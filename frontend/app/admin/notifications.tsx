@@ -295,6 +295,14 @@ export default function AdminNotifications() {
       }
       groups[key].notifications.push(n);
     }
+    // Sort notifications inside each group: most recent first
+    for (const k of Object.keys(groups)) {
+      groups[k].notifications.sort((a, b) => {
+        const ta = new Date(a.created_at).getTime() || 0;
+        const tb = new Date(b.created_at).getTime() || 0;
+        return tb - ta;
+      });
+    }
     return Object.values(groups).sort((a, b) => b.sortKey.localeCompare(a.sortKey));
   }, [notifications, searchQuery]);
 
