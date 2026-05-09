@@ -864,7 +864,7 @@ export default function AdminAthleteDetail() {
       await api.delete(`/athletes/${id}`);
       showAlert('Successo', 'Atleta eliminato definitivamente');
       setDeleteModalVisible(false);
-      router.back();
+      (router.canGoBack() ? router.back() : router.replace('/admin'));
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'eliminazione');
     } finally {
@@ -1067,7 +1067,7 @@ export default function AdminAthleteDetail() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))}>
             <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Caricamento...</Text>
@@ -1084,7 +1084,7 @@ export default function AdminAthleteDetail() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))}>
             <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Errore</Text>
@@ -1693,7 +1693,7 @@ export default function AdminAthleteDetail() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
         </TouchableOpacity>
         <View style={styles.headerCenter}>

@@ -266,7 +266,7 @@ export default function PreseasonAdmin() {
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <TouchableOpacity onPress={() => router.back()} data-testid="preseason-back-btn">
+          <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))} data-testid="preseason-back-btn">
             <Ionicons name="arrow-back" size={24} color="#333" />
           </TouchableOpacity>
           <Text style={{ fontSize: 20, fontWeight: '700', color: '#0D47A1' }}>Pre-iscrizioni</Text>

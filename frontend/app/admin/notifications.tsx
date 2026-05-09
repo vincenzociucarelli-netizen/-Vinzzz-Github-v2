@@ -321,7 +321,7 @@ export default function AdminNotifications() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))} style={styles.backBtn}>
           <View style={styles.backBtnInner}>
             <Ionicons name="chevron-back" size={24} color="#007AFF" />
           </View>

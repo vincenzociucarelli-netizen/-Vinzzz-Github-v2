@@ -367,7 +367,7 @@ export default function AuditLogsPage() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))} style={styles.backButton}>
           <Icon name="arrow-back" size={24} color="#007AFF" />
         </TouchableOpacity>
         <Text style={styles.title}>Audit Log</Text>

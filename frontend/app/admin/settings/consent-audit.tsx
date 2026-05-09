@@ -100,7 +100,7 @@ export default function ConsentAuditPage() {
   return (
     <View style={s.container}>
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))} style={s.backBtn}>
           <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 8 }}>
             <Ionicons name="chevron-back" size={24} color="#2E7D32" />
           </View>

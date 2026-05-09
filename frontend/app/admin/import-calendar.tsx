@@ -825,7 +825,7 @@ export default function ImportCalendarScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))}>
           <View style={styles.backBtn}>
             <Ionicons name="chevron-back" size={24} color="#007AFF" />
           </View>

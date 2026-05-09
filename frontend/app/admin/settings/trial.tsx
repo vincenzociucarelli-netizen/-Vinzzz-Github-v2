@@ -63,7 +63,7 @@ export default function TrialSettings() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))} style={styles.backBtn}>
           <View style={styles.backIcon}>
             <Ionicons name="chevron-back" size={24} color="#FF6F00" />
           </View>
