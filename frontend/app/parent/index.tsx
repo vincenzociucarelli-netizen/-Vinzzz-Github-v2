@@ -889,36 +889,43 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
               const isInTrial = athlete.status === 'trial' && !!athlete.trial_start_date;
               const isActive = athlete.status === 'active';
               const isPending = athlete.status === 'pending';
+              const isPendingCertificate = athlete.status === 'pending_certificate';
               
               const borderColor = isPending 
                 ? '#FFE082'
-                : isPendingTrial
-                  ? '#9C27B0' // Viola (stesso visual di WaitingTrial)
-                  : isWaitingTrial
-                    ? '#9C27B0' // Viola
-                    : isInTrial
-                      ? '#FF9500' // Arancione
-                      : '#34C759'; // Verde
+                : isPendingCertificate
+                  ? '#FF9800' // Arancione (validazione certificato)
+                  : isPendingTrial
+                    ? '#9C27B0' // Viola (stesso visual di WaitingTrial)
+                    : isWaitingTrial
+                      ? '#9C27B0' // Viola
+                      : isInTrial
+                        ? '#FF9500' // Arancione
+                        : '#34C759'; // Verde
               
               const iconColor = isPending 
                 ? '#FF9500' 
-                : isPendingTrial
-                  ? '#9C27B0'
-                  : isWaitingTrial
+                : isPendingCertificate
+                  ? '#FF9800'
+                  : isPendingTrial
                     ? '#9C27B0'
-                    : isInTrial
-                      ? '#FF9500'
-                      : '#34C759';
+                    : isWaitingTrial
+                      ? '#9C27B0'
+                      : isInTrial
+                        ? '#FF9500'
+                        : '#34C759';
               
               const statusText = isPending
                 ? 'In attesa di approvazione'
-                : isPendingTrial
-                  ? 'In attesa di inizio prova'
-                  : isWaitingTrial
+                : isPendingCertificate
+                  ? 'Validazione Certificato'
+                  : isPendingTrial
                     ? 'In attesa di inizio prova'
-                    : isInTrial
-                      ? 'In prova'
-                      : 'Attivo';
+                    : isWaitingTrial
+                      ? 'In attesa di inizio prova'
+                      : isInTrial
+                        ? 'In prova'
+                        : 'Attivo';
               
               return (
               <TouchableOpacity
