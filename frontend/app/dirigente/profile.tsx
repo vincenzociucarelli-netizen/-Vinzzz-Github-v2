@@ -1294,6 +1294,20 @@ Società sportiva: ${societyName}
         )}
 
         <View style={{ height: 100 }} />
+
+        {/* Consensi Privacy e Immagini - solo dopo firma privacy (DENTRO lo ScrollView per non coprire il Salva floating) */}
+        {privacyAccepted && (
+          <View style={{ marginHorizontal: 16, marginTop: 16, marginBottom: 24 }}>
+            <TouchableOpacity 
+              onPress={() => setShowConsents(!showConsents)}
+              style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F3E5F5', padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: '#6A1B9A' }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#6A1B9A' }}>Consensi Privacy</Text>
+              <Ionicons name={showConsents ? "chevron-up" : "chevron-down"} size={20} color="#6A1B9A" />
+            </TouchableOpacity>
+            {showConsents && <ConsentManager entityType="staff" accentColor="#6A1B9A" />}
+          </View>
+        )}
       </ScrollView>
 
       {/* Floating Save Button */}
@@ -1313,20 +1327,6 @@ Società sportiva: ${societyName}
               </>
             )}
           </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Consensi Privacy e Immagini - solo dopo firma privacy */}
-      {privacyAccepted && (
-        <View style={{ marginHorizontal: 16, marginTop: 16, marginBottom: 8 }}>
-          <TouchableOpacity 
-            onPress={() => setShowConsents(!showConsents)}
-            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F3E5F5', padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: '#6A1B9A' }}
-          >
-            <Text style={{ fontSize: 14, fontWeight: '700', color: '#6A1B9A' }}>Consensi Privacy</Text>
-            <Ionicons name={showConsents ? "chevron-up" : "chevron-down"} size={20} color="#6A1B9A" />
-          </TouchableOpacity>
-          {showConsents && <ConsentManager entityType="staff" accentColor="#6A1B9A" />}
         </View>
       )}
 

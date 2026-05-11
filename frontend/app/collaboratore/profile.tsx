@@ -1406,6 +1406,20 @@ Società sportiva: ${societyName}
         )}
 
         <View style={{ height: 40 }} />
+
+        {/* Consensi Privacy e Immagini - dentro lo ScrollView per non coprire il Salva floating */}
+        {privacyAccepted && (
+          <View style={{ marginHorizontal: 16, marginTop: 16, marginBottom: 24 }}>
+            <TouchableOpacity 
+              onPress={() => setShowConsents(!showConsents)}
+              style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFF3E0', padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: '#E65100' }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#E65100' }}>Consensi Privacy</Text>
+              <Ionicons name={showConsents ? "chevron-up" : "chevron-down"} size={20} color="#E65100" />
+            </TouchableOpacity>
+            {showConsents && <ConsentManager entityType="staff" accentColor="#E65100" />}
+          </View>
+        )}
       </ScrollView>
       </KeyboardAvoidingView>
 
@@ -1426,20 +1440,6 @@ Società sportiva: ${societyName}
               </>
             )}
           </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Consensi Privacy e Immagini - collassabile, solo dopo firma privacy */}
-      {privacyAccepted && (
-        <View style={{ marginHorizontal: 16, marginTop: 16, marginBottom: 8 }}>
-          <TouchableOpacity 
-            onPress={() => setShowConsents(!showConsents)}
-            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFF3E0', padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: '#E65100' }}
-          >
-            <Text style={{ fontSize: 14, fontWeight: '700', color: '#E65100' }}>Consensi Privacy</Text>
-            <Ionicons name={showConsents ? "chevron-up" : "chevron-down"} size={20} color="#E65100" />
-          </TouchableOpacity>
-          {showConsents && <ConsentManager entityType="staff" accentColor="#E65100" />}
         </View>
       )}
 
