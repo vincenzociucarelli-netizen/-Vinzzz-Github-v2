@@ -245,7 +245,11 @@ async def update_society_settings(request: Request, data: SocietySettingsUpdate,
     
     # block_expired_certificates: special handling with audit log + auto-reactivation
     if data.block_expired_certificates is not None:
-        current_settings = await db.settings.find_one({"type": "society"})
+        _society_id_local_probe = current_user.get("society_id")
+        _probe_query = {"type": "society"}
+        if _society_id_local_probe:
+            _probe_query["society_id"] = _society_id_local_probe
+        current_settings = await db.settings.find_one(_probe_query)
         old_value = current_settings.get("block_expired_certificates", True) if current_settings else True
         new_value = data.block_expired_certificates
 
@@ -342,8 +346,15 @@ async def update_society_settings(request: Request, data: SocietySettingsUpdate,
         update_dict["trial_max_sessions"] = max(1, min(5, data.trial_max_sessions))
     
     if update_dict:
+        # Multi-tenant: scope settings to the admin's society to prevent
+        # cross-tenant data leakage (e.g. Sirio admin overwriting PPG settings).
+        society_id_local = current_user.get("society_id")
+        filter_query = {"type": "society"}
+        if society_id_local:
+            filter_query["society_id"] = society_id_local
+            update_dict["society_id"] = society_id_local
         await db.settings.update_one(
-            {"type": "society"},
+            filter_query,
             {"$set": update_dict},
             upsert=True
         )
@@ -361,7 +372,11 @@ async def get_certificate_override_status(current_user = Depends(get_current_use
     """
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può consultare questo stato")
-    settings = await db.settings.find_one({"type": "society"}) or {}
+    _sid = current_user.get("society_id")
+    _q = {"type": "society"}
+    if _sid:
+        _q["society_id"] = _sid
+    settings = await db.settings.find_one(_q) or {}
     block_enabled = settings.get("block_expired_certificates", True)
     # Today key (Italy) for per-day popup
     try:
@@ -393,9 +408,15 @@ async def mark_certificate_override_seen(current_user = Depends(get_current_user
         today_it = datetime.now(ZoneInfo("Europe/Rome")).strftime("%Y-%m-%d")
     except Exception:
         today_it = datetime.utcnow().strftime("%Y-%m-%d")
+    _sid = current_user.get("society_id")
+    _q = {"type": "society"}
+    _set_dict = {"override_last_admin_seen_date": today_it}
+    if _sid:
+        _q["society_id"] = _sid
+        _set_dict["society_id"] = _sid
     await db.settings.update_one(
-        {"type": "society"},
-        {"$set": {"override_last_admin_seen_date": today_it}},
+        _q,
+        {"$set": _set_dict},
         upsert=True,
     )
     return {"message": "Popup marcato come visto per oggi", "date": today_it}
@@ -409,7 +430,11 @@ async def get_stripe_settings(current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere le impostazioni Stripe")
     
-    settings = await db.settings.find_one({"type": "stripe"})
+    _sid = current_user.get("society_id")
+    _q = {"type": "stripe"}
+    if _sid:
+        _q["society_id"] = _sid
+    settings = await db.settings.find_one(_q)
     if not settings:
         return {
             "stripe_enabled": False,
@@ -488,8 +513,13 @@ async def update_stripe_settings(data: StripeSettingsUpdate, current_user = Depe
     update_dict["updated_at"] = datetime.now(timezone.utc)
     update_dict["updated_by"] = current_user["id"]
     
+    _sid = current_user.get("society_id")
+    _q = {"type": "stripe"}
+    if _sid:
+        _q["society_id"] = _sid
+        update_dict["society_id"] = _sid
     await db.settings.update_one(
-        {"type": "stripe"},
+        _q,
         {"$set": update_dict},
         upsert=True
     )
@@ -516,8 +546,12 @@ async def delete_stripe_keys(current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può eliminare le chiavi Stripe")
     
+    _sid = current_user.get("society_id")
+    _q = {"type": "stripe"}
+    if _sid:
+        _q["society_id"] = _sid
     await db.settings.update_one(
-        {"type": "stripe"},
+        _q,
         {"$unset": {
             "stripe_publishable_key": "",
             "stripe_secret_key": "",
