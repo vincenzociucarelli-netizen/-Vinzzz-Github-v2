@@ -49,6 +49,13 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - ✅ **Popup di avviso lato Parent** prima di stampare/condividere se i campi tax_payer (Cognome/Nome/CF del genitore che porta in detrazione) sono incompleti — l'utente può comunque procedere senza
 - File toccati: `/app/backend/server.py` (riga 10636), `/app/frontend/src/utils/fiscalReceipt.ts`, `/app/frontend/app/admin/athlete/[id].tsx`, `/app/frontend/app/parent/athlete/[id].tsx`
 
+### 🆕 Fix Fuso Orario Calendario Gare (12/05/2026)
+- 🐛 **Bug**: gli orari delle partite mostravano UTC invece di Europe/Rome → "anticipati di 2h" (es. 18:00 mostrata come 16:00)
+- 🔍 **Root cause**: in `admin/matches.tsx::handleSave` veniva fatto `new Date(localStr).toISOString()` che converte local→UTC, e il display usa `timeZone:'UTC'` ovunque, perdendo le 2h di offset
+- ✅ **Fix**: ora costruisce direttamente la stringa ISO con suffix Z preservando il wall-clock (es. utente inserisce 18:00 → salvato come `2026-XX-XXT18:00:00.000Z` → display mostra 18:00)
+- 📌 **Match esistenti**: utente correggerà manualmente le 4 gare già nel DB (riaprendo edit modal e re-inserendo orario)
+- File toccato: `/app/frontend/app/admin/matches.tsx` (linee 198-209)
+
 ### 🔴 P0 ancora da gestire
 1. Profilo Simona incompleto in produzione (dato perso da bug vecchio) — Simona deve compilare manualmente
 2. Logo login con riquadro bianco — caricare PNG trasparente
