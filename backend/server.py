@@ -11814,9 +11814,21 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
     # Get matches for 7 days FIRST (to know which teams have home matches on which days)
     end_of_week = today + timedelta(days=7)
     matches = await db.matches.find({
-        "team_id": {"$in": team_ids},
-        "date": {"$gte": today, "$lt": end_of_week}
-    }).to_list(50)
+        "team_id": {"$in": team_ids}
+    }).to_list(200)
+    # Filter by date in Python (some records have date stored as ISO string)
+    filtered_matches = []
+    for m in matches:
+        d = m.get("date")
+        if isinstance(d, str):
+            try:
+                d = datetime.fromisoformat(d.replace("Z", "").replace("+00:00", ""))
+            except Exception:
+                continue
+        if d and today <= d < end_of_week:
+            m["date"] = d
+            filtered_matches.append(m)
+    matches = filtered_matches
     
     # Build a set of (team_id, day_key) for home matches - these will skip training
     # Also build a dict for rifinitura (team_id, day_key) -> team info for rifinitura
@@ -21998,11 +22010,28 @@ async def get_minor_dashboard(current_user = Depends(get_current_user)):
             att["team_name"] = team.get("name", "")
         att.pop("team_id", None)
     
-    # Upcoming matches
-    upcoming_matches = await db.matches.find({
-        "team_id": athlete.get("team_id"),
-        "date": {"$gte": datetime.now().strftime("%Y-%m-%d")}
-    }, {"_id": 0, "id": 1, "date": 1, "time": 1, "opponent": 1, "venue": 1, "home_away": 1}).sort("date", 1).limit(5).to_list(5)
+    # Upcoming matches (handle both datetime and ISO string date types in DB)
+    raw_matches = await db.matches.find({
+        "team_id": athlete.get("team_id")
+    }, {"_id": 0, "id": 1, "date": 1, "time": 1, "opponent": 1, "venue": 1, "home_away": 1}).to_list(200)
+    now_dt = datetime.now()
+    upcoming_matches = []
+    for m in raw_matches:
+        d = m.get("date")
+        if isinstance(d, str):
+            try:
+                d_dt = datetime.fromisoformat(d.replace("Z", "").replace("+00:00", ""))
+            except Exception:
+                continue
+        elif isinstance(d, datetime):
+            d_dt = d
+        else:
+            continue
+        if d_dt >= now_dt:
+            m["date"] = d_dt
+            upcoming_matches.append(m)
+    upcoming_matches.sort(key=lambda x: x["date"])
+    upcoming_matches = upcoming_matches[:5]
     
     # Trial info
     trial_info = None

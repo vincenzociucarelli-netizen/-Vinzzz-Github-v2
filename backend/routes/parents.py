@@ -66,9 +66,21 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
         return days_map[date.weekday()]
     
     matches = await db.matches.find({
-        "team_id": {"$in": team_ids},
-        "date": {"$gte": today, "$lt": end_of_week}
-    }).to_list(50)
+        "team_id": {"$in": team_ids}
+    }).to_list(200)
+    # Filter by date in Python (some records have date as ISO string, others as datetime)
+    filtered_matches = []
+    for m in matches:
+        d = m.get("date")
+        if isinstance(d, str):
+            try:
+                d = datetime.fromisoformat(d.replace("Z", "").replace("+00:00", ""))
+            except Exception:
+                continue
+        if d and today <= d < end_of_week:
+            m["date"] = d  # normalize to datetime for downstream
+            filtered_matches.append(m)
+    matches = filtered_matches
     
     home_match_days = set()
     for match in matches:
