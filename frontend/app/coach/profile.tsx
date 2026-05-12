@@ -1289,10 +1289,6 @@ Società sportiva: ${societyName}
                     style={{ flexDirection: 'row', alignItems: 'center', flex: 1, textDecoration: 'none' }}
                     data-testid={`open-doc-${doc.id}`}
                   >
-                    }}
-                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1, textDecoration: 'none' }}
-                    data-testid={`open-doc-${doc.id}`}
-                  >
                   <Ionicons 
                     name={doc.document_type === 'privacy_consent' ? 'shield-checkmark' : 
                           doc.document_type?.includes('5000') ? 'alert-circle' :
