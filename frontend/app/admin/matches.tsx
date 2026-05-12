@@ -195,7 +195,12 @@ export default function AdminMatches() {
         }
       }
       
-      const dateTime = new Date(`${dateStr}T${formData.time || '00:00'}`);
+      const timeStr = formData.time || '00:00';
+      // Build ISO string preserving wall-clock time (no TZ conversion).
+      // The whole app displays match times with timeZone:'UTC' to render
+      // the exact value stored. So we store the user's local input as-is.
+      const dateISO = `${dateStr}T${timeStr}:00.000Z`;
+      const dateTime = new Date(dateISO);
       
       // Verifica che la data sia valida
       if (isNaN(dateTime.getTime())) {
@@ -206,7 +211,7 @@ export default function AdminMatches() {
       
       const payload = {
         team_id: formData.team_id,
-        date: dateTime.toISOString(),
+        date: dateISO,
         opponent: formData.opponent,
         venue: formData.venue || "",
         address: formData.address || null,
