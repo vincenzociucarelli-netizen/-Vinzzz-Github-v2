@@ -56,6 +56,11 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - 📌 **Match esistenti**: utente correggerà manualmente le 4 gare già nel DB (riaprendo edit modal e re-inserendo orario)
 - File toccato: `/app/frontend/app/admin/matches.tsx` (linee 198-209)
 
+### 🆕 Riattivato Register Society (12/05/2026)
+- ✅ Pulsante "Sei una nuova società? Registrati qui" rimesso nella schermata login (`login.tsx`)
+- 🎯 Obiettivo: onboardare "Sirio" + 3-4 società amiche per test multi-tenant
+- ⚠️ Audit multi-tenancy (`society_id` su tutti gli endpoint) NON ancora completato → da fare PRIMA di andare in pubblico ma utente farà test smoke con poche persone
+
 ### 🔴 P0 ancora da gestire
 1. Profilo Simona incompleto in produzione (dato perso da bug vecchio) — Simona deve compilare manualmente
 2. Logo login con riquadro bianco — caricare PNG trasparente
