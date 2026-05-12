@@ -35,12 +35,14 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
     
     team_athletes = {}
     for a in athletes:
-        team_id = a.get("team_id")
-        if team_id:
-            athlete_name = a.get("first_name", a.get("full_name", "").split()[0] if a.get("full_name") else "")
-            if team_id not in team_athletes:
-                team_athletes[team_id] = []
-            team_athletes[team_id].append(athlete_name)
+        athlete_name = a.get("first_name", a.get("full_name", "").split()[0] if a.get("full_name") else "")
+        # Includi sia la squadra principale (team_id) sia eventuale squadra secondaria (team_id_2)
+        for team_id in (a.get("team_id"), a.get("team_id_2")):
+            if team_id:
+                if team_id not in team_athletes:
+                    team_athletes[team_id] = []
+                if athlete_name not in team_athletes[team_id]:
+                    team_athletes[team_id].append(athlete_name)
     
     team_ids = list(team_athletes.keys())
     if not team_ids:
