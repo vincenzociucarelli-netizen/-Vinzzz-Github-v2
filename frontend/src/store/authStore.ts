@@ -60,6 +60,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await AsyncStorage.removeItem('token');
     await AsyncStorage.removeItem('user');
     set({ user: null, token: null });
+    // Multi-tenant safety: on web, force a hard reload to /login so that all
+    // module-level caches (SportIcon image cache, in-memory React state with
+    // previous society data, etc.) are nuked. Without this, a user logging in
+    // with a different society on the same browser tab may see mixed data.
+    if (typeof window !== 'undefined' && window.location) {
+      window.location.replace('/login');
+    }
   },
   
   loadAuth: async () => {

@@ -61,6 +61,25 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - 🎯 Obiettivo: onboardare "Sirio" + 3-4 società amiche per test multi-tenant
 - ⚠️ Audit multi-tenancy (`society_id` su tutti gli endpoint) NON ancora completato → da fare PRIMA di andare in pubblico ma utente farà test smoke con poche persone
 
+### 🆕 Fix Multi-Tenancy Settings + Cache Bleed (12/05/2026 — sera tardi)
+🔴 **Bug critico scoperto durante test Sirio**: quando l'admin di una società salva le impostazioni, il backend sovrascriveva il record `{type:"society"}` SENZA filtro per `society_id` → dati di una società rovinavano dati dell'altra.
+
+✅ **Fix backend** (`routes/settings.py`):
+- `PATCH /settings/society` → ora filtra per `society_id` del current_user
+- `GET /settings/certificate-override-status` → filtrato
+- `POST /settings/certificate-override-status/mark-seen` → filtrato
+- `GET/PATCH/DELETE /settings/stripe` → tutti filtrati
+
+🔴 **Bug separato (cache frontend)**: utente fa login con email Sirio, logout, poi login con email PPG → header mostrava "Sirio" mentre dati erano PPG. Cause: cache module-level (SportIcon) e React state non rimontato.
+
+✅ **Fix frontend**:
+- `login.tsx::handleLogin`: dopo login web fa `window.location.replace(target)` → full reload pulisce cache
+- `authStore.ts::logout`: dopo cleanup AsyncStorage fa `window.location.replace('/login')` su web
+
+⚠️ **CRITICO - Da verificare in produzione**: Vincenzo deve controllare che le impostazioni di PPG non siano state sovrascritte durante il test Sirio. Eventualmente recuperare da snapshot MongoDB Atlas.
+
+🛑 **Ancora pendente (server.py)**: 40+ query `db.settings.find_one({"type": "society"})` senza filtro `society_id` (logo PDF, threshold computations, audit logs, intestazioni documenti GDPR). Da sistemare prima di onboarding pubblico.
+
 ### 🔴 P0 ancora da gestire
 1. Profilo Simona incompleto in produzione (dato perso da bug vecchio) — Simona deve compilare manualmente
 2. Logo login con riquadro bianco — caricare PNG trasparente

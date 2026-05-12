@@ -91,20 +91,23 @@ export default function Login() {
       const response = await api.post('/auth/login', { email, password });
       await setUser(response.data.user, response.data.token);
       
-      // Navigate based on role
+      // Multi-tenant safety: clear all in-memory module caches that may
+      // contain data from a previously logged-in society on the same browser
+      // (e.g. SportIcon image cache, ...). Forcing a full page reload after
+      // login is the simplest 100% reliable way to start clean.
       const role = response.data.user.role;
-      if (role === 'admin') {
-        router.replace('/select-role');
-      } else if (role === 'coach') {
-        router.replace('/coach');
-      } else if (role === 'collaboratore') {
-        router.replace('/collaboratore');
-      } else if (role === 'parent') {
-        router.replace('/parent');
-      } else if (role === 'viewer' || role === 'dirigente') {
-        router.replace('/dirigente');
-      } else if (role === 'athlete') {
-        router.replace('/athlete');
+      let target = '/select-role';
+      if (role === 'coach') target = '/coach';
+      else if (role === 'collaboratore') target = '/collaboratore';
+      else if (role === 'parent') target = '/parent';
+      else if (role === 'viewer' || role === 'dirigente') target = '/dirigente';
+      else if (role === 'athlete') target = '/athlete';
+      
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        // Use full reload to nuke any stale in-memory caches from previous session
+        window.location.replace(target);
+      } else {
+        router.replace(target as any);
       }
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante il login');
