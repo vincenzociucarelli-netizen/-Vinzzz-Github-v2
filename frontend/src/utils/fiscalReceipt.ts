@@ -6,6 +6,7 @@ interface PaymentData {
   receipt_number: string;
   amount: number;
   description?: string;
+  notes?: string;
   payment_method?: string;
   registration_date?: string;
 }
@@ -91,7 +92,7 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
     const bgColor = index % 2 === 0 ? '#fff' : '#f5f5f5';
     const payDate = formatDateIT(payment.date);
     const method = payment.payment_method || '-';
-    const note = payment.description || '-';
+    const note = payment.notes || '-';
     
     return `
       <tr style="background-color: ${bgColor};">

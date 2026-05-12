@@ -556,7 +556,38 @@ export default function AthleteDetail() {
   // Download Fiscal Receipt
   const handleDownloadFiscalReceipt = async () => {
     if (!athlete) return;
-    
+
+    // Warn user if tax_payer data is missing (needed for tax detrazione)
+    const missingTaxPayer =
+      !(athlete as any).tax_payer_last_name ||
+      !(athlete as any).tax_payer_first_name ||
+      !(athlete as any).tax_payer_fiscal_code;
+
+    if (missingTaxPayer) {
+      const message =
+        'I dati del genitore che porta in detrazione la spesa (Cognome, Nome, Codice Fiscale) sono incompleti.\n\n' +
+        'Ti consigliamo di inserirli prima nella sezione "Dati Anagrafici" dell\'atleta, altrimenti l\'Attestato di Versamento verrà emesso SENZA i dati del genitore.\n\n' +
+        'Vuoi continuare comunque senza i dati di detrazione?';
+
+      if (Platform.OS === 'web') {
+        const confirmed = window.confirm(message);
+        if (!confirmed) return;
+      } else {
+        const confirmed = await new Promise<boolean>((resolve) => {
+          Alert.alert(
+            'Dati di detrazione mancanti',
+            message,
+            [
+              { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Continua senza', style: 'destructive', onPress: () => resolve(true) },
+            ],
+            { cancelable: true, onDismiss: () => resolve(false) }
+          );
+        });
+        if (!confirmed) return;
+      }
+    }
+
     setGeneratingReceipt(true);
     try {
       const response = await api.get(`/payments/${id}/fiscal-receipt`);

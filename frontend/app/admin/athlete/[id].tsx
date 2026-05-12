@@ -1420,8 +1420,9 @@ export default function AdminAthleteDetail() {
           birth_province: (athlete as any).birth_province || '',
         },
         parent: {
-          first_name: '', // Admin view doesn't have parent data directly
-          last_name: '',
+          first_name: (athlete as any).tax_payer_first_name || '',
+          last_name: (athlete as any).tax_payer_last_name || '',
+          fiscal_code: (athlete as any).tax_payer_fiscal_code || '',
         },
         society: {
           name: societyData?.ragione_sociale || societyData?.society_name || societyData?.name || 'Società Sportiva',
@@ -1443,7 +1444,7 @@ export default function AdminAthleteDetail() {
               date: p.paid_date || '',
               receipt_number: p.receipt_number || `${index + 1}`,
               amount: p.amount || 0,
-              description: p.description || p.notes || '',
+              notes: p.notes || '',
               payment_method: p.payment_method || (p.is_cash ? 'Contanti' : 'Bonifico'),
             })) 
           : [], // Empty array if no payments

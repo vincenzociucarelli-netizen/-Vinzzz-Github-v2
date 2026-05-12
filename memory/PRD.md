@@ -23,7 +23,7 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
-## Stato Attuale (07/05/2026 — fine sessione tarda sera)
+## Stato Attuale (12/05/2026)
 
 ### ✅ Già LIVE in produzione (PR #11-#16+)
 - Brevo email risolto (chiave SMTP→API + blocco IP disattivato)
@@ -39,11 +39,15 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Badge status `pending_trial` viola
 - **Projection MongoDB COMPLETA per firma trial** (backend) — fix critico per atleti stranieri (Belgio, Danimarca) e italiani con campo solo in `birth_place`
 - **Modal firma trial: maxHeight 85% + paddingBottom 120** — pulsante "Conferma e Firma" non più nascosto da navbar browser mobile
+- Fix partite invisibili (Coach Fede, Anna, Lucia) — `team_id_2` + comparazione date ISO
 
-### 🎯 Test famiglia allargata: ✅ COMPLETATO con successo
-- Linking 3 genitori ↔ 2 figli con approvazioni reciproche
-- Firma "Dichiarazione di Prova" funzionante per qualsiasi dei 2 genitori
-- Confermato: il bug "PDF intestato al genitore sbagliato" era SOLO cache di sessione/JWT, non bug del codice (test in incognito + verifica utente loggato in alto a dx → tutto corretto)
+### 🆕 Attestato di Versamento PDF (12/05/2026)
+- ✅ Aggiunta colonna **"Note"** in posizione 2 nella tabella pagamenti (N. Prog. | Note | Data | Metodo | Importo)
+- ✅ Le note provengono dal campo `notes` del pagamento (non più da `description`) — utile per indicare numero ricevuta reale del commercialista
+- ✅ Backend `get_fiscal_receipt_data`: aggiunto `notes` al payload payments
+- ✅ Admin path: ora popola tax_payer dall'athlete (`tax_payer_first_name/last_name/fiscal_code`) invece di lasciarli vuoti
+- ✅ **Popup di avviso lato Parent** prima di stampare/condividere se i campi tax_payer (Cognome/Nome/CF del genitore che porta in detrazione) sono incompleti — l'utente può comunque procedere senza
+- File toccati: `/app/backend/server.py` (riga 10636), `/app/frontend/src/utils/fiscalReceipt.ts`, `/app/frontend/app/admin/athlete/[id].tsx`, `/app/frontend/app/parent/athlete/[id].tsx`
 
 ### 🔴 P0 ancora da gestire
 1. Profilo Simona incompleto in produzione (dato perso da bug vecchio) — Simona deve compilare manualmente

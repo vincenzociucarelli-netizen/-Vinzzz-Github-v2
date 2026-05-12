@@ -10639,6 +10639,7 @@ async def get_fiscal_receipt_data(athlete_id: str, current_user = Depends(get_cu
                 "receipt_number": p.get("receipt_number", ""),
                 "amount": p.get("amount", 0),
                 "description": p.get("description", ""),
+                "notes": p.get("notes", ""),
                 "payment_method": p.get("payment_method", ""),
                 "registration_date": p.get("registration_date").isoformat() if p.get("registration_date") else "",
             }
