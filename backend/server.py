@@ -4811,7 +4811,9 @@ async def get_matches(current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere tutte le gare")
     
-    matches = await db.matches.find({}).sort("date", 1).to_list(500)
+    society_id = current_user.get("society_id")
+    query = {"society_id": society_id} if society_id else {}
+    matches = await db.matches.find(query).sort("date", 1).to_list(500)
     for m in matches:
         clean_mongo_doc(m)
     return matches
@@ -4822,9 +4824,11 @@ async def get_upcoming_matches(days: int = 7, current_user = Depends(get_current
     today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     end_date = today + timedelta(days=days)
     
-    matches = await db.matches.find({
-        "date": {"$gte": today, "$lte": end_date}
-    }).sort("date", 1).to_list(100)
+    society_id = current_user.get("society_id")
+    base_q = {"date": {"$gte": today, "$lte": end_date}}
+    if society_id:
+        base_q["society_id"] = society_id
+    matches = await db.matches.find(base_q).sort("date", 1).to_list(100)
     
     for m in matches:
         clean_mongo_doc(m)
@@ -4833,7 +4837,11 @@ async def get_upcoming_matches(days: int = 7, current_user = Depends(get_current
 @api_router.get("/matches/team/{team_id}")
 async def get_team_matches(team_id: str, current_user = Depends(get_current_user)):
     """Get all matches for a specific team"""
-    matches = await db.matches.find({"team_id": team_id}).sort("date", 1).to_list(100)
+    society_id = current_user.get("society_id")
+    q = {"team_id": team_id}
+    if society_id:
+        q["society_id"] = society_id
+    matches = await db.matches.find(q).sort("date", 1).to_list(100)
     for m in matches:
         clean_mongo_doc(m)
     return matches
@@ -4849,6 +4857,7 @@ async def create_match(match_data: MatchCreate, current_user = Depends(get_curre
     team_name = team.get("name", "") if team else ""
     
     match = Match(
+        society_id=current_user.get("society_id"),
         team_id=match_data.team_id,
         team_name=team_name,
         date=match_data.date,
@@ -4877,8 +4886,12 @@ async def update_match(match_id: str, match_data: dict, current_user = Depends(g
         team = await db.teams.find_one({"id": match_data["team_id"]})
         match_data["team_name"] = team.get("name", "") if team else ""
     
+    society_id = current_user.get("society_id")
+    filter_q = {"id": match_id}
+    if society_id:
+        filter_q["society_id"] = society_id
     result = await db.matches.update_one(
-        {"id": match_id},
+        filter_q,
         {"$set": match_data}
     )
     
@@ -4893,7 +4906,11 @@ async def delete_match(match_id: str, current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può eliminare gare")
     
-    result = await db.matches.delete_one({"id": match_id})
+    society_id = current_user.get("society_id")
+    filter_q = {"id": match_id}
+    if society_id:
+        filter_q["society_id"] = society_id
+    result = await db.matches.delete_one(filter_q)
     
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Gara non trovata")
@@ -5018,6 +5035,7 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può importare gare")
     
+    society_id_local = current_user.get("society_id")
     matches_data = file_data.get("matches", [])
     imported_count = 0
     deleted_count = 0
@@ -5032,10 +5050,14 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
             match_numbers_to_import.add(row["match_number"])
     
     # Pre-calcola quali match_number esistono già nel DB → quelli sono "aggiornamenti"
+    # Multi-tenant: scope to current society to avoid touching other tenants' matches.
     existing_match_numbers = set()
     if match_numbers_to_import:
+        _existing_query = {"match_number": {"$in": list(match_numbers_to_import)}}
+        if society_id_local:
+            _existing_query["society_id"] = society_id_local
         existing_cursor = db.matches.find(
-            {"match_number": {"$in": list(match_numbers_to_import)}},
+            _existing_query,
             {"match_number": 1, "_id": 0}
         )
         async for doc in existing_cursor:
@@ -5045,10 +5067,11 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
     # If we have match_numbers, delete only those specific matches (upsert logic)
     # Otherwise, fall back to deleting all future matches for those teams
     if match_numbers_to_import:
-        # Delete existing matches with same match_number
-        result = await db.matches.delete_many({
-            "match_number": {"$in": list(match_numbers_to_import)}
-        })
+        # Delete existing matches with same match_number - scoped by society
+        _del_query = {"match_number": {"$in": list(match_numbers_to_import)}}
+        if society_id_local:
+            _del_query["society_id"] = society_id_local
+        result = await db.matches.delete_many(_del_query)
         deleted_count = result.deleted_count
         logging.info(f"Deleted {deleted_count} existing matches with match_numbers: {match_numbers_to_import}")
     else:
@@ -5063,10 +5086,13 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
             today = now.replace(hour=0, minute=0, second=0, microsecond=0)
             
             for team_id in team_ids_to_import:
-                result = await db.matches.delete_many({
+                _del_q = {
                     "team_id": team_id,
                     "date": {"$gte": today}
-                })
+                }
+                if society_id_local:
+                    _del_q["society_id"] = society_id_local
+                result = await db.matches.delete_many(_del_q)
                 deleted_count += result.deleted_count
                 logging.info(f"Deleted {result.deleted_count} existing future matches for team {team_id}")
     
@@ -5104,6 +5130,7 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
                 match_date = date_str
             
             match = Match(
+                society_id=society_id_local,
                 team_id=row["team_id"],
                 team_name=team_name,
                 match_number=row.get("match_number"),  # Numero gara univoco
@@ -5138,6 +5165,46 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
         "deleted": deleted_count,
         "errors": errors
     }
+
+
+
+@api_router.post("/admin/maintenance/backfill-match-society-ids")
+async def backfill_match_society_ids(current_user = Depends(get_current_user)):
+    """One-shot maintenance: assign society_id to existing matches that have none,
+    by looking up team_id -> team.society_id. Admin-only."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può eseguire la maintenance")
+    
+    # Build team_id -> society_id map
+    teams = await db.teams.find({}, {"id": 1, "society_id": 1, "_id": 0}).to_list(2000)
+    team_to_society = {t["id"]: t.get("society_id") for t in teams if t.get("society_id")}
+    
+    updated = 0
+    missing_team = 0
+    already_set = 0
+    
+    cursor = db.matches.find({})
+    async for m in cursor:
+        if m.get("society_id"):
+            already_set += 1
+            continue
+        team_society = team_to_society.get(m.get("team_id"))
+        if team_society:
+            await db.matches.update_one(
+                {"id": m["id"]},
+                {"$set": {"society_id": team_society}}
+            )
+            updated += 1
+        else:
+            missing_team += 1
+    
+    return {
+        "message": "Backfill completed",
+        "updated": updated,
+        "already_set": already_set,
+        "missing_team": missing_team,
+    }
+
 
 
 # ==================== FEDERATION CALENDAR IMPORT ====================

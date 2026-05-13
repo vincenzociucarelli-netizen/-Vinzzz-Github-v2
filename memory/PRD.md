@@ -114,6 +114,20 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
   - Se l'utente è già loggato in qualche società → logo società (via `?society_id=`)
   - Altrimenti → logo RegistraTEAM (file statico locale, no chiamata API)
 
+### 🆕 Fix Multi-Tenancy Calendario Gare (13/05/2026 — mattina)
+🔴 **Bug**: Sirio vedeva e poteva modificare le gare di PPG. Causa: tutte le query `db.matches.find({})` e `db.matches.update_one({"id": ...})` non filtravano per `society_id`. Inoltre l'endpoint `/matches/import` (Excel) eseguiva `delete_many({"match_number": ...})` cross-tenant, potenzialmente cancellando match di altre società.
+
+✅ **Fix backend** (`server.py`):
+- `GET /matches` → filtra per `society_id`
+- `GET /matches/upcoming` → filtra per `society_id`
+- `GET /matches/team/{team_id}` → filtra per `society_id`
+- `POST /matches` → popola `society_id` dal current_user
+- `PATCH /matches/{id}` → filtra per `society_id` (no cross-tenant edit)
+- `DELETE /matches/{id}` → filtra per `society_id` (no cross-tenant delete)
+- `POST /matches/import` → tutte le query (find/delete_many/insert) scoped a `society_id`. Nuovo Match creato con `society_id` popolato.
+
+✅ **Endpoint maintenance** aggiunto: `POST /api/admin/maintenance/backfill-match-society-ids` — assegna `society_id` ai match esistenti senza society_id, ricavandolo da `team_id` → `team.society_id`. **Da eseguire una volta in produzione dopo il deploy.**
+
 🛑 **Ancora pendente (server.py)**: 40+ query `db.settings.find_one({"type": "society"})` senza filtro `society_id` (logo PDF, threshold computations, audit logs, intestazioni documenti GDPR). Da sistemare prima di onboarding pubblico.
 
 ### 🔴 P0 ancora da gestire
