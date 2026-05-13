@@ -55,15 +55,35 @@ def looks_like_society_name(full_name: str) -> bool:
 
 
 async def is_society_institutional_email(user_email: str, society_id: Optional[str] = None) -> bool:
-    """Return True if the user's email matches the society's institutional email
-    or PEC stored in the society settings. Such accounts MUST NOT declare as
-    Legal Representative because the email is institutional, not personal.
+    """Return True if the user's email is institutional (NOT a physical person)
+    and therefore MUST NOT declare/receive the Legal Representative role.
 
-    If society_id is given, looks up the settings of that specific society
-    (multi-tenant).
+    Two-layer detection:
+    1) Function-role prefixes (info@, assistenza@, support@, noreply@, admin@,
+       segreteria@, amministrazione@, presidenza@, direzione@, comunicazione@,
+       eventi@, contatti@, contact@, mail@, postmaster@, hello@, ufficio@,
+       sede@, staff@, redazione@, comunicazioni@) — universal, no DB lookup.
+    2) Society-specific match against the email/PEC stored in that society's
+       settings (multi-tenant safe).
     """
     if not user_email:
         return False
+    u = user_email.strip().lower()
+
+    # Layer 1: function-role prefixes that are NEVER physical persons
+    INSTITUTIONAL_PREFIXES = {
+        "info", "assistenza", "support", "noreply", "no-reply", "admin",
+        "segreteria", "amministrazione", "presidenza", "direzione",
+        "comunicazione", "comunicazioni", "eventi", "contatti", "contact",
+        "mail", "postmaster", "hello", "ufficio", "sede", "staff",
+        "redazione", "marketing", "iscrizioni", "tesseramento",
+        "tesoreria", "vicepresidenza", "segretaria",
+    }
+    local_part = u.split("@", 1)[0] if "@" in u else u
+    if local_part in INSTITUTIONAL_PREFIXES:
+        return True
+
+    # Layer 2: society-specific email/PEC match
     query = {"type": "society"}
     if society_id:
         query["society_id"] = society_id
@@ -73,7 +93,6 @@ async def is_society_institutional_email(user_email: str, society_id: Optional[s
     ) or {}
     society_email = (settings.get("email") or settings.get("society_email") or "").strip().lower()
     society_pec = (settings.get("pec") or settings.get("society_pec") or "").strip().lower()
-    u = user_email.strip().lower()
     return u != "" and (u == society_email or u == society_pec)
 
 
@@ -242,6 +261,8 @@ async def get_primary_admin_status(current_user=Depends(get_current_user)):
     declaration_signed = bool(primary_user and primary_user.get("primary_admin_declaration") in PRIMARY_DECLARATION_TYPES)
 
     # Admins that can RECEIVE delegation (only if caller is legal_rep + primary) - SCOPED PER SOCIETY
+    # Multi-tenant + institutional safety: exclude society-named accounts and society-email/PEC
+    # accounts (info@..., assistenza@..., pec@...). Only physical persons can hold the "scettro".
     admins = []
     can_delegate = is_current_primary and my_decl == "legal_representative"
     if can_delegate:
@@ -252,6 +273,11 @@ async def get_primary_admin_status(current_user=Depends(get_current_user)):
             delegate_q,
             {"_id": 0, "id": 1, "email": 1, "full_name": 1, "primary_admin_declaration": 1},
         ).sort("full_name", 1):
+            # Skip institutional accounts (society-named or society-email/PEC)
+            if looks_like_society_name(a.get("full_name", "")):
+                continue
+            if await is_society_institutional_email(a.get("email", ""), society_id):
+                continue
             # Exclude other legal_reps (shouldn't exist but defensive)
             if a.get("primary_admin_declaration") != "legal_representative":
                 a.pop("primary_admin_declaration", None)
