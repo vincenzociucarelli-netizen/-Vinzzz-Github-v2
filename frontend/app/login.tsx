@@ -152,15 +152,13 @@ export default function Login() {
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {societyLogo && (
-          <View style={styles.logoContainer}>
-            <Image
-              source={{ uri: societyLogo }}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
-        )}
+        <View style={styles.logoContainer}>
+          <Image
+            source={societyLogo ? { uri: societyLogo } : require('../assets/images/registrateam-logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
         <Text style={styles.title}>{societyName}</Text>
 
         {/* Mode selector tabs */}

@@ -108,6 +108,12 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - `/app/frontend/src/components/SocietyLogo.tsx` (HEAD probe + Image src usano `useAuthStore().user?.society_id`)
 - `login.tsx` resta senza society_id → mostra "RegistraTEAM" generico (corretto)
 
+### 🆕 Logo RegistraTEAM nella schermata di login (13/05/2026)
+- ✅ Aggiunto file `/app/frontend/assets/images/registrateam-logo.png` (PNG con sfondo trasparente, derivato dal JPG inviato dall'utente)
+- ✅ `login.tsx`: ora mostra **sempre** un logo:
+  - Se l'utente è già loggato in qualche società → logo società (via `?society_id=`)
+  - Altrimenti → logo RegistraTEAM (file statico locale, no chiamata API)
+
 🛑 **Ancora pendente (server.py)**: 40+ query `db.settings.find_one({"type": "society"})` senza filtro `society_id` (logo PDF, threshold computations, audit logs, intestazioni documenti GDPR). Da sistemare prima di onboarding pubblico.
 
 ### 🔴 P0 ancora da gestire
