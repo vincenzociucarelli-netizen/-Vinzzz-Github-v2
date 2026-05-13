@@ -20558,9 +20558,13 @@ async def delete_my_data(current_user = Depends(get_current_user)):
 @api_router.api_route("/society/card-fiscale", methods=["GET", "POST"])
 async def generate_fiscal_card(current_user = Depends(get_current_user)):
     """Genera immagine JPG biglietto da visita della societa - design professionale"""
-    society = await db.settings.find_one({"type": "society"})
-    if not society:
-        society = await db.societies.find_one({"id": current_user.get("society_id")})
+    _sid = current_user.get("society_id")
+    _q = {"type": "society"}
+    if _sid:
+        _q["society_id"] = _sid
+    society = await db.settings.find_one(_q)
+    if not society and _sid:
+        society = await db.societies.find_one({"id": _sid})
     if not society:
         raise HTTPException(status_code=404, detail="Societa non trovata")
     
@@ -20814,9 +20818,13 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
 @api_router.get("/society/card-bancaria")
 async def generate_bank_card(current_user = Depends(get_current_user)):
     """Genera immagine JPG con i dati bancari della societa"""
-    society = await db.settings.find_one({"type": "society"})
-    if not society:
-        society = await db.societies.find_one({"id": current_user.get("society_id")})
+    _sid = current_user.get("society_id")
+    _q = {"type": "society"}
+    if _sid:
+        _q["society_id"] = _sid
+    society = await db.settings.find_one(_q)
+    if not society and _sid:
+        society = await db.societies.find_one({"id": _sid})
     if not society:
         raise HTTPException(status_code=404, detail="Societa non trovata")
     
