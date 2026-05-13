@@ -78,6 +78,17 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 
 ⚠️ **CRITICO - Da verificare in produzione**: Vincenzo deve controllare che le impostazioni di PPG non siano state sovrascritte durante il test Sirio. Eventualmente recuperare da snapshot MongoDB Atlas.
 
+### 🆕 Fix Branding Leak su Pagina Login Pubblica (13/05/2026 — notte)
+🔴 **Bug**: aprendo `www.registrateam.it` (anche in incognito / browser mai usato), la pagina login mostrava logo + nome di **Sirio Perugia Volley Asd** invece del branding RegistraTEAM generico. Causa: chiamata anonima a `/api/settings/society` ritornava il primo record `{type:"society"}` trovato nel DB (= Sirio).
+
+✅ **Fix** (`routes/settings.py`):
+- `GET /settings/society` per richieste anonime → ora ritorna defaults **generici RegistraTEAM** (nome "RegistraTEAM", no logo, no dati specifici società)
+- `GET /settings/society/logo.png` per richieste anonime senza `?society_id=XXX` → 404 (no branding leak)
+- Per email embedding che hanno bisogno del logo specifico di una società, supporta query param `?society_id=XXX`
+- Idem per sport-image.png e (TODO) stamp-signature.png
+
+✅ **Verifica produzione**: dati PPG intatti (ragione sociale, CF, IBAN, indirizzo).
+
 🛑 **Ancora pendente (server.py)**: 40+ query `db.settings.find_one({"type": "society"})` senza filtro `society_id` (logo PDF, threshold computations, audit logs, intestazioni documenti GDPR). Da sistemare prima di onboarding pubblico.
 
 ### 🔴 P0 ancora da gestire

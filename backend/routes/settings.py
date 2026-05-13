@@ -7,6 +7,7 @@ Society and Stripe settings routes.
 import base64
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 
 from database import db
@@ -19,13 +20,15 @@ router = APIRouter()
 
 
 @router.api_route("/settings/society/logo.png", methods=["GET", "HEAD"])
-async def get_society_logo_image(request: Request):
+async def get_society_logo_image(request: Request, society_id: Optional[str] = None):
     """Serve society logo as PNG image.
-    Public endpoint for email embedding. If authenticated, serve the logo of
-    the requester's society; otherwise fallback to first society (single-tenant
-    legacy compatibility).
+    Multi-tenant rules:
+    - Authenticated request → society from JWT
+    - Anonymous + explicit ?society_id=XXX query (used by email embedding) → that society
+    - Anonymous + no society_id (e.g. public /login page) → 404 (no branding leak)
     """
     query = {"type": "society"}
+    has_society_scope = False
     auth_header = request.headers.get("authorization") or ""
     if auth_header.lower().startswith("bearer "):
         try:
@@ -38,8 +41,15 @@ async def get_society_logo_image(request: Request):
                 u = await db.users.find_one({"id": uid}, {"_id": 0, "society_id": 1})
                 if u and u.get("society_id"):
                     query["society_id"] = u["society_id"]
+                    has_society_scope = True
         except Exception:
             pass
+    if not has_society_scope and society_id:
+        query["society_id"] = society_id
+        has_society_scope = True
+    if not has_society_scope:
+        # Public/anonymous request without explicit society → no branding leak
+        raise HTTPException(status_code=404, detail="Logo non trovato")
     settings = await db.settings.find_one(query, {"_id": 0, "logo": 1})
     if not settings or not settings.get("logo"):
         raise HTTPException(status_code=404, detail="Logo non trovato")
@@ -48,9 +58,10 @@ async def get_society_logo_image(request: Request):
 
 
 @router.get("/settings/society/sport-image.png")
-async def get_society_sport_image(request: Request):
+async def get_society_sport_image(request: Request, society_id: Optional[str] = None):
     """Serve society sport image as PNG image. Public endpoint with short cache."""
     query = {"type": "society"}
+    has_society_scope = False
     auth_header = request.headers.get("authorization") or ""
     if auth_header.lower().startswith("bearer "):
         try:
@@ -63,8 +74,14 @@ async def get_society_sport_image(request: Request):
                 u = await db.users.find_one({"id": uid}, {"_id": 0, "society_id": 1})
                 if u and u.get("society_id"):
                     query["society_id"] = u["society_id"]
+                    has_society_scope = True
         except Exception:
             pass
+    if not has_society_scope and society_id:
+        query["society_id"] = society_id
+        has_society_scope = True
+    if not has_society_scope:
+        raise HTTPException(status_code=404, detail="Sport image non trovata")
     settings = await db.settings.find_one(query, {"_id": 0, "sport_image": 1})
     if not settings or not settings.get("sport_image"):
         raise HTTPException(status_code=404, detail="Sport image non trovata")
@@ -116,6 +133,53 @@ async def get_society_settings(request: Request, include_images: bool = False):
     - /settings/society/sport-image.png
     - /settings/society/stamp-signature.png
     """
+    is_authenticated_request = False
+    auth_header_probe = request.headers.get("authorization") or ""
+    if auth_header_probe.lower().startswith("bearer "):
+        try:
+            import jwt as _jwt2
+            from auth_utils import SECRET_KEY as _SK2, ALGORITHM as _AL2
+            _payload2 = _jwt2.decode(auth_header_probe.split(" ", 1)[1].strip(), _SK2, algorithms=[_AL2])
+            _uid2 = _payload2.get("user_id")
+            if _uid2:
+                _u2 = await db.users.find_one({"id": _uid2}, {"_id": 0, "society_id": 1})
+                if _u2 and _u2.get("society_id"):
+                    is_authenticated_request = True
+        except Exception:
+            pass
+    # Multi-tenant safety: anonymous requests (public /login page on registrateam.it)
+    # MUST NOT see any specific society's branding. Return generic RegistraTEAM
+    # defaults so the public landing/login page looks like a SaaS, not a tenant.
+    if not is_authenticated_request:
+        return {
+            "name": "RegistraTEAM",
+            "logo": None,
+            "logo_size": 50,
+            "sport_image": None,
+            "athlete_roles": [],
+            "athlete_characteristics": [],
+            "dirigente_qualifications": [],
+            "venues": [],
+            "ragione_sociale": None,
+            "sport_praticato": None,
+            "address": None,
+            "postal_code": None,
+            "city": None,
+            "province": None,
+            "fiscal_code": None,
+            "partita_iva": None,
+            "phone": None,
+            "phone2": None,
+            "president_name": None,
+            "stamp_signature": None,
+            "iban": None,
+            "bank_name": None,
+            "affiliations": [],
+            "has_logo": False,
+            "has_sport_image": False,
+            "has_stamp_signature": False,
+        }
+
     query = {"type": "society"}
     auth_header = request.headers.get("authorization") or ""
     if auth_header.lower().startswith("bearer "):
