@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Image, StyleSheet } from 'react-native';
 import api from '../services/api';
+import { useAuthStore } from '../store/authStore';
 
 interface SocietyLogoProps {
   defaultSize?: number;
@@ -9,6 +10,8 @@ interface SocietyLogoProps {
 export default function SocietyLogo({ defaultSize = 40 }: SocietyLogoProps) {
   const [hasLogo, setHasLogo] = useState<boolean>(false);
   const [size, setSize] = useState<number>(defaultSize);
+  const user = useAuthStore((state) => state.user);
+  const societyIdQuery = user?.society_id ? `?society_id=${user.society_id}` : '';
 
   useEffect(() => {
     const loadLogo = async () => {
@@ -22,7 +25,7 @@ export default function SocietyLogo({ defaultSize = 40 }: SocietyLogoProps) {
         // (response.data.logo will be null in the light response, so we probe the endpoint)
         try {
           const head = await fetch(
-            `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png`,
+            `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png${societyIdQuery}`,
             { method: 'HEAD' }
           );
           setHasLogo(head.ok);
@@ -34,7 +37,7 @@ export default function SocietyLogo({ defaultSize = 40 }: SocietyLogoProps) {
       }
     };
     loadLogo();
-  }, []);
+  }, [societyIdQuery]);
 
   if (!hasLogo) {
     return null;
@@ -43,7 +46,7 @@ export default function SocietyLogo({ defaultSize = 40 }: SocietyLogoProps) {
   return (
     <View style={[styles.container, { width: size, height: size }]}>
       <Image
-        source={{ uri: `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png` }}
+        source={{ uri: `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png${societyIdQuery}` }}
         style={[styles.logo, { width: size, height: size, borderRadius: size / 2 }]}
         resizeMode="cover"
       />

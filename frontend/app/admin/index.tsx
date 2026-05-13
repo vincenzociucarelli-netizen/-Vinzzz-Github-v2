@@ -380,7 +380,7 @@ export default function AdminDashboard() {
         <View style={styles.headerTopRow}>
           {(society.has_logo || society.logo) && (
             <Image
-              source={{ uri: `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png` }}
+              source={{ uri: `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png${user?.society_id ? `?society_id=${user.society_id}` : ''}` }}
               style={styles.headerLogo}
               resizeMode="cover"
             />
@@ -881,7 +881,7 @@ export default function AdminDashboard() {
             <View style={[styles.menuIcon, { backgroundColor: '#E8F4FD' }]}>
               {(society.has_logo || society.logo) ? (
                 <Image 
-                  source={{ uri: `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png` }}
+                  source={{ uri: `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png${user?.society_id ? `?society_id=${user.society_id}` : ''}` }}
                   style={{ width: 40, height: 40, borderRadius: 8 }}
                   resizeMode="contain"
                 />
@@ -970,7 +970,7 @@ export default function AdminDashboard() {
             <View style={[styles.menuIcon, { backgroundColor: '#F3E5F5' }]}>
               {(society.has_sport_image || society.sport_image) ? (
                 <Image 
-                  source={{ uri: `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/sport-image.png` }}
+                  source={{ uri: `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/sport-image.png${user?.society_id ? `?society_id=${user.society_id}` : ''}` }}
                   style={{ width: 40, height: 40, borderRadius: 8 }}
                   resizeMode="contain"
                 />

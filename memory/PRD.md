@@ -83,11 +83,30 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 
 ✅ **Fix** (`routes/settings.py`):
 - `GET /settings/society` per richieste anonime → ora ritorna defaults **generici RegistraTEAM** (nome "RegistraTEAM", no logo, no dati specifici società)
-- `GET /settings/society/logo.png` per richieste anonime senza `?society_id=XXX` → 404 (no branding leak)
-- Per email embedding che hanno bisogno del logo specifico di una società, supporta query param `?society_id=XXX`
-- Idem per sport-image.png e (TODO) stamp-signature.png
+- `GET /settings/society/logo.png` per richieste anonime senza `?society_id=XXX` → 404 (no branding leak); accetta `?society_id=XXX` per email embedding
+- `GET /settings/society/sport-image.png` per richieste anonime → 404; accetta `?society_id=XXX`
+- Idem per richieste anonime di `/settings/society` payload completo
 
 ✅ **Verifica produzione**: dati PPG intatti (ragione sociale, CF, IBAN, indirizzo).
+
+### 🆕 Ripristino dati PPG sovrascritti (13/05/2026 — notte tardi)
+🔴 **Bug confermato via curl prod**: il record `settings` con `society_id=PPG` aveva ricevuto sovrascrittura dei campi da Sirio (bug pre-fix `PATCH /settings/society` senza filtro `society_id`).
+
+✅ **Ripristino via API**: nome, ragione sociale, CF, P.IVA, indirizzo, IBAN, telefono (347/8111019), email, PEC, affiliazioni FIPAV/FIVB ripristinati.
+
+### 🆕 Fix Biglietti da Visita multi-tenant + Logo nel menu admin (13/05/2026 — notte tardi)
+🔴 **Bug**: endpoint `/society/card-fiscale` e `/society/card-bancaria` (generano JPG biglietti da visita) caricavano dati di PPG anche quando l'admin loggato era Sirio. Causa: `db.settings.find_one({"type":"society"})` senza filtro `society_id`.
+
+✅ **Fix backend** (`server.py`):
+- `/society/card-fiscale` (riga 20558) → filtra per `current_user.society_id`
+- `/society/card-bancaria` (riga 20814) → filtra per `current_user.society_id`
+
+🔴 **Effetto collaterale del fix anonimo `/logo.png`**: i tag `<Image>` di React Native NON inviano automaticamente il token JWT → backend riceveva richieste anonime → 404 → logo società non visibile nei menu admin.
+
+✅ **Fix frontend**: tutti i `<Image source={{uri: ".../logo.png"}}>` ora passano `?society_id=${user.society_id}` come query param:
+- `/app/frontend/app/admin/index.tsx` (3 occorrenze: header, society menu card, sport-image card)
+- `/app/frontend/src/components/SocietyLogo.tsx` (HEAD probe + Image src usano `useAuthStore().user?.society_id`)
+- `login.tsx` resta senza society_id → mostra "RegistraTEAM" generico (corretto)
 
 🛑 **Ancora pendente (server.py)**: 40+ query `db.settings.find_one({"type": "society"})` senza filtro `society_id` (logo PDF, threshold computations, audit logs, intestazioni documenti GDPR). Da sistemare prima di onboarding pubblico.
 
