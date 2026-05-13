@@ -6613,7 +6613,10 @@ async def get_my_athletes(current_user = Depends(get_current_user)):
             ]
         }).to_list(1000)
     elif current_user["role"] in [UserRole.ADMIN, UserRole.COACH]:
-        athletes = await db.athletes.find().to_list(1000)
+        # Multi-tenant: scope by society_id to avoid cross-tenant data leak.
+        _sid = current_user.get("society_id")
+        _q = {"society_id": _sid} if _sid else {}
+        athletes = await db.athletes.find(_q).to_list(1000)
     else:
         raise HTTPException(status_code=403, detail="Accesso negato")
     
@@ -7434,7 +7437,12 @@ async def get_registrations_history(current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin")
     
-    all_athletes = await db.athletes.find({"created_at": {"$exists": True, "$ne": None}}).sort("created_at", -1).to_list(5000)
+    # Multi-tenant: scope to admin's society to prevent cross-tenant data leak.
+    society_id = current_user.get("society_id")
+    query = {"created_at": {"$exists": True, "$ne": None}}
+    if society_id:
+        query["society_id"] = society_id
+    all_athletes = await db.athletes.find(query).sort("created_at", -1).to_list(5000)
     
     registrations = []
     for a in all_athletes:
@@ -9601,8 +9609,10 @@ async def upload_self_certificate(request: dict, current_user = Depends(get_curr
     expiring_today = []
     expiring_soon = []
     
-    # Get all certificates
-    certificates = await db.certificates.find({}).to_list(1000)
+    # Get all certificates (multi-tenant scope)
+    _sid_c = current_user.get("society_id")
+    _q_c = {"society_id": _sid_c} if _sid_c else {}
+    certificates = await db.certificates.find(_q_c).to_list(1000)
     
     for cert in certificates:
         expiry = cert.get("expiry_date")
@@ -12170,11 +12180,17 @@ async def export_coaches(current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può esportare")
     
-    users = await db.users.find({"role": UserRole.COACH}).to_list(1000)
+    _sid = current_user.get("society_id")
+    _q_users = {"role": UserRole.COACH}
+    _q_teams = {}
+    if _sid:
+        _q_users["society_id"] = _sid
+        _q_teams["society_id"] = _sid
+    users = await db.users.find(_q_users).to_list(1000)
     clean_mongo_docs(users)
     
     # Batch fetch all teams to avoid N+1 queries
-    teams_list = await db.teams.find().to_list(1000)
+    teams_list = await db.teams.find(_q_teams).to_list(1000)
     teams_dict = {t["id"]: t for t in teams_list}
     
     # Get team names for assigned teams
@@ -13892,8 +13908,12 @@ async def get_all_coaches_threshold_status(
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere lo stato di tutti i coach")
     
-    # Get all coaches
-    coaches = await db.users.find({"role": UserRole.COACH}).to_list(100)
+    # Get all coaches (multi-tenant scope)
+    _sid = current_user.get("society_id")
+    _q = {"role": UserRole.COACH}
+    if _sid:
+        _q["society_id"] = _sid
+    coaches = await db.users.find(_q).to_list(100)
     
     result = []
     for coach in coaches:
@@ -13960,7 +13980,9 @@ async def get_all_coaches_threshold_status(
 @api_router.get("/championships")
 async def get_championships(current_user = Depends(get_current_user)):
     """Get all championships"""
-    championships = await db.championships.find({}).to_list(100)
+    _sid = current_user.get("society_id")
+    _q = {"society_id": _sid} if _sid else {}
+    championships = await db.championships.find(_q).to_list(100)
     clean_mongo_docs(championships)
     return championships
 
@@ -18136,7 +18158,11 @@ async def get_collaboratori(current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere i collaboratori")
     
-    collaboratori = await db.users.find({"role": UserRole.COLLABORATORE}).to_list(100)
+    _sid = current_user.get("society_id")
+    _q = {"role": UserRole.COLLABORATORE}
+    if _sid:
+        _q["society_id"] = _sid
+    collaboratori = await db.users.find(_q).to_list(100)
     clean_mongo_docs(collaboratori)
     return {"collaboratori": collaboratori}
 

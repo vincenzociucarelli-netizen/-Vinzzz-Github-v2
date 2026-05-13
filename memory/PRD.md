@@ -128,6 +128,29 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 
 ✅ **Endpoint maintenance** aggiunto: `POST /api/admin/maintenance/backfill-match-society-ids` — assegna `society_id` ai match esistenti senza society_id, ricavandolo da `team_id` → `team.society_id`. **Da eseguire una volta in produzione dopo il deploy.**
 
+### 🆕 Audit Multi-Tenancy Parziale (13/05/2026 — sera)
+🔴 **Bug critico osservato**: la pagina "Iscrizioni Atleti" admin di "La Tua Società" mostrava atleti di PPG. Causa: `GET /athletes/registrations-history` non filtrava per `society_id`.
+
+✅ **Fix applicati** (`server.py`):
+- `GET /athletes/registrations-history` → scope per `society_id`
+- `GET /athletes` (admin/coach branch alla riga 6616) → scope per `society_id`
+- `GET /certificates/expiring` (line 9613, expiring_today/soon) → scope per `society_id`
+- `GET /export/coaches` → scope per `society_id` (sia users.find che teams.find)
+- `GET /admin/coaches-threshold-status/{year}` → scope per `society_id`
+- `GET /championships` → scope per `society_id`
+- `GET /collaboratori` → scope per `society_id`
+
+🛡️ **Anche anti-istituzionale** (`routes/primary_admin.py`):
+- `delegable_admins` ora esclude account società-named e prefissi istituzionali (`info@`, `assistenza@`, etc.)
+- `is_society_institutional_email` ora detect anche prefissi funzionali universali (`info`, `assistenza`, `support`, `noreply`, `segreteria`, `amministrazione`, `presidenza`, `direzione`, `comunicazione`, `eventi`, `contatti`, `ufficio`, `staff`, `marketing`, `iscrizioni`, `tesseramento`, `tesoreria`, ecc.)
+
+🛑 **Ancora pendente (~50 query)**: ci sono ancora endpoint senza filtro `society_id` in `server.py` (signed_documents lists, attendances stats, compensation aggregates). Da fixare in audit sistematico.
+
+### 🆕 Seed Demo "La Tua Società ASD" (13/05/2026 — sera)
+- Cast pietre preziose creato via API: 3 coach (Rubino, Smeraldo, Zaffiro), 2 dirigenti (Corallo, Ambra), 1 collaboratore (Onice), 5 atleti minori (Diamante, Topazio, Ametista, Quarzo, Opale) + 5 genitori, 2 atleti maggiorenni (Granato, Perla), 3 squadre (U.14/U.16/Prima Div.), 3 partite upcoming
+- Script di seed in `/tmp/seed_la_tua_societa.py`
+- Demo password: `Demo1234` (tutti gli utenti escluso admin Enzo Bianchi Test1234)
+
 🛑 **Ancora pendente (server.py)**: 40+ query `db.settings.find_one({"type": "society"})` senza filtro `society_id` (logo PDF, threshold computations, audit logs, intestazioni documenti GDPR). Da sistemare prima di onboarding pubblico.
 
 ### 🔴 P0 ancora da gestire
