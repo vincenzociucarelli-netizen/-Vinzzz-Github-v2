@@ -246,13 +246,11 @@ export default function Login() {
               <Text style={styles.linkText}>Non hai un account? Registrati</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.linkButton}
-              onPress={() => router.push('/register-society')}
-              data-testid="link-register-society"
-            >
-              <Text style={styles.linkText}>Sei una nuova società? Registrati qui</Text>
-            </TouchableOpacity>
+            {/* Link "Sei una nuova società? Registrati qui" temporaneamente nascosto:
+                la piattaforma è in fase di demo controllata con 3 società attive
+                (PPG, Sirio, "La Tua Società" demo per amici). Riattivare quando
+                l'audit multi-tenancy completo sarà finito. La pagina
+                /register-society resta funzionante per accesso diretto via URL. */}
           </View>
         ) : (
           <View style={styles.form}>
