@@ -99,11 +99,34 @@ export default function AdminDashboard() {
   const [sendingInvite, setSendingInvite] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: '', first_name: '', last_name: '' });
   const [proEnabled, setProEnabled] = useState<boolean>(false);
+  // Logo probe: try to fetch the society logo URL once and toggle state.
+  // Works regardless of has_logo flag (some backends don't set it).
+  const [logoOk, setLogoOk] = useState<boolean>(false);
+  const logoUrl = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png${user?.society_id ? `?society_id=${user.society_id}` : ''}`;
 
   // Refresh user data on mount to get profile_photo
   useEffect(() => {
     refreshUser();
   }, []);
+
+  // Probe society logo URL once when society_id is known. If HEAD returns OK,
+  // enable the logo display. Robust against backend versions that don't expose
+  // the `has_logo` flag on the settings payload.
+  useEffect(() => {
+    const probeLogo = async () => {
+      if (!user?.society_id) {
+        setLogoOk(false);
+        return;
+      }
+      try {
+        const res = await fetch(logoUrl, { method: 'HEAD' });
+        setLogoOk(res.ok);
+      } catch {
+        setLogoOk(false);
+      }
+    };
+    probeLogo();
+  }, [user?.society_id]);
 
   // Helper function for API calls with retry
   const fetchWithRetry = async (url: string, defaultValue: any, retries = 2): Promise<any> => {
@@ -376,20 +399,23 @@ export default function AdminDashboard() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        {/* Society Name Row */}
+        {/* Society Name Row + small logo on right side */}
         <View style={styles.headerTopRow}>
-          {(society.has_logo || society.logo) && (
-            <Image
-              source={{ uri: `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png${user?.society_id ? `?society_id=${user.society_id}` : ''}` }}
-              style={styles.headerLogo}
-              resizeMode="cover"
-            />
-          )}
-          <Text style={styles.headerTitle} numberOfLines={1}>{society.name}</Text>
+          <Text style={styles.headerTitle} numberOfLines={2}>{society.name}</Text>
         </View>
         
         {/* Icons Row */}
         <View style={styles.headerButtons}>
+          {/* Society mini logo (round, same size as other action buttons) */}
+          {logoOk && (
+            <View style={styles.headerIconBtn}>
+              <Image
+                source={{ uri: logoUrl }}
+                style={styles.headerMiniLogo}
+                resizeMode="cover"
+              />
+            </View>
+          )}
           {/* Notifications Bell */}
           <TouchableOpacity 
             onPress={() => router.push('/admin/notifications')} 
@@ -879,9 +905,9 @@ export default function AdminDashboard() {
             onPress={() => router.push('/admin/society-profile')}
           >
             <View style={[styles.menuIcon, { backgroundColor: '#E8F4FD' }]}>
-              {(society.has_logo || society.logo) ? (
+              {logoOk ? (
                 <Image 
-                  source={{ uri: `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png${user?.society_id ? `?society_id=${user.society_id}` : ''}` }}
+                  source={{ uri: logoUrl }}
                   style={{ width: 40, height: 40, borderRadius: 8 }}
                   resizeMode="contain"
                 />
@@ -1295,17 +1321,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
+    minHeight: 50,
   },
   headerLogo: {
     width: 50,
     height: 50,
     marginRight: 12,
   },
+  headerMiniLogo: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#fff',
     flex: 1,
+    lineHeight: 30,
   },
   headerButtons: {
     flexDirection: 'row',

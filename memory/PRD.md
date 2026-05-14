@@ -151,6 +151,25 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Script di seed in `/tmp/seed_la_tua_societa.py`
 - Demo password: `Demo1234` (tutti gli utenti escluso admin Enzo Bianchi Test1234)
 
+### 🆕 UI Admin Dashboard — Header & Logo (14/05/2026)
+🎨 **3 modifiche su richiesta utente** in `/app/frontend/app/admin/index.tsx`:
+
+**(A) Nome società più grande, wrap su 2 righe se lungo**
+- `styles.headerTitle.fontSize` da 20 → 26
+- `lineHeight` 30
+- `numberOfLines={2}` invece di 1 (rimane su una riga se breve, va a capo se lungo)
+
+**(B) Logo società piccolo (rotondo) accanto alle icone azione a destra**
+- Aggiunto nuovo button rotondo bianco (40x40) con logo società 36x36 centrato
+- Si affianca a 🔔 Notifiche, 💼 Briefcase, ⚙️ Settings, 🚪 Logout
+- Visibile solo se il logo esiste (`logoOk` state)
+
+**(C) Logo nella card "Profilo Società" (sezione Gestione) — fix probe**
+- Bug: il backend in produzione non espone `has_logo: true` (versione legacy senza il fix di stanotte), quindi il check `(society.has_logo || society.logo)` falliva → mostrava sempre l'icona generica 🏢
+- ✅ Fix: nuovo state `logoOk` con HEAD probe diretto sull'endpoint `/api/settings/society/logo.png?society_id=...`. Indipendente da `has_logo`, robusto a versioni backend miste.
+
+🔧 Strategia tecnica: un solo `useEffect` fa HEAD probe quando `user.society_id` è disponibile, poi tutte le 2 visualizzazioni del logo (mini round + card profilo) si attivano insieme.
+
 🛑 **Ancora pendente (server.py)**: 40+ query `db.settings.find_one({"type": "society"})` senza filtro `society_id` (logo PDF, threshold computations, audit logs, intestazioni documenti GDPR). Da sistemare prima di onboarding pubblico.
 
 ### 🔴 P0 ancora da gestire
