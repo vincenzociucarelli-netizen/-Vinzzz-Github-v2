@@ -99,9 +99,10 @@ export default function AdminDashboard() {
   const [sendingInvite, setSendingInvite] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: '', first_name: '', last_name: '' });
   const [proEnabled, setProEnabled] = useState<boolean>(false);
-  // Logo probe: try to fetch the society logo URL once and toggle state.
-  // Works regardless of has_logo flag (some backends don't set it).
-  const [logoOk, setLogoOk] = useState<boolean>(false);
+  // Optimistic logo rendering: try to load the image first; only hide on real error.
+  // This avoids issues with HEAD probes failing on some backend versions while
+  // GET requests work fine.
+  const [logoOk, setLogoOk] = useState<boolean>(true);
   const logoUrl = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png${user?.society_id ? `?society_id=${user.society_id}` : ''}`;
 
   // Refresh user data on mount to get profile_photo
@@ -109,23 +110,10 @@ export default function AdminDashboard() {
     refreshUser();
   }, []);
 
-  // Probe society logo URL once when society_id is known. If HEAD returns OK,
-  // enable the logo display. Robust against backend versions that don't expose
-  // the `has_logo` flag on the settings payload.
+  // When society_id changes (e.g. after refresh), reset logoOk to true so the
+  // <Image> is tried again. onError handler will hide it if loading fails.
   useEffect(() => {
-    const probeLogo = async () => {
-      if (!user?.society_id) {
-        setLogoOk(false);
-        return;
-      }
-      try {
-        const res = await fetch(logoUrl, { method: 'HEAD' });
-        setLogoOk(res.ok);
-      } catch {
-        setLogoOk(false);
-      }
-    };
-    probeLogo();
+    setLogoOk(true);
   }, [user?.society_id]);
 
   // Helper function for API calls with retry
@@ -406,6 +394,7 @@ export default function AdminDashboard() {
               source={{ uri: logoUrl }}
               style={styles.headerBigLogo}
               resizeMode="contain"
+              onError={() => setLogoOk(false)}
             />
           ) : (
             <View style={styles.headerBigLogo} />
@@ -417,7 +406,7 @@ export default function AdminDashboard() {
               style={styles.headerTitle}
               numberOfLines={2}
               adjustsFontSizeToFit
-              minimumFontScale={0.7}
+              minimumFontScale={0.6}
             >
               {society.name}
             </Text>
@@ -918,6 +907,7 @@ export default function AdminDashboard() {
                   source={{ uri: logoUrl }}
                   style={{ width: 40, height: 40, borderRadius: 8 }}
                   resizeMode="contain"
+                  onError={() => setLogoOk(false)}
                 />
               ) : (
                 <Text style={{ fontSize: 26 }}>{Icons.business}</Text>
@@ -1323,17 +1313,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#007AFF',
     paddingTop: 50,
     paddingBottom: 16,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   headerMainRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 8,
   },
   headerBigLogo: {
-    width: 92,
-    height: 92,
+    width: 80,
+    height: 80,
   },
   headerRightCol: {
     flex: 1,
