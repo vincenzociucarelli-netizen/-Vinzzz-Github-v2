@@ -399,54 +399,62 @@ export default function AdminDashboard() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        {/* Society Name Row + small logo on right side */}
-        <View style={styles.headerTopRow}>
-          <Text style={styles.headerTitle} numberOfLines={2}>{society.name}</Text>
-        </View>
-        
-        {/* Icons Row */}
-        <View style={styles.headerButtons}>
-          {/* Society mini logo (round, same size as other action buttons) */}
-          {logoOk && (
-            <View style={styles.headerIconBtn}>
-              <Image
-                source={{ uri: logoUrl }}
-                style={styles.headerMiniLogo}
-                resizeMode="cover"
-              />
-            </View>
+        <View style={styles.headerMainRow}>
+          {/* Society logo on the LEFT, no white circle, scaled to fit blue band */}
+          {logoOk ? (
+            <Image
+              source={{ uri: logoUrl }}
+              style={styles.headerBigLogo}
+              resizeMode="contain"
+            />
+          ) : (
+            <View style={styles.headerBigLogo} />
           )}
-          {/* Notifications Bell */}
-          <TouchableOpacity 
-            onPress={() => router.push('/admin/notifications')} 
-            style={styles.headerIconBtn}
-          >
-            <Text style={{ fontSize: 20 }}>🔔</Text>
-            {unreadNotifications > 0 && (
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>
-                  {unreadNotifications > 9 ? '9+' : unreadNotifications}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-          {/* Switch to Dirigente button — nascosto per account istituzionali */}
-          {!(user as any)?.is_institutional_account && (
-            <TouchableOpacity 
-              onPress={() => router.replace('/dirigente')} 
-              style={styles.headerIconBtn}
+          
+          {/* Right column: title (top, right-aligned) + 4 action icons below */}
+          <View style={styles.headerRightCol}>
+            <Text
+              style={styles.headerTitle}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
             >
-              <Text style={{ fontSize: 18 }}>{Icons.briefcase}</Text>
-            </TouchableOpacity>
-          )}
-          {/* Settings button */}
-          <TouchableOpacity onPress={() => router.push('/admin/settings')} style={styles.headerIconBtn}>
-            <Text style={{ fontSize: 20 }}>{Icons.settings}</Text>
-          </TouchableOpacity>
-          {/* Logout button */}
-          <TouchableOpacity onPress={handleLogout} style={styles.headerIconBtn}>
-            <Text style={{ fontSize: 20 }}>{Icons.logout}</Text>
-          </TouchableOpacity>
+              {society.name}
+            </Text>
+            <View style={styles.headerButtons}>
+              {/* Notifications Bell */}
+              <TouchableOpacity 
+                onPress={() => router.push('/admin/notifications')} 
+                style={styles.headerIconBtn}
+              >
+                <Text style={{ fontSize: 20 }}>🔔</Text>
+                {unreadNotifications > 0 && (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>
+                      {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              {/* Switch to Dirigente button — nascosto per account istituzionali */}
+              {!(user as any)?.is_institutional_account && (
+                <TouchableOpacity 
+                  onPress={() => router.replace('/dirigente')} 
+                  style={styles.headerIconBtn}
+                >
+                  <Text style={{ fontSize: 18 }}>{Icons.briefcase}</Text>
+                </TouchableOpacity>
+              )}
+              {/* Settings button */}
+              <TouchableOpacity onPress={() => router.push('/admin/settings')} style={styles.headerIconBtn}>
+                <Text style={{ fontSize: 20 }}>{Icons.settings}</Text>
+              </TouchableOpacity>
+              {/* Logout button */}
+              <TouchableOpacity onPress={handleLogout} style={styles.headerIconBtn}>
+                <Text style={{ fontSize: 20 }}>{Icons.logout}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </View>
 
@@ -1317,6 +1325,21 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     paddingHorizontal: 20,
   },
+  headerMainRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  headerBigLogo: {
+    width: 92,
+    height: 92,
+  },
+  headerRightCol: {
+    flex: 1,
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
   headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1334,16 +1357,17 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   headerTitle: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#fff',
-    flex: 1,
-    lineHeight: 30,
+    textAlign: 'right',
+    lineHeight: 32,
+    marginBottom: 10,
   },
   headerButtons: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 16,
+    gap: 8,
   },
   headerBtn: {
     padding: 4,
