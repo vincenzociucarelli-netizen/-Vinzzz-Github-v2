@@ -1317,7 +1317,7 @@ const styles = StyleSheet.create({
   },
   headerMainRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 8,
   },
@@ -1328,7 +1328,8 @@ const styles = StyleSheet.create({
   headerRightCol: {
     flex: 1,
     alignItems: 'flex-end',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    minHeight: 80,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -1347,12 +1348,12 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: 'bold',
     color: '#fff',
     textAlign: 'right',
-    lineHeight: 32,
-    marginBottom: 10,
+    lineHeight: 34,
+    marginBottom: 0,
   },
   headerButtons: {
     flexDirection: 'row',
