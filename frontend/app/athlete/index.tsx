@@ -96,6 +96,7 @@ export default function AthleteScreen() {
   const [certValidityMonthsAthlete, setCertValidityMonthsAthlete] = useState('12');
   const [savingCertAthlete, setSavingCertAthlete] = useState(false);
   const [showCertForm, setShowCertForm] = useState(false);
+  const [showUpcomingAthlete, setShowUpcomingAthlete] = useState(false);
   const [societyEmail, setSocietyEmail] = useState('');
   
   // Notifications state
@@ -1293,10 +1294,23 @@ export default function AthleteScreen() {
           ].map(section => {
             const items = (commitments as any)[section.key] as any[];
             if (!items || items.length === 0) return null;
+            const isUpcoming = section.key === 'upcoming';
+            const isCollapsed = isUpcoming && !showUpcomingAthlete;
             return (
               <View key={section.key} style={{ marginBottom: 10 }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#666', marginBottom: 6 }}>{section.label}</Text>
-                {items.map((item, idx) => (
+                {isUpcoming ? (
+                  <TouchableOpacity
+                    onPress={() => setShowUpcomingAthlete(!showUpcomingAthlete)}
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6 }}
+                    data-testid="athlete-upcoming-toggle"
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#666' }}>{section.label} ({items.length})</Text>
+                    <Ionicons name={showUpcomingAthlete ? 'chevron-up' : 'chevron-down'} size={18} color="#007AFF" />
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#666', marginBottom: 6 }}>{section.label}</Text>
+                )}
+                {!isCollapsed && items.map((item, idx) => (
                   <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 6, gap: 8 }}>
                     <Ionicons name={item.type === 'training' ? 'fitness' : 'trophy'} size={16} color={item.type === 'training' ? '#007AFF' : '#FF9500'} style={{ marginTop: 2 }} />
                     <View style={{ flex: 1 }}>

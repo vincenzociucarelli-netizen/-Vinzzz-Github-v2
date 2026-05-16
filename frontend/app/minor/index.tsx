@@ -113,6 +113,7 @@ export default function MinorDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [data, setData] = useState<DashboardData | null>(null);
   const [showQR, setShowQR] = useState(false);
+  const [showUpcomingMinor, setShowUpcomingMinor] = useState(false);
   const [showPersonalize, setShowPersonalize] = useState(false);
   const [savingPersonalization, setSavingPersonalization] = useState(false);
 
@@ -454,10 +455,23 @@ export default function MinorDashboard() {
           ].map(section => {
             const items = (data.commitments as any)[section.key] as any[];
             if (!items || items.length === 0) return null;
+            const isUpcoming = section.key === 'upcoming';
+            const isCollapsed = isUpcoming && !showUpcomingMinor;
             return (
               <View key={section.key} style={{ marginBottom: 10 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#666', marginTop: 8, marginBottom: 4 }}>{section.label}</Text>
-                {items.map((item, idx) => (
+                {isUpcoming ? (
+                  <TouchableOpacity
+                    onPress={() => setShowUpcomingMinor(!showUpcomingMinor)}
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 6, marginTop: 8 }}
+                    data-testid="minor-upcoming-toggle"
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#666' }}>{section.label} ({items.length})</Text>
+                    <Ionicons name={showUpcomingMinor ? 'chevron-up' : 'chevron-down'} size={18} color="#007AFF" />
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#666', marginTop: 8, marginBottom: 4 }}>{section.label}</Text>
+                )}
+                {!isCollapsed && items.map((item, idx) => (
                   <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 6, gap: 8 }}>
                     <Ionicons name={item.type === 'training' ? 'fitness' : 'trophy'} size={16} color={item.type === 'training' ? '#007AFF' : '#FF9500'} style={{ marginTop: 2 }} />
                     <View style={{ flex: 1 }}>

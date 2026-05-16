@@ -237,6 +237,16 @@ trial 🟠 "In Prova"
 - Mongo: tutte query pesanti escludono `athlete_photo`, `logo`, `signature_image`, `gdpr_signature_image_data`. **MA** quando si filtrano campi specifici per performance, ricordarsi di INCLUDERE: `place_of_birth`, `birth_place`, `birth_province`, `province_of_birth`, `country_of_birth` (vedi bug del 07/05 sulla firma trial).
 - Cache JWT browser: per test multi-utente sullo stesso device, usare SEMPRE finestre incognito separate per evitare confusione di token.
 
+### 🆕 Collapsible "IMPEGNI SUCCESSIVI" (16/05/2026)
+- ✅ Sezione "IMPEGNI SUCCESSIVI" (oltre 3 giorni) ora **collassabile** su tutte le dashboard role:
+  - `parent/index.tsx` (già esistente, `showUpcoming`)
+  - `athlete/index.tsx` (NEW, `showUpcomingAthlete`)
+  - `minor/index.tsx` (NEW, `showUpcomingMinor`)
+- Default: **collassata** — mostra header `IMPEGNI SUCCESSIVI (N)` con chevron giù
+- Click → espande sezione con dettagli completi
+- TestIDs: `athlete-upcoming-toggle`, `minor-upcoming-toggle`
+- ✅ Backend già filtra (sessione precedente): allenamenti annullati per "Gara" sono completamente nascosti (non più mostrati come "Annullato")
+
 ## Architettura File Chiave
 ```
 /app
