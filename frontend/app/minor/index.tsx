@@ -8,6 +8,8 @@ import {
   RefreshControl,
   ActivityIndicator,
   Image,
+  Platform,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
@@ -86,6 +88,12 @@ interface DashboardData {
   recent_attendances: Array<{ id: string; date: string; check_in_time: string; training_slot?: string; team_name?: string }>;
   upcoming_matches: Array<{ id: string; date: string; time?: string; opponent?: string; venue?: string; home_away?: string }>;
   trial_info: { is_trial: boolean; trial_start_date?: string; trial_end_date?: string; trial_days_remaining?: number; waiting_first_attendance?: boolean } | null;
+  commitments?: {
+    today: any[];
+    tomorrow: any[];
+    day_after: any[];
+    upcoming: any[];
+  };
 }
 
 // Helper: get avatar emoji from lite_emoji (supports both old emoji and new avatar IDs)
@@ -431,6 +439,75 @@ export default function MinorDashboard() {
           <Text style={styles.statValue}>{data.stats.monthly_attendances}</Text>
         </View>
       </View>
+
+      {/* Prossimi Impegni 7 giorni - con annullamenti/modifiche */}
+      {data.commitments && (data.commitments.today.length + data.commitments.tomorrow.length + data.commitments.day_after.length + data.commitments.upcoming.length > 0) && (
+        <View style={styles.section} data-testid="minor-commitments-section">
+          <Text style={styles.sectionTitle}>
+            <Ionicons name="calendar" size={18} color="#333" /> Prossimi Impegni
+          </Text>
+          {[
+            { key: 'today', label: 'OGGI' },
+            { key: 'tomorrow', label: 'DOMANI' },
+            { key: 'day_after', label: 'DOPODOMANI' },
+            { key: 'upcoming', label: 'IMPEGNI SUCCESSIVI' },
+          ].map(section => {
+            const items = (data.commitments as any)[section.key] as any[];
+            if (!items || items.length === 0) return null;
+            return (
+              <View key={section.key} style={{ marginBottom: 10 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#666', marginTop: 8, marginBottom: 4 }}>{section.label}</Text>
+                {items.map((item, idx) => (
+                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 6, gap: 8 }}>
+                    <Ionicons name={item.type === 'training' ? 'fitness' : 'trophy'} size={16} color={item.type === 'training' ? '#007AFF' : '#FF9500'} style={{ marginTop: 2 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[{ fontSize: 14, fontWeight: '600', color: '#333' }, item.cancelled && { textDecorationLine: 'line-through', color: '#888' }]}>
+                        {item.type === 'training' ? `Allenamento ${item.team_name}${item.modified ? ' ✏️ Variato' : ''}` : item.title}
+                      </Text>
+                      {section.key === 'upcoming' && (
+                        <Text style={{ fontSize: 12, color: '#666' }}>📅 {item.date} - {item.day_name}</Text>
+                      )}
+                      {item.cancelled ? (
+                        item.reason === 'Gara' ? (
+                          <>
+                            <Text style={{ color: '#C0392B', fontWeight: '700', fontSize: 13, marginTop: 2 }}>
+                              ❌ ANNULLATO {item.time_start ? `(${item.time_start} - ${item.time_end})` : ''}
+                            </Text>
+                            <Text style={{ color: '#1565C0', fontWeight: '600', fontSize: 12, marginTop: 2 }}>c'è una gara</Text>
+                          </>
+                        ) : (
+                          <>
+                            <Text style={{ color: '#C0392B', fontWeight: '700', fontSize: 13, marginTop: 2 }}>
+                              ❌ ANNULLATO {item.time_start ? `(${item.time_start} - ${item.time_end})` : ''}
+                            </Text>
+                            <TouchableOpacity onPress={() => {
+                              const msg = item.reason ? `Allenamento annullato.\nMotivo: ${item.reason}` : 'Allenamento annullato.';
+                              if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Annullato', msg); }
+                            }}>
+                              <Text style={{ color: '#1565C0', fontWeight: '600', fontSize: 12, marginTop: 2, textDecorationLine: 'underline' }}>tocca per il motivo</Text>
+                            </TouchableOpacity>
+                          </>
+                        )
+                      ) : (
+                        <Text style={[{ fontSize: 13, color: '#444' }, item.modified && { color: '#D35400', fontWeight: '700', backgroundColor: '#FFF3E0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }]}>
+                          {item.type === 'training' ? `${item.time_start} - ${item.time_end}` : `ore ${item.time}`} • {item.venue}
+                        </Text>
+                      )}
+                      {item.modified && item.reason && (
+                        <Text style={{ fontSize: 12, fontStyle: 'italic', color: '#D35400' }}>Motivo: {item.reason}</Text>
+                      )}
+                      {item.meeting_time && !item.cancelled && (
+                        <Text style={{ fontSize: 12, color: '#FF9500', fontWeight: '600' }}>⚠️ Ritrovo: {item.meeting_time}</Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            );
+          })}
+        </View>
+      )}
+
 
       {/* Training Schedule */}
       {data.schedule && data.schedule.training_sessions.length > 0 && (

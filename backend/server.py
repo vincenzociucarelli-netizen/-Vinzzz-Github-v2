@@ -22153,7 +22153,17 @@ async def get_minor_dashboard(current_user = Depends(get_current_user)):
             except:
                 pass
     
+    # Load 7-day commitments (with cancel/modify overrides) using shared helper
+    from routes.parents import _build_commitments_payload
+    athlete_display = athlete.get("nome_lite") or athlete.get("first_name", "")
+    team_athletes_map = {}
+    for tid in (athlete.get("team_id"), athlete.get("team_id_2")):
+        if tid:
+            team_athletes_map[tid] = [athlete_display]
+    commitments = await _build_commitments_payload(team_athletes_map)
+    
     return {
+        "commitments": commitments,
         "athlete": {
             "id": athlete["id"],
             "full_name": athlete.get("full_name", ""),

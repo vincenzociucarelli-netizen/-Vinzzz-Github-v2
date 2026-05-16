@@ -20,36 +20,21 @@ router = APIRouter()
 
 # ==================== PARENT COMMITMENTS ====================
 
-@router.get("/parent/commitments")
-async def get_parent_commitments(current_user = Depends(get_current_user)):
-    """Get commitments (trainings + matches) for parent's children — 7 days."""
-    if current_user["role"] != UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Solo genitori possono vedere gli impegni")
+async def _build_commitments_payload(team_athletes: dict) -> dict:
+    """Shared logic that builds the 7-day commitments payload for a set of teams
+    (parent flow: child names per team; athlete flow: athlete's own name per team).
     
-    athletes = await db.athletes.find({
-        "$or": [
-            {"parent_id": current_user["id"]},
-            {"second_parent_id": current_user["id"]}
-        ]
-    }).to_list(20)
-    
-    team_athletes = {}
-    for a in athletes:
-        athlete_name = a.get("first_name", a.get("full_name", "").split()[0] if a.get("full_name") else "")
-        # Includi sia la squadra principale (team_id) sia eventuale squadra secondaria (team_id_2)
-        for team_id in (a.get("team_id"), a.get("team_id_2")):
-            if team_id:
-                if team_id not in team_athletes:
-                    team_athletes[team_id] = []
-                if athlete_name not in team_athletes[team_id]:
-                    team_athletes[team_id].append(athlete_name)
-    
+    team_athletes: dict[team_id -> list[str (display names)]]
+    Returns: {today: [], tomorrow: [], day_after: [], upcoming: []}
+    """
     team_ids = list(team_athletes.keys())
     if not team_ids:
         return {"today": [], "tomorrow": [], "day_after": [], "upcoming": []}
     
-    teams = await db.teams.find({"id": {"$in": team_ids}}).to_list(20)
-    teams_dict = {t["id"]: t for t in teams}
+    teams_cursor = db.teams.find({"id": {"$in": team_ids}})
+    teams_dict = {}
+    async for t in teams_cursor:
+        teams_dict[t["id"]] = t
     
     now = datetime.utcnow()
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -61,62 +46,31 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
         0: "Lunedì", 1: "Martedì", 2: "Mercoledì",
         3: "Giovedì", 4: "Venerdì", 5: "Sabato", 6: "Domenica"
     }
+    def get_day_name(d): return days_map[d.weekday()]
     
-    def get_day_name(date):
-        return days_map[date.weekday()]
-    
-    # Load training overrides for the next 7 days (manual cancellations/modifications)
     overrides_cursor = db.training_overrides.find({
         "team_id": {"$in": team_ids},
         "date": {"$gte": today.strftime("%Y-%m-%d"), "$lt": end_of_week.strftime("%Y-%m-%d")}
     })
-    overrides_map = {}  # (team_id, "YYYY-MM-DD") -> override dict
+    overrides_map = {}
     async for ov in overrides_cursor:
         overrides_map[(ov.get("team_id"), ov.get("date"))] = ov
     
-    matches = await db.matches.find({
-        "team_id": {"$in": team_ids}
-    }).to_list(200)
-    # Filter by date in Python (some records have date as ISO string, others as datetime)
-    filtered_matches = []
-    for m in matches:
-        d = m.get("date")
-        if isinstance(d, str):
-            try:
-                d = datetime.fromisoformat(d.replace("Z", "").replace("+00:00", ""))
-            except Exception:
-                continue
-        if d and today <= d < end_of_week:
-            m["date"] = d  # normalize to datetime for downstream
-            filtered_matches.append(m)
-    matches = filtered_matches
+    matches = await db.matches.find({"team_id": {"$in": team_ids}}).to_list(200)
     
-    # Load training overrides for the next 7 days (manual cancellations/modifications)
-    end_of_week = today + timedelta(days=7)
-    overrides_cursor = db.training_overrides.find({
-        "team_id": {"$in": team_ids},
-        "date": {"$gte": today.strftime("%Y-%m-%d"), "$lt": end_of_week.strftime("%Y-%m-%d")}
-    })
-    overrides_map = {}  # (team_id, "YYYY-MM-DD") -> override dict
-    async for ov in overrides_cursor:
-        overrides_map[(ov.get("team_id"), ov.get("date"))] = ov
-    
-    # A team cannot train on a day it plays a match — home OR away.
-    # The team is busy (preparing for match, traveling, playing).
-    match_days = set()
+    home_match_days = set()
     for match in matches:
         match_date = match.get("date")
         if isinstance(match_date, str):
             match_date = datetime.fromisoformat(match_date.replace("Z", ""))
         if today <= match_date < tomorrow:
-            match_days.add((match.get("team_id"), "today"))
+            home_match_days.add((match.get("team_id"), "today"))
         elif tomorrow <= match_date < day_after:
-            match_days.add((match.get("team_id"), "tomorrow"))
+            home_match_days.add((match.get("team_id"), "tomorrow"))
         elif day_after <= match_date < (day_after + timedelta(days=1)):
-            match_days.add((match.get("team_id"), "day_after"))
+            home_match_days.add((match.get("team_id"), "day_after"))
         else:
-            match_days.add((match.get("team_id"), match_date.strftime("%d/%m")))
-    home_match_days = match_days  # backwards-compat alias used below
+            home_match_days.add((match.get("team_id"), match_date.strftime("%d/%m")))
     
     result = {"today": [], "tomorrow": [], "day_after": [], "upcoming": []}
     
@@ -152,17 +106,11 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
                         reason = override.get("reason")
                         modified = True
                     result[day_key].append({
-                        "type": "training",
-                        "team_id": team_id,
-                        "team_name": team_name,
+                        "type": "training", "team_id": team_id, "team_name": team_name,
                         "athlete_names": athlete_names_str,
-                        "time_start": t_start,
-                        "time_end": t_end,
-                        "venue": venue,
+                        "time_start": t_start, "time_end": t_end, "venue": venue,
                         "title": f"Allenamento {team_name}",
-                        "modified": modified,
-                        "cancelled": cancelled,
-                        "reason": reason,
+                        "modified": modified, "cancelled": cancelled, "reason": reason,
                     })
     
     for day_offset in range(3, 7):
@@ -199,59 +147,48 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
                         reason = override.get("reason")
                         modified = True
                     result["upcoming"].append({
-                        "type": "training",
-                        "team_id": team_id,
-                        "team_name": team_name,
+                        "type": "training", "team_id": team_id, "team_name": team_name,
                         "athlete_names": athlete_names_str,
-                        "date": date_str,
-                        "day_name": day_name,
-                        "time_start": t_start,
-                        "time_end": t_end,
-                        "venue": venue,
+                        "date": date_str, "day_name": day_name,
+                        "time_start": t_start, "time_end": t_end, "venue": venue,
                         "title": f"Allenamento {team_name}",
-                        "modified": modified,
-                        "cancelled": cancelled,
-                        "reason": reason,
+                        "modified": modified, "cancelled": cancelled, "reason": reason,
                     })
     
+    # Matches → split by day bucket
     for match in matches:
         match_date = match.get("date")
         if isinstance(match_date, str):
             match_date = datetime.fromisoformat(match_date.replace("Z", ""))
+        day_key = None
         if today <= match_date < tomorrow:
             day_key = "today"
         elif tomorrow <= match_date < day_after:
             day_key = "tomorrow"
         elif day_after <= match_date < (day_after + timedelta(days=1)):
             day_key = "day_after"
-        elif match_date < end_of_week:
+        elif (day_after + timedelta(days=1)) <= match_date < end_of_week:
             day_key = "upcoming"
-        else:
+        if not day_key:
             continue
-        
-        match_team_id = match.get("team_id")
-        athlete_names = team_athletes.get(match_team_id, [])
+        team_name = teams_dict.get(match.get("team_id"), {}).get("name", "Squadra")
+        athlete_names = team_athletes.get(match.get("team_id"), [])
         athlete_names_str = ", ".join(athlete_names) if athlete_names else ""
-        
         match_item = {
-            "type": "match",
-            "team_id": match_team_id,
-            "team_name": match.get("team_name", ""),
+            "type": "match", "team_id": match.get("team_id"), "team_name": team_name,
             "athlete_names": athlete_names_str,
             "time": match_date.strftime("%H:%M"),
             "venue": match.get("venue", ""),
-            "city": match.get("city", ""),
-            "address": match.get("address", ""),
+            "city": match.get("city"), "address": match.get("address"),
             "opponent": match.get("opponent", ""),
             "home_away": match.get("home_away", "home"),
             "meeting_time": match.get("meeting_time"),
             "notes": match.get("notes"),
-            "title": f"Gara {match.get('team_name', '')} vs {match.get('opponent', '')}"
+            "title": f"Gara {team_name} vs {match.get('opponent', '')}",
         }
         if day_key == "upcoming":
             match_item["date"] = match_date.strftime("%d/%m")
             match_item["day_name"] = get_day_name(match_date)
-        
         result[day_key].append(match_item)
     
     for day_key in ["today", "tomorrow", "day_after"]:
@@ -259,6 +196,58 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
     result["upcoming"].sort(key=lambda x: (x.get("date", ""), x.get("time_start", x.get("time", "00:00"))))
     
     return result
+
+
+@router.get("/athlete/commitments")
+async def get_athlete_commitments(current_user = Depends(get_current_user)):
+    """Get commitments (trainings + matches) for an athlete user — 7 days."""
+    if current_user["role"] != UserRole.ATHLETE:
+        raise HTTPException(status_code=403, detail="Solo atleti possono vedere i propri impegni")
+    
+    # Find the athlete record matching this user (by linked_user_id or email)
+    athlete = await db.athletes.find_one({
+        "$or": [
+            {"linked_user_id": current_user["id"]},
+            {"user_id": current_user["id"]},
+            {"email": current_user.get("email")},
+        ]
+    })
+    if not athlete:
+        return {"today": [], "tomorrow": [], "day_after": [], "upcoming": []}
+    
+    athlete_name = athlete.get("first_name", athlete.get("full_name", "").split()[0] if athlete.get("full_name") else "")
+    team_athletes = {}
+    for team_id in (athlete.get("team_id"), athlete.get("team_id_2")):
+        if team_id:
+            team_athletes[team_id] = [athlete_name]
+    
+    return await _build_commitments_payload(team_athletes)
+
+
+@router.get("/parent/commitments")
+async def get_parent_commitments(current_user = Depends(get_current_user)):
+    """Get commitments (trainings + matches) for parent's children — 7 days."""
+    if current_user["role"] != UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Solo genitori possono vedere gli impegni")
+    
+    athletes = await db.athletes.find({
+        "$or": [
+            {"parent_id": current_user["id"]},
+            {"second_parent_id": current_user["id"]}
+        ]
+    }).to_list(20)
+    
+    team_athletes = {}
+    for a in athletes:
+        athlete_name = a.get("first_name", a.get("full_name", "").split()[0] if a.get("full_name") else "")
+        for team_id in (a.get("team_id"), a.get("team_id_2")):
+            if team_id:
+                if team_id not in team_athletes:
+                    team_athletes[team_id] = []
+                if athlete_name not in team_athletes[team_id]:
+                    team_athletes[team_id].append(athlete_name)
+    
+    return await _build_commitments_payload(team_athletes)
 
 
 # ==================== PARENT-LINK ====================

@@ -102,6 +102,11 @@ export default function AthleteScreen() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(true);
   
+  // Commitments (trainings + matches) for next 7 days — supports cancelled/modified flags
+  const [commitments, setCommitments] = useState<{
+    today: any[]; tomorrow: any[]; day_after: any[]; upcoming: any[];
+  }>({ today: [], tomorrow: [], day_after: [], upcoming: [] });
+  
   // Trial document signing
   const [showTrialSignModal, setShowTrialSignModal] = useState(false);
   const [trialSignature, setTrialSignature] = useState<string | null>(null);
@@ -279,6 +284,14 @@ export default function AthleteScreen() {
         setNotifications(notifResponse.data.notifications || []);
       } catch (notifError) {
         console.log('Could not load notifications');
+      }
+      
+      // Load commitments (trainings + matches) for next 7 days
+      try {
+        const commitmentsResponse = await api.get('/athlete/commitments');
+        setCommitments(commitmentsResponse.data || { today: [], tomorrow: [], day_after: [], upcoming: [] });
+      } catch {
+        console.log('Could not load commitments');
       }
       
     } catch (error: any) {
@@ -1266,6 +1279,73 @@ export default function AthleteScreen() {
           </View>
         )}
       </View>
+
+
+      {/* Prossimi Impegni — Trainings + Matches con supporto annullamento/modifica */}
+      {(commitments.today.length + commitments.tomorrow.length + commitments.day_after.length + commitments.upcoming.length > 0) && (
+        <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginHorizontal: 16, marginBottom: 16 }}>
+          <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 12, color: '#000' }}>📅 Prossimi Impegni</Text>
+          {[
+            { key: 'today', label: 'OGGI' },
+            { key: 'tomorrow', label: 'DOMANI' },
+            { key: 'day_after', label: 'DOPODOMANI' },
+            { key: 'upcoming', label: 'IMPEGNI SUCCESSIVI' },
+          ].map(section => {
+            const items = (commitments as any)[section.key] as any[];
+            if (!items || items.length === 0) return null;
+            return (
+              <View key={section.key} style={{ marginBottom: 10 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#666', marginBottom: 6 }}>{section.label}</Text>
+                {items.map((item, idx) => (
+                  <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 6, gap: 8 }}>
+                    <Ionicons name={item.type === 'training' ? 'fitness' : 'trophy'} size={16} color={item.type === 'training' ? '#007AFF' : '#FF9500'} style={{ marginTop: 2 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[{ fontSize: 14, fontWeight: '600' }, item.cancelled && { textDecorationLine: 'line-through', color: '#888' }]}>
+                        {item.type === 'training' ? `Allenamento ${item.team_name}${item.modified ? ' ✏️ Variato' : ''}` : item.title}
+                      </Text>
+                      {section.key === 'upcoming' && (
+                        <Text style={{ fontSize: 12, color: '#666' }}>📅 {item.date} - {item.day_name}</Text>
+                      )}
+                      {item.cancelled ? (
+                        item.reason === 'Gara' ? (
+                          <>
+                            <Text style={{ color: '#C0392B', fontWeight: '700', fontSize: 13, marginTop: 2 }}>
+                              ❌ ANNULLATO {item.time_start ? `(${item.time_start} - ${item.time_end})` : ''}
+                            </Text>
+                            <Text style={{ color: '#1565C0', fontWeight: '600', fontSize: 12, marginTop: 2 }}>c'è una gara</Text>
+                          </>
+                        ) : (
+                          <>
+                            <Text style={{ color: '#C0392B', fontWeight: '700', fontSize: 13, marginTop: 2 }}>
+                              ❌ ANNULLATO {item.time_start ? `(${item.time_start} - ${item.time_end})` : ''}
+                            </Text>
+                            <TouchableOpacity onPress={() => {
+                              const msg = item.reason ? `Allenamento annullato.\nMotivo: ${item.reason}` : 'Allenamento annullato.';
+                              if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Annullato', msg); }
+                            }}>
+                              <Text style={{ color: '#1565C0', fontWeight: '600', fontSize: 12, marginTop: 2, textDecorationLine: 'underline' }}>tocca per il motivo</Text>
+                            </TouchableOpacity>
+                          </>
+                        )
+                      ) : (
+                        <Text style={[{ fontSize: 13, color: '#444' }, item.modified && { color: '#D35400', fontWeight: '700', backgroundColor: '#FFF3E0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }]}>
+                          {item.type === 'training' ? `${item.time_start} - ${item.time_end}` : `ore ${item.time}`} • {item.venue}
+                        </Text>
+                      )}
+                      {item.modified && item.reason && (
+                        <Text style={{ fontSize: 12, fontStyle: 'italic', color: '#D35400' }}>Motivo: {item.reason}</Text>
+                      )}
+                      {item.meeting_time && !item.cancelled && (
+                        <Text style={{ fontSize: 12, color: '#FF9500', fontWeight: '600' }}>⚠️ Ritrovo: {item.meeting_time}</Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            );
+          })}
+        </View>
+      )}
 
       {/* Certificato Medico Card */}
       <View style={styles.certificateCard}>
