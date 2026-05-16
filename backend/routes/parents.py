@@ -124,28 +124,30 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
         day_name = get_day_name(target_date)
         date_iso = target_date.strftime("%Y-%m-%d")
         for team_id in team_ids:
-            if (team_id, day_key) in home_match_days:
-                continue
             team = teams_dict.get(team_id, {})
             team_name = team.get("name", "Squadra")
             training_sessions = team.get("training_sessions", [])
             athlete_names = team_athletes.get(team_id, [])
             athlete_names_str = ", ".join(athlete_names) if athlete_names else ""
             override = overrides_map.get((team_id, date_iso))
-            # If override marks the training as cancelled for this date, skip it
-            if override and override.get("status") == "cancelled":
-                continue
+            has_match_today = (team_id, day_key) in home_match_days
             for session in training_sessions:
                 if session.get("day") == day_name:
-                    # Apply modification override if present
                     t_start = session.get("timeStart", "")
                     t_end = session.get("timeEnd", "")
                     venue = session.get("venue", "")
                     modified = False
+                    cancelled = False
                     reason = None
-                    if override and override.get("status") == "modified":
-                        t_start = override.get("new_start_time", t_start)
-                        t_end = override.get("new_end_time", t_end)
+                    if has_match_today:
+                        cancelled = True
+                        reason = "Gara"
+                    elif override and override.get("status") == "cancelled":
+                        cancelled = True
+                        reason = override.get("reason")
+                    elif override and override.get("status") == "modified":
+                        t_start = override.get("new_start_time", t_start) or t_start
+                        t_end = override.get("new_end_time", t_end) or t_end
                         venue = override.get("new_venue", venue) or venue
                         reason = override.get("reason")
                         modified = True
@@ -159,6 +161,7 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
                         "venue": venue,
                         "title": f"Allenamento {team_name}",
                         "modified": modified,
+                        "cancelled": cancelled,
                         "reason": reason,
                     })
     
@@ -168,26 +171,30 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
         date_str = target_date.strftime("%d/%m")
         date_iso = target_date.strftime("%Y-%m-%d")
         for team_id in team_ids:
-            if (team_id, date_str) in home_match_days:
-                continue
             team = teams_dict.get(team_id, {})
             team_name = team.get("name", "Squadra")
             training_sessions = team.get("training_sessions", [])
             athlete_names = team_athletes.get(team_id, [])
             athlete_names_str = ", ".join(athlete_names) if athlete_names else ""
             override = overrides_map.get((team_id, date_iso))
-            if override and override.get("status") == "cancelled":
-                continue
+            has_match_today = (team_id, date_str) in home_match_days
             for session in training_sessions:
                 if session.get("day") == day_name:
                     t_start = session.get("timeStart", "")
                     t_end = session.get("timeEnd", "")
                     venue = session.get("venue", "")
                     modified = False
+                    cancelled = False
                     reason = None
-                    if override and override.get("status") == "modified":
-                        t_start = override.get("new_start_time", t_start)
-                        t_end = override.get("new_end_time", t_end)
+                    if has_match_today:
+                        cancelled = True
+                        reason = "Gara"
+                    elif override and override.get("status") == "cancelled":
+                        cancelled = True
+                        reason = override.get("reason")
+                    elif override and override.get("status") == "modified":
+                        t_start = override.get("new_start_time", t_start) or t_start
+                        t_end = override.get("new_end_time", t_end) or t_end
                         venue = override.get("new_venue", venue) or venue
                         reason = override.get("reason")
                         modified = True
@@ -203,6 +210,7 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
                         "venue": venue,
                         "title": f"Allenamento {team_name}",
                         "modified": modified,
+                        "cancelled": cancelled,
                         "reason": reason,
                     })
     
