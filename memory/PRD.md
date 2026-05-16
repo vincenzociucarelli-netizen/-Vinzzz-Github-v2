@@ -237,6 +237,22 @@ trial 🟠 "In Prova"
 - Mongo: tutte query pesanti escludono `athlete_photo`, `logo`, `signature_image`, `gdpr_signature_image_data`. **MA** quando si filtrano campi specifici per performance, ricordarsi di INCLUDERE: `place_of_birth`, `birth_place`, `birth_province`, `province_of_birth`, `country_of_birth` (vedi bug del 07/05 sulla firma trial).
 - Cache JWT browser: per test multi-utente sullo stesso device, usare SEMPRE finestre incognito separate per evitare confusione di token.
 
+## 📌 PROMEMORIA RIPRESA STAGIONE — SETTEMBRE 2026
+
+L'utente ha chiesto esplicitamente (16/05/2026) di rimandare a settembre, perché da inizio giugno cessa l'attività sportiva fino a ripresa allenamenti. **All'apertura della prossima sessione di sviluppo (~settembre 2026), ricordare all'utente queste 2 feature in sospeso:**
+
+1. **🔔 Notifiche Annullamenti/Variazioni Allenamenti**
+   - Quando admin/coach annulla o modifica un allenamento → avvisare automaticamente i genitori/atleti interessati
+   - Tre opzioni discusse:
+     - **A) Email automatica** via Brevo (già integrato): rapido (~30 min), arriva al 100% degli utenti, ma non istantanea
+     - **B) Push PWA vera** (Web Push API + VAPID o Firebase FCM): notifica visibile a schermo bloccato come WhatsApp; richiede che i genitori installino la PWA (~2-3 ore di lavoro + onboarding utenti). iOS solo da 16.4+ con PWA in Home
+     - **C) Entrambe** (consigliata): email subito + push come bonus
+   - **Da ricordare all'utente**: chiedere quale opzione preferisce a settembre
+
+2. **Riferimento contesto**: la sezione "IMPEGNI SUCCESSIVI" è ora collassabile su Parent/Athlete/Minor (default chiusa). Backend già nasconde gli allenamenti annullati per "Gara" così da non creare confusione.
+
+---
+
 ### 🆕 Collapsible "IMPEGNI SUCCESSIVI" (16/05/2026)
 - ✅ Sezione "IMPEGNI SUCCESSIVI" (oltre 3 giorni) ora **collassabile** su tutte le dashboard role:
   - `parent/index.tsx` (già esistente, `showUpcoming`)
