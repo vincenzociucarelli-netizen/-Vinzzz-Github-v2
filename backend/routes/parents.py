@@ -94,8 +94,10 @@ async def _build_commitments_payload(team_athletes: dict) -> dict:
                     cancelled = False
                     reason = None
                     if has_match_today:
-                        cancelled = True
-                        reason = "Gara"
+                        # Skip silently: when there is a match the team is busy.
+                        # No "annullato per gara" line: the match is already shown
+                        # below in the same day, no point in adding confusion.
+                        continue
                     elif override and override.get("status") == "cancelled":
                         cancelled = True
                         reason = override.get("reason")
@@ -135,8 +137,8 @@ async def _build_commitments_payload(team_athletes: dict) -> dict:
                     cancelled = False
                     reason = None
                     if has_match_today:
-                        cancelled = True
-                        reason = "Gara"
+                        # Skip silently — match is visible the same day
+                        continue
                     elif override and override.get("status") == "cancelled":
                         cancelled = True
                         reason = override.get("reason")
