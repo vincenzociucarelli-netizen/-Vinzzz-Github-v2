@@ -914,8 +914,9 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                   />
                   <View style={styles.commitmentItemContent}>
                     {item.type === 'training' ? (
-                      <Text style={styles.commitmentItemTitle}>
+                      <Text style={[styles.commitmentItemTitle, (item as any).cancelled && { textDecorationLine: 'line-through', color: '#888' }]}>
                         Allenamento {abbreviateTeamName(item.team_name)}
+                        {(item as any).modified ? ' ✏️ Variato' : ''}
                         {renderAthleteNames(item.athlete_names)}
                       </Text>
                     ) : (
@@ -926,13 +927,50 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                     <Text style={styles.commitmentItemDate}>
                       📅 {item.date} - {item.day_name}
                     </Text>
-                    <Text style={styles.commitmentItemDetails}>
-                      {item.type === 'training' 
-                        ? `${item.time_start} - ${item.time_end}` 
-                        : `ore ${item.time}`} • {item.venue}
-                      {item.city ? ` - ${item.city}` : ''}
-                    </Text>
-                    {item.meeting_time && (
+                    {(item as any).cancelled ? (
+                      (item as any).reason === 'Gara' ? (
+                        <>
+                          <Text style={{ color: '#C0392B', fontWeight: '700', fontSize: 14, marginTop: 2 }}>
+                            ❌ ANNULLATO {item.time_start ? `(${item.time_start} - ${item.time_end})` : ''}
+                          </Text>
+                          <Text style={{ color: '#1565C0', fontWeight: '600', fontSize: 13, marginTop: 2 }}>
+                            c'è una gara
+                          </Text>
+                        </>
+                      ) : (
+                        <>
+                          <Text style={{ color: '#C0392B', fontWeight: '700', fontSize: 14, marginTop: 2 }}>
+                            ❌ ANNULLATO {item.time_start ? `(${item.time_start} - ${item.time_end})` : ''}
+                          </Text>
+                          <TouchableOpacity onPress={() => {
+                            const msg = (item as any).reason
+                              ? `Allenamento annullato.\nMotivo: ${(item as any).reason}`
+                              : 'Allenamento annullato.';
+                            if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Annullato', msg); }
+                          }}>
+                            <Text style={{ color: '#1565C0', fontWeight: '600', fontSize: 13, marginTop: 2, textDecorationLine: 'underline' }}>
+                              tocca per il motivo
+                            </Text>
+                          </TouchableOpacity>
+                        </>
+                      )
+                    ) : (
+                      <Text style={[
+                        styles.commitmentItemDetails,
+                        (item as any).modified && { color: '#D35400', fontWeight: '700', backgroundColor: '#FFF3E0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }
+                      ]}>
+                        {item.type === 'training' 
+                          ? `${item.time_start} - ${item.time_end}` 
+                          : `ore ${item.time}`} • {item.venue}
+                        {item.city ? ` - ${item.city}` : ''}
+                      </Text>
+                    )}
+                    {(item as any).modified && (item as any).reason && (
+                      <Text style={[styles.commitmentItemDetails, { color: '#D35400', fontStyle: 'italic' }]}>
+                        Motivo: {(item as any).reason}
+                      </Text>
+                    )}
+                    {item.meeting_time && !(item as any).cancelled && (
                       <Text style={styles.commitmentMeeting}>⚠️ Ritrovo: {item.meeting_time}</Text>
                     )}
                   </View>
