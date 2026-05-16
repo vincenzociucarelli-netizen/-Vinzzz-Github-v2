@@ -676,16 +676,22 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                       </View>
                     )}
                     {(item as any).cancelled ? (
-                      <TouchableOpacity onPress={() => {
-                        const msg = (item as any).reason
-                          ? `Allenamento annullato.\nMotivo: ${(item as any).reason}`
-                          : 'Allenamento annullato.';
-                        if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Annullato', msg); }
-                      }}>
+                      (item as any).reason === 'Gara' ? (
                         <Text style={{ color: '#C0392B', fontWeight: '700', fontSize: 14, marginTop: 2 }}>
-                          ❌ ANNULLATO {item.time_start ? `(${item.time_start} - ${item.time_end})` : ''} — tocca per il motivo
+                          ❌ ANNULLATO {item.time_start ? `(${item.time_start} - ${item.time_end})` : ''} — c'è una gara
                         </Text>
-                      </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity onPress={() => {
+                          const msg = (item as any).reason
+                            ? `Allenamento annullato.\nMotivo: ${(item as any).reason}`
+                            : 'Allenamento annullato.';
+                          if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Annullato', msg); }
+                        }}>
+                          <Text style={{ color: '#C0392B', fontWeight: '700', fontSize: 14, marginTop: 2 }}>
+                            ❌ ANNULLATO {item.time_start ? `(${item.time_start} - ${item.time_end})` : ''} — tocca per il motivo
+                          </Text>
+                        </TouchableOpacity>
+                      )
                     ) : (
                       <Text style={[
                         styles.commitmentItemDetails,
@@ -740,16 +746,22 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                       </View>
                     )}
                     {(item as any).cancelled ? (
-                      <TouchableOpacity onPress={() => {
-                        const msg = (item as any).reason
-                          ? `Allenamento annullato.\nMotivo: ${(item as any).reason}`
-                          : 'Allenamento annullato.';
-                        if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Annullato', msg); }
-                      }}>
+                      (item as any).reason === 'Gara' ? (
                         <Text style={{ color: '#C0392B', fontWeight: '700', fontSize: 14, marginTop: 2 }}>
-                          ❌ ANNULLATO {item.time_start ? `(${item.time_start} - ${item.time_end})` : ''} — tocca per il motivo
+                          ❌ ANNULLATO {item.time_start ? `(${item.time_start} - ${item.time_end})` : ''} — c'è una gara
                         </Text>
-                      </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity onPress={() => {
+                          const msg = (item as any).reason
+                            ? `Allenamento annullato.\nMotivo: ${(item as any).reason}`
+                            : 'Allenamento annullato.';
+                          if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Annullato', msg); }
+                        }}>
+                          <Text style={{ color: '#C0392B', fontWeight: '700', fontSize: 14, marginTop: 2 }}>
+                            ❌ ANNULLATO {item.time_start ? `(${item.time_start} - ${item.time_end})` : ''} — tocca per il motivo
+                          </Text>
+                        </TouchableOpacity>
+                      )
                     ) : (
                       <Text style={[
                         styles.commitmentItemDetails,
@@ -804,16 +816,22 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                       </View>
                     )}
                     {(item as any).cancelled ? (
-                      <TouchableOpacity onPress={() => {
-                        const msg = (item as any).reason
-                          ? `Allenamento annullato.\nMotivo: ${(item as any).reason}`
-                          : 'Allenamento annullato.';
-                        if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Annullato', msg); }
-                      }}>
+                      (item as any).reason === 'Gara' ? (
                         <Text style={{ color: '#C0392B', fontWeight: '700', fontSize: 14, marginTop: 2 }}>
-                          ❌ ANNULLATO {item.time_start ? `(${item.time_start} - ${item.time_end})` : ''} — tocca per il motivo
+                          ❌ ANNULLATO {item.time_start ? `(${item.time_start} - ${item.time_end})` : ''} — c'è una gara
                         </Text>
-                      </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity onPress={() => {
+                          const msg = (item as any).reason
+                            ? `Allenamento annullato.\nMotivo: ${(item as any).reason}`
+                            : 'Allenamento annullato.';
+                          if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Annullato', msg); }
+                        }}>
+                          <Text style={{ color: '#C0392B', fontWeight: '700', fontSize: 14, marginTop: 2 }}>
+                            ❌ ANNULLATO {item.time_start ? `(${item.time_start} - ${item.time_end})` : ''} — tocca per il motivo
+                          </Text>
+                        </TouchableOpacity>
+                      )
                     ) : (
                       <Text style={[
                         styles.commitmentItemDetails,
