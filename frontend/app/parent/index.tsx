@@ -667,6 +667,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                     {item.type === 'training' ? (
                       <Text style={styles.commitmentItemTitle}>
                         Allenamento {abbreviateTeamName(item.team_name)}
+                        {(item as any).modified ? ' ✏️ Variato' : ''}
                         {renderAthleteNames(item.athlete_names)}
                       </Text>
                     ) : (
@@ -680,6 +681,11 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                         : `ore ${item.time}`} • {item.venue}
                       {item.city ? ` - ${item.city}` : ''}
                     </Text>
+                    {(item as any).modified && (item as any).reason && (
+                      <Text style={[styles.commitmentItemDetails, { color: '#D35400', fontStyle: 'italic' }]}>
+                        Motivo: {(item as any).reason}
+                      </Text>
+                    )}
                     {item.meeting_time && (
                       <Text style={styles.commitmentMeeting}>⚠️ Ritrovo: {item.meeting_time}</Text>
                     )}
@@ -709,6 +715,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                     {item.type === 'training' ? (
                       <Text style={styles.commitmentItemTitle}>
                         Allenamento {abbreviateTeamName(item.team_name)}
+                        {(item as any).modified ? ' ✏️ Variato' : ''}
                         {renderAthleteNames(item.athlete_names)}
                       </Text>
                     ) : (
@@ -722,6 +729,11 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                         : `ore ${item.time}`} • {item.venue}
                       {item.city ? ` - ${item.city}` : ''}
                     </Text>
+                    {(item as any).modified && (item as any).reason && (
+                      <Text style={[styles.commitmentItemDetails, { color: '#D35400', fontStyle: 'italic' }]}>
+                        Motivo: {(item as any).reason}
+                      </Text>
+                    )}
                     {item.meeting_time && (
                       <Text style={styles.commitmentMeeting}>⚠️ Ritrovo: {item.meeting_time}</Text>
                     )}
@@ -751,6 +763,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                     {item.type === 'training' ? (
                       <Text style={styles.commitmentItemTitle}>
                         Allenamento {abbreviateTeamName(item.team_name)}
+                        {(item as any).modified ? ' ✏️ Variato' : ''}
                         {renderAthleteNames(item.athlete_names)}
                       </Text>
                     ) : (
@@ -764,6 +777,11 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                         : `ore ${item.time}`} • {item.venue}
                       {item.city ? ` - ${item.city}` : ''}
                     </Text>
+                    {(item as any).modified && (item as any).reason && (
+                      <Text style={[styles.commitmentItemDetails, { color: '#D35400', fontStyle: 'italic' }]}>
+                        Motivo: {(item as any).reason}
+                      </Text>
+                    )}
                     {item.meeting_time && (
                       <Text style={styles.commitmentMeeting}>⚠️ Ritrovo: {item.meeting_time}</Text>
                     )}

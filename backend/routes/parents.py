@@ -65,6 +65,15 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
     def get_day_name(date):
         return days_map[date.weekday()]
     
+    # Load training overrides for the next 7 days (manual cancellations/modifications)
+    overrides_cursor = db.training_overrides.find({
+        "team_id": {"$in": team_ids},
+        "date": {"$gte": today.strftime("%Y-%m-%d"), "$lt": end_of_week.strftime("%Y-%m-%d")}
+    })
+    overrides_map = {}  # (team_id, "YYYY-MM-DD") -> override dict
+    async for ov in overrides_cursor:
+        overrides_map[(ov.get("team_id"), ov.get("date"))] = ov
+    
     matches = await db.matches.find({
         "team_id": {"$in": team_ids}
     }).to_list(200)
@@ -82,25 +91,38 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
             filtered_matches.append(m)
     matches = filtered_matches
     
-    home_match_days = set()
+    # Load training overrides for the next 7 days (manual cancellations/modifications)
+    end_of_week = today + timedelta(days=7)
+    overrides_cursor = db.training_overrides.find({
+        "team_id": {"$in": team_ids},
+        "date": {"$gte": today.strftime("%Y-%m-%d"), "$lt": end_of_week.strftime("%Y-%m-%d")}
+    })
+    overrides_map = {}  # (team_id, "YYYY-MM-DD") -> override dict
+    async for ov in overrides_cursor:
+        overrides_map[(ov.get("team_id"), ov.get("date"))] = ov
+    
+    # A team cannot train on a day it plays a match — home OR away.
+    # The team is busy (preparing for match, traveling, playing).
+    match_days = set()
     for match in matches:
         match_date = match.get("date")
         if isinstance(match_date, str):
             match_date = datetime.fromisoformat(match_date.replace("Z", ""))
-        if match.get("home_away") == "home":
-            if today <= match_date < tomorrow:
-                home_match_days.add((match.get("team_id"), "today"))
-            elif tomorrow <= match_date < day_after:
-                home_match_days.add((match.get("team_id"), "tomorrow"))
-            elif day_after <= match_date < (day_after + timedelta(days=1)):
-                home_match_days.add((match.get("team_id"), "day_after"))
-            else:
-                home_match_days.add((match.get("team_id"), match_date.strftime("%d/%m")))
+        if today <= match_date < tomorrow:
+            match_days.add((match.get("team_id"), "today"))
+        elif tomorrow <= match_date < day_after:
+            match_days.add((match.get("team_id"), "tomorrow"))
+        elif day_after <= match_date < (day_after + timedelta(days=1)):
+            match_days.add((match.get("team_id"), "day_after"))
+        else:
+            match_days.add((match.get("team_id"), match_date.strftime("%d/%m")))
+    home_match_days = match_days  # backwards-compat alias used below
     
     result = {"today": [], "tomorrow": [], "day_after": [], "upcoming": []}
     
     for day_key, target_date in [("today", today), ("tomorrow", tomorrow), ("day_after", day_after)]:
         day_name = get_day_name(target_date)
+        date_iso = target_date.strftime("%Y-%m-%d")
         for team_id in team_ids:
             if (team_id, day_key) in home_match_days:
                 continue
@@ -109,23 +131,42 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
             training_sessions = team.get("training_sessions", [])
             athlete_names = team_athletes.get(team_id, [])
             athlete_names_str = ", ".join(athlete_names) if athlete_names else ""
+            override = overrides_map.get((team_id, date_iso))
+            # If override marks the training as cancelled for this date, skip it
+            if override and override.get("status") == "cancelled":
+                continue
             for session in training_sessions:
                 if session.get("day") == day_name:
+                    # Apply modification override if present
+                    t_start = session.get("timeStart", "")
+                    t_end = session.get("timeEnd", "")
+                    venue = session.get("venue", "")
+                    modified = False
+                    reason = None
+                    if override and override.get("status") == "modified":
+                        t_start = override.get("new_start_time", t_start)
+                        t_end = override.get("new_end_time", t_end)
+                        venue = override.get("new_venue", venue) or venue
+                        reason = override.get("reason")
+                        modified = True
                     result[day_key].append({
                         "type": "training",
                         "team_id": team_id,
                         "team_name": team_name,
                         "athlete_names": athlete_names_str,
-                        "time_start": session.get("timeStart", ""),
-                        "time_end": session.get("timeEnd", ""),
-                        "venue": session.get("venue", ""),
-                        "title": f"Allenamento {team_name}"
+                        "time_start": t_start,
+                        "time_end": t_end,
+                        "venue": venue,
+                        "title": f"Allenamento {team_name}",
+                        "modified": modified,
+                        "reason": reason,
                     })
     
     for day_offset in range(3, 7):
         target_date = today + timedelta(days=day_offset)
         day_name = get_day_name(target_date)
         date_str = target_date.strftime("%d/%m")
+        date_iso = target_date.strftime("%Y-%m-%d")
         for team_id in team_ids:
             if (team_id, date_str) in home_match_days:
                 continue
@@ -134,8 +175,22 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
             training_sessions = team.get("training_sessions", [])
             athlete_names = team_athletes.get(team_id, [])
             athlete_names_str = ", ".join(athlete_names) if athlete_names else ""
+            override = overrides_map.get((team_id, date_iso))
+            if override and override.get("status") == "cancelled":
+                continue
             for session in training_sessions:
                 if session.get("day") == day_name:
+                    t_start = session.get("timeStart", "")
+                    t_end = session.get("timeEnd", "")
+                    venue = session.get("venue", "")
+                    modified = False
+                    reason = None
+                    if override and override.get("status") == "modified":
+                        t_start = override.get("new_start_time", t_start)
+                        t_end = override.get("new_end_time", t_end)
+                        venue = override.get("new_venue", venue) or venue
+                        reason = override.get("reason")
+                        modified = True
                     result["upcoming"].append({
                         "type": "training",
                         "team_id": team_id,
@@ -143,10 +198,12 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
                         "athlete_names": athlete_names_str,
                         "date": date_str,
                         "day_name": day_name,
-                        "time_start": session.get("timeStart", ""),
-                        "time_end": session.get("timeEnd", ""),
-                        "venue": session.get("venue", ""),
-                        "title": f"Allenamento {team_name}"
+                        "time_start": t_start,
+                        "time_end": t_end,
+                        "venue": venue,
+                        "title": f"Allenamento {team_name}",
+                        "modified": modified,
+                        "reason": reason,
                     })
     
     for match in matches:

@@ -24536,12 +24536,14 @@ from routes.seasons import router as seasons_router
 from routes.parents import router as parents_router
 from routes.teams import router as teams_router
 from routes.primary_admin import router as primary_admin_router
+from routes.training_overrides import router as training_overrides_router
 api_router.include_router(notifications_router)
 api_router.include_router(settings_router)
 api_router.include_router(seasons_router)
 api_router.include_router(parents_router)
 api_router.include_router(teams_router)
 api_router.include_router(primary_admin_router)
+api_router.include_router(training_overrides_router)
 
 app.include_router(api_router)
 

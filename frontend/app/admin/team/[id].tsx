@@ -1322,6 +1322,24 @@ export default function TeamDetail() {
               </View>
               <Ionicons name="chevron-forward" size={24} color="#999" />
             </TouchableOpacity>
+            
+            {/* Link to Training Overrides */}
+            <TouchableOpacity 
+              style={styles.attendanceLink}
+              onPress={() => router.push(`/admin/team/${id}/training-overrides`)}
+              data-testid="link-training-overrides"
+            >
+              <View style={styles.attendanceLinkContent}>
+                <View style={styles.attendanceLinkIcon}>
+                  <Ionicons name="construct-outline" size={28} color="#D35400" />
+                </View>
+                <View style={styles.attendanceLinkText}>
+                  <Text style={styles.attendanceLinkTitle}>Modifica/Annulla Allenamenti</Text>
+                  <Text style={styles.attendanceLinkSubtitle}>Variazioni dei prossimi 7 giorni</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#999" />
+            </TouchableOpacity>
           </>
         )}
       </ScrollView>

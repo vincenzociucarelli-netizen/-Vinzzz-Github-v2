@@ -230,6 +230,17 @@ export default function CoachTeamAthletes() {
           <Text style={styles.attendanceBtnText}>Registro Presenze</Text>
           <Ionicons name="chevron-forward" size={20} color="#007AFF" />
         </TouchableOpacity>
+        
+        {/* Training Overrides Button */}
+        <TouchableOpacity 
+          style={styles.attendanceBtn}
+          onPress={() => router.push(`/admin/team/${id}/training-overrides`)}
+          data-testid="link-training-overrides"
+        >
+          <Ionicons name="construct" size={20} color="#D35400" />
+          <Text style={styles.attendanceBtnText}>Modifica/Annulla Allenamenti</Text>
+          <Ionicons name="chevron-forward" size={20} color="#D35400" />
+        </TouchableOpacity>
 
         {/* Athletes Section */}
         <View style={styles.section}>
