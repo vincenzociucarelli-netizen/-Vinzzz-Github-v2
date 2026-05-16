@@ -239,17 +239,44 @@ trial 🟠 "In Prova"
 
 ## 📌 PROMEMORIA RIPRESA STAGIONE — SETTEMBRE 2026
 
-L'utente ha chiesto esplicitamente (16/05/2026) di rimandare a settembre, perché da inizio giugno cessa l'attività sportiva fino a ripresa allenamenti. **All'apertura della prossima sessione di sviluppo (~settembre 2026), ricordare all'utente queste 2 feature in sospeso:**
+⚠️ **STATO ATTUALE (16/05/2026)**: L'app è in **fase di TEST**, NON ancora completata. L'utente ha invitato alcune società ad usare la demo web **"La Tua Società ASD"** per provare le funzionalità e segnalare eventuali problemi/bug. Prima di sviluppare nuove feature, attendere il feedback dei tester e sistemare i bug emersi.
 
-1. **🔔 Notifiche Annullamenti/Variazioni Allenamenti**
-   - Quando admin/coach annulla o modifica un allenamento → avvisare automaticamente i genitori/atleti interessati
-   - Tre opzioni discusse:
-     - **A) Email automatica** via Brevo (già integrato): rapido (~30 min), arriva al 100% degli utenti, ma non istantanea
-     - **B) Push PWA vera** (Web Push API + VAPID o Firebase FCM): notifica visibile a schermo bloccato come WhatsApp; richiede che i genitori installino la PWA (~2-3 ore di lavoro + onboarding utenti). iOS solo da 16.4+ con PWA in Home
-     - **C) Entrambe** (consigliata): email subito + push come bonus
-   - **Da ricordare all'utente**: chiedere quale opzione preferisce a settembre
+L'utente ha chiesto esplicitamente (16/05/2026) di rimandare a settembre, perché da inizio giugno cessa l'attività sportiva fino a ripresa allenamenti. **All'apertura della prossima sessione di sviluppo (~settembre 2026), ricordare all'utente queste feature in sospeso (in ordine di priorità):**
 
-2. **Riferimento contesto**: la sezione "IMPEGNI SUCCESSIVI" è ora collassabile su Parent/Athlete/Minor (default chiusa). Backend già nasconde gli allenamenti annullati per "Gara" così da non creare confusione.
+### 0. 🐛 RACCOLTA FEEDBACK DEMO (PRIORITÀ MASSIMA)
+- Chiedere all'utente quali bug/problemi hanno segnalato le società invitate sulla demo "La Tua Società"
+- Sistemare tutti i bug emersi PRIMA di sviluppare nuove feature
+- L'app deve essere **stabile e completa** prima di passare alle feature successive
+
+### 1. 🏐 ATLETI MAGGIORENNI CHE PERCEPISCONO UN COMPENSO (FEATURE NUOVA — CRITICA)
+**Contesto**: alcune società hanno **atleti 18+ semi-professionisti** che, invece di pagare la quota di iscrizione, **ricevono un compenso mensile** (esattamente come i coach).
+
+**Requisiti**:
+- Nuovo ruolo o variante: fusione tra **Atleta 18+** e **Coach**
+  - Mantiene tutte le funzionalità Atleta 18+ (certificato medico, presenze allenamenti, partite, QR scan, calendario, firma documenti)
+  - Aggiunge le funzionalità Coach: compensi mensili, tracciamento soglie €5k/€15k Riforma Sport, attestati di compenso, PDF compensi
+- Probabilmente serve un toggle in fase di registrazione atleta 18+ tipo: `"Questo atleta percepisce un compenso?"` → se sì, abilita il modulo compensi
+- Backend: probabilmente serve campo `receives_compensation: bool` + collezione `compensations` con `athlete_id` oltre a `coach_id`
+- Frontend: ricondurre/condividere i componenti `CompensationCard`, `ThresholdBanner`, ecc. tra Coach e Athlete 18+
+- Admin path: poter assegnare/modificare compenso a un atleta 18+ esattamente come si fa per il coach
+
+**Da chiedere a settembre**: 
+  - Quanti atleti tipicamente prendono compenso per società?
+  - Importi tipici? Soglie diverse rispetto al coach?
+  - L'atleta deve firmare documenti aggiuntivi (es. dichiarazione fiscale come il coach)?
+
+### 2. 🔔 Notifiche Annullamenti/Variazioni Allenamenti
+- Quando admin/coach annulla o modifica un allenamento → avvisare automaticamente i genitori/atleti interessati
+- Tre opzioni discusse:
+  - **A) Email automatica** via Brevo (già integrato): rapido (~30 min), arriva al 100% degli utenti, ma non istantanea
+  - **B) Push PWA vera** (Web Push API + VAPID o Firebase FCM): notifica visibile a schermo bloccato come WhatsApp; richiede che i genitori installino la PWA (~2-3 ore di lavoro + onboarding utenti). iOS solo da 16.4+ con PWA in Home
+  - **C) Entrambe** (consigliata): email subito + push come bonus
+- **Da ricordare all'utente**: chiedere quale opzione preferisce a settembre
+
+### 3. Riferimento contesto (già FATTO, solo per memoria)
+- Sezione "IMPEGNI SUCCESSIVI" collassabile su Parent/Athlete/Minor (default chiusa)
+- Backend nasconde gli allenamenti annullati per "Gara" così da non creare confusione
+- Audit multi-tenancy: ~6 query già filtrate per `society_id`, restano ~35 da sistemare (payments, attendances, compensation) — fare PRIMA di onboardare Sirio in produzione
 
 ---
 
