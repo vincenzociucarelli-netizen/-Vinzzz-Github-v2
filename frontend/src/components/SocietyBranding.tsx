@@ -24,7 +24,7 @@ let cachedName: string | null = null;
 let cachedLogoExists: boolean | null = null;
 let inflight: Promise<void> | null = null;
 
-export default function SocietyBranding({ light = true, logoSize = 28, style }: SocietyBrandingProps) {
+export default function SocietyBranding({ light = true, logoSize = 40, style }: SocietyBrandingProps) {
   const [name, setName] = useState<string | null>(cachedName);
   const [hasLogo, setHasLogo] = useState<boolean>(cachedLogoExists ?? false);
   const user = useAuthStore((state) => state.user);
@@ -78,7 +78,7 @@ export default function SocietyBranding({ light = true, logoSize = 28, style }: 
       ) : null}
       {name ? (
         <Text
-          style={[styles.name, { color: textColor, fontSize: 13 }]}
+          style={[styles.name, { color: textColor, fontSize: 16 }]}
           numberOfLines={2}
           ellipsizeMode="tail"
         >
@@ -93,8 +93,9 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
+    gap: 10,
+    marginTop: -8,
+    marginBottom: 8,
     flexShrink: 1,
   },
   name: {
