@@ -26,6 +26,13 @@
 - Password: Test123
 - Stato: in_trial (ma il frontend potrebbe non riconoscerlo correttamente)
 
+## Atleta 18+ (Viola Rossi - TEST utente fittizio Pallavolo Perugia)
+- Email: viola@test.com
+- Password: Test1234
+- Società: Pallavolo Perugia SSD
+- Squadra: Serie C
+- Stato: email_verified=true, is_approved=true (inserito manualmente il 17/05/2026 perché viola@test.com era un placeholder fittizio per test)
+
 ## Coach (Sara)
 - Email: sara@test.com
 - Password: (verificare nel DB)
