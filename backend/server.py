@@ -1566,6 +1566,58 @@ async def update_my_society(update_data: dict, current_user = Depends(get_curren
     
     return {"message": "Società aggiornata"}
 
+@api_router.post("/admin/users/{user_id}/force-verify-email")
+async def admin_force_verify_email(user_id: str, current_user = Depends(get_current_user)):
+    """Admin-only: force verify a user's email without sending the link.
+    Useful for test accounts (yopmail) or users who can't access their inbox.
+    The path param can be either a user_id OR an athlete_id (fallback lookup).
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può forzare la verifica email")
+
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        # Fallback: lookup by athlete_id
+        user = await db.users.find_one({"athlete_id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+
+    # Enforce same society
+    if current_user.get("society_id") and user.get("society_id") and \
+            current_user["society_id"] != user["society_id"]:
+        raise HTTPException(status_code=403, detail="L'utente appartiene a un'altra società")
+
+    if user.get("email_verified") and user.get("status") not in ("pending_email", None):
+        return {"message": "Utente già verificato", "already_verified": True}
+
+    new_user_status = "pending_trial" if user.get("role") == "athlete" else "approved"
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {
+            "email_verified": True,
+            "status": new_user_status,
+            "email_verification_token": None,
+            "verified_at": datetime.now(timezone.utc).isoformat(),
+            "force_verified_by": current_user["id"],
+        }}
+    )
+    # Activate athlete record if applicable
+    athlete_id = user.get("athlete_id")
+    if athlete_id:
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$set": {"status": "pending_trial"}}
+        )
+    # For parent, activate the linked minor athlete
+    if user.get("role") == "parent":
+        await db.athletes.update_many(
+            {"parent_id": user_id, "status": "pending_email"},
+            {"$set": {"status": "pending_trial"}}
+        )
+
+    return {"message": "Email verificata forzatamente dall'admin", "verified": True}
+
+
 @api_router.post("/societies/accept-terms")
 async def accept_terms(current_user = Depends(get_current_user)):
     """Accept Terms of Use - admin who activated the society"""

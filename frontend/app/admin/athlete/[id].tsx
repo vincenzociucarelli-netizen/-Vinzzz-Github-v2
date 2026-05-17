@@ -1816,6 +1816,34 @@ export default function AdminAthleteDetail() {
             {/* Dati Tecnici */}
             <View style={styles.card}>
               {/* Box Validazione Certificato */}
+              {/* Box "Forza verifica email" - solo per atleti pending_email */}
+              {athlete.status === 'pending_email' && (
+                <View style={{ marginBottom: 16 }}>
+                  <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', marginBottom: 4 }}>Email non verificata</Text>
+                    <Text style={{ fontSize: 13, color: '#666', marginBottom: 10 }}>
+                      L'atleta non ha cliccato il link di verifica nella mail. Puoi forzare la verifica come Admin se sai che l'email è valida (utile per test o per utenti che hanno problemi a ricevere la mail).
+                    </Text>
+                    <TouchableOpacity
+                      onPress={async () => {
+                        try {
+                          const resp = await api.post(`/admin/users/${athlete.id}/force-verify-email`);
+                          Alert.alert('Successo', resp.data?.message || 'Email verificata forzatamente');
+                          loadAthleteData();
+                        } catch (e: any) {
+                          Alert.alert('Errore', e?.response?.data?.detail || 'Operazione non riuscita');
+                        }
+                      }}
+                      style={{ backgroundColor: '#FF9800', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                      data-testid="admin-force-verify-email-btn"
+                    >
+                      <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Forza verifica email</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
               {athlete.status === 'pending_certificate' && (
                 <View style={{ marginBottom: 16 }}>
                   <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
