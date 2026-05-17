@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SocietyBranding from '../../src/components/SocietyBranding';
 import {
   View,
   Text,
@@ -209,7 +210,11 @@ export default function DirigenteIndex() {
       <OnboardingTutorial role="dirigente" steps={DIRIGENTE_STEPS} />
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Dashboard Dirigente</Text>
+          {/* BRANDING_WRAPPED */}
+          <View style={{ flex: 1, marginHorizontal: 8 }}>
+            <SocietyBranding />
+            <Text style={styles.headerTitle}>Dashboard Dirigente</Text>
+          </View>
           <Text style={styles.headerSubtitle}>Benvenuto, {user?.first_name || user?.full_name?.split(' ')[0]}</Text>
         </View>
         <View style={styles.headerButtons}>

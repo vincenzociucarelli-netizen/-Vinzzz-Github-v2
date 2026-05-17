@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import SocietyBranding from '../../src/components/SocietyBranding';
 import {
   View,
   Text,
@@ -537,7 +538,11 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
     <View style={styles.container}>
       <OnboardingTutorial role="parent" steps={PARENT_STEPS} />
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>I Miei Figli</Text>
+        {/* BRANDING_WRAPPED */}
+          <View style={{ flex: 1, marginHorizontal: 8 }}>
+            <SocietyBranding />
+            <Text style={styles.headerTitle}>I Miei Figli</Text>
+          </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
           <TouchableOpacity onPress={() => { setShowUserNotifs(!showUserNotifs); if (!showUserNotifs && unreadCount > 0) markAllUserNotifsRead(); }} data-testid="parent-notifications-bell">
             <View>

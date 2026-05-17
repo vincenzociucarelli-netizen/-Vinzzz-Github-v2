@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SocietyBranding from '../../src/components/SocietyBranding';
 import {
   View,
   Text,
@@ -782,7 +783,11 @@ Società sportiva: ${societyName}
             <Ionicons name="chevron-back" size={24} color="#007AFF" />
           </View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Il Mio Profilo</Text>
+        {/* BRANDING_WRAPPED */}
+          <View style={{ flex: 1, marginHorizontal: 8 }}>
+            <SocietyBranding />
+            <Text style={styles.headerTitle}>Il Mio Profilo</Text>
+          </View>
         <TouchableOpacity onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color="#fff" />
         </TouchableOpacity>

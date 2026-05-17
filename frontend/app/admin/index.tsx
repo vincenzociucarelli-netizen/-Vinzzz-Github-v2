@@ -1322,15 +1322,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerBigLogo: {
-    width: 80,
-    height: 80,
-    marginTop: 14,
+    width: 100,
+    height: 100,
+    marginTop: 10,
   },
   headerRightCol: {
     flex: 1,
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    minHeight: 94,
+    minHeight: 110,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -1349,11 +1349,11 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   headerTitle: {
-    fontSize: 36,
+    fontSize: 42,
     fontWeight: 'bold',
     color: '#fff',
     textAlign: 'right',
-    lineHeight: 38,
+    lineHeight: 44,
     marginBottom: 0,
   },
   headerButtons: {

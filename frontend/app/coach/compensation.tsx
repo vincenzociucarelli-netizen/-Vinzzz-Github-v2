@@ -999,8 +999,8 @@ export default function CoachCompensation() {
           </View>
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.headerTitle}>Compensi Sportivi</Text>
           <SocietyBranding />
+          <Text style={styles.headerTitle}>Compensi Sportivi</Text>
         </View>
         <View style={{ width: 40 }} />
       </View>

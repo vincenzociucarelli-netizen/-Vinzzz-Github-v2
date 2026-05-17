@@ -280,6 +280,27 @@ L'utente ha chiesto esplicitamente (16/05/2026) di rimandare a settembre, perch�
 
 ---
 
+### 🆕 Branding Società ovunque + Logo scontornato + Header Admin (17/05/2026 - v2)
+
+**Modifiche su richiesta utente (foto annotata + frase agente):**
+
+1. **Logo scontornato**: rimosso `borderRadius` e `backgroundColor: '#fff'` da `SocietyBranding`. Ora resizeMode è `contain` (no taglio). Identico a come l'admin lo mostra in home da "Profilo Società".
+2. **Logo+nome SOPRA al titolo della pagina** (non più sotto): invertito ordine in tutti i file Coach + spostato `marginBottom: 6` invece di `marginTop: 4` per spaziatura naturale.
+3. **Branding aggiunto anche a Scanner attivo** (camera view).
+4. **Branding replicato su 22 file** in ruoli rimanenti (script `/tmp/apply_branding.py`):
+   - Parent: index, link-athlete, register-athlete, documents, profile, athlete/[id], athlete/timeline (7 file)
+   - Atleta 18+: index, sign-trial, schedule, payments, documents, presenze, timeline, profile (8 file)
+   - Minor: index
+   - Dirigente: index, compensation, team/[id], profile (4 file)
+   - Collaboratore: compensation, profile (2 file)
+5. **Header Admin Pallavolo Perugia (Foto 1)**:
+   - Logo da 80x80 → 100x100 (più grande), marginTop 14 → 10
+   - Nome società da fontSize 36 → 42 (più grande)
+   - `headerRightCol` minHeight 94 → 110 (allineato col logo)
+   - Mantiene auto-shrink + max 2 righe
+
+Build Expo Web ricompilata.
+
 ### 🆕 Branding Società su tutte le pagine COACH (17/05/2026)
 
 Su richiesta dell'utente: i coach (e in seguito anche atleti/genitori/dirigenti/collaboratori) non sapevano sempre con quale società stessero operando. Implementato il branding su **tutte le pagine del ruolo Coach** come prova.

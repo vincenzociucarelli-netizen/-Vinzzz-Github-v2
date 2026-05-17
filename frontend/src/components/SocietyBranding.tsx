@@ -72,8 +72,8 @@ export default function SocietyBranding({ light = true, logoSize = 28, style }: 
       {hasLogo ? (
         <Image
           source={{ uri: `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png${societyIdQuery}` }}
-          style={{ width: logoSize, height: logoSize, borderRadius: logoSize / 2, backgroundColor: '#fff' }}
-          resizeMode="cover"
+          style={{ width: logoSize, height: logoSize }}
+          resizeMode="contain"
         />
       ) : null}
       {name ? (
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 4,
+    marginBottom: 6,
     flexShrink: 1,
   },
   name: {

@@ -193,8 +193,8 @@ export default function CoachTeamAthletes() {
           </View>
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 8 }}>
-          <Text style={styles.headerTitle}>{team?.name || 'Squadra'}</Text>
           <SocietyBranding />
+          <Text style={styles.headerTitle}>{team?.name || 'Squadra'}</Text>
         </View>
         <View style={{ width: 40 }} />
       </View>

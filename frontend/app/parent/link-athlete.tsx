@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SocietyBranding from '../../src/components/SocietyBranding';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
   TextInput, ActivityIndicator, Alert, Platform,
@@ -120,7 +121,11 @@ export default function ParentLinkPage() {
             <Ionicons name="chevron-back" size={24} color="#007AFF" />
           </View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Collega un atleta</Text>
+        {/* BRANDING_WRAPPED */}
+          <View style={{ flex: 1, marginHorizontal: 8 }}>
+            <SocietyBranding />
+            <Text style={styles.headerTitle}>Collega un atleta</Text>
+          </View>
         <View style={{ width: 40 }} />
       </View>
 

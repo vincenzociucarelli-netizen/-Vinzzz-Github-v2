@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SocietyBranding from '../../src/components/SocietyBranding';
 import {
   View,
   Text,
@@ -334,7 +335,11 @@ export default function ParentDocuments() {
         <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/parent'))} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>I Miei Documenti</Text>
+        {/* BRANDING_WRAPPED */}
+          <View style={{ flex: 1, marginHorizontal: 8 }}>
+            <SocietyBranding />
+            <Text style={styles.headerTitle}>I Miei Documenti</Text>
+          </View>
         <View style={{ width: 40 }} />
       </View>
 

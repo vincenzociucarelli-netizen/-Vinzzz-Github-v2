@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SocietyBranding from '../../../src/components/SocietyBranding';
 import {
   View,
   Text,
@@ -189,7 +190,11 @@ export default function TeamAthletes() {
           <Ionicons name="arrow-back" size={28} color="#333" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>{name || 'Squadra'}</Text>
+          {/* BRANDING_WRAPPED */}
+          <View style={{ flex: 1, marginHorizontal: 8 }}>
+            <SocietyBranding />
+            <Text style={styles.headerTitle}>{name || 'Squadra'}</Text>
+          </View>
           <Text style={styles.headerSubtitle}>{activeAthletes.length} atleti attivi</Text>
         </View>
       </View>

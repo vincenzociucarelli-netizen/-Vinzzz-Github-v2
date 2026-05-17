@@ -855,8 +855,8 @@ Società sportiva: ${societyName}
           </View>
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.headerTitle}>Il Mio Profilo</Text>
           <SocietyBranding />
+          <Text style={styles.headerTitle}>Il Mio Profilo</Text>
         </View>
         <TouchableOpacity onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color="#fff" />

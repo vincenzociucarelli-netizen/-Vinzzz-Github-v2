@@ -252,8 +252,8 @@ export default function CoachAthleteDetail() {
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.headerTitle}>Dati Tecnici</Text>
           <SocietyBranding />
+          <Text style={styles.headerTitle}>Dati Tecnici</Text>
         </View>
         <TouchableOpacity onPress={handleSave} disabled={saving}>
           {saving ? (

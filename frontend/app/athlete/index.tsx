@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import SocietyBranding from '../../src/components/SocietyBranding';
 import {
   View,
   Text,
@@ -418,7 +419,11 @@ export default function AthleteScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#007AFF']} />}
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Il Mio Profilo</Text>
+          {/* BRANDING_WRAPPED */}
+          <View style={{ flex: 1, marginHorizontal: 8 }}>
+            <SocietyBranding />
+            <Text style={styles.headerTitle}>Il Mio Profilo</Text>
+          </View>
           <TouchableOpacity onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={24} color="#fff" />
           </TouchableOpacity>
@@ -1253,7 +1258,11 @@ export default function AthleteScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Il Mio Profilo</Text>
+        {/* BRANDING_WRAPPED */}
+          <View style={{ flex: 1, marginHorizontal: 8 }}>
+            <SocietyBranding />
+            <Text style={styles.headerTitle}>Il Mio Profilo</Text>
+          </View>
         <TouchableOpacity onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color="#fff" />
         </TouchableOpacity>

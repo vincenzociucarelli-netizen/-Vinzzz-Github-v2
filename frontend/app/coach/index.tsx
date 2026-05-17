@@ -661,8 +661,8 @@ export default function CoachScreen() {
         <View style={styles.container}>
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.headerTitle}>Scanner Presenze</Text>
               <SocietyBranding />
+              <Text style={styles.headerTitle}>Scanner Presenze</Text>
             </View>
             <TouchableOpacity onPress={handleLogout}>
               <Ionicons name="log-out-outline" size={24} color="#fff" />
@@ -732,7 +732,10 @@ export default function CoachScreen() {
             <TouchableOpacity onPress={() => { stopWebScanner(); }} style={{ padding: 8 }}>
               <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Scanner Presenze</Text>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <SocietyBranding />
+              <Text style={styles.headerTitle}>Scanner Presenze</Text>
+            </View>
             <TouchableOpacity onPress={() => { stopWebScanner(); }} style={{ padding: 8 }}>
               <Ionicons name="close" size={24} color="#fff" />
             </TouchableOpacity>
@@ -1194,8 +1197,8 @@ export default function CoachScreen() {
       <OnboardingTutorial role="coach" steps={COACH_STEPS} />
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>Le Mie Squadre</Text>
           <SocietyBranding />
+          <Text style={styles.headerTitle}>Le Mie Squadre</Text>
         </View>
         <TouchableOpacity onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color="#fff" />

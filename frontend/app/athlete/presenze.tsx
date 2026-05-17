@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SocietyBranding from '../../src/components/SocietyBranding';
 import {
   View,
   Text,
@@ -121,7 +122,11 @@ export default function AthletePresenze() {
         >
           <Ionicons name="chevron-back" size={24} color="#007AFF" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Presenze e Statistiche</Text>
+        {/* BRANDING_WRAPPED */}
+          <View style={{ flex: 1, marginHorizontal: 8 }}>
+            <SocietyBranding />
+            <Text style={styles.headerTitle}>Presenze e Statistiche</Text>
+          </View>
         <View style={{ width: 40 }} />
       </View>
 

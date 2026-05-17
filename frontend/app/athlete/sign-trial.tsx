@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import SocietyBranding from '../../src/components/SocietyBranding';
 import {
   View,
   Text,
@@ -86,7 +87,11 @@ export default function SignTrialPage() {
         <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/athlete'))} style={{ padding: 8 }}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Firma Dichiarazione di Prova</Text>
+        {/* BRANDING_WRAPPED */}
+          <View style={{ flex: 1, marginHorizontal: 8 }}>
+            <SocietyBranding />
+            <Text style={styles.headerTitle}>Firma Dichiarazione di Prova</Text>
+          </View>
         <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/athlete'))} style={{ padding: 8 }}>
           <Ionicons name="close" size={24} color="#fff" />
         </TouchableOpacity>

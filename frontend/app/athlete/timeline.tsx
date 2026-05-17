@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import SocietyBranding from '../../src/components/SocietyBranding';
 import {
   View,
   Text,
@@ -141,7 +142,11 @@ export default function AthleteTimelinePage() {
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.headerSubtitle}>Cronologia</Text>
-          <Text style={styles.headerTitle}>{athleteName}</Text>
+          {/* BRANDING_WRAPPED */}
+          <View style={{ flex: 1, marginHorizontal: 8 }}>
+            <SocietyBranding />
+            <Text style={styles.headerTitle}>{athleteName}</Text>
+          </View>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: (statusColor[athleteStatus] || '#8E8E93') + '20' }]}>
           <View style={[styles.statusDot, { backgroundColor: statusColor[athleteStatus] || '#8E8E93' }]} />
