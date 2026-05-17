@@ -280,6 +280,23 @@ L'utente ha chiesto esplicitamente (16/05/2026) di rimandare a settembre, perch�
 
 ---
 
+### 🆕 Motivazione Annullamento Collassabile + Coach Upcoming ANNULLATO (17/05/2026)
+
+**Su richiesta utente (foto Coach)**: 
+1. La motivazione "Motivo: ..." era sempre visibile e prendeva troppo spazio → ora è **collassata di default**: si vede solo "❌ ANNULLATO (HH:MM - HH:MM) ▼" e cliccando il chevron si espande il motivo.
+2. Negli **IMPEGNI SUCCESSIVI** (upcoming) del Coach mancava l'indicazione "❌ ANNULLATO" — apparivano solo barrati. Ora mostrano il badge come negli altri giorni.
+
+**Modifiche** (`coach/index.tsx`):
+- Aggiunto stato `expandedReasons: Set<string>` e helper `toggleReason(key)` per espansione singola per riga
+- Aggiornati tutti e 4 i blocchi (today/tomorrow/day_after/upcoming):
+  - Bottone tap con icon `chevron-down/up` accanto a "❌ ANNULLATO"
+  - Motivazione visibile solo se la chiave è nel Set
+- Blocco upcoming ora ha anche il rendering condizionale cancelled/modified (prima solo barrato senza badge)
+
+**Parent/Athlete/Minor**: già "collassati" in modo nativo (mostrano "tocca per il motivo" che apre un alert nativo) — nessuna modifica necessaria.
+
+Build Expo Web ricompilata.
+
 ### 🆕 Solo Admin può Modificare/Annullare Allenamenti (17/05/2026)
 
 **Policy change (su richiesta utente)**: i Coach non possono più creare/modificare/cancellare gli override degli allenamenti — tutto passa dall'Admin per evitare abusi all'insaputa della società.
