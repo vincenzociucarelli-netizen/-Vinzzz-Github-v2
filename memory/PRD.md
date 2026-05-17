@@ -280,6 +280,34 @@ L'utente ha chiesto esplicitamente (16/05/2026) di rimandare a settembre, perch�
 
 ---
 
+### 🆕 Branding Società su tutte le pagine COACH (17/05/2026)
+
+Su richiesta dell'utente: i coach (e in seguito anche atleti/genitori/dirigenti/collaboratori) non sapevano sempre con quale società stessero operando. Implementato il branding su **tutte le pagine del ruolo Coach** come prova.
+
+- **Componente nuovo**: `frontend/src/components/SocietyBranding.tsx`
+  - Mostra **logo (28px tondo) + nome società** in una riga compatta
+  - Si auto-cache a livello modulo (evita refetch su ogni page change)
+  - Auto-rileva mancanza logo via HEAD probe (404 ⇒ mostra solo nome)
+  - Props: `light` (default true per header colorati), `logoSize`, `style`
+- **Pagine aggiornate**:
+  - `coach/index.tsx` — "Le Mie Squadre" + Scanner Presenze inattivo
+  - `coach/history.tsx` — "Presenze di Oggi"
+  - `coach/compensation.tsx` — "Compensi Sportivi"
+  - `coach/profile.tsx` — "Il Mio Profilo"
+  - `coach/team/[id]/index.tsx` — dettaglio squadra
+  - `coach/team/[id]/attendances.tsx` — "Registro Presenze"
+  - `coach/athlete/[id].tsx` — "Dati Tecnici"
+- Layout opzione "A" scelto dall'utente: logo+nome **sotto al titolo della pagina** nell'header colorato esistente
+- Nome società su **una sola riga** (max 2 con autoshrink se troppo lungo)
+
+**Test prossimo**: una volta che utente conferma il risultato sul coach, replicheremo lo stesso pattern a:
+- Parent (`parent/*`)
+- Atleta 18+ (`athlete/*`)
+- Minor lite (`minor/*`)
+- Dirigente (`dirigente/*`)
+- Collaboratore (`collaboratore/*`)
+- Admin sotto-pagine (`admin/*`) — header admin home è già custom
+
 ### 🆕 Motivazione Annullamento Collassabile + Coach Upcoming ANNULLATO (17/05/2026)
 
 **Su richiesta utente (foto Coach)**: 

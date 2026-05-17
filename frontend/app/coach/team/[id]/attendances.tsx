@@ -11,6 +11,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../../src/services/api';
 import { Ionicons } from '../../../../src/components/Icon';
+import SocietyBranding from '../../../../src/components/SocietyBranding';
 
 interface AthleteStats {
   athlete_id: string;
@@ -119,7 +120,10 @@ export default function CoachTeamAttendances() {
         <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/coach'))}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Registro Presenze</Text>
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={styles.headerTitle}>Registro Presenze</Text>
+          <SocietyBranding />
+        </View>
         <View style={{ width: 24 }} />
       </View>
 

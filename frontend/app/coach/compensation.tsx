@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
+import SocietyBranding from '../../src/components/SocietyBranding';
 import SignaturePadInline from '../../src/components/SignaturePadInline';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
@@ -997,7 +998,10 @@ export default function CoachCompensation() {
             <Ionicons name="chevron-back" size={24} color="#007AFF" />
           </View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Compensi Sportivi</Text>
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={styles.headerTitle}>Compensi Sportivi</Text>
+          <SocietyBranding />
+        </View>
         <View style={{ width: 40 }} />
       </View>
 

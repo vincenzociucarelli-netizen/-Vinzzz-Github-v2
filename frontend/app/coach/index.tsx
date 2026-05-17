@@ -25,6 +25,7 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { SportIcon } from '../../src/components/SportIcon';
 import { OnboardingTutorial, COACH_STEPS } from '../../src/components/OnboardingTutorial';
+import SocietyBranding from '../../src/components/SocietyBranding';
 
 // Web QR Scanner
 let Html5QrcodeScanner: any = null;
@@ -659,7 +660,10 @@ export default function CoachScreen() {
       return (
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Scanner Presenze</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.headerTitle}>Scanner Presenze</Text>
+              <SocietyBranding />
+            </View>
             <TouchableOpacity onPress={handleLogout}>
               <Ionicons name="log-out-outline" size={24} color="#fff" />
             </TouchableOpacity>
@@ -1189,7 +1193,10 @@ export default function CoachScreen() {
     <View style={styles.container}>
       <OnboardingTutorial role="coach" steps={COACH_STEPS} />
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Le Mie Squadre</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>Le Mie Squadre</Text>
+          <SocietyBranding />
+        </View>
         <TouchableOpacity onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color="#fff" />
         </TouchableOpacity>

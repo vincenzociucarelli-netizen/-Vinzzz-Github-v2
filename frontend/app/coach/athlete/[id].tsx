@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '../../../src/components/Icon';
+import SocietyBranding from '../../../src/components/SocietyBranding';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../../../src/services/api';
@@ -250,7 +251,10 @@ export default function CoachAthleteDetail() {
         <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/coach'))}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Dati Tecnici</Text>
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={styles.headerTitle}>Dati Tecnici</Text>
+          <SocietyBranding />
+        </View>
         <TouchableOpacity onPress={handleSave} disabled={saving}>
           {saving ? (
             <ActivityIndicator size="small" color="#fff" />

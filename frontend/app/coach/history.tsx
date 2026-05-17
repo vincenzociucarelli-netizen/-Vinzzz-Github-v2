@@ -15,6 +15,7 @@ import { Ionicons } from '../../src/components/Icon';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useAuthStore } from '../../src/store/authStore';
+import SocietyBranding from '../../src/components/SocietyBranding';
 
 interface AttendanceWithAthlete {
   id: string;
@@ -105,7 +106,10 @@ export default function CoachHistory() {
         <TouchableOpacity onPress={() => router.replace('/coach')}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Presenze di Oggi</Text>
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={styles.headerTitle}>Presenze di Oggi</Text>
+          <SocietyBranding />
+        </View>
         <TouchableOpacity onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color="#fff" />
         </TouchableOpacity>

@@ -13,6 +13,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../../src/services/api';
 import { Ionicons } from '../../../../src/components/Icon';
 import { SportIcon } from '../../../../src/components/SportIcon';
+import SocietyBranding from '../../../../src/components/SocietyBranding';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import PhotoViewer from '../../../../src/components/PhotoViewer';
@@ -191,7 +192,10 @@ export default function CoachTeamAthletes() {
             <Ionicons name="chevron-back" size={24} color="#007AFF" />
           </View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{team?.name || 'Squadra'}</Text>
+        <View style={{ flex: 1, marginLeft: 8 }}>
+          <Text style={styles.headerTitle}>{team?.name || 'Squadra'}</Text>
+          <SocietyBranding />
+        </View>
         <View style={{ width: 40 }} />
       </View>
 
