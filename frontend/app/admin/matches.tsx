@@ -18,6 +18,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import api from '../../src/services/api';
+import { MultiStepTutorial, TutorialStep } from '../../src/components/MultiStepTutorial';
 import { Ionicons } from '../../src/components/Icon';
 import { SportIcon } from '../../src/components/SportIcon';
 
@@ -69,10 +70,9 @@ export default function AdminMatches() {
   // Filter state
   const [filterMode, setFilterMode] = useState<'upcoming' | 'played' | 'all'>('upcoming');
 
-  // Multi-step info tutorial (mostrato al tap di "Info importazione")
+  // Multi-step info tutorial (mostrato al tap di "Info & tutorial")
   const [tutorialVisible, setTutorialVisible] = useState(false);
-  const [tutorialStep, setTutorialStep] = useState(0);
-  const TUTORIAL_STEPS = [
+  const TUTORIAL_STEPS: TutorialStep[] = [
     {
       icon: 'calendar', iconColor: '#fff', iconBg: '#007AFF',
       title: 'Benvenuto nel Calendario Gare',
@@ -104,13 +104,6 @@ export default function AdminMatches() {
       description: 'Usa i 3 tab in alto per filtrare:\n\n⏰ Da disputare — solo le gare future\n🏆 Giocate — solo le gare già fatte\n📋 Tutte — l\'elenco completo\n\nTocca una gara per modificarla o cancellarla.',
     },
   ];
-
-  const openTutorial = () => { setTutorialStep(0); setTutorialVisible(true); };
-  const tutorialNext = () => {
-    if (tutorialStep < TUTORIAL_STEPS.length - 1) setTutorialStep(tutorialStep + 1);
-    else setTutorialVisible(false);
-  };
-  const tutorialPrev = () => { if (tutorialStep > 0) setTutorialStep(tutorialStep - 1); };
 
   // Carica nome squadra di casa salvato (per evitare di doverlo riscrivere ad ogni re-import)
   useEffect(() => {
@@ -715,7 +708,7 @@ export default function AdminMatches() {
       <View style={styles.instructionCard}>
         <TouchableOpacity
           style={styles.infoIconBtn}
-          onPress={openTutorial}
+          onPress={() => setTutorialVisible(true)}
           data-testid="matches-info-btn"
         >
           <Ionicons name="information-circle" size={22} color="#007AFF" />
@@ -1158,44 +1151,13 @@ export default function AdminMatches() {
         </View>
       )}
 
-      {/* Multi-step Tutorial Modal */}
-      <Modal visible={tutorialVisible} transparent animationType="fade" onRequestClose={() => setTutorialVisible(false)}>
-        <View style={styles.tutorialOverlay}>
-          <View style={styles.tutorialCard} data-testid="matches-tutorial-modal">
-            <TouchableOpacity style={styles.tutorialClose} onPress={() => setTutorialVisible(false)} data-testid="tutorial-close-btn">
-              <Ionicons name="close" size={24} color="#666" />
-            </TouchableOpacity>
-            <View style={styles.tutorialDots}>
-              {TUTORIAL_STEPS.map((_, i) => (
-                <View key={i} style={[styles.tutorialDot, i === tutorialStep && styles.tutorialDotActive]} />
-              ))}
-            </View>
-            <View style={[styles.tutorialIconCircle, { backgroundColor: TUTORIAL_STEPS[tutorialStep].iconBg }]}>
-              <Ionicons name={TUTORIAL_STEPS[tutorialStep].icon as any} size={36} color={TUTORIAL_STEPS[tutorialStep].iconColor} />
-            </View>
-            <Text style={styles.tutorialTitle}>{TUTORIAL_STEPS[tutorialStep].title}</Text>
-            <Text style={styles.tutorialDesc}>{TUTORIAL_STEPS[tutorialStep].description}</Text>
-            <View style={styles.tutorialBtnRow}>
-              <TouchableOpacity
-                style={[styles.tutorialBtn, styles.tutorialBtnSecondary, tutorialStep === 0 && { opacity: 0.4 }]}
-                onPress={tutorialPrev}
-                disabled={tutorialStep === 0}
-                data-testid="tutorial-prev-btn"
-              >
-                <Ionicons name="chevron-back" size={18} color="#007AFF" />
-                <Text style={styles.tutorialBtnSecondaryText}>Indietro</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.tutorialBtn, styles.tutorialBtnPrimary]} onPress={tutorialNext} data-testid="tutorial-next-btn">
-                <Text style={styles.tutorialBtnPrimaryText}>
-                  {tutorialStep === TUTORIAL_STEPS.length - 1 ? 'Ho capito' : 'Avanti'}
-                </Text>
-                {tutorialStep < TUTORIAL_STEPS.length - 1 && <Ionicons name="chevron-forward" size={18} color="#fff" />}
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.tutorialStepCounter}>{tutorialStep + 1} di {TUTORIAL_STEPS.length}</Text>
-          </View>
-        </View>
-      </Modal>
+      {/* Multi-step Tutorial Modal (reusable component) */}
+      <MultiStepTutorial
+        visible={tutorialVisible}
+        steps={TUTORIAL_STEPS}
+        onClose={() => setTutorialVisible(false)}
+        testIdPrefix="matches-tutorial"
+      />
     </View>
   );
 }
@@ -1594,102 +1556,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
     fontWeight: 'bold',
-  },
-  tutorialOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  tutorialCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-    maxWidth: 420,
-    alignItems: 'center',
-  },
-  tutorialClose: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    padding: 4,
-    zIndex: 2,
-  },
-  tutorialDots: {
-    flexDirection: 'row',
-    gap: 6,
-    marginBottom: 16,
-  },
-  tutorialDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#e0e0e0',
-  },
-  tutorialDotActive: {
-    backgroundColor: '#007AFF',
-    width: 24,
-  },
-  tutorialIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  tutorialTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  tutorialDesc: {
-    fontSize: 15,
-    color: '#333',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 20,
-  },
-  tutorialBtnRow: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  tutorialBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    gap: 4,
-  },
-  tutorialBtnPrimary: {
-    backgroundColor: '#007AFF',
-  },
-  tutorialBtnPrimaryText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 15,
-  },
-  tutorialBtnSecondary: {
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    backgroundColor: '#fff',
-  },
-  tutorialBtnSecondaryText: {
-    color: '#007AFF',
-    fontWeight: '600',
-    fontSize: 15,
-  },
-  tutorialStepCounter: {
-    marginTop: 12,
-    fontSize: 12,
-    color: '#999',
   },
 });

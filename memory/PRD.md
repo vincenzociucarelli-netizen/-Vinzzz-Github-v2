@@ -280,6 +280,22 @@ L'utente ha chiesto esplicitamente (16/05/2026) di rimandare a settembre, perch�
 
 ---
 
+### 🆕 Componente Riutilizzabile `<MultiStepTutorial />` (17/05/2026)
+
+- Estratto il tutorial multi-step in **componente generico riutilizzabile**: `/app/frontend/src/components/MultiStepTutorial.tsx`
+- API:
+  ```tsx
+  <MultiStepTutorial
+    visible={tutorialVisible}
+    steps={TUTORIAL_STEPS}   // array di { icon, iconColor, iconBg, title, description }
+    onClose={() => setTutorialVisible(false)}
+    testIdPrefix="matches-tutorial"
+  />
+  ```
+- Tipo esportato: `TutorialStep` per typing
+- Refactor `admin/matches.tsx`: rimossi ~100 righe di Modal inline + 12 stili duplicati. Ora usa il componente.
+- **Pronto per settembre**: quando aggiungeremo gli atleti 18+ con compenso, possiamo aggiungere subito un mini-tour anche su quella pagina (e su altre come settings, payments-import) senza duplicare codice.
+
 ### 🆕 Tutorial multi-step Admin Calendario Gare (17/05/2026)
 
 - Aggiunto **tutorial guidato in 6 step** al tap del bottone "Info & tutorial" su `/admin/matches`:
