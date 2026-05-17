@@ -280,6 +280,20 @@ L'utente ha chiesto esplicitamente (16/05/2026) di rimandare a settembre, perch�
 
 ---
 
+### 🆕 Tutorial multi-step Admin Calendario Gare (17/05/2026)
+
+- Aggiunto **tutorial guidato in 6 step** al tap del bottone "Info & tutorial" su `/admin/matches`:
+  1. Benvenuto — panoramica della pagina
+  2. Scarica Template Excel (verde)
+  3. Importa gare (icona ☁️)
+  4. Sincronizza da FIPAV (icona 🔄 arancione)
+  5. Aggiungi gara manualmente (icona +)
+  6. Filtri e visualizzazione (tab Da disputare/Giocate/Tutte)
+- UI: Modal con icona, titolo, descrizione, dots indicatori, bottoni Indietro/Avanti, contatore "1 di 6"
+- TestIDs: `matches-info-btn`, `matches-tutorial-modal`, `tutorial-prev-btn`, `tutorial-next-btn`, `tutorial-close-btn`
+- File: `frontend/app/admin/matches.tsx` (~70 righe aggiunte: state, modal, styles)
+- Pensato per le **società demo "La Tua Società"** che provano la piattaforma per la prima volta — riduce il bisogno di documentazione esterna.
+
 ### 🆕 Hide Trainings for ALL Matches + Date Headers + Calendario UI (17/05/2026)
 
 - **BUG FIX Coach**: `/api/coach/commitments` ora nasconde gli allenamenti per partite **HOME e TRASFERTA** (prima solo HOME). La rifinitura pre-gara resta solo per partite in casa. (file: `backend/server.py` L11911-11960)
