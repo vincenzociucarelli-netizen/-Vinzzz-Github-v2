@@ -11907,6 +11907,15 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
             m["date"] = d
             filtered_matches.append(m)
     matches = filtered_matches
+
+    # Load training overrides (cancellations / modifications) within the same window
+    overrides_cursor = db.training_overrides.find({
+        "team_id": {"$in": team_ids},
+        "date": {"$gte": today.strftime("%Y-%m-%d"), "$lt": end_of_week.strftime("%Y-%m-%d")}
+    })
+    overrides_map = {}
+    async for ov in overrides_cursor:
+        overrides_map[(ov.get("team_id"), ov.get("date"))] = ov
     
     # Build a set of (team_id, day_key) for home matches - these will skip training
     # Also build a dict for rifinitura (team_id, day_key) -> team info for rifinitura
@@ -11964,27 +11973,47 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
     
     for day_key, target_date in [("today", today), ("tomorrow", tomorrow), ("day_after", day_after)]:
         day_name = get_day_name(target_date)
-        
+        date_iso = target_date.strftime("%Y-%m-%d")
+
         # Check trainings for this day
         for team_id in team_ids:
-            # Skip training if there's a home match for this team on this day
+            # Skip training silently if there's a match (home or away) for this team on this day
             if (team_id, day_key) in home_match_days:
                 continue
-            
+
             team = teams_dict.get(team_id, {})
             team_name = team.get("name", "Squadra")
             training_sessions = team.get("training_sessions", [])
-            
+            override = overrides_map.get((team_id, date_iso))
+
             for session in training_sessions:
                 if session.get("day") == day_name:
+                    t_start = session.get("timeStart", "")
+                    t_end = session.get("timeEnd", "")
+                    venue = session.get("venue", "")
+                    cancelled = False
+                    modified = False
+                    reason = None
+                    if override and override.get("status") == "cancelled":
+                        cancelled = True
+                        reason = override.get("reason")
+                    elif override and override.get("status") == "modified":
+                        t_start = override.get("new_start_time", t_start) or t_start
+                        t_end = override.get("new_end_time", t_end) or t_end
+                        venue = override.get("new_venue", venue) or venue
+                        reason = override.get("reason")
+                        modified = True
                     result[day_key].append({
                         "type": "training",
                         "team_id": team_id,
                         "team_name": team_name,
-                        "time_start": session.get("timeStart", ""),
-                        "time_end": session.get("timeEnd", ""),
-                        "venue": session.get("venue", ""),
-                        "title": f"Allenamento {team_name}"
+                        "time_start": t_start,
+                        "time_end": t_end,
+                        "venue": venue,
+                        "title": f"Allenamento {team_name}",
+                        "cancelled": cancelled,
+                        "modified": modified,
+                        "reason": reason,
                     })
         
         # Add rifinitura for home matches on this day
@@ -12007,28 +12036,48 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
         target_date = today + timedelta(days=day_offset)
         day_name = get_day_name(target_date)
         date_str = target_date.strftime("%d/%m")
-        
+        date_iso = target_date.strftime("%Y-%m-%d")
+
         for team_id in team_ids:
-            # Skip training if there's a home match for this team on this day
+            # Skip training silently if there's a match (home or away) for this team on this day
             if (team_id, date_str) in home_match_days:
                 continue
-            
+
             team = teams_dict.get(team_id, {})
             team_name = team.get("name", "Squadra")
             training_sessions = team.get("training_sessions", [])
-            
+            override = overrides_map.get((team_id, date_iso))
+
             for session in training_sessions:
                 if session.get("day") == day_name:
+                    t_start = session.get("timeStart", "")
+                    t_end = session.get("timeEnd", "")
+                    venue = session.get("venue", "")
+                    cancelled = False
+                    modified = False
+                    reason = None
+                    if override and override.get("status") == "cancelled":
+                        cancelled = True
+                        reason = override.get("reason")
+                    elif override and override.get("status") == "modified":
+                        t_start = override.get("new_start_time", t_start) or t_start
+                        t_end = override.get("new_end_time", t_end) or t_end
+                        venue = override.get("new_venue", venue) or venue
+                        reason = override.get("reason")
+                        modified = True
                     result["upcoming"].append({
                         "type": "training",
                         "team_id": team_id,
                         "team_name": team_name,
                         "date": date_str,
                         "day_name": day_name,
-                        "time_start": session.get("timeStart", ""),
-                        "time_end": session.get("timeEnd", ""),
-                        "venue": session.get("venue", ""),
-                        "title": f"Allenamento {team_name}"
+                        "time_start": t_start,
+                        "time_end": t_end,
+                        "venue": venue,
+                        "title": f"Allenamento {team_name}",
+                        "cancelled": cancelled,
+                        "modified": modified,
+                        "reason": reason,
                     })
     
     # Add rifinitura for upcoming days with home matches

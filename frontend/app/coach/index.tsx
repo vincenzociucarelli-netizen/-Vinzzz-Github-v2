@@ -1390,8 +1390,9 @@ export default function CoachScreen() {
                   />
                   <View style={styles.commitmentItemContent}>
                     {item.type === 'training' ? (
-                      <Text style={styles.commitmentItemTitle}>
+                      <Text style={[styles.commitmentItemTitle, (item as any).cancelled && { textDecorationLine: 'line-through', color: '#888' }]}>
                         Allenamento {abbreviateTeamName(item.team_name)}
+                        {(item as any).modified ? ' ✏️ Variato' : ''}
                       </Text>
                     ) : item.type === 'rifinitura' ? (
                       <Text style={[styles.commitmentItemTitle, { color: '#9C27B0' }]}>
@@ -1403,12 +1404,25 @@ export default function CoachScreen() {
                         <Text style={styles.matchTitleVs}>Vs. {item.opponent}</Text>
                       </View>
                     )}
-                    <Text style={styles.commitmentItemDetails}>
-                      {item.type === 'training' || item.type === 'rifinitura'
-                        ? `${item.time_start} - ${item.time_end}` 
-                        : `ore ${item.time}`} • {item.venue}
-                      {item.city ? ` - ${item.city}` : ''}
-                    </Text>
+                    {(item as any).cancelled ? (
+                      <>
+                        <Text style={{ color: '#C0392B', fontWeight: '700', fontSize: 14, marginTop: 2 }}>
+                          ❌ ANNULLATO {item.time_start ? `(${item.time_start} - ${item.time_end})` : ''}
+                        </Text>
+                        {(item as any).reason ? (
+                          <Text style={{ color: '#1565C0', fontWeight: '600', fontSize: 13, marginTop: 2 }}>
+                            Motivo: {(item as any).reason}
+                          </Text>
+                        ) : null}
+                      </>
+                    ) : (
+                      <Text style={[styles.commitmentItemDetails, (item as any).modified && { color: '#D35400', fontWeight: '700', backgroundColor: '#FFF3E0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }]}>
+                        {item.type === 'training' || item.type === 'rifinitura'
+                          ? `${item.time_start} - ${item.time_end}` 
+                          : `ore ${item.time}`} • {item.venue}
+                        {item.city ? ` - ${item.city}` : ''}
+                      </Text>
+                    )}
                     {item.type === 'match' && item.home_away && (
                       <Text style={[styles.commitmentHomeAway, { color: item.home_away === 'home' ? '#007AFF' : '#FF9500' }]}>
                         {item.home_away === 'home' ? '🏠 Casa' : '✈️ Trasferta'}
@@ -1443,8 +1457,9 @@ export default function CoachScreen() {
                   />
                   <View style={styles.commitmentItemContent}>
                     {item.type === 'training' ? (
-                      <Text style={styles.commitmentItemTitle}>
+                      <Text style={[styles.commitmentItemTitle, (item as any).cancelled && { textDecorationLine: 'line-through', color: '#888' }]}>
                         Allenamento {abbreviateTeamName(item.team_name)}
+                        {(item as any).modified ? ' ✏️ Variato' : ''}
                       </Text>
                     ) : item.type === 'rifinitura' ? (
                       <Text style={[styles.commitmentItemTitle, { color: '#9C27B0' }]}>
@@ -1456,12 +1471,25 @@ export default function CoachScreen() {
                         <Text style={styles.matchTitleVs}>Vs. {item.opponent}</Text>
                       </View>
                     )}
-                    <Text style={styles.commitmentItemDetails}>
-                      {item.type === 'training' || item.type === 'rifinitura'
-                        ? `${item.time_start} - ${item.time_end}` 
-                        : `ore ${item.time}`} • {item.venue}
-                      {item.city ? ` - ${item.city}` : ''}
-                    </Text>
+                    {(item as any).cancelled ? (
+                      <>
+                        <Text style={{ color: '#C0392B', fontWeight: '700', fontSize: 14, marginTop: 2 }}>
+                          ❌ ANNULLATO {item.time_start ? `(${item.time_start} - ${item.time_end})` : ''}
+                        </Text>
+                        {(item as any).reason ? (
+                          <Text style={{ color: '#1565C0', fontWeight: '600', fontSize: 13, marginTop: 2 }}>
+                            Motivo: {(item as any).reason}
+                          </Text>
+                        ) : null}
+                      </>
+                    ) : (
+                      <Text style={[styles.commitmentItemDetails, (item as any).modified && { color: '#D35400', fontWeight: '700', backgroundColor: '#FFF3E0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }]}>
+                        {item.type === 'training' || item.type === 'rifinitura'
+                          ? `${item.time_start} - ${item.time_end}` 
+                          : `ore ${item.time}`} • {item.venue}
+                        {item.city ? ` - ${item.city}` : ''}
+                      </Text>
+                    )}
                     {item.type === 'match' && item.home_away && (
                       <Text style={[styles.commitmentHomeAway, { color: item.home_away === 'home' ? '#007AFF' : '#FF9500' }]}>
                         {item.home_away === 'home' ? '🏠 Casa' : '✈️ Trasferta'}
@@ -1496,8 +1524,9 @@ export default function CoachScreen() {
                   />
                   <View style={styles.commitmentItemContent}>
                     {item.type === 'training' ? (
-                      <Text style={styles.commitmentItemTitle}>
+                      <Text style={[styles.commitmentItemTitle, (item as any).cancelled && { textDecorationLine: 'line-through', color: '#888' }]}>
                         Allenamento {abbreviateTeamName(item.team_name)}
+                        {(item as any).modified ? ' ✏️ Variato' : ''}
                       </Text>
                     ) : item.type === 'rifinitura' ? (
                       <Text style={[styles.commitmentItemTitle, { color: '#9C27B0' }]}>
@@ -1509,12 +1538,25 @@ export default function CoachScreen() {
                         <Text style={styles.matchTitleVs}>Vs. {item.opponent}</Text>
                       </View>
                     )}
-                    <Text style={styles.commitmentItemDetails}>
-                      {item.type === 'training' || item.type === 'rifinitura'
-                        ? `${item.time_start} - ${item.time_end}` 
-                        : `ore ${item.time}`} • {item.venue}
-                      {item.city ? ` - ${item.city}` : ''}
-                    </Text>
+                    {(item as any).cancelled ? (
+                      <>
+                        <Text style={{ color: '#C0392B', fontWeight: '700', fontSize: 14, marginTop: 2 }}>
+                          ❌ ANNULLATO {item.time_start ? `(${item.time_start} - ${item.time_end})` : ''}
+                        </Text>
+                        {(item as any).reason ? (
+                          <Text style={{ color: '#1565C0', fontWeight: '600', fontSize: 13, marginTop: 2 }}>
+                            Motivo: {(item as any).reason}
+                          </Text>
+                        ) : null}
+                      </>
+                    ) : (
+                      <Text style={[styles.commitmentItemDetails, (item as any).modified && { color: '#D35400', fontWeight: '700', backgroundColor: '#FFF3E0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, alignSelf: 'flex-start' }]}>
+                        {item.type === 'training' || item.type === 'rifinitura'
+                          ? `${item.time_start} - ${item.time_end}` 
+                          : `ore ${item.time}`} • {item.venue}
+                        {item.city ? ` - ${item.city}` : ''}
+                      </Text>
+                    )}
                     {item.type === 'match' && item.home_away && (
                       <Text style={[styles.commitmentHomeAway, { color: item.home_away === 'home' ? '#007AFF' : '#FF9500' }]}>
                         {item.home_away === 'home' ? '🏠 Casa' : '✈️ Trasferta'}

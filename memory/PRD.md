@@ -280,6 +280,20 @@ L'utente ha chiesto esplicitamente (16/05/2026) di rimandare a settembre, perch�
 
 ---
 
+### 🆕 Coach Dashboard — Allenamenti Annullati/Modificati (17/05/2026)
+
+**Bug fix critico**: il coach **non vedeva** gli annullamenti/variazioni degli allenamenti (parents/atleti li vedevano già).
+
+- **Backend** (`server.py` endpoint `/api/coach/commitments`):
+  - Aggiunto fetch di `training_overrides` per team_id + date range
+  - Per ogni training: se override `status='cancelled'` → `cancelled: true` + reason; se `modified` → orari/venue aggiornati + `modified: true`
+  - Applicato sia ai 3 giorni (today/tomorrow/day_after) sia ai successivi (upcoming)
+- **Frontend** (`coach/index.tsx`): renderizzazione identica a parent/athlete:
+  - `cancelled` → testo barrato, "❌ ANNULLATO (HH:MM - HH:MM)" rosso + "Motivo: ..." blu
+  - `modified` → "✏️ Variato" + sfondo arancione con nuovi orari
+  - Replace_all sui 4 blocchi (today/tomorrow/day_after/upcoming)
+- **Testato via curl** end-to-end: backend ritorna correttamente `cancelled/modified/reason` con override inseriti manualmente nel DB.
+
 ### 🆕 Componente Riutilizzabile `<MultiStepTutorial />` (17/05/2026)
 
 - Estratto il tutorial multi-step in **componente generico riutilizzabile**: `/app/frontend/src/components/MultiStepTutorial.tsx`
