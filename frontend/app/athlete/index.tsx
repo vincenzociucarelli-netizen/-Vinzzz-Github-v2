@@ -1286,12 +1286,22 @@ export default function AthleteScreen() {
       {(commitments.today.length + commitments.tomorrow.length + commitments.day_after.length + commitments.upcoming.length > 0) && (
         <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginHorizontal: 16, marginBottom: 16 }}>
           <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 12, color: '#000' }}>📅 Prossimi Impegni</Text>
-          {[
-            { key: 'today', label: 'OGGI' },
-            { key: 'tomorrow', label: 'DOMANI' },
-            { key: 'day_after', label: 'DOPODOMANI' },
-            { key: 'upcoming', label: 'IMPEGNI SUCCESSIVI' },
-          ].map(section => {
+          {(() => {
+            const fmt = (offset: number) => {
+              const d = new Date();
+              d.setDate(d.getDate() + offset);
+              const dd = String(d.getDate()).padStart(2, '0');
+              const mm = String(d.getMonth() + 1).padStart(2, '0');
+              const days = ['DOMENICA', 'LUNEDÌ', 'MARTEDÌ', 'MERCOLEDÌ', 'GIOVEDÌ', 'VENERDÌ', 'SABATO'];
+              return `${dd}/${mm} - ${days[d.getDay()]}`;
+            };
+            return [
+              { key: 'today', label: `OGGI ${fmt(0)}` },
+              { key: 'tomorrow', label: `DOMANI ${fmt(1)}` },
+              { key: 'day_after', label: `DOPODOMANI ${fmt(2)}` },
+              { key: 'upcoming', label: 'IMPEGNI SUCCESSIVI' },
+            ];
+          })().map(section => {
             const items = (commitments as any)[section.key] as any[];
             if (!items || items.length === 0) return null;
             const isUpcoming = section.key === 'upcoming';

@@ -647,7 +647,7 @@ export default function AdminMatches() {
         <TouchableOpacity onPress={() => router.replace('/admin')} data-testid="header-home-btn" style={{ marginLeft: 8 }}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Calendario Gare</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} data-testid="matches-page-title">Calendario Gare</Text>
         <TouchableOpacity
           onPress={handleSyncFipav}
           style={[styles.syncBtn, syncing && { opacity: 0.6 }]}
@@ -668,14 +668,19 @@ export default function AdminMatches() {
         </TouchableOpacity>
       </View>
 
-      {/* Instructions Card with Template Download */}
+      {/* Compact info row: tappable info icon + Template button */}
       <View style={styles.instructionCard}>
-        <View style={styles.instructionContent}>
-          <Ionicons name="information-circle" size={20} color="#007AFF" />
-          <Text style={styles.instructionText}>
-            <Text style={{ fontWeight: '700' }}>Importa o aggiorna calendario:</Text> ricarica lo stesso file Excel quando la federazione cambia date. Le gare con stesso numero verranno aggiornate, le nuove aggiunte.
-          </Text>
-        </View>
+        <TouchableOpacity
+          style={styles.infoIconBtn}
+          onPress={() => {
+            const msg = "Importa o aggiorna calendario: ricarica lo stesso file Excel quando la federazione cambia date. Le gare con stesso numero verranno aggiornate, le nuove aggiunte.";
+            if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert("Importa o aggiorna calendario", msg); }
+          }}
+          data-testid="matches-info-btn"
+        >
+          <Ionicons name="information-circle" size={22} color="#007AFF" />
+          <Text style={styles.infoIconLabel}>Info importazione</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.templateBtn} onPress={downloadTemplate}>
           <Ionicons name="share-outline" size={16} color="#fff" />
           <Text style={styles.templateBtnText}>Template</Text>
@@ -1145,7 +1150,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     flex: 1,
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#fff',
   },
@@ -1212,6 +1217,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  infoIconBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  infoIconLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#007AFF',
   },
   instructionText: {
     flex: 1,

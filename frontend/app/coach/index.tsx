@@ -1375,7 +1375,7 @@ export default function CoachScreen() {
             <View style={styles.commitmentDayHeader}>
               <View style={[styles.commitmentDot, { backgroundColor: '#FF3B30' }]} />
               <Text style={styles.commitmentDayTitle}>
-                OGGI - {format(new Date(), 'EEEE', { locale: it }).toUpperCase()}
+                OGGI {format(new Date(), 'dd/MM')} - {format(new Date(), 'EEEE', { locale: it }).toUpperCase()}
               </Text>
             </View>
             {commitments.today.length === 0 ? (
@@ -1428,7 +1428,7 @@ export default function CoachScreen() {
             <View style={styles.commitmentDayHeader}>
               <View style={[styles.commitmentDot, { backgroundColor: '#FF9500' }]} />
               <Text style={styles.commitmentDayTitle}>
-                DOMANI - {format(new Date(Date.now() + 86400000), 'EEEE', { locale: it }).toUpperCase()}
+                DOMANI {format(new Date(Date.now() + 86400000), 'dd/MM')} - {format(new Date(Date.now() + 86400000), 'EEEE', { locale: it }).toUpperCase()}
               </Text>
             </View>
             {commitments.tomorrow.length === 0 ? (
@@ -1481,7 +1481,7 @@ export default function CoachScreen() {
             <View style={styles.commitmentDayHeader}>
               <View style={[styles.commitmentDot, { backgroundColor: '#34C759' }]} />
               <Text style={styles.commitmentDayTitle}>
-                DOPODOMANI - {format(new Date(Date.now() + 2*86400000), 'EEEE', { locale: it }).toUpperCase()}
+                DOPODOMANI {format(new Date(Date.now() + 2*86400000), 'dd/MM')} - {format(new Date(Date.now() + 2*86400000), 'EEEE', { locale: it }).toUpperCase()}
               </Text>
             </View>
             {commitments.day_after.length === 0 ? (

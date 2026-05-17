@@ -11918,44 +11918,46 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
         if isinstance(match_date, str):
             match_date = datetime.fromisoformat(match_date.replace("Z", ""))
         
-        # Only home matches hide training and show rifinitura
-        if match.get("home_away") == "home":
-            team_id = match.get("team_id")
-            team = teams_dict.get(team_id, {})
-            rifinitura = team.get("rifinitura", {})
-            
-            if today <= match_date < tomorrow:
-                home_match_days.add((team_id, "today"))
-                if rifinitura and rifinitura.get("enabled"):
-                    home_match_rifinitura[(team_id, "today")] = {
-                        "team_name": team.get("name", "Squadra"),
-                        "rifinitura": rifinitura
-                    }
-            elif tomorrow <= match_date < day_after:
-                home_match_days.add((team_id, "tomorrow"))
-                if rifinitura and rifinitura.get("enabled"):
-                    home_match_rifinitura[(team_id, "tomorrow")] = {
-                        "team_name": team.get("name", "Squadra"),
-                        "rifinitura": rifinitura
-                    }
-            elif day_after <= match_date < (day_after + timedelta(days=1)):
-                home_match_days.add((team_id, "day_after"))
-                if rifinitura and rifinitura.get("enabled"):
-                    home_match_rifinitura[(team_id, "day_after")] = {
-                        "team_name": team.get("name", "Squadra"),
-                        "rifinitura": rifinitura
-                    }
-            else:
-                # For upcoming, we need to track by date
-                date_str = match_date.strftime("%d/%m")
-                home_match_days.add((team_id, date_str))
-                if rifinitura and rifinitura.get("enabled"):
-                    home_match_rifinitura[(team_id, date_str)] = {
-                        "team_name": team.get("name", "Squadra"),
-                        "rifinitura": rifinitura,
-                        "date": date_str,
-                        "day_name": days_map[match_date.weekday()]
-                    }
+        # ALL matches (home OR away) hide the training of that team
+        # because the team is busy with the match. For HOME matches we also
+        # surface the rifinitura (pre-match warm-up) if configured.
+        team_id = match.get("team_id")
+        team = teams_dict.get(team_id, {})
+        rifinitura = team.get("rifinitura", {})
+        is_home = match.get("home_away") == "home"
+
+        if today <= match_date < tomorrow:
+            home_match_days.add((team_id, "today"))
+            if is_home and rifinitura and rifinitura.get("enabled"):
+                home_match_rifinitura[(team_id, "today")] = {
+                    "team_name": team.get("name", "Squadra"),
+                    "rifinitura": rifinitura
+                }
+        elif tomorrow <= match_date < day_after:
+            home_match_days.add((team_id, "tomorrow"))
+            if is_home and rifinitura and rifinitura.get("enabled"):
+                home_match_rifinitura[(team_id, "tomorrow")] = {
+                    "team_name": team.get("name", "Squadra"),
+                    "rifinitura": rifinitura
+                }
+        elif day_after <= match_date < (day_after + timedelta(days=1)):
+            home_match_days.add((team_id, "day_after"))
+            if is_home and rifinitura and rifinitura.get("enabled"):
+                home_match_rifinitura[(team_id, "day_after")] = {
+                    "team_name": team.get("name", "Squadra"),
+                    "rifinitura": rifinitura
+                }
+        else:
+            # For upcoming, we need to track by date
+            date_str = match_date.strftime("%d/%m")
+            home_match_days.add((team_id, date_str))
+            if is_home and rifinitura and rifinitura.get("enabled"):
+                home_match_rifinitura[(team_id, date_str)] = {
+                    "team_name": team.get("name", "Squadra"),
+                    "rifinitura": rifinitura,
+                    "date": date_str,
+                    "day_name": days_map[match_date.weekday()]
+                }
     
     # Build commitments for each day
     result = {"today": [], "tomorrow": [], "day_after": [], "upcoming": []}

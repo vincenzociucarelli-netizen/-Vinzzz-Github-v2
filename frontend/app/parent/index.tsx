@@ -48,6 +48,16 @@ export default function ParentDashboard() {
     upcoming: any[];
   }>({ today: [], tomorrow: [], day_after: [], upcoming: [] });
   const [showUpcoming, setShowUpcoming] = useState(false);
+
+  // Helper: returns "DD/MM - GIORNO" for a date offset (0=today, 1=tomorrow, 2=day_after)
+  const formatDayLabel = (offset: number): string => {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const days = ['DOMENICA', 'LUNEDÌ', 'MARTEDÌ', 'MERCOLEDÌ', 'GIOVEDÌ', 'VENERDÌ', 'SABATO'];
+    return `${dd}/${mm} - ${days[d.getDay()]}`;
+  };
   
   // Trial period modal state
   const [trialModalVisible, setTrialModalVisible] = useState(false);
@@ -651,7 +661,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
           <View style={styles.commitmentDay}>
             <View style={styles.commitmentDayHeader}>
               <View style={[styles.commitmentDot, { backgroundColor: '#FF3B30' }]} />
-              <Text style={styles.commitmentDayTitle}>OGGI</Text>
+              <Text style={styles.commitmentDayTitle}>OGGI {formatDayLabel(0)}</Text>
             </View>
             {commitments.today.length === 0 ? (
               <Text style={styles.noCommitments}>Nulla in programma</Text>
@@ -731,7 +741,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
           <View style={styles.commitmentDay}>
             <View style={styles.commitmentDayHeader}>
               <View style={[styles.commitmentDot, { backgroundColor: '#FF9500' }]} />
-              <Text style={styles.commitmentDayTitle}>DOMANI</Text>
+              <Text style={styles.commitmentDayTitle}>DOMANI {formatDayLabel(1)}</Text>
             </View>
             {commitments.tomorrow.length === 0 ? (
               <Text style={styles.noCommitments}>Nulla in programma</Text>
@@ -811,7 +821,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
           <View style={styles.commitmentDay}>
             <View style={styles.commitmentDayHeader}>
               <View style={[styles.commitmentDot, { backgroundColor: '#34C759' }]} />
-              <Text style={styles.commitmentDayTitle}>DOPODOMANI</Text>
+              <Text style={styles.commitmentDayTitle}>DOPODOMANI {formatDayLabel(2)}</Text>
             </View>
             {commitments.day_after.length === 0 ? (
               <Text style={styles.noCommitments}>Nulla in programma</Text>
