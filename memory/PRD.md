@@ -280,6 +280,29 @@ L'utente ha chiesto esplicitamente (16/05/2026) di rimandare a settembre, perch�
 
 ---
 
+### 🆕 Hide Trainings for ALL Matches + Date Headers + Calendario UI (17/05/2026)
+
+- **BUG FIX Coach**: `/api/coach/commitments` ora nasconde gli allenamenti per partite **HOME e TRASFERTA** (prima solo HOME). La rifinitura pre-gara resta solo per partite in casa. (file: `backend/server.py` L11911-11960)
+- **UI Date Headers**: aggiunta data DD/MM e giorno della settimana sotto OGGI/DOMANI/DOPODOMANI su tutti i ruoli:
+  - Coach (`coach/index.tsx`): `OGGI 17/05 - DOMENICA` (usa date-fns già presente)
+  - Parent (`parent/index.tsx`): helper `formatDayLabel(offset)` 
+  - Athlete 18+ (`athlete/index.tsx`): IIFE inline nel map sections
+  - Minor (`minor/index.tsx`): IIFE inline nel map sections
+- **Admin Calendario Gare** (`admin/matches.tsx`):
+  - Titolo "Calendario Gare": `fontSize 24` (era 20), `numberOfLines=1 adjustsFontSizeToFit minimumFontScale=0.7`
+  - Box info "Importa o aggiorna calendario..." sostituito con bottone compatto **"Info importazione"** (icona info-circle). Al tap → alert con testo completo. Il pulsante "Template" resta accanto.
+- **Testing**: 3/3 backend pytest passati; verificate UI dopo rebuild Expo web.
+
+### ⚠️ Nota tecnica: Expo Web build statica
+
+Il preview environment serve frontend da `/app/frontend/dist` (build statica). Dopo ogni modifica frontend serve eseguire:
+```
+cd /app/frontend && npx expo export -p web --output-dir dist
+```
+(impiega ~3-4 minuti). In produzione (Vercel) il build è automatico sul push.
+
+---
+
 ### 🆕 Collapsible "IMPEGNI SUCCESSIVI" (16/05/2026)
 - ✅ Sezione "IMPEGNI SUCCESSIVI" (oltre 3 giorni) ora **collassabile** su tutte le dashboard role:
   - `parent/index.tsx` (già esistente, `showUpcoming`)
