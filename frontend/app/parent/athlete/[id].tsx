@@ -2595,21 +2595,53 @@ export default function AthleteDetail() {
                 Credenziali per l'accesso:
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <Text style={{ fontSize: 13, color: '#555' }}>Nome Lite:</Text>
+                <Text style={{ fontSize: 13, color: '#555' }}>Nick Name:</Text>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e' }}>{athlete?.nome_lite || 'Non impostato'}</Text>
               </View>
-              <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 4 }}
-                onPress={() => setNomeLiteModalVisible(true)}
-                data-testid="set-nome-lite-button"
-              >
-                <Ionicons name="create-outline" size={15} color="#1565C0" />
-                <Text style={{ fontSize: 12, color: '#1565C0', fontWeight: '600' }}>
-                  {athlete?.nome_lite ? 'Modifica Nome Lite' : 'Imposta Nome Lite'}
-                </Text>
-              </TouchableOpacity>
+              {/* Highlighted CTA when nickname not set */}
+              {!athlete?.nome_lite ? (
+                <TouchableOpacity
+                  style={{
+                    marginTop: 10,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    backgroundColor: '#FFC107',
+                    paddingVertical: 12,
+                    paddingHorizontal: 14,
+                    borderRadius: 10,
+                    borderWidth: 2,
+                    borderColor: '#FF6F00',
+                    shadowColor: '#FF6F00',
+                    shadowOpacity: 0.25,
+                    shadowRadius: 6,
+                    shadowOffset: { width: 0, height: 2 },
+                    elevation: 3,
+                  }}
+                  onPress={() => setNomeLiteModalVisible(true)}
+                  data-testid="set-nome-lite-button"
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="alert-circle" size={20} color="#5D2E00" />
+                  <Text style={{ fontSize: 14, color: '#5D2E00', fontWeight: '800', textAlign: 'center', flexShrink: 1 }}>
+                    Imposta Nick Name per l'accesso lite di {athlete?.first_name || 'tuo figlio'}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 4 }}
+                  onPress={() => setNomeLiteModalVisible(true)}
+                  data-testid="set-nome-lite-button"
+                >
+                  <Ionicons name="create-outline" size={15} color="#1565C0" />
+                  <Text style={{ fontSize: 12, color: '#1565C0', fontWeight: '600' }}>
+                    Modifica Nick Name
+                  </Text>
+                </TouchableOpacity>
+              )}
               <Text style={{ fontSize: 12, color: '#888', fontStyle: 'italic', marginTop: 6 }}>
-                Dalla schermata di login, seleziona "Accesso Atleta" e inserisci il Nome Lite e il PIN.
+                Dalla schermata di login, seleziona "Accesso Atleta" e inserisci il Nick Name e il PIN.
               </Text>
             </View>
           )}
@@ -3773,10 +3805,10 @@ export default function AthleteDetail() {
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400 }}>
             <Text style={{ fontSize: 18, fontWeight: '700', color: '#333', marginBottom: 8, textAlign: 'center' }}>
-              Imposta Nome Lite
+              Imposta Nick Name
             </Text>
             <Text style={{ fontSize: 13, color: '#666', marginBottom: 16, textAlign: 'center' }}>
-              Scegli un nome facile da ricordare per l'accesso Lite (3-20 caratteri). Deve essere unico.
+              Scegli un Nick Name facile da ricordare per l'accesso lite di {athlete?.first_name || 'tuo figlio'} (3-20 caratteri). Deve essere unico.
             </Text>
             <TextInput
               style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 14, fontSize: 16, textAlign: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#e0e0e0' }}
