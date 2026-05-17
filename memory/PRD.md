@@ -280,6 +280,21 @@ L'utente ha chiesto esplicitamente (16/05/2026) di rimandare a settembre, perch�
 
 ---
 
+### 🆕 Solo Admin può Modificare/Annullare Allenamenti (17/05/2026)
+
+**Policy change (su richiesta utente)**: i Coach non possono più creare/modificare/cancellare gli override degli allenamenti — tutto passa dall'Admin per evitare abusi all'insaputa della società.
+
+- **Frontend** (`coach/team/[id]/index.tsx`): rimosso il bottone "Modifica/Annulla Allenamenti" dalla pagina della squadra del coach
+- **Backend** (`routes/training_overrides.py`):
+  - Aggiunto parametro `write=True` a `_check_team_access` 
+  - POST/PATCH/DELETE → richiede `role == ADMIN` (coach 403)
+  - GET → resta aperto a Admin + Coach (lettura)
+- **Comportamento risultante**:
+  - Coach può vedere "❌ ANNULLATO"/"✏️ Variato" nella sua dashboard
+  - Coach non vede più il pulsante di gestione e non può chiamare le API di scrittura
+  - Solo l'Admin gestisce gli override via `/admin/team/[id]/training-overrides`
+- **Testato via curl**: coach 403 sulla POST, coach 200 sulla GET (logica confermata)
+
 ### 🆕 Coach Dashboard — Allenamenti Annullati/Modificati (17/05/2026)
 
 **Bug fix critico**: il coach **non vedeva** gli annullamenti/variazioni degli allenamenti (parents/atleti li vedevano già).

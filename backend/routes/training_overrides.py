@@ -43,8 +43,11 @@ class TrainingOverrideUpdate(BaseModel):
     reason: Optional[str] = None
 
 
-def _check_team_access(current_user: dict, team: dict) -> None:
-    """Allow Admin of the society OR Coach assigned to the team."""
+def _check_team_access(current_user: dict, team: dict, write: bool = False) -> None:
+    """Allow Admin of the society always. Coaches can READ but NOT write
+    (cancel/modify trainings) — only Admin can manage overrides to prevent
+    coaches from changing trainings without society approval.
+    """
     if not team:
         raise HTTPException(status_code=404, detail="Squadra non trovata")
     if current_user.get("society_id") and team.get("society_id") and \
@@ -53,17 +56,19 @@ def _check_team_access(current_user: dict, team: dict) -> None:
     role = current_user["role"]
     if role == UserRole.ADMIN:
         return
-    if role == UserRole.COACH:
+    if not write and role == UserRole.COACH:
         coach_ids = team.get("coach_ids") or []
         if current_user["id"] in coach_ids:
             return
-    raise HTTPException(status_code=403, detail="Solo Admin o Coach della squadra possono gestire gli allenamenti")
+    if write:
+        raise HTTPException(status_code=403, detail="Solo l'Admin della società può modificare o annullare gli allenamenti")
+    raise HTTPException(status_code=403, detail="Solo Admin o Coach della squadra possono visualizzare gli allenamenti")
 
 
 @router.post("/teams/{team_id}/training-overrides")
 async def create_training_override(team_id: str, data: TrainingOverrideCreate, current_user = Depends(get_current_user)):
     team = await db.teams.find_one({"id": team_id})
-    _check_team_access(current_user, team)
+    _check_team_access(current_user, team, write=True)
     if data.status not in ("cancelled", "modified"):
         raise HTTPException(status_code=400, detail="Status non valido (cancelled | modified)")
     try:
@@ -121,7 +126,7 @@ async def update_training_override(ov_id: str, data: TrainingOverrideUpdate, cur
     if not ov:
         raise HTTPException(status_code=404, detail="Override non trovato")
     team = await db.teams.find_one({"id": ov["team_id"]})
-    _check_team_access(current_user, team)
+    _check_team_access(current_user, team, write=True)
     update_dict = {k: v for k, v in data.dict().items() if v is not None}
     if "status" in update_dict and update_dict["status"] not in ("cancelled", "modified"):
         raise HTTPException(status_code=400, detail="Status non valido (cancelled | modified)")
@@ -137,6 +142,6 @@ async def delete_training_override(ov_id: str, current_user = Depends(get_curren
     if not ov:
         raise HTTPException(status_code=404, detail="Override non trovato")
     team = await db.teams.find_one({"id": ov["team_id"]})
-    _check_team_access(current_user, team)
+    _check_team_access(current_user, team, write=True)
     await db.training_overrides.delete_one({"id": ov_id})
     return {"message": "Override eliminato"}
