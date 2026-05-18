@@ -20501,7 +20501,99 @@ async def download_document(
             logger.error(f"Error generating PDF on-the-fly: {e}")
             raise HTTPException(status_code=500, detail="Errore nella generazione del PDF")
     
+    # Final fallback: for legacy documents (privacy_consent, trial_declaration,
+    # terms_of_use, gdpr_adult of non-athlete signers) generate a summary PDF
+    # so the admin/owner can at least see who signed what and when.
+    legacy_types = {"privacy_consent", "trial_declaration", "terms_of_use", "gdpr_adult", "gdpr_minor"}
+    if doc.get("document_type") in legacy_types:
+        try:
+            signer = await db.users.find_one({"id": doc.get("signer_id")}) if doc.get("signer_id") else None
+            society = await db.societies.find_one({"id": doc.get("society_id")}) if doc.get("society_id") else None
+            pdf_bytes = _generate_consent_summary_pdf(doc, signer, society)
+            # Cache for future calls
+            try:
+                pdf_b64 = base64.b64encode(pdf_bytes).decode()
+                await db.signed_documents.update_one({"id": document_id}, {"$set": {"pdf_base64": pdf_b64}})
+            except Exception:
+                pass
+            safe_name = (doc.get("signer_name") or "documento").replace(" ", "_")
+            return StreamingResponse(
+                io.BytesIO(pdf_bytes),
+                media_type="application/pdf",
+                headers={"Content-Disposition": f'inline; filename="{safe_name}_{document_id[:8]}.pdf"'}
+            )
+        except Exception as e:
+            logger.error(f"Error generating legacy summary PDF for {document_id}: {e}")
+
     raise HTTPException(status_code=404, detail="File PDF non trovato")
+
+def _generate_consent_summary_pdf(doc: dict, signer: Optional[dict], society: Optional[dict]) -> bytes:
+    """Generate a minimal but valid PDF for documents whose original PDF
+    was not stored (legacy privacy_consent, trial_declaration, terms_of_use).
+    Includes title, signer info, society info, signed_at and document id.
+    """
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas as _c
+    buf = io.BytesIO()
+    p = _c.Canvas(buf, pagesize=A4)
+    w, h = A4
+    y = h - 60
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(50, y, doc.get("document_title", "Documento Firmato"))
+    y -= 30
+    p.setFont("Helvetica", 10)
+    p.drawString(50, y, "Riepilogo firma digitale (PDF originale non più disponibile)")
+    y -= 30
+    p.line(50, y, w - 50, y)
+    y -= 24
+
+    def row(label: str, value: str):
+        nonlocal y
+        if y < 80:
+            p.showPage()
+            y = h - 60
+            p.setFont("Helvetica", 10)
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(50, y, f"{label}:")
+        p.setFont("Helvetica", 10)
+        # Wrap long values
+        max_chars = 70
+        v = str(value or "—")
+        if len(v) > max_chars:
+            p.drawString(170, y, v[:max_chars])
+            y -= 14
+            p.drawString(170, y, v[max_chars:max_chars*2])
+        else:
+            p.drawString(170, y, v)
+        y -= 18
+
+    row("Documento ID", doc.get("id", ""))
+    row("Tipo", doc.get("document_type", ""))
+    row("Firmatario", doc.get("signer_name", "") or (signer.get("full_name", "") if signer else ""))
+    row("Email firmatario", doc.get("signer_email", "") or (signer.get("email", "") if signer else ""))
+    add = doc.get("additional_data") or {}
+    if isinstance(add, dict):
+        if add.get("role"):
+            row("Ruolo", add.get("role"))
+        if add.get("fiscal_code"):
+            row("Codice Fiscale", add.get("fiscal_code"))
+    signed_at = doc.get("signed_at")
+    if isinstance(signed_at, datetime):
+        signed_at_s = signed_at.strftime("%d/%m/%Y %H:%M")
+    else:
+        signed_at_s = str(signed_at) if signed_at else "—"
+    row("Firmato il", signed_at_s)
+    if society:
+        row("Società", society.get("ragione_sociale") or society.get("name") or "")
+
+    y -= 10
+    p.line(50, y, w - 50, y)
+    y -= 20
+    p.setFont("Helvetica-Oblique", 9)
+    p.drawString(50, y, "Documento generato automaticamente da RegistraTEAM. La firma è registrata nel sistema con timestamp e ID univoco.")
+    p.showPage()
+    p.save()
+    return buf.getvalue()
 
 @api_router.get("/documents/my-documents")
 async def get_my_documents(
