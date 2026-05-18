@@ -20527,6 +20527,72 @@ async def download_document(
 
     raise HTTPException(status_code=404, detail="File PDF non trovato")
 
+
+@api_router.delete("/documents/{document_id}")
+async def admin_delete_signed_document(document_id: str, current_user = Depends(get_current_user)):
+    """Admin-only: delete a signed document (e.g., wrong signature).
+    Also removes the PDF file from disk if present.
+    Logs the deletion for audit purposes.
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può cancellare documenti firmati")
+
+    doc = await db.signed_documents.find_one({"id": document_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Documento non trovato")
+
+    # Enforce same society
+    if current_user.get("society_id") and doc.get("society_id") and \
+            current_user["society_id"] != doc["society_id"]:
+        raise HTTPException(status_code=403, detail="Il documento appartiene a un'altra società")
+
+    # Remove PDF file from disk if it exists
+    pdf_path = doc.get("pdf_path")
+    if pdf_path:
+        try:
+            if os.path.exists(pdf_path):
+                os.remove(pdf_path)
+        except Exception as e:
+            logger.warning(f"Impossibile rimuovere file PDF {pdf_path}: {e}")
+
+    # If this is a compensation_receipt, also unlock the related compensation
+    # so the user can sign a new (correct) receipt for that month.
+    if doc.get("document_type") in ("compensation_receipt", "coach_compensation_receipt", "collaboratore_compensation_receipt"):
+        comp_id = (doc.get("additional_data") or {}).get("compensation_id") or doc.get("related_entity_id")
+        if comp_id:
+            try:
+                await db.compensations.update_one(
+                    {"id": comp_id},
+                    {"$set": {"receipt_signed": False, "receipt_signed_at": None, "receipt_document_id": None}}
+                )
+            except Exception as e:
+                logger.warning(f"Impossibile sbloccare compensation {comp_id}: {e}")
+
+    # Audit log
+    try:
+        await db.audit_logs.insert_one({
+            "id": str(uuid.uuid4()),
+            "action": "admin_delete_signed_document",
+            "actor_id": current_user["id"],
+            "actor_email": current_user.get("email"),
+            "society_id": doc.get("society_id"),
+            "target_document_id": document_id,
+            "target_signer_name": doc.get("signer_name"),
+            "target_document_type": doc.get("document_type"),
+            "target_document_title": doc.get("document_title"),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+    except Exception:
+        pass
+
+    await db.signed_documents.delete_one({"id": document_id})
+    return {
+        "message": "Documento cancellato. L'utente potrà rifirmare se necessario.",
+        "document_id": document_id,
+        "signer_name": doc.get("signer_name"),
+    }
+
+
 def _generate_consent_summary_pdf(doc: dict, signer: Optional[dict], society: Optional[dict]) -> bytes:
     """Generate a minimal but valid PDF for documents whose original PDF
     was not stored (legacy privacy_consent, trial_declaration, terms_of_use).

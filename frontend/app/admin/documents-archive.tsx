@@ -162,6 +162,44 @@ export default function DocumentsArchive() {
     loadDocuments(1, true);
   };
 
+  const handleDelete = async (doc: Document) => {
+    const confirmMsg = `Cancellare DEFINITIVAMENTE il documento firmato?\n\nDocumento: ${doc.document_title}\nFirmatario: ${doc.signer_name}\n\n⚠️ Azione irreversibile. Se è una quietanza compenso, l'utente potrà rifirmarla.`;
+    const ok = Platform.OS === 'web' ? window.confirm(confirmMsg) : await new Promise<boolean>((resolve) => {
+      Alert.alert('Conferma cancellazione', confirmMsg, [
+        { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Cancella', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/documents/${doc.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ detail: 'Errore' }));
+        throw new Error(err.detail || 'Errore nella cancellazione');
+      }
+      const data = await response.json();
+      const successMsg = data.message || 'Documento cancellato';
+      if (Platform.OS === 'web') {
+        window.alert(successMsg);
+      } else {
+        Alert.alert('Cancellato', successMsg);
+      }
+      // Refresh list
+      loadDocuments(1, true);
+    } catch (error: any) {
+      const msg = error?.message || 'Cancellazione non riuscita';
+      if (Platform.OS === 'web') {
+        window.alert(`Errore: ${msg}`);
+      } else {
+        Alert.alert('Errore', msg);
+      }
+    }
+  };
+
   const handleDownload = async (doc: Document) => {
     try {
       const token = await AsyncStorage.getItem('token');
@@ -281,15 +319,24 @@ export default function DocumentsArchive() {
         <View style={[styles.figureTypeBadge, { backgroundColor: getFigureTypeColor(doc.figure_type) }]}>
           <Text style={styles.figureTypeBadgeText}>{getFigureTypeLabel(doc.figure_type)}</Text>
         </View>
-        {doc.pdf_filename && (
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          {doc.pdf_filename && (
+            <TouchableOpacity
+              style={styles.downloadButton}
+              onPress={() => handleDownload(doc)}
+              data-testid={`download-btn-${doc.id}`}
+            >
+              <Ionicons name="eye-outline" size={20} color="#fff" />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
-            style={styles.downloadButton}
-            onPress={() => handleDownload(doc)}
-            data-testid={`download-btn-${doc.id}`}
+            style={styles.deleteButton}
+            onPress={() => handleDelete(doc)}
+            data-testid={`delete-btn-${doc.id}`}
           >
-            <Ionicons name="eye-outline" size={20} color="#fff" />
+            <Ionicons name="trash-outline" size={18} color="#fff" />
           </TouchableOpacity>
-        )}
+        </View>
       </View>
       
       <Text style={styles.documentTitle}>{doc.document_title}</Text>
@@ -622,12 +669,17 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   downloadButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#4CAF50',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#3498DB',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  deleteButton: {
+    backgroundColor: '#E74C3C',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginLeft: 6,
   },
   documentTitle: {
     fontSize: 15,
