@@ -20479,6 +20479,16 @@ async def download_document(
             signed_at = doc.get("signed_at", datetime.utcnow())
             ts_str = signed_at.strftime("%Y-%m-%d %H:%M:%S") if isinstance(signed_at, datetime) else str(signed_at)
             
+            # Fetch full address: prefer user record, but fallback to athlete
+            # record which often has the most complete address data
+            addr_src = dict(signer) if signer else {}
+            if signer and signer.get("role") == "athlete":
+                ath = await db.athletes.find_one({"id": signer.get("athlete_id") or signer.get("id")})
+                if ath:
+                    for fld in ("address", "city", "province", "postal_code", "birth_place"):
+                        if not addr_src.get(fld) and ath.get(fld):
+                            addr_src[fld] = ath[fld]
+
             pdf_bytes = generate_gdpr_adult_privacy_pdf(
                 society_name=society.get("name", "") if society else "",
                 ragione_sociale=society.get("ragione_sociale", "") if society else "",
@@ -20490,9 +20500,9 @@ async def download_document(
                 signer_fiscal_code=signer_cf,
                 signer_birth_date=signer_dob,
                 signer_birth_place=signer_bp,
-                signer_address=signer.get("address", "") if signer else "",
-                signer_city=signer.get("city", "") if signer else "",
-                signer_province=signer.get("province", "") if signer else "",
+                signer_address=addr_src.get("address", ""),
+                signer_city=addr_src.get("city", ""),
+                signer_province=addr_src.get("province", ""),
                 signature_base64="",
                 timestamp=ts_str,
                 ip_address="Registrazione",
@@ -20569,6 +20579,22 @@ async def download_document(
                     or ((coach_user or {}).get("full_name") or "")
                 )
                 fiscal = (coach_user or {}).get("fiscal_code") or (doc.get("additional_data") or {}).get("fiscal_code") or ""
+                # Try to fetch the actual hand-written signature from the
+                # linked `compensations` record (where receipt_signature_base64
+                # is stored when the coach signs).
+                signature_b64 = doc.get("signature_base64", "") or ""
+                if not signature_b64 and coach_id and month_val and year_val:
+                    try:
+                        comp = await db.compensations.find_one({
+                            "coach_id": coach_id,
+                            "month": int(month_val),
+                            "year": int(year_val),
+                        })
+                        if comp:
+                            signature_b64 = comp.get("receipt_signature_base64") or ""
+                    except Exception:
+                        pass
+
                 pdf_bytes = generate_monthly_receipt_pdf(
                     society_name=soc_name,
                     collaborator_name=signer_name,
@@ -20576,7 +20602,7 @@ async def download_document(
                     month_name=month_name,
                     year=int(year_val) if year_val else datetime.now(timezone.utc).year,
                     amount_gross=float(amount_val) if amount_val else 0.0,
-                    signature_base64=doc.get("signature_base64", ""),
+                    signature_base64=signature_b64,
                 )
             else:
                 pdf_bytes = _generate_consent_summary_pdf(doc, signer, society)
