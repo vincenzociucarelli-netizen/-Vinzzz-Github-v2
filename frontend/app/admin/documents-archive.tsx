@@ -163,7 +163,7 @@ export default function DocumentsArchive() {
   };
 
   const handleDelete = async (doc: Document) => {
-    const confirmMsg = `Cancellare DEFINITIVAMENTE il documento firmato?\n\nDocumento: ${doc.document_title}\nFirmatario: ${doc.signer_name}\n\n⚠️ Azione irreversibile. Se è una quietanza compenso, l'utente potrà rifirmarla.`;
+    const confirmMsg = `Richiedere la cancellazione del documento firmato?\n\nDocumento: ${doc.document_title}\nFirmatario: ${doc.signer_name}\n\n⚠️ Il documento NON sarà cancellato subito. Verrà inviata una richiesta al firmatario che dovrà autorizzare la cancellazione dalla propria dashboard.`;
     const ok = Platform.OS === 'web' ? window.confirm(confirmMsg) : await new Promise<boolean>((resolve) => {
       Alert.alert('Conferma cancellazione', confirmMsg, [
         { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },

@@ -20528,7 +20528,58 @@ async def download_document(
         try:
             signer = await db.users.find_one({"id": doc.get("signer_id")}) if doc.get("signer_id") else None
             society = await db.societies.find_one({"id": doc.get("society_id")}) if doc.get("society_id") else None
-            pdf_bytes = _generate_consent_summary_pdf(doc, signer, society)
+
+            # For compensation receipts, rebuild the ORIGINAL full PDF (same
+            # layout as Foto 2) using stored coach_id, month, year, amount, etc.
+            dtype = doc.get("document_type")
+            if dtype in ("compensation_receipt", "coach_compensation_receipt", "collaboratore_compensation_receipt"):
+                # Find the coach/collaborator user record for fiscal code
+                coach_user = None
+                coach_id = doc.get("coach_id") or doc.get("signer_id")
+                if coach_id:
+                    coach_user = await db.users.find_one({"id": coach_id})
+                    if not coach_user:
+                        coach_user = await db.coaches.find_one({"id": coach_id}) if hasattr(db, "coaches") else None
+                # Fallback: try to find user by full_name match
+                if not coach_user and doc.get("coach_name"):
+                    coach_user = await db.users.find_one({"full_name": doc.get("coach_name")})
+                # Fallback for society if not set in doc
+                soc_id = doc.get("society_id")
+                if not soc_id and coach_user:
+                    soc_id = coach_user.get("society_id")
+                if soc_id and not society:
+                    society = await db.societies.find_one({"id": soc_id})
+                # If still no society, take the only society in the system (single-tenant fallback)
+                if not society:
+                    society = await db.societies.find_one({})
+
+                month_val = doc.get("month") or (doc.get("additional_data") or {}).get("month")
+                year_val = doc.get("year") or (doc.get("additional_data") or {}).get("year")
+                amount_val = doc.get("amount_gross") or (doc.get("additional_data") or {}).get("amount_gross") or (doc.get("additional_data") or {}).get("amount")
+                month_names = ["", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+                               "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
+                try:
+                    month_name = month_names[int(month_val)] if month_val else ""
+                except Exception:
+                    month_name = str(month_val) if month_val else ""
+                soc_name = (society.get("ragione_sociale") or society.get("name") or "") if society else ""
+                signer_name = (
+                    doc.get("coach_name")
+                    or doc.get("signer_name")
+                    or ((coach_user or {}).get("full_name") or "")
+                )
+                fiscal = (coach_user or {}).get("fiscal_code") or (doc.get("additional_data") or {}).get("fiscal_code") or ""
+                pdf_bytes = generate_monthly_receipt_pdf(
+                    society_name=soc_name,
+                    collaborator_name=signer_name,
+                    collaborator_fiscal_code=fiscal,
+                    month_name=month_name,
+                    year=int(year_val) if year_val else datetime.now(timezone.utc).year,
+                    amount_gross=float(amount_val) if amount_val else 0.0,
+                    signature_base64=doc.get("signature_base64", ""),
+                )
+            else:
+                pdf_bytes = _generate_consent_summary_pdf(doc, signer, society)
             # Cache for future calls
             try:
                 pdf_b64 = base64.b64encode(pdf_bytes).decode()
@@ -20548,24 +20599,83 @@ async def download_document(
 
 
 @api_router.delete("/documents/{document_id}")
-async def admin_delete_signed_document(document_id: str, current_user = Depends(get_current_user)):
-    """Admin-only: delete a signed document (e.g., wrong signature).
-    Also removes the PDF file from disk if present.
-    Logs the deletion for audit purposes.
+async def admin_request_delete_signed_document(document_id: str, current_user = Depends(get_current_user)):
+    """Admin: REQUEST deletion of a signed document.
+
+    Does NOT immediately delete. Creates a 'deletion_request' record and notifies
+    the signer (via in-app notification and audit log). The signer must approve
+    the deletion from their dashboard. This protects the integrity of signed
+    documents (GDPR/contabilità) by requiring co-consent.
+
+    If the document was signed by an admin themselves (e.g., privacy GDPR
+    society admin), the deletion is immediate (no co-consent needed).
     """
     if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin può cancellare documenti firmati")
+        raise HTTPException(status_code=403, detail="Solo admin può richiedere cancellazione")
 
     doc = await db.signed_documents.find_one({"id": document_id})
     if not doc:
         raise HTTPException(status_code=404, detail="Documento non trovato")
 
-    # Enforce same society
     if current_user.get("society_id") and doc.get("society_id") and \
             current_user["society_id"] != doc["society_id"]:
         raise HTTPException(status_code=403, detail="Il documento appartiene a un'altra società")
 
-    # Remove PDF file from disk if it exists
+    signer_id = doc.get("signer_id") or doc.get("coach_id")
+    signer_user = await db.users.find_one({"id": signer_id}) if signer_id else None
+
+    # If signer IS the same admin → delete immediately
+    if not signer_id or signer_id == current_user["id"]:
+        await _execute_document_deletion(doc, deleted_by=current_user)
+        return {"message": "Documento cancellato (firmatario coincide con admin)", "immediate": True}
+
+    # Otherwise: create a pending deletion request
+    existing = await db.deletion_requests.find_one({"document_id": document_id, "status": "pending"})
+    if existing:
+        return {"message": "Richiesta di cancellazione già in attesa di approvazione", "request_id": existing["id"], "status": "pending"}
+
+    req_id = str(uuid.uuid4())
+    await db.deletion_requests.insert_one({
+        "id": req_id,
+        "document_id": document_id,
+        "document_title": doc.get("document_title"),
+        "document_type": doc.get("document_type"),
+        "society_id": doc.get("society_id"),
+        "requested_by_id": current_user["id"],
+        "requested_by_name": current_user.get("full_name") or current_user.get("email"),
+        "requested_by_email": current_user.get("email"),
+        "signer_id": signer_id,
+        "signer_name": doc.get("signer_name") or doc.get("coach_name") or (signer_user or {}).get("full_name"),
+        "signer_email": (signer_user or {}).get("email"),
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+    # In-app notification for the signer
+    try:
+        await db.notifications.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": signer_id,
+            "type": "document_deletion_request",
+            "title": "Richiesta cancellazione documento firmato",
+            "message": f"L'amministratore ha richiesto la cancellazione di '{doc.get('document_title')}'. Apri la richiesta per autorizzare o rifiutare.",
+            "related_entity_id": req_id,
+            "is_read": False,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+    except Exception as e:
+        logger.warning(f"Failed to create notification: {e}")
+
+    return {
+        "message": "Richiesta inoltrata al firmatario. La cancellazione avverrà solo dopo l'autorizzazione.",
+        "request_id": req_id,
+        "status": "pending",
+        "signer_name": doc.get("signer_name"),
+    }
+
+
+async def _execute_document_deletion(doc: dict, deleted_by: dict):
+    """Internal helper: actually deletes the document + file + audit log."""
     pdf_path = doc.get("pdf_path")
     if pdf_path:
         try:
@@ -20574,8 +20684,7 @@ async def admin_delete_signed_document(document_id: str, current_user = Depends(
         except Exception as e:
             logger.warning(f"Impossibile rimuovere file PDF {pdf_path}: {e}")
 
-    # If this is a compensation_receipt, also unlock the related compensation
-    # so the user can sign a new (correct) receipt for that month.
+    # Unlock compensation if it was a quietanza
     if doc.get("document_type") in ("compensation_receipt", "coach_compensation_receipt", "collaboratore_compensation_receipt"):
         comp_id = (doc.get("additional_data") or {}).get("compensation_id") or doc.get("related_entity_id")
         if comp_id:
@@ -20584,18 +20693,17 @@ async def admin_delete_signed_document(document_id: str, current_user = Depends(
                     {"id": comp_id},
                     {"$set": {"receipt_signed": False, "receipt_signed_at": None, "receipt_document_id": None}}
                 )
-            except Exception as e:
-                logger.warning(f"Impossibile sbloccare compensation {comp_id}: {e}")
+            except Exception:
+                pass
 
-    # Audit log
     try:
         await db.audit_logs.insert_one({
             "id": str(uuid.uuid4()),
-            "action": "admin_delete_signed_document",
-            "actor_id": current_user["id"],
-            "actor_email": current_user.get("email"),
+            "action": "delete_signed_document",
+            "actor_id": deleted_by["id"],
+            "actor_email": deleted_by.get("email"),
             "society_id": doc.get("society_id"),
-            "target_document_id": document_id,
+            "target_document_id": doc.get("id"),
             "target_signer_name": doc.get("signer_name"),
             "target_document_type": doc.get("document_type"),
             "target_document_title": doc.get("document_title"),
@@ -20604,12 +20712,63 @@ async def admin_delete_signed_document(document_id: str, current_user = Depends(
     except Exception:
         pass
 
-    await db.signed_documents.delete_one({"id": document_id})
-    return {
-        "message": "Documento cancellato. L'utente potrà rifirmare se necessario.",
-        "document_id": document_id,
-        "signer_name": doc.get("signer_name"),
-    }
+    await db.signed_documents.delete_one({"id": doc["id"]})
+
+
+@api_router.get("/deletion-requests/pending")
+async def list_my_pending_deletion_requests(current_user = Depends(get_current_user)):
+    """List pending deletion requests addressed to the current user (signer)."""
+    cursor = db.deletion_requests.find(
+        {"signer_id": current_user["id"], "status": "pending"},
+        {"_id": 0}
+    ).sort("created_at", -1)
+    return await cursor.to_list(100)
+
+
+@api_router.post("/deletion-requests/{request_id}/approve")
+async def approve_deletion_request(request_id: str, current_user = Depends(get_current_user)):
+    req = await db.deletion_requests.find_one({"id": request_id})
+    if not req:
+        raise HTTPException(status_code=404, detail="Richiesta non trovata")
+    if req.get("signer_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Solo il firmatario può approvare la cancellazione")
+    if req.get("status") != "pending":
+        raise HTTPException(status_code=400, detail=f"Richiesta già {req.get('status')}")
+
+    doc = await db.signed_documents.find_one({"id": req["document_id"]})
+    if doc:
+        await _execute_document_deletion(doc, deleted_by=current_user)
+
+    await db.deletion_requests.update_one(
+        {"id": request_id},
+        {"$set": {
+            "status": "approved",
+            "approved_at": datetime.now(timezone.utc).isoformat(),
+            "approved_by_id": current_user["id"],
+        }}
+    )
+    return {"message": "Cancellazione autorizzata. Documento eliminato."}
+
+
+@api_router.post("/deletion-requests/{request_id}/reject")
+async def reject_deletion_request(request_id: str, current_user = Depends(get_current_user)):
+    req = await db.deletion_requests.find_one({"id": request_id})
+    if not req:
+        raise HTTPException(status_code=404, detail="Richiesta non trovata")
+    if req.get("signer_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Solo il firmatario può rifiutare la cancellazione")
+    if req.get("status") != "pending":
+        raise HTTPException(status_code=400, detail=f"Richiesta già {req.get('status')}")
+
+    await db.deletion_requests.update_one(
+        {"id": request_id},
+        {"$set": {
+            "status": "rejected",
+            "rejected_at": datetime.now(timezone.utc).isoformat(),
+            "rejected_by_id": current_user["id"],
+        }}
+    )
+    return {"message": "Cancellazione rifiutata. Il documento resta valido."}
 
 
 def _generate_consent_summary_pdf(doc: dict, signer: Optional[dict], society: Optional[dict]) -> bytes:
