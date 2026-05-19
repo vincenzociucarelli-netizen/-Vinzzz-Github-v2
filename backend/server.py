@@ -20521,11 +20521,10 @@ async def download_document(
             logger.error(f"Error generating PDF on-the-fly: {e}")
             raise HTTPException(status_code=500, detail="Errore nella generazione del PDF")
     
-    # Final fallback: for legacy documents (privacy_consent, trial_declaration,
-    # terms_of_use, gdpr_adult of non-athlete signers) generate a summary PDF
-    # so the admin/owner can at least see who signed what and when.
-    legacy_types = {"privacy_consent", "trial_declaration", "terms_of_use", "gdpr_adult", "gdpr_minor"}
-    if doc.get("document_type") in legacy_types:
+    # Final fallback: for ANY signed document without a stored PDF (including
+    # compensation_receipt, threshold_5000_communication, gdpr*, etc), generate
+    # a summary PDF so the admin can at least see the firma metadata.
+    if doc.get("id"):
         try:
             signer = await db.users.find_one({"id": doc.get("signer_id")}) if doc.get("signer_id") else None
             society = await db.societies.find_one({"id": doc.get("society_id")}) if doc.get("society_id") else None
@@ -20663,6 +20662,32 @@ def _generate_consent_summary_pdf(doc: dict, signer: Optional[dict], society: Op
             row("Ruolo", add.get("role"))
         if add.get("fiscal_code"):
             row("Codice Fiscale", add.get("fiscal_code"))
+        # Compensation/threshold specific fields
+        if add.get("month") or add.get("reference_month"):
+            row("Mese di riferimento", str(add.get("month") or add.get("reference_month")))
+        if add.get("year") or add.get("reference_year"):
+            row("Anno", str(add.get("year") or add.get("reference_year")))
+        if add.get("amount") is not None or add.get("gross_amount") is not None:
+            amt = add.get("amount") if add.get("amount") is not None else add.get("gross_amount")
+            try:
+                row("Importo lordo", f"€ {float(amt):,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+            except Exception:
+                row("Importo lordo", str(amt))
+        if add.get("net_amount") is not None:
+            try:
+                row("Importo netto", f"€ {float(add['net_amount']):,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+            except Exception:
+                pass
+        if add.get("iban"):
+            row("IBAN", add.get("iban"))
+        if add.get("threshold"):
+            row("Soglia superata", f"€ {add.get('threshold')}")
+        if add.get("contract_total"):
+            row("Totale Contratto", f"€ {add.get('contract_total')}")
+        if add.get("contract_start") and add.get("contract_end"):
+            row("Periodo Contratto", f"{add.get('contract_start')} → {add.get('contract_end')}")
+        if add.get("notes"):
+            row("Note", str(add.get("notes")))
     signed_at = doc.get("signed_at")
     if isinstance(signed_at, datetime):
         signed_at_s = signed_at.strftime("%d/%m/%Y %H:%M")
