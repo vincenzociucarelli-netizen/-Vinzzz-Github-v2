@@ -16773,6 +16773,26 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
         except Exception as e:
             logger.error(f"Error generating PDF on-the-fly: {e}")
     
+    # Last-resort fallback: generate a minimal "summary PDF" for legacy
+    # signed documents that have no original PDF stored. This includes types
+    # like compensation_receipt (Quietanze) saved before the system started
+    # caching the rendered PDF.
+    if not pdf_bytes:
+        try:
+            signer = await db.users.find_one({"id": document.get("signer_id")}) if document.get("signer_id") else None
+            society = await db.societies.find_one({"id": document.get("society_id")}) if document.get("society_id") else None
+            pdf_bytes = _generate_consent_summary_pdf(document, signer, society)
+            # Cache for future calls
+            try:
+                await db.signed_documents.update_one(
+                    {"id": document_id},
+                    {"$set": {"pdf_base64": base64.b64encode(pdf_bytes).decode()}}
+                )
+            except Exception:
+                pass
+        except Exception as e:
+            logger.error(f"Error generating fallback summary PDF for {document_id}: {e}")
+
     if not pdf_bytes:
         raise HTTPException(status_code=404, detail="PDF non disponibile per questo documento")
     
