@@ -180,7 +180,8 @@ export default function DocumentsArchive() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || 'Errore');
       const detail = (data.repaired || []).map((r: any) => `• ${r.coach_name} ${r.month}/${r.year}`).join('\n');
-      const msg = `${data.message}\n\n${detail || 'Nessun coach sbloccato'}`;
+      const diag = `\n\n📊 DIAGNOSTICA:\n- Compensations scansionate: ${data.scanned ?? '?'}\n- Escluse (altra società): ${data.filtered_other_society ?? '?'}\n- Sbloccate: ${data.count ?? 0}`;
+      const msg = `${data.message}${diag}\n\n${detail ? '✅ DETTAGLIO:\n' + detail : ''}`;
       if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Completato', msg);
     } catch (e: any) {
       if (Platform.OS === 'web') window.alert(`Errore: ${e?.message || 'failed'}`); else Alert.alert('Errore', e?.message || 'failed');

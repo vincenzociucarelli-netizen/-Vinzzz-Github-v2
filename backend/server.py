@@ -20753,6 +20753,53 @@ async def _execute_document_deletion(doc: dict, deleted_by: dict):
     await db.signed_documents.delete_one({"id": doc["id"]})
 
 
+@api_router.get("/admin/diagnostics/compensations/{coach_name}")
+async def admin_diagnose_coach_compensations(coach_name: str, current_user = Depends(get_current_user)):
+    """Returns full diagnostic info about a coach's compensations vs signed_documents.
+    Helps debug 'orphaned receipts' issues.
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    # Find coach user(s) by name (case-insensitive partial match)
+    users = await db.users.find(
+        {"$or": [
+            {"full_name": {"$regex": coach_name, "$options": "i"}},
+            {"first_name": {"$regex": coach_name, "$options": "i"}},
+            {"last_name": {"$regex": coach_name, "$options": "i"}},
+        ]},
+        {"_id": 0, "id": 1, "full_name": 1, "role": 1, "society_id": 1, "email": 1}
+    ).to_list(20)
+
+    result = []
+    for u in users:
+        comps = await db.compensations.find({"coach_id": u["id"]}, {"_id": 0}).to_list(50)
+        for c in comps:
+            signed = None
+            if c.get("receipt_document_id"):
+                signed = await db.signed_documents.find_one({"id": c["receipt_document_id"]}, {"_id": 0, "id": 1})
+            if not signed:
+                signed = await db.signed_documents.find_one(
+                    {"coach_id": u["id"], "month": c.get("month"), "year": c.get("year"),
+                     "document_type": {"$in": ["compensation_receipt", "coach_compensation_receipt", "collaboratore_compensation_receipt"]}},
+                    {"_id": 0, "id": 1}
+                )
+            result.append({
+                "coach": u.get("full_name"),
+                "coach_id": u["id"],
+                "month": c.get("month"),
+                "year": c.get("year"),
+                "amount_gross": c.get("amount_gross"),
+                "receipt_signed": c.get("receipt_signed"),
+                "receipt_signed_type": type(c.get("receipt_signed")).__name__,
+                "receipt_document_id": c.get("receipt_document_id"),
+                "linked_signed_doc_exists": bool(signed),
+                "comp_society_id": c.get("society_id"),
+                "user_society_id": u.get("society_id"),
+            })
+    return {"matches": len(users), "users": users, "compensations_detail": result}
+
+
 @api_router.post("/admin/compensations/repair-orphaned-receipts")
 async def admin_repair_orphaned_compensation_receipts(current_user = Depends(get_current_user)):
     """Admin tool: find compensations marked as receipt_signed=true that have
