@@ -162,6 +162,31 @@ export default function DocumentsArchive() {
     loadDocuments(1, true);
   };
 
+  const handleRepairOrphaned = async () => {
+    const confirmMsg = "Sblocca le quietanze 'orfane'?\n\nQuesto pulsante cerca le quietanze marcate come firmate ma che NON hanno più il documento PDF (cancellato per errore in passato), e le rimette nello stato 'da firmare' così i coach possono rifirmare.\n\n✅ Da usare quando: un coach vede una quietanza come firmata ma il PDF non c'è più.\n⚠️ Solo l'admin può eseguire questa operazione.";
+    const ok = Platform.OS === 'web' ? window.confirm(confirmMsg) : await new Promise<boolean>((resolve) => {
+      Alert.alert('Riparazione quietanze', confirmMsg, [
+        { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Procedi', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/admin/compensations/repair-orphaned-receipts`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || 'Errore');
+      const detail = (data.repaired || []).map((r: any) => `• ${r.coach_name} ${r.month}/${r.year}`).join('\n');
+      const msg = `${data.message}\n\n${detail || 'Nessun coach sbloccato'}`;
+      if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Completato', msg);
+    } catch (e: any) {
+      if (Platform.OS === 'web') window.alert(`Errore: ${e?.message || 'failed'}`); else Alert.alert('Errore', e?.message || 'failed');
+    }
+  };
+
   const handleDelete = async (doc: Document) => {
     const confirmMsg = `Richiedere la cancellazione del documento firmato?\n\nDocumento: ${doc.document_title}\nFirmatario: ${doc.signer_name}\n\n⚠️ Il documento NON sarà cancellato subito. Verrà inviata una richiesta al firmatario che dovrà autorizzare la cancellazione dalla propria dashboard.`;
     const ok = Platform.OS === 'web' ? window.confirm(confirmMsg) : await new Promise<boolean>((resolve) => {
@@ -374,6 +399,13 @@ export default function DocumentsArchive() {
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Archivio Documenti</Text>
+        <TouchableOpacity
+          onPress={handleRepairOrphaned}
+          style={{ backgroundColor: '#FF9800', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, marginRight: 8 }}
+          data-testid="repair-orphaned-btn"
+        >
+          <Ionicons name="build" size={18} color="#fff" />
+        </TouchableOpacity>
         <TouchableOpacity 
           onPress={() => setShowFilters(!showFilters)} 
           style={styles.filterToggle}

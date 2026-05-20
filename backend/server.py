@@ -20710,17 +20710,29 @@ async def _execute_document_deletion(doc: dict, deleted_by: dict):
         except Exception as e:
             logger.warning(f"Impossibile rimuovere file PDF {pdf_path}: {e}")
 
-    # Unlock compensation if it was a quietanza
+    # Unlock compensation if it was a quietanza so the coach sees it as
+    # unsigned again and can re-sign with the correct data.
     if doc.get("document_type") in ("compensation_receipt", "coach_compensation_receipt", "collaboratore_compensation_receipt"):
         comp_id = (doc.get("additional_data") or {}).get("compensation_id") or doc.get("related_entity_id")
-        if comp_id:
-            try:
+        try:
+            if comp_id:
                 await db.compensations.update_one(
                     {"id": comp_id},
-                    {"$set": {"receipt_signed": False, "receipt_signed_at": None, "receipt_document_id": None}}
+                    {"$set": {"receipt_signed": False, "receipt_signed_at": None, "receipt_document_id": None, "receipt_signature_base64": None}}
                 )
-            except Exception:
-                pass
+            else:
+                # Legacy quietanze: lookup by coach_id + month + year
+                coach_id = doc.get("coach_id") or doc.get("signer_id")
+                month_v = doc.get("month") or (doc.get("additional_data") or {}).get("month")
+                year_v = doc.get("year") or (doc.get("additional_data") or {}).get("year")
+                if coach_id and month_v is not None and year_v is not None:
+                    res = await db.compensations.update_many(
+                        {"coach_id": coach_id, "month": int(month_v), "year": int(year_v)},
+                        {"$set": {"receipt_signed": False, "receipt_signed_at": None, "receipt_document_id": None, "receipt_signature_base64": None}}
+                    )
+                    logger.info(f"Unlocked {res.modified_count} legacy compensation(s) for coach={coach_id} {month_v}/{year_v}")
+        except Exception as e:
+            logger.warning(f"Impossibile sbloccare compensation: {e}")
 
     try:
         await db.audit_logs.insert_one({
@@ -20739,6 +20751,61 @@ async def _execute_document_deletion(doc: dict, deleted_by: dict):
         pass
 
     await db.signed_documents.delete_one({"id": doc["id"]})
+
+
+@api_router.post("/admin/compensations/repair-orphaned-receipts")
+async def admin_repair_orphaned_compensation_receipts(current_user = Depends(get_current_user)):
+    """Admin tool: find compensations marked as receipt_signed=true that have
+    NO matching record in signed_documents (orphaned) and unlock them so the
+    coach can re-sign. Caused by past bug where signed_document was deleted
+    but compensation was not unlocked.
+    Returns the list of compensations repaired.
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    repaired = []
+    society_id = current_user.get("society_id")
+    base_filter = {"receipt_signed": True}
+    if society_id:
+        base_filter["society_id"] = society_id
+
+    async for comp in db.compensations.find(base_filter):
+        # Look up matching signed_document by coach_id+month+year OR by receipt_document_id
+        signed_doc = None
+        if comp.get("receipt_document_id"):
+            signed_doc = await db.signed_documents.find_one({"id": comp["receipt_document_id"]})
+        if not signed_doc and comp.get("coach_id"):
+            signed_doc = await db.signed_documents.find_one({
+                "coach_id": comp["coach_id"],
+                "month": comp.get("month"),
+                "year": comp.get("year"),
+                "document_type": {"$in": ["compensation_receipt", "coach_compensation_receipt", "collaboratore_compensation_receipt"]}
+            })
+        if not signed_doc:
+            await db.compensations.update_one(
+                {"id": comp["id"]},
+                {"$set": {
+                    "receipt_signed": False,
+                    "receipt_signed_at": None,
+                    "receipt_document_id": None,
+                    "receipt_signature_base64": None,
+                }}
+            )
+            repaired.append({
+                "compensation_id": comp["id"],
+                "coach_id": comp.get("coach_id"),
+                "coach_name": comp.get("coach_name"),
+                "month": comp.get("month"),
+                "year": comp.get("year"),
+                "amount": comp.get("amount_gross"),
+            })
+
+    return {
+        "message": f"{len(repaired)} compensation(s) sbloccate. I coach potranno ora rifirmare le quietanze.",
+        "count": len(repaired),
+        "repaired": repaired,
+    }
 
 
 @api_router.get("/deletion-requests/pending")
