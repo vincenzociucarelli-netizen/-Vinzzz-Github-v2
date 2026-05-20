@@ -20802,74 +20802,109 @@ async def admin_diagnose_coach_compensations(coach_name: str, current_user = Dep
 
 @api_router.post("/admin/compensations/repair-orphaned-receipts")
 async def admin_repair_orphaned_compensation_receipts(current_user = Depends(get_current_user)):
-    """Admin tool: find compensations marked as receipt_signed=true that have
-    NO matching record in signed_documents (orphaned) and unlock them so the
-    coach can re-sign. Caused by past bug where signed_document was deleted
-    but compensation was not unlocked.
-    Returns the list of compensations repaired.
+    """Admin tool: scans ALL compensation collections (coach/dirigente/
+    collaboratore/atleta_pro/legacy) and finds records marked as
+    receipt_signed=True that no longer have a matching signed_documents
+    record. Resets receipt_signed=False so the user can re-sign.
+    Returns aggregated diagnostics + list of repaired records.
     """
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin")
 
-    repaired = []
     society_id = current_user.get("society_id")
 
-    # We can NOT simply filter compensations by society_id because legacy
-    # records may not have that field set. Instead, iterate all compensations
-    # marked as receipt_signed=true and filter via the coach record.
-    diagnostics = {"scanned": 0, "no_signed_doc": 0, "other_society": 0}
+    # (collection_name, owner_id_field, role_label)
+    targets = [
+        ("coach_compensations", "coach_id", "coach"),
+        ("dirigente_compensations", "dirigente_id", "dirigente"),
+        ("collaboratore_compensations", "collaboratore_id", "collaboratore"),
+        ("atleta_pro_compensations", "atleta_id", "atleta_pro"),
+        ("athlete_compensations", "athlete_id", "atleta"),
+        ("compensations", "coach_id", "legacy"),
+    ]
 
-    async for comp in db.compensations.find({"receipt_signed": True}):
-        diagnostics["scanned"] += 1
+    repaired = []
+    per_collection = {}
+    total_scanned = 0
+    total_other_soc = 0
 
-        # Society scope check (via comp.society_id OR via coach.society_id)
-        comp_soc = comp.get("society_id")
-        if not comp_soc and comp.get("coach_id"):
-            coach_doc = await db.users.find_one({"id": comp["coach_id"]}, {"society_id": 1})
-            if coach_doc:
-                comp_soc = coach_doc.get("society_id")
-        if society_id and comp_soc and comp_soc != society_id:
-            diagnostics["other_society"] += 1
-            continue
+    for coll_name, owner_field, role_label in targets:
+        coll = db[coll_name]
+        scanned = 0
+        other_soc = 0
+        fixed = 0
+        async for comp in coll.find({"receipt_signed": True}):
+            scanned += 1
+            total_scanned += 1
 
-        # Look up matching signed_document
-        signed_doc = None
-        if comp.get("receipt_document_id"):
-            signed_doc = await db.signed_documents.find_one({"id": comp["receipt_document_id"]})
-        if not signed_doc and comp.get("coach_id"):
-            signed_doc = await db.signed_documents.find_one({
-                "coach_id": comp["coach_id"],
-                "month": comp.get("month"),
-                "year": comp.get("year"),
-                "document_type": {"$in": ["compensation_receipt", "coach_compensation_receipt", "collaboratore_compensation_receipt"]}
-            })
-        if not signed_doc:
-            diagnostics["no_signed_doc"] += 1
-            await db.compensations.update_one(
-                {"id": comp["id"]},
+            # Society scope check (via comp.society_id OR via owner.society_id)
+            comp_soc = comp.get("society_id")
+            owner_id = comp.get(owner_field)
+            if not comp_soc and owner_id:
+                owner_doc = await db.users.find_one({"id": owner_id}, {"society_id": 1})
+                if owner_doc:
+                    comp_soc = owner_doc.get("society_id")
+            if society_id and comp_soc and comp_soc != society_id:
+                other_soc += 1
+                total_other_soc += 1
+                continue
+
+            # Look up matching signed_document
+            signed_doc = None
+            if comp.get("receipt_document_id"):
+                signed_doc = await db.signed_documents.find_one(
+                    {"id": comp["receipt_document_id"]}, {"_id": 0, "id": 1}
+                )
+            if not signed_doc and owner_id:
+                signed_doc = await db.signed_documents.find_one(
+                    {
+                        "signer_id": owner_id,
+                        "month": comp.get("month"),
+                        "year": comp.get("year"),
+                    },
+                    {"_id": 0, "id": 1},
+                )
+            if signed_doc:
+                continue
+
+            # Orphan: reset
+            await coll.update_one(
+                {"id": comp["id"]} if comp.get("id") else {"_id": comp["_id"]},
                 {"$set": {
                     "receipt_signed": False,
-                    "receipt_signed_at": None,
+                    "receipt_signed_date": None,
                     "receipt_document_id": None,
                     "receipt_signature_base64": None,
-                }}
+                    "received": False,
+                    "received_date": None,
+                }},
             )
+            fixed += 1
             repaired.append({
-                "compensation_id": comp["id"],
-                "coach_id": comp.get("coach_id"),
-                "coach_name": comp.get("coach_name"),
+                "collection": coll_name,
+                "role": role_label,
+                "compensation_id": comp.get("id") or str(comp.get("_id")),
+                "owner_id": owner_id,
+                "owner_name": comp.get("coach_name") or comp.get("dirigente_name") or comp.get("collaboratore_name") or comp.get("atleta_name") or comp.get("athlete_name") or "—",
                 "month": comp.get("month"),
                 "year": comp.get("year"),
                 "amount": comp.get("amount_gross"),
             })
 
-    logger.info(f"Repair orphaned receipts: scanned={diagnostics['scanned']} no_doc={diagnostics['no_signed_doc']} other_soc={diagnostics['other_society']} fixed={len(repaired)}")
+        per_collection[coll_name] = {"scanned": scanned, "other_society": other_soc, "fixed": fixed}
+
+    logger.info(
+        f"Repair orphaned receipts: total_scanned={total_scanned} "
+        f"total_other_society={total_other_soc} total_fixed={len(repaired)} "
+        f"per_collection={per_collection}"
+    )
 
     return {
-        "message": f"{len(repaired)} compensation(s) sbloccate. I coach potranno ora rifirmare le quietanze.",
+        "message": f"{len(repaired)} compensation(s) sbloccate. Gli utenti potranno ora rifirmare le quietanze.",
         "count": len(repaired),
-        "scanned": diagnostics["scanned"],
-        "filtered_other_society": diagnostics["other_society"],
+        "scanned": total_scanned,
+        "filtered_other_society": total_other_soc,
+        "per_collection": per_collection,
         "repaired": repaired,
     }
 

@@ -179,8 +179,12 @@ export default function DocumentsArchive() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || 'Errore');
-      const detail = (data.repaired || []).map((r: any) => `• ${r.coach_name} ${r.month}/${r.year}`).join('\n');
-      const diag = `\n\n📊 DIAGNOSTICA:\n- Compensations scansionate: ${data.scanned ?? '?'}\n- Escluse (altra società): ${data.filtered_other_society ?? '?'}\n- Sbloccate: ${data.count ?? 0}`;
+      const detail = (data.repaired || []).map((r: any) => `• [${r.role}] ${r.owner_name} ${r.month}/${r.year}`).join('\n');
+      const pc = data.per_collection || {};
+      const perColl = Object.keys(pc)
+        .map((k: string) => `  • ${k}: scan=${pc[k].scanned} altra_soc=${pc[k].other_society} fix=${pc[k].fixed}`)
+        .join('\n');
+      const diag = `\n\n📊 DIAGNOSTICA:\n- Totale scansionate: ${data.scanned ?? '?'}\n- Escluse (altra società): ${data.filtered_other_society ?? '?'}\n- Sbloccate: ${data.count ?? 0}\n\nPer collezione:\n${perColl}`;
       const msg = `${data.message}${diag}\n\n${detail ? '✅ DETTAGLIO:\n' + detail : ''}`;
       if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Completato', msg);
     } catch (e: any) {
