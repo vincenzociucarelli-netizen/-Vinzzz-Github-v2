@@ -20766,12 +20766,26 @@ async def admin_repair_orphaned_compensation_receipts(current_user = Depends(get
 
     repaired = []
     society_id = current_user.get("society_id")
-    base_filter = {"receipt_signed": True}
-    if society_id:
-        base_filter["society_id"] = society_id
 
-    async for comp in db.compensations.find(base_filter):
-        # Look up matching signed_document by coach_id+month+year OR by receipt_document_id
+    # We can NOT simply filter compensations by society_id because legacy
+    # records may not have that field set. Instead, iterate all compensations
+    # marked as receipt_signed=true and filter via the coach record.
+    diagnostics = {"scanned": 0, "no_signed_doc": 0, "other_society": 0}
+
+    async for comp in db.compensations.find({"receipt_signed": True}):
+        diagnostics["scanned"] += 1
+
+        # Society scope check (via comp.society_id OR via coach.society_id)
+        comp_soc = comp.get("society_id")
+        if not comp_soc and comp.get("coach_id"):
+            coach_doc = await db.users.find_one({"id": comp["coach_id"]}, {"society_id": 1})
+            if coach_doc:
+                comp_soc = coach_doc.get("society_id")
+        if society_id and comp_soc and comp_soc != society_id:
+            diagnostics["other_society"] += 1
+            continue
+
+        # Look up matching signed_document
         signed_doc = None
         if comp.get("receipt_document_id"):
             signed_doc = await db.signed_documents.find_one({"id": comp["receipt_document_id"]})
@@ -20783,6 +20797,7 @@ async def admin_repair_orphaned_compensation_receipts(current_user = Depends(get
                 "document_type": {"$in": ["compensation_receipt", "coach_compensation_receipt", "collaboratore_compensation_receipt"]}
             })
         if not signed_doc:
+            diagnostics["no_signed_doc"] += 1
             await db.compensations.update_one(
                 {"id": comp["id"]},
                 {"$set": {
@@ -20801,9 +20816,13 @@ async def admin_repair_orphaned_compensation_receipts(current_user = Depends(get
                 "amount": comp.get("amount_gross"),
             })
 
+    logger.info(f"Repair orphaned receipts: scanned={diagnostics['scanned']} no_doc={diagnostics['no_signed_doc']} other_soc={diagnostics['other_society']} fixed={len(repaired)}")
+
     return {
         "message": f"{len(repaired)} compensation(s) sbloccate. I coach potranno ora rifirmare le quietanze.",
         "count": len(repaired),
+        "scanned": diagnostics["scanned"],
+        "filtered_other_society": diagnostics["other_society"],
         "repaired": repaired,
     }
 
