@@ -24,6 +24,32 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
 ## Stato Attuale (12/05/2026)
+### 🆕 Multi-Tenancy Audit P1 (21/05/2026)
+- 🛡️ **Audit chirurgico delle query LIST cross-tenant** in `server.py` (140+ punti scansionati, 13 falle critiche corrette).
+- **Endpoint corretti** (ora rispettano `society_id`):
+  1. `/teams/{team_id}/attendance-stats` — atleti scoped
+  2. `/payments/export-athletes-codes` — teams scoped
+  3. `/payments/solleciti` — teams scoped
+  4. Payment import — teams scoped
+  5. `/coach/my-teams` — teams scoped
+  6. `/coach/commitments` — teams + matches scoped
+  7. `/coach/team/{team_id}/athletes` — atleti scoped
+  8. `/export/dirigenti` — **CRITICO**: prima esponeva TUTTI gli admin di TUTTE le società
+  9. `/admin/quietanze/all` — coach/dirigente/collaboratore receipts filtrati via society user_ids
+  10. `/admin/medical-certificates-archive` (list + stats) — scoped
+  11. `/certificates/override-logs` — audit_logs scoped
+  12. `/admin/threshold-declarations` — filtrato via society_coach_ids
+  13. `/prime-squadre/athletes` — atleti pro + coach + dirigenti + teams scoped
+- ✅ Backend hot-reload OK, lint clean (solo warning preesistenti).
+- 🎯 **Pronto per onboarding "Sirio" senza data bleed.**
+
+### 🆕 Fix Quietanze Orfane Multi-Collezione (20/05/2026)
+- 🐛 **Bug**: pulsante 🔧 "Ripara quietanze orfane" trovava sempre 0 record.
+- 🔍 **Root cause**: l'endpoint scansionava solo `db.compensations` (legacy), ma le quietanze coach stanno in `db.coach_compensations`, dirigenti in `db.dirigente_compensations`, ecc.
+- ✅ **Fix**: ora scansiona **6 collezioni** (`coach_compensations`, `dirigente_compensations`, `collaboratore_compensations`, `atleta_pro_compensations`, `athlete_compensations`, `compensations`) usando `signer_id` per il lookup in `signed_documents`. Popup ammin mostra diagnostica per-collezione (scan / other_society / fix).
+- File toccati: `/app/backend/server.py` (`admin_repair_orphaned_compensation_receipts`), `/app/frontend/app/admin/documents-archive.tsx`.
+
+
 
 ### ✅ Già LIVE in produzione (PR #11-#16+)
 - Brevo email risolto (chiave SMTP→API + blocco IP disattivato)

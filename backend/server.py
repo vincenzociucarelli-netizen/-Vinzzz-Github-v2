@@ -8372,7 +8372,10 @@ async def get_medical_certificates_archive(
     if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
         raise HTTPException(status_code=403, detail="Accesso riservato agli amministratori")
     
+    _sid = current_user.get("society_id")
     query = {}
+    if _sid:
+        query["society_id"] = _sid
     if search:
         search_regex = {"$regex": search, "$options": "i"}
         query["$or"] = [
@@ -8405,10 +8408,13 @@ async def get_certificates_archive_stats(current_user = Depends(get_current_user
     if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
         raise HTTPException(status_code=403, detail="Accesso riservato agli amministratori")
     
-    total = await db.medical_certificates_archive.count_documents({})
+    _sid = current_user.get("society_id")
+    _q = {"society_id": _sid} if _sid else {}
+    total = await db.medical_certificates_archive.count_documents(_q)
     
-    # Count by year
+    # Count by year (scoped to society)
     pipeline = [
+        {"$match": _q},
         {
             "$group": {
                 "_id": {"$substr": ["$uploaded_at", 0, 4]},
@@ -9494,9 +9500,11 @@ async def get_certificate_override_logs(current_user = Depends(get_current_user)
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere i log")
     
-    logs = await db.audit_logs.find(
-        {"type": "certificate_block_override"}
-    ).sort("timestamp", -1).to_list(100)
+    _sid = current_user.get("society_id")
+    _q = {"type": "certificate_block_override"}
+    if _sid:
+        _q["society_id"] = _sid
+    logs = await db.audit_logs.find(_q).sort("timestamp", -1).to_list(100)
     
     for log in logs:
         clean_mongo_doc(log)
@@ -9788,26 +9796,33 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
     if not team:
         raise HTTPException(status_code=404, detail="Squadra non trovata")
     
-    # Get all athletes in the team (including trial athletes)
-    athletes = await db.athletes.find({
+    # Get all athletes in the team (including trial athletes) — scoped by society
+    _sid = current_user.get("society_id")
+    _q = {
         "$or": [
             {"team_id": team_id},
             {"team_id_2": team_id}
         ],
         "status": {"$in": ["active", "trial"]},
         "is_withdrawn": {"$ne": True}
-    }).to_list(1000)
+    }
+    if _sid:
+        _q["society_id"] = _sid
+    athletes = await db.athletes.find(_q).to_list(1000)
     
     # Also include trial athletes who have attendances for this team but no team_id set
     team_athlete_ids = [a["id"] for a in athletes]
     trial_attendance_ids = await db.attendances.distinct("athlete_id", {"team_id": team_id})
     missing_trial_ids = [aid for aid in trial_attendance_ids if aid not in team_athlete_ids]
     if missing_trial_ids:
-        extra_athletes = await db.athletes.find({
+        _q_extra = {
             "id": {"$in": missing_trial_ids},
             "status": "trial",
             "is_withdrawn": {"$ne": True}
-        }).to_list(100)
+        }
+        if _sid:
+            _q_extra["society_id"] = _sid
+        extra_athletes = await db.athletes.find(_q_extra).to_list(100)
         athletes.extend(extra_athletes)
     
     # Get team's training sessions configuration
@@ -10025,7 +10040,8 @@ async def export_athletes_with_codes(current_user = Depends(get_current_user)):
     }
     
     athletes = await db.athletes.find(query).to_list(1000)
-    teams = await db.teams.find({}).to_list(100)
+    _teams_q = {"society_id": society_id} if society_id else {}
+    teams = await db.teams.find(_teams_q).to_list(100)
     team_dict = {t["id"]: t["name"] for t in teams}
     
     result = []
@@ -10118,7 +10134,8 @@ async def get_solleciti(current_user = Depends(get_current_user)):
     
     society_id = current_user.get("society_id")
     athletes = await db.athletes.find({"society_id": society_id, "is_withdrawn": {"$ne": True}}).to_list(10000)
-    teams = await db.teams.find({}).to_list(100)
+    _teams_q = {"society_id": society_id} if society_id else {}
+    teams = await db.teams.find(_teams_q).to_list(100)
     team_map = {t["id"]: t.get("name", "") for t in teams}
     team_map_full = {t["id"]: t for t in teams}
     
@@ -10983,7 +11000,8 @@ async def import_payments(file: UploadFile = File(...), current_user = Depends(g
             "is_withdrawn": {"$ne": True}
         }
         all_athletes = await db.athletes.find(society_query).to_list(1000)
-        teams = await db.teams.find({}).to_list(100)
+        _teams_q = {"society_id": society_id} if society_id else {}
+        teams = await db.teams.find(_teams_q).to_list(100)
         team_dict = {t["id"]: t["name"] for t in teams}
         
         def normalize_name(s):
@@ -11906,7 +11924,11 @@ async def get_coach_teams(current_user = Depends(get_current_user)):
     if not assigned_team_ids:
         return []
     
-    teams = await db.teams.find({"id": {"$in": assigned_team_ids}}).to_list(100)
+    _sid = current_user.get("society_id")
+    _q_teams = {"id": {"$in": assigned_team_ids}}
+    if _sid:
+        _q_teams["society_id"] = _sid
+    teams = await db.teams.find(_q_teams).to_list(100)
     clean_mongo_docs(teams)
     return [Team(**team) for team in teams]
 
@@ -11922,8 +11944,12 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
     if not team_ids:
         return {"today": [], "tomorrow": [], "day_after": [], "upcoming": []}
     
-    # Get teams info (for training schedules)
-    teams = await db.teams.find({"id": {"$in": team_ids}}).to_list(20)
+    # Get teams info (for training schedules) — scoped by society
+    _sid = current_user.get("society_id")
+    _q_teams = {"id": {"$in": team_ids}}
+    if _sid:
+        _q_teams["society_id"] = _sid
+    teams = await db.teams.find(_q_teams).to_list(20)
     teams_dict = {t["id"]: t for t in teams}
     
     # Get current date info
@@ -11943,9 +11969,10 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
     
     # Get matches for 7 days FIRST (to know which teams have home matches on which days)
     end_of_week = today + timedelta(days=7)
-    matches = await db.matches.find({
-        "team_id": {"$in": team_ids}
-    }).to_list(200)
+    _q_matches = {"team_id": {"$in": team_ids}}
+    if _sid:
+        _q_matches["society_id"] = _sid
+    matches = await db.matches.find(_q_matches).to_list(200)
     # Filter by date in Python (some records have date stored as ISO string)
     filtered_matches = []
     for m in matches:
@@ -12211,25 +12238,32 @@ async def get_coach_team_athletes(team_id: str, current_user = Depends(get_curre
     if team_id not in assigned_team_ids:
         raise HTTPException(status_code=403, detail="Non sei assegnato a questa squadra")
     
-    # Get athletes (team_id or team_id_2, including trial athletes with attendances)
-    athletes = await db.athletes.find({
+    # Get athletes (team_id or team_id_2, including trial athletes with attendances) — scoped by society
+    _sid = current_user.get("society_id")
+    _q = {
         "$or": [
             {"team_id": team_id},
             {"team_id_2": team_id}
         ],
         "is_withdrawn": {"$ne": True}
-    }).to_list(1000)
+    }
+    if _sid:
+        _q["society_id"] = _sid
+    athletes = await db.athletes.find(_q).to_list(1000)
     
     # Also include trial athletes who have attendances for this team
     team_athlete_ids = [a["id"] for a in athletes]
     trial_attendance_ids = await db.attendances.distinct("athlete_id", {"team_id": team_id})
     missing_ids = [aid for aid in trial_attendance_ids if aid not in team_athlete_ids]
     if missing_ids:
-        extra_athletes = await db.athletes.find({
+        _q_extra = {
             "id": {"$in": missing_ids},
             "status": "trial",
             "is_withdrawn": {"$ne": True}
-        }).to_list(100)
+        }
+        if _sid:
+            _q_extra["society_id"] = _sid
+        extra_athletes = await db.athletes.find(_q_extra).to_list(100)
         athletes.extend(extra_athletes)
     
     clean_mongo_docs(athletes)
@@ -12260,9 +12294,11 @@ async def export_dirigenti(current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può esportare")
     
-    users = await db.users.find({
-        "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER]}
-    }).to_list(1000)
+    _sid = current_user.get("society_id")
+    _q_u = {"role": {"$in": [UserRole.ADMIN, UserRole.VIEWER]}}
+    if _sid:
+        _q_u["society_id"] = _sid
+    users = await db.users.find(_q_u).to_list(1000)
     clean_mongo_docs(users)
     
     export_data = []
@@ -12915,9 +12951,19 @@ async def admin_get_all_custom_receipts(
         admin_cache[admin_id] = name
         return name
     
+    # Multi-tenant: only consider users belonging to admin's society
+    _sid = current_user.get("society_id")
+    _users_q = {"society_id": _sid} if _sid else {}
+    society_user_ids = set()
+    async for u in db.users.find(_users_q, {"_id": 0, "id": 1}):
+        if u.get("id"):
+            society_user_ids.add(u["id"])
+
     # Get coach receipts
     coach_receipts = await db.coach_compensations.find({}).to_list(1000)
     for r in coach_receipts:
+        if _sid and r.get("coach_id") not in society_user_ids:
+            continue
         user = await db.users.find_one({"id": r.get("coach_id")})
         if user:
             created_by_name = await get_admin_name(r.get("created_by"))
@@ -12947,6 +12993,8 @@ async def admin_get_all_custom_receipts(
     # Get dirigente receipts
     dirigente_receipts = await db.dirigente_compensations.find({}).to_list(1000)
     for r in dirigente_receipts:
+        if _sid and r.get("dirigente_id") not in society_user_ids:
+            continue
         user = await db.users.find_one({"id": r.get("dirigente_id")})
         if user:
             created_by_name = await get_admin_name(r.get("created_by"))
@@ -12976,6 +13024,8 @@ async def admin_get_all_custom_receipts(
     # Get collaboratore receipts
     collaboratore_receipts = await db.collaboratore_compensations.find({}).to_list(1000)
     for r in collaboratore_receipts:
+        if _sid and r.get("collaboratore_id") not in society_user_ids:
+            continue
         user = await db.users.find_one({"id": r.get("collaboratore_id")})
         if user:
             created_by_name = await get_admin_name(r.get("created_by"))
@@ -13984,9 +14034,19 @@ async def get_all_threshold_declarations(
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere tutte le dichiarazioni")
     
+    # Multi-tenant: filter declarations to only those of coaches in admin's society
+    _sid = current_user.get("society_id")
+    _users_q = {"society_id": _sid} if _sid else {}
+    society_coach_ids = set()
+    async for u in db.users.find(_users_q, {"_id": 0, "id": 1}):
+        if u.get("id"):
+            society_coach_ids.add(u["id"])
+
     query = {}
     if year:
         query["year"] = year
+    if _sid and society_coach_ids:
+        query["coach_id"] = {"$in": list(society_coach_ids)}
     
     declarations = await db.threshold_declarations.find(query).sort([("year", -1), ("signed_date", -1)]).to_list(200)
     
@@ -19238,27 +19298,37 @@ async def get_prime_squadre_athletes(current_user = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Solo admin può accedere a Prime Squadre")
     
     # Check if pro_enabled is true for this society
-    settings = await db.settings.find_one({"type": "society"})
+    _sid = current_user.get("society_id")
+    _set_q = {"type": "society"}
+    if _sid:
+        _set_q["society_id"] = _sid
+    settings = await db.settings.find_one(_set_q)
     if not settings or not settings.get("pro_enabled", False):
         raise HTTPException(status_code=403, detail="Modulo Prime Squadre non attivato per questa società")
     
-    # Get athletes with is_compensated = True
-    athletes = await db.athletes.find({"is_compensated": True}).to_list(100)
+    # Get athletes with is_compensated = True (scoped by society)
+    _a_q = {"is_compensated": True}
+    _u_q_coach = {"role": "coach", "is_compensated": True}
+    _u_q_dir = {"role": {"$in": ["admin", "viewer"]}, "is_compensated": True}
+    _t_q = {}
+    if _sid:
+        _a_q["society_id"] = _sid
+        _u_q_coach["society_id"] = _sid
+        _u_q_dir["society_id"] = _sid
+        _t_q["society_id"] = _sid
+    athletes = await db.athletes.find(_a_q).to_list(100)
     clean_mongo_docs(athletes)
     
     # Get coaches with is_compensated = True
-    coaches = await db.users.find({"role": "coach", "is_compensated": True}).to_list(50)
+    coaches = await db.users.find(_u_q_coach).to_list(50)
     clean_mongo_docs(coaches)
     
     # Get dirigenti (admin or viewer) with is_compensated = True
-    dirigenti = await db.users.find({
-        "role": {"$in": ["admin", "viewer"]},
-        "is_compensated": True
-    }).to_list(50)
+    dirigenti = await db.users.find(_u_q_dir).to_list(50)
     clean_mongo_docs(dirigenti)
     
     # Get all teams for lookup
-    teams = await db.teams.find({}).to_list(100)
+    teams = await db.teams.find(_t_q).to_list(100)
     teams_dict = {t["id"]: t["name"] for t in teams}
     
     # Get their compensation records for the current year
