@@ -24,24 +24,26 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
 ## Stato Attuale (12/05/2026)
-### 🆕 Multi-Tenancy Audit P1 (21/05/2026)
-- 🛡️ **Audit chirurgico delle query LIST cross-tenant** in `server.py` (140+ punti scansionati, 13 falle critiche corrette).
-- **Endpoint corretti** (ora rispettano `society_id`):
-  1. `/teams/{team_id}/attendance-stats` — atleti scoped
-  2. `/payments/export-athletes-codes` — teams scoped
-  3. `/payments/solleciti` — teams scoped
-  4. Payment import — teams scoped
-  5. `/coach/my-teams` — teams scoped
-  6. `/coach/commitments` — teams + matches scoped
-  7. `/coach/team/{team_id}/athletes` — atleti scoped
-  8. `/export/dirigenti` — **CRITICO**: prima esponeva TUTTI gli admin di TUTTE le società
-  9. `/admin/quietanze/all` — coach/dirigente/collaboratore receipts filtrati via society user_ids
-  10. `/admin/medical-certificates-archive` (list + stats) — scoped
-  11. `/certificates/override-logs` — audit_logs scoped
-  12. `/admin/threshold-declarations` — filtrato via society_coach_ids
-  13. `/prime-squadre/athletes` — atleti pro + coach + dirigenti + teams scoped
-- ✅ Backend hot-reload OK, lint clean (solo warning preesistenti).
-- 🎯 **Pronto per onboarding "Sirio" senza data bleed.**
+### 🆕 Multi-Tenancy Audit P1 (21/05/2026) — **Passata 1+2**
+- 🛡️ **Audit chirurgico delle query LIST cross-tenant** in `server.py` (140+ punti scansionati via script automatico).
+- **Passata 1 (notturna)**: 13 falle critiche corrette
+- **Passata 2 (mattutina)**: 13 ULTERIORI falle corrette (totale ora: **26 endpoint sicurizzati**)
+- Nuovi endpoint corretti nella passata 2:
+  1. `/teams/{team_id}/championships` — ora scoped per società
+  2. `/attendance/today` — attendances filtrate via team_ids della società
+  3. `/coach/commitments` — training_overrides scoped
+  4. `/reports/monthly-compensation/{year}/{month}/pdf` — coach/dirigente/athlete/atleta_pro compensations filtrate via society user_ids
+  5. `/reports/monthly-compensation/{year}/{month}/summary` — count + sum scoped per società
+  6. `/prime-squadre/athletes/{id}/enable` — settings + counts scoped (per non sforare il limite 50 globalmente)
+  7. `/prime-squadre/stats` — total_members + yearly atleta_pro scoped
+  8. `/documents/signed` (list) — admin vede solo signer_id della propria società
+  9. `/documents/archive` — scoped via signer_id society + team athletes lookup scoped
+  10. `/export-csv/attendances` — scoped via team_ids della società
+  11. `/admin/all-consents` — users + athletes scoped (era CRITICO: esponeva consensi GDPR di tutte le società)
+  12. `/preseason/campaigns/{id}/responses` — verifica campagna appartiene alla società admin
+  13. `/preseason/campaigns/{id}/export` — verifica campagna appartiene alla società admin
+- ✅ Backend healthy, lint clean (solo warning preesistenti).
+- 🎯 **RegistraTEAM ora ha protezione multi-tenant solida su tutti gli endpoint amministrativi sensibili.**
 
 ### 🆕 Fix Quietanze Orfane Multi-Collezione (20/05/2026)
 - 🐛 **Bug**: pulsante 🔧 "Ripara quietanze orfane" trovava sempre 0 record.

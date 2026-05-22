@@ -11758,11 +11758,16 @@ async def get_today_attendances(current_user = Depends(get_current_user)):
     if current_user["role"] not in [UserRole.COACH, UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Accesso negato")
     
-    # Get today's attendances
+    # Get today's attendances (scoped by society via team membership)
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    attendances = await db.attendances.find({
-        "check_in_time": {"$gte": today_start}
-    }).sort("check_in_time", -1).to_list(1000)
+    _sid = current_user.get("society_id")
+    society_team_ids = None
+    if _sid:
+        society_team_ids = [t["id"] async for t in db.teams.find({"society_id": _sid}, {"_id": 0, "id": 1})]
+    _att_q = {"check_in_time": {"$gte": today_start}}
+    if society_team_ids is not None:
+        _att_q["team_id"] = {"$in": society_team_ids}
+    attendances = await db.attendances.find(_att_q).sort("check_in_time", -1).to_list(1000)
     
     # Enrich with athlete info
     result = []
@@ -11988,10 +11993,13 @@ async def get_coach_commitments(current_user = Depends(get_current_user)):
     matches = filtered_matches
 
     # Load training overrides (cancellations / modifications) within the same window
-    overrides_cursor = db.training_overrides.find({
+    _q_ovr = {
         "team_id": {"$in": team_ids},
         "date": {"$gte": today.strftime("%Y-%m-%d"), "$lt": end_of_week.strftime("%Y-%m-%d")}
-    })
+    }
+    if _sid:
+        _q_ovr["society_id"] = _sid
+    overrides_cursor = db.training_overrides.find(_q_ovr)
     overrides_map = {}
     async for ov in overrides_cursor:
         overrides_map[(ov.get("team_id"), ov.get("date"))] = ov
@@ -14152,7 +14160,11 @@ async def get_championships(current_user = Depends(get_current_user)):
 @api_router.get("/teams/{team_id}/championships")
 async def get_team_championships(team_id: str, current_user = Depends(get_current_user)):
     """Get championships for a specific team"""
-    championships = await db.championships.find({"team_id": team_id}).to_list(100)
+    _sid = current_user.get("society_id")
+    _q = {"team_id": team_id}
+    if _sid:
+        _q["society_id"] = _sid
+    championships = await db.championships.find(_q).to_list(100)
     clean_mongo_docs(championships)
     return championships
 
@@ -16967,6 +16979,25 @@ async def list_signed_documents(
             if "$or" in query:
                 query["$and"] = [{"$or": query.pop("$or")}, {"$or": filter_conditions}]
     
+    # Multi-tenant: admin sees only their society's documents (via signer_id from society users)
+    if current_user["role"] == UserRole.ADMIN:
+        _sid = current_user.get("society_id")
+        if _sid:
+            society_user_ids = [u["id"] async for u in db.users.find({"society_id": _sid}, {"_id": 0, "id": 1})]
+            # If a filter on signer_id already present (filter_conditions used $or above), restrict that
+            # else add signer_id $in scope
+            if "$or" not in query and "$and" not in query:
+                query["signer_id"] = {"$in": society_user_ids}
+            else:
+                # Wrap with $and to enforce both existing OR and society scope
+                existing = []
+                if "$or" in query:
+                    existing.append({"$or": query.pop("$or")})
+                if "$and" in query:
+                    existing.extend(query.pop("$and"))
+                existing.append({"signer_id": {"$in": society_user_ids}})
+                query["$and"] = existing
+
     documents = await db.signed_documents.find(query, {"pdf_base64": 0}).sort([("signed_at", -1), ("created_at", -1)]).to_list(100)
     
     for doc in documents:
@@ -19385,15 +19416,26 @@ async def enable_athlete_compensation(athlete_id: str, current_user = Depends(ge
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può gestire Prime Squadre")
     
-    # Check if pro_enabled
-    settings = await db.settings.find_one({"type": "society"})
+    # Check if pro_enabled (society-scoped)
+    _sid = current_user.get("society_id")
+    _set_q = {"type": "society"}
+    if _sid:
+        _set_q["society_id"] = _sid
+    settings = await db.settings.find_one(_set_q)
     if not settings or not settings.get("pro_enabled", False):
         raise HTTPException(status_code=403, detail="Modulo Prime Squadre non attivato")
     
-    # Check member limit (50) - count athletes, coaches, and dirigenti
-    athletes_count = await db.athletes.count_documents({"is_compensated": True})
-    coaches_count = await db.users.count_documents({"role": "coach", "is_compensated": True})
-    dirigenti_count = await db.users.count_documents({"role": {"$in": ["admin", "viewer"]}, "is_compensated": True})
+    # Check member limit (50) - count athletes, coaches, and dirigenti (society-scoped)
+    _a_q = {"is_compensated": True}
+    _u_q_coach = {"role": "coach", "is_compensated": True}
+    _u_q_dir = {"role": {"$in": ["admin", "viewer"]}, "is_compensated": True}
+    if _sid:
+        _a_q["society_id"] = _sid
+        _u_q_coach["society_id"] = _sid
+        _u_q_dir["society_id"] = _sid
+    athletes_count = await db.athletes.count_documents(_a_q)
+    coaches_count = await db.users.count_documents(_u_q_coach)
+    dirigenti_count = await db.users.count_documents(_u_q_dir)
     if athletes_count + coaches_count + dirigenti_count >= 50:
         raise HTTPException(status_code=400, detail="Raggiunto il limite massimo di 50 membri Prime Squadre")
     
@@ -20058,6 +20100,20 @@ async def get_monthly_compensation_report(
     all_receipts = []
     total_amount = 0.0
     
+    # Multi-tenant scope: precompute society user/athlete IDs
+    _sid = current_user.get("society_id")
+    society_user_ids = None
+    society_athlete_ids = None
+    if _sid:
+        society_user_ids = set()
+        async for u in db.users.find({"society_id": _sid}, {"_id": 0, "id": 1}):
+            if u.get("id"):
+                society_user_ids.add(u["id"])
+        society_athlete_ids = set()
+        async for a in db.athletes.find({"society_id": _sid}, {"_id": 0, "id": 1}):
+            if a.get("id"):
+                society_athlete_ids.add(a["id"])
+
     # 1. Get coach compensations
     coach_comps = await db.coach_compensations.find({
         "year": year,
@@ -20066,6 +20122,8 @@ async def get_monthly_compensation_report(
     }).to_list(100)
     
     for comp in coach_comps:
+        if society_user_ids is not None and comp.get("coach_id") not in society_user_ids:
+            continue
         coach = await db.users.find_one({"id": comp.get("coach_id")})
         coach_name = coach.get("full_name", "N/D") if coach else "N/D"
         amount = comp.get("amount_gross", comp.get("amount", 0))
@@ -20116,6 +20174,8 @@ async def get_monthly_compensation_report(
     }).to_list(100)
     
     for receipt in athlete_receipts:
+        if society_athlete_ids is not None and receipt.get("athlete_id") not in society_athlete_ids:
+            continue
         athlete = await db.athletes.find_one({"id": receipt.get("athlete_id")})
         athlete_name = athlete.get("full_name", "N/D") if athlete else "N/D"
         amount = receipt.get("amount", 0)
@@ -20141,6 +20201,8 @@ async def get_monthly_compensation_report(
     }).to_list(100)
     
     for comp in atleta_pro_comps:
+        if society_athlete_ids is not None and comp.get("atleta_id") not in society_athlete_ids:
+            continue
         athlete = await db.athletes.find_one({"id": comp.get("atleta_id")})
         athlete_name = athlete.get("full_name", "N/D") if athlete else "N/D"
         amount = comp.get("amount_gross", comp.get("amount", 0))
@@ -20199,38 +20261,58 @@ async def get_monthly_compensation_summary(
     ]
     month_name = month_names[month - 1] if 1 <= month <= 12 else f"Mese {month}"
     
+    # Multi-tenant scope: precompute society user/athlete IDs
+    _sid = current_user.get("society_id")
+    society_user_ids = None
+    society_athlete_ids = None
+    if _sid:
+        society_user_ids = []
+        async for u in db.users.find({"society_id": _sid}, {"_id": 0, "id": 1}):
+            if u.get("id"):
+                society_user_ids.append(u["id"])
+        society_athlete_ids = []
+        async for a in db.athletes.find({"society_id": _sid}, {"_id": 0, "id": 1}):
+            if a.get("id"):
+                society_athlete_ids.append(a["id"])
+
+    def _scoped(q, owner_field, ids):
+        nq = dict(q)
+        if ids is not None:
+            nq[owner_field] = {"$in": ids}
+        return nq
+
     # Count receipts by type
-    coach_count = await db.coach_compensations.count_documents({
-        "year": year, "month": month, "receipt_signed": True
-    })
+    coach_count = await db.coach_compensations.count_documents(
+        _scoped({"year": year, "month": month, "receipt_signed": True}, "coach_id", society_user_ids)
+    )
     
-    dirigente_count = await db.dirigente_compensations.count_documents({
-        "year": year, "month": month, "receipt_signed": True
-    })
+    dirigente_count = await db.dirigente_compensations.count_documents(
+        _scoped({"year": year, "month": month, "receipt_signed": True}, "dirigente_id", society_user_ids)
+    )
     
-    collaboratore_count = await db.collaboratore_compensations.count_documents({
-        "year": year, "month": month, "receipt_signed": True
-    })
+    collaboratore_count = await db.collaboratore_compensations.count_documents(
+        _scoped({"year": year, "month": month, "receipt_signed": True}, "collaboratore_id", society_user_ids)
+    )
     
-    athlete_count = await db.athlete_compensation_receipts.count_documents({
-        "year": year, "month": month_name, "signed": True
-    })
+    athlete_count = await db.athlete_compensation_receipts.count_documents(
+        _scoped({"year": year, "month": month_name, "signed": True}, "athlete_id", society_athlete_ids)
+    )
     
     # Calculate totals
     coach_total = 0
-    async for comp in db.coach_compensations.find({"year": year, "month": month, "receipt_signed": True}):
+    async for comp in db.coach_compensations.find(_scoped({"year": year, "month": month, "receipt_signed": True}, "coach_id", society_user_ids)):
         coach_total += comp.get("amount_gross", comp.get("amount", 0))
     
     dirigente_total = 0
-    async for comp in db.dirigente_compensations.find({"year": year, "month": month, "receipt_signed": True}):
+    async for comp in db.dirigente_compensations.find(_scoped({"year": year, "month": month, "receipt_signed": True}, "dirigente_id", society_user_ids)):
         dirigente_total += comp.get("amount_gross", comp.get("amount", 0))
     
     collaboratore_total = 0
-    async for comp in db.collaboratore_compensations.find({"year": year, "month": month, "receipt_signed": True}):
+    async for comp in db.collaboratore_compensations.find(_scoped({"year": year, "month": month, "receipt_signed": True}, "collaboratore_id", society_user_ids)):
         collaboratore_total += comp.get("amount_gross", comp.get("amount", 0))
     
     athlete_total = 0
-    async for receipt in db.athlete_compensation_receipts.find({"year": year, "month": month_name, "signed": True}):
+    async for receipt in db.athlete_compensation_receipts.find(_scoped({"year": year, "month": month_name, "signed": True}, "athlete_id", society_athlete_ids)):
         athlete_total += receipt.get("amount", 0)
     
     return {
@@ -20366,6 +20448,12 @@ async def get_documents_archive(
     
     query = {}
     
+    # Multi-tenant: scope to society via signer_id of users in this society
+    _sid = current_user.get("society_id")
+    if _sid:
+        society_user_ids = [u["id"] async for u in db.users.find({"society_id": _sid}, {"_id": 0, "id": 1})]
+        query["signer_id"] = {"$in": society_user_ids}
+    
     # Filter by season (e.g., "2024-2025" -> years 2024 and 2025)
     if season:
         try:
@@ -20378,11 +20466,14 @@ async def get_documents_archive(
     if document_type:
         query["document_type"] = document_type
     
-    # Filter by team - need to find athletes in that team first
+    # Filter by team - need to find athletes in that team first (society-scoped)
     if team_id:
         # Get athlete IDs from this team
         athlete_ids = []
-        async for athlete in db.athletes.find({"team_id": team_id}, {"id": 1}):
+        _t_a_q = {"team_id": team_id}
+        if _sid:
+            _t_a_q["society_id"] = _sid
+        async for athlete in db.athletes.find(_t_a_q, {"id": 1}):
             athlete_ids.append(athlete.get("id"))
         if athlete_ids:
             query["athlete_id"] = {"$in": athlete_ids}
@@ -24483,6 +24574,15 @@ async def export_preseason_responses(campaign_id: str, current_user = Depends(ge
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin")
     
+    # Multi-tenant: verify campaign belongs to admin's society
+    _sid = current_user.get("society_id")
+    _camp_q = {"id": campaign_id}
+    if _sid:
+        _camp_q["society_id"] = _sid
+    campaign_check = await db.preseason_campaigns.find_one(_camp_q, {"_id": 0, "id": 1})
+    if not campaign_check:
+        raise HTTPException(status_code=404, detail="Campagna non trovata")
+    
     responses = await db.preseason_responses.find(
         {"campaign_id": campaign_id}, {"_id": 0}
     ).sort("created_at", 1).to_list(10000)
@@ -25223,9 +25323,16 @@ async def get_all_consents_admin(current_user = Depends(get_current_user)):
     
     result = []
     
+    _sid = current_user.get("society_id")
+    _u_q = {"role": {"$ne": "admin"}}
+    _a_q = {}
+    if _sid:
+        _u_q["society_id"] = _sid
+        _a_q["society_id"] = _sid
+
     # Get users with consents
     users = await db.users.find(
-        {"role": {"$ne": "admin"}},
+        _u_q,
         {"_id": 0, "id": 1, "full_name": 1, "email": 1, "role": 1, "consents": 1, "consent_history": 1}
     ).to_list(500)
     
@@ -25244,9 +25351,9 @@ async def get_all_consents_admin(current_user = Depends(get_current_user)):
                 "last_change": history[-1]["timestamp"] if history else None,
             })
     
-    # Get athletes with consents
+    # Get athletes with consents (society-scoped)
     athletes = await db.athletes.find(
-        {},
+        _a_q,
         {"_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1, "consents": 1, "consent_history": 1}
     ).to_list(500)
     
