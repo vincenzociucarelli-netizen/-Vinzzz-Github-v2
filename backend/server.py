@@ -2045,7 +2045,7 @@ async def register_society(payload: RegisterSocietyRequest, request: Request):
     inst_dict["created_via"] = "register-society-auto"  # marker per audit
     await db.users.insert_one(inst_dict)
 
-    # 4) Email all'account istituzionale con link "imposta password"
+    # 4) Email all'account istituzionale con link "imposta password" (BCC al superadmin per notifica nuova società)
     try:
         await send_institutional_account_setup_email(
             to_email=society_email_norm,
@@ -2057,6 +2057,17 @@ async def register_society(payload: RegisterSocietyRequest, request: Request):
     except Exception as e:
         # Non blocchiamo la registrazione se l'email fallisce — il dirigente può sempre fare reset password
         logging.warning(f"register-society: invio email istituzionale fallito ({society_email_norm}): {e}")
+
+    # 4b) Welcome Email al Dirigente Incaricato (persona fisica) con checklist + BCC superadmin
+    try:
+        await send_welcome_admin_email(
+            to_email=admin_email_norm,
+            admin_full_name=full_name,
+            society_name=society.name,
+            invite_code=invite_code,
+        )
+    except Exception as e:
+        logging.warning(f"register-society: invio welcome email dirigente fallito ({admin_email_norm}): {e}")
 
     # 5) Auto-login del dirigente persona fisica
     token = create_token(admin_user.id, "admin")
@@ -2152,11 +2163,13 @@ async def send_institutional_account_setup_email(
     """
 
     try:
+        # BCC al superadmin per notifica creazione nuova società
         result = await send_transactional_email(
             to_email=to_email,
             subject=f"🏛️ Account Istituzionale creato — {society_name}",
             html_content=html_content,
             to_name=society_name,
+            bcc_list=["vincenzo.ciucarelli@gmail.com"],
         )
         if result.get("success"):
             logging.info(f"Institutional setup email sent to {to_email}")
@@ -2164,6 +2177,92 @@ async def send_institutional_account_setup_email(
             logging.error(f"Failed to send institutional setup email: {result.get('error')}")
     except Exception as e:
         logging.error(f"Institutional setup email error: {e}")
+        raise
+
+
+async def send_welcome_admin_email(
+    to_email: str,
+    admin_full_name: str,
+    society_name: str,
+    invite_code: str,
+):
+    """Welcome email per il Dirigente Incaricato (persona fisica) appena
+    registrato. Contiene checklist primo accesso e codice invito.
+
+    Invia in BCC al superadmin (vincenzo.ciucarelli@gmail.com) come notifica
+    di registrazione nuova società.
+    """
+    base_url = os.environ.get("EXPO_PUBLIC_BACKEND_URL", os.environ.get("FRONTEND_URL", "https://registrateam.it"))
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html><head><meta charset="utf-8"><style>
+        body {{ font-family: Arial, sans-serif; line-height:1.6; color:#333; }}
+        .container {{ max-width:600px; margin:0 auto; padding:20px; }}
+        .header {{ background-color:#C62828; color:white; padding:24px 20px; text-align:center; border-radius:8px 8px 0 0; }}
+        .header h1 {{ margin:0; font-size:22px; color:white; }}
+        .content {{ background-color:#fafafa; padding:30px; border:1px solid #ddd; }}
+        .checklist {{ background-color:#fff; border:1px solid #ddd; border-radius:8px; padding:18px 22px; margin:20px 0; }}
+        .checklist li {{ margin:10px 0; }}
+        .invite {{ background-color:#E3F2FD; border:1px solid #90CAF9; border-radius:6px; padding:14px; text-align:center; margin:18px 0; font-size:22px; font-weight:700; letter-spacing:3px; color:#0D47A1; }}
+        .cta {{ text-align:center; margin:24px 0; }}
+        .cta a {{ display:inline-block; background-color:#C62828; color:white !important; text-decoration:none; padding:14px 32px; border-radius:8px; font-weight:700; font-size:16px; }}
+        .footer {{ text-align:center; padding:20px; color:#666; font-size:12px; }}
+    </style></head><body>
+    <div class="container">
+        <div class="header">
+            <div style="font-size:42px; margin-bottom:6px;">🎉</div>
+            <h1>Benvenuto su RegistraTEAM!</h1>
+            <p style="margin:8px 0 0 0; font-size:14px; opacity:0.9;">{society_name}</p>
+        </div>
+        <div class="content">
+            <p>Ciao <strong>{admin_full_name}</strong>,</p>
+            <p>La tua Società <strong>{society_name}</strong> è stata registrata correttamente come Dirigente Incaricato. Sei pronto a gestire atleti, allenamenti e documenti GDPR in pochi click.</p>
+
+            <div class="cta">
+                <a href="{base_url}/login">🚀 Accedi alla tua area</a>
+            </div>
+
+            <p style="margin-top:24px;"><strong>📋 Checklist primo accesso (5 minuti):</strong></p>
+            <div class="checklist">
+                <ol>
+                    <li>📤 <strong>Carica il logo</strong> della Società (Impostazioni → Logo)</li>
+                    <li>👥 <strong>Crea le squadre</strong> (Squadre → + Nuova squadra)</li>
+                    <li>🏐 <strong>Aggiungi un allenatore</strong> e/o un dirigente sportivo</li>
+                    <li>📨 <strong>Invita atleti/genitori</strong> condividendo il codice qui sotto</li>
+                    <li>📅 <strong>Imposta calendario allenamenti</strong> e campionati</li>
+                </ol>
+            </div>
+
+            <p><strong>🔑 Codice invito della tua Società:</strong></p>
+            <div class="invite">{invite_code}</div>
+            <p style="font-size:13px; color:#666; text-align:center; margin-top:-8px;">Condividi questo codice con genitori, atleti e collaboratori che vuoi far entrare nella tua Società.</p>
+
+            <p style="margin-top:28px; font-size:13px; color:#555;">Hai domande? Rispondi a questa email oppure scrivici a <a href="mailto:assistenza@registrateam.it">assistenza@registrateam.it</a>.</p>
+            <p style="font-size:13px; color:#555;">Buon lavoro 🏆</p>
+        </div>
+        <div class="footer">
+            <p>Questa è un'email automatica generata alla registrazione della tua Società.</p>
+            <p>&copy; {datetime.now().year} RegistraTEAM — Tutti i diritti riservati</p>
+        </div>
+    </div>
+    </body></html>
+    """
+
+    try:
+        result = await send_transactional_email(
+            to_email=to_email,
+            subject=f"🎉 Benvenuto su RegistraTEAM — {society_name}",
+            html_content=html_content,
+            to_name=admin_full_name,
+            bcc_list=["vincenzo.ciucarelli@gmail.com"],
+        )
+        if result.get("success"):
+            logging.info(f"Welcome admin email sent to {to_email}")
+        else:
+            logging.error(f"Failed to send welcome admin email: {result.get('error')}")
+    except Exception as e:
+        logging.error(f"Welcome admin email error: {e}")
         raise
 
 

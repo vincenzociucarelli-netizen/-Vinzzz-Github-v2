@@ -24,6 +24,14 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
 ## Stato Attuale (12/05/2026)
+### 🆕 Welcome Email Nuova Società (23/05/2026)
+- ✉️ **Welcome Email automatica** al Dirigente Incaricato dopo registrazione società (`/auth/register-society`).
+- Contiene: saluto personalizzato, CTA accesso, **checklist primo accesso** (logo, squadre, allenatore, codice invito, calendario), codice invito evidenziato.
+- 📧 **BCC superadmin** `vincenzo.ciucarelli@gmail.com` su ENTRAMBE le email (welcome dirigente + istituzionale società) → notifica automatica di ogni nuova società registrata.
+- Nuova funzione: `send_welcome_admin_email()` in `server.py` (riga ~2170).
+- File toccati: `/app/backend/server.py` (register_society + nuova funzione welcome email).
+
+
 ### 🆕 Multi-Tenancy Audit P1 (21/05/2026) — **Passata 1+2**
 - 🛡️ **Audit chirurgico delle query LIST cross-tenant** in `server.py` (140+ punti scansionati via script automatico).
 - **Passata 1 (notturna)**: 13 falle critiche corrette
