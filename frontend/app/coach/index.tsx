@@ -953,6 +953,15 @@ export default function CoachScreen() {
             <Ionicons name="list" size={18} color="#007AFF" />
             <Text style={styles.historyButtonText}>Storico Presenze</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.historyButton}
+            onPress={() => router.push('/palestre')}
+            data-testid="coach-palestre-btn"
+          >
+            <Ionicons name="map" size={18} color="#43A047" />
+            <Text style={[styles.historyButtonText, { color: '#43A047' }]}>🏟️ Mappa Palestre</Text>
+          </TouchableOpacity>
           
           <View style={{ height: 40 }} />
         </ScrollView>

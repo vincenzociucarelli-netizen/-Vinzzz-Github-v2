@@ -934,6 +934,21 @@ export default function AdminDashboard() {
             </View>
           </TouchableOpacity>
 
+          {/* Mappa Palestre */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/palestre')}
+            data-testid="admin-palestre-btn"
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#E8F5E9' }]}>
+              <Text style={{ fontSize: 26 }}>🏟️</Text>
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Mappa Palestre</Text>
+              <Text style={styles.menuCardSubtitle}>Palazzetti dei campionati</Text>
+            </View>
+          </TouchableOpacity>
+
           {/* Importa Calendario Federazione */}
           <TouchableOpacity
             style={styles.menuCard}

@@ -294,6 +294,24 @@ export default function DirigenteIndex() {
           <Ionicons name="chevron-forward" size={24} color="#27AE60" />
         </TouchableOpacity>
 
+        {/* Mappa Palestre */}
+        <TouchableOpacity
+          style={[styles.profileCard, { marginTop: 12, borderColor: '#43A047', backgroundColor: '#F1F8E9' }]}
+          onPress={() => router.push('/palestre')}
+          data-testid="dirigente-palestre-btn"
+        >
+          <View style={[styles.profileIcon, { backgroundColor: '#E8F5E9' }]}>
+            <Ionicons name="map" size={28} color="#43A047" />
+          </View>
+          <View style={styles.profileInfo}>
+            <Text style={[styles.profileTitle, { color: '#43A047' }]}>🏟️ Mappa Palestre</Text>
+            <Text style={styles.profileDescription}>
+              Palazzetti utilizzati per i campionati
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#43A047" />
+        </TouchableOpacity>
+
         {/* Teams Section with inline Athletes */}
         <View style={styles.section}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>

@@ -55,6 +55,7 @@ export default function RootLayout() {
         <Stack.Screen name="parent" />
         <Stack.Screen name="minor" />
         <Stack.Screen name="preseason" />
+        <Stack.Screen name="palestre" />
       </Stack>
     </View>
   );

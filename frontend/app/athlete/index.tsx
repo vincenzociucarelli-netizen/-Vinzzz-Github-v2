@@ -1116,6 +1116,20 @@ export default function AthleteScreen() {
           </View>
           <Ionicons name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
+
+        {/* Mappa Palestre */}
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => router.push('/palestre')}
+          data-testid="athlete-palestre-btn"
+        >
+          <Ionicons name="map" size={22} color="#43A047" />
+          <View style={styles.menuItemContent}>
+            <Text style={styles.menuItemTitle}>🏟️ Mappa Palestre</Text>
+            <Text style={styles.menuItemSubtitle}>Palazzetti dei campionati</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
         
         {/* Privacy status - only show if NOT yet accepted (to prompt signing) */}
         {!isMinor && !profile?.privacy_accepted && (

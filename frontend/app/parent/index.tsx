@@ -1172,6 +1172,17 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
           <Text style={styles.documentsButtonText}>I Miei Documenti</Text>
           <Ionicons name="chevron-forward" size={20} color="#8E44AD" />
         </TouchableOpacity>
+
+        {/* Mappa Palestre */}
+        <TouchableOpacity
+          style={styles.documentsButton}
+          onPress={() => router.push('/palestre')}
+          data-testid="parent-palestre-btn"
+        >
+          <Ionicons name="map" size={24} color="#43A047" />
+          <Text style={[styles.documentsButtonText, { color: '#43A047' }]}>🏟️ Mappa Palestre</Text>
+          <Ionicons name="chevron-forward" size={20} color="#43A047" />
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Modal per modifica nome */}
