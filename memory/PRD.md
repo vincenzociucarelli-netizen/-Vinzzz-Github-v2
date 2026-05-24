@@ -24,6 +24,36 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
 ## Stato Attuale (12/05/2026)
+### 📌 SPEC CONGELATE — Atleti Pro (futura implementazione)
+**Status: WAITING — utente vuole prima valutare stabilità app base prima di partire**
+
+Quando l'utente darà il via, implementare con queste specifiche:
+
+| # | Decisione |
+|---|---|
+| 1 | Naming: **"Atleta Pro"** (riusa terminologia Prime Squadre esistente) |
+| 2 | Periodo soglia €5k/€15k: **anno solare** (1/1 → 31/12), conforme D.lgs 36/2021. La dichiarazione iniziale considera compensi pregressi dell'anno corrente fino al giorno dell'incarico (come oggi per i coach) |
+| 3 | Toggle `is_compensated` su atleta: **bloccato lato backend se età < 18 anni** (D.lgs 36/2021 — minorenni non possono essere "lavoratori sportivi") |
+| 4 | Auto-sgancio genitori al 18° compleanno: **NO**. Solo sgancio manuale via admin (`/api/athletes/{id}/detach-parents` già esistente) |
+| 5 | Caso atleta+coach: **1 dashboard ibrida con tab "Atleta" + "Coach"**. Calcolo soglie €5k/€15k **cumulativo cross-ruolo** (somma `coach_compensations` + `atleta_pro_compensations` per stessa persona). **1 sola dichiarazione** che vale per entrambi i ruoli |
+| 6 | Quietanze atleta+coach contemporaneo: **DA DECIDERE quando si parte** (unica vs separate per ruolo) |
+
+**Effort stimato: ~10-11 ore** distribuite in 2-3 sessioni.
+
+**Componenti riusabili al 100%**:
+- `/api/athletes/{id}/detach-parents` (sgancio genitori già completo)
+- `atleta_pro_compensations` collezione (già esistente con Prime Squadre)
+- `is_compensated` flag su atleta (già esistente)
+- Pattern coach compensations (threshold, dichiarazioni, quietanze, PDF generator)
+- Frontend `/app/admin/prime-squadre.tsx` (già esistente)
+
+**Da creare ex novo**:
+- Estensione `threshold_declarations` per ruolo `atleta_pro` + PDF generator quietanza atleta
+- Aggregazione cross-collection (`coach_compensations` + `atleta_pro_compensations`) nel calcolo soglie
+- Sezione "Compensi" nella dashboard atleta (tab ibrido)
+- Validazione `age >= 18` nel toggle is_compensated
+
+
 ### 🆕 Welcome Email Nuova Società (23/05/2026)
 - ✉️ **Welcome Email automatica** al Dirigente Incaricato dopo registrazione società (`/auth/register-society`).
 - Contiene: saluto personalizzato, CTA accesso, **checklist primo accesso** (logo, squadre, allenatore, codice invito, calendario), codice invito evidenziato.
