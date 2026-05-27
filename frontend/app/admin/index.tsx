@@ -99,6 +99,7 @@ export default function AdminDashboard() {
   const [sendingInvite, setSendingInvite] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: '', first_name: '', last_name: '' });
   const [proEnabled, setProEnabled] = useState<boolean>(false);
+  const [waCount, setWaCount] = useState<number>(0);
   // Optimistic logo rendering: try to load the image first; only hide on real error.
   // This avoids issues with HEAD probes failing on some backend versions while
   // GET requests work fine.
@@ -168,6 +169,12 @@ export default function AdminDashboard() {
       const collaboratoriPending = pending.filter((u: any) => u.role === 'collaboratore').length;
       const parentsPending = pending.filter((u: any) => u.role === 'parent').length;
       setPendingCounts({ dirigenti: dirigentiPending, coaches: coachesPending, collaboratori: collaboratoriPending, parents: parentsPending });
+      
+      // WhatsApp pending reminders counter
+      try {
+        const waRes = await fetchWithRetry('/admin/whatsapp/pending-count', { count: 0 });
+        setWaCount(waRes.data?.count || 0);
+      } catch (e) { /* ignore */ }
 
       // Group 3: Secondary data (can load slightly delayed)
       const [birthdaysRes, certsRes, inviteRes, notifRes] = await Promise.all([
@@ -959,8 +966,17 @@ export default function AdminDashboard() {
               <Text style={{ fontSize: 26 }}>🟢</Text>
             </View>
             <View style={styles.menuCardContent}>
-              <Text style={styles.menuCardTitle}>Solleciti WhatsApp</Text>
-              <Text style={styles.menuCardSubtitle}>Azioni pendenti di genitori/atleti/coach</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={styles.menuCardTitle}>Solleciti WhatsApp</Text>
+                {waCount > 0 && (
+                  <View style={{ backgroundColor: '#C62828', borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2, minWidth: 22, alignItems: 'center' }}>
+                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{waCount}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.menuCardSubtitle}>
+                {waCount > 0 ? `${waCount} azioni pendenti da inviare` : 'Tutto in regola'}
+              </Text>
             </View>
           </TouchableOpacity>
 

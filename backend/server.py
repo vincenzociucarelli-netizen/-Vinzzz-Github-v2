@@ -25491,6 +25491,22 @@ api_router.include_router(primary_admin_router)
 api_router.include_router(training_overrides_router)
 
 
+# ─────────────────────────── Palestre KML ───────────────────────────
+from palestre_kml import get_palestre_list as _palestre_get
+
+
+@api_router.get("/palestre/list")
+async def list_palestre(refresh: bool = False, current_user=Depends(get_current_user)):
+    """Lista pubblica palestre estratta dalla Google My Map (KML).
+    Tutti gli utenti loggati possono leggerla (mappa condivisa Umbria).
+    """
+    data = await _palestre_get(force_refresh=bool(refresh))
+    return data
+
+
+# ─────────────────────────── /Palestre KML ───────────────────────────
+
+
 # ─────────────────────────── WhatsApp Reminders ───────────────────────────
 from whatsapp_reminders_core import (
     DEFAULT_TEMPLATES, ReminderLogIn, _normalize_phone, _link_app,
@@ -25770,6 +25786,18 @@ async def get_pending_reminders(current_user=Depends(get_current_user)):
         "cases": cases,
         "society_name": (await db.societies.find_one({"id": sid}, {"_id": 0, "name": 1}) or {}).get("name") if sid else None,
     }
+
+
+@api_router.get("/admin/whatsapp/pending-count")
+async def get_whatsapp_pending_count(current_user=Depends(get_current_user)):
+    """Lightweight endpoint: returns just the count, used by dashboard badges."""
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.COACH):
+        raise HTTPException(status_code=403, detail="Solo admin o coach")
+    try:
+        data = await get_pending_reminders(current_user=current_user)
+        return {"count": data.get("count", 0)}
+    except Exception:
+        return {"count": 0}
 
 
 @api_router.post("/admin/whatsapp/log-sent")

@@ -55,6 +55,7 @@ export default function CoachScreen() {
   const [loading, setLoading] = useState(true);
   const [dirigenti, setDirigenti] = useState<Dirigente[]>([]);
   const [fellowCoaches, setFellowCoaches] = useState<Dirigente[]>([]);
+  const [waCount, setWaCount] = useState<number>(0);
   const [commitments, setCommitments] = useState<{
     today: any[];
     tomorrow: any[];
@@ -178,6 +179,10 @@ export default function CoachScreen() {
     loadCommitments();
     loadDirigenti();
     loadFellowCoaches();
+    // WhatsApp pending counter
+    api.get('/admin/whatsapp/pending-count')
+      .then((r: any) => setWaCount(r?.data?.count || 0))
+      .catch(() => {});
   }, []);
 
   // Auto-select team if only one
@@ -969,7 +974,14 @@ export default function CoachScreen() {
             data-testid="coach-whatsapp-reminders-btn"
           >
             <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
-            <Text style={[styles.historyButtonText, { color: '#25D366' }]}>🟢 Solleciti WhatsApp</Text>
+            <Text style={[styles.historyButtonText, { color: '#25D366' }]}>
+              🟢 Solleciti WhatsApp
+            </Text>
+            {waCount > 0 && (
+              <View style={{ backgroundColor: '#C62828', borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2, minWidth: 22, alignItems: 'center', marginLeft: 6 }}>
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{waCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
           
           <View style={{ height: 40 }} />

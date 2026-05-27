@@ -24,6 +24,29 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
 ## Stato Attuale (12/05/2026)
+### 🆕 Ricerca palestre + Counter solleciti (28/05/2026)
+
+**Counter dinamico solleciti WhatsApp** ✅
+- Nuovo endpoint `GET /api/admin/whatsapp/pending-count` (lightweight)
+- Badge rosso con numero pendenti nel menu Admin (card "Solleciti WhatsApp")
+- Badge rosso nel link Coach dashboard
+- Sottotitolo dinamico: "X azioni pendenti da inviare" oppure "Tutto in regola"
+
+**Mappa palestre con ricerca + lista** ✅
+- Backend: nuovo modulo `/app/backend/palestre_kml.py` — parser KML da Google My Maps con cache 1h (TTL configurabile)
+- Endpoint `GET /api/palestre/list` (autenticato, accessibile a tutti i ruoli)
+- Frontend `/app/frontend/app/palestre.tsx` riscritto:
+  - Search box live ("scrivi spoleto → filtra")
+  - Mappa embed sopra
+  - Lista 79 palestre sotto con nome + indirizzo + bottone "Naviga" (apre Google Maps mobile)
+  - Contatore "📍 Lista palestre (79)"
+- ✅ Backend testato: `count: 79`, link `google_maps_url` (`?api=1&query=lat,lng`) corretti
+- ✅ Frontend testato via screenshot: header + ricerca + mappa + lista visibili
+
+File creati: `/app/backend/palestre_kml.py`
+File toccati: `/app/backend/server.py` (endpoint palestre + count solleciti), `/app/frontend/app/palestre.tsx` (rewrite completo), `/app/frontend/app/admin/index.tsx` (counter), `/app/frontend/app/coach/index.tsx` (counter)
+
+
 ### 🆕 Solleciti WhatsApp (27/05/2026)
 - 🟢 **Sistema completo di solleciti via WhatsApp** con click-to-chat (`wa.me`) — GRATIS, nessuna API a pagamento, GDPR-friendly (l'admin invia dal suo numero).
 - **6 casi tracciati automaticamente**:
