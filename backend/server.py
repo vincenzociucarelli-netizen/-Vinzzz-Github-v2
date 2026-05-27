@@ -25596,8 +25596,8 @@ async def get_pending_reminders(current_user=Depends(get_current_user)):
         last = ath.get("last_name") or ""
         full_name = ath.get("full_name") or f"{first} {last}".strip()
         contacts = await _wa_get_phones(ath)
-        if not contacts:
-            continue  # Nessun numero → impossibile sollecitare
+        # NOTE: even if contacts is empty, we still surface the case so that
+        # the admin knows there is something to do (e.g. recover phone offline).
 
         is_trial = ath.get("is_trial", False)
         trial_end = ath.get("trial_end_date")
@@ -25605,6 +25605,8 @@ async def get_pending_reminders(current_user=Depends(get_current_user)):
         status = ath.get("status", "")
         trial_doc_signed = bool(ath.get("trial_document_generated"))
         privacy_signed = bool(ath.get("privacy_accepted"))
+        # "Atleta è in prova" se uno qualunque tra is_trial=True OR status='trial'
+        is_in_trial = is_trial or status == "trial"
 
         # Normalise dates
         def _to_date(v):
@@ -25616,8 +25618,8 @@ async def get_pending_reminders(current_user=Depends(get_current_user)):
         te = _to_date(trial_end)
         ts = _to_date(trial_start)
 
-        # (a) trial_start_unsigned — trial started but document never generated
-        if is_trial and ts and not trial_doc_signed:
+        # (a) trial_start_unsigned — trial active but trial document never signed
+        if is_in_trial and ts and not trial_doc_signed:
             days_since = (today - ts).days
             if days_since >= settings["trial_start_unsigned"]["threshold_days"]:
                 last = _wa_last_reminder(reminders_log, "trial_start_unsigned", ath_id, None)

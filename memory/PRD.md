@@ -24,6 +24,24 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
 ## Stato Attuale (12/05/2026)
+### 🐛 Bug Fix: Solleciti WhatsApp non comunicati (28/05/2026)
+**Segnalazione utente**: l'atleta ALUNNI MADD... aveva "Periodo di prova attivo" + "Dichiarazione non ancora firmata" ma NON appariva nei solleciti WhatsApp Admin.
+
+**Root cause** (3 bug combinati):
+1. La logica `if is_trial AND ts AND not trial_doc_signed` non scattava perché molti atleti hanno `is_trial=False` ma `status='trial'` (campi non sincronizzati)
+2. Atleti senza `parent_phone` venivano **scartati silenziosamente** (`if not contacts: continue`) — l'admin non sapeva nemmeno che c'era un problema
+3. Caso (d) `trial_end_no_decision` aveva condizione `is_trial is False` che escludeva atleti ancora in stato trial
+
+**Fix**:
+- Introdotta variabile `is_in_trial = is_trial OR status == 'trial'` per identificare atleti effettivamente in prova
+- Atleti senza numero **non vengono più scartati**: appaiono comunque con badge giallo "⚠️ Numero non presente — contattare offline"
+- Caso (d) condizione rivista: scatta se `status ∈ {pending_decision, pending_certificate, pending_trial, trial}` E mancano sia privacy sia certificato
+
+**Risultato**: i casi rilevati nel preview sono passati da **1** a **23** (BIANCHI SOFIA, MAZZI SILVIA, PERRI EMMA/MIA, ecc. ora visibili).
+
+File toccati: `/app/backend/server.py` (logica casi a/d), `/app/frontend/app/admin/whatsapp-reminders.tsx` (banner "numero non presente")
+
+
 ### 🆕 Dashboard "Da fare oggi" (28/05/2026)
 - 📋 Nuovo pannello **"Da fare oggi"** in dashboard Admin, sotto le quickStats
 - Mostra fino a **6 categorie** di task pendenti, con badge totale rosso in alto a destra:

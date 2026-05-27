@@ -253,7 +253,12 @@ export default function WhatsAppRemindersPage() {
                 )}
 
                 <View style={styles.contactsRow}>
-                  {row.contacts.map((ct, i) => (
+                  {row.contacts.length === 0 ? (
+                    <View style={[styles.waBtn, { backgroundColor: '#FFB300', flexDirection: 'row' }]}>
+                      <Ionicons name="warning" size={16} color="#fff" />
+                      <Text style={styles.waBtnText}>Numero non presente — contattare offline</Text>
+                    </View>
+                  ) : row.contacts.map((ct, i) => (
                     <TouchableOpacity
                       key={i}
                       style={styles.waBtn}
