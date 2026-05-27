@@ -962,6 +962,15 @@ export default function CoachScreen() {
             <Ionicons name="map" size={18} color="#43A047" />
             <Text style={[styles.historyButtonText, { color: '#43A047' }]}>🏟️ Mappa Palestre</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.historyButton}
+            onPress={() => router.push('/admin/whatsapp-reminders')}
+            data-testid="coach-whatsapp-reminders-btn"
+          >
+            <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
+            <Text style={[styles.historyButtonText, { color: '#25D366' }]}>🟢 Solleciti WhatsApp</Text>
+          </TouchableOpacity>
           
           <View style={{ height: 40 }} />
         </ScrollView>

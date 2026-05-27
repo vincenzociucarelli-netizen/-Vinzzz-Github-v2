@@ -949,6 +949,21 @@ export default function AdminDashboard() {
             </View>
           </TouchableOpacity>
 
+          {/* Solleciti WhatsApp */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/whatsapp-reminders')}
+            data-testid="admin-whatsapp-reminders-btn"
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#E8F5E9' }]}>
+              <Text style={{ fontSize: 26 }}>🟢</Text>
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Solleciti WhatsApp</Text>
+              <Text style={styles.menuCardSubtitle}>Azioni pendenti di genitori/atleti/coach</Text>
+            </View>
+          </TouchableOpacity>
+
           {/* Importa Calendario Federazione */}
           <TouchableOpacity
             style={styles.menuCard}

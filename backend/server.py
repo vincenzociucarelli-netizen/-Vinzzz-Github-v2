@@ -25490,6 +25490,359 @@ api_router.include_router(teams_router)
 api_router.include_router(primary_admin_router)
 api_router.include_router(training_overrides_router)
 
+
+# ─────────────────────────── WhatsApp Reminders ───────────────────────────
+from whatsapp_reminders_core import (
+    DEFAULT_TEMPLATES, ReminderLogIn, _normalize_phone, _link_app,
+    _get_settings as _wa_get_settings,
+    _get_society_team_ids as _wa_get_team_ids,
+    _get_athlete_parent_phones as _wa_get_phones,
+    _last_reminder_for as _wa_last_reminder,
+    _render_template as _wa_render,
+)
+
+
+@api_router.get("/admin/whatsapp/settings")
+async def get_whatsapp_settings(current_user=Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    settings = await _wa_get_settings(current_user.get("society_id"))
+    return {"settings": settings, "available_variables": ["nome", "atleta", "data", "link", "società"]}
+
+
+@api_router.put("/admin/whatsapp/settings")
+async def update_whatsapp_settings(payload: dict, current_user=Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    settings_in = (payload or {}).get("settings") or {}
+    # Validate keys
+    cleaned = {}
+    for key in DEFAULT_TEMPLATES.keys():
+        item = settings_in.get(key) or {}
+        td = item.get("threshold_days")
+        try:
+            td = int(td)
+            if td < 0 or td > 365:
+                raise ValueError
+        except Exception:
+            td = DEFAULT_TEMPLATES[key]["threshold_days"]
+        cleaned[key] = {
+            "label": (item.get("label") or DEFAULT_TEMPLATES[key]["label"])[:120],
+            "threshold_days": td,
+            "template": (item.get("template") or DEFAULT_TEMPLATES[key]["template"])[:1000],
+        }
+    await db.settings.update_one(
+        {"type": "whatsapp_reminders_config", "society_id": sid},
+        {"$set": {"settings": cleaned, "updated_at": datetime.utcnow(), "updated_by": current_user["id"]}},
+        upsert=True,
+    )
+    return {"ok": True, "settings": cleaned}
+
+
+@api_router.get("/admin/whatsapp/pending-reminders")
+async def get_pending_reminders(current_user=Depends(get_current_user)):
+    """Return list of cases that require a WhatsApp reminder.
+    Admin sees all of their society. Coach sees only athletes/cases of their teams.
+    """
+    role = current_user["role"]
+    if role not in (UserRole.ADMIN, UserRole.COACH):
+        raise HTTPException(status_code=403, detail="Solo admin o coach")
+
+    sid = current_user.get("society_id")
+    settings = await _wa_get_settings(sid)
+    now = datetime.now(timezone.utc)
+    today = now.date()
+
+    # Reminders log (this society)
+    reminders_log = await db.whatsapp_reminders.find({"society_id": sid}).to_list(2000)
+
+    # Restrict by team if coach
+    coach_team_ids: Optional[List[str]] = None
+    if role == UserRole.COACH:
+        coach_team_ids = current_user.get("assigned_team_ids") or []
+        if current_user.get("assigned_team_id"):
+            coach_team_ids = list(set(coach_team_ids + [current_user["assigned_team_id"]]))
+
+    # Build athletes query
+    ath_q: Dict[str, Any] = {"is_withdrawn": {"$ne": True}}
+    if sid:
+        ath_q["society_id"] = sid
+    if coach_team_ids is not None:
+        ath_q["$or"] = [{"team_id": {"$in": coach_team_ids}}, {"team_id_2": {"$in": coach_team_ids}}]
+
+    cases: List[Dict[str, Any]] = []
+    athletes = await db.athletes.find(ath_q).to_list(5000)
+
+    for ath in athletes:
+        ath_id = ath.get("id")
+        first = ath.get("first_name") or ""
+        last = ath.get("last_name") or ""
+        full_name = ath.get("full_name") or f"{first} {last}".strip()
+        contacts = await _wa_get_phones(ath)
+        if not contacts:
+            continue  # Nessun numero → impossibile sollecitare
+
+        is_trial = ath.get("is_trial", False)
+        trial_end = ath.get("trial_end_date")
+        trial_start = ath.get("trial_start_date")
+        status = ath.get("status", "")
+        trial_doc_signed = bool(ath.get("trial_document_generated"))
+        privacy_signed = bool(ath.get("privacy_accepted"))
+
+        # Normalise dates
+        def _to_date(v):
+            if not v: return None
+            if isinstance(v, datetime): return v.date()
+            try: return datetime.fromisoformat(str(v).replace("Z","+00:00")).date()
+            except Exception: return None
+
+        te = _to_date(trial_end)
+        ts = _to_date(trial_start)
+
+        # (a) trial_start_unsigned — trial started but document never generated
+        if is_trial and ts and not trial_doc_signed:
+            days_since = (today - ts).days
+            if days_since >= settings["trial_start_unsigned"]["threshold_days"]:
+                last = _wa_last_reminder(reminders_log, "trial_start_unsigned", ath_id, None)
+                cases.append({
+                    "case": "trial_start_unsigned",
+                    "label": settings["trial_start_unsigned"]["label"],
+                    "athlete_id": ath_id,
+                    "athlete_name": full_name,
+                    "team_id": ath.get("team_id"),
+                    "contacts": contacts,
+                    "data_context": {"start_date": ts.strftime("%d/%m/%Y")},
+                    "days_overdue": days_since,
+                    "last_reminder_at": (last or {}).get("sent_at"),
+                    "template": settings["trial_start_unsigned"]["template"],
+                })
+
+        # (b/c/d) trial ended
+        if te and te <= today:
+            days_since_end = (today - te).days
+
+            # (b) no certificate
+            cert_expiry = ath.get("medical_certificate_expiry")
+            has_cert = bool(cert_expiry)
+            if not has_cert and days_since_end >= settings["trial_end_no_certificate"]["threshold_days"]:
+                last = _wa_last_reminder(reminders_log, "trial_end_no_certificate", ath_id, None)
+                cases.append({
+                    "case": "trial_end_no_certificate",
+                    "label": settings["trial_end_no_certificate"]["label"],
+                    "athlete_id": ath_id,
+                    "athlete_name": full_name,
+                    "team_id": ath.get("team_id"),
+                    "contacts": contacts,
+                    "data_context": {"end_date": te.strftime("%d/%m/%Y")},
+                    "days_overdue": days_since_end,
+                    "last_reminder_at": (last or {}).get("sent_at"),
+                    "template": settings["trial_end_no_certificate"]["template"],
+                })
+
+            # (c) no privacy
+            if not privacy_signed and days_since_end >= settings["trial_end_no_privacy"]["threshold_days"]:
+                last = _wa_last_reminder(reminders_log, "trial_end_no_privacy", ath_id, None)
+                cases.append({
+                    "case": "trial_end_no_privacy",
+                    "label": settings["trial_end_no_privacy"]["label"],
+                    "athlete_id": ath_id,
+                    "athlete_name": full_name,
+                    "team_id": ath.get("team_id"),
+                    "contacts": contacts,
+                    "data_context": {"end_date": te.strftime("%d/%m/%Y")},
+                    "days_overdue": days_since_end,
+                    "last_reminder_at": (last or {}).get("sent_at"),
+                    "template": settings["trial_end_no_privacy"]["template"],
+                })
+
+            # (d) no decision (status still pending_certificate/pending_decision)
+            decision_pending = status in ("pending_decision", "pending_certificate", "pending_trial") and is_trial is False
+            if decision_pending and days_since_end >= settings["trial_end_no_decision"]["threshold_days"]:
+                last = _wa_last_reminder(reminders_log, "trial_end_no_decision", ath_id, None)
+                cases.append({
+                    "case": "trial_end_no_decision",
+                    "label": settings["trial_end_no_decision"]["label"],
+                    "athlete_id": ath_id,
+                    "athlete_name": full_name,
+                    "team_id": ath.get("team_id"),
+                    "contacts": contacts,
+                    "data_context": {"end_date": te.strftime("%d/%m/%Y")},
+                    "days_overdue": days_since_end,
+                    "last_reminder_at": (last or {}).get("sent_at"),
+                    "template": settings["trial_end_no_decision"]["template"],
+                })
+
+        # (f) certificate expiring/expired
+        cert_expiry = ath.get("medical_certificate_expiry")
+        if cert_expiry:
+            ce = _to_date(cert_expiry)
+            if ce:
+                days_to = (ce - today).days
+                thresh = settings["certificate_expiring"]["threshold_days"]
+                if days_to <= thresh:
+                    last = _wa_last_reminder(reminders_log, "certificate_expiring", ath_id, None)
+                    cases.append({
+                        "case": "certificate_expiring",
+                        "label": settings["certificate_expiring"]["label"],
+                        "athlete_id": ath_id,
+                        "athlete_name": full_name,
+                        "team_id": ath.get("team_id"),
+                        "contacts": contacts,
+                        "data_context": {"expiry_date": ce.strftime("%d/%m/%Y")},
+                        "days_overdue": max(0, -days_to),
+                        "expires_in_days": days_to,
+                        "last_reminder_at": (last or {}).get("sent_at"),
+                        "template": settings["certificate_expiring"]["template"],
+                    })
+
+    # (e) Unsigned receipts (only admin sees)
+    if role == UserRole.ADMIN:
+        # Build society_user_ids
+        society_user_ids: Optional[List[str]] = None
+        if sid:
+            society_user_ids = [u["id"] async for u in db.users.find({"society_id": sid}, {"_id": 0, "id": 1})]
+
+        threshold_e = settings["unsigned_receipt"]["threshold_days"]
+        coll_specs = [
+            ("coach_compensations", "coach_id", "coach"),
+            ("dirigente_compensations", "dirigente_id", "dirigente"),
+            ("collaboratore_compensations", "collaboratore_id", "collaboratore"),
+        ]
+        for coll_name, owner_field, role_label in coll_specs:
+            q = {"receipt_signed": {"$ne": True}, "received": True}
+            if society_user_ids is not None:
+                q[owner_field] = {"$in": society_user_ids}
+            async for comp in db[coll_name].find(q):
+                # Determine "received_date" or "created_at" as starting point
+                received_date_raw = comp.get("received_date") or comp.get("created_at")
+                rd = None
+                if isinstance(received_date_raw, datetime):
+                    rd = received_date_raw.date()
+                elif received_date_raw:
+                    try:
+                        rd = datetime.fromisoformat(str(received_date_raw).replace("Z","+00:00")).date()
+                    except Exception:
+                        rd = None
+                if not rd:
+                    continue
+                days_since = (today - rd).days
+                if days_since < threshold_e:
+                    continue
+                owner_id = comp.get(owner_field)
+                user = await db.users.find_one({"id": owner_id}, {"_id": 0, "full_name": 1, "first_name": 1, "phone": 1})
+                if not user:
+                    continue
+                phone = user.get("phone")
+                if not phone:
+                    continue
+                month_label = comp.get("month_name") or f"{comp.get('month')}/{comp.get('year')}"
+                last = _wa_last_reminder(reminders_log, "unsigned_receipt", None, owner_id)
+                # Also key on month so multiple months don't collapse
+                cases.append({
+                    "case": "unsigned_receipt",
+                    "label": settings["unsigned_receipt"]["label"],
+                    "athlete_id": None,
+                    "athlete_name": None,
+                    "team_id": None,
+                    "user_id": owner_id,
+                    "user_role": role_label,
+                    "contacts": [{
+                        "name": user.get("first_name") or user.get("full_name") or role_label,
+                        "phone": phone,
+                        "role": role_label,
+                    }],
+                    "data_context": {
+                        "month": month_label,
+                        "amount": comp.get("amount_gross") or comp.get("amount"),
+                    },
+                    "compensation_id": comp.get("id"),
+                    "days_overdue": days_since,
+                    "last_reminder_at": (last or {}).get("sent_at"),
+                    "template": settings["unsigned_receipt"]["template"],
+                })
+
+    # Sort: most overdue first
+    cases.sort(key=lambda x: -(x.get("days_overdue") or 0))
+
+    return {
+        "count": len(cases),
+        "cases": cases,
+        "society_name": (await db.societies.find_one({"id": sid}, {"_id": 0, "name": 1}) or {}).get("name") if sid else None,
+    }
+
+
+@api_router.post("/admin/whatsapp/log-sent")
+async def log_whatsapp_sent(payload: ReminderLogIn, current_user=Depends(get_current_user)):
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.COACH):
+        raise HTTPException(status_code=403, detail="Solo admin o coach")
+    rec = {
+        "id": str(uuid.uuid4()),
+        "society_id": current_user.get("society_id"),
+        "case": payload.case,
+        "target_user_id": payload.target_user_id,
+        "target_athlete_id": payload.target_athlete_id,
+        "target_phone": _normalize_phone(payload.target_phone),
+        "message_sent": payload.message_sent[:2000],
+        "sent_by": current_user["id"],
+        "sent_by_name": current_user.get("full_name"),
+        "sent_by_role": current_user["role"],
+        "sent_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.whatsapp_reminders.insert_one(dict(rec))
+    return {"ok": True, "id": rec["id"]}
+
+
+@api_router.get("/admin/whatsapp/render")
+async def render_whatsapp_message(case: str, athlete_id: Optional[str] = None, user_id: Optional[str] = None, contact_name: str = "", current_user=Depends(get_current_user)):
+    """Render the message with variables substituted (server-side single source of truth)."""
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.COACH):
+        raise HTTPException(status_code=403, detail="Solo admin o coach")
+    sid = current_user.get("society_id")
+    settings = await _wa_get_settings(sid)
+    if case not in settings:
+        raise HTTPException(status_code=400, detail="Caso non valido")
+
+    society = await db.societies.find_one({"id": sid}, {"_id": 0, "name": 1}) if sid else None
+    society_name = (society or {}).get("name", "RegistraTEAM")
+    link = _link_app()
+
+    nome = contact_name or "amico"
+    atleta_name = ""
+    data_str = ""
+    if athlete_id:
+        ath = await db.athletes.find_one({"id": athlete_id}, {"_id": 0})
+        if ath:
+            atleta_name = ath.get("full_name") or f"{ath.get('first_name','')} {ath.get('last_name','')}".strip()
+            if case in ("trial_end_no_certificate", "trial_end_no_privacy", "trial_end_no_decision"):
+                te = ath.get("trial_end_date")
+                if isinstance(te, datetime):
+                    data_str = te.strftime("%d/%m/%Y")
+                elif te:
+                    try:
+                        data_str = datetime.fromisoformat(str(te).replace("Z","+00:00")).strftime("%d/%m/%Y")
+                    except Exception:
+                        pass
+            elif case == "trial_start_unsigned":
+                ts = ath.get("trial_start_date")
+                if isinstance(ts, datetime):
+                    data_str = ts.strftime("%d/%m/%Y")
+            elif case == "certificate_expiring":
+                ce = ath.get("medical_certificate_expiry")
+                if ce:
+                    try:
+                        data_str = datetime.fromisoformat(str(ce).replace("Z","+00:00")).strftime("%d/%m/%Y")
+                    except Exception:
+                        data_str = str(ce)
+
+    msg = _wa_render(settings[case]["template"], nome=nome, atleta=atleta_name, data=data_str, link=link)
+    msg = msg.replace("{società}", society_name).replace("{societa}", society_name)
+    return {"message": msg, "label": settings[case]["label"]}
+
+
+# ─────────────────────────── /WhatsApp Reminders ───────────────────────────
+
+
 app.include_router(api_router)
 
 # CORS origins: in sviluppo consente tutto, in produzione limita a domini espliciti.

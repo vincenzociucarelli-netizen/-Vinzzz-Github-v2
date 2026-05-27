@@ -24,6 +24,49 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
 ## Stato Attuale (12/05/2026)
+### 🆕 Solleciti WhatsApp (27/05/2026)
+- 🟢 **Sistema completo di solleciti via WhatsApp** con click-to-chat (`wa.me`) — GRATIS, nessuna API a pagamento, GDPR-friendly (l'admin invia dal suo numero).
+- **6 casi tracciati automaticamente**:
+  - (a) `trial_start_unsigned` — Firma inizio periodo di prova mancante
+  - (b) `trial_end_no_certificate` — Trial scaduto + certificato medico mancante
+  - (c) `trial_end_no_privacy` — Trial scaduto + privacy GDPR non firmata
+  - (d) `trial_end_no_decision` — Trial scaduto + nessuna decisione (restare/cancellare)
+  - (e) `unsigned_receipt` — Quietanza coach/dirigente/collaboratore non firmata
+  - (f) `certificate_expiring` — Certificato medico in scadenza/scaduto
+- **Visibilità**: Admin vede tutto, Coach vede solo i casi delle sue squadre (tutti i casi tranne quietanze).
+- **Soglie temporali e template** personalizzabili per società da `/admin/whatsapp-settings` (con variabili `{nome}` `{atleta}` `{data}` `{link}` `{società}`).
+- **Storico solleciti** registrato in `db.whatsapp_reminders`. Mostra "Ultimo sollecito: 2g fa" accanto a ogni nome.
+- **UX**: modal con anteprima messaggio modificabile + bottone "Apri WhatsApp" che apre `wa.me/39<numero>?text=<msg>`. Admin clicca "Invia" manualmente.
+- **Endpoint backend**:
+  - `GET /api/admin/whatsapp/settings` → load template + soglie società
+  - `PUT /api/admin/whatsapp/settings` → salva template personalizzati
+  - `GET /api/admin/whatsapp/pending-reminders` → lista casi pendenti (scoped per ruolo: admin tutti, coach solo squadre proprie)
+  - `GET /api/admin/whatsapp/render?case=X&athlete_id=Y` → render messaggio con variabili sostituite
+  - `POST /api/admin/whatsapp/log-sent` → registra invio in storico
+- File creati: `/app/backend/whatsapp_reminders_core.py`, `/app/frontend/app/admin/whatsapp-reminders.tsx`, `/app/frontend/app/admin/whatsapp-settings.tsx`
+- File toccati: `/app/backend/server.py` (5 endpoint nuovi), `/app/frontend/app/_layout.tsx`, dashboard admin + coach
+- ✅ Testato end-to-end: backend healthy, login admin OK, endpoint settings/pending-reminders/render rispondono correttamente con dati reali (es. 1 sollecito trovato: PASQUI LENA certificato scaduto da 75gg).
+
+
+### 🆕 Mappa Palestre (25/05/2026)
+- 🗺️ Pagina `/palestre` con embed Google My Maps (`mid=1yMgkjp8BvFZ5xPiEUPmKKWHLo9c`) — mappa condivisa Umbria per tutte le società RegistraTEAM
+- Pulsante 🏟️ "Mappa Palestre" in dashboard di **tutti i ruoli**: Admin, Coach, Genitore, Atleta, Dirigente
+- Pulsante "Apri in Google Maps" per navigazione GPS mobile
+- Header con SocietyBranding (logo + nome società)
+- Modifiche dati (rinomina mappa, rimuovi pin "Sede", livello "Studi medici" generico) → da fare lato utente su Google My Maps (modifiche istantanee, no deploy)
+- File creato: `/app/frontend/app/palestre.tsx`
+- File toccati: `/app/frontend/app/_layout.tsx`, dashboard admin/coach/parent/athlete/dirigente
+
+### 📌 BACKLOG — Ricerca testuale palestre (proposto 25/05/2026)
+**Status: WAITING — l'utente preferisce valutare prima la stabilità dell'app base**
+
+Quando richiesto, implementare:
+- Backend: endpoint `/api/palestre/list` che parsa KML da `https://www.google.com/maps/d/kml?mid=1yMgkjp8BvFZ5xPiEUPmKKWHLo9c` con cache 1h → JSON `[{name, address, description, lat, lng, google_maps_url}]`
+- Frontend: barra di ricerca sopra la mappa + lista filtrata real-time (es. "spoleto" → 3 palestre con indirizzi)
+- Bonus opzionali: contatore palestre, raggruppamento per provincia, ordinamento alfabetico
+- **Stima: ~45 min** (20 min backend + 20 min frontend + 5 min test)
+
+
 ### 📌 SPEC CONGELATE — Atleti Pro (futura implementazione)
 **Status: WAITING — utente vuole prima valutare stabilità app base prima di partire**
 
