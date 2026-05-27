@@ -551,6 +551,107 @@ export default function AdminDashboard() {
           </View>
         )}
 
+        {/* Task Center — "Da fare oggi" */}
+        {(() => {
+          const tasks = [
+            {
+              key: 'pending-athletes',
+              count: pendingAthletes?.length || 0,
+              label: 'Atleti da approvare',
+              icon: '👥',
+              color: '#1976D2',
+              onPress: () => router.push('/admin/iscrizioni'),
+              testId: 'task-pending-athletes',
+            },
+            {
+              key: 'pending-staff',
+              count: pendingStaff?.length || 0,
+              label: 'Staff da approvare',
+              icon: '🧑‍💼',
+              color: '#7B1FA2',
+              onPress: () => router.push('/admin/iscrizioni'),
+              testId: 'task-pending-staff',
+            },
+            {
+              key: 'deletion-requests',
+              count: deletionRequests?.length || 0,
+              label: 'Richieste cancellazione',
+              icon: '🗑️',
+              color: '#C62828',
+              onPress: () => router.push('/admin/iscrizioni'),
+              testId: 'task-deletion-requests',
+            },
+            {
+              key: 'expiring-certs',
+              count: (expiringCerts?.count_today || 0) + (expiringCerts?.count_30_days || 0),
+              label: 'Certificati in scadenza',
+              icon: '📄',
+              color: '#EF6C00',
+              onPress: () => router.push('/admin/athletes'),
+              testId: 'task-expiring-certs',
+            },
+            {
+              key: 'whatsapp-reminders',
+              count: waCount || 0,
+              label: 'Solleciti WhatsApp',
+              icon: '🟢',
+              color: '#25D366',
+              onPress: () => router.push('/admin/whatsapp-reminders'),
+              testId: 'task-whatsapp-reminders',
+            },
+            {
+              key: 'notifications',
+              count: unreadNotifications || 0,
+              label: 'Notifiche non lette',
+              icon: '🔔',
+              color: '#5E35B1',
+              onPress: () => router.push('/admin/notifications'),
+              testId: 'task-notifications',
+            },
+          ].filter(t => t.count > 0);
+
+          if (tasks.length === 0) {
+            return (
+              <View style={[styles.taskCenter, { backgroundColor: '#E8F5E9', borderColor: '#A5D6A7' }]}>
+                <Text style={{ fontSize: 20 }}>✅</Text>
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#2E7D32' }}>Tutto in ordine!</Text>
+                  <Text style={{ fontSize: 12, color: '#388E3C' }}>Nessuna azione urgente al momento.</Text>
+                </View>
+              </View>
+            );
+          }
+
+          const totalTasks = tasks.reduce((s, t) => s + t.count, 0);
+
+          return (
+            <View style={styles.taskCenter} data-testid="task-center">
+              <View style={styles.taskCenterHeader}>
+                <Text style={styles.taskCenterTitle}>📋 Da fare oggi</Text>
+                <View style={styles.taskCenterTotalBadge}>
+                  <Text style={styles.taskCenterTotalText}>{totalTasks}</Text>
+                </View>
+              </View>
+              <View style={styles.taskGrid}>
+                {tasks.map(t => (
+                  <TouchableOpacity
+                    key={t.key}
+                    style={[styles.taskChip, { borderLeftColor: t.color }]}
+                    onPress={t.onPress}
+                    data-testid={t.testId}
+                  >
+                    <Text style={{ fontSize: 18 }}>{t.icon}</Text>
+                    <View style={styles.taskChipInfo}>
+                      <Text style={[styles.taskChipCount, { color: t.color }]}>{t.count}</Text>
+                      <Text style={styles.taskChipLabel} numberOfLines={2}>{t.label}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          );
+        })()}
+
         {/* Invite Code Card + Share/Invite Buttons */}
         {inviteCode && (
           <View style={styles.inviteCodeCard}>
@@ -1519,6 +1620,56 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     marginHorizontal: 2,
   },
+  taskCenter: {
+    marginHorizontal: 16,
+    marginTop: 14,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#eee',
+    flexDirection: 'column',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  taskCenterHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  taskCenterTitle: { fontSize: 15, fontWeight: '700', color: '#222' },
+  taskCenterTotalBadge: {
+    backgroundColor: '#C62828',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+    minWidth: 26,
+    alignItems: 'center',
+  },
+  taskCenterTotalText: { color: '#fff', fontWeight: '700', fontSize: 12 },
+  taskGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  taskChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderLeftWidth: 4,
+    width: '48%',
+    gap: 10,
+  },
+  taskChipInfo: { flex: 1 },
+  taskChipCount: { fontSize: 18, fontWeight: '800', lineHeight: 20 },
+  taskChipLabel: { fontSize: 11, color: '#555', marginTop: 1, lineHeight: 14 },
   inviteCodeCard: {
     backgroundColor: '#E3F2FD',
     marginHorizontal: 16,

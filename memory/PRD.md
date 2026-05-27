@@ -24,6 +24,22 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
 ## Stato Attuale (12/05/2026)
+### 🆕 Dashboard "Da fare oggi" (28/05/2026)
+- 📋 Nuovo pannello **"Da fare oggi"** in dashboard Admin, sotto le quickStats
+- Mostra fino a **6 categorie** di task pendenti, con badge totale rosso in alto a destra:
+  1. 👥 Atleti da approvare (`pendingAthletes.length`)
+  2. 🧑‍💼 Staff da approvare (`pendingStaff.length`)
+  3. 🗑️ Richieste cancellazione (`deletionRequests.length`)
+  4. 📄 Certificati in scadenza (`expiringCerts.count_today + count_30_days`)
+  5. 🟢 Solleciti WhatsApp (`waCount`)
+  6. 🔔 Notifiche non lette (`unreadNotifications`)
+- **Auto-hide**: solo i task con `count > 0` sono mostrati. Se nulla è pendente → banner verde "✅ Tutto in ordine!"
+- Click su un chip → naviga alla pagina relativa
+- Grid responsive (2 colonne) con bordo colorato per categoria
+- ✅ Testato end-to-end: vista admin mostra "📋 Da fare oggi" con 2 task (1 certificato + 1 sollecito WA)
+- File toccati: `/app/frontend/app/admin/index.tsx`
+
+
 ### 🆕 Ricerca palestre + Counter solleciti (28/05/2026)
 
 **Counter dinamico solleciti WhatsApp** ✅
