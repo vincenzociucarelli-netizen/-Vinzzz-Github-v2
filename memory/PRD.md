@@ -24,6 +24,28 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
 ## Stato Attuale (12/05/2026)
+### 🐛 Bug Fix: Numeri genitori atleti minorenni (28/05/2026)
+**Segnalazione utente**: per gli atleti 18- il sollecito WhatsApp DEVE andare al genitore (Tel. Madre / Tel. Padre), ma il sistema mostrava "Numero non presente" anche quando i numeri erano salvati.
+
+**Root cause**: la funzione `_get_athlete_parent_phones` cercava solo `parent_phone` (campo legacy spesso vuoto). I numeri reali nella scheda atleta sono in `phone_mother` e `phone_father`.
+
+**Fix completo**: rifattorizzato `_get_athlete_parent_phones` con cascata di lookup:
+1. `phone_mother` → contatto "Madre"
+2. `phone_father` → contatto "Padre" (entrambi proposti se diversi)
+3. Fallback `parent_phone` (legacy)
+4. Fallback lookup utente genitore via `parent_id`
+5. Fallback `second_parent_email` → cerca utente genitore 2
+6. Deduplicazione numeri normalizzati (no duplicati se madre/padre stesso numero)
+7. Per maggiorenni: `phone` atleta + user.phone
+
+**Risultato verificato**:
+- Casi pendenti con numero disponibile: **da 1 → a 20 su 24** (era 1 su 23, ora 20 su 24)
+- ALUNNI MADD / GIORGETTI ora mostrano sia "Madre" che "Padre" come contatti WhatsApp separati
+- I 4 rimasti senza numero hanno banner giallo "Numero non presente — contattare offline"
+
+File toccati: `/app/backend/whatsapp_reminders_core.py`
+
+
 ### 🐛 Bug Fix: Solleciti WhatsApp non comunicati (28/05/2026)
 **Segnalazione utente**: l'atleta ALUNNI MADD... aveva "Periodo di prova attivo" + "Dichiarazione non ancora firmata" ma NON appariva nei solleciti WhatsApp Admin.
 

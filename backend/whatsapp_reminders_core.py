@@ -166,45 +166,93 @@ async def _get_society_team_ids(society_id: Optional[str]) -> Optional[List[str]
 
 async def _get_athlete_parent_phones(athlete: Dict[str, Any]) -> List[Dict[str, str]]:
     """Return list of {name, phone, role} for the contact persons of an athlete.
-    Adult athletes → themselves; minors → both parents if available.
+    Adult athletes → themselves; minors → both parents (mother + father) if available.
+
+    Tries multiple sources to recover phones:
+      - athlete.phone_mother / phone_father (preferred — fields shown in UI)
+      - athlete.parent_phone (legacy)
+      - athlete.second_parent.phone (if minor with detached/linked second parent)
+      - linked parent users (via athlete.parent_id / second_parent_email)
+    Returns empty list if no phone found.
     """
     contacts: List[Dict[str, str]] = []
+    seen_phones = set()
+
+    def _add(name: str, phone: Optional[str], role: str):
+        if not phone:
+            return
+        norm = _normalize_phone(phone)
+        if not norm or norm in seen_phones:
+            return
+        seen_phones.add(norm)
+        contacts.append({"name": (name or role).strip(), "phone": phone, "role": role})
+
     is_adult = bool(athlete.get("is_adult")) or athlete.get("parents_detached") is True
 
     if is_adult:
-        # The athlete themselves
-        phone = athlete.get("phone") or athlete.get("parent_phone")
-        if phone:
-            contacts.append({
-                "name": athlete.get("first_name") or athlete.get("full_name") or "atleta",
-                "phone": phone,
-                "role": "atleta",
-            })
-        # Also linked user (in case phone is updated there)
+        # Adult athlete: themselves
+        _add(
+            athlete.get("first_name") or athlete.get("full_name") or "atleta",
+            athlete.get("phone") or athlete.get("parent_phone"),
+            "atleta",
+        )
+        # Linked user account (might have phone updated there)
         user_id = athlete.get("user_id") or athlete.get("athlete_user_id")
         if user_id:
             u = await _db.users.find_one({"id": user_id}, {"_id": 0, "full_name": 1, "phone": 1})
-            if u and u.get("phone") and not any(c["phone"] == u.get("phone") for c in contacts):
-                contacts.append({
-                    "name": u.get("full_name") or "atleta",
-                    "phone": u["phone"],
-                    "role": "atleta",
-                })
-    else:
-        # Minor: parents
-        parent_phone = athlete.get("parent_phone")
-        parent_name = athlete.get("parent_name") or athlete.get("parent_full_name") or "genitore"
-        if parent_phone:
-            contacts.append({"name": parent_name, "phone": parent_phone, "role": "genitore"})
-        # Second parent (if linked)
-        sp = athlete.get("second_parent")
-        if isinstance(sp, dict):
-            if sp.get("phone"):
-                contacts.append({
-                    "name": sp.get("full_name") or "genitore",
-                    "phone": sp["phone"],
-                    "role": "genitore",
-                })
+            if u and u.get("phone"):
+                _add(u.get("full_name") or "atleta", u["phone"], "atleta")
+        return contacts
+
+    # Minor: try both parents from athlete record
+    mother_name = athlete.get("mother_full_name") or athlete.get("parent_mother_name") or "Madre"
+    father_name = athlete.get("father_full_name") or athlete.get("parent_father_name") or "Padre"
+
+    # If we know the primary parent's full name, use it for whichever phone matches
+    primary_parent_name = athlete.get("parent_name") or athlete.get("parent_full_name") or ""
+
+    # Determine which phone belongs to primary
+    primary_phone = athlete.get("parent_phone")
+    phone_mother = athlete.get("phone_mother")
+    phone_father = athlete.get("phone_father")
+
+    if phone_mother:
+        _add(
+            primary_parent_name if primary_phone and _normalize_phone(primary_phone) == _normalize_phone(phone_mother) else mother_name,
+            phone_mother,
+            "madre",
+        )
+    if phone_father:
+        _add(
+            primary_parent_name if primary_phone and _normalize_phone(primary_phone) == _normalize_phone(phone_father) else father_name,
+            phone_father,
+            "padre",
+        )
+
+    # Legacy/fallback: parent_phone (when neither mother nor father field is set)
+    if not contacts and primary_phone:
+        _add(primary_parent_name or "genitore", primary_phone, "genitore")
+
+    # Lookup linked parent user (parent_id) for phone if still empty
+    if not contacts:
+        parent_id = athlete.get("parent_id")
+        if parent_id:
+            pu = await _db.users.find_one({"id": parent_id}, {"_id": 0, "full_name": 1, "phone": 1})
+            if pu and pu.get("phone"):
+                _add(pu.get("full_name") or "genitore", pu["phone"], "genitore")
+
+    # Second parent (detached/linked)
+    sp = athlete.get("second_parent")
+    if isinstance(sp, dict) and sp.get("phone"):
+        _add(sp.get("full_name") or "genitore 2", sp["phone"], "genitore")
+
+    # Second parent via email lookup
+    sp_email = athlete.get("second_parent_email")
+    if sp_email and not any(c["role"] in ("madre", "padre") for c in contacts):
+        u2 = await _db.users.find_one({"email": sp_email.lower()}, {"_id": 0, "full_name": 1, "phone": 1})
+        if u2 and u2.get("phone"):
+            _add(u2.get("full_name") or "genitore 2", u2["phone"], "genitore")
+
     return contacts
 
 
