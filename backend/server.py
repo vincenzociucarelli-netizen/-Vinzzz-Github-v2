@@ -25790,6 +25790,16 @@ async def get_pending_reminders(current_user=Depends(get_current_user)):
     }
 
 
+@api_router.post("/admin/whatsapp/settings/reset-defaults")
+async def reset_whatsapp_settings_defaults(current_user=Depends(get_current_user)):
+    """Cancella i template personalizzati e ripristina i default del sistema."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    r = await db.settings.delete_one({"type": "whatsapp_reminders_config", "society_id": sid})
+    return {"ok": True, "deleted": r.deleted_count}
+
+
 @api_router.get("/admin/whatsapp/pending-count")
 async def get_whatsapp_pending_count(current_user=Depends(get_current_user)):
     """Lightweight endpoint: returns just the count, used by dashboard badges."""
@@ -25837,13 +25847,14 @@ async def render_whatsapp_message(case: str, athlete_id: Optional[str] = None, u
     society_name = (society or {}).get("name", "RegistraTEAM")
     link = _link_app()
 
-    nome = contact_name or "amico"
+    nome = contact_name or ""
     atleta_name = ""
     data_str = ""
     if athlete_id:
         ath = await db.athletes.find_one({"id": athlete_id}, {"_id": 0})
         if ath:
-            atleta_name = ath.get("full_name") or f"{ath.get('first_name','')} {ath.get('last_name','')}".strip()
+            # Solo nome dell'atleta (no cognome) per messaggio più amichevole
+            atleta_name = ath.get("first_name") or ath.get("full_name") or f"{ath.get('first_name','')} {ath.get('last_name','')}".strip()
             if case in ("trial_end_no_certificate", "trial_end_no_privacy", "trial_end_no_decision"):
                 te = ath.get("trial_end_date")
                 if isinstance(te, datetime):

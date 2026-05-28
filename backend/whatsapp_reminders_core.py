@@ -40,7 +40,7 @@ DEFAULT_TEMPLATES = {
         "label": "Firma inizio periodo di prova",
         "threshold_days": 2,
         "template": (
-            "Ciao {nome}, ti ricordo di firmare il documento di inizio periodo di prova "
+            "Ciao, ti ricordo di firmare il documento di inizio periodo di prova "
             "di {atleta} su RegistraTEAM. Senza firma {atleta} non può iniziare gli allenamenti. "
             "Accedi qui: {link}"
         ),
@@ -49,7 +49,7 @@ DEFAULT_TEMPLATES = {
         "label": "Fine prova — certificato medico mancante",
         "threshold_days": 1,
         "template": (
-            "Ciao {nome}, il periodo di prova di {atleta} è terminato il {data}. "
+            "Ciao, il periodo di prova di {atleta} è terminato il {data}. "
             "Per continuare gli allenamenti è OBBLIGATORIO caricare il certificato medico "
             "e consegnarne copia alla società. Accedi qui: {link}"
         ),
@@ -58,7 +58,7 @@ DEFAULT_TEMPLATES = {
         "label": "Fine prova — privacy non firmata",
         "threshold_days": 1,
         "template": (
-            "Ciao {nome}, per completare l'iscrizione di {atleta} mancano i documenti "
+            "Ciao, per completare l'iscrizione di {atleta} mancano i documenti "
             "privacy/GDPR. Senza firma {atleta} non può accedere agli allenamenti. "
             "Accedi qui: {link}"
         ),
@@ -67,7 +67,7 @@ DEFAULT_TEMPLATES = {
         "label": "Fine prova — nessuna decisione",
         "threshold_days": 3,
         "template": (
-            "Ciao {nome}, il periodo di prova di {atleta} è terminato il {data}. "
+            "Ciao, il periodo di prova di {atleta} è terminato il {data}. "
             "Ci farebbe piacere sapere se vuole continuare. Se invece desideri ritirare "
             "l'iscrizione, ricordati di richiedere la cancellazione dei dati. "
             "Accedi qui: {link}"
@@ -77,7 +77,7 @@ DEFAULT_TEMPLATES = {
         "label": "Quietanza compenso non firmata",
         "threshold_days": 5,
         "template": (
-            "Ciao {nome}, ti ricordo di firmare la quietanza del compenso "
+            "Ciao, ti ricordo di firmare la quietanza del compenso "
             "di {data} su RegistraTEAM. Accedi qui: {link}"
         ),
     },
@@ -85,7 +85,7 @@ DEFAULT_TEMPLATES = {
         "label": "Certificato medico in scadenza/scaduto",
         "threshold_days": 14,
         "template": (
-            "Ciao {nome}, il certificato medico di {atleta} scade il {data}. "
+            "Ciao, il certificato medico di {atleta} scade il {data}. "
             "Carica al più presto il nuovo certificato per non interrompere gli allenamenti. "
             "Accedi qui: {link}"
         ),

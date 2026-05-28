@@ -67,6 +67,34 @@ export default function WhatsAppSettingsPage() {
     }
   };
 
+  const resetDefaults = async () => {
+    const confirmMsg = 'Sei sicuro di voler ripristinare i messaggi predefiniti? Le tue personalizzazioni saranno perse.';
+    const ok = Platform.OS === 'web' ? window.confirm(confirmMsg) : true;
+    if (!ok) return;
+    setSaving(true);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const r = await fetch(`${API}/api/admin/whatsapp/settings/reset-defaults`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!r.ok) throw new Error('Errore reset');
+      // Reload settings
+      const r2 = await fetch(`${API}/api/admin/whatsapp/settings`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await r2.json();
+      setSettings(data.settings || {});
+      if (Platform.OS === 'web') alert('✅ Default ripristinati');
+      else Alert.alert('OK', 'Default ripristinati');
+    } catch (e: any) {
+      if (Platform.OS === 'web') alert('❌ ' + e.message);
+      else Alert.alert('Errore', e.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const update = (key: string, field: keyof CaseSetting, value: any) => {
     setSettings(prev => ({
       ...prev,
@@ -142,6 +170,16 @@ export default function WhatsAppSettingsPage() {
             </>
           )}
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.resetBtn, saving && { opacity: 0.6 }]}
+          onPress={resetDefaults}
+          disabled={saving}
+          data-testid="was-reset-defaults"
+        >
+          <Ionicons name="refresh-outline" size={16} color="#C62828" />
+          <Text style={styles.resetBtnText}>Ripristina messaggi predefiniti</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -172,4 +210,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#25D366', paddingVertical: 14, borderRadius: 10, marginTop: 6,
   },
   saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  resetBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#fff', borderColor: '#C62828', borderWidth: 1,
+    paddingVertical: 12, borderRadius: 10, marginTop: 10,
+  },
+  resetBtnText: { color: '#C62828', fontWeight: '600', fontSize: 13 },
 });
