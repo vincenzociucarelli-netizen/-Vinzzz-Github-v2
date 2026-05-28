@@ -186,7 +186,7 @@ export default function PalestrePage() {
               data-testid={`palestra-card-${idx}`}
             >
               <View style={styles.palestraIcon}>
-                <Ionicons name="location" size={22} color="#C62828" />
+                <Ionicons name="location" size={22} color="#3D7CB3" />
               </View>
               <View style={styles.palestraInfo}>
                 <Text style={styles.palestraName} numberOfLines={2}>
@@ -223,7 +223,7 @@ export default function PalestrePage() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fafafa' },
   header: {
-    backgroundColor: '#C62828',
+    backgroundColor: '#6FA8DC',
     paddingTop: Platform.OS === 'web' ? 24 : 50,
     paddingBottom: 18,
     paddingHorizontal: 18,
@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#C62828',
+    backgroundColor: '#6FA8DC',
     paddingVertical: 13,
     borderRadius: 10,
     marginBottom: 18,
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#FFF5F5',
+    backgroundColor: '#E8F4FB',
     alignItems: 'center',
     justifyContent: 'center',
   },
