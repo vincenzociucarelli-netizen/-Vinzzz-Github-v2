@@ -7520,11 +7520,15 @@ async def get_deletion_requests(current_user = Depends(get_current_user)):
 
 @api_router.get("/athletes/registered-today")
 async def get_athletes_registered_today(current_user = Depends(get_current_user)):
-    """Get athletes registered today with parent info and team assignment status"""
+    """Get athletes registered today with parent info and team assignment status.
+
+    "Today" is the Italian calendar day (Europe/Rome) to match what the user
+    sees in the dashboard between midnight and ~02:00 local time.
+    """
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin")
-    
-    today = datetime.utcnow().date()
+
+    today = now_it().date()
     society_id = current_user.get("society_id")
     # Projection + society filter to avoid scanning base64 photos.
     all_athletes = await db.athletes.find(
@@ -12586,11 +12590,16 @@ async def get_stats_overview(current_user = Depends(get_current_user)):
 
 @api_router.get("/birthdays/today")
 async def get_today_birthdays(current_user = Depends(get_current_user)):
-    """Get all birthdays for today - athletes, coaches, and dirigenti"""
+    """Get all birthdays for today - athletes, coaches, and dirigenti.
+
+    NOTE: "today" is the Italian calendar day (Europe/Rome). Using UTC here
+    would shift the dashboard by 1-2 hours and show "yesterday's" birthdays
+    between midnight and ~02:00 Italian time.
+    """
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere i compleanni")
-    
-    today = datetime.utcnow()
+
+    today = now_it()
     today_month = today.month
     today_day = today.day
     
@@ -26042,6 +26051,23 @@ async def admin_reset_coach_compensations_for_year(payload: dict, current_user=D
     })
     results["threshold_declarations"] = r3.deleted_count
 
+    # Audit log entry — records who reset what, for traceability.
+    try:
+        await db.audit_logs.insert_one({
+            "action": "reset_coach_year_compensations",
+            "target_user_id": signer_id,
+            "target_user_name": signer.get("full_name", ""),
+            "year": year,
+            "admin_id": current_user.get("id"),
+            "admin_name": current_user.get("full_name", ""),
+            "admin_email": current_user.get("email", ""),
+            "society_id": sid,
+            "deleted": results,
+            "timestamp": datetime.utcnow(),
+        })
+    except Exception as ex:
+        logger.warning(f"audit log insert failed for reset_coach_year: {ex}")
+
     logger.info(
         f"admin {current_user['id']} reset compensations for signer={signer_id} year={year}: {results}"
     )
@@ -26051,6 +26077,22 @@ async def admin_reset_coach_compensations_for_year(payload: dict, current_user=D
         "year": year,
         "deleted": results,
     }
+
+
+@api_router.get("/admin/audit/last-reset/{user_id}")
+async def get_last_reset_for_user(user_id: str, current_user = Depends(get_current_user)):
+    """Return the most recent reset_coach_year_compensations audit entry for a
+    given user, scoped to the admin's society. Used by Coach/Collab/Dirigente
+    admin pages to display "Ultimo reset: …" near the reset button.
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    q = {"action": "reset_coach_year_compensations", "target_user_id": user_id}
+    if sid:
+        q["society_id"] = sid
+    log = await db.audit_logs.find_one(q, {"_id": 0}, sort=[("timestamp", -1)])
+    return log or {}
 
 
 # ─────────────────────────── Palestre KML ───────────────────────────

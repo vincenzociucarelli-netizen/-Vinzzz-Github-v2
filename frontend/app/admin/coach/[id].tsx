@@ -85,6 +85,8 @@ export default function AdminCoachDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [coach, setCoach] = useState<Coach | null>(null);
+  // Last reset audit info (admin info banner near reset button)
+  const [lastReset, setLastReset] = useState<any | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -176,6 +178,11 @@ export default function AdminCoachDetail() {
       ]);
       setCoach(coachRes.data);
       setTeams(teamsRes.data);
+      // Fetch last reset audit info (silent fail if user is not admin)
+      try {
+        const lr = await api.get(`/admin/audit/last-reset/${id}`);
+        setLastReset(lr.data || null);
+      } catch {}
       setMonthlyCompensation(coachRes.data.monthly_compensation?.toString() || '0');
       setOtherAnnualCompensation(coachRes.data.other_annual_compensation?.toString() || '0');
       setSelectedTeams(coachRes.data.assigned_teams || []);
@@ -347,6 +354,11 @@ export default function AdminCoachDetail() {
         `Eliminate:\n• ${compSum} righe compensi\n• ${docs} PDF firmati\n• ${thr} dichiarazioni soglie\n\nRicarico i dati...`
       );
       await loadData();
+      // refresh audit info
+      try {
+        const lr = await api.get(`/admin/audit/last-reset/${coach.id}`);
+        setLastReset(lr.data || null);
+      } catch {}
     } catch (err: any) {
       const msg = err?.response?.data?.detail || err?.message || 'Errore sconosciuto';
       showAlert('Errore Reset', String(msg));
@@ -2045,6 +2057,11 @@ export default function AdminCoachDetail() {
                 <Text style={{ color: '#7F0000', fontSize: 11, marginBottom: 8 }}>
                   Cancella TUTTE le quietanze, soglie e PDF firmati di questo coach per l'anno scelto.
                 </Text>
+                {lastReset && lastReset.timestamp && (
+                  <Text style={{ color: '#7F0000', fontSize: 10, marginBottom: 8, fontStyle: 'italic' }}>
+                    Ultimo reset: anno {lastReset.year} • {new Date(lastReset.timestamp.endsWith?.('Z') ? lastReset.timestamp : lastReset.timestamp + 'Z').toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' })} da {lastReset.admin_name || lastReset.admin_email || 'admin'}
+                  </Text>
+                )}
                 <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
                   {[new Date().getFullYear(), new Date().getFullYear() - 1].map((y) => (
                     <TouchableOpacity

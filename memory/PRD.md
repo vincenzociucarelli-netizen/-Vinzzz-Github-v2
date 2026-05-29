@@ -23,7 +23,28 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
-## Stato Attuale (29/05/2026)
+## Stato Attuale (30/05/2026)
+### 🐛🌐 Bug Fix CRITICO: Backend usava UTC invece di Europe/Rome (30/05/2026)
+**Segnalazione utente**: "Sono le 00:47 del 30/05 ma la dashboard admin mostra un compleanno del 29/5."
+
+**Root cause**: due endpoint usavano `datetime.utcnow()` per calcolare "oggi":
+- `GET /api/birthdays/today` (linea 12593) → alle 00:47 italiane (CEST=UTC+2) il server pensa sia ancora il 29/05 alle 22:47 UTC → mostra compleanni del 29 invece che del 30.
+- `GET /api/athletes/registered-today` (linea 7527) → stesso bug, atleti registrati "oggi" sbagliati nelle 2 ore notturne.
+
+**Fix applicato**:
+- Sostituito `datetime.utcnow()` con `now_it()` (Europe/Rome, gestisce CET/CEST automaticamente) — helper già esistente nel codebase.
+- Test backend: con IT now = `2026-05-30 00:56 CEST`, l'endpoint `/birthdays/today` ora ritorna correttamente la lista dei compleanni del 30 maggio (vuota in questa preview, ma logicamente corretta).
+
+### ✨ Feature: Reset Quietanze esteso a Dirigente + audit log (30/05/2026)
+**Aggiunto**:
+- Pulsante "Reset anno YYYY" anche su `admin/dirigente/[id].tsx` (stesso pattern Coach/Collab).
+- **Audit log** della reset: ogni reset salva su `audit_logs` un record `{action, target_user_id, target_user_name, year, admin_id, admin_name, society_id, deleted, timestamp}`.
+- Nuovo endpoint `GET /api/admin/audit/last-reset/{user_id}` ritorna l'ultimo reset per quell'utente nella società dell'admin chiamante.
+- Nel box "🧹 Reset Quietanze" delle 3 schede admin (coach + collab + dirig) ora appare in corsivo: *"Ultimo reset: anno 2026 • 30/05/2026, 00:55 da Vincenzo C."* — formattato Europe/Rome (con suffisso Z se mancante).
+
+**Verifica preview**: bundle ricompilato, 3× `admin/audit/last-reset` + 3× "Ultimo reset" nel JS servito. Endpoint risponde `{}` per utenti senza storico (graceful).
+
+
 ### ✨ Feature: Pulsante Reset Quietanze Anno (Admin) + auto-fix Foto 3 (29/05/2026)
 **Richiesta utente**: "Cancellami tutte le quietanze del 2026 di Paoli Pietro per testare gli stampati. Non mi avevi messo un pulsante di reset?"
 
