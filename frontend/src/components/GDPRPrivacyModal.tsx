@@ -622,8 +622,20 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
                     canvasProps={{
                       width: Math.min(SCREEN_WIDTH - 80, 400),
                       height: 150,
-                      style: { border: '2px solid #ddd', borderRadius: 8, backgroundColor: '#fff' }
+                      'data-testid': 'gdpr-signature-canvas',
+                      style: {
+                        border: '2px solid #ddd',
+                        borderRadius: 8,
+                        backgroundColor: '#fff',
+                        touchAction: 'none',
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        WebkitTouchCallout: 'none',
+                        cursor: 'crosshair',
+                        display: 'block',
+                      }
                     }}
+                    onBegin={handleSignatureEnd}
                     onEnd={handleSignatureEnd}
                     penColor="black"
                     minWidth={1}

@@ -246,8 +246,20 @@ Con la sottoscrizione del presente documento, Lei dichiara di aver letto e compr
                     canvasProps={{
                       width: Math.min(SCREEN_WIDTH - 80, 400),
                       height: 150,
-                      style: { border: '1px solid #ddd', borderRadius: 8, backgroundColor: '#fff' }
+                      'data-testid': 'adult-signature-canvas',
+                      style: {
+                        border: '1px solid #ddd',
+                        borderRadius: 8,
+                        backgroundColor: '#fff',
+                        touchAction: 'none',
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        WebkitTouchCallout: 'none',
+                        cursor: 'crosshair',
+                        display: 'block',
+                      }
                     }}
+                    onBegin={handleSignatureEnd}
                     onEnd={handleSignatureEnd}
                     penColor="black"
                     minWidth={1}

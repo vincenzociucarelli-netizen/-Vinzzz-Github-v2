@@ -130,16 +130,24 @@ const SignaturePadInline = forwardRef<SignaturePadInlineRef, SignaturePadInlineP
             {SignatureCanvasWeb && (
               <SignatureCanvasWeb
                 ref={webCanvasRef}
+                onBegin={handleWebEnd}
                 onEnd={handleWebEnd}
                 penColor={penColor}
                 backgroundColor={backgroundColor}
                 canvasProps={{
                   width: containerWidth,
                   height: height - 4,
+                  'data-testid': 'signature-pad-inline-canvas',
                   style: { 
                     width: '100%', 
                     height: '100%',
                     borderRadius: 8,
+                    touchAction: 'none',
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
+                    WebkitTouchCallout: 'none',
+                    cursor: 'crosshair',
+                    display: 'block',
                   },
                 }}
               />

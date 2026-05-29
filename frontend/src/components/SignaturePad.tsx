@@ -104,12 +104,20 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
               <View style={styles.signatureBox}>
                 <ReactSignatureCanvas
                   ref={signatureRef}
+                  onBegin={handleSignatureEnd}
                   onEnd={handleSignatureEnd}
                   canvasProps={{
+                    'data-testid': 'signature-pad-canvas',
                     style: {
                       width: '100%',
                       height: '100%',
                       backgroundColor: 'white',
+                      touchAction: 'none',
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none',
+                      WebkitTouchCallout: 'none',
+                      cursor: 'crosshair',
+                      display: 'block',
                     },
                   }}
                   backgroundColor="white"

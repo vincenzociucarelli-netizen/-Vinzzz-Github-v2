@@ -23,7 +23,30 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
-## Stato Attuale (12/05/2026)
+## Stato Attuale (29/05/2026)
+### 🐛 Bug Fix CRITICO PROD: firma GDPR non viene presa su mobile (29/05/2026)
+**Segnalazione utente (genitore MARCUCCI AGNESE, prod)**: "il sistema non ci fa confermare la firma. La inseriamo, ma non viene presa."
+
+**Root cause**: il `<canvas>` di `react-signature-canvas` non aveva `touch-action: none`. Su browser mobili (iOS Safari / Chrome Android) il default `touch-action: auto` fa interpretare il dito come gesto di scroll/zoom invece che come tratto di disegno → il canvas non riceve i pointer events → `onEnd` non scatta → `hasSignature` resta `false` → pulsante "Conferma e Salva" disabilitato. Inoltre `userSelect` di default attivo può causare iOS Safari a mostrare menu di selezione testo invece di disegnare.
+
+**Fix applicato a TUTTI i componenti firma**:
+- ✨ `touchAction: 'none'` → canvas riceve i pointer events del dito senza essere intercettato dal browser
+- ✨ `userSelect: 'none'`, `WebkitUserSelect: 'none'`, `WebkitTouchCallout: 'none'` → niente menu copia/incolla iOS durante il drag
+- ✨ `cursor: 'crosshair'`, `display: 'block'` → feedback visivo + niente whitespace inline
+- ✨ Aggiunto `onBegin={handleSignatureEnd}` come failsafe: marca `hasSignature=true` già al primo tocco, indipendentemente da `onEnd` (utile su browser con eventi flaky)
+- ✨ `data-testid` su ogni canvas per testabilità
+
+**File toccati**:
+- `/app/frontend/src/components/GDPRPrivacyModal.tsx` (linea ~620, canvas firma GDPR genitori/atleti)
+- `/app/frontend/src/components/AdultPrivacyModal.tsx` (canvas firma adulti)
+- `/app/frontend/src/components/SignaturePad.tsx` (modale firma generica)
+- `/app/frontend/src/components/SignaturePadInline.tsx` (canvas inline web, usato da coach/dirigente/collaboratore compensation)
+
+**Verifica preview**: bundle ricompilato (`expo export -p web`), `touchAction` presente 9× nel bundle servito (era 6× prima).
+
+**Pubblicazione produzione**: ⚠️ utente deve cliccare "Save to GitHub" → Vercel rebuilda → fix live in 5-7 min.
+
+
 ### 🐛 Bug Fix: PDF comunicazione superamento soglia incompleti (29/05/2026)
 **Segnalazione utente**: alcuni documenti `threshold_5000_communication` e `threshold_15000_communication` venivano scaricati come "Riepilogo firma digitale (PDF originale non più disponibile)" invece del documento legale completo (foto 2: testo + città + firma + metadati).
 
