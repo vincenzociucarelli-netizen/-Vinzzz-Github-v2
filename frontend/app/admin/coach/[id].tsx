@@ -303,6 +303,56 @@ export default function AdminCoachDetail() {
     }
   };
 
+  // Admin utility: wipe ALL receipts + threshold declarations + signed PDFs
+  // for the current coach + a specific year. Used for testing/cleanup.
+  const handleResetCoachYearReceipts = async (year: number) => {
+    if (!coach || !coach.id) {
+      showAlert('Errore', 'Coach non caricato');
+      return;
+    }
+    const fullName = (coach.full_name || `${coach.last_name || ''} ${coach.first_name || ''}`).trim();
+    // Web double-confirm with typed text — Alert.prompt is iOS-only on RN.
+    let confirmed = false;
+    if (Platform.OS === 'web') {
+      const typed = window.prompt(
+        `⚠️ ATTENZIONE: stai per CANCELLARE TUTTE le quietanze, dichiarazioni soglie e PDF firmati di ${fullName} per l'anno ${year}.\n\nQuesta operazione è IRREVERSIBILE.\n\nDigita esattamente "RESET ${year}" per confermare:`
+      );
+      confirmed = typed === `RESET ${year}`;
+    } else {
+      confirmed = await new Promise<boolean>((resolve) => {
+        Alert.alert(
+          `⚠️ Reset quietanze ${year}`,
+          `Verranno cancellate TUTTE le quietanze, soglie e PDF firmati di ${fullName} per l'anno ${year}.\nOperazione IRREVERSIBILE.`,
+          [
+            { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+            { text: 'CONFERMA RESET', style: 'destructive', onPress: () => resolve(true) },
+          ],
+          { cancelable: true, onDismiss: () => resolve(false) }
+        );
+      });
+    }
+    if (!confirmed) return;
+    try {
+      const resp = await api.post('/admin/compensations/reset-coach-year', {
+        signer_id: coach.id,
+        year,
+      });
+      const r = resp.data || {};
+      const compSum = (r.coach_compensations || 0) + (r.dirigente_compensations || 0) +
+        (r.collaboratore_compensations || 0) + (r.compensations || 0);
+      const docs = (r.signed_documents_deleted || 0);
+      const thr = (r.threshold_declarations_deleted || 0);
+      showAlert(
+        '✅ Reset completato',
+        `Eliminate:\n• ${compSum} righe compensi\n• ${docs} PDF firmati\n• ${thr} dichiarazioni soglie\n\nRicarico i dati...`
+      );
+      await loadData();
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail || err?.message || 'Errore sconosciuto';
+      showAlert('Errore Reset', String(msg));
+    }
+  };
+
   const formatDate = (dateStr: string | undefined) => {
     if (!dateStr) return '-';
     try {
@@ -1986,7 +2036,31 @@ export default function AdminCoachDetail() {
                   {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate
                 </Text>
               </View>
-              
+
+              {/* ADMIN UTILITY — Reset quietanze di un anno (irreversibile) */}
+              <View style={{ backgroundColor: '#FFEBEE', padding: 10, borderRadius: 10, marginBottom: 12, borderWidth: 1, borderColor: '#FFCDD2' }}>
+                <Text style={{ color: '#B71C1C', fontWeight: '700', fontSize: 12, marginBottom: 6 }}>
+                  🧹 Reset Quietanze (Admin only — test/cleanup)
+                </Text>
+                <Text style={{ color: '#7F0000', fontSize: 11, marginBottom: 8 }}>
+                  Cancella TUTTE le quietanze, soglie e PDF firmati di questo coach per l'anno scelto.
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                  {[new Date().getFullYear(), new Date().getFullYear() - 1].map((y) => (
+                    <TouchableOpacity
+                      key={`reset-y-${y}`}
+                      onPress={() => handleResetCoachYearReceipts(y)}
+                      style={{ backgroundColor: '#C62828', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, flex: 1, minWidth: 130 }}
+                      testID={`reset-receipts-${y}`}
+                    >
+                      <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12, textAlign: 'center' }}>
+                        Reset anno {y}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
               {/* Lista quietanze compatta - con calcolo soglie dinamico */}
               {(() => {
                 const signedOnly = signedReceipts.filter((r: any) => r.receipt_signed);

@@ -24,6 +24,24 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
 ## Stato Attuale (29/05/2026)
+### ✨ Feature: Pulsante Reset Quietanze Anno (Admin) + auto-fix Foto 3 (29/05/2026)
+**Richiesta utente**: "Cancellami tutte le quietanze del 2026 di Paoli Pietro per testare gli stampati. Non mi avevi messo un pulsante di reset?"
+
+**Implementato (P0 finalmente chiuso)**:
+- ✨ Pulsante **"Reset anno YYYY"** nella modale "Gestione Quietanze" sia in `admin/coach/[id].tsx` che in `admin/collaboratore/[id].tsx`. Posizionato in box rosso ("Admin only — test/cleanup") subito dopo "Totale Percepito". Mostra 2 pulsanti: anno corrente e anno precedente.
+- ✨ Doppia conferma: su web `window.prompt` richiede di digitare esattamente `RESET YYYY` per procedere; su mobile `Alert.alert` con tasto rosso "CONFERMA RESET". Operazione marcata IRREVERSIBILE.
+- ✨ Handler `handleResetCoachYearReceipts(year)` / `handleResetCollabYearReceipts(year)` chiama il backend `POST /api/admin/compensations/reset-coach-year` (già esistente). Cancella in cascata: quietanze (5 collezioni), threshold_declarations, signed_documents PDF di tipo `compensation_receipt`/`threshold_*` + file su disco, e ricarica i dati.
+- ✨ Feedback dettagliato: l'utente vede quante righe compensi, quanti PDF firmati e quante dichiarazioni soglie sono state eliminate.
+
+**Bug fix collaterale (Foto 3 - 5k still showing summary)**:
+- ✨ Esteso l'auto-fix sull'endpoint `GET /documents/signed/{id}/pdf` anche ai tipi `threshold_5000_communication` / `threshold_15000_communication`. Prima il fix esisteva solo su `/documents/download/{id}` → la Foto 3 (che usava /signed/) restava sul Riepilogo. Ora rileva summary (`PDF originale non` o `Riepilogo firma` o size < 8000) e rigenera al volo con `_regenerate_threshold_communication_pdf`.
+
+**Test backend preview**:
+- `POST /api/admin/compensations/reset-coach-year` con signer fake → `{"detail":"Utente non trovato"}` ✅
+- Senza year → `{"detail":"signer_id e year obbligatori"}` ✅
+- Bundle ricompilato: `reset-coach-year` × 2 + `Reset Quietanze` × 2 nel JS servito ✅
+
+
 ### 🐛 Bug Fix: doppio doc privacy_consent + orario errato (29/05/2026 — Solution A)
 **Segnalazione utente (OPALE SANDRO genitore di OPALE LAURA)**:
 1. Doppio documento dopo firma GDPR: `privacy_consent` (Attestazione senza firma) + `gdpr_minor` (Informativa completa con firma)

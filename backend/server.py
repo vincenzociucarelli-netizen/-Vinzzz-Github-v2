@@ -16831,6 +16831,30 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
         logger.info(f"Discarding stale summary PDF cache for {document_id} ({len(pdf_bytes)} bytes), will regenerate")
         pdf_bytes = None
 
+    # Same logic for threshold communications: summary fallback OR incomplete
+    # legacy PDF (no signature/location) → regenerate.
+    if pdf_bytes and document.get("document_type") in (
+        "threshold_5000_communication", "threshold_15000_communication"
+    ) and (b"PDF originale non" in pdf_bytes or b"Riepilogo firma" in pdf_bytes or len(pdf_bytes) < 8000):
+        logger.info(f"Discarding stale threshold PDF cache for {document_id} ({len(pdf_bytes)} bytes), will regenerate")
+        try:
+            fixed = await _regenerate_threshold_communication_pdf(document)
+            if fixed and len(fixed) > 1500:
+                pdf_bytes = fixed
+                try:
+                    await db.signed_documents.update_one(
+                        {"id": document_id},
+                        {"$set": {"pdf_base64": base64.b64encode(fixed).decode()}}
+                    )
+                except Exception:
+                    pass
+                logger.info(f"Auto-fixed threshold PDF cache for {document_id} ({len(pdf_bytes)} bytes)")
+            else:
+                pdf_bytes = None  # fallback will run below
+        except Exception as ex:
+            logger.warning(f"threshold cache auto-fix failed for {document_id}: {ex}")
+            pdf_bytes = None
+
     # Generate PDF on-the-fly if not stored (registration-time documents)
     if not pdf_bytes and document.get("document_type") in ("gdpr_privacy_adult", "gdpr_privacy_minor", "gdpr_adult", "gdpr_minor", "privacy_consent"):
         try:
