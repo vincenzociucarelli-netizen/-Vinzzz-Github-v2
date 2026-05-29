@@ -24,6 +24,33 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
 ## Stato Attuale (12/05/2026)
+### 🐛 Bug Fix: PDF comunicazione superamento soglia incompleti (29/05/2026)
+**Segnalazione utente**: alcuni documenti `threshold_5000_communication` e `threshold_15000_communication` venivano scaricati come "Riepilogo firma digitale (PDF originale non più disponibile)" invece del documento legale completo (foto 2: testo + città + firma + metadati).
+
+**Root cause**: 2 categorie di documenti problematici:
+1. PDF salvati su disco quando il campo `society_city` non veniva passato → file di 4266 byte con `Luogo e data: __________________` e firma vuota
+2. PDF mancanti del tutto (no pdf_path + no pdf_base64) → fallback a `_generate_consent_summary_pdf` che produceva il "summary" generico
+
+**Fix completo**:
+- ✨ Nuova funzione `_regenerate_threshold_communication_pdf` che usa il **generatore ufficiale** `generate_threshold_5k_pdf` / `15k_pdf` con cascata di lookup robusta per recuperare i dati mancanti:
+  - signer da `signer_id` OR `coach_id` OR `dirigente_id` OR `collaboratore_id` OR `atleta_id`
+  - società da `society_id` (doc) OR signer.society_id OR fallback `settings.society`
+  - signature_base64 da: doc + additional_data + relativo `coach_compensations` (`receipt_signature_base64`) + `threshold_declarations`
+  - totali (yearly_total_before/after, prior_compensation_declared) da additional_data + compensation record + threshold_declaration
+  - society_city da `settings.city` OR `society.city` con fallback "Perugia"
+
+- ⚡ **Auto-fix on download**: in `download_document`, se il PDF su disco è < 8000 byte ed è un threshold → rigenera al volo, sovrascrive file su disco + DB cache (`pdf_base64`) → da quel momento sarà permanentemente corretto. Log info: `Auto-fixed threshold PDF {id} ({size} bytes)`
+
+- 🛡️ **Fallback finale**: se ANCHE il PDF non esiste su disco/DB, prima di cadere nel summary generico, prova prima `_regenerate_threshold_communication_pdf` con header `inline; filename=comunicazione_soglia_{id}.pdf`
+
+**Risultato verificato**:
+- PDF di ROSSI LIA passato da `4266 byte (incompleto)` a `4623 byte (completo)`
+- Log conferma `Auto-fixed threshold PDF 653c29f8...`
+- Il testo include: titolo, dati firmatario, COMUNICA, `Luogo e data: Perugia, 29/05/2026`, sezione METADATI (timestamp, totali, hash firma)
+
+File toccati: `/app/backend/server.py` (funzione `_regenerate_threshold_communication_pdf` riscritta per usare i generatori ufficiali + auto-fix in `download_document`)
+
+
 ### 🐛 Bug Fix: Lentezza app + profilo atleta bloccato (29/05/2026)
 **Segnalazione utente**: "Tutto è un po' rallentato. Admin non riesce ad entrare nel profilo delle atlete (caricamento infinito)".
 

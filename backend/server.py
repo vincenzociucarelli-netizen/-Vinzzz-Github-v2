@@ -16944,6 +16944,21 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
         except Exception as e:
             logger.error(f"Error generating PDF on-the-fly: {e}")
     
+    # Specific fallback for threshold communication docs (5k/15k) — rebuild
+    # the FULL legal document with text + signature + metadata, NOT just a summary
+    if not pdf_bytes and document.get("document_type") in (
+        "threshold_5000_communication", "threshold_15000_communication"
+    ):
+        try:
+            pdf_bytes = await _regenerate_threshold_communication_pdf(document)
+            if pdf_bytes:
+                await db.signed_documents.update_one(
+                    {"id": document_id},
+                    {"$set": {"pdf_base64": base64.b64encode(pdf_bytes).decode()}}
+                )
+        except Exception as e:
+            logger.error(f"Error regenerating threshold PDF for {document_id}: {e}")
+
     # Last-resort fallback: generate a minimal "summary PDF" for legacy
     # signed documents that have no original PDF stored. This includes types
     # like compensation_receipt (Quietanze) saved before the system started
@@ -20673,9 +20688,35 @@ async def download_document(
     # Try pdf_path first (file on disk)
     pdf_path = doc.get("pdf_path")
     if pdf_path and os.path.exists(pdf_path):
-        # Read file and return as StreamingResponse with inline disposition
+        # Read file
         with open(pdf_path, 'rb') as f:
             pdf_content = f.read()
+
+        # AUTO-FIX: for threshold communication PDFs that were generated before
+        # the city/signature fix, the file on disk is incomplete (size < 8KB,
+        # signature missing, "Luogo e data: __________________" placeholder).
+        # We re-generate using the official generator with the recovered city
+        # and signature so the document becomes legally complete.
+        dtype = doc.get("document_type", "")
+        if dtype in ("threshold_5000_communication", "threshold_15000_communication") and len(pdf_content) < 8000:
+            try:
+                fixed = await _regenerate_threshold_communication_pdf(doc)
+                if fixed and len(fixed) > 1500:
+                    # Overwrite disk file + db cache so it's permanent
+                    with open(pdf_path, 'wb') as f:
+                        f.write(fixed)
+                    try:
+                        await db.signed_documents.update_one(
+                            {"id": document_id},
+                            {"$set": {"pdf_base64": base64.b64encode(fixed).decode()}}
+                        )
+                    except Exception:
+                        pass
+                    pdf_content = fixed
+                    logger.info(f"Auto-fixed threshold PDF {document_id} ({len(pdf_content)} bytes)")
+            except Exception as ex:
+                logger.warning(f"threshold auto-fix failed for {document_id}: {ex}")
+
         return StreamingResponse(
             io.BytesIO(pdf_content),
             media_type="application/pdf",
@@ -20799,9 +20840,27 @@ async def download_document(
             signer = await db.users.find_one({"id": doc.get("signer_id")}) if doc.get("signer_id") else None
             society = await db.societies.find_one({"id": doc.get("society_id")}) if doc.get("society_id") else None
 
+            # For threshold communication docs, rebuild the FULL legal document
+            # with text + signature (NOT a summary).
+            dtype = doc.get("document_type")
+            if dtype in ("threshold_5000_communication", "threshold_15000_communication"):
+                pdf_bytes = await _regenerate_threshold_communication_pdf(doc)
+                if pdf_bytes:
+                    try:
+                        await db.signed_documents.update_one(
+                            {"id": document_id},
+                            {"$set": {"pdf_base64": base64.b64encode(pdf_bytes).decode()}}
+                        )
+                    except Exception:
+                        pass
+                    return StreamingResponse(
+                        io.BytesIO(pdf_bytes),
+                        media_type="application/pdf",
+                        headers={"Content-Disposition": f'inline; filename="comunicazione_soglia_{document_id}.pdf"'}
+                    )
+
             # For compensation receipts, rebuild the ORIGINAL full PDF (same
             # layout as Foto 2) using stored coach_id, month, year, amount, etc.
-            dtype = doc.get("document_type")
             if dtype in ("compensation_receipt", "coach_compensation_receipt", "collaboratore_compensation_receipt"):
                 # Find the coach/collaborator user record for fiscal code
                 coach_user = None
@@ -21223,6 +21282,139 @@ async def reject_deletion_request(request_id: str, current_user = Depends(get_cu
         }}
     )
     return {"message": "Cancellazione rifiutata. Il documento resta valido."}
+
+
+async def _regenerate_threshold_communication_pdf(document: dict) -> Optional[bytes]:
+    """Regenerate the FULL Comunicazione Superamento Soglia €5k/€15k PDF
+    when the original was not stored or was incomplete (no signature/luogo).
+    """
+    try:
+        doc_type = document.get("document_type", "")
+        threshold_type = "5000" if "5000" in doc_type else "15000"
+
+        # Signer can be referenced as signer_id, coach_id, dirigente_id, collaboratore_id, atleta_id
+        signer_id = (
+            document.get("signer_id")
+            or document.get("coach_id")
+            or document.get("dirigente_id")
+            or document.get("collaboratore_id")
+            or document.get("atleta_id")
+        )
+        signer = await db.users.find_one({"id": signer_id}, {"_id": 0}) if signer_id else None
+
+        # Society: from doc or via signer
+        society_id = document.get("society_id") or (signer.get("society_id") if signer else None)
+        society = await db.societies.find_one({"id": society_id}, {"_id": 0}) if society_id else None
+        settings = await db.settings.find_one({"type": "society", "society_id": society_id}, {"_id": 0}) if society_id else None
+        if not settings:
+            settings = await db.settings.find_one({"type": "society"}, {"_id": 0})
+
+        # Year/month
+        month = document.get("month")
+        year = document.get("year") or (int(str(document.get("signed_at", ""))[:4]) if document.get("signed_at") else None)
+
+        # Lookup compensation record for signature
+        comp = None
+        if signer_id and year and month:
+            for coll in ("coach_compensations", "dirigente_compensations", "collaboratore_compensations", "atleta_pro_compensations"):
+                comp = await db[coll].find_one({
+                    "$or": [
+                        {"coach_id": signer_id},
+                        {"dirigente_id": signer_id},
+                        {"collaboratore_id": signer_id},
+                        {"atleta_id": signer_id},
+                    ],
+                    "month": month, "year": year,
+                }, {"_id": 0})
+                if comp:
+                    break
+
+        # Lookup threshold_declaration for prior_compensation_declared
+        decl = None
+        if signer_id and year:
+            decl = await db.threshold_declarations.find_one({
+                "$or": [{"coach_id": signer_id}, {"signer_id": signer_id}],
+                "year": year,
+                "threshold_type": threshold_type,
+            }, {"_id": 0})
+
+        # Signature: try multiple sources
+        add = document.get("additional_data") or {}
+        sig_b64 = (
+            document.get("signature_base64")
+            or add.get("signature_base64")
+            or (comp.get("receipt_signature_base64") if comp else None)
+            or (decl.get("signature_base64") if decl else None)
+        )
+
+        # Society city
+        society_city = (
+            (settings.get("city") if settings else None)
+            or (society.get("city") if society else None)
+            or "Perugia"
+        )
+
+        # Collaborator info
+        collaborator_name = (
+            document.get("signer_name")
+            or document.get("coach_name")
+            or (signer.get("full_name") if signer else None)
+            or "Collaboratore"
+        )
+        fiscal_code = (
+            (signer.get("fiscal_code") if signer else None)
+            or add.get("fiscal_code")
+            or ""
+        )
+
+        # Totals (best effort)
+        yearly_total = add.get("yearly_total_after") or (comp.get("yearly_total_after") if comp else None) or 0
+        yearly_total_before = add.get("yearly_total_before") or (comp.get("yearly_total_before") if comp else None) or 0
+        prior_comp = add.get("prior_compensation_declared") or (decl.get("compensi_pregressi_dichiarati") if decl else None) or 0
+
+        threshold_meta = {
+            "yearly_total_before": yearly_total_before,
+            "yearly_total_after": yearly_total,
+            "prior_compensation_declared": prior_comp,
+            "threshold_crossed": threshold_type,
+            "signature_timestamp_utc": str(document.get("signed_at") or ""),
+            "monthly_compensation_rate": (comp.get("amount_gross") if comp else None) or 0,
+        }
+
+        # Resolve society name
+        society_name = (
+            (settings.get("ragione_sociale") if settings else None)
+            or (society.get("ragione_sociale") if society else None)
+            or (society.get("name") if society else None)
+            or "ASD/SSD"
+        )
+
+        # Use the OFFICIAL generator (same as the live signing flow)
+        if threshold_type == "5000":
+            pdf_bytes = generate_threshold_5k_pdf(
+                society_name=society_name,
+                collaborator_name=collaborator_name,
+                collaborator_fiscal_code=fiscal_code,
+                year=int(year) if year else datetime.utcnow().year,
+                signature_base64=sig_b64 or "",
+                society_city=society_city,
+                threshold_metadata=threshold_meta,
+            )
+        else:
+            pdf_bytes = generate_threshold_15k_pdf(
+                society_name=society_name,
+                collaborator_name=collaborator_name,
+                collaborator_fiscal_code=fiscal_code,
+                year=int(year) if year else datetime.utcnow().year,
+                signature_base64=sig_b64 or "",
+                society_city=society_city,
+                threshold_metadata=threshold_meta,
+            )
+
+        return pdf_bytes
+    except Exception as e:
+        logger.error(f"_regenerate_threshold_communication_pdf failed: {e}", exc_info=True)
+        return None
 
 
 def _generate_consent_summary_pdf(doc: dict, signer: Optional[dict], society: Optional[dict]) -> bytes:
