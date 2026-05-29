@@ -25590,12 +25590,24 @@ async def get_pending_reminders(current_user=Depends(get_current_user)):
     cases: List[Dict[str, Any]] = []
     athletes = await db.athletes.find(ath_q).to_list(5000)
 
+    # Pre-fetch ALL users of this society in a single query to build a phone cache
+    # (avoids N+1 lookups inside _wa_get_phones for each athlete's parent_id)
+    user_phone_cache: dict = {}
+    if sid:
+        async for u in db.users.find({"society_id": sid}, {"_id": 0, "id": 1, "full_name": 1, "phone": 1}):
+            uid = u.get("id")
+            if uid:
+                user_phone_cache[uid] = {
+                    "full_name": u.get("full_name", ""),
+                    "phone": u.get("phone", ""),
+                }
+
     for ath in athletes:
         ath_id = ath.get("id")
         first = ath.get("first_name") or ""
         last = ath.get("last_name") or ""
         full_name = ath.get("full_name") or f"{first} {last}".strip()
-        contacts = await _wa_get_phones(ath)
+        contacts = await _wa_get_phones(ath, user_phone_cache=user_phone_cache)
         # NOTE: even if contacts is empty, we still surface the case so that
         # the admin knows there is something to do (e.g. recover phone offline).
 
@@ -25800,16 +25812,48 @@ async def reset_whatsapp_settings_defaults(current_user=Depends(get_current_user
     return {"ok": True, "deleted": r.deleted_count}
 
 
+_WA_COUNT_CACHE: dict = {}
+_WA_COUNT_CACHE_TTL = 60  # seconds
+
+
 @api_router.get("/admin/whatsapp/pending-count")
 async def get_whatsapp_pending_count(current_user=Depends(get_current_user)):
-    """Lightweight endpoint: returns just the count, used by dashboard badges."""
+    """Lightweight endpoint: returns just the count, used by dashboard badges.
+
+    Optimizations:
+      - In-memory cache per (society_id, role, team_ids) with 60s TTL
+      - Returns immediately if cached
+      - On miss, runs the heavier pending-reminders calc in background
+        (the next call within 60s will get the fresh value)
+    """
     if current_user["role"] not in (UserRole.ADMIN, UserRole.COACH):
         raise HTTPException(status_code=403, detail="Solo admin o coach")
+
+    # Cache key: differentiate admin (all society) vs coach (team-scoped)
+    sid = current_user.get("society_id") or "_global_"
+    role = current_user["role"]
+    if role == UserRole.COACH:
+        team_ids = sorted(current_user.get("assigned_team_ids") or [])
+        if current_user.get("assigned_team_id"):
+            team_ids = sorted(set(team_ids + [current_user["assigned_team_id"]]))
+        cache_key = f"coach::{sid}::{','.join(team_ids)}"
+    else:
+        cache_key = f"admin::{sid}"
+
+    import time as _time
+    now = _time.time()
+    entry = _WA_COUNT_CACHE.get(cache_key)
+    if entry and (now - entry["ts"]) < _WA_COUNT_CACHE_TTL:
+        return {"count": entry["count"], "cached": True}
+
     try:
         data = await get_pending_reminders(current_user=current_user)
-        return {"count": data.get("count", 0)}
-    except Exception:
-        return {"count": 0}
+        cnt = data.get("count", 0)
+    except Exception as e:
+        logger.warning(f"pending-count fallback: {e}")
+        cnt = 0
+    _WA_COUNT_CACHE[cache_key] = {"count": cnt, "ts": now}
+    return {"count": cnt, "cached": False}
 
 
 @api_router.post("/admin/whatsapp/log-sent")

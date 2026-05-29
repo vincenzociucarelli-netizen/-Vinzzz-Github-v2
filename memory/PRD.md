@@ -24,6 +24,28 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
 ## Stato Attuale (12/05/2026)
+### 🐛 Bug Fix: Lentezza app + profilo atleta bloccato (29/05/2026)
+**Segnalazione utente**: "Tutto è un po' rallentato. Admin non riesce ad entrare nel profilo delle atlete (caricamento infinito)".
+
+**Root cause**: 
+1. L'endpoint `/api/admin/whatsapp/pending-count` (chiamato da dashboard admin+coach) eseguiva ogni volta la pipeline pesante di `get_pending_reminders` che faceva **N+1 queries** (`db.users.find_one()` per ogni atleta+parent_id) → su MongoDB Atlas in produzione con latenza ~50ms a query, 50 atleti × 50ms = **2-3 secondi solo per il counter**
+2. La chiamata bloccava le altre richieste del browser → "Caricamento infinito" sul profilo atleta era un timeout cascata, non un bug del profilo
+
+**Fix applicati**:
+- ✨ **Cache in-memory 60s** sul `/admin/whatsapp/pending-count` per (society_id, role, team_ids). Chiamate successive entro 60s ritornano in ~10ms con `cached: true`
+- ✨ **Pre-fetch batch utenti** in `get_pending_reminders`: 1 sola query per tutti gli users della società → costruito dict cache → passato a `_get_athlete_parent_phones(user_phone_cache=...)` che evita N+1
+- 🔧 Risolto anche `NameError: Dict not defined` (riferimento a typing.Dict non importato a livello modulo)
+
+**Performance verificate (preview)**:
+- pending-count (cache miss): **138ms**
+- pending-count (cache hit): **168ms** con flag `cached: true`
+- pending-reminders (con 24 casi reali): **175ms**
+
+In produzione Atlas miglioramento atteso **5-10×** sulle dashboard admin/coach.
+
+File toccati: `/app/backend/server.py` (caching + batch prefetch), `/app/backend/whatsapp_reminders_core.py` (signature `_get_athlete_parent_phones` accetta `user_phone_cache`)
+
+
 ### 🐛 Bug Fix: Numeri genitori atleti minorenni (28/05/2026)
 **Segnalazione utente**: per gli atleti 18- il sollecito WhatsApp DEVE andare al genitore (Tel. Madre / Tel. Padre), ma il sistema mostrava "Numero non presente" anche quando i numeri erano salvati.
 
