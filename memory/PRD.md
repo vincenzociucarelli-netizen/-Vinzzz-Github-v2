@@ -24,6 +24,30 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
 ## Stato Attuale (29/05/2026)
+### 🐛 Bug Fix CRITICO PROD: GDPR scarica solo "Riepilogo firma digitale" (29/05/2026)
+**Segnalazione utente**: documento privacy_consent di ALUNNI MADDALENA (firmataria BUCCHI SIENA GIULIA) scaricato come breve "Riepilogo firma digitale (PDF originale non più disponibile)" invece della dichiarazione GDPR completa. Funzionava prima, ora regressione.
+
+**Root cause (3 problemi combinati)**:
+1. **Disco effimero su Render**: ogni redeploy cancella `/var/lib/.../signed_documents/`. I PDF salvati solo su disco vengono persi.
+2. **`download_document` non riconosceva `privacy_consent`**: il branch di rigenerazione inline (linea 20738) controllava solo `gdpr_privacy_adult/minor`/`gdpr_adult` → per `privacy_consent` cadeva nel fallback `_generate_consent_summary_pdf`.
+3. **Il summary veniva cachato in `pdf_base64`** → da quel momento OGNI download restituiva il summary, per sempre.
+
+**Fix applicato (server.py)**:
+- ✨ **Salvataggio doppio**: l'endpoint `POST /documents/sign` ora salva `pdf_base64` + `signature_base64` nel DB oltre che `pdf_path` su disco → sopravvive ai redeploy.
+- ✨ **Helper `_regenerate_gdpr_privacy_pdf(doc)`**: rigenera il PDF GDPR COMPLETO (adulto o minore) con lookup robusto di signer, athlete, society, signature_base64. Gestisce 3 casi: adulto firma per sé / parent firma per minore (`privacy_consent` con `related_entity_id` athlete minore) / `gdpr_minor` esplicito.
+- ✨ **Auto-fix on download**: sia `/documents/signed/{id}/pdf` che `/documents/download/{id}` ora rilevano il summary cached (size < 4500 bytes oppure contiene "PDF originale non"/"Riepilogo firma") e rigenerano on-the-fly, sovrascrivendo cache + disco.
+- ✨ **Anti-cache summary**: i tipi GDPR/threshold non vengono più cachati come `pdf_base64` quando si genera il summary fallback (evita di "bloccare" il documento sul placeholder).
+- ✨ **Signature recovery**: la signature ora viene letta da `doc.signature_base64` (era hardcoded a "" nel branch di rigenerazione).
+
+**Test verificato (preview)**:
+- Iniettato summary fake in `pdf_base64` di doc privacy_consent reale (size: 2101 bytes)
+- Chiamato `/documents/download/{id}` → restituisce **6540 bytes** (PDF GDPR completo)
+- Log: `Auto-fixed GDPR privacy cache for 57ae39c8... (6540 bytes)`
+- Verificato che la cache ora contiene il PDF completo (non più summary)
+
+**Pubblicazione produzione**: ⚠️ Clicca "Save to GitHub" → Vercel+Render rebuildano (5-7 min). Tutti i PDF GDPR esistenti si auto-correggono al primo download successivo. I nuovi PDF firmati saranno permanentemente al sicuro nel DB.
+
+
 ### 🐛 Bug Fix CRITICO PROD: firma GDPR non viene presa su mobile (29/05/2026)
 **Segnalazione utente (genitore MARCUCCI AGNESE, prod)**: "il sistema non ci fa confermare la firma. La inseriamo, ma non viene presa."
 
