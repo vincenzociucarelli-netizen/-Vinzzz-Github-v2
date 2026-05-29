@@ -25683,6 +25683,117 @@ api_router.include_router(primary_admin_router)
 api_router.include_router(training_overrides_router)
 
 
+@api_router.post("/admin/compensations/reset-coach-year")
+async def admin_reset_coach_compensations_for_year(payload: dict, current_user=Depends(get_current_user)):
+    """ADMIN ONLY: reset (delete) ALL coach/dirigente/collaboratore compensations
+    + ALL related signed_documents (quietanze + threshold communications)
+    for a specific user + year.
+
+    Used to "ricominciare da zero" testing flows in production.
+
+    Body: { "signer_id": "<user_id>", "year": 2026 }
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    signer_id = (payload or {}).get("signer_id")
+    year = (payload or {}).get("year")
+    if not signer_id or not year:
+        raise HTTPException(status_code=400, detail="signer_id e year obbligatori")
+    try:
+        year = int(year)
+    except Exception:
+        raise HTTPException(status_code=400, detail="year deve essere un numero")
+
+    sid = current_user.get("society_id")
+    # Verify signer belongs to this society (multi-tenant safety)
+    signer = await db.users.find_one({"id": signer_id}, {"_id": 0, "id": 1, "full_name": 1, "society_id": 1})
+    if not signer:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    if sid and signer.get("society_id") and signer["society_id"] != sid:
+        raise HTTPException(status_code=403, detail="Utente non appartiene alla tua società")
+
+    results: dict = {}
+    # 1) Delete compensations from all 5 collections
+    for coll, owner_field in [
+        ("coach_compensations", "coach_id"),
+        ("dirigente_compensations", "dirigente_id"),
+        ("collaboratore_compensations", "collaboratore_id"),
+        ("atleta_pro_compensations", "atleta_id"),
+        ("compensations", "coach_id"),
+    ]:
+        r = await db[coll].delete_many({owner_field: signer_id, "year": year})
+        results[coll] = r.deleted_count
+
+    # 2) Delete signed documents (quietanze + threshold 5k/15k) — disk + DB
+    sd_query = {
+        "$or": [
+            {"coach_id": signer_id},
+            {"signer_id": signer_id},
+            {"dirigente_id": signer_id},
+            {"collaboratore_id": signer_id},
+        ],
+        "$and": [{"year": year}] if "year" else [],
+        "document_type": {
+            "$in": [
+                "compensation_receipt",
+                "coach_compensation_receipt",
+                "collaboratore_compensation_receipt",
+                "threshold_5000_communication",
+                "threshold_15000_communication",
+                "threshold_declaration_5000",
+                "threshold_declaration_15000",
+            ]
+        },
+    }
+    # Drop the empty $and if no condition
+    if not sd_query["$and"]:
+        sd_query.pop("$and")
+    files_deleted = 0
+    docs_to_delete = []
+    async for d in db.signed_documents.find(sd_query, {"_id": 0, "id": 1, "pdf_path": 1, "year": 1, "signed_at": 1}):
+        # year may be missing on doc — verify via signed_at
+        doc_year = d.get("year")
+        if not doc_year and d.get("signed_at"):
+            try:
+                doc_year = int(str(d["signed_at"])[:4])
+            except Exception:
+                doc_year = None
+        if doc_year and int(doc_year) != year:
+            continue
+        docs_to_delete.append(d["id"])
+        pdf_path = d.get("pdf_path")
+        if pdf_path and os.path.exists(pdf_path):
+            try:
+                os.remove(pdf_path)
+                files_deleted += 1
+            except Exception:
+                pass
+    if docs_to_delete:
+        r2 = await db.signed_documents.delete_many({"id": {"$in": docs_to_delete}})
+        results["signed_documents"] = r2.deleted_count
+    else:
+        results["signed_documents"] = 0
+    results["disk_files_deleted"] = files_deleted
+
+    # 3) Delete threshold_declarations
+    r3 = await db.threshold_declarations.delete_many({
+        "$or": [{"coach_id": signer_id}, {"signer_id": signer_id}],
+        "year": year,
+    })
+    results["threshold_declarations"] = r3.deleted_count
+
+    logger.info(
+        f"admin {current_user['id']} reset compensations for signer={signer_id} year={year}: {results}"
+    )
+    return {
+        "ok": True,
+        "signer_name": signer.get("full_name", ""),
+        "year": year,
+        "deleted": results,
+    }
+
+
 # ─────────────────────────── Palestre KML ───────────────────────────
 from palestre_kml import get_palestre_list as _palestre_get
 
