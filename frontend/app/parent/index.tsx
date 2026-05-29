@@ -338,30 +338,30 @@ PRESA VISIONE:
 DICHIARAZIONE
 Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compreso la presente informativa sulla privacy ai sensi del Regolamento UE 2016/679 relativa al trattamento dei dati del minore ${athleteName}.`;
 
-      await api.post('/documents/sign', {
-        document_type: 'privacy_consent',
-        document_title: `Presa Visione Privacy - ${athleteName}`,
-        document_text: privacyText,
-        signer_name: user.full_name,
-        signer_email: user.email,
-        signature_base64: signatureBase64,
-        related_entity_id: athleteId,
-        consent_data: {
-          privacy_viewed: true,
-          images_promo: consentImgPromo,
-        },
-        additional_data: {
-          'Atleta': athleteName,
-          'Genitore/Tutore': user.full_name,
-          'Tipo documento': 'Presa Visione Privacy e Liberatoria',
-          'Consenso immagini uso promozionale': consentImgPromo ? 'SI' : 'NO',
-        }
-      });
-      
-      // Then update the athlete's privacy status with consent choices
+      // SOLUTION A (29/05/2026): the legacy privacy_consent doc creation has
+      // been removed. The proper signed GDPR document for minors is now created
+      // exclusively via /documents/sign-gdpr-privacy (gdpr_minor) from the
+      // athlete's profile page (parent/athlete/[id].tsx → GDPRPrivacyModal).
+      // Here we only update the trial/privacy acceptance status — no more
+      // duplicate doc in the archive.
+      // PREVIOUS CODE (kept commented for reference):
+      // await api.post('/documents/sign', {
+      //   document_type: 'privacy_consent',
+      //   document_title: `Presa Visione Privacy - ${athleteName}`,
+      //   document_text: privacyText,
+      //   signer_name: user.full_name,
+      //   signer_email: user.email,
+      //   signature_base64: signatureBase64,
+      //   related_entity_id: athleteId,
+      //   consent_data: { privacy_viewed: true, images_promo: consentImgPromo },
+      //   additional_data: { ... }
+      // });
+
+      // Update the athlete's privacy status with consent choices
       await api.post(`/trial/accept-privacy/${athleteId}`, {
         images_promo: consentImgPromo,
         document_version: '1.0',
+        signature_base64: signatureBase64,
       });
       
       Alert.alert(

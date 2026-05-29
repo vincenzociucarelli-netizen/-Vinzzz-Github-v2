@@ -333,13 +333,21 @@ export default function DocumentsArchive() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    // Backend stores datetime.utcnow() (naive UTC). If the ISO string has no
+    // timezone marker, append 'Z' so the browser interprets it as UTC and not
+    // as device-local time. Then format in Europe/Rome for the Italian user.
+    let normalized = dateString;
+    if (typeof normalized === 'string' && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(normalized)) {
+      normalized = normalized + 'Z';
+    }
+    const date = new Date(normalized);
     return date.toLocaleDateString('it-IT', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'Europe/Rome',
     });
   };
 

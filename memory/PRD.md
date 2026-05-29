@@ -24,6 +24,28 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
 ## Stato Attuale (29/05/2026)
+### 🐛 Bug Fix: doppio doc privacy_consent + orario errato (29/05/2026 — Solution A)
+**Segnalazione utente (OPALE SANDRO genitore di OPALE LAURA)**:
+1. Doppio documento dopo firma GDPR: `privacy_consent` (Attestazione senza firma) + `gdpr_minor` (Informativa completa con firma)
+2. Lista documenti mostra orario UTC sbagliato (21:36) mentre il PDF mostra l'orario corretto Europe/Rome (23:36)
+
+**Root cause**:
+1. `parent/index.tsx:handleSignPrivacy()` chiamava ancora il legacy endpoint `POST /documents/sign` creando un doc `privacy_consent`. In parallelo, `parent/athlete/[id].tsx` apriva la GDPRPrivacyModal moderna che chiamava `POST /documents/sign-gdpr-privacy` creando un doc `gdpr_minor`. Risultato: due record nel DB per la stessa firma.
+2. Il backend salva `datetime.utcnow()` (naive UTC, senza suffisso Z). Il frontend faceva `new Date(dateStr).toLocaleDateString('it-IT', {...})` senza `timeZone` → il browser interpretava la stringa come "naive local" e applicava il fuso del device. Su mobile Chrome Android l'esito era UTC puro (21:36).
+
+**Fix Solution A — Eliminato il doc legacy + timezone**:
+- ✨ Rimossa la chiamata `POST /documents/sign` con `privacy_consent` in `parent/index.tsx` (linea 341). Resta solo `POST /trial/accept-privacy/{athlete_id}` che aggiorna lo stato trial/consent — niente più doc duplicato.
+- ✨ Da ora in poi, dopo la firma del genitore esiste UN SOLO documento: `gdpr_minor` (Informativa Privacy GDPR - Minore) con firma, dati genitore+minore, metadati legali, hash, IP, device.
+- ✨ `formatDate` in `parent/documents.tsx` e `admin/documents-archive.tsx` ora: (a) aggiunge `Z` se la stringa è naive UTC, (b) formatta con `timeZone: 'Europe/Rome'`. Risultato: lista mostra `23:36` come il PDF.
+- ✨ Documenti vecchi nel DB restano accessibili (storico). Solo i nuovi flussi non duplicheranno più.
+
+**Test E2E preview**:
+- Build expo `export -p web` ricompilato. Bundle ha `Europe/Rome` 5× e niente più `Tipo documento` (additional_data della chiamata legacy).
+- Test browser di conversione: input UTC `2026-05-29T21:36:14` → output `29/05/2026, 23:36` ✅ (sia con sia senza suffisso Z).
+
+**Pubblicazione produzione**: ⚠️ Clicca "Save to GitHub" → Vercel rebuilda in 5-7 min.
+
+
 ### 🐛 Bug Fix CRITICO PROD: GDPR scarica solo "Riepilogo firma digitale" (29/05/2026)
 **Segnalazione utente**: documento privacy_consent di ALUNNI MADDALENA (firmataria BUCCHI SIENA GIULIA) scaricato come breve "Riepilogo firma digitale (PDF originale non più disponibile)" invece della dichiarazione GDPR completa. Funzionava prima, ora regressione.
 
