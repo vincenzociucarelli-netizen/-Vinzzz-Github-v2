@@ -974,11 +974,7 @@ export default function CollaboratoreCompensation() {
       return null;
     };
 
-    const thresholdInlineStyle = isAfter15k
-      ? { backgroundColor: '#F3E5F5', borderColor: '#8E44AD' }
-      : isAfter5k
-        ? { backgroundColor: '#FFF3E0', borderColor: '#F9A825' }
-        : null;
+    const thresholdInlineStyle = null;
     
     return (
       <TouchableOpacity

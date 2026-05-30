@@ -986,14 +986,10 @@ export default function CoachCompensation() {
       return null;
     };
 
-    // Additional inline style for threshold-based background (applied on top
-    // of getCardStyle so unsigned cards also turn orange/purple when projected
-    // cumulative crosses 5k/15k).
-    const thresholdInlineStyle = isAfter15k
-      ? { backgroundColor: '#F3E5F5', borderColor: '#8E44AD' }
-      : isAfter5k
-        ? { backgroundColor: '#FFF3E0', borderColor: '#F9A825' }
-        : null;
+    // Additional inline style for threshold-based background — applied ONLY
+    // to SIGNED cards. Unsigned/blocked/future cards keep their standard
+    // pending/blocked/future look (white/yellow/locked).
+    const thresholdInlineStyle = null;
     
     return (
       <TouchableOpacity
