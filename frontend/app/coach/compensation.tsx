@@ -815,9 +815,87 @@ export default function CoachCompensation() {
           </View>
         );
       }
+
+      // Blocked: needs €5.000 declaration for year 2026
+      if (thresholdStatus2026.thresholds['5000'].needs_declaration) {
+        warnings.push(
+          <TouchableOpacity
+            key="blocked-5000-2026"
+            style={[styles.thresholdBanner, styles.blockedBanner]}
+            onPress={() => openDeclarationModal('5000')}
+            data-testid="declaration-5000-2026-btn"
+          >
+            <Ionicons name="lock-closed" size={18} color="#fff" />
+            <View style={styles.thresholdBannerContent}>
+              <Text style={[styles.thresholdBannerTitle, { color: '#fff' }]}>
+                Anno {year2026}: Dichiarazione €5.000 richiesta
+              </Text>
+              <Text style={[styles.thresholdBannerText, { color: '#fff' }]}>
+                Tocca qui per firmare la dichiarazione e sbloccare le quietanze
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#fff" />
+          </TouchableOpacity>
+        );
+      }
+
+      // Blocked: needs €15.000 declaration for year 2026
+      if (thresholdStatus2026.thresholds['15000'].needs_declaration) {
+        warnings.push(
+          <TouchableOpacity
+            key="blocked-15000-2026"
+            style={[styles.thresholdBanner, styles.blockedBanner, { backgroundColor: '#721C24' }]}
+            onPress={() => openDeclarationModal('15000')}
+            data-testid="declaration-15000-2026-btn"
+          >
+            <Ionicons name="lock-closed" size={18} color="#fff" />
+            <View style={styles.thresholdBannerContent}>
+              <Text style={[styles.thresholdBannerTitle, { color: '#fff' }]}>
+                URGENTE: Anno {year2026} — Dichiarazione €15.000 richiesta
+              </Text>
+              <Text style={[styles.thresholdBannerText, { color: '#fff' }]}>
+                Tocca qui per firmare la dichiarazione fiscale
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#fff" />
+          </TouchableOpacity>
+        );
+      }
     }
     
     return warnings.length > 0 ? <View style={styles.warningsContainer}>{warnings}</View> : null;
+  };
+
+  // Find first month where each threshold was exceeded based on PROJECTED
+  // cumulative (signed + unsigned). Used for coloring month cards so that
+  // the user can SEE in advance which months will be above 5k/15k.
+  const getProjectedThresholdMonths = () => {
+    const sorted = [...records].sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      return a.month - b.month;
+    });
+    const thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } } = {};
+    const cumulativeByYear: { [year: number]: number } = {};
+    if (contractStartYear && priorCompensation > 0) {
+      cumulativeByYear[contractStartYear] = priorCompensation;
+    }
+    for (const r of sorted) {
+      if (!thresholdsByYear[r.year]) {
+        thresholdsByYear[r.year] = { first5k: null, first15k: null };
+      }
+      if (!cumulativeByYear[r.year]) {
+        cumulativeByYear[r.year] = r.year === contractStartYear ? (priorCompensation || 0) : 0;
+      }
+      const actualAmount = r.amount_gross || r.amount || profile?.monthly_compensation || 0;
+      cumulativeByYear[r.year] += actualAmount;
+      if (cumulativeByYear[r.year] > 5000 && thresholdsByYear[r.year].first5k === null) {
+        thresholdsByYear[r.year].first5k = r.month;
+      }
+      if (cumulativeByYear[r.year] > 15000 && thresholdsByYear[r.year].first15k === null) {
+        thresholdsByYear[r.year].first15k = r.month;
+      }
+    }
+    return thresholdsByYear;
   };
 
   // Find first month where each threshold was exceeded (for highlighting subsequent months)
@@ -884,15 +962,19 @@ export default function CoachCompensation() {
     const monthlyAmount = record?.amount_gross || record?.amount || profile?.monthly_compensation || 0;
     
     // Check if this month is after threshold was crossed IN THE SAME YEAR (for highlighting)
-    const thresholdsByYear = getThresholdMonths();
-    const isAfter5k = status === 'signed' && isMonthAfterThreshold(month, displayYear, thresholdsByYear, '5k');
-    const isAfter15k = status === 'signed' && isMonthAfterThreshold(month, displayYear, thresholdsByYear, '15k');
+    // Uses PROJECTED cumulative (signed + unsigned) so the user can see in advance
+    // which months are above 5k/15k even before they sign them.
+    const thresholdsByYear = getProjectedThresholdMonths();
+    const isAfter5k = isMonthAfterThreshold(month, displayYear, thresholdsByYear, '5k');
+    const isAfter15k = isMonthAfterThreshold(month, displayYear, thresholdsByYear, '15k');
     
     // Use calculated thresholds for badge display (not DB values which may be stale)
     const showBadge5k = isAfter5k && !isAfter15k;
     const showBadge15k = isAfter15k;
     
-    // Determine the card style based on threshold status
+    // Determine the card style based on threshold status.
+    // Colors apply to ALL statuses (signed/pending/blocked/future) so the
+    // user has a clear visual cue from start of the year.
     const getCardStyle = () => {
       if (status === 'signed') {
         if (isAfter15k) return styles.monthCardSigned15k;
@@ -903,6 +985,15 @@ export default function CoachCompensation() {
       if (status === 'blocked') return styles.monthCardBlocked;
       return null;
     };
+
+    // Additional inline style for threshold-based background (applied on top
+    // of getCardStyle so unsigned cards also turn orange/purple when projected
+    // cumulative crosses 5k/15k).
+    const thresholdInlineStyle = isAfter15k
+      ? { backgroundColor: '#F3E5F5', borderColor: '#8E44AD' }
+      : isAfter5k
+        ? { backgroundColor: '#FFF3E0', borderColor: '#F9A825' }
+        : null;
     
     return (
       <TouchableOpacity
@@ -910,8 +1001,10 @@ export default function CoachCompensation() {
         style={[
           styles.monthCard,
           getCardStyle(),
-          // Purple background when exceeded €15k
+          // Purple background when exceeded €15k (signed)
           isAfter15k && status === 'signed' && { backgroundColor: '#F3E5F5', borderColor: '#8E44AD' },
+          // Threshold tint for unsigned/blocked/future cards
+          status !== 'signed' && thresholdInlineStyle,
         ]}
         onPress={() => {
           console.log('Month card pressed:', { month, displayYear, status });
