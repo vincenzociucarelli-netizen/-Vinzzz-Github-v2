@@ -24,6 +24,42 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
 ## Stato Attuale (30/05/2026)
+### 🔁 Refactor CRITICO: "Reset Quietanze Anno" ora richiede CONSENSO del firmatario (30/05/2026)
+**Segnalazione utente**: "Admin richiede la cancellazione delle quietanze di Pietro del 2026, ma Pietro resta con le quietanze firmate e nessuna richiesta di cancellazione da accettare. Per Francesca/Agnese (Coach) avevamo già un workflow mese-per-mese con consenso."
+
+**Root cause**: l'endpoint `POST /admin/compensations/reset-coach-year` cancellava direttamente le quietanze senza consenso, violando il principio già adottato per la cancellazione di singole quietanze (`DELETE /documents/{id}` crea `deletion_requests` pending).
+
+**Refactor applicato (backend `/app/backend/server.py`)**:
+- L'endpoint reset NON cancella più direttamente le quietanze/comunicazioni firmate. Ora crea UN `deletion_requests` pending per ogni `signed_document` di tipo `compensation_receipt` / `*_compensation_receipt` / `threshold_5000_communication` / `threshold_15000_communication` dell'utente+anno.
+- Skip duplicate: se esiste già una request `pending` per lo stesso documento, conteggia ma non duplica.
+- Notifica in-app per ogni request creata (collezione `notifications`).
+- Le compensations **NON firmate** (`receipt_signed != True`) e le `threshold_declarations` **senza PDF firmato** vengono comunque cancellate subito (non c'è firmatario da chiedere).
+- Audit log esteso: action = `request_reset_coach_year_compensations`, include `deletion_request_ids` per traceability.
+- Risposta: `{ok, signer_name, year, results: {deletion_requests_created, deletion_requests_already_pending, unsigned_compensations_deleted, threshold_declarations_unsigned_deleted}}`.
+
+**Bug fix correlato (`_execute_document_deletion`)**: la funzione che sblocca la compensation dopo l'approvazione cercava SOLO in `db.compensations` → per collaboratori/dirigenti la compensation restava bloccata `receipt_signed=True` dopo l'approve. Ora itera su tutte e 5 le collezioni (`compensations`, `coach_compensations`, `collaboratore_compensations`, `dirigente_compensations`, `atleta_pro_compensations`) finché non trova il record da sbloccare.
+
+**UI aggiornata in 3 schede admin** (coach + collaboratore + dirigente):
+- Box rosso ora si chiama "🧹 Richiedi Reset Quietanze (Admin)"
+- Pulsanti: "Richiedi reset {anno}"
+- Prompt: "Stai per RICHIEDERE A {NOME} il consenso a cancellare TUTTE le quietanze... La cancellazione effettiva avverrà SOLO dopo che il firmatario avrà autorizzato ogni singola richiesta dalla sua dashboard (come per Francesca/Agnese)."
+- Risposta admin: "✅ Richieste inviate: N richieste create (M già in attesa). • X quietanze NON firmate eliminate subito. {Nome} riceverà una notifica e dovrà autorizzare ogni richiesta..."
+
+**Banner "Richieste di cancellazione" per il firmatario**:
+- Già presente in `coach/index.tsx` (era stato fatto per Francesca/Agnese).
+- **AGGIUNTO** in `collaboratore/profile.tsx` (data-testid `collab-pending-deletions-banner`).
+- **AGGIUNTO** in `dirigente/profile.tsx` (data-testid `dirigente-pending-deletions-banner`).
+- Usa endpoint esistente `GET /deletion-requests/pending` + `POST /deletion-requests/{id}/approve|reject`.
+
+**Test E2E preview verificato**:
+1. Admin chiama `/admin/compensations/reset-coach-year` per DARK FRANZ (collaboratore) anno 2026 → 3 deletion_requests create
+2. FRANZ chiama `GET /deletion-requests/pending` → vede 3 richieste con titoli corretti (Quietanza Feb / Comunicazione 5k Gen / Comunicazione 15k Mar), batch_reason `reset_year_2026`, admin requester
+3. FRANZ approva una quietanza Sep 2025 → `_execute_document_deletion` cancella PDF + sblocca `collaboratore_compensations` `month=9 year=2025` da `receipt_signed=True` a `receipt_signed=False` ✅. Log: `Unlocked 1 row(s) in collaboratore_compensations`.
+4. FRANZ rifiuta una richiesta → status=rejected, documento resta valido ✅
+
+**Pubblicazione produzione**: ⚠️ Clicca "Save to GitHub" → Vercel + Render. Pietro Paoli riceverà la notifica + banner arancione nella sua dashboard collaboratore con le richieste da autorizzare/rifiutare.
+
+
 ### 🐛🌐 Bug Fix CRITICO: Backend usava UTC invece di Europe/Rome (30/05/2026)
 **Segnalazione utente**: "Sono le 00:47 del 30/05 ma la dashboard admin mostra un compleanno del 29/5."
 

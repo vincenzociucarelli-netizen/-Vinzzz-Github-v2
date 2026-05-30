@@ -373,7 +373,43 @@ Società sportiva: ${societyName}
 
   useEffect(() => {
     loadProfile();
+    loadPendingDeletions();
   }, []);
+
+  // Pending deletion requests addressed to this dirigente
+  const [pendingDeletions, setPendingDeletions] = useState<any[]>([]);
+  const [processingDeletion, setProcessingDeletion] = useState<string | null>(null);
+
+  const loadPendingDeletions = async () => {
+    try {
+      const resp = await api.get('/deletion-requests/pending');
+      setPendingDeletions(resp.data || []);
+    } catch {/* silent */}
+  };
+
+  const handleDeletionResponse = async (reqId: string, approve: boolean) => {
+    if (processingDeletion) return;
+    setProcessingDeletion(reqId);
+    try {
+      const path = approve ? `/deletion-requests/${reqId}/approve` : `/deletion-requests/${reqId}/reject`;
+      await api.post(path);
+      if (Platform.OS === 'web') {
+        window.alert(approve
+          ? 'Cancellazione autorizzata. Il documento è stato eliminato.'
+          : 'Cancellazione rifiutata. Il documento resta valido.');
+      } else {
+        Alert.alert(approve ? 'Autorizzata' : 'Rifiutata', '');
+      }
+      loadPendingDeletions();
+      await loadProfile();
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail || 'Operazione non riuscita';
+      if (Platform.OS === 'web') window.alert(`Errore: ${msg}`);
+      else Alert.alert('Errore', msg);
+    } finally {
+      setProcessingDeletion(null);
+    }
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -679,6 +715,47 @@ Società sportiva: ${societyName}
           <Ionicons name="log-out-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
+
+      {/* Banner richieste cancellazione documenti firmati */}
+      {pendingDeletions.length > 0 && (
+        <View style={{ marginHorizontal: 16, marginTop: 12, padding: 12, backgroundColor: '#FFF3E0', borderLeftWidth: 4, borderLeftColor: '#FF9800', borderRadius: 8 }} data-testid="dirigente-pending-deletions-banner">
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+            <Ionicons name="alert-circle" size={20} color="#E65100" />
+            <Text style={{ marginLeft: 8, fontWeight: '700', color: '#E65100', flex: 1 }}>
+              Richieste di cancellazione documenti ({pendingDeletions.length})
+            </Text>
+          </View>
+          <Text style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>
+            L'amministratore ha richiesto la cancellazione di documenti firmati. Devi autorizzare o rifiutare:
+          </Text>
+          {pendingDeletions.map((req: any) => (
+            <View key={req.id} style={{ backgroundColor: '#fff', borderRadius: 6, padding: 10, marginBottom: 6 }}>
+              <Text style={{ fontWeight: '600', fontSize: 13, marginBottom: 2 }}>{req.document_title}</Text>
+              <Text style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>
+                Richiesta da: {req.requested_by_name}
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TouchableOpacity
+                  onPress={() => handleDeletionResponse(req.id, true)}
+                  disabled={processingDeletion === req.id}
+                  style={{ flex: 1, backgroundColor: '#E74C3C', paddingVertical: 8, borderRadius: 6, alignItems: 'center', opacity: processingDeletion === req.id ? 0.5 : 1 }}
+                  data-testid={`approve-deletion-${req.id}`}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Autorizza cancellazione</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleDeletionResponse(req.id, false)}
+                  disabled={processingDeletion === req.id}
+                  style={{ flex: 1, backgroundColor: '#27AE60', paddingVertical: 8, borderRadius: 6, alignItems: 'center', opacity: processingDeletion === req.id ? 0.5 : 1 }}
+                  data-testid={`reject-deletion-${req.id}`}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Rifiuta</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
 
       <ScrollView
         style={styles.content}

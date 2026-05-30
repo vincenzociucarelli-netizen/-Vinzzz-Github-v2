@@ -21164,25 +21164,52 @@ async def _execute_document_deletion(doc: dict, deleted_by: dict):
 
     # Unlock compensation if it was a quietanza so the coach sees it as
     # unsigned again and can re-sign with the correct data.
-    if doc.get("document_type") in ("compensation_receipt", "coach_compensation_receipt", "collaboratore_compensation_receipt"):
+    quietanza_types = (
+        "compensation_receipt",
+        "coach_compensation_receipt",
+        "collaboratore_compensation_receipt",
+        "dirigente_compensation_receipt",
+    )
+    if doc.get("document_type") in quietanza_types:
         comp_id = (doc.get("additional_data") or {}).get("compensation_id") or doc.get("related_entity_id")
+        owner_id = (doc.get("coach_id") or doc.get("signer_id") or
+                    doc.get("collaboratore_id") or doc.get("dirigente_id"))
+        month_v = doc.get("month") or (doc.get("additional_data") or {}).get("month")
+        year_v = doc.get("year") or (doc.get("additional_data") or {}).get("year")
+        unlock_patch = {
+            "$set": {
+                "receipt_signed": False,
+                "receipt_signed_at": None,
+                "receipt_document_id": None,
+                "receipt_signature_base64": None,
+            }
+        }
+        # Try every compensation collection: by id first, then by owner+month+year
+        collections_with_owner = [
+            ("compensations", "coach_id"),
+            ("coach_compensations", "coach_id"),
+            ("collaboratore_compensations", "collaboratore_id"),
+            ("dirigente_compensations", "dirigente_id"),
+            ("atleta_pro_compensations", "atleta_id"),
+        ]
         try:
+            total_unlocked = 0
             if comp_id:
-                await db.compensations.update_one(
-                    {"id": comp_id},
-                    {"$set": {"receipt_signed": False, "receipt_signed_at": None, "receipt_document_id": None, "receipt_signature_base64": None}}
-                )
-            else:
-                # Legacy quietanze: lookup by coach_id + month + year
-                coach_id = doc.get("coach_id") or doc.get("signer_id")
-                month_v = doc.get("month") or (doc.get("additional_data") or {}).get("month")
-                year_v = doc.get("year") or (doc.get("additional_data") or {}).get("year")
-                if coach_id and month_v is not None and year_v is not None:
-                    res = await db.compensations.update_many(
-                        {"coach_id": coach_id, "month": int(month_v), "year": int(year_v)},
-                        {"$set": {"receipt_signed": False, "receipt_signed_at": None, "receipt_document_id": None, "receipt_signature_base64": None}}
+                for coll, _ in collections_with_owner:
+                    res = await db[coll].update_one({"id": comp_id}, unlock_patch)
+                    total_unlocked += res.modified_count
+            if owner_id and month_v is not None and year_v is not None and total_unlocked == 0:
+                for coll, owner_field in collections_with_owner:
+                    res = await db[coll].update_many(
+                        {owner_field: owner_id, "month": int(month_v), "year": int(year_v)},
+                        unlock_patch,
                     )
-                    logger.info(f"Unlocked {res.modified_count} legacy compensation(s) for coach={coach_id} {month_v}/{year_v}")
+                    if res.modified_count:
+                        total_unlocked += res.modified_count
+                        logger.info(
+                            f"Unlocked {res.modified_count} row(s) in {coll} for "
+                            f"{owner_field}={owner_id} {month_v}/{year_v}"
+                        )
         except Exception as e:
             logger.warning(f"Impossibile sbloccare compensation: {e}")
 
@@ -25953,13 +25980,22 @@ api_router.include_router(training_overrides_router)
 
 @api_router.post("/admin/compensations/reset-coach-year")
 async def admin_reset_coach_compensations_for_year(payload: dict, current_user=Depends(get_current_user)):
-    """ADMIN ONLY: reset (delete) ALL coach/dirigente/collaboratore compensations
-    + ALL related signed_documents (quietanze + threshold communications)
-    for a specific user + year.
+    """ADMIN: REQUEST deletion of ALL signed compensation receipts + threshold
+    communications for a specific user + year.
 
-    Used to "ricominciare da zero" testing flows in production.
+    Does NOT immediately delete. Creates one `deletion_requests` record per
+    document signed by the user, with status='pending'. The user receives an
+    in-app notification per document and must approve each one from their
+    dashboard, exactly like the per-month flow already in place for coach
+    Francesca/Agnese.
+
+    UNSIGNED compensations (no PDF, just rows in the compensations collections)
+    are deleted immediately because there is no firmatario whose consent must
+    be sought — they were never signed.
 
     Body: { "signer_id": "<user_id>", "year": 2026 }
+    Returns: counts of requests created (signed docs) and rows deleted
+    immediately (unsigned compensations).
     """
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin")
@@ -25974,26 +26010,25 @@ async def admin_reset_coach_compensations_for_year(payload: dict, current_user=D
         raise HTTPException(status_code=400, detail="year deve essere un numero")
 
     sid = current_user.get("society_id")
-    # Verify signer belongs to this society (multi-tenant safety)
-    signer = await db.users.find_one({"id": signer_id}, {"_id": 0, "id": 1, "full_name": 1, "society_id": 1})
+    signer = await db.users.find_one(
+        {"id": signer_id},
+        {"_id": 0, "id": 1, "full_name": 1, "email": 1, "society_id": 1, "role": 1}
+    )
     if not signer:
         raise HTTPException(status_code=404, detail="Utente non trovato")
     if sid and signer.get("society_id") and signer["society_id"] != sid:
         raise HTTPException(status_code=403, detail="Utente non appartiene alla tua società")
 
-    results: dict = {}
-    # 1) Delete compensations from all 5 collections
-    for coll, owner_field in [
-        ("coach_compensations", "coach_id"),
-        ("dirigente_compensations", "dirigente_id"),
-        ("collaboratore_compensations", "collaboratore_id"),
-        ("atleta_pro_compensations", "atleta_id"),
-        ("compensations", "coach_id"),
-    ]:
-        r = await db[coll].delete_many({owner_field: signer_id, "year": year})
-        results[coll] = r.deleted_count
+    results: dict = {
+        "deletion_requests_created": 0,
+        "deletion_requests_already_pending": 0,
+        "unsigned_compensations_deleted": 0,
+        "threshold_declarations_unsigned_deleted": 0,
+    }
 
-    # 2) Delete signed documents (quietanze + threshold 5k/15k) — disk + DB
+    # ------------------------------------------------------------------
+    # 1) Find ALL signed documents for this user+year that should be deleted
+    # ------------------------------------------------------------------
     sd_query = {
         "$or": [
             {"coach_id": signer_id},
@@ -26001,7 +26036,6 @@ async def admin_reset_coach_compensations_for_year(payload: dict, current_user=D
             {"dirigente_id": signer_id},
             {"collaboratore_id": signer_id},
         ],
-        "$and": [{"year": year}] if "year" else [],
         "document_type": {
             "$in": [
                 "compensation_receipt",
@@ -26014,13 +26048,13 @@ async def admin_reset_coach_compensations_for_year(payload: dict, current_user=D
             ]
         },
     }
-    # Drop the empty $and if no condition
-    if not sd_query["$and"]:
-        sd_query.pop("$and")
-    files_deleted = 0
-    docs_to_delete = []
-    async for d in db.signed_documents.find(sd_query, {"_id": 0, "id": 1, "pdf_path": 1, "year": 1, "signed_at": 1}):
-        # year may be missing on doc — verify via signed_at
+    signed_docs = []
+    async for d in db.signed_documents.find(
+        sd_query,
+        {"_id": 0, "id": 1, "document_title": 1, "document_type": 1,
+         "society_id": 1, "year": 1, "month": 1, "signed_at": 1,
+         "signer_name": 1, "coach_name": 1}
+    ):
         doc_year = d.get("year")
         if not doc_year and d.get("signed_at"):
             try:
@@ -26029,32 +26063,102 @@ async def admin_reset_coach_compensations_for_year(payload: dict, current_user=D
                 doc_year = None
         if doc_year and int(doc_year) != year:
             continue
-        docs_to_delete.append(d["id"])
-        pdf_path = d.get("pdf_path")
-        if pdf_path and os.path.exists(pdf_path):
-            try:
-                os.remove(pdf_path)
-                files_deleted += 1
-            except Exception:
-                pass
-    if docs_to_delete:
-        r2 = await db.signed_documents.delete_many({"id": {"$in": docs_to_delete}})
-        results["signed_documents"] = r2.deleted_count
-    else:
-        results["signed_documents"] = 0
-    results["disk_files_deleted"] = files_deleted
+        signed_docs.append(d)
 
-    # 3) Delete threshold_declarations
+    # ------------------------------------------------------------------
+    # 2) For each signed document → create a deletion_request (pending)
+    # ------------------------------------------------------------------
+    now_iso = datetime.now(timezone.utc).isoformat()
+    request_ids: list = []
+    for d in signed_docs:
+        doc_id = d["id"]
+        # Skip if a pending request already exists (no spam)
+        existing = await db.deletion_requests.find_one(
+            {"document_id": doc_id, "status": "pending"}
+        )
+        if existing:
+            results["deletion_requests_already_pending"] += 1
+            request_ids.append(existing["id"])
+            continue
+
+        req_id = str(uuid.uuid4())
+        await db.deletion_requests.insert_one({
+            "id": req_id,
+            "document_id": doc_id,
+            "document_title": d.get("document_title")
+                or f"Quietanza/Comunicazione {d.get('month','?')}/{d.get('year', year)}",
+            "document_type": d.get("document_type"),
+            "society_id": d.get("society_id") or sid,
+            "requested_by_id": current_user["id"],
+            "requested_by_name": current_user.get("full_name") or current_user.get("email"),
+            "requested_by_email": current_user.get("email"),
+            "signer_id": signer_id,
+            "signer_name": d.get("signer_name") or d.get("coach_name") or signer.get("full_name"),
+            "signer_email": signer.get("email"),
+            "status": "pending",
+            "batch_reason": f"reset_year_{year}",
+            "created_at": now_iso,
+        })
+        results["deletion_requests_created"] += 1
+        request_ids.append(req_id)
+
+        # In-app notification per signed doc
+        try:
+            await db.notifications.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": signer_id,
+                "type": "document_deletion_request",
+                "title": "Richiesta cancellazione quietanza",
+                "message": (
+                    f"L'amministratore ha richiesto la cancellazione di "
+                    f"'{d.get('document_title') or d.get('document_type')}'. "
+                    f"Apri la richiesta per autorizzare o rifiutare."
+                ),
+                "related_entity_id": req_id,
+                "is_read": False,
+                "created_at": now_iso,
+            })
+        except Exception as ex:
+            logger.warning(f"reset_coach_year: notification insert failed: {ex}")
+
+    # ------------------------------------------------------------------
+    # 3) Delete UNSIGNED compensations immediately (no firmatario to ask)
+    # ------------------------------------------------------------------
+    for coll, owner_field in [
+        ("coach_compensations", "coach_id"),
+        ("dirigente_compensations", "dirigente_id"),
+        ("collaboratore_compensations", "collaboratore_id"),
+        ("atleta_pro_compensations", "atleta_id"),
+        ("compensations", "coach_id"),
+    ]:
+        r = await db[coll].delete_many({
+            owner_field: signer_id,
+            "year": year,
+            # only unsigned rows
+            "$or": [
+                {"receipt_signed": {"$ne": True}},
+                {"receipt_signed": {"$exists": False}},
+            ],
+        })
+        if r.deleted_count:
+            results["unsigned_compensations_deleted"] += r.deleted_count
+
+    # Threshold declarations that were NOT signed yet (no PDF stored)
     r3 = await db.threshold_declarations.delete_many({
         "$or": [{"coach_id": signer_id}, {"signer_id": signer_id}],
         "year": year,
+        "$and": [{"$or": [
+            {"signed_pdf_id": {"$exists": False}},
+            {"signed_pdf_id": None},
+        ]}],
     })
-    results["threshold_declarations"] = r3.deleted_count
+    results["threshold_declarations_unsigned_deleted"] = r3.deleted_count
 
-    # Audit log entry — records who reset what, for traceability.
+    # Audit log entry — records who requested what
     try:
         await db.audit_logs.insert_one({
-            "action": "reset_coach_year_compensations",
+            "id": str(uuid.uuid4()),
+            "action": "request_reset_coach_year_compensations",
             "target_user_id": signer_id,
             "target_user_name": signer.get("full_name", ""),
             "year": year,
@@ -26062,20 +26166,31 @@ async def admin_reset_coach_compensations_for_year(payload: dict, current_user=D
             "admin_name": current_user.get("full_name", ""),
             "admin_email": current_user.get("email", ""),
             "society_id": sid,
-            "deleted": results,
+            "results": results,
+            "deletion_request_ids": request_ids,
             "timestamp": datetime.utcnow(),
         })
     except Exception as ex:
         logger.warning(f"audit log insert failed for reset_coach_year: {ex}")
 
     logger.info(
-        f"admin {current_user['id']} reset compensations for signer={signer_id} year={year}: {results}"
+        f"admin {current_user['id']} REQUESTED reset compensations for "
+        f"signer={signer_id} year={year}: {results}"
     )
     return {
         "ok": True,
         "signer_name": signer.get("full_name", ""),
         "year": year,
-        "deleted": results,
+        "results": results,
+        # back-compat keys for the old frontend response
+        "deleted": {
+            "signed_documents_deleted": 0,  # nothing deleted now
+            "threshold_declarations_deleted": results["threshold_declarations_unsigned_deleted"],
+            "coach_compensations": 0,
+            "dirigente_compensations": 0,
+            "collaboratore_compensations": 0,
+            "compensations": 0,
+        },
     }
 
 

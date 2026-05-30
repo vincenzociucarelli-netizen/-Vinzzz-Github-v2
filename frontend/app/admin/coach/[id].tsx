@@ -322,17 +322,17 @@ export default function AdminCoachDetail() {
     let confirmed = false;
     if (Platform.OS === 'web') {
       const typed = window.prompt(
-        `⚠️ ATTENZIONE: stai per CANCELLARE TUTTE le quietanze, dichiarazioni soglie e PDF firmati di ${fullName} per l'anno ${year}.\n\nQuesta operazione è IRREVERSIBILE.\n\nDigita esattamente "RESET ${year}" per confermare:`
+        `⚠️ Stai per RICHIEDERE A ${fullName.toUpperCase()} il consenso a cancellare TUTTE le quietanze, dichiarazioni soglie e PDF firmati per l'anno ${year}.\n\nLa cancellazione effettiva avverrà SOLO dopo che il firmatario avrà autorizzato ogni singola richiesta dalla sua dashboard (come per Francesca/Agnese).\n\nDigita esattamente "RESET ${year}" per inviare la richiesta:`
       );
       confirmed = typed === `RESET ${year}`;
     } else {
       confirmed = await new Promise<boolean>((resolve) => {
         Alert.alert(
-          `⚠️ Reset quietanze ${year}`,
-          `Verranno cancellate TUTTE le quietanze, soglie e PDF firmati di ${fullName} per l'anno ${year}.\nOperazione IRREVERSIBILE.`,
+          `Richiedi reset quietanze ${year}`,
+          `Verrà inviata a ${fullName} una richiesta di cancellazione per OGNI quietanza/comunicazione del ${year}. La cancellazione effettiva avverrà solo dopo la sua approvazione.`,
           [
             { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
-            { text: 'CONFERMA RESET', style: 'destructive', onPress: () => resolve(true) },
+            { text: 'INVIA RICHIESTA', style: 'destructive', onPress: () => resolve(true) },
           ],
           { cancelable: true, onDismiss: () => resolve(false) }
         );
@@ -344,14 +344,17 @@ export default function AdminCoachDetail() {
         signer_id: coach.id,
         year,
       });
-      const r = resp.data || {};
-      const compSum = (r.coach_compensations || 0) + (r.dirigente_compensations || 0) +
-        (r.collaboratore_compensations || 0) + (r.compensations || 0);
-      const docs = (r.signed_documents_deleted || 0);
-      const thr = (r.threshold_declarations_deleted || 0);
+      const r = resp.data?.results || {};
+      const created = r.deletion_requests_created || 0;
+      const pending = r.deletion_requests_already_pending || 0;
+      const unsigned = r.unsigned_compensations_deleted || 0;
+      const thrUns = r.threshold_declarations_unsigned_deleted || 0;
       showAlert(
-        '✅ Reset completato',
-        `Eliminate:\n• ${compSum} righe compensi\n• ${docs} PDF firmati\n• ${thr} dichiarazioni soglie\n\nRicarico i dati...`
+        '✅ Richieste inviate',
+        `${created} richieste di cancellazione create${pending ? ` (${pending} già in attesa)` : ''}.\n` +
+        (unsigned ? `\n• ${unsigned} quietanze NON firmate eliminate subito` : '') +
+        (thrUns ? `\n• ${thrUns} dichiarazioni soglia non firmate eliminate subito` : '') +
+        `\n\n${fullName} riceverà una notifica e dovrà autorizzare ogni richiesta dalla sua dashboard prima della cancellazione effettiva.`
       );
       await loadData();
       // refresh audit info
@@ -2052,10 +2055,10 @@ export default function AdminCoachDetail() {
               {/* ADMIN UTILITY — Reset quietanze di un anno (irreversibile) */}
               <View style={{ backgroundColor: '#FFEBEE', padding: 10, borderRadius: 10, marginBottom: 12, borderWidth: 1, borderColor: '#FFCDD2' }}>
                 <Text style={{ color: '#B71C1C', fontWeight: '700', fontSize: 12, marginBottom: 6 }}>
-                  🧹 Reset Quietanze (Admin only — test/cleanup)
+                  🧹 Richiedi Reset Quietanze (Admin)
                 </Text>
                 <Text style={{ color: '#7F0000', fontSize: 11, marginBottom: 8 }}>
-                  Cancella TUTTE le quietanze, soglie e PDF firmati di questo coach per l'anno scelto.
+                  Invia richiesta di cancellazione a questo coach per TUTTE le quietanze, soglie e PDF firmati dell'anno scelto. Cancellazione effettiva solo dopo approvazione del firmatario.
                 </Text>
                 {lastReset && lastReset.timestamp && (
                   <Text style={{ color: '#7F0000', fontSize: 10, marginBottom: 8, fontStyle: 'italic' }}>
@@ -2071,7 +2074,7 @@ export default function AdminCoachDetail() {
                       testID={`reset-receipts-${y}`}
                     >
                       <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12, textAlign: 'center' }}>
-                        Reset anno {y}
+                        Richiedi reset {y}
                       </Text>
                     </TouchableOpacity>
                   ))}
