@@ -383,60 +383,33 @@ export default function AdminCollaboratoreDetail() {
     }
   };
 
-  // Admin utility: wipe ALL receipts + threshold declarations + signed PDFs
-  // for this collaboratore + a specific year. Used for testing/cleanup.
-  const handleResetCollabYearReceipts = async (year: number) => {
-    if (!collaboratore || !collaboratore.id) {
-      showAlert('Errore', 'Collaboratore non caricato');
+  // Admin: REQUEST deletion of a single signed receipt (per-mese).
+  const handleRequestDeleteReceipt = async (receipt: any) => {
+    const docId = receipt.receipt_document_id;
+    if (!docId) {
+      showAlert('Errore', 'Documento firmato non trovato per questa quietanza');
       return;
     }
-    const fullName = (collaboratore.full_name ||
-      `${(collaboratore as any).last_name || ''} ${(collaboratore as any).first_name || ''}`).trim();
-    let confirmed = false;
-    if (Platform.OS === 'web') {
-      const typed = window.prompt(
-        `⚠️ Stai per RICHIEDERE A ${fullName.toUpperCase()} il consenso a cancellare TUTTE le quietanze, dichiarazioni soglie e PDF firmati per l'anno ${year}.\n\nLa cancellazione effettiva avverrà SOLO dopo che il firmatario avrà autorizzato ogni singola richiesta dalla sua dashboard (come per Francesca/Agnese).\n\nDigita esattamente "RESET ${year}" per inviare la richiesta:`
-      );
-      confirmed = typed === `RESET ${year}`;
-    } else {
-      confirmed = await new Promise<boolean>((resolve) => {
-        Alert.alert(
-          `Richiedi reset quietanze ${year}`,
-          `Verrà inviata a ${fullName} una richiesta di cancellazione per OGNI quietanza/comunicazione del ${year}. La cancellazione effettiva avverrà solo dopo la sua approvazione.`,
-          [
+    const MONTH_NAMES = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+    const fullName = (collaboratore?.full_name || `${(collaboratore as any)?.last_name || ''} ${(collaboratore as any)?.first_name || ''}`).trim();
+    const msg = `Inviare a ${fullName} la richiesta di cancellazione della quietanza ${MONTH_NAMES[receipt.month]} ${receipt.year}?\n\n⚠️ La cancellazione effettiva avverrà solo dopo l'autorizzazione del firmatario.`;
+    const ok = Platform.OS === 'web'
+      ? window.confirm(msg)
+      : await new Promise<boolean>((resolve) => {
+          Alert.alert('Richiedi cancellazione quietanza', msg, [
             { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
-            { text: 'INVIA RICHIESTA', style: 'destructive', onPress: () => resolve(true) },
-          ],
-          { cancelable: true, onDismiss: () => resolve(false) }
-        );
-      });
-    }
-    if (!confirmed) return;
+            { text: 'Invia richiesta', style: 'destructive', onPress: () => resolve(true) },
+          ]);
+        });
+    if (!ok) return;
     try {
-      const resp = await api.post('/admin/compensations/reset-coach-year', {
-        signer_id: collaboratore.id,
-        year,
-      });
-      const r = resp.data?.results || {};
-      const created = r.deletion_requests_created || 0;
-      const pending = r.deletion_requests_already_pending || 0;
-      const unsigned = r.unsigned_compensations_deleted || 0;
-      const thrUns = r.threshold_declarations_unsigned_deleted || 0;
-      showAlert(
-        '✅ Richieste inviate',
-        `${created} richieste di cancellazione create${pending ? ` (${pending} già in attesa)` : ''}.\n` +
-        (unsigned ? `\n• ${unsigned} quietanze NON firmate eliminate subito` : '') +
-        (thrUns ? `\n• ${thrUns} dichiarazioni soglia non firmate eliminate subito` : '') +
-        `\n\n${fullName} riceverà una notifica e dovrà autorizzare ogni richiesta dalla sua dashboard prima della cancellazione effettiva.`
-      );
+      const resp = await api.delete(`/documents/${docId}`);
+      const m = resp.data?.message || 'Richiesta inviata';
+      showAlert('✅ Richiesta inviata', m);
       await loadData();
-      try {
-        const lr = await api.get(`/admin/audit/last-reset/${collaboratore.id}`);
-        setLastReset(lr.data || null);
-      } catch {}
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail || err?.message || 'Errore sconosciuto';
-      showAlert('Errore Reset', String(msg));
+    } catch (e: any) {
+      const detail = e?.response?.data?.detail || 'Operazione non riuscita';
+      showAlert('Errore', String(detail));
     }
   };
 
@@ -1774,35 +1747,6 @@ export default function AdminCollaboratoreDetail() {
                 </Text>
               </View>
 
-              {/* ADMIN UTILITY — Reset quietanze di un anno (irreversibile) */}
-              <View style={{ backgroundColor: '#FFEBEE', padding: 10, borderRadius: 10, marginBottom: 12, borderWidth: 1, borderColor: '#FFCDD2' }}>
-                <Text style={{ color: '#B71C1C', fontWeight: '700', fontSize: 12, marginBottom: 6 }}>
-                  🧹 Richiedi Reset Quietanze (Admin)
-                </Text>
-                <Text style={{ color: '#7F0000', fontSize: 11, marginBottom: 8 }}>
-                  Invia richiesta di cancellazione a questo collaboratore per TUTTE le quietanze, soglie e PDF firmati dell'anno scelto. Cancellazione effettiva solo dopo approvazione del firmatario.
-                </Text>
-                {lastReset && lastReset.timestamp && (
-                  <Text style={{ color: '#7F0000', fontSize: 10, marginBottom: 8, fontStyle: 'italic' }}>
-                    Ultimo reset: anno {lastReset.year} • {new Date(lastReset.timestamp.endsWith?.('Z') ? lastReset.timestamp : lastReset.timestamp + 'Z').toLocaleString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' })} da {lastReset.admin_name || lastReset.admin_email || 'admin'}
-                  </Text>
-                )}
-                <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
-                  {[new Date().getFullYear(), new Date().getFullYear() - 1].map((y) => (
-                    <TouchableOpacity
-                      key={`reset-y-${y}`}
-                      onPress={() => handleResetCollabYearReceipts(y)}
-                      style={{ backgroundColor: '#C62828', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, flex: 1, minWidth: 130 }}
-                      testID={`reset-receipts-${y}`}
-                    >
-                      <Text style={{ color: '#fff', fontWeight: '600', fontSize: 12, textAlign: 'center' }}>
-                        Richiedi reset {y}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
               {/* Lista quietanze compatta - con calcolo soglie dinamico */}
               {(() => {
                 // Filter only signed receipts
@@ -1891,6 +1835,14 @@ export default function AdminCollaboratoreDetail() {
                         <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#2E7D32' }}>
                           {formatCurrency((receipt.amount_gross || receipt.amount || 0))}
                         </Text>
+                        <TouchableOpacity
+                          onPress={() => handleRequestDeleteReceipt(receipt)}
+                          style={{ marginLeft: 8, padding: 4 }}
+                          testID={`request-delete-receipt-${receipt.month}-${receipt.year}`}
+                          accessibilityLabel="Richiedi cancellazione"
+                        >
+                          <Ionicons name="trash-outline" size={18} color="#C62828" />
+                        </TouchableOpacity>
                       </View>
                     </View>
                   );

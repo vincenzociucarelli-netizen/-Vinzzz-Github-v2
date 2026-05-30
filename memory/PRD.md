@@ -24,6 +24,24 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
 ## Stato Attuale (30/05/2026)
+### ↩️ Correzione: tornati al workflow PER-MESE (30/05/2026)
+**Segnalazione utente**: "Avevo gia usato la funzione che admin chiede la cancellazione di una mensilità ed il coach accetta. Ora sul collaboratore avevo chiesto cancellazione parziali mese per mese ed invece è stato impostato la cancellazione di un periodo 2025 e 2026. E oltretutto non funziona!"
+
+**Cosa avevo fatto male**: nel turno precedente ho creato un workflow di "reset annuale" (un click → richiesta consenso per TUTTO l'anno). Era ridondante perché il workflow per-singolo-mese **esiste già da tempo** in `DELETE /api/documents/{document_id}`.
+
+**Correzione (frontend only — backend non toccato)**:
+- ❌ **RIMOSSO** il box "🧹 Richiedi Reset Quietanze" + i 3 handler `handleResetCoach/Collab/DirigYearReceipts` + il pulsante "Richiedi reset 2026/2025" dalle 3 schede admin (coach, collaboratore, dirigente).
+- ✅ **AGGIUNTO** un pulsante 🗑️ trash-outline accanto a ogni quietanza FIRMATA nella lista "Gestione Quietanze" di tutte e 3 le schede admin.
+- Il pulsante chiama un nuovo handler `handleRequestDeleteReceipt(receipt)` che invoca l'endpoint backend **già esistente** `DELETE /api/documents/{receipt.receipt_document_id}` (workflow consenso).
+- Conferma utente: "Inviare a {NOME} la richiesta di cancellazione della quietanza {Mese} {Anno}? La cancellazione effettiva avverrà solo dopo l'autorizzazione del firmatario."
+
+**Banner del firmatario**:
+- ✅ Già presente per il coach in `/coach/index.tsx` (era stato fatto per Francesca/Agnese).
+- ✅ Lasciato il banner aggiunto nel turno precedente in `/collaboratore/profile.tsx` e `/dirigente/profile.tsx` — utile per visualizzare le richieste arrivate, indipendentemente da come sono state create.
+
+**Test E2E preview verificato**: admin chiama `DELETE /api/documents/{id}` per Quietanza Nov 2025 di FRANZ → risposta `{"message":"Richiesta inoltrata al firmatario...","status":"pending"}` → FRANZ vede la nuova richiesta nel suo banner pending insieme alle altre ✅.
+
+
 ### 🔁 Refactor CRITICO: "Reset Quietanze Anno" ora richiede CONSENSO del firmatario (30/05/2026)
 **Segnalazione utente**: "Admin richiede la cancellazione delle quietanze di Pietro del 2026, ma Pietro resta con le quietanze firmate e nessuna richiesta di cancellazione da accettare. Per Francesca/Agnese (Coach) avevamo già un workflow mese-per-mese con consenso."
 
