@@ -17057,7 +17057,7 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=documento_firmato_{document_id}.pdf"}
+        headers={"Content-Disposition": f"attachment; filename=documento_firmato_{document_id}.pdf", "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
     )
 
 
@@ -17129,7 +17129,7 @@ async def get_consent_pdf(consent_type: str, current_user = Depends(get_current_
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"inline; filename=\"{filename}\""}
+        headers={"Content-Disposition": f"inline; filename=\"{filename}\"", "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
     )
 
 
@@ -20840,7 +20840,7 @@ async def download_document(
         return StreamingResponse(
             io.BytesIO(pdf_bytes),
             media_type="application/pdf",
-            headers={"Content-Disposition": f'inline; filename="documento_{document_id}.pdf"'}
+            headers={"Content-Disposition": f'inline; filename="documento_{document_id}.pdf"', "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
         )
 
     # Generate PDF on-the-fly for registration-time documents (no PDF stored)
@@ -20855,7 +20855,7 @@ async def download_document(
                 return StreamingResponse(
                     io.BytesIO(pdf_bytes),
                     media_type="application/pdf",
-                    headers={"Content-Disposition": f'inline; filename="privacy_{document_id}.pdf"'}
+                    headers={"Content-Disposition": f'inline; filename="privacy_{document_id}.pdf"', "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
                 )
         except Exception as e:
             logger.error(f"Error generating GDPR PDF on-the-fly for {document_id}: {e}", exc_info=True)
@@ -20951,7 +20951,7 @@ async def download_document(
             return StreamingResponse(
                 io.BytesIO(pdf_bytes),
                 media_type="application/pdf",
-                headers={"Content-Disposition": f'inline; filename="privacy_{signer_name.replace(" ", "_")}.pdf"'}
+                headers={"Content-Disposition": f'inline; filename="privacy_{signer_name.replace(" ", "_")}.pdf"', "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
             )
         except Exception as e:
             logger.error(f"Error generating PDF on-the-fly: {e}")
@@ -20981,7 +20981,7 @@ async def download_document(
                     return StreamingResponse(
                         io.BytesIO(pdf_bytes),
                         media_type="application/pdf",
-                        headers={"Content-Disposition": f'inline; filename="comunicazione_soglia_{document_id}.pdf"'}
+                        headers={"Content-Disposition": f'inline; filename="comunicazione_soglia_{document_id}.pdf"', "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
                     )
 
             # For compensation receipts, rebuild the ORIGINAL full PDF (same
@@ -21068,7 +21068,7 @@ async def download_document(
             return StreamingResponse(
                 io.BytesIO(pdf_bytes),
                 media_type="application/pdf",
-                headers={"Content-Disposition": f'inline; filename="{safe_name}_{document_id[:8]}.pdf"'}
+                headers={"Content-Disposition": f'inline; filename="{safe_name}_{document_id[:8]}.pdf"', "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
             )
         except Exception as e:
             logger.error(f"Error generating legacy summary PDF for {document_id}: {e}")
@@ -22427,7 +22427,7 @@ async def generate_bank_card(current_user = Depends(get_current_user)):
     buffer.seek(0)
     
     filename = f"Dati_Bancari_{name.replace(' ', '_')}.jpg"
-    return StreamingResponse(buffer, media_type="image/jpeg", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+    return StreamingResponse(buffer, media_type="image/jpeg", headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"})
 
 # ==================== TRIAL PERIOD ENDPOINTS ====================
 
@@ -22731,7 +22731,7 @@ async def generate_trial_document(athlete_id: str, current_user = Depends(get_cu
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
     )
 
 class TrialSignRequest(BaseModel):
@@ -23164,7 +23164,7 @@ async def sign_trial_document(athlete_id: str, body: TrialSignRequest, request: 
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
     )
 
 @api_router.post("/athletes/{athlete_id}/start-trial")
@@ -24228,7 +24228,7 @@ async def export_full_backup(current_user = Depends(get_current_user)):
     return StreamingResponse(
         iter([buf.getvalue()]),
         media_type="application/zip",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        headers={"Content-Disposition": f"attachment; filename={filename}", "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"},
     )
 
 
@@ -24537,7 +24537,7 @@ async def download_pre_restore_backup(filename: str, current_user = Depends(get_
     return StreamingResponse(
         iter([data]),
         media_type="application/zip",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        headers={"Content-Disposition": f"attachment; filename={filename}", "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"},
     )
 
 
@@ -24594,7 +24594,7 @@ async def export_athletes_csv(current_user = Depends(get_current_user)):
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=atleti_{datetime.now().strftime('%Y%m%d')}.csv"}
+        headers={"Content-Disposition": f"attachment; filename=atleti_{datetime.now().strftime('%Y%m%d')}.csv", "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
     )
 
 @api_router.get("/export-csv/attendances")
@@ -24681,7 +24681,7 @@ async def export_attendances_csv(
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=presenze_{datetime.now().strftime('%Y%m%d')}.csv"}
+        headers={"Content-Disposition": f"attachment; filename=presenze_{datetime.now().strftime('%Y%m%d')}.csv", "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
     )
 
 @api_router.get("/export-csv/compensations")
@@ -24724,7 +24724,7 @@ async def export_compensations_csv(current_user = Depends(get_current_user)):
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=compensi_{datetime.now().strftime('%Y%m%d')}.csv"}
+        headers={"Content-Disposition": f"attachment; filename=compensi_{datetime.now().strftime('%Y%m%d')}.csv", "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
     )
 
 @api_router.get("/export-csv/audit-logs")
@@ -24773,7 +24773,7 @@ async def export_audit_logs_csv(
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=audit_logs_{datetime.now().strftime('%Y%m%d')}.csv"}
+        headers={"Content-Disposition": f"attachment; filename=audit_logs_{datetime.now().strftime('%Y%m%d')}.csv", "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
     )
 
 @api_router.get("/export-csv/prima-nota")
@@ -24885,7 +24885,7 @@ async def export_prima_nota_csv(current_user = Depends(get_current_user)):
     return StreamingResponse(
         iter([output.getvalue()]),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=prima_nota_cassa_{season_str.replace('/', '-')}_{datetime.now().strftime('%Y%m%d')}.csv"}
+        headers={"Content-Disposition": f"attachment; filename=prima_nota_cassa_{season_str.replace('/', '-')}_{datetime.now().strftime('%Y%m%d')}.csv", "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
     )
 
 @api_router.get("/export-xlsx/registro")

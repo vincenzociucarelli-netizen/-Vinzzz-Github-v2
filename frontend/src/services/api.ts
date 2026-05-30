@@ -17,6 +17,22 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // CACHE BUSTING for PDF / blob downloads: append a fresh timestamp so the
+    // browser never returns a cached response from another user (regression
+    // happened when Lella saw VERDI VINCENZO's GDPR PDF). Applied to every GET
+    // that asks for binary data or hits a /documents/* endpoint.
+    try {
+      const method = String(config.method || 'get').toLowerCase();
+      const url = String(config.url || '');
+      const isBinary = config.responseType === 'blob' || config.responseType === 'arraybuffer';
+      const isDocEndpoint = /\/documents(\/|$)/.test(url) || /\/threshold(s)?(\/|$)/.test(url);
+      if (method === 'get' && (isBinary || isDocEndpoint)) {
+        config.params = { ...(config.params || {}), _t: Date.now() };
+        config.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+        config.headers['Pragma'] = 'no-cache';
+        config.headers['Expires'] = '0';
+      }
+    } catch {/* ignore */}
     return config;
   },
   (error) => {

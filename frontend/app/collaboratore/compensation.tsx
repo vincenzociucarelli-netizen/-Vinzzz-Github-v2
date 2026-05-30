@@ -407,11 +407,21 @@ export default function CollaboratoreCompensation() {
       const thresholdAmount = declarationType === '5000' ? '5.000' : '15.000';
       const monthName = MONTH_NAMES[monthToUse || 0];
       
-      // Show PDF if available
+      // Show PDF if available — DOWNLOAD as file (not window.open in PWA tab,
+      // because on Android the user can't close it and pressing back kicks
+      // them out of the app).
       if (response.data.pdf_base64 && Platform.OS === 'web') {
         const pdfBlob = base64ToBlob(response.data.pdf_base64, 'application/pdf');
         const pdfUrl = URL.createObjectURL(pdfBlob);
-        window.open(pdfUrl, '_blank');
+        const a = document.createElement('a');
+        a.href = pdfUrl;
+        a.download = `Dichiarazione_Soglia_${declarationType}_${monthName}_${selectedYear}.pdf`;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(pdfUrl), 2000);
       }
       
       Alert.alert(
@@ -484,11 +494,19 @@ export default function CollaboratoreCompensation() {
       // Close modal FIRST, then show success message
       closeSignatureModal();
       
-      // Show PDF if available
+      // Show PDF if available — DOWNLOAD (not window.open in PWA tab)
       if (response.data.pdf_base64 && Platform.OS === 'web') {
         const pdfBlob = base64ToBlob(response.data.pdf_base64, 'application/pdf');
         const pdfUrl = URL.createObjectURL(pdfBlob);
-        window.open(pdfUrl, '_blank');
+        const a = document.createElement('a');
+        a.href = pdfUrl;
+        a.download = `Quietanza_${selectedMonth}_${selectedYear}.pdf`;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(pdfUrl), 2000);
       }
       
       Alert.alert(
@@ -1033,7 +1051,7 @@ export default function CollaboratoreCompensation() {
         </TouchableOpacity>
         {/* BRANDING_WRAPPED */}
           <View style={{ flex: 1, marginHorizontal: 8 }}>
-            <SocietyBranding />
+            <SocietyBranding light={false} />
             <Text style={styles.headerTitle}>Compensi Sportivi</Text>
           </View>
         <View style={{ width: 40 }} />
