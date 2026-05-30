@@ -780,75 +780,41 @@ export default function CollaboratoreCompensation() {
         );
       }
       
-      // Warning for approaching €5.000 in 2026 (not yet signed)
-      if (thresholdStatus2026.thresholds['5000'].needs_warning && !thresholdStatus2026.thresholds['5000'].declaration_signed) {
+      // Warning for €5.000 in 2026 — stays visible from "approaching" through
+      // "exceeded but declaration not yet signed". Once the declaration is
+      // signed the LIGHT-BLUE "signed" banner above takes over.
+      if ((thresholdStatus2026.thresholds['5000'].needs_warning || thresholdStatus2026.thresholds['5000'].needs_declaration) && !thresholdStatus2026.thresholds['5000'].declaration_signed) {
+        const m1y2 = thresholdStatus2026.thresholds['5000'].threshold_month;
+        const monthLabel1y2 = (m1y2 && m1y2 >= 1 && m1y2 <= 12) ? ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][m1y2] : (thresholdMonth5k_y2 || '');
+        const isExceeded = thresholdStatus2026.thresholds['5000'].needs_declaration;
         warnings.push(
           <View key="warning-5000-2026" style={styles.thresholdWarningBox5k}>
             <Text style={styles.thresholdWarningTitle5k}>⚠️ Anno {year2026}: Soglia dei €5.000</Text>
             <Text style={[styles.thresholdWarningText5k, { textAlign: 'center', lineHeight: 18, marginTop: 4 }]}>
-              Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{thresholdMonth5k_y2}</Text> supererai la soglia previdenziale di €5.000.
+              {isExceeded
+                ? <>Soglia previdenziale di €5.000 superata nel mese di <Text style={{ fontWeight: 'bold' }}>{monthLabel1y2}</Text>.</>
+                : <>Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{monthLabel1y2}</Text> supererai la soglia previdenziale di €5.000.</>}
             </Text>
             <Text style={[styles.thresholdWarningText5k, { textAlign: 'center', fontStyle: 'italic', marginTop: 4 }]}>Contributi previdenziali INPS</Text>
           </View>
         );
       }
-      
-      // Warning for approaching €15.000 in 2026 (not yet signed)
-      if (thresholdStatus2026.thresholds['15000'].needs_warning && !thresholdStatus2026.thresholds['15000'].declaration_signed) {
+
+      // Warning for €15.000 in 2026 — same logic as 5k
+      if ((thresholdStatus2026.thresholds['15000'].needs_warning || thresholdStatus2026.thresholds['15000'].needs_declaration) && !thresholdStatus2026.thresholds['15000'].declaration_signed) {
+        const m2y2 = thresholdStatus2026.thresholds['15000'].threshold_month;
+        const monthLabel2y2 = (m2y2 && m2y2 >= 1 && m2y2 <= 12) ? ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'][m2y2] : (thresholdMonth15k_y2 || '');
+        const isExceeded = thresholdStatus2026.thresholds['15000'].needs_declaration;
         warnings.push(
           <View key="warning-15000-2026" style={styles.thresholdWarningBox15k}>
             <Text style={styles.thresholdWarningTitle15k}>🚨 Anno {year2026}: Soglia dei €15.000</Text>
             <Text style={[styles.thresholdWarningText15k, { textAlign: 'center', lineHeight: 18, marginTop: 4 }]}>
-              Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{thresholdMonth15k_y2}</Text> supererai la soglia fiscale di €15.000.
+              {isExceeded
+                ? <>Soglia fiscale di €15.000 superata nel mese di <Text style={{ fontWeight: 'bold' }}>{monthLabel2y2}</Text>.</>
+                : <>Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{monthLabel2y2}</Text> supererai la soglia fiscale di €15.000.</>}
             </Text>
             <Text style={[styles.thresholdWarningText15k, { textAlign: 'center', fontStyle: 'italic', marginTop: 4 }]}>Tassazione IRPEF obbligatoria</Text>
           </View>
-        );
-      }
-
-      // Blocked: needs €5.000 declaration for year 2026
-      if (thresholdStatus2026.thresholds['5000'].needs_declaration) {
-        warnings.push(
-          <TouchableOpacity
-            key="blocked-5000-2026"
-            style={[styles.thresholdBanner, styles.blockedBanner]}
-            onPress={() => openDeclarationModal('5000')}
-            data-testid="declaration-5000-2026-btn"
-          >
-            <Ionicons name="lock-closed" size={18} color="#fff" />
-            <View style={styles.thresholdBannerContent}>
-              <Text style={[styles.thresholdBannerTitle, { color: '#fff' }]}>
-                Anno {year2026}: Dichiarazione €5.000 richiesta
-              </Text>
-              <Text style={[styles.thresholdBannerText, { color: '#fff' }]}>
-                Tocca qui per firmare la dichiarazione e sbloccare le quietanze
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#fff" />
-          </TouchableOpacity>
-        );
-      }
-
-      // Blocked: needs €15.000 declaration for year 2026
-      if (thresholdStatus2026.thresholds['15000'].needs_declaration) {
-        warnings.push(
-          <TouchableOpacity
-            key="blocked-15000-2026"
-            style={[styles.thresholdBanner, styles.blockedBanner, { backgroundColor: '#721C24' }]}
-            onPress={() => openDeclarationModal('15000')}
-            data-testid="declaration-15000-2026-btn"
-          >
-            <Ionicons name="lock-closed" size={18} color="#fff" />
-            <View style={styles.thresholdBannerContent}>
-              <Text style={[styles.thresholdBannerTitle, { color: '#fff' }]}>
-                URGENTE: Anno {year2026} — Dichiarazione €15.000 richiesta
-              </Text>
-              <Text style={[styles.thresholdBannerText, { color: '#fff' }]}>
-                Tocca qui per firmare la dichiarazione fiscale
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#fff" />
-          </TouchableOpacity>
         );
       }
     }
