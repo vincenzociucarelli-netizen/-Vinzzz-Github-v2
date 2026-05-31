@@ -276,6 +276,32 @@ export default function CoachCompensation() {
     
     const targetYear = year || currentYear;
     
+    // CRONOLOGICAL ORDER CHECK: prevent signing a month if any prior contract
+    // month is still unsigned (avoids out-of-order thresholds).
+    if (contractStartYear && contractStartMonth) {
+      const monthNamesLong = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+        'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+      const endYear = contractEndYear || targetYear;
+      const endMonth = contractEndMonth || 12;
+      let blocked = false;
+      for (let y = contractStartYear; y <= endYear && !blocked; y++) {
+        const mStart = y === contractStartYear ? contractStartMonth : 1;
+        const mEnd = y === endYear ? endMonth : 12;
+        for (let m = mStart; m <= mEnd; m++) {
+          if (y > targetYear || (y === targetYear && m >= month)) { blocked = true; break; }
+          const isSigned = records.some(r => r.year === y && matchesMonth(r.month, m) && r.receipt_signed);
+          if (!isSigned) {
+            Alert.alert(
+              'Ordine cronologico richiesto',
+              `Devi prima firmare la quietanza di ${monthNamesLong[m]} ${y}. Le quietanze vanno firmate in ordine cronologico.`,
+              [{ text: 'OK' }]
+            );
+            return;
+          }
+        }
+      }
+    }
+    
     // Check if there's an existing record with a custom amount set by Admin
     const existingRecord = records.find(r => matchesMonth(r.month, month) && r.year === targetYear);
     const amountForThisMonth = existingRecord?.amount_gross || existingRecord?.amount || profile?.monthly_compensation || 0;

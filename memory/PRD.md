@@ -23,6 +23,17 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🔧 Fix 31/05/2026 — Enforcement ordine cronologico firma quietanze
+
+**Motivazione**: il bug di Filippa (Maggio firmato prima di Marzo/Aprile) ha confuso il calcolo soglie. Per prevenirlo alla radice, ora il frontend blocca la firma fuori ordine cronologico in tutti i ruoli (coach, collaboratore, dirigente).
+
+**Fix applicato** in `handleOpenSignature` dei 3 file `compensation.tsx`:
+Prima di aprire il modal di firma, scansiona tutti i mesi del periodo contrattuale che precedono cronologicamente il mese target. Se anche solo uno è non firmato → Alert "Devi prima firmare la quietanza di {Mese} {Anno}. Le quietanze vanno firmate in ordine cronologico." e return.
+
+Esempio: Filippa con Gen+Feb 2026 firmati prova a cliccare Maggio → Alert "Devi prima firmare la quietanza di Marzo 2026".
+
+---
+
 ## 🔧 Fix 31/05/2026 — Sfondo viola + Calcolo soglie cronologico
 
 **Segnalazioni utente (Filippa, foto)**:
