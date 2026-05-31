@@ -833,30 +833,41 @@ export default function CoachCompensation() {
   // Find first month where each threshold was exceeded based on PROJECTED
   // cumulative (signed + unsigned). Used for coloring month cards so that
   // the user can SEE in advance which months will be above 5k/15k.
+  //
+  // CRITICAL: we project ALL 12 months of every relevant year using the
+  // user's `monthly_compensation` for months that don't have a DB record
+  // yet. Otherwise, before signing any quietanza, no records exist → no
+  // cumulative → no >5K/>15K badge shown (bug reported 30/05/2026).
   const getProjectedThresholdMonths = () => {
-    const sorted = [...records].sort((a, b) => {
-      if (a.year !== b.year) return a.year - b.year;
-      return a.month - b.month;
-    });
     const thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } } = {};
-    const cumulativeByYear: { [year: number]: number } = {};
-    if (contractStartYear && priorCompensation > 0) {
-      cumulativeByYear[contractStartYear] = priorCompensation;
+    const monthlyDefault = profile?.monthly_compensation || 0;
+
+    // Build a quick map: "year-month" → amount (from DB record), else default
+    const recordMap: { [key: string]: number } = {};
+    for (const r of records) {
+      recordMap[`${r.year}-${r.month}`] = r.amount_gross || r.amount || monthlyDefault;
     }
-    for (const r of sorted) {
-      if (!thresholdsByYear[r.year]) {
-        thresholdsByYear[r.year] = { first5k: null, first15k: null };
-      }
-      if (!cumulativeByYear[r.year]) {
-        cumulativeByYear[r.year] = r.year === contractStartYear ? (priorCompensation || 0) : 0;
-      }
-      const actualAmount = r.amount_gross || r.amount || profile?.monthly_compensation || 0;
-      cumulativeByYear[r.year] += actualAmount;
-      if (cumulativeByYear[r.year] > 5000 && thresholdsByYear[r.year].first5k === null) {
-        thresholdsByYear[r.year].first5k = r.month;
-      }
-      if (cumulativeByYear[r.year] > 15000 && thresholdsByYear[r.year].first15k === null) {
-        thresholdsByYear[r.year].first15k = r.month;
+
+    // Discover all years to project: contract start year, current year, any year present in records
+    const yearsSet = new Set<number>();
+    if (contractStartYear) yearsSet.add(contractStartYear);
+    yearsSet.add(currentYear);
+    records.forEach(r => yearsSet.add(r.year));
+    const years = Array.from(yearsSet).sort();
+
+    for (const y of years) {
+      thresholdsByYear[y] = { first5k: null, first15k: null };
+      let cumul = (y === contractStartYear && priorCompensation > 0) ? priorCompensation : 0;
+      for (let m = 1; m <= 12; m++) {
+        const amount = recordMap[`${y}-${m}`] !== undefined ? recordMap[`${y}-${m}`] : monthlyDefault;
+        if (amount <= 0) continue;
+        cumul += amount;
+        if (cumul > 5000 && thresholdsByYear[y].first5k === null) {
+          thresholdsByYear[y].first5k = m;
+        }
+        if (cumul > 15000 && thresholdsByYear[y].first15k === null) {
+          thresholdsByYear[y].first15k = m;
+        }
       }
     }
     return thresholdsByYear;
