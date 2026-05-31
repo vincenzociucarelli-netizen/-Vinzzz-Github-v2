@@ -23,6 +23,44 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🔧 Fix 31/05/2026 — Sfondo viola + Calcolo soglie cronologico
+
+**Segnalazioni utente (Filippa, foto)**:
+1. Dicembre 2025 ha badge `>15K` viola ma sfondo arancio (dovrebbe essere viola).
+2. Aprile 2026 ha badge `>15K` viola ma sfondo bianco (dovrebbe essere viola).
+3. Cliccando **Marzo 2026** (cumul=14700, sotto 15k) appare la dichiarazione di superamento €15k — ma il superamento dovrebbe arrivare con Aprile.
+
+**Root cause**:
+
+**Bug 1 (sfondo)**: lo sfondo viola `#F3E5F5` veniva applicato SOLO ai mesi `status === 'signed'`. I mesi blocked/pending con badge `>15K` rimanevano con il colore di default (arancio per blocked, bianco per pending).
+
+**Bug 2 (firma Marzo)**: la query nel backend `sign_collaboratore_compensation_receipt` (e analoghe per coach/dirigente) usava `"month": {"$ne": request.month}` — escludeva solo il mese corrente ma includeva i mesi futuri già firmati. Per Filippa, Maggio 2026 era già firmato. Quando firmava Marzo:
+- yearly_total = Gen+Feb+Mag = 14700 (sbagliato — include Maggio futuro!)
+- new_total = 14700 + 4900 = 19600 > 15000
+- `first_time_exceeded_15000 = True` → attaccava erroneamente la Comunicazione €15k a Marzo.
+
+**Fix applicati**:
+
+**Backend** (`server.py`, 3 endpoint):
+- `sign_coach_compensation_receipt` (linea 13270)
+- `sign_dirigente_compensation_receipt` (linea 18060)
+- `sign_collaboratore_compensation_receipt` (linea 18763)
+
+Cambiato `"month": {"$ne": request.month}` → `"month": {"$lt": request.month}` (solo mesi cronologicamente precedenti).
+
+**Frontend** (3 file `compensation.tsx`):
+- `getMonthCard` style: ora applica sfondo viola/arancio in base alla soglia per **tutti gli status** (non solo signed).
+- `handleOpenSignature`: filtro `r.month < month` per cumulativa cronologica.
+- `handleSign`: filtro `r.month < selectedMonth` per cumulativa cronologica.
+
+**Verifica logica Marzo 2026 dopo fix**:
+- yearly_total = Gen+Feb = 9800 (esclude Mag perché month >= 3)
+- new_total = 14700 → `first_time_exceeded_15000 = false` ✓
+- Marzo si firma normalmente. ✓
+- Aprile (cumul prima = 14700, new=19600) → first_time_exceeded_15000 = true ✓
+
+---
+
 ## 🔧 Fix 31/05/2026 — Badge soglie su contratti che non partono a gennaio
 
 **Segnalazione utente (Filippa, foto allegate)**:

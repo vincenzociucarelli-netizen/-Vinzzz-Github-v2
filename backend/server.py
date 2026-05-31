@@ -13271,7 +13271,7 @@ async def sign_compensation_receipt(
         "coach_id": coach_id,
         "year": request.year,
         "receipt_signed": True,  # Only count already SIGNED receipts
-        "month": {"$ne": request.month}  # Exclude current month
+        "month": {"$lt": request.month}  # Only months BEFORE this one (chronological order)
     }).to_list(12)
     
     yearly_total_from_receipts = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
@@ -18061,7 +18061,7 @@ async def sign_dirigente_compensation_receipt(
         "dirigente_id": dirigente_id,
         "year": request.year,
         "receipt_signed": True,  # Only count already SIGNED receipts
-        "month": {"$ne": request.month}  # Exclude current month
+        "month": {"$lt": request.month}  # Only months BEFORE this one (chronological order)
     }).to_list(12)
     
     yearly_total_from_receipts = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
@@ -18764,7 +18764,7 @@ async def sign_collaboratore_compensation_receipt(
         "collaboratore_id": collaboratore_id,
         "year": request.year,
         "receipt_signed": True,
-        "month": {"$ne": request.month}  # Exclude current month
+        "month": {"$lt": request.month}  # Only months BEFORE this one (chronological order)
     }).to_list(12)
     
     # Also check coach_compensations as backup (some data may be stored there)
@@ -18772,7 +18772,7 @@ async def sign_collaboratore_compensation_receipt(
         "coach_id": collaboratore_id,
         "year": request.year,
         "receipt_signed": True,
-        "month": {"$ne": request.month}  # Exclude current month
+        "month": {"$lt": request.month}  # Only months BEFORE this one (chronological order)
     }).to_list(12)
     
     yearly_total_collab = sum(r.get("amount_gross", 0) for r in yearly_records)

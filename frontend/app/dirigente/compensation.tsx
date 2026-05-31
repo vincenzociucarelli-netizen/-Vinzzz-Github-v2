@@ -226,7 +226,7 @@ export default function DirigenteCompensation() {
       contractStartYearLocal = parseInt(profile.contract_start_date.split('-')[0]);
     }
     
-    const yearRecords = records.filter(r => r.year === targetYear && r.receipt_signed);
+    const yearRecords = records.filter(r => r.year === targetYear && r.receipt_signed && r.month < month);
     const yearTotalFromReceipts = yearRecords.reduce((sum, r) => sum + (r.amount_gross || r.amount || 0), 0);
     const yearTotalBeforeThis = (targetYear === contractStartYearLocal) 
       ? yearTotalFromReceipts + priorComp 
@@ -348,7 +348,7 @@ export default function DirigenteCompensation() {
       
       const priorComp = profile.other_annual_compensation || 0;
       
-      const yearRecords = records.filter(r => r.year === selectedYear && r.receipt_signed);
+      const yearRecords = records.filter(r => r.year === selectedYear && r.receipt_signed && r.month < selectedMonth);
       const yearTotalFromReceipts = yearRecords.reduce((sum, r) => sum + (r.amount_gross || r.amount || 0), 0);
       
       let contractStartYearLocal = null;
@@ -831,9 +831,11 @@ export default function DirigenteCompensation() {
           styles.monthCard,
           getCardStyle(),
           // Purple background when exceeded €15k (signed)
-          isAfter15k && status === 'signed' && { backgroundColor: '#F3E5F5', borderColor: '#8E44AD' },
-          // Threshold tint for unsigned/blocked/future cards
-          status !== 'signed' && thresholdInlineStyle,
+          // Threshold tint applied to ALL statuses (signed, blocked, pending, future)
+          // so that >5K months appear orange and >15K months appear purple even
+          // before signing.
+          isAfter15k && { backgroundColor: '#F3E5F5', borderColor: '#8E44AD' },
+          isAfter5k && !isAfter15k && { backgroundColor: '#FFF8E1', borderColor: '#F9A825' },
         ]}
         onPress={() => (status === 'pending' || status === 'blocked') && handleOpenSignature(month, displayYear)}
         disabled={status === 'future'}

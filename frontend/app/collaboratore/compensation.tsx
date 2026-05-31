@@ -296,8 +296,10 @@ export default function CollaboratoreCompensation() {
       contractStartYearLocal = parseInt(profile.contract_start_date.split('-')[0]);
     }
     
-    // Calculate total before this month - use matchesMonth helper for legacy support
-    const yearRecords = records.filter(r => r.year === targetYear && r.receipt_signed);
+    // Calculate total before this month - chronological order matters!
+    // Only include months BEFORE the target month (signing out-of-order would
+    // wrongly attribute threshold-crossing to the current month).
+    const yearRecords = records.filter(r => r.year === targetYear && r.receipt_signed && r.month < month);
     const yearTotalFromReceipts = yearRecords.reduce((sum, r) => sum + (r.amount_gross || r.amount || 0), 0);
     const yearTotalBeforeThis = (targetYear === contractStartYearLocal) 
       ? yearTotalFromReceipts + priorComp 
@@ -459,8 +461,8 @@ export default function CollaboratoreCompensation() {
       
       const priorComp = profile.other_annual_compensation || 0;
       
-      // Calculate total for the selected year (not current display year)
-      const yearRecords = records.filter(r => r.year === selectedYear && r.receipt_signed);
+      // Calculate total for the selected year (chronological order — only months BEFORE this one)
+      const yearRecords = records.filter(r => r.year === selectedYear && r.receipt_signed && r.month < selectedMonth);
       const yearTotalFromReceipts = yearRecords.reduce((sum, r) => sum + (r.amount_gross || r.amount || 0), 0);
       
       // Get contract start year to determine if prior compensation applies
@@ -976,10 +978,11 @@ export default function CollaboratoreCompensation() {
         style={[
           styles.monthCard,
           getCardStyle(),
-          // Purple background when exceeded €15k (signed)
-          isAfter15k && status === 'signed' && { backgroundColor: '#F3E5F5', borderColor: '#8E44AD' },
-          // Threshold tint for unsigned/blocked/future cards
-          status !== 'signed' && thresholdInlineStyle,
+          // Threshold tint applied to ALL statuses (signed, blocked, pending, future)
+          // so that >5K months appear orange and >15K months appear purple even
+          // before signing.
+          isAfter15k && { backgroundColor: '#F3E5F5', borderColor: '#8E44AD' },
+          isAfter5k && !isAfter15k && { backgroundColor: '#FFF8E1', borderColor: '#F9A825' },
         ]}
         onPress={() => (status === 'pending' || status === 'blocked') && handleOpenSignature(month, displayYear)}
         disabled={status === 'future'}
