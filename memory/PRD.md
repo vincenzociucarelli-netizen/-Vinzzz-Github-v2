@@ -23,6 +23,42 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## ✨ 31/05/2026 — Email automatica al Coach per consensi immagini negati
+
+**Estensione GDPR**: aggiunta funzionalità per notificare via email il coach (con copia all'email istituzionale della società) con l'elenco degli atleti della sua squadra **senza consenso uso immagini**.
+
+### Backend
+`POST /api/admin/athletes/image-consents/notify-team`
+Body: `{"team_id": "...", "consent_type": "images_promo"|"images_internal"}`
+
+Logica:
+1. Trova i coach assegnati alla squadra (`users.assigned_team_ids` o `assigned_team_id`)
+2. Recupera email istituzionale della società da `settings.society_email`
+3. Calcola elenco atleti senza consenso applicando la regola multi-genitore
+4. Invia email HTML strutturata via Brevo (con CC) a ogni coach
+5. Restituisce conferma con elenco destinatari + atleti elencati
+
+L'email contiene:
+- Header con nome squadra
+- Tipo di consenso oggetto della comunicazione
+- Box di alert con lista degli atleti da escludere (incluso "negato da: nome genitore" quando rilevante)
+- Istruzioni operative: come comportarsi durante foto di squadra
+- Nota sulla mutabilità del consenso
+
+### Frontend
+Nuovo pulsante verde **"📧 Notifica coach (p.c. società)"** visibile solo quando:
+- Il gruppo squadra è espanso
+- `only_denied = true` (vista "Solo NEGATI")
+- C'è almeno un atleta nella squadra
+
+Con conferma `window.confirm` prima dell'invio e feedback al completamento.
+
+### Comportamento gestito
+- Se squadra senza coach: 400 con messaggio "Assegna un coach prima di inviare la notifica"
+- Email istituzionale non duplicata se coincide con un'email coach
+
+---
+
 ## ✨ 31/05/2026 — Nuova funzionalità: Consensi Immagini Atleti
 
 **Richiesta utente**: avere una lista degli atleti che NON hanno concesso l'uso della loro immagine per fini promozionali, raggruppata per squadra.

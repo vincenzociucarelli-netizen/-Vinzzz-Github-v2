@@ -49,6 +49,7 @@ export default function ImageConsentsPage() {
   const [total, setTotal] = useState(0);
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [notifying, setNotifying] = useState<string | null>(null);
 
   const loadTeams = useCallback(async () => {
     try {
@@ -129,6 +130,46 @@ export default function ImageConsentsPage() {
   const toggleExpand = (teamId: string | null) => {
     const k = teamId || '_none_';
     setExpanded((prev) => ({ ...prev, [k]: !prev[k] }));
+  };
+
+  const notifyTeam = async (teamId: string | null, teamName: string) => {
+    if (!teamId) {
+      if (Platform.OS === 'web') {
+        window.alert('Impossibile inviare email per il gruppo "Senza squadra".');
+      }
+      return;
+    }
+    const msg = `Inviare email al coach di ${teamName} con la lista degli atleti senza consenso ${
+      consentType === 'images_promo' ? 'promozionale' : 'uso interno'
+    }? (in copia all\'email della società)`;
+    const ok = Platform.OS === 'web'
+      ? window.confirm(msg)
+      : true;
+    if (!ok) return;
+    try {
+      setNotifying(teamId);
+      const res = await api.post('/admin/athletes/image-consents/notify-team', {
+        team_id: teamId,
+        consent_type: consentType,
+      });
+      const data = res.data;
+      const sentTo = (data.sent_to || []).join(', ');
+      const cc = (data.cc || []).join(', ');
+      const successMsg =
+        `Email inviata a ${data.sent_to.length} coach (${sentTo})` +
+        (cc ? `\nIn copia: ${cc}` : '') +
+        `\nAtleti senza consenso elencati: ${data.denied_count}`;
+      if (Platform.OS === 'web') {
+        window.alert(successMsg);
+      }
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail || 'Errore nell\'invio dell\'email';
+      if (Platform.OS === 'web') {
+        window.alert('❌ ' + msg);
+      }
+    } finally {
+      setNotifying(null);
+    }
   };
 
   const consentLabel = consentType === 'images_promo' ? 'promozionale' : 'uso interno';
@@ -307,6 +348,28 @@ export default function ImageConsentsPage() {
                     <Text style={styles.countBadgeText}>{g.count}</Text>
                   </View>
                 </TouchableOpacity>
+                {isOpen && g.team_id && onlyDenied && (
+                  <TouchableOpacity
+                    style={[
+                      styles.notifyBtn,
+                      notifying === g.team_id && { opacity: 0.6 },
+                    ]}
+                    onPress={() => notifyTeam(g.team_id, g.team_name)}
+                    disabled={notifying === g.team_id}
+                    data-testid={`notify-coach-${g.team_id}`}
+                  >
+                    {notifying === g.team_id ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Ionicons name="mail-outline" size={16} color="#fff" />
+                    )}
+                    <Text style={styles.notifyBtnText}>
+                      {notifying === g.team_id
+                        ? 'Invio in corso...'
+                        : 'Notifica coach (p.c. società)'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 {isOpen && (
                   <View style={styles.athleteList}>
                     {g.athletes.map((a) => (
@@ -447,6 +510,20 @@ const styles = StyleSheet.create({
   },
   countBadgeText: { color: '#fff', fontWeight: 'bold', fontSize: 12 },
   athleteList: { backgroundColor: '#fff' },
+  notifyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#388E3C',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginHorizontal: 12,
+    marginTop: 10,
+    marginBottom: 4,
+    borderRadius: 6,
+  },
+  notifyBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
   athleteRow: {
     flexDirection: 'row',
     alignItems: 'center',

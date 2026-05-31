@@ -26835,6 +26835,175 @@ async def admin_list_image_consents(
 # ─────────────────────────── /Consensi Immagini ───────────────────────────
 
 
+@api_router.post("/admin/athletes/image-consents/notify-team")
+async def admin_notify_team_image_consents(
+    payload: dict = Body(...),
+    current_user = Depends(get_current_user),
+):
+    """Admin: invia un'email al coach (e p.c. società) con la lista degli atleti
+    della sua squadra SENZA consenso uso immagini, per uso operativo (es. foto
+    di squadra a fine partita).
+
+    Body JSON: {"team_id": "...", "consent_type": "images_promo" | "images_internal"}
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    team_id = payload.get("team_id")
+    consent_type = payload.get("consent_type", "images_promo")
+    if not team_id:
+        raise HTTPException(status_code=400, detail="team_id obbligatorio")
+    if consent_type not in ("images_promo", "images_internal"):
+        raise HTTPException(status_code=400, detail="consent_type non valido")
+
+    society_id = current_user.get("society_id")
+
+    # Resolve team
+    team = await db.teams.find_one({"id": team_id, "society_id": society_id}, {"_id": 0})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+
+    # Find coaches assigned to this team
+    coaches = await db.users.find(
+        {
+            "society_id": society_id,
+            "role": UserRole.COACH,
+            "$or": [
+                {"assigned_team_ids": team_id},
+                {"assigned_team_id": team_id},
+            ],
+        },
+        {"_id": 0, "id": 1, "full_name": 1, "email": 1},
+    ).to_list(50)
+    if not coaches:
+        raise HTTPException(
+            status_code=400,
+            detail="Nessun coach assegnato a questa squadra. Assegna un coach prima di inviare la notifica.",
+        )
+
+    # Society email (cc)
+    society_settings = await db.settings.find_one(
+        {"type": "society", "society_id": society_id}, {"_id": 0}
+    ) or await db.settings.find_one({"type": "society"}, {"_id": 0}) or {}
+    society_email = society_settings.get("society_email")
+    society_name = society_settings.get("ragione_sociale") or society_settings.get("society_name") or "la società"
+
+    # Fetch athletes (denied only) for this team
+    athletes = await db.athletes.find(
+        {"society_id": society_id, "team_id": team_id}, {"_id": 0}
+    ).to_list(2000)
+    parent_ids = {pid for a in athletes for pid in [a.get("parent_id"), a.get("second_parent_id")] if pid}
+    parents = await db.users.find(
+        {"id": {"$in": list(parent_ids)}},
+        {"_id": 0, "id": 1, "full_name": 1, "email": 1},
+    ).to_list(2000) if parent_ids else []
+    parent_info = {p["id"]: p for p in parents}
+
+    def _extract(entry):
+        if isinstance(entry, bool):
+            return entry
+        if isinstance(entry, dict):
+            return entry.get("value", False)
+        return False
+
+    denied_rows = []
+    for a in athletes:
+        consents = a.get("consents") or {}
+        athlete_parent_ids = [pid for pid in [a.get("parent_id"), a.get("second_parent_id")] if pid]
+        parent_states = {}
+        for pid in athlete_parent_ids:
+            key = f"{consent_type}__{pid}"
+            if key in consents:
+                parent_states[pid] = _extract(consents[key])
+            elif pid == a.get("parent_id") and consent_type in consents:
+                parent_states[pid] = _extract(consents[consent_type])
+        if parent_states:
+            final_value = all(parent_states.values())
+            denied_by_names = [
+                (parent_info.get(pid) or {}).get("full_name") or (parent_info.get(pid) or {}).get("email") or pid
+                for pid, v in parent_states.items() if not v
+            ]
+        else:
+            raw = consents.get(consent_type)
+            final_value = _extract(raw) if raw is not None else False
+            denied_by_names = []
+        if final_value:
+            continue
+        full_name = f"{a.get('last_name','')} {a.get('first_name','')}".strip() or a.get("full_name", "—")
+        denied_rows.append({"name": full_name, "denied_by": denied_by_names})
+
+    consent_label = "promozionale (social, sito, materiale promozionale)" if consent_type == "images_promo" else "uso interno (gruppi WhatsApp, archivio storico)"
+    team_name = team.get("name", "—")
+
+    if not denied_rows:
+        rows_html = "<p style='color:#2E7D32; font-weight:bold;'>✅ Tutti gli atleti di questa squadra hanno dato il consenso. Nessuna restrizione.</p>"
+    else:
+        rows_html = "<ul style='padding-left:20px; line-height:1.7;'>"
+        for r in denied_rows:
+            extra = f" <span style='color:#666;font-size:12px;'>(negato da: {' · '.join(r['denied_by'])})</span>" if r['denied_by'] else ""
+            rows_html += f"<li><strong>{r['name']}</strong>{extra}</li>"
+        rows_html += "</ul>"
+
+    html = f"""
+<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+  <div style="background: #1976D2; color: #fff; padding: 20px; border-radius: 8px 8px 0 0;">
+    <h2 style="margin:0;">📸 Consensi Immagini — Squadra {team_name}</h2>
+  </div>
+  <div style="background: #fff; padding: 24px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;">
+    <p>Ciao,</p>
+    <p>Per garantire il rispetto del GDPR e della privacy dei tuoi atleti, ti inviamo l'elenco aggiornato degli atleti della squadra <strong>{team_name}</strong> che <strong>NON hanno prestato consenso</strong> per l'uso delle immagini ad uso <strong>{consent_label}</strong>.</p>
+    <div style="background: #FFF3E0; border-left: 4px solid #FF9800; padding: 12px 16px; margin: 16px 0; border-radius: 4px;">
+      <strong>⚠️ Atleti da escludere da foto / video / pubblicazioni:</strong>
+      {rows_html}
+    </div>
+    <p style="font-size: 13px; color: #666;">
+      <strong>Cosa fare:</strong><br/>
+      • Durante le foto di squadra (fine partita, eventi), assicurati che questi atleti non compaiano oppure oscurane il volto prima di pubblicare.<br/>
+      • Questa lista può cambiare nel tempo (i genitori possono modificare il consenso in qualsiasi momento). Consulta la sezione "Consensi Immagini" nel pannello Admin prima di ogni pubblicazione importante.
+    </p>
+    <p style="font-size: 12px; color: #999; margin-top: 24px; border-top: 1px solid #eee; padding-top: 12px;">
+      Email automatica generata da {society_name} tramite RegistraTEAM. In copia: l'indirizzo istituzionale della società.
+    </p>
+  </div>
+</div>
+"""
+    subject = f"[GDPR] Consensi Immagini — {team_name} ({len(denied_rows)} atleti da escludere)"
+
+    from email_service import send_transactional_email
+
+    sent_to: list = []
+    errors: list = []
+    cc_list = [society_email] if society_email and society_email not in [c.get("email") for c in coaches] else None
+
+    for coach in coaches:
+        coach_email = coach.get("email")
+        if not coach_email:
+            continue
+        try:
+            result = await send_transactional_email(
+                to_email=coach_email,
+                to_name=coach.get("full_name"),
+                subject=subject,
+                html_content=html,
+                cc_list=cc_list,
+            )
+            if result.get("success"):
+                sent_to.append(coach_email)
+            else:
+                errors.append({"email": coach_email, "error": result.get("error", "unknown")})
+        except Exception as e:
+            errors.append({"email": coach_email, "error": str(e)})
+
+    return {
+        "message": f"Email inviata a {len(sent_to)} coach.",
+        "sent_to": sent_to,
+        "cc": cc_list or [],
+        "team_name": team_name,
+        "denied_count": len(denied_rows),
+        "errors": errors,
+    }
+
+
 app.include_router(api_router)
 
 # CORS origins: in sviluppo consente tutto, in produzione limita a domini espliciti.
