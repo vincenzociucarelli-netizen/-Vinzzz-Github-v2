@@ -21093,6 +21093,40 @@ async def admin_request_delete_signed_document(document_id: str, current_user = 
 
     doc = await db.signed_documents.find_one({"id": document_id})
     if not doc:
+        # Document not found: check if there's an orphaned compensation row
+        # referencing this missing document_id, and unlock it directly.
+        orphan_collections = [
+            ("coach_compensations", "coach_id"),
+            ("collaboratore_compensations", "collaboratore_id"),
+            ("dirigente_compensations", "dirigente_id"),
+            ("atleta_pro_compensations", "atleta_id"),
+            ("compensations", "coach_id"),
+        ]
+        unlock_patch = {"$set": {
+            "receipt_signed": False,
+            "receipt_signed_date": None,
+            "receipt_document_id": None,
+            "receipt_signature_base64": None,
+            "received": False,
+            "received_date": None,
+        }}
+        total_unlocked = 0
+        for coll_name, _ in orphan_collections:
+            res = await db[coll_name].update_many(
+                {"receipt_document_id": document_id},
+                unlock_patch,
+            )
+            total_unlocked += res.modified_count
+        if total_unlocked > 0:
+            logger.info(
+                f"[orphan-cleanup] document {document_id} missing; unlocked "
+                f"{total_unlocked} compensation row(s)."
+            )
+            return {
+                "message": "Quietanza orfana ripulita (il documento era già stato cancellato). Il firmatario potrà nuovamente firmare il mese.",
+                "orphan_cleaned": True,
+                "unlocked": total_unlocked,
+            }
         raise HTTPException(status_code=404, detail="Documento non trovato")
 
     if current_user.get("society_id") and doc.get("society_id") and \

@@ -23,6 +23,39 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🔧 Fix 31/05/2026 — Bug Modifica/Elimina + Quietanze orfane
+
+**Segnalazione utente (Vincenzo, foto allegate)**:
+1. Foto 2 (lato Collaboratore): quietanze Nov 2025, Feb 2026, Apr 2026 mostrate come ✅ firmate anche se i documenti PDF erano stati cancellati.
+2. Foto 3 (lato Admin): pulsanti **Modifica / Elimina** sulle quietanze non firmate non funzionano.
+3. Foto 4: cliccando trash sulle quietanze firmate orfane → errore "Documento non trovato".
+
+**Root cause**:
+- **Bug A (Modifica)**: l'handler chiamava `setSelectedMonthForReceipt / setSelectedYearForReceipt / setCustomReceiptAmount` ma la modal "Genera Quietanza" usa `newReceiptMonth / newReceiptYear / newReceiptAmount`. Variabili di stato scollegate → modal si apriva con valori di default → sembrava non funzionare.
+- **Bug B (Elimina)**: `Alert.alert` su Expo Web mostra solo Cancel/OK, mai i pulsanti destructive → il click su "Elimina" non veniva mai propagato.
+- **Bug C (404 quietanze orfane)**: la trash su quietanze firmate cerca il `receipt_document_id` in `signed_documents`. Se il documento era stato cancellato in passato senza sbloccare la compensation row (data inconsistency), `DELETE /api/documents/{id}` ritornava 404 ma la riga restava marcata `receipt_signed=true`.
+
+**Fix applicati**:
+1. **`/app/backend/server.py` `admin_request_delete_signed_document`**: aggiunto auto-cleanup per quietanze orfane. Se il documento non esiste MA esiste una compensation row con quel `receipt_document_id`, viene sbloccata automaticamente (5 collezioni controllate). Risposta 200 con `orphan_cleaned: true`.
+2. **`/app/frontend/app/admin/{coach,collaboratore,dirigente}/[id].tsx`**:
+   - Pulsante **Modifica**: ora usa `setNewReceiptMonth/setNewReceiptYear/setNewReceiptAmount` → modal pre-compilata correttamente.
+   - Pulsante **Elimina**: usa `window.confirm` su `Platform.OS === 'web'` invece di `Alert.alert` → conferma destructive funziona su web.
+   - Messaggi di errore migliorati con `error.response.data.detail`.
+
+**Test backend (verificato in locale)**:
+```
+Inserted orphan comp pointing to orphan-test-...
+DELETE /api/documents/{fake_id} → HTTP 200
+{"message":"Quietanza orfana ripulita...","orphan_cleaned":true,"unlocked":1}
+State after API call: receipt_signed=False, doc_id=None
+```
+
+**Recupero dati produzione**: l'utente può ora cliccare la trash icon sulle quietanze orfane (Nov 2025, Feb 2026, Apr 2026 di Lella su Pallavolo Perugia) → auto-cleanup → torneranno bianche con badge >5K/>15K corretti.
+
+In alternativa è disponibile l'endpoint `POST /admin/compensations/repair-orphaned-receipts` per riparazione batch.
+
+---
+
 ## Stato Attuale (30/05/2026)
 ### ↩️ Correzione: tornati al workflow PER-MESE (30/05/2026)
 **Segnalazione utente**: "Avevo gia usato la funzione che admin chiede la cancellazione di una mensilità ed il coach accetta. Ora sul collaboratore avevo chiesto cancellazione parziali mese per mese ed invece è stato impostato la cancellazione di un periodo 2025 e 2026. E oltretutto non funziona!"

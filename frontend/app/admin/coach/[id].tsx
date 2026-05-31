@@ -1970,9 +1970,9 @@ export default function AdminCoachDetail() {
                             <TouchableOpacity
                               style={{ backgroundColor: '#2196F3', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}
                               onPress={() => {
-                                setSelectedMonthForReceipt(receipt.month);
-                                setSelectedYearForReceipt(receipt.year);
-                                setCustomReceiptAmount(String(receipt.amount_gross || receipt.amount || ''));
+                                setNewReceiptMonth(receipt.month);
+                                setNewReceiptYear(receipt.year);
+                                setNewReceiptAmount(String(receipt.amount_gross || receipt.amount || ''));
                                 setReceiptsModalVisible(false);
                                 setCreateReceiptModalVisible(true);
                               }}
@@ -1981,27 +1981,24 @@ export default function AdminCoachDetail() {
                             </TouchableOpacity>
                             <TouchableOpacity
                               style={{ backgroundColor: '#F44336', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}
-                              onPress={() => {
-                                Alert.alert(
-                                  'Elimina Quietanza',
-                                  `Eliminare la quietanza di ${MONTH_NAMES_SHORT[receipt.month]} ${receipt.year}?`,
-                                  [
-                                    { text: 'Annulla', style: 'cancel' },
-                                    { 
-                                      text: 'Elimina', 
-                                      style: 'destructive',
-                                      onPress: async () => {
-                                        try {
-                                          await api.delete(`/admin/coach/${id}/compensation/${receipt.year}/${receipt.month}`);
-                                          showAlert('Eliminata', 'Quietanza eliminata');
-                                          loadData();
-                                        } catch (error) {
-                                          showAlert('Errore', 'Impossibile eliminare la quietanza');
-                                        }
-                                      }
-                                    }
-                                  ]
-                                );
+                              onPress={async () => {
+                                const msg = `Eliminare la quietanza di ${MONTH_NAMES_SHORT[receipt.month]} ${receipt.year}?`;
+                                const ok = Platform.OS === 'web'
+                                  ? window.confirm(msg)
+                                  : await new Promise<boolean>((resolve) => {
+                                      Alert.alert('Elimina Quietanza', msg, [
+                                        { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                                        { text: 'Elimina', style: 'destructive', onPress: () => resolve(true) },
+                                      ]);
+                                    });
+                                if (!ok) return;
+                                try {
+                                  await api.delete(`/admin/coach/${id}/compensation/${receipt.year}/${receipt.month}`);
+                                  showAlert('Eliminata', 'Quietanza eliminata');
+                                  loadData();
+                                } catch (error: any) {
+                                  showAlert('Errore', error?.response?.data?.detail || 'Impossibile eliminare la quietanza');
+                                }
                               }}
                             >
                               <Text style={{ color: '#fff', fontWeight: '500', fontSize: 12 }}>Elimina</Text>
