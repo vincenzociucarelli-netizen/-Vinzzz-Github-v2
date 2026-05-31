@@ -23,6 +23,36 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🔧 Fix 31/05/2026 — Badge soglie su contratti che non partono a gennaio
+
+**Segnalazione utente (Filippa, foto allegate)**:
+Banner riporta correttamente "Sett 2025 superi €5.000" e "Nov 2025 superi €15.000".
+La griglia mensile invece marca **tutti** i mesi 2025 (Set/Ott/Nov/Dic) come `>15K viola`.
+
+**Root cause**:
+In `getProjectedThresholdMonths()` il loop `for (let m = 1; m <= 12; m++)` applicava il `monthlyDefault` anche ai mesi PRIMA del `contractStartMonth`. Per Filippa (contratto Set→Mag, monthly=€4900, pregressi=€4500), Gen-Ago 2025 venivano riempiti a €4900 ciascuno → cumulative gonfiata a >€39k già a marzo → `first15k` impostato a marzo → tutti i mesi successivi mostravano `>15K`.
+
+**Fix applicato** in tutti e 3 i file (`coach/compensation.tsx`, `collaboratore/compensation.tsx`, `dirigente/compensation.tsx`):
+Aggiunto controllo `inContract` che restringe la proiezione `monthlyDefault` ai soli mesi dentro il periodo contrattuale:
+- `y < contractStartYear` → fuori
+- `y > contractEndYear` → fuori
+- `y === contractStartYear && m < contractStartMonth` → fuori
+- `y === contractEndYear && m > contractEndMonth` → fuori
+
+I record firmati/admin contano sempre indipendentemente dal periodo (safety).
+
+**Verifica manuale (caso Filippa, contratto Set 2025 - Mag 2026)**:
+| Mese | Cumul | Atteso |
+|---|---|---|
+| Set 2025 | 4500+4900=9400 | >5K arancio ✓ |
+| Ott 2025 | 14300 | >5K arancio ✓ |
+| Nov 2025 | 19200 | >15K viola ✓ |
+| Dic 2025 | 24100 | >15K viola ✓ |
+| Feb 2026 | 9800 | >5K arancio ✓ |
+| Apr 2026 | 19600 | >15K viola ✓ |
+
+---
+
 ## 🔧 Fix 31/05/2026 — Bug Modifica/Elimina + Quietanze orfane
 
 **Segnalazione utente (Vincenzo, foto allegate)**:

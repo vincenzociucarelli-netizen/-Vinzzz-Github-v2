@@ -860,7 +860,15 @@ export default function CollaboratoreCompensation() {
       thresholdsByYear[y] = { first5k: null, first15k: null };
       let cumul = (y === contractStartYear && priorCompensation > 0) ? priorCompensation : 0;
       for (let m = 1; m <= 12; m++) {
-        const amount = recordMap[`${y}-${m}`] !== undefined ? recordMap[`${y}-${m}`] : monthlyDefault;
+        const hasRecord = recordMap[`${y}-${m}`] !== undefined;
+        // Project monthly default ONLY for months WITHIN the contract period.
+        // Signed/admin records always count (regardless of period) for safety.
+        let inContract = true;
+        if (contractStartYear && y < contractStartYear) inContract = false;
+        else if (contractEndYear && y > contractEndYear) inContract = false;
+        else if (y === contractStartYear && contractStartMonth && m < contractStartMonth) inContract = false;
+        else if (contractEndYear && y === contractEndYear && contractEndMonth && m > contractEndMonth) inContract = false;
+        const amount = hasRecord ? recordMap[`${y}-${m}`] : (inContract ? monthlyDefault : 0);
         if (amount <= 0) continue;
         cumul += amount;
         if (cumul > 5000 && thresholdsByYear[y].first5k === null) {
