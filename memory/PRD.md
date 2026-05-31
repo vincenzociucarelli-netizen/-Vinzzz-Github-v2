@@ -23,6 +23,61 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## ✨ 31/05/2026 — Nuova funzionalità: Consensi Immagini Atleti
+
+**Richiesta utente**: avere una lista degli atleti che NON hanno concesso l'uso della loro immagine per fini promozionali, raggruppata per squadra.
+
+**Implementazione**:
+
+### Backend
+`GET /api/admin/athletes/image-consents` — restituisce gli atleti raggruppati per squadra con stato consenso immagini.
+
+Query params:
+- `consent_type`: `images_promo` (default) o `images_internal`
+- `only_denied`: bool (default `true`) — mostra solo i NEGATI
+- `team_id`: filtro per squadra (opzionale)
+- `minors_only`: bool (default `false`) — solo minorenni
+
+Per ogni atleta viene calcolato `final_value` applicando la regola "un NO = NEGATO" sui consensi per-genitore (campi `images_promo__{parent_id}` in `athlete.consents`). Per atleti maggiorenni che hanno firmato in autonomia, viene letto il campo diretto.
+
+Output:
+```json
+{
+  "total": 18,
+  "groups": [
+    {
+      "team_id": "...",
+      "team_name": "Serie C",
+      "count": 1,
+      "athletes": [
+        {"athlete_id", "full_name", "is_minor", "consent_given",
+         "denied_by_parents": ["FABI FANNY"], "has_signed", "privacy_accepted"}
+      ]
+    }
+  ]
+}
+```
+
+### Frontend
+- Nuova pagina `/app/frontend/app/admin/image-consents.tsx`
+- Nuova voce menu Admin "📸 Consensi Immagini" (icona rosa `#FCE4EC`)
+- Filtri:
+  - Tipo consenso (📣 Promozionale / 🏛️ Uso interno)
+  - Mostra (🚫 Solo NEGATI / 👥 Tutti)
+  - Età (Tutti / Solo minorenni)
+  - Squadra (Tutte + lista squadre)
+- Risultati: card collapsibili per squadra con badge contatore
+- Per ogni atleta: icona stato, nome, badge "minorenne", riga "Negato da: {nomi genitori}", link per andare al profilo
+- **Pulsante "Esporta CSV"** per scaricare la lista (es. utile per allenatori prima di pubblicare foto sui social)
+
+### Test backend verificati
+- Default (negati promo): 18 atleti in 7 squadre
+- Filtro squadra Serie C: 1 atleta (Rossi Viola)
+- Filtro minorenni: 0
+- Tutti consenso interno: 34 atleti in 8 squadre
+
+---
+
 ## 🔧 Fix 31/05/2026 — Enforcement ordine cronologico firma quietanze
 
 **Motivazione**: il bug di Filippa (Maggio firmato prima di Marzo/Aprile) ha confuso il calcolo soglie. Per prevenirlo alla radice, ora il frontend blocca la firma fuori ordine cronologico in tutti i ruoli (coach, collaboratore, dirigente).

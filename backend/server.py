@@ -26681,6 +26681,160 @@ async def render_whatsapp_message(case: str, athlete_id: Optional[str] = None, u
 # ─────────────────────────── /WhatsApp Reminders ───────────────────────────
 
 
+# ─────────────────────────── Consensi Immagini (Admin) ───────────────────────────
+@api_router.get("/admin/athletes/image-consents")
+async def admin_list_image_consents(
+    consent_type: str = "images_promo",  # "images_promo" or "images_internal"
+    only_denied: bool = True,
+    team_id: Optional[str] = None,
+    minors_only: bool = False,
+    current_user = Depends(get_current_user),
+):
+    """Admin: lista atleti raggruppati per squadra con stato consenso immagini.
+
+    Per ogni atleta calcola il `final_value` del consenso applicando la regola
+    "un NO = NEGATO" sui consensi per-genitore. Per atleti maggiorenni che hanno
+    firmato in autonomia, viene letta la chiave diretta.
+
+    Query params:
+    - consent_type: "images_promo" (default) o "images_internal"
+    - only_denied: se true (default) restituisce solo gli atleti SENZA consenso
+    - team_id: filtra per squadra specifica
+    - minors_only: se true, esclude gli atleti maggiorenni
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    if consent_type not in ("images_promo", "images_internal"):
+        raise HTTPException(status_code=400, detail="consent_type non valido")
+
+    society_id = current_user.get("society_id")
+    query: dict = {"society_id": society_id}
+    if team_id:
+        query["team_id"] = team_id
+    athletes = await db.athletes.find(query, {"_id": 0}).to_list(5000)
+
+    # Map team_id → team_name
+    team_ids = list({a.get("team_id") for a in athletes if a.get("team_id")})
+    teams = await db.teams.find({"id": {"$in": team_ids}}, {"_id": 0, "id": 1, "name": 1}).to_list(500)
+    team_names = {t["id"]: t.get("name", "—") for t in teams}
+
+    # Map parent_id → parent_name (only for the parents referenced)
+    parent_ids = set()
+    for a in athletes:
+        for k in ("parent_id", "second_parent_id"):
+            pid = a.get(k)
+            if pid:
+                parent_ids.add(pid)
+    parents = await db.users.find(
+        {"id": {"$in": list(parent_ids)}},
+        {"_id": 0, "id": 1, "full_name": 1, "email": 1},
+    ).to_list(2000) if parent_ids else []
+    parent_info = {p["id"]: p for p in parents}
+
+    def _extract(entry):
+        if isinstance(entry, bool):
+            return entry
+        if isinstance(entry, dict):
+            return entry.get("value", False)
+        return False
+
+    def _is_minor(a: dict) -> bool:
+        bd = a.get("birth_date")
+        if not bd:
+            return False
+        try:
+            if isinstance(bd, str):
+                bd_date = datetime.fromisoformat(bd.replace("Z", "+00:00")).date()
+            elif hasattr(bd, "date"):
+                bd_date = bd.date()
+            else:
+                bd_date = bd
+            today = datetime.now().date()
+            age = today.year - bd_date.year - ((today.month, today.day) < (bd_date.month, bd_date.day))
+            return age < 18
+        except Exception:
+            return False
+
+    result_athletes = []
+    for a in athletes:
+        if minors_only and not _is_minor(a):
+            continue
+
+        consents = a.get("consents") or {}
+        athlete_parent_ids = [pid for pid in [a.get("parent_id"), a.get("second_parent_id")] if pid]
+
+        # Compute final value
+        parent_states = {}
+        for pid in athlete_parent_ids:
+            key = f"{consent_type}__{pid}"
+            if key in consents:
+                parent_states[pid] = _extract(consents[key])
+            elif pid == a.get("parent_id") and consent_type in consents:
+                parent_states[pid] = _extract(consents[consent_type])
+
+        if parent_states:
+            final_value = all(parent_states.values())
+            denied_by_ids = [pid for pid, v in parent_states.items() if not v]
+            denied_by_names = [
+                (parent_info.get(pid) or {}).get("full_name") or (parent_info.get(pid) or {}).get("email") or pid
+                for pid in denied_by_ids
+            ]
+            has_record = True
+        else:
+            raw = consents.get(consent_type)
+            final_value = _extract(raw) if raw is not None else False
+            denied_by_names = []
+            has_record = raw is not None
+
+        if only_denied and final_value:
+            continue
+
+        full_name = f"{a.get('last_name','')} {a.get('first_name','')}".strip() or a.get("full_name", "—")
+        result_athletes.append({
+            "athlete_id": a.get("id"),
+            "full_name": full_name,
+            "team_id": a.get("team_id"),
+            "team_name": team_names.get(a.get("team_id"), "Senza squadra"),
+            "birth_date": a.get("birth_date"),
+            "is_minor": _is_minor(a),
+            "consent_given": final_value,
+            "denied_by_parents": denied_by_names,
+            "has_signed": has_record,
+            "privacy_accepted": bool(a.get("privacy_accepted")),
+        })
+
+    # Group by team
+    by_team: dict = {}
+    for r in result_athletes:
+        tid = r["team_id"] or "_none_"
+        if tid not in by_team:
+            by_team[tid] = {
+                "team_id": r["team_id"],
+                "team_name": r["team_name"],
+                "athletes": [],
+            }
+        by_team[tid]["athletes"].append(r)
+
+    # Sort teams by name; athletes within each team by last name (full_name)
+    groups = sorted(by_team.values(), key=lambda g: (g["team_name"] or "").lower())
+    for g in groups:
+        g["athletes"].sort(key=lambda x: (x["full_name"] or "").lower())
+        g["count"] = len(g["athletes"])
+
+    return {
+        "consent_type": consent_type,
+        "only_denied": only_denied,
+        "minors_only": minors_only,
+        "team_id_filter": team_id,
+        "total": len(result_athletes),
+        "groups": groups,
+    }
+
+
+# ─────────────────────────── /Consensi Immagini ───────────────────────────
+
+
 app.include_router(api_router)
 
 # CORS origins: in sviluppo consente tutto, in produzione limita a domini espliciti.

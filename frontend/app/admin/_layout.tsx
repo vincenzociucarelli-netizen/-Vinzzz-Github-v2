@@ -166,6 +166,7 @@ export default function AdminLayout() {
         <Stack.Screen name="attendances" />
         <Stack.Screen name="prime-squadre" />
         <Stack.Screen name="prime-squadre/[id]" />
+        <Stack.Screen name="image-consents" />
       </Stack>
       {/* Real-time popup: se un Coach scansiona un atleta con cert scaduto,
           appare qui il modale con AUTORIZZA / RIFIUTA */}

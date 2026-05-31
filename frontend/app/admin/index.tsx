@@ -1315,6 +1315,22 @@ export default function AdminDashboard() {
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
+          {/* Consensi Immagini */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/image-consents')}
+            data-testid="image-consents-menu-card"
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#FCE4EC' }]}>
+              <Text style={{ fontSize: 26 }}>📸</Text>
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Consensi Immagini</Text>
+              <Text style={styles.menuCardSubtitle}>Atleti senza consenso foto promozionali / uso interno</Text>
+            </View>
+            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
+          </TouchableOpacity>
+
           {/* Ricerca Avanzata Atleti */}
           <TouchableOpacity
             style={styles.menuCard}
