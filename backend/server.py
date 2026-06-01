@@ -25974,8 +25974,13 @@ async def get_all_consents_admin(current_user = Depends(get_current_user)):
     # Get athletes with consents (society-scoped)
     athletes = await db.athletes.find(
         _a_q,
-        {"_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1, "consents": 1, "consent_history": 1}
+        {"_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1, "consents": 1, "consent_history": 1, "team_id": 1}
     ).to_list(500)
+    
+    # Pre-load team names for athletes
+    _team_ids = list({a.get("team_id") for a in athletes if a.get("team_id")})
+    _teams = await db.teams.find({"id": {"$in": _team_ids}}, {"_id": 0, "id": 1, "name": 1}).to_list(500) if _team_ids else []
+    _team_names = {t["id"]: t.get("name", "—") for t in _teams}
     
     for a in athletes:
         consents = a.get("consents") or {}
@@ -25986,6 +25991,8 @@ async def get_all_consents_admin(current_user = Depends(get_current_user)):
                 "entity_id": a["id"],
                 "full_name": a.get("full_name") or f'{a.get("last_name", "")} {a.get("first_name", "")}',
                 "role": "atleta",
+                "team_id": a.get("team_id"),
+                "team_name": _team_names.get(a.get("team_id")) if a.get("team_id") else None,
                 "consents": consents,
                 "history_count": len(history),
                 "last_change": history[-1]["timestamp"] if history else None,

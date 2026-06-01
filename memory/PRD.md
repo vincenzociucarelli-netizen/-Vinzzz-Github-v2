@@ -23,6 +23,36 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🔧 01/06/2026 — Fix Esporta Dati + Filtri Consensi Privacy
+
+### Fix 1: Esporta Dati pagina bianca
+**Bug**: cliccando su Settings → Esporta Dati appariva pagina bianca.
+**Root cause**: in `/app/frontend/app/admin/settings/export-data.tsx` riga 185 era usato `<Ionicons name="home" .../>` ma il file importa solo `Icon` (alias di Ionicons). Componente undefined → React crash → blank page.
+**Fix**: sostituito `Ionicons` → `Icon` (componente già importato a riga 12).
+
+### Feature 2: Filtri sui Consensi Privacy + raggruppamento per squadra
+**Richiesta utente**: nella pagina Settings → Consensi Privacy non era possibile filtrare velocemente chi ha dato/negato consensi senza scorrere tutta la lista. Inoltre richiesto report squadra-per-squadra.
+
+**Backend** (`GET /api/admin/all-consents`):
+- Arricchito output con `team_id` e `team_name` per ogni atleta (join su collezione `teams`).
+
+**Frontend** (`/app/frontend/app/admin/settings/consent-audit.tsx`):
+- Barra filtri sticky con 3 set di chip:
+  1. **Tipo consenso**: Tutti / Privacy / Interno / Promo
+  2. **Stato**: Tutti / ✅ Concessi / 🚫 Negati / — Non espressi
+  3. **Ruolo**: Tutti / Atleti / Genitori / Coach / Dirigenti / Collaboratori
+- Toggle **"🏐 Raggruppa per squadra"**: quando attivo, mostra card squadra-per-squadra (collapsibili) con badge contatore. Lo staff viene raggruppato in una sezione "Staff (non assegnabile a squadra)".
+- Contatore live "X risultati su Y" sotto i filtri.
+- Card atleta arricchita con badge verde della squadra (quando presente).
+
+**Test backend verificato**:
+- 56 entries totali (33 staff + 23 atleti)
+- 22/23 atleti con team_name correttamente popolato
+
+**Build statico rigenerato** (`/app/frontend/dist`).
+
+---
+
 ## ✨ 31/05/2026 — Email automatica al Coach per consensi immagini negati
 
 **Estensione GDPR**: aggiunta funzionalità per notificare via email il coach (con copia all'email istituzionale della società) con l'elenco degli atleti della sua squadra **senza consenso uso immagini**.
