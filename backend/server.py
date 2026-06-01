@@ -7107,7 +7107,9 @@ async def sign_athlete_compensation_receipt_with_signature(
                 collaborator_fiscal_code=athlete.get('fiscal_code', ''),
                 year=year,
                 signature_base64=signature_base64,
-                society_city=society_city
+                society_city=society_city,
+                signed_at=now,
+                threshold_month=month,
             )
             pdf_filename_prefix = "comunicazione_15k_atleta"
             doc_type = "threshold_15000_communication"
@@ -7118,7 +7120,9 @@ async def sign_athlete_compensation_receipt_with_signature(
                 collaborator_fiscal_code=athlete.get('fiscal_code', ''),
                 year=year,
                 signature_base64=signature_base64,
-                society_city=society_city
+                society_city=society_city,
+                signed_at=now,
+                threshold_month=month,
             )
             pdf_filename_prefix = "comunicazione_5k_atleta"
             doc_type = "threshold_5000_communication"
@@ -7130,7 +7134,9 @@ async def sign_athlete_compensation_receipt_with_signature(
                 month_name=month_name,
                 year=year,
                 amount_gross=amount_gross,
-                signature_base64=signature_base64
+                signature_base64=signature_base64,
+                signed_at=now,
+                signer_id=athlete_id,
             )
             pdf_filename_prefix = "quietanza_atleta"
             doc_type = "compensation_receipt"
@@ -13383,7 +13389,9 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 year=request.year,
                 signature_base64=request.signature_base64,
                 society_city=society_city,
-                threshold_metadata=threshold_meta_15k
+                threshold_metadata=threshold_meta_15k,
+                signed_at=now,
+                threshold_month=request.month,
             )
             pdf_filename_prefix = "comunicazione_15k"
             doc_type = "threshold_15000_communication"
@@ -13407,7 +13415,9 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 year=request.year,
                 signature_base64=request.signature_base64,
                 society_city=society_city,
-                threshold_metadata=threshold_meta
+                threshold_metadata=threshold_meta,
+                signed_at=now,
+                threshold_month=request.month,
             )
             pdf_filename_prefix = "comunicazione_5k"
             doc_type = "threshold_5000_communication"
@@ -13421,7 +13431,10 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 month_name=month_name,
                 year=request.year,
                 amount_gross=request.amount_gross,
-                signature_base64=request.signature_base64
+                signature_base64=request.signature_base64,
+                signed_at=now,
+                document_id=None,  # set below after uuid
+                signer_id=coach_id,
             )
             pdf_filename_prefix = "quietanza"
             doc_type = "compensation_receipt"
@@ -18282,7 +18295,9 @@ async def sign_dirigente_compensation_receipt(
                 year=request.year,
                 signature_base64=request.signature_base64,
                 society_city=society_city,
-                threshold_metadata=threshold_meta
+                threshold_metadata=threshold_meta,
+                signed_at=now,
+                threshold_month=request.month,
             )
             pdf_filename_prefix = "comunicazione_15k_dirigente"
             doc_type = "threshold_15000_communication"
@@ -18295,7 +18310,9 @@ async def sign_dirigente_compensation_receipt(
                 year=request.year,
                 signature_base64=request.signature_base64,
                 society_city=society_city,
-                threshold_metadata=threshold_meta
+                threshold_metadata=threshold_meta,
+                signed_at=now,
+                threshold_month=request.month,
             )
             pdf_filename_prefix = "comunicazione_5k_dirigente"
             doc_type = "threshold_5000_communication"
@@ -18308,7 +18325,9 @@ async def sign_dirigente_compensation_receipt(
                 month_name=month_name,
                 year=request.year,
                 amount_gross=request.amount_gross,
-                signature_base64=request.signature_base64
+                signature_base64=request.signature_base64,
+                signed_at=now,
+                signer_id=dirigente_id,
             )
             pdf_filename_prefix = "quietanza_dirigente"
             doc_type = "compensation_receipt"
@@ -19004,7 +19023,9 @@ async def sign_collaboratore_compensation_receipt(
                 year=request.year,
                 signature_base64=request.signature_base64,
                 society_city=society_city,
-                threshold_metadata=threshold_meta_15k
+                threshold_metadata=threshold_meta_15k,
+                signed_at=now,
+                threshold_month=request.month,
             )
             pdf_filename_prefix = "comunicazione_15k_collaboratore"
             doc_type = "threshold_15000_communication"
@@ -19028,7 +19049,9 @@ async def sign_collaboratore_compensation_receipt(
                 year=request.year,
                 signature_base64=request.signature_base64,
                 society_city=society_city,
-                threshold_metadata=threshold_meta
+                threshold_metadata=threshold_meta,
+                signed_at=now,
+                threshold_month=request.month,
             )
             pdf_filename_prefix = "comunicazione_5k_collaboratore"
             doc_type = "threshold_5000_communication"
@@ -19042,7 +19065,9 @@ async def sign_collaboratore_compensation_receipt(
                 month_name=month_name,
                 year=request.year,
                 amount_gross=request.amount_gross,
-                signature_base64=request.signature_base64
+                signature_base64=request.signature_base64,
+                signed_at=now,
+                signer_id=collaboratore_id,
             )
             pdf_filename_prefix = "quietanza_collaboratore"
             doc_type = "collaboratore_compensation_receipt"

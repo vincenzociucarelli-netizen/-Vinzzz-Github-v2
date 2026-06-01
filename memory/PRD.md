@@ -23,6 +23,20 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🔧 01/06/2026 — Propagazione fix ai signing handler (al posto della sola rigenerazione)
+
+Aggiornati TUTTI i punti dove vengono firmate quietanze e comunicazioni soglia per passare `signed_at` (timestamp firma originale) e `threshold_month` (mese di superamento). Così i NUOVI documenti firmati avranno SUBITO data + metadati + "Mese di superamento" senza bisogno di passare dal flow di rigenerazione.
+
+**Handler aggiornati**:
+- Atleta (`/athlete/.../compensation/receipt`): quietanza + threshold 5k/15k
+- Coach (`/coach/{coach_id}/compensation/receipt`): quietanza + threshold 5k/15k
+- Dirigente (`/dirigente/{dirigente_id}/compensation/receipt`): quietanza + threshold 5k/15k
+- Collaboratore (`/collaboratore/{collaboratore_id}/compensation/receipt`): quietanza + threshold 5k/15k
+
+Verifica automatica: ✓ 14/14 callers di `generate_threshold_*_pdf` e `generate_monthly_receipt_pdf` ora passano `signed_at`. 0 caller mancanti.
+
+---
+
 ## 🔧 01/06/2026 — 4 fix critici Comunicazioni Soglia 5k/15k
 
 ### Bug 1: Data di stampa invece di data firma
