@@ -27340,9 +27340,12 @@ async def admin_list_image_consents(
 
 
 def _public_verify_url(document_id: str) -> str:
-    """Build the public verification URL for a signed document QR code."""
+    """Build the public verification URL for a signed document QR code.
+    Points to the FRONTEND SPA route (so it works on Vercel-hosted production
+    where the marketing domain doesn't proxy /api/* to the backend).
+    """
     base = (os.environ.get("FRONTEND_URL") or "").rstrip("/")
-    return f"{base}/api/documents/verify/{document_id}"
+    return f"{base}/verify/{document_id}"
 
 
 def _generate_qr_png(data: str) -> Optional[bytes]:
@@ -27361,16 +27364,12 @@ def _generate_qr_png(data: str) -> Optional[bytes]:
         return None
 
 
-@api_router.get("/documents/verify/{document_id}", response_class=HTMLResponse)
-async def public_document_verify(document_id: str):
+@api_router.get("/documents/verify/{document_id}")
+async def public_document_verify(document_id: str, format: str = "html"):
     """Public endpoint (no auth) — verifies document authenticity.
 
-    Shows a sober mobile-friendly HTML page with:
-      - Document type, signer name (masked), signing timestamp (Europe/Rome)
-      - Crossed threshold (5k/15k) or month reference (for receipts)
-      - Document ID & signature hash prefix (for cross-checking)
-
-    Never exposes signature image / pdf content / personal fiscal code.
+    Returns HTML by default (for direct browser access) or JSON when called
+    with ?format=json (for the frontend SPA route to render natively).
     """
     doc = await db.signed_documents.find_one(
         {"id": document_id},
@@ -27379,6 +27378,8 @@ async def public_document_verify(document_id: str):
          "society_id": 1},
     )
     if not doc:
+        if format == "json":
+            raise HTTPException(status_code=404, detail="Documento non trovato")
         html = """
         <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Documento non trovato</title>
         <style>body{font-family:-apple-system,system-ui,Helvetica,Arial,sans-serif;background:#f5f5f5;padding:20px;color:#333}
@@ -27456,6 +27457,22 @@ async def public_document_verify(document_id: str):
         society_name = (s or {}).get("ragione_sociale") or (s or {}).get("society_name") or ""
     except Exception:
         pass
+
+    # JSON branch (used by the frontend SPA /verify/[id] route)
+    if format == "json":
+        amt = doc.get("amount_gross")
+        return {
+            "document_id": document_id,
+            "type_label": type_label,
+            "kind": "threshold" if dtype.startswith("threshold_") else "receipt",
+            "threshold": "15000" if "15000" in dtype else ("5000" if "5000" in dtype else None),
+            "society_name": society_name,
+            "signer_masked": masked,
+            "signed_at_rome": signed_str,
+            "month_ref": month_ref,
+            "amount_str": (f"€ {float(amt):.2f}" if amt is not None else None),
+            "signature_hash_prefix": (tm.get("signature_hash") or "")[:16] or None,
+        }
 
     html = f"""<!doctype html><html lang="it"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
