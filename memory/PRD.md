@@ -23,6 +23,30 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🆕 01/06/2026 — QR code di verifica autenticità sui PDF
+
+**Richiesta utente**: aggiungere QR code per la verifica pubblica dell'autenticità.
+
+### Endpoint pubblico (NO auth)
+`GET /api/documents/verify/{document_id}` — HTML mobile-friendly con:
+- Tipo documento, società emittente
+- Nome firmatario mascherato ("MARIO R.")
+- Data/ora firma (Europe/Rome), soglia superata, mese di superamento
+- ID documento + primi 16 char hash firma
+- Box privacy: no CF, no firma immagine, no importo dettagliato
+
+### QR embedded nei PDF
+- Quietanze (`generate_monthly_receipt_pdf`): QR 2.2 cm + label "Verifica autenticità"
+- Threshold 5k/15k (`generate_threshold_*_pdf`): QR 2.4 cm + label "Verifica autenticità"
+
+### Auto-rigenerazione estesa
+Check `b"Verifica autenticita" not in pdf_bytes` aggiunto a tutti i path di cache invalidation → vecchi PDF auto-aggiornati al primo download.
+
+**Test live**: ✅ HTML pubblico OK, ✅ QR presente in quietanze + comunicazioni soglia, ✅ Auto-fix triggera.
+
+---
+
+
 ## 🔧 01/06/2026 — Propagazione fix ai signing handler (al posto della sola rigenerazione)
 
 Aggiornati TUTTI i punti dove vengono firmate quietanze e comunicazioni soglia per passare `signed_at` (timestamp firma originale) e `threshold_month` (mese di superamento). Così i NUOVI documenti firmati avranno SUBITO data + metadati + "Mese di superamento" senza bisogno di passare dal flow di rigenerazione.

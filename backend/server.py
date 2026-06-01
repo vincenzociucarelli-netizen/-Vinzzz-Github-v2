@@ -1,6 +1,6 @@
 from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form, Depends, status, Request, Body
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import StreamingResponse, FileResponse, Response
+from fastapi.responses import StreamingResponse, FileResponse, Response, HTMLResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -14817,6 +14817,25 @@ def generate_monthly_receipt_pdf(
             label = f"Hash documento: {document_hash[:32]}…" if len(document_hash) > 32 else f"Hash documento: {document_hash}"
             c.drawString(2 * cm, footer_y, label)
         c.setFillColorRGB(0, 0, 0)
+
+        # QR code (bottom-right) — links to public verify page
+        if document_id:
+            try:
+                verify_url = _public_verify_url(document_id)
+                qr_png = _generate_qr_png(verify_url)
+                if qr_png:
+                    from reportlab.lib.utils import ImageReader
+                    qr_reader = ImageReader(io.BytesIO(qr_png))
+                    qr_size = 2.2 * cm
+                    qr_x = width - qr_size - 1.5 * cm
+                    qr_y = 0.8 * cm
+                    c.drawImage(qr_reader, qr_x, qr_y, width=qr_size, height=qr_size, preserveAspectRatio=True, mask='auto')
+                    c.setFont("Helvetica", 6)
+                    c.setFillColorRGB(0.4, 0.4, 0.4)
+                    c.drawCentredString(qr_x + qr_size / 2, qr_y - 0.2 * cm, "Verifica autenticità")
+                    c.setFillColorRGB(0, 0, 0)
+            except Exception:
+                pass
     except Exception:
         pass
 
@@ -16055,6 +16074,7 @@ def generate_threshold_5k_pdf(
     threshold_metadata: dict = None,
     signed_at: Optional[Any] = None,
     threshold_month: Optional[int] = None,
+    document_id: Optional[str] = None,
 ) -> bytes:
     """Generate €5,000 threshold communication PDF with metadata.
 
@@ -16062,6 +16082,7 @@ def generate_threshold_5k_pdf(
       signed_at: Original signing timestamp (str ISO or datetime). If omitted,
                  falls back to today — should never happen for a signed doc.
       threshold_month: Month (1-12) when the threshold was crossed.
+      document_id: If provided, embeds a QR code linking to the public verify page.
     """
     if not HAS_PDF_GENERATION:
         raise HTTPException(status_code=500, detail="PDF generation not available")
@@ -16240,7 +16261,26 @@ def generate_threshold_5k_pdf(
         if sig_hash and len(sig_hash) > 20:
             sig_hash = sig_hash[:20] + "..."
         c.drawString(2*cm, y, f"Hash firma: {sig_hash}")
-    
+
+    # QR code (bottom-right) — links to public verify page
+    if document_id:
+        try:
+            verify_url = _public_verify_url(document_id)
+            qr_png = _generate_qr_png(verify_url)
+            if qr_png:
+                from reportlab.lib.utils import ImageReader
+                qr_reader = ImageReader(io.BytesIO(qr_png))
+                qr_size = 2.4 * cm
+                qr_x = width - qr_size - 1.5 * cm
+                qr_y = 0.8 * cm
+                c.drawImage(qr_reader, qr_x, qr_y, width=qr_size, height=qr_size, preserveAspectRatio=True, mask='auto')
+                c.setFont("Helvetica", 6)
+                c.setFillColorRGB(0.4, 0.4, 0.4)
+                c.drawCentredString(qr_x + qr_size / 2, qr_y - 0.2 * cm, "Verifica autenticità")
+                c.setFillColorRGB(0, 0, 0)
+        except Exception:
+            pass
+
     c.save()
     return buffer.getvalue()
 
@@ -16254,6 +16294,7 @@ def generate_threshold_15k_pdf(
     threshold_metadata: dict = None,
     signed_at: Optional[Any] = None,
     threshold_month: Optional[int] = None,
+    document_id: Optional[str] = None,
 ) -> bytes:
     """Generate €15,000 threshold communication PDF with metadata"""
     if not HAS_PDF_GENERATION:
@@ -16429,7 +16470,26 @@ def generate_threshold_15k_pdf(
         if sig_hash and len(sig_hash) > 20:
             sig_hash = sig_hash[:20] + "..."
         c.drawString(2*cm, y, f"Hash firma: {sig_hash}")
-    
+
+    # QR code (bottom-right) — links to public verify page
+    if document_id:
+        try:
+            verify_url = _public_verify_url(document_id)
+            qr_png = _generate_qr_png(verify_url)
+            if qr_png:
+                from reportlab.lib.utils import ImageReader
+                qr_reader = ImageReader(io.BytesIO(qr_png))
+                qr_size = 2.4 * cm
+                qr_x = width - qr_size - 1.5 * cm
+                qr_y = 0.8 * cm
+                c.drawImage(qr_reader, qr_x, qr_y, width=qr_size, height=qr_size, preserveAspectRatio=True, mask='auto')
+                c.setFont("Helvetica", 6)
+                c.setFillColorRGB(0.4, 0.4, 0.4)
+                c.drawCentredString(qr_x + qr_size / 2, qr_y - 0.2 * cm, "Verifica autenticità")
+                c.setFillColorRGB(0, 0, 0)
+        except Exception:
+            pass
+
     c.save()
     return buffer.getvalue()
 
@@ -16995,6 +17055,7 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
         b"PDF originale non" in pdf_bytes
         or b"Riepilogo firma" in pdf_bytes
         or b"Mese di superamento" not in pdf_bytes
+        or b"Verifica autenticita" not in pdf_bytes
         or len(pdf_bytes) < 8000
     ):
         logger.info(f"Discarding stale threshold PDF cache for {document_id} ({len(pdf_bytes)} bytes), will regenerate")
@@ -20937,6 +20998,7 @@ async def download_document(
         if dtype in ("threshold_5000_communication", "threshold_15000_communication") and (
             len(pdf_content) < 8000
             or b"Mese di superamento" not in pdf_content
+            or b"Verifica autenticita" not in pdf_content
         ):
             try:
                 fixed = await _regenerate_threshold_communication_pdf(doc)
@@ -21042,6 +21104,7 @@ async def download_document(
                 b"Riepilogo firma" in pdf_bytes
                 or b"PDF originale non" in pdf_bytes
                 or b"Metadati di autentica" not in pdf_bytes
+                or b"Verifica autenticita" not in pdf_bytes
             )
             if needs_rebuild:
                 logger.info(f"Invalidating stale compensation_receipt cache for {document_id} ({len(pdf_bytes)} bytes)")
@@ -21069,6 +21132,7 @@ async def download_document(
                 b"Riepilogo firma" in pdf_bytes
                 or b"PDF originale non" in pdf_bytes
                 or b"Mese di superamento" not in pdf_bytes
+                or b"Verifica autenticita" not in pdf_bytes
                 or len(pdf_bytes) < 8000
             )
             if needs_rebuild:
@@ -21934,6 +21998,7 @@ async def _regenerate_threshold_communication_pdf(document: dict) -> Optional[by
                 threshold_metadata=threshold_meta,
                 signed_at=signed_at_final,
                 threshold_month=int(month) if month else None,
+                document_id=document.get("id"),
             )
         else:
             pdf_bytes = generate_threshold_15k_pdf(
@@ -21946,6 +22011,7 @@ async def _regenerate_threshold_communication_pdf(document: dict) -> Optional[by
                 threshold_metadata=threshold_meta,
                 signed_at=signed_at_final,
                 threshold_month=int(month) if month else None,
+                document_id=document.get("id"),
             )
 
         return pdf_bytes
@@ -27271,6 +27337,165 @@ async def admin_list_image_consents(
 
 
 # ─────────────────────────── /Consensi Immagini ───────────────────────────
+
+
+def _public_verify_url(document_id: str) -> str:
+    """Build the public verification URL for a signed document QR code."""
+    base = (os.environ.get("FRONTEND_URL") or "").rstrip("/")
+    return f"{base}/api/documents/verify/{document_id}"
+
+
+def _generate_qr_png(data: str) -> Optional[bytes]:
+    """Generate a small PNG (transparent-free) QR code for the given data."""
+    try:
+        import qrcode
+        qr = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_M, box_size=4, border=2)
+        qr.add_data(data)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white").convert("RGB")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        return buf.getvalue()
+    except Exception as e:
+        logger.warning(f"QR generation failed: {e}")
+        return None
+
+
+@api_router.get("/documents/verify/{document_id}", response_class=HTMLResponse)
+async def public_document_verify(document_id: str):
+    """Public endpoint (no auth) — verifies document authenticity.
+
+    Shows a sober mobile-friendly HTML page with:
+      - Document type, signer name (masked), signing timestamp (Europe/Rome)
+      - Crossed threshold (5k/15k) or month reference (for receipts)
+      - Document ID & signature hash prefix (for cross-checking)
+
+    Never exposes signature image / pdf content / personal fiscal code.
+    """
+    doc = await db.signed_documents.find_one(
+        {"id": document_id},
+        {"_id": 0, "id": 1, "document_type": 1, "signer_name": 1, "coach_name": 1,
+         "signed_at": 1, "month": 1, "year": 1, "amount_gross": 1, "threshold_metadata": 1,
+         "society_id": 1},
+    )
+    if not doc:
+        html = """
+        <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Documento non trovato</title>
+        <style>body{font-family:-apple-system,system-ui,Helvetica,Arial,sans-serif;background:#f5f5f5;padding:20px;color:#333}
+        .box{background:#fff;max-width:520px;margin:40px auto;padding:32px 24px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.1);text-align:center}
+        .icon{font-size:48px;color:#D32F2F}
+        h1{margin:12px 0 6px;font-size:22px;color:#D32F2F}
+        p{color:#666;line-height:1.5}</style>
+        </head><body><div class="box"><div class="icon">✕</div><h1>Documento non trovato</h1>
+        <p>L'identificativo non corrisponde ad alcun documento firmato nei nostri archivi.</p></div></body></html>
+        """
+        return HTMLResponse(content=html, status_code=404)
+
+    # Mask signer name (first name + initial)
+    raw_name = (doc.get("signer_name") or doc.get("coach_name") or "").strip()
+    if raw_name:
+        parts = raw_name.split()
+        if len(parts) >= 2:
+            masked = f"{parts[0]} {parts[1][0]}."
+            for p in parts[2:]:
+                masked += f" {p[0]}."
+        else:
+            masked = raw_name
+    else:
+        masked = "—"
+
+    dtype = doc.get("document_type", "")
+    type_label = {
+        "compensation_receipt": "Quietanza di compenso sportivo dilettantistico",
+        "coach_compensation_receipt": "Quietanza di compenso sportivo dilettantistico",
+        "collaboratore_compensation_receipt": "Quietanza di compenso sportivo dilettantistico",
+        "threshold_5000_communication": "Comunicazione superamento soglia € 5.000",
+        "threshold_15000_communication": "Comunicazione superamento soglia € 15.000",
+    }.get(dtype, dtype or "Documento firmato")
+
+    signed_at = doc.get("signed_at")
+    try:
+        if isinstance(signed_at, str):
+            _dt = datetime.fromisoformat(signed_at.replace("Z", "+00:00"))
+        elif hasattr(signed_at, "isoformat"):
+            _dt = signed_at
+        else:
+            _dt = None
+        signed_str = to_rome_time(_dt).strftime("%d/%m/%Y %H:%M:%S") if _dt else "—"
+    except Exception:
+        signed_str = "—"
+
+    # Month reference
+    m_int = int(doc.get("month")) if doc.get("month") else None
+    y_int = int(doc.get("year")) if doc.get("year") else None
+    month_ref = f"{MONTH_NAMES.get(m_int, '')} {y_int}".strip() if m_int else "—"
+
+    tm = doc.get("threshold_metadata") or {}
+    sig_hash = (tm.get("signature_hash") or "")[:16] or "—"
+
+    threshold_block = ""
+    if dtype.startswith("threshold_"):
+        threshold_block = f"""
+        <div class="row"><span class="lbl">Soglia superata</span><span class="val">€ {('15.000' if '15000' in dtype else '5.000')}</span></div>
+        <div class="row"><span class="lbl">Mese di superamento</span><span class="val">{month_ref}</span></div>"""
+    else:
+        amt = doc.get("amount_gross")
+        amt_str = f"€ {float(amt):.2f}" if amt is not None else "—"
+        threshold_block = f"""
+        <div class="row"><span class="lbl">Mese di riferimento</span><span class="val">{month_ref}</span></div>
+        <div class="row"><span class="lbl">Importo lordo</span><span class="val">{amt_str}</span></div>"""
+
+    # Society name
+    society_name = ""
+    try:
+        sid = doc.get("society_id")
+        s = await db.settings.find_one(
+            {"type": "society", "society_id": sid} if sid else {"type": "society"},
+            {"_id": 0, "ragione_sociale": 1, "society_name": 1},
+        )
+        society_name = (s or {}).get("ragione_sociale") or (s or {}).get("society_name") or ""
+    except Exception:
+        pass
+
+    html = f"""<!doctype html><html lang="it"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verifica autenticità documento</title>
+<style>
+body{{font-family:-apple-system,system-ui,Helvetica,Arial,sans-serif;background:#f5f5f5;margin:0;padding:16px;color:#222}}
+.box{{background:#fff;max-width:560px;margin:24px auto;padding:0;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.08);overflow:hidden}}
+.hd{{background:#2E7D32;color:#fff;padding:22px 20px;text-align:center}}
+.hd .badge{{display:inline-block;background:#fff;color:#2E7D32;border-radius:20px;padding:4px 12px;font-size:11px;font-weight:700;letter-spacing:.5px;margin-bottom:8px}}
+.hd h1{{margin:0;font-size:18px;font-weight:600;line-height:1.3}}
+.body{{padding:20px}}
+.row{{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0f0f0;font-size:14px}}
+.row:last-child{{border-bottom:none}}
+.lbl{{color:#666;font-weight:500;flex-shrink:0;padding-right:12px}}
+.val{{color:#222;text-align:right;font-weight:600;word-break:break-word}}
+.note{{background:#FFF9E5;border-left:3px solid #FBC02D;padding:12px 14px;margin-top:16px;border-radius:0 6px 6px 0;font-size:12px;color:#666;line-height:1.5}}
+.foot{{text-align:center;padding:12px;font-size:11px;color:#999}}
+</style></head>
+<body>
+<div class="box">
+  <div class="hd">
+    <div class="badge">✓ DOCUMENTO AUTENTICO</div>
+    <h1>{type_label}</h1>
+  </div>
+  <div class="body">
+    <div class="row"><span class="lbl">Società</span><span class="val">{society_name or '—'}</span></div>
+    <div class="row"><span class="lbl">Firmatario</span><span class="val">{masked}</span></div>
+    <div class="row"><span class="lbl">Data firma</span><span class="val">{signed_str}<br><span style="font-size:11px;color:#888;font-weight:normal">(Europe/Rome)</span></span></div>
+    {threshold_block}
+    <div class="row"><span class="lbl">ID documento</span><span class="val" style="font-family:monospace;font-size:11px">{document_id}</span></div>
+    <div class="row"><span class="lbl">Hash firma</span><span class="val" style="font-family:monospace;font-size:11px">{sig_hash}…</span></div>
+    <div class="note">
+      Per tutela della privacy non vengono mostrati nome completo, codice fiscale, importo dettagliato o immagine della firma.
+      Questa pagina prova solo l'<strong>esistenza e l'autenticità</strong> della firma elettronica sul documento.
+    </div>
+  </div>
+  <div class="foot">Generato da RegistraTEAM · {datetime.now(timezone.utc).year}</div>
+</div>
+</body></html>"""
+    return HTMLResponse(content=html, headers={"Cache-Control": "no-store"})
 
 
 @api_router.post("/admin/compensations/regenerate-all-receipts")
