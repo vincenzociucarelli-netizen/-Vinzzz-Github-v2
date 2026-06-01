@@ -27096,6 +27096,74 @@ async def admin_list_image_consents(
 # ─────────────────────────── /Consensi Immagini ───────────────────────────
 
 
+@api_router.post("/admin/compensations/regenerate-all-receipts")
+async def admin_regenerate_all_receipts(current_user = Depends(get_current_user)):
+    """Admin: forza la rigenerazione di TUTTE le quietanze della società.
+
+    Per ogni quietanza firmata (compensation_receipt / coach_compensation_receipt
+    / collaboratore_compensation_receipt) invalida la cache (pdf_base64 +
+    pdf_path su disco) così che al prossimo download verrà rigenerata con:
+      - data di firma originale
+      - firma immagine (recuperata dal source-of-truth compensation row)
+      - metadati di autentica GDPR
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    society_id = current_user.get("society_id")
+    base_filter = {"document_type": {"$in": [
+        "compensation_receipt",
+        "coach_compensation_receipt",
+        "collaboratore_compensation_receipt",
+    ]}}
+    # If admin has a society_id, include docs of that society OR legacy docs
+    # without society_id field (their society is implied by the signer).
+    if society_id:
+        query = {**base_filter, "$or": [
+            {"society_id": society_id},
+            {"society_id": {"$exists": False}},
+            {"society_id": None},
+        ]}
+    else:
+        query = base_filter
+
+    docs = await db.signed_documents.find(query, {"_id": 0, "id": 1, "pdf_path": 1}).to_list(20000)
+    invalidated_cache = 0
+    removed_files = 0
+    errors = []
+    for d in docs:
+        # 1) Unset pdf_base64 cache in DB
+        try:
+            res = await db.signed_documents.update_one(
+                {"id": d["id"]},
+                {"$unset": {"pdf_base64": ""}}
+            )
+            if res.modified_count:
+                invalidated_cache += 1
+        except Exception as e:
+            errors.append({"id": d["id"], "error": str(e)})
+            continue
+        # 2) Remove stale PDF file from disk (will be regenerated on next download)
+        if d.get("pdf_path"):
+            try:
+                if os.path.exists(d["pdf_path"]):
+                    os.remove(d["pdf_path"])
+                    removed_files += 1
+            except Exception as e:
+                errors.append({"id": d["id"], "error": f"file_remove: {str(e)}"})
+
+    return {
+        "message": f"Rigenerazione preparata per {len(docs)} quietanze. Verranno ricostruite con metadati e firma corretti al prossimo accesso.",
+        "total": len(docs),
+        "cache_invalidated": invalidated_cache,
+        "files_removed": removed_files,
+        "errors": errors[:50],  # cap to avoid huge response
+    }
+
+
+# ─────────────────────────── /Rigenera quietanze ───────────────────────────
+
+
 @api_router.post("/admin/athletes/image-consents/notify-team")
 async def admin_notify_team_image_consents(
     payload: dict = Body(...),

@@ -192,6 +192,30 @@ export default function DocumentsArchive() {
     }
   };
 
+  const handleRegenerateReceipts = async () => {
+    const confirmMsg = "Rigenera TUTTE le quietanze della società?\n\nQuesto pulsante invalida la cache di tutti i PDF delle quietanze esistenti. Al prossimo apertura/download, ogni quietanza verrà ricostruita con:\n• data di firma originale (e non la data di stampa)\n• firma immagine recuperata dalla riga compenso\n• metadati di autentica GDPR (ID documento, ID firmatario, IP, timestamp)\n\n✅ Da usare una tantum dopo gli ultimi fix. Operazione sicura, non cancella i documenti.";
+    const ok = Platform.OS === 'web' ? window.confirm(confirmMsg) : await new Promise<boolean>((resolve) => {
+      Alert.alert('Rigenera tutte le quietanze', confirmMsg, [
+        { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Procedi', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/admin/compensations/regenerate-all-receipts`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || 'Errore');
+      const msg = `${data.message}\n\n📊 Totale quietanze: ${data.total}\n• Cache invalidata: ${data.cache_invalidated}\n• File su disco rimossi: ${data.files_removed}` + ((data.errors || []).length ? `\n\n⚠️ Errori: ${data.errors.length}` : '');
+      if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Completato', msg);
+    } catch (e: any) {
+      if (Platform.OS === 'web') window.alert(`Errore: ${e?.message || 'failed'}`); else Alert.alert('Errore', e?.message || 'failed');
+    }
+  };
+
   const handleDelete = async (doc: Document) => {
     const confirmMsg = `Richiedere la cancellazione del documento firmato?\n\nDocumento: ${doc.document_title}\nFirmatario: ${doc.signer_name}\n\n⚠️ Il documento NON sarà cancellato subito. Verrà inviata una richiesta al firmatario che dovrà autorizzare la cancellazione dalla propria dashboard.`;
     const ok = Platform.OS === 'web' ? window.confirm(confirmMsg) : await new Promise<boolean>((resolve) => {
@@ -418,6 +442,13 @@ export default function DocumentsArchive() {
           data-testid="repair-orphaned-btn"
         >
           <Ionicons name="build" size={18} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleRegenerateReceipts}
+          style={{ backgroundColor: '#4CAF50', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, marginRight: 8 }}
+          data-testid="regenerate-receipts-btn"
+        >
+          <Ionicons name="refresh" size={18} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity 
           onPress={() => setShowFilters(!showFilters)} 
