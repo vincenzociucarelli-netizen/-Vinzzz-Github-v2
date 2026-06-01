@@ -7168,6 +7168,7 @@ async def sign_athlete_compensation_receipt_with_signature(
         "amount_gross": amount_gross,
         "pdf_path": pdf_path,
         "pdf_filename": pdf_filename,
+        "pdf_base64": base64.b64encode(pdf_bytes).decode(),
         "signed_at": now,
         "exceeded_5000": first_time_exceeded_5000,
         "exceeded_15000": first_time_exceeded_15000
@@ -13455,6 +13456,10 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
         logging.error(f"Error saving PDF: {e}")
         raise HTTPException(status_code=500, detail="Errore nel salvataggio del documento")
     
+    # ALWAYS store PDF as base64 in DB as fallback for ephemeral disk
+    # (Render/Cloud disks are wiped on redeploy/restart).
+    pdf_base64_persistent = base64.b64encode(pdf_bytes).decode()
+    
     # Store document record with comprehensive metadata
     document_record = {
         "id": receipt_id,
@@ -13472,6 +13477,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
         "deductions": deductions,
         "pdf_path": pdf_path,
         "pdf_filename": pdf_filename,
+        "pdf_base64": pdf_base64_persistent,
         "signed_at": now,
         "signed_at_iso": now.isoformat(),
         "exceeded_5000": first_time_exceeded_5000,
@@ -14043,6 +14049,7 @@ Luogo e data: _________________, {now.strftime('%d/%m/%Y')}
         "threshold_amount": threshold_amount,
         "pdf_path": pdf_path,
         "pdf_filename": pdf_filename,
+        "pdf_base64": base64.b64encode(pdf_bytes).decode(),
         "signed_at": now
     }
     await db.signed_documents.insert_one(document_record)
@@ -16115,19 +16122,8 @@ def generate_threshold_5k_pdf(
     c.drawCentredString(width/2, height - 2.5*cm, title1)
     c.drawCentredString(width/2, height - 3.2*cm, title2)
 
-    # Threshold-crossing month (highlighted reference)
-    if threshold_month and 1 <= int(threshold_month) <= 12:
-        try:
-            month_name_str = MONTH_NAMES[int(threshold_month)]
-            c.setFont("Helvetica-Bold", 10)
-            c.setFillColorRGB(0.7, 0.15, 0.15)
-            c.drawCentredString(width/2, height - 4.0*cm, f"Mese di superamento: {month_name_str} {year}")
-            c.setFillColorRGB(0, 0, 0)
-        except Exception:
-            pass
-    
     # Intro
-    y = height - 5*cm
+    y = height - 4.5*cm
     c.setFont("Helvetica", 11)
     c.drawString(2*cm, y, "Il/La sottoscritto/a")
     
@@ -16150,10 +16146,20 @@ def generate_threshold_5k_pdf(
     c.setFont("Helvetica-Bold", 14)
     c.drawCentredString(width/2, y, "C O M U N I C A")
     
-    # Communication text
+    # Communication text — prepended with the receipt month that crossed the threshold.
     y -= 1.2*cm
     c.setFont("Helvetica", 10)
-    text = f"che, alla data odierna, il totale dei compensi percepiti per attività sportiva dilettantistica nell'anno solare {year}, anche da altri enti sportivi, ha raggiunto e/o superato l'importo complessivo di € 5.000,00."
+    prefix = ""
+    try:
+        if threshold_month and 1 <= int(threshold_month) <= 12:
+            prefix = f"Con la quietanza del mese di {MONTH_NAMES[int(threshold_month)]} {year}, "
+    except Exception:
+        pass
+    text = (
+        f"{prefix}il totale dei compensi percepiti per attività sportiva dilettantistica "
+        f"nell'anno solare {year}, anche da altri enti sportivi, ha raggiunto e/o superato "
+        f"l'importo complessivo di € 5.000,00."
+    )
     
     # Word wrap
     words = text.split(' ')
@@ -16328,19 +16334,8 @@ def generate_threshold_15k_pdf(
     c.drawCentredString(width/2, height - 2.5*cm, title1)
     c.drawCentredString(width/2, height - 3.2*cm, title2)
 
-    # Threshold-crossing month (highlighted reference)
-    if threshold_month and 1 <= int(threshold_month) <= 12:
-        try:
-            month_name_str = MONTH_NAMES[int(threshold_month)]
-            c.setFont("Helvetica-Bold", 10)
-            c.setFillColorRGB(0.7, 0.15, 0.15)
-            c.drawCentredString(width/2, height - 4.0*cm, f"Mese di superamento: {month_name_str} {year}")
-            c.setFillColorRGB(0, 0, 0)
-        except Exception:
-            pass
-    
     # Intro
-    y = height - 5*cm
+    y = height - 4.5*cm
     c.setFont("Helvetica", 11)
     c.drawString(2*cm, y, "Il/La sottoscritto/a")
     
@@ -16361,10 +16356,20 @@ def generate_threshold_15k_pdf(
     c.setFont("Helvetica-Bold", 14)
     c.drawCentredString(width/2, y, "C O M U N I C A")
     
-    # Communication text
+    # Communication text — prepended with the receipt month that crossed the threshold.
     y -= 1.2*cm
     c.setFont("Helvetica", 10)
-    text = f"che, alla data odierna, il totale dei compensi percepiti per attività sportiva dilettantistica nell'anno solare {year}, anche da altri enti sportivi, ha raggiunto e/o superato l'importo complessivo di € 15.000,00."
+    prefix = ""
+    try:
+        if threshold_month and 1 <= int(threshold_month) <= 12:
+            prefix = f"Con la quietanza del mese di {MONTH_NAMES[int(threshold_month)]} {year}, "
+    except Exception:
+        pass
+    text = (
+        f"{prefix}il totale dei compensi percepiti per attività sportiva dilettantistica "
+        f"nell'anno solare {year}, anche da altri enti sportivi, ha raggiunto e/o superato "
+        f"l'importo complessivo di € 15.000,00."
+    )
     
     words = text.split(' ')
     lines = []
@@ -17054,7 +17059,7 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
     ) and (
         b"PDF originale non" in pdf_bytes
         or b"Riepilogo firma" in pdf_bytes
-        or b"Mese di superamento" not in pdf_bytes
+        or b"Con la quietanza del mese di" not in pdf_bytes
         or b"Verifica autenticita" not in pdf_bytes
         or len(pdf_bytes) < 8000
     ):
@@ -18425,6 +18430,7 @@ async def sign_dirigente_compensation_receipt(
         "deductions": deductions,
         "pdf_path": pdf_path,
         "pdf_filename": pdf_filename,
+        "pdf_base64": base64.b64encode(pdf_bytes).decode(),
         "signed_at": now,
         "signed_at_iso": now.isoformat(),
         "exceeded_5000": first_time_exceeded_5000,
@@ -19161,6 +19167,7 @@ async def sign_collaboratore_compensation_receipt(
         "exceeded_15000": first_time_exceeded_15000,
         "pdf_path": pdf_path,
         "pdf_filename": pdf_filename,
+        "pdf_base64": base64.b64encode(pdf_bytes).decode(),
         "signed_at": now
     }
     await db.signed_documents.insert_one(document_record)
@@ -20997,7 +21004,7 @@ async def download_document(
         dtype = doc.get("document_type", "")
         if dtype in ("threshold_5000_communication", "threshold_15000_communication") and (
             len(pdf_content) < 8000
-            or b"Mese di superamento" not in pdf_content
+            or b"Con la quietanza del mese di" not in pdf_content
             or b"Verifica autenticita" not in pdf_content
         ):
             try:
@@ -21131,7 +21138,7 @@ async def download_document(
             needs_rebuild = (
                 b"Riepilogo firma" in pdf_bytes
                 or b"PDF originale non" in pdf_bytes
-                or b"Mese di superamento" not in pdf_bytes
+                or b"Con la quietanza del mese di" not in pdf_bytes
                 or b"Verifica autenticita" not in pdf_bytes
                 or len(pdf_bytes) < 8000
             )
