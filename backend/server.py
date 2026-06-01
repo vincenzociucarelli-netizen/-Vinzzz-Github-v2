@@ -16039,9 +16039,17 @@ def generate_threshold_5k_pdf(
     year: int,
     signature_base64: str,
     society_city: str = "Perugia",
-    threshold_metadata: dict = None
+    threshold_metadata: dict = None,
+    signed_at: Optional[Any] = None,
+    threshold_month: Optional[int] = None,
 ) -> bytes:
-    """Generate €5,000 threshold communication PDF with metadata"""
+    """Generate €5,000 threshold communication PDF with metadata.
+
+    Args:
+      signed_at: Original signing timestamp (str ISO or datetime). If omitted,
+                 falls back to today — should never happen for a signed doc.
+      threshold_month: Month (1-12) when the threshold was crossed.
+    """
     if not HAS_PDF_GENERATION:
         raise HTTPException(status_code=500, detail="PDF generation not available")
     
@@ -16049,7 +16057,19 @@ def generate_threshold_5k_pdf(
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
-    timestamp = to_rome_time(datetime.now(timezone.utc)).strftime("%d/%m/%Y %H:%M:%S")
+    # Use original signing date (NOT generation date)
+    signed_dt = None
+    if signed_at:
+        try:
+            if isinstance(signed_at, str):
+                signed_dt = datetime.fromisoformat(signed_at.replace("Z", "+00:00"))
+            elif isinstance(signed_at, datetime):
+                signed_dt = signed_at
+        except Exception:
+            signed_dt = None
+    if signed_dt is None:
+        signed_dt = datetime.now(timezone.utc)
+    timestamp = to_rome_time(signed_dt).strftime("%d/%m/%Y %H:%M:%S")
     
     # Name is already stored as "COGNOME NOME" in database - use as-is
     formatted_name = collaborator_name
@@ -16060,6 +16080,17 @@ def generate_threshold_5k_pdf(
     title2 = "DI COMPENSI SPORTIVI DILETTANTISTICI DI € 5.000,00 (Cinquemila/00)"
     c.drawCentredString(width/2, height - 2.5*cm, title1)
     c.drawCentredString(width/2, height - 3.2*cm, title2)
+
+    # Threshold-crossing month (highlighted reference)
+    if threshold_month and 1 <= int(threshold_month) <= 12:
+        try:
+            month_name_str = MONTH_NAMES[int(threshold_month)]
+            c.setFont("Helvetica-Bold", 10)
+            c.setFillColorRGB(0.7, 0.15, 0.15)
+            c.drawCentredString(width/2, height - 4.0*cm, f"Mese di superamento: {month_name_str} {year}")
+            c.setFillColorRGB(0, 0, 0)
+        except Exception:
+            pass
     
     # Intro
     y = height - 5*cm
@@ -16207,7 +16238,9 @@ def generate_threshold_15k_pdf(
     year: int,
     signature_base64: str,
     society_city: str = "Perugia",
-    threshold_metadata: dict = None
+    threshold_metadata: dict = None,
+    signed_at: Optional[Any] = None,
+    threshold_month: Optional[int] = None,
 ) -> bytes:
     """Generate €15,000 threshold communication PDF with metadata"""
     if not HAS_PDF_GENERATION:
@@ -16217,7 +16250,19 @@ def generate_threshold_15k_pdf(
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
-    timestamp = to_rome_time(datetime.now(timezone.utc)).strftime("%d/%m/%Y %H:%M:%S")
+    # Use original signing date (NOT generation date)
+    signed_dt = None
+    if signed_at:
+        try:
+            if isinstance(signed_at, str):
+                signed_dt = datetime.fromisoformat(signed_at.replace("Z", "+00:00"))
+            elif isinstance(signed_at, datetime):
+                signed_dt = signed_at
+        except Exception:
+            signed_dt = None
+    if signed_dt is None:
+        signed_dt = datetime.now(timezone.utc)
+    timestamp = to_rome_time(signed_dt).strftime("%d/%m/%Y %H:%M:%S")
     
     # Name is already stored as "COGNOME NOME" in database - use as-is
     formatted_name = collaborator_name
@@ -16228,6 +16273,17 @@ def generate_threshold_15k_pdf(
     title2 = "DEI COMPENSI SPORTIVI DILETTANTISTICI DI € 15.000,00 (Quindicimila)"
     c.drawCentredString(width/2, height - 2.5*cm, title1)
     c.drawCentredString(width/2, height - 3.2*cm, title2)
+
+    # Threshold-crossing month (highlighted reference)
+    if threshold_month and 1 <= int(threshold_month) <= 12:
+        try:
+            month_name_str = MONTH_NAMES[int(threshold_month)]
+            c.setFont("Helvetica-Bold", 10)
+            c.setFillColorRGB(0.7, 0.15, 0.15)
+            c.drawCentredString(width/2, height - 4.0*cm, f"Mese di superamento: {month_name_str} {year}")
+            c.setFillColorRGB(0, 0, 0)
+        except Exception:
+            pass
     
     # Intro
     y = height - 5*cm
@@ -16919,10 +16975,15 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
             pdf_bytes = None
 
     # Same logic for threshold communications: summary fallback OR incomplete
-    # legacy PDF (no signature/location) → regenerate.
+    # legacy PDF (no signature/location/month-of-crossing) → regenerate.
     if pdf_bytes and document.get("document_type") in (
         "threshold_5000_communication", "threshold_15000_communication"
-    ) and (b"PDF originale non" in pdf_bytes or b"Riepilogo firma" in pdf_bytes or len(pdf_bytes) < 8000):
+    ) and (
+        b"PDF originale non" in pdf_bytes
+        or b"Riepilogo firma" in pdf_bytes
+        or b"Mese di superamento" not in pdf_bytes
+        or len(pdf_bytes) < 8000
+    ):
         logger.info(f"Discarding stale threshold PDF cache for {document_id} ({len(pdf_bytes)} bytes), will regenerate")
         try:
             fixed = await _regenerate_threshold_communication_pdf(document)
@@ -20848,7 +20909,10 @@ async def download_document(
         # We re-generate using the official generator with the recovered city
         # and signature so the document becomes legally complete.
         dtype = doc.get("document_type", "")
-        if dtype in ("threshold_5000_communication", "threshold_15000_communication") and len(pdf_content) < 8000:
+        if dtype in ("threshold_5000_communication", "threshold_15000_communication") and (
+            len(pdf_content) < 8000
+            or b"Mese di superamento" not in pdf_content
+        ):
             try:
                 fixed = await _regenerate_threshold_communication_pdf(doc)
                 if fixed and len(fixed) > 1500:
@@ -20974,6 +21038,32 @@ async def download_document(
                     media_type="application/pdf",
                     headers={"Content-Disposition": f'inline; filename="documento_{document_id}.pdf"', "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
                 )
+        elif dtype in ("threshold_5000_communication", "threshold_15000_communication"):
+            # AUTO-FIX threshold communications: regen if missing month-of-crossing
+            needs_rebuild = (
+                b"Riepilogo firma" in pdf_bytes
+                or b"PDF originale non" in pdf_bytes
+                or b"Mese di superamento" not in pdf_bytes
+                or len(pdf_bytes) < 8000
+            )
+            if needs_rebuild:
+                logger.info(f"Invalidating stale threshold cache for {document_id} ({len(pdf_bytes)} bytes)")
+                try:
+                    fixed = await _regenerate_threshold_communication_pdf(doc)
+                    if fixed and len(fixed) > 1500:
+                        pdf_bytes = fixed
+                        await db.signed_documents.update_one(
+                            {"id": document_id},
+                            {"$set": {"pdf_base64": base64.b64encode(fixed).decode()}}
+                        )
+                        logger.info(f"Auto-fixed threshold PDF {document_id} ({len(pdf_bytes)} bytes)")
+                except Exception as ex:
+                    logger.warning(f"threshold auto-fix failed for {document_id}: {ex}")
+            return StreamingResponse(
+                io.BytesIO(pdf_bytes),
+                media_type="application/pdf",
+                headers={"Content-Disposition": f'inline; filename="documento_{document_id}.pdf"', "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
+            )
         else:
             return StreamingResponse(
                 io.BytesIO(pdf_bytes),
@@ -21650,7 +21740,8 @@ async def _regenerate_threshold_communication_pdf(document: dict) -> Optional[by
     """
     try:
         doc_type = document.get("document_type", "")
-        threshold_type = "5000" if "5000" in doc_type else "15000"
+        # ⚠️ Check 15000 FIRST because "5000" is a substring of "15000"!
+        threshold_type = "15000" if "15000" in doc_type else "5000"
 
         # Signer can be referenced as signer_id, coach_id, dirigente_id, collaboratore_id, atleta_id
         signer_id = (
@@ -21727,18 +21818,75 @@ async def _regenerate_threshold_communication_pdf(document: dict) -> Optional[by
             or ""
         )
 
-        # Totals (best effort)
-        yearly_total = add.get("yearly_total_after") or (comp.get("yearly_total_after") if comp else None) or 0
-        yearly_total_before = add.get("yearly_total_before") or (comp.get("yearly_total_before") if comp else None) or 0
-        prior_comp = add.get("prior_compensation_declared") or (decl.get("compensi_pregressi_dichiarati") if decl else None) or 0
+        # Totals: prefer the persisted threshold_metadata (most authoritative
+        # snapshot taken at signing time); fall back to additional_data / comp.
+        persisted_meta = document.get("threshold_metadata") or {}
+        yearly_total = persisted_meta.get("yearly_total_after") or add.get("yearly_total_after") or (comp.get("yearly_total_after") if comp else None)
+        yearly_total_before = persisted_meta.get("yearly_total_before") or add.get("yearly_total_before") or (comp.get("yearly_total_before") if comp else None)
+
+        # If totals are missing (legacy docs), reconstruct them by summing
+        # all signed compensation rows for that year up to and including the
+        # threshold month.
+        if (not yearly_total or not yearly_total_before) and signer_id and year and month:
+            try:
+                m_int, y_int = int(month), int(year)
+                cum_after = 0.0
+                cum_before = 0.0
+                for coll, key in [
+                    ("coach_compensations", "coach_id"),
+                    ("collaboratore_compensations", "collaboratore_id"),
+                    ("dirigente_compensations", "dirigente_id"),
+                    ("atleta_pro_compensations", "atleta_id"),
+                ]:
+                    rows = await db[coll].find(
+                        {key: signer_id, "year": y_int, "receipt_signed": True}
+                    ).to_list(50)
+                    for r in rows:
+                        rm = int(r.get("month") or 0)
+                        amt = float(r.get("amount_gross") or r.get("amount") or 0)
+                        if rm <= m_int:
+                            cum_after += amt
+                        if rm < m_int:
+                            cum_before += amt
+                if not yearly_total:
+                    yearly_total = cum_after
+                if not yearly_total_before:
+                    yearly_total_before = cum_before
+            except Exception:
+                pass
+
+        yearly_total = yearly_total or 0
+        yearly_total_before = yearly_total_before or 0
+        prior_comp = persisted_meta.get("prior_compensation_declared") or add.get("prior_compensation_declared") or ((signer or {}).get("other_annual_compensation") if year == ((signer or {}).get("contract_start_date") or "")[:4] else 0) or (decl.get("compensi_pregressi_dichiarati") if decl else None) or 0
+        sig_hash = persisted_meta.get("signature_hash") or (hashlib.sha256(sig_b64.encode()).hexdigest() if sig_b64 else "N/D")
+
+        # Original signing timestamp (priority: signed_documents.signed_at →
+        # persisted metadata → compensation.receipt_signed_date)
+        signed_at_final = (
+            document.get("signed_at")
+            or persisted_meta.get("signature_timestamp_utc")
+            or (comp.get("receipt_signed_date") if comp else None)
+        )
+        sig_timestamp_rome = persisted_meta.get("signature_timestamp_rome")
+        if not sig_timestamp_rome and signed_at_final:
+            try:
+                if isinstance(signed_at_final, str):
+                    _dt = datetime.fromisoformat(signed_at_final.replace("Z", "+00:00"))
+                else:
+                    _dt = signed_at_final
+                sig_timestamp_rome = to_rome_time(_dt).strftime("%d/%m/%Y %H:%M:%S")
+            except Exception:
+                sig_timestamp_rome = "N/D"
 
         threshold_meta = {
             "yearly_total_before": yearly_total_before,
             "yearly_total_after": yearly_total,
             "prior_compensation_declared": prior_comp,
             "threshold_crossed": threshold_type,
-            "signature_timestamp_utc": str(document.get("signed_at") or ""),
-            "monthly_compensation_rate": (comp.get("amount_gross") if comp else None) or 0,
+            "signature_timestamp_utc": str(signed_at_final or ""),
+            "signature_timestamp_rome": sig_timestamp_rome or "N/D",
+            "signature_hash": sig_hash,
+            "monthly_compensation_rate": (comp.get("amount_gross") if comp else None) or persisted_meta.get("monthly_compensation_rate") or 0,
         }
 
         # Resolve society name
@@ -21759,6 +21907,8 @@ async def _regenerate_threshold_communication_pdf(document: dict) -> Optional[by
                 signature_base64=sig_b64 or "",
                 society_city=society_city,
                 threshold_metadata=threshold_meta,
+                signed_at=signed_at_final,
+                threshold_month=int(month) if month else None,
             )
         else:
             pdf_bytes = generate_threshold_15k_pdf(
@@ -21769,6 +21919,8 @@ async def _regenerate_threshold_communication_pdf(document: dict) -> Optional[by
                 signature_base64=sig_b64 or "",
                 society_city=society_city,
                 threshold_metadata=threshold_meta,
+                signed_at=signed_at_final,
+                threshold_month=int(month) if month else None,
             )
 
         return pdf_bytes
@@ -27115,6 +27267,8 @@ async def admin_regenerate_all_receipts(current_user = Depends(get_current_user)
         "compensation_receipt",
         "coach_compensation_receipt",
         "collaboratore_compensation_receipt",
+        "threshold_5000_communication",
+        "threshold_15000_communication",
     ]}}
     # If admin has a society_id, include docs of that society OR legacy docs
     # without society_id field (their society is implied by the signer).

@@ -23,6 +23,48 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🔧 01/06/2026 — 4 fix critici Comunicazioni Soglia 5k/15k
+
+### Bug 1: Data di stampa invece di data firma
+Stesso pattern delle quietanze. `generate_threshold_5k_pdf` e `generate_threshold_15k_pdf` usavano `datetime.now()`. Aggiunto parametro `signed_at` con stesso fallback chain (signed_documents.signed_at → metadata persisted → comp.receipt_signed_date).
+
+### Bug 2: PDF 15k mostrava € 5.000 (BUG GRAVE)
+**Root cause**: in `_regenerate_threshold_communication_pdf` la riga:
+```python
+threshold_type = "5000" if "5000" in doc_type else "15000"
+```
+Era sbagliata perché `"5000" in "threshold_15000_communication"` ritorna **True** (substring match). Quindi anche i documenti 15k venivano rigenerati con il template 5k.
+
+**Fix**: invertito il check → `threshold_type = "15000" if "15000" in doc_type else "5000"`.
+
+### Bug 3: Metadati di verifica tutti a zero (Totale prima: €0, Timestamp: N/D)
+**Root cause**: `_regenerate_threshold_communication_pdf` ignorava il `threshold_metadata` dict persistito in `signed_documents` al momento della firma. Inoltre per i doc legacy senza `threshold_metadata` non veniva calcolato nulla.
+
+**Fix duale**:
+1. Lettura prioritaria da `document.threshold_metadata` (snapshot firma originale).
+2. Fallback: ricostruisce i totali sommando tutte le compensation rows firmate dello stesso anno fino al mese di superamento incluso (per `yearly_total_after`) ed esclusivo (per `yearly_total_before`). Cerca in 4 collezioni (coach/collaboratore/dirigente/atleta_pro).
+3. `signature_timestamp_rome` ora viene popolato correttamente convertendo `signed_at` in Europe/Rome.
+
+### Bug 4: Mancava "Mese di superamento: <Mese> <Anno>"
+Aggiunta riga **rossa in grassetto** sotto i titoli del PDF (sia 5k che 15k) con il riferimento al mese in cui si supera la soglia. Es: `Mese di superamento: Novembre 2025`.
+
+Bug nascosto trovato: usavo `ITALIAN_MONTHS[...]` ma la costante si chiama `MONTH_NAMES` (dict). L'eccezione veniva silenziata dal try/except, quindi la riga non appariva senza errore visibile.
+
+### Auto-fix esteso al pdf_base64 cache branch
+Sia `/documents/download/{id}` che `/documents/signed/{id}/pdf` ora invalidano la cache `pdf_base64` per le threshold communications se manca il testo `Mese di superamento`. Garantisce che ogni PDF servito sia coerente con i nuovi metadati.
+
+### "Rigenera tutte le quietanze" ora include anche le Comunicazioni Soglia
+Endpoint `POST /api/admin/compensations/regenerate-all-receipts` aggiornato per processare anche `threshold_5000_communication` e `threshold_15000_communication`.
+
+**Test backend verificato live**:
+Doc 15k `ec9ba55b-...` (firmato 18/02/2026, mese di superamento Novembre 2025):
+- ✅ Mese di superamento: Novembre 2025
+- ✅ Data: 18/02/2026 02:35:11
+- ✅ Totale prima: € 650.00, Totale dopo: € 1.300.00
+- ✅ Titolo 15.000 corretto (non più 5.000)
+
+---
+
 ## 🔧 01/06/2026 — 3 fix critici quietanze + InAppPdfModal
 
 ### Bug 1: Quietanze con data di OGGI invece di data firma
