@@ -10,7 +10,7 @@ import uuid
 import hashlib
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
-from typing import List, Optional
+from typing import List, Optional, Any
 from datetime import datetime, timedelta, timezone
 try:
     from zoneinfo import ZoneInfo  # Python 3.9+
@@ -14650,9 +14650,18 @@ def generate_monthly_receipt_pdf(
     month_name: str,
     year: int,
     amount_gross: float,
-    signature_base64: str
+    signature_base64: str,
+    signed_at: Optional[Any] = None,
+    document_id: Optional[str] = None,
+    signer_id: Optional[str] = None,
+    ip_address: Optional[str] = None,
+    document_hash: Optional[str] = None,
 ) -> bytes:
-    """Generate monthly compensation receipt PDF with proper formatting"""
+    """Generate monthly compensation receipt PDF with proper formatting.
+
+    `signed_at` is the ORIGINAL signing date (str ISO or datetime). Falls back
+    to today only when missing — should never happen for a signed receipt.
+    """
     if not HAS_PDF_GENERATION:
         raise HTTPException(status_code=500, detail="PDF generation not available")
     
@@ -14660,7 +14669,21 @@ def generate_monthly_receipt_pdf(
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     
-    timestamp = to_rome_time(datetime.now(timezone.utc)).strftime("%d/%m/%Y")
+    # Use original signing date (NOT generation date). Receipts must show the
+    # date the collaborator/coach/dirigente actually signed.
+    signed_dt = None
+    if signed_at:
+        try:
+            if isinstance(signed_at, str):
+                signed_dt = datetime.fromisoformat(signed_at.replace("Z", "+00:00"))
+            elif isinstance(signed_at, datetime):
+                signed_dt = signed_at
+        except Exception:
+            signed_dt = None
+    if signed_dt is None:
+        signed_dt = datetime.now(timezone.utc)
+    timestamp = to_rome_time(signed_dt).strftime("%d/%m/%Y")
+    timestamp_full = to_rome_time(signed_dt).strftime("%d/%m/%Y %H:%M:%S")
     
     # Title - centered, bold
     c.setFont("Helvetica-Bold", 14)
@@ -14758,6 +14781,32 @@ def generate_monthly_receipt_pdf(
         except Exception as e:
             logging.error(f"Error adding signature: {e}")
     
+    # Authentication metadata footer (GDPR audit trail)
+    # Drawn at the bottom of the page in small grey font.
+    try:
+        c.setFont("Helvetica", 7)
+        c.setFillColorRGB(0.45, 0.45, 0.45)
+        footer_y = 1.6 * cm
+        c.drawString(2 * cm, footer_y, "— Metadati di autentica —")
+        footer_y -= 0.32 * cm
+        c.drawString(2 * cm, footer_y, f"Firmato il: {timestamp_full} (Europe/Rome)")
+        if document_id:
+            footer_y -= 0.32 * cm
+            c.drawString(2 * cm, footer_y, f"ID documento: {document_id}")
+        if signer_id:
+            footer_y -= 0.32 * cm
+            c.drawString(2 * cm, footer_y, f"ID firmatario: {signer_id}")
+        if ip_address:
+            footer_y -= 0.32 * cm
+            c.drawString(2 * cm, footer_y, f"Indirizzo IP firma: {ip_address}")
+        if document_hash:
+            footer_y -= 0.32 * cm
+            label = f"Hash documento: {document_hash[:32]}…" if len(document_hash) > 32 else f"Hash documento: {document_hash}"
+            c.drawString(2 * cm, footer_y, label)
+        c.setFillColorRGB(0, 0, 0)
+    except Exception:
+        pass
+
     c.save()
     return buffer.getvalue()
 
@@ -16839,6 +16888,35 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
     ) and (b"PDF originale non" in pdf_bytes or b"Riepilogo firma" in pdf_bytes or len(pdf_bytes) < 4500):
         logger.info(f"Discarding stale summary PDF cache for {document_id} ({len(pdf_bytes)} bytes), will regenerate")
         pdf_bytes = None
+
+    # Same logic for compensation receipts: legacy placeholder OR missing
+    # authentication metadata footer → regenerate with original signing date,
+    # signature from source compensation row, and audit metadata.
+    if pdf_bytes and document.get("document_type") in (
+        "compensation_receipt", "coach_compensation_receipt", "collaboratore_compensation_receipt"
+    ) and (
+        b"PDF originale non" in pdf_bytes
+        or b"Riepilogo firma" in pdf_bytes
+        or b"Metadati di autentica" not in pdf_bytes
+    ):
+        logger.info(f"Discarding stale compensation_receipt cache for {document_id} ({len(pdf_bytes)} bytes), will regenerate")
+        try:
+            fixed = await _regenerate_compensation_receipt_pdf(document)
+            if fixed and len(fixed) > 1500:
+                pdf_bytes = fixed
+                try:
+                    await db.signed_documents.update_one(
+                        {"id": document_id},
+                        {"$set": {"pdf_base64": base64.b64encode(fixed).decode()}}
+                    )
+                except Exception:
+                    pass
+                logger.info(f"Auto-fixed compensation_receipt PDF {document_id} ({len(pdf_bytes)} bytes)")
+            else:
+                pdf_bytes = None
+        except Exception as ex:
+            logger.warning(f"compensation_receipt regen failed for {document_id}: {ex}")
+            pdf_bytes = None
 
     # Same logic for threshold communications: summary fallback OR incomplete
     # legacy PDF (no signature/location) → regenerate.
@@ -20789,6 +20867,34 @@ async def download_document(
             except Exception as ex:
                 logger.warning(f"threshold auto-fix failed for {document_id}: {ex}")
 
+        # AUTO-FIX: compensation_receipt on disk — if file is from the legacy
+        # placeholder generator OR uses today's date instead of signing date
+        # (no "Metadati di autentica" footer), regenerate from the source-of-truth
+        # compensation row so signature + date + audit metadata are restored.
+        if dtype in ("compensation_receipt", "coach_compensation_receipt", "collaboratore_compensation_receipt"):
+            needs_rebuild = (
+                b"Riepilogo firma" in pdf_content
+                or b"PDF originale non" in pdf_content
+                or b"Metadati di autentica" not in pdf_content
+            )
+            if needs_rebuild:
+                try:
+                    fixed = await _regenerate_compensation_receipt_pdf(doc)
+                    if fixed and len(fixed) > 1500:
+                        with open(pdf_path, 'wb') as f:
+                            f.write(fixed)
+                        try:
+                            await db.signed_documents.update_one(
+                                {"id": document_id},
+                                {"$set": {"pdf_base64": base64.b64encode(fixed).decode()}}
+                            )
+                        except Exception:
+                            pass
+                        pdf_content = fixed
+                        logger.info(f"Auto-fixed compensation_receipt PDF {document_id} ({len(pdf_content)} bytes)")
+                except Exception as ex:
+                    logger.warning(f"compensation_receipt auto-fix failed for {document_id}: {ex}")
+
         # AUTO-FIX: for GDPR privacy PDFs that show the legacy summary
         # ("PDF originale non più disponibile") regenerate the full legal doc.
         if dtype in ("gdpr_privacy_adult", "gdpr_privacy_minor", "gdpr_adult", "gdpr_minor", "privacy_consent") and (b"PDF originale non" in pdf_content or b"Riepilogo firma" in pdf_content or len(pdf_content) < 4500):
@@ -20837,11 +20943,43 @@ async def download_document(
                     logger.info(f"Auto-fixed GDPR privacy cache for {document_id} ({len(pdf_bytes)} bytes)")
             except Exception as ex:
                 logger.warning(f"gdpr cache auto-fix failed for {document_id}: {ex}")
-        return StreamingResponse(
-            io.BytesIO(pdf_bytes),
-            media_type="application/pdf",
-            headers={"Content-Disposition": f'inline; filename="documento_{document_id}.pdf"', "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
-        )
+        # AUTO-FIX: for compensation receipts whose cached PDF was generated
+        # by the legacy placeholder ("Riepilogo firma") OR by an early version
+        # of generate_monthly_receipt_pdf that used datetime.now() as date and
+        # had no authentication footer, FORCE invalidation so the rebuild
+        # logic below picks up the original signing date + signature + metadata.
+        if dtype in ("compensation_receipt", "coach_compensation_receipt", "collaboratore_compensation_receipt"):
+            needs_rebuild = (
+                b"Riepilogo firma" in pdf_bytes
+                or b"PDF originale non" in pdf_bytes
+                or b"Metadati di autentica" not in pdf_bytes
+            )
+            if needs_rebuild:
+                logger.info(f"Invalidating stale compensation_receipt cache for {document_id} ({len(pdf_bytes)} bytes)")
+                # Drop the cached base64 so we fall through to the regeneration
+                # path lower in this function which rebuilds with the correct
+                # date/signature/metadata.
+                doc["pdf_base64"] = None
+                try:
+                    await db.signed_documents.update_one(
+                        {"id": document_id},
+                        {"$unset": {"pdf_base64": ""}}
+                    )
+                except Exception:
+                    pass
+                # Fall through to the regeneration path
+            else:
+                return StreamingResponse(
+                    io.BytesIO(pdf_bytes),
+                    media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="documento_{document_id}.pdf"', "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
+                )
+        else:
+            return StreamingResponse(
+                io.BytesIO(pdf_bytes),
+                media_type="application/pdf",
+                headers={"Content-Disposition": f'inline; filename="documento_{document_id}.pdf"', "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
+            )
 
     # Generate PDF on-the-fly for registration-time documents (no PDF stored)
     if doc.get("document_type") in ("gdpr_privacy_adult", "gdpr_privacy_minor", "gdpr_adult", "gdpr_minor", "privacy_consent"):
@@ -21024,20 +21162,43 @@ async def download_document(
                 )
                 fiscal = (coach_user or {}).get("fiscal_code") or (doc.get("additional_data") or {}).get("fiscal_code") or ""
                 # Try to fetch the actual hand-written signature from the
-                # linked `compensations` record (where receipt_signature_base64
-                # is stored when the coach signs).
+                # source-of-truth compensation row. Search across ALL three
+                # collections (coach / collaboratore / dirigente) — receipts
+                # signed by dirigenti/collaboratori live in their own tables.
                 signature_b64 = doc.get("signature_base64", "") or ""
-                if not signature_b64 and coach_id and month_val and year_val:
+                source_signed_at = None
+                source_ip = None
+                if coach_id and month_val and year_val:
                     try:
-                        comp = await db.compensations.find_one({
-                            "coach_id": coach_id,
-                            "month": int(month_val),
-                            "year": int(year_val),
-                        })
-                        if comp:
-                            signature_b64 = comp.get("receipt_signature_base64") or ""
+                        m_int = int(month_val)
+                        y_int = int(year_val)
+                        candidates = [
+                            ("coach_compensations", "coach_id"),
+                            ("collaboratore_compensations", "collaboratore_id"),
+                            ("dirigente_compensations", "dirigente_id"),
+                            ("compensations", "coach_id"),  # legacy
+                        ]
+                        for coll, key in candidates:
+                            comp = await db[coll].find_one(
+                                {key: coach_id, "month": m_int, "year": y_int}
+                            )
+                            if comp:
+                                if not signature_b64:
+                                    signature_b64 = comp.get("receipt_signature_base64") or ""
+                                if not source_signed_at:
+                                    source_signed_at = comp.get("receipt_signed_date") or comp.get("signed_date")
+                                if signature_b64 and source_signed_at:
+                                    break
                     except Exception:
                         pass
+
+                # Resolve final signing timestamp (priority: signed_documents.signed_at
+                # → source compensation.receipt_signed_date → doc.created_at)
+                signed_at_final = (
+                    doc.get("signed_at")
+                    or source_signed_at
+                    or doc.get("created_at")
+                )
 
                 pdf_bytes = generate_monthly_receipt_pdf(
                     society_name=soc_name,
@@ -21047,6 +21208,11 @@ async def download_document(
                     year=int(year_val) if year_val else datetime.now(timezone.utc).year,
                     amount_gross=float(amount_val) if amount_val else 0.0,
                     signature_base64=signature_b64,
+                    signed_at=signed_at_final,
+                    document_id=doc.get("id"),
+                    signer_id=doc.get("signer_id") or coach_id,
+                    ip_address=doc.get("ip_address") or source_ip,
+                    document_hash=doc.get("document_hash") or doc.get("hash"),
                 )
             else:
                 pdf_bytes = _generate_consent_summary_pdf(doc, signer, society)
@@ -21608,6 +21774,94 @@ async def _regenerate_threshold_communication_pdf(document: dict) -> Optional[by
         return pdf_bytes
     except Exception as e:
         logger.error(f"_regenerate_threshold_communication_pdf failed: {e}", exc_info=True)
+        return None
+
+
+async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes]:
+    """Regenerate a compensation receipt PDF from the source-of-truth row.
+
+    Used to repair stale cached PDFs that lack signature/original signing date/
+    authentication metadata. Searches across coach / collaboratore / dirigente
+    compensation collections for the original signature and signed date.
+    """
+    try:
+        signer_id = document.get("coach_id") or document.get("signer_id")
+        # Read month/year/amount from BOTH top-level (current schema) and
+        # additional_data (legacy/alternative schema)
+        ad = document.get("additional_data") or {}
+        month_val = document.get("month") or ad.get("month")
+        year_val = document.get("year") or ad.get("year")
+        amount_val = (
+            document.get("amount_gross")
+            or document.get("amount")
+            or ad.get("amount_gross")
+            or ad.get("amount")
+        )
+
+        # Find signer profile
+        signer = await db.users.find_one({"id": signer_id}) if signer_id else None
+
+        # Find society
+        society_id = document.get("society_id") or (signer or {}).get("society_id")
+        society_settings = await db.settings.find_one(
+            {"type": "society", "society_id": society_id}, {"_id": 0}
+        ) if society_id else None
+        if not society_settings:
+            society_settings = await db.settings.find_one({"type": "society"}, {"_id": 0}) or {}
+        society_name = society_settings.get("ragione_sociale") or society_settings.get("society_name") or ""
+
+        signer_name = (
+            document.get("coach_name")
+            or document.get("signer_name")
+            or (signer or {}).get("full_name", "")
+        )
+        fiscal = (signer or {}).get("fiscal_code") or (document.get("additional_data") or {}).get("fiscal_code") or ""
+
+        # Recover signature + signed_date from source-of-truth compensation row
+        signature_b64 = document.get("signature_base64") or ""
+        source_signed_at = None
+        if signer_id and month_val and year_val:
+            try:
+                m_int = int(month_val)
+                y_int = int(year_val)
+                for coll, key in [
+                    ("coach_compensations", "coach_id"),
+                    ("collaboratore_compensations", "collaboratore_id"),
+                    ("dirigente_compensations", "dirigente_id"),
+                    ("compensations", "coach_id"),
+                ]:
+                    comp = await db[coll].find_one({key: signer_id, "month": m_int, "year": y_int})
+                    if comp:
+                        if not signature_b64:
+                            signature_b64 = comp.get("receipt_signature_base64") or ""
+                        if not source_signed_at:
+                            source_signed_at = comp.get("receipt_signed_date") or comp.get("signed_date")
+                        if signature_b64 and source_signed_at:
+                            break
+            except Exception:
+                pass
+
+        signed_at_final = document.get("signed_at") or source_signed_at or document.get("created_at")
+
+        month_name = ITALIAN_MONTHS[int(month_val) - 1] if month_val and 1 <= int(month_val) <= 12 else ""
+
+        pdf_bytes = generate_monthly_receipt_pdf(
+            society_name=society_name,
+            collaborator_name=signer_name,
+            collaborator_fiscal_code=fiscal,
+            month_name=month_name,
+            year=int(year_val) if year_val else datetime.now(timezone.utc).year,
+            amount_gross=float(amount_val) if amount_val else 0.0,
+            signature_base64=signature_b64,
+            signed_at=signed_at_final,
+            document_id=document.get("id"),
+            signer_id=signer_id,
+            ip_address=document.get("ip_address"),
+            document_hash=document.get("document_hash") or document.get("hash"),
+        )
+        return pdf_bytes
+    except Exception as e:
+        logger.error(f"_regenerate_compensation_receipt_pdf failed: {e}", exc_info=True)
         return None
 
 

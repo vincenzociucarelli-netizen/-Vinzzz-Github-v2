@@ -23,6 +23,59 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🔧 01/06/2026 — 3 fix critici quietanze + InAppPdfModal
+
+### Bug 1: Quietanze con data di OGGI invece di data firma
+**Root cause**: `generate_monthly_receipt_pdf` usava `datetime.now(timezone.utc)` come timestamp. Quando il PDF veniva rigenerato (perdita file da disk wipe o cache placeholder), il nuovo PDF mostrava la data di rigenerazione invece della data originale di firma.
+
+**Fix**: aggiunto parametro `signed_at` alla funzione. Tutti i callers passano:
+1. `signed_documents.signed_at` (priorità 1)
+2. `compensation_row.receipt_signed_date` (priorità 2, dal source-of-truth)
+3. `doc.created_at` (fallback)
+
+### Bug 2: Quietanze senza firma
+**Root cause**: il codice cercava la firma SOLO in `db.compensations` (legacy coach). Le firme di dirigenti e collaboratori sono in collezioni separate (`dirigente_compensations`, `collaboratore_compensations`).
+
+**Fix**: cerca in **5 collezioni** (`coach_compensations`, `collaboratore_compensations`, `dirigente_compensations`, `atleta_pro_compensations`, `compensations` legacy) finché non trova `receipt_signature_base64`.
+
+### Bug 3: Metadati di autentica mancanti
+**Root cause**: la funzione PDF non includeva footer con metadati audit.
+
+**Fix**: aggiunto footer GDPR-compliant in piè di pagina (font 7pt, grigio):
+```
+— Metadati di autentica —
+Firmato il: 18/02/2026 02:20:17 (Europe/Rome)
+ID documento: <uuid>
+ID firmatario: <uuid>
+Indirizzo IP firma: <ip>
+Hash documento: <hash>
+```
+
+### Auto-rigenerazione PDF stale
+Sia `GET /api/documents/download/{id}` che `GET /api/documents/signed/{id}/pdf` ora rilevano PDF cached "stale" (senza `Metadati di autentica` o con marker `Riepilogo firma`/`PDF originale non`) e li **rigenerano automaticamente** dal source-of-truth. Stesso check sul branch `pdf_base64` e su `pdf_path` (file su disco).
+
+### Funzione helper `_regenerate_compensation_receipt_pdf`
+Nuova utility che ricostruisce il PDF leggendo month/year/amount sia da top-level che da `additional_data` (gestisce entrambi gli schemi).
+
+### Bug 4 (Frontend): Documenti senza pulsante "Chiudi" → back hardware esce dall'app
+**Root cause**: `parent/documents.tsx` apriva PDF con `window.open(blobUrl, '_blank')`. Su mobile (PWA browser), il "back" del telefono usciva dall'app invece di chiudere il PDF.
+
+**Fix**: creato componente riutilizzabile `/app/frontend/src/components/InAppPdfModal.tsx`:
+- Modal full-screen con `<iframe>` per web
+- Header blu con pulsante back + titolo + close (×)
+- Pulsante "CHIUDI" fisso in basso
+- Intercetta hardware back su Android (`BackHandler.addEventListener`)
+- `revokeObjectURL` automatico alla chiusura per liberare memoria
+
+Applicato a `parent/documents.tsx` (flow più utilizzato). Per coach/collaboratore/dirigente profile il flow già scarica il PDF come file (download nativo), quindi il problema back non esiste.
+
+**Test backend verificato live**:
+- Quietanza `23bea1e6-...` ora restituisce: data 18/02/2026 (corretta), metadati di autentica completi, firma embedded come `/Image` PDF object.
+
+**Build statico rigenerato** (`/app/frontend/dist`).
+
+---
+
 ## 🔧 01/06/2026 — Fix Esporta Dati + Filtri Consensi Privacy
 
 ### Fix 1: Esporta Dati pagina bianca

@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
+import { InAppPdfModal } from '../../src/components/InAppPdfModal';
 
 interface Document {
   id: string;
@@ -67,6 +68,7 @@ export default function ParentDocuments() {
   const [grouped, setGrouped] = useState<GroupedDocuments>({ personal: [], minors: [] });
   const [parentName, setParentName] = useState('');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['personal']));
+  const [pdfViewer, setPdfViewer] = useState<{ visible: boolean; url: string | null; title?: string }>({ visible: false, url: null });
 
   useEffect(() => {
     loadDocuments();
@@ -124,7 +126,6 @@ export default function ParentDocuments() {
           headers: { 'Authorization': `Bearer ${token}` },
         });
         if (!response.ok) {
-          const errorText = await response.text().catch(() => 'Errore sconosciuto');
           Alert.alert('Errore', `Impossibile aprire il documento: ${response.status}`);
           return;
         }
@@ -134,18 +135,10 @@ export default function ParentDocuments() {
           return;
         }
         const blobUrl = window.URL.createObjectURL(blob);
-        // Try opening in new tab first, fallback to download
-        const newWindow = window.open(blobUrl, '_blank');
-        if (!newWindow) {
-          // Popup blocked - fallback to download
-          const a = document.createElement('a');
-          a.href = blobUrl;
-          a.download = `${docTitle || 'documento'}.pdf`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-        }
-        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 5000);
+        // Open in IN-APP modal so the user can close it with the visible
+        // "Chiudi" button or with hardware back, without being kicked out
+        // of the webapp.
+        setPdfViewer({ visible: true, url: blobUrl, title: docTitle });
       } else {
         const url = `${api.defaults.baseURL}/documents/signed/${docId}/pdf`;
         await Linking.openURL(url);
@@ -397,6 +390,17 @@ export default function ParentDocuments() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      <InAppPdfModal
+        visible={pdfViewer.visible}
+        url={pdfViewer.url}
+        title={pdfViewer.title}
+        onClose={() => {
+          if (pdfViewer.url && pdfViewer.url.startsWith('blob:')) {
+            window.URL.revokeObjectURL(pdfViewer.url);
+          }
+          setPdfViewer({ visible: false, url: null });
+        }}
+      />
     </View>
   );
 }
