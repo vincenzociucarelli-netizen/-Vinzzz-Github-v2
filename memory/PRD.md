@@ -44,6 +44,52 @@ Check `b"Verifica autenticita" not in pdf_bytes` aggiunto a tutti i path di cach
 
 **Test live**: ✅ HTML pubblico OK, ✅ QR presente in quietanze + comunicazioni soglia, ✅ Auto-fix triggera.
 
+
+---
+
+## 🔧 02/06/2026 — Fix 4 bug critici post-cancellazione quietanze
+
+### 1️⃣ Bug 4 — Filtro Archivio "Quietanza > 5.000€" / "> 15.000€" mostrava 0 documenti
+**Root cause**: Il frontend invia `document_type=receipt_5000`/`receipt_15000`/`receipt_standard`, ma in DB il `document_type` reale è `compensation_receipt` / `coach_compensation_receipt` / `collaboratore_compensation_receipt` / ecc., con flag separati `exceeded_5000: true` / `exceeded_15000: true`. Il backend faceva match diretto e non trovava mai nulla.
+**Fix**: in `/api/documents/archive` mappa i tre filtri ai 5 tipi DB + flag esceeded.
+- `receipt_5000` → `document_type ∈ RECEIPT_TYPES AND exceeded_5000=true`
+- `receipt_15000` → `document_type ∈ RECEIPT_TYPES AND exceeded_15000=true`
+- `receipt_standard` → `document_type ∈ RECEIPT_TYPES AND exceeded_5000≠true AND exceeded_15000≠true`
+
+### 2️⃣ Bug 1 — Mesi colorati >5K/>15K anche se non firmati
+**Richiesta utente**: tenere i **badge** >5K/>15K come preview ma **sfondo bianco** finché il mese non viene effettivamente firmato.
+**Fix**: in `collaboratore/coach/dirigente compensation.tsx` lo sfondo arancio/viola è applicato solo se `status === 'signed'`. Il badge resta visibile su tutti gli stati (proiezione).
+
+### 3️⃣ Bug 3 — PDF "Comunicazione Superamento €5.000" mostrava sempre "Riepilogo firma digitale (PDF originale non più disponibile)"
+**Root cause #1**: tutti i check di "needs_rebuild" usavano `b"Riepilogo firma" in pdf_bytes` / `b"Verifica autenticita" not in pdf_bytes` / `b"Con la quietanza del mese di" not in pdf_bytes`. **ReportLab comprime i page content stream in zlib**, quindi questi check ritornavano SEMPRE False per i PDF reali → entravano in loop "rigenera sempre", ma se la rigenerazione falliva silenziosamente il PDF cached restava il summary.
+**Root cause #2**: `_regenerate_threshold_communication_pdf` cercava `threshold_declarations` con `$or: [{coach_id}, {signer_id}]` → MAI trovato per collaboratore/dirigente/atleta (in DB sono salvati come `collaboratore_id` / `dirigente_id` / `atleta_id`).
+**Fix**:
+- Sostituiti tutti i check `b"..." in pdf_bytes` con `len(pdf_bytes) < 3500` (summary fallback ~1-2KB, PDF reale ~5-7KB)
+- Threshold/compensation regen ora richiedono `len(fixed) > 3500` (era 1500) per essere considerati validi
+- Esteso lookup `threshold_declarations` con `collaboratore_id` / `dirigente_id` / `atleta_id`
+- Aggiunti `logger.warning` quando la rigenerazione produce un PDF troppo piccolo (per debug)
+
+### 4️⃣ Bug 2 — Click sui mesi cancellati "non fa nulla" (collaboratore)
+**Approccio**: aggiunti `console.log('[handleOpenSignature]...')` e `Alert.alert` visibili su OGNI return-early path. Ora l'utente vedrà esplicitamente:
+- "Caricamento in corso" se `loading=true`
+- "Ordine cronologico richiesto: devi firmare X" se manca un mese precedente
+- "Azione Bloccata" se threshold_status risulta bloccato
+- "Stato: future. Mese X/Y" se per qualche motivo il mese è considerato futuro
+Il prossimo click su un mese cancellato mostrerà la causa esatta del blocco silenzioso.
+
+**File modificati**:
+- `/app/backend/server.py` (archive filter, 4 punti di check size-based, lookup threshold_declarations)
+- `/app/frontend/app/collaboratore/compensation.tsx` (colori + log)
+- `/app/frontend/app/coach/compensation.tsx` (colori)
+- `/app/frontend/app/dirigente/compensation.tsx` (colori)
+
+**Test pendente in produzione (dopo Save to GitHub)**:
+- Aprire filtro Archivio → "Quietanza > 5.000€" / "> 15.000€" → ora devono comparire le quietanze
+- Aprire pagina collaboratore Lella su 2026 → mesi non firmati devono essere bianchi con solo badge
+- Cliccare su un mese non firmabile → leggere il messaggio Alert e riferirlo al developer per fix definitivo
+- Aprire PDF "Comunicazione Superamento €5.000 - Settembre 2025" → ora deve essere il documento legale completo (5-7KB) con firma, città, data 30/05/2026 23:31, metadati e QR code
+
+
 ---
 
 

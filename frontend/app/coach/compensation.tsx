@@ -1008,12 +1008,11 @@ export default function CoachCompensation() {
         style={[
           styles.monthCard,
           getCardStyle(),
-          // Purple background when exceeded €15k (signed)
-          // Threshold tint applied to ALL statuses (signed, blocked, pending, future)
-          // so that >5K months appear orange and >15K months appear purple even
-          // before signing.
-          isAfter15k && { backgroundColor: '#F3E5F5', borderColor: '#8E44AD' },
-          isAfter5k && !isAfter15k && { backgroundColor: '#FFF8E1', borderColor: '#F9A825' },
+          // Threshold tint applied ONLY to signed months. Pending/blocked/future
+          // months keep a white background but still show the >5K/>15K badge
+          // as a preview hint.
+          status === 'signed' && isAfter15k && { backgroundColor: '#F3E5F5', borderColor: '#8E44AD' },
+          status === 'signed' && isAfter5k && !isAfter15k && { backgroundColor: '#FFF8E1', borderColor: '#F9A825' },
         ]}
         onPress={() => {
           console.log('Month card pressed:', { month, displayYear, status });

@@ -17023,20 +17023,17 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
         logger.info(f"Discarding stale summary PDF cache for {document_id} ({len(pdf_bytes)} bytes), will regenerate")
         pdf_bytes = None
 
-    # Same logic for compensation receipts: legacy placeholder OR missing
-    # authentication metadata footer → regenerate with original signing date,
-    # signature from source compensation row, and audit metadata.
+    # Same logic for compensation receipts: cached PDF too small (legacy
+    # placeholder ~1-2KB instead of full ~5-7KB) → regenerate with original
+    # signing date, signature from source compensation row, and audit metadata.
+    # NOTE: ReportLab compresses page streams, so we rely on SIZE.
     if pdf_bytes and document.get("document_type") in (
         "compensation_receipt", "coach_compensation_receipt", "collaboratore_compensation_receipt"
-    ) and (
-        b"PDF originale non" in pdf_bytes
-        or b"Riepilogo firma" in pdf_bytes
-        or b"Metadati di autentica" not in pdf_bytes
-    ):
+    ) and len(pdf_bytes) < 3500:
         logger.info(f"Discarding stale compensation_receipt cache for {document_id} ({len(pdf_bytes)} bytes), will regenerate")
         try:
             fixed = await _regenerate_compensation_receipt_pdf(document)
-            if fixed and len(fixed) > 1500:
+            if fixed and len(fixed) > 3500:
                 pdf_bytes = fixed
                 try:
                     await db.signed_documents.update_one(
@@ -17052,21 +17049,15 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
             logger.warning(f"compensation_receipt regen failed for {document_id}: {ex}")
             pdf_bytes = None
 
-    # Same logic for threshold communications: summary fallback OR incomplete
-    # legacy PDF (no signature/location/month-of-crossing) → regenerate.
+    # Same logic for threshold communications: cached PDF too small (summary
+    # fallback ~1-2KB instead of full ~5-7KB) → regenerate.
     if pdf_bytes and document.get("document_type") in (
         "threshold_5000_communication", "threshold_15000_communication"
-    ) and (
-        b"PDF originale non" in pdf_bytes
-        or b"Riepilogo firma" in pdf_bytes
-        or b"Con la quietanza del mese di" not in pdf_bytes
-        or b"Verifica autenticita" not in pdf_bytes
-        or len(pdf_bytes) < 8000
-    ):
+    ) and len(pdf_bytes) < 3500:
         logger.info(f"Discarding stale threshold PDF cache for {document_id} ({len(pdf_bytes)} bytes), will regenerate")
         try:
             fixed = await _regenerate_threshold_communication_pdf(document)
-            if fixed and len(fixed) > 1500:
+            if fixed and len(fixed) > 3500:
                 pdf_bytes = fixed
                 try:
                     await db.signed_documents.update_one(
@@ -20881,7 +20872,31 @@ async def get_documents_archive(
             pass
     
     # Filter by document type
-    if document_type:
+    # Special mapping for receipt filters: in DB document_type is e.g.
+    # "compensation_receipt", "coach_compensation_receipt",
+    # "collaboratore_compensation_receipt", "dirigente_compensation_receipt",
+    # "atleta_pro_compensation_receipt" — with separate flags
+    # exceeded_5000 / exceeded_15000 to mark threshold-crossing months.
+    RECEIPT_TYPES = [
+        "compensation_receipt",
+        "coach_compensation_receipt",
+        "collaboratore_compensation_receipt",
+        "dirigente_compensation_receipt",
+        "atleta_pro_compensation_receipt",
+    ]
+    if document_type == "receipt_standard":
+        query["document_type"] = {"$in": RECEIPT_TYPES}
+        query["$and"] = [
+            {"$or": [{"exceeded_5000": {"$exists": False}}, {"exceeded_5000": False}]},
+            {"$or": [{"exceeded_15000": {"$exists": False}}, {"exceeded_15000": False}]},
+        ]
+    elif document_type == "receipt_5000":
+        query["document_type"] = {"$in": RECEIPT_TYPES}
+        query["exceeded_5000"] = True
+    elif document_type == "receipt_15000":
+        query["document_type"] = {"$in": RECEIPT_TYPES}
+        query["exceeded_15000"] = True
+    elif document_type:
         query["document_type"] = document_type
     
     # Filter by team - need to find athletes in that team first (society-scoped)
@@ -20997,19 +21012,15 @@ async def download_document(
             pdf_content = f.read()
 
         # AUTO-FIX: for threshold communication PDFs that were generated before
-        # the city/signature fix, the file on disk is incomplete (size < 8KB,
-        # signature missing, "Luogo e data: __________________" placeholder).
-        # We re-generate using the official generator with the recovered city
-        # and signature so the document becomes legally complete.
+        # the city/signature fix, the file on disk is incomplete (size < 3.5KB
+        # for a real legal doc, the summary fallback is < 2.5KB).
+        # NOTE: ReportLab compresses page content streams (zlib), so substring
+        # checks on the raw bytes are unreliable — rely on SIZE instead.
         dtype = doc.get("document_type", "")
-        if dtype in ("threshold_5000_communication", "threshold_15000_communication") and (
-            len(pdf_content) < 8000
-            or b"Con la quietanza del mese di" not in pdf_content
-            or b"Verifica autenticita" not in pdf_content
-        ):
+        if dtype in ("threshold_5000_communication", "threshold_15000_communication") and len(pdf_content) < 3500:
             try:
                 fixed = await _regenerate_threshold_communication_pdf(doc)
-                if fixed and len(fixed) > 1500:
+                if fixed and len(fixed) > 3500:
                     # Overwrite disk file + db cache so it's permanent
                     with open(pdf_path, 'wb') as f:
                         f.write(fixed)
@@ -21022,23 +21033,21 @@ async def download_document(
                         pass
                     pdf_content = fixed
                     logger.info(f"Auto-fixed threshold PDF {document_id} ({len(pdf_content)} bytes)")
+                else:
+                    logger.warning(f"threshold rebuild for {document_id} returned insufficient bytes ({len(fixed) if fixed else 0})")
             except Exception as ex:
                 logger.warning(f"threshold auto-fix failed for {document_id}: {ex}")
 
         # AUTO-FIX: compensation_receipt on disk — if file is from the legacy
         # placeholder generator OR uses today's date instead of signing date
-        # (no "Metadati di autentica" footer), regenerate from the source-of-truth
+        # (no Auth metadata footer), regenerate from the source-of-truth
         # compensation row so signature + date + audit metadata are restored.
+        # NOTE: ReportLab compresses page streams, so we rely on SIZE.
         if dtype in ("compensation_receipt", "coach_compensation_receipt", "collaboratore_compensation_receipt"):
-            needs_rebuild = (
-                b"Riepilogo firma" in pdf_content
-                or b"PDF originale non" in pdf_content
-                or b"Metadati di autentica" not in pdf_content
-            )
-            if needs_rebuild:
+            if len(pdf_content) < 3500:
                 try:
                     fixed = await _regenerate_compensation_receipt_pdf(doc)
-                    if fixed and len(fixed) > 1500:
+                    if fixed and len(fixed) > 3500:
                         with open(pdf_path, 'wb') as f:
                             f.write(fixed)
                         try:
@@ -21050,6 +21059,8 @@ async def download_document(
                             pass
                         pdf_content = fixed
                         logger.info(f"Auto-fixed compensation_receipt PDF {document_id} ({len(pdf_content)} bytes)")
+                    else:
+                        logger.warning(f"compensation_receipt rebuild for {document_id} returned insufficient bytes ({len(fixed) if fixed else 0})")
                 except Exception as ex:
                     logger.warning(f"compensation_receipt auto-fix failed for {document_id}: {ex}")
 
@@ -21102,18 +21113,13 @@ async def download_document(
             except Exception as ex:
                 logger.warning(f"gdpr cache auto-fix failed for {document_id}: {ex}")
         # AUTO-FIX: for compensation receipts whose cached PDF was generated
-        # by the legacy placeholder ("Riepilogo firma") OR by an early version
-        # of generate_monthly_receipt_pdf that used datetime.now() as date and
+        # by the legacy placeholder OR by an early version of
+        # generate_monthly_receipt_pdf that used datetime.now() as date and
         # had no authentication footer, FORCE invalidation so the rebuild
         # logic below picks up the original signing date + signature + metadata.
+        # NOTE: ReportLab compresses page streams, so we rely on SIZE.
         if dtype in ("compensation_receipt", "coach_compensation_receipt", "collaboratore_compensation_receipt"):
-            needs_rebuild = (
-                b"Riepilogo firma" in pdf_bytes
-                or b"PDF originale non" in pdf_bytes
-                or b"Metadati di autentica" not in pdf_bytes
-                or b"Verifica autenticita" not in pdf_bytes
-            )
-            if needs_rebuild:
+            if len(pdf_bytes) < 3500:
                 logger.info(f"Invalidating stale compensation_receipt cache for {document_id} ({len(pdf_bytes)} bytes)")
                 # Drop the cached base64 so we fall through to the regeneration
                 # path lower in this function which rebuilds with the correct
@@ -21134,25 +21140,21 @@ async def download_document(
                     headers={"Content-Disposition": f'inline; filename="documento_{document_id}.pdf"', "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
                 )
         elif dtype in ("threshold_5000_communication", "threshold_15000_communication"):
-            # AUTO-FIX threshold communications: regen if missing month-of-crossing
-            needs_rebuild = (
-                b"Riepilogo firma" in pdf_bytes
-                or b"PDF originale non" in pdf_bytes
-                or b"Con la quietanza del mese di" not in pdf_bytes
-                or b"Verifica autenticita" not in pdf_bytes
-                or len(pdf_bytes) < 8000
-            )
-            if needs_rebuild:
+            # AUTO-FIX threshold communications: regen if cache is smaller than
+            # a real legal doc (full PDF ~5-7KB, summary fallback ~1-2.5KB).
+            if len(pdf_bytes) < 3500:
                 logger.info(f"Invalidating stale threshold cache for {document_id} ({len(pdf_bytes)} bytes)")
                 try:
                     fixed = await _regenerate_threshold_communication_pdf(doc)
-                    if fixed and len(fixed) > 1500:
+                    if fixed and len(fixed) > 3500:
                         pdf_bytes = fixed
                         await db.signed_documents.update_one(
                             {"id": document_id},
                             {"$set": {"pdf_base64": base64.b64encode(fixed).decode()}}
                         )
                         logger.info(f"Auto-fixed threshold PDF {document_id} ({len(pdf_bytes)} bytes)")
+                    else:
+                        logger.warning(f"threshold rebuild for {document_id} returned insufficient bytes ({len(fixed) if fixed else 0}) — keeping cache")
                 except Exception as ex:
                     logger.warning(f"threshold auto-fix failed for {document_id}: {ex}")
             return StreamingResponse(
@@ -21877,10 +21879,17 @@ async def _regenerate_threshold_communication_pdf(document: dict) -> Optional[by
                     break
 
         # Lookup threshold_declaration for prior_compensation_declared
+        # Supports all signer types (coach/collaboratore/dirigente/atleta)
         decl = None
         if signer_id and year:
             decl = await db.threshold_declarations.find_one({
-                "$or": [{"coach_id": signer_id}, {"signer_id": signer_id}],
+                "$or": [
+                    {"coach_id": signer_id},
+                    {"collaboratore_id": signer_id},
+                    {"dirigente_id": signer_id},
+                    {"atleta_id": signer_id},
+                    {"signer_id": signer_id},
+                ],
                 "year": year,
                 "threshold_type": threshold_type,
             }, {"_id": 0})

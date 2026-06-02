@@ -276,9 +276,11 @@ export default function CollaboratoreCompensation() {
   };
 
   const handleOpenSignature = (month: number, year?: number) => {
+    console.log('[handleOpenSignature] called:', { month, year, loading });
     // Prevent action if still loading
     if (loading) {
-      console.log('Still loading, ignoring click');
+      console.log('[handleOpenSignature] EXIT: still loading');
+      Alert.alert('Caricamento in corso', 'Attendi il caricamento dei dati.');
       return;
     }
     
@@ -292,6 +294,7 @@ export default function CollaboratoreCompensation() {
         'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
       const endYear = contractEndYear || targetYear;
       const endMonth = contractEndMonth || 12;
+      console.log('[handleOpenSignature] cronological check:', { contractStartYear, contractStartMonth, endYear, endMonth, targetYear, month, recordCount: records.length });
       for (let y = contractStartYear; y <= endYear; y++) {
         const mStart = y === contractStartYear ? contractStartMonth : 1;
         const mEnd = y === endYear ? endMonth : 12;
@@ -300,6 +303,7 @@ export default function CollaboratoreCompensation() {
           if (y > targetYear || (y === targetYear && m >= month)) break;
           const isSigned = records.some(r => r.year === y && matchesMonth(r.month, m) && r.receipt_signed);
           if (!isSigned) {
+            console.log('[handleOpenSignature] EXIT: chronological block on', { y, m });
             Alert.alert(
               'Ordine cronologico richiesto',
               `Devi prima firmare la quietanza di ${monthNamesLong[m]} ${y}. Le quietanze vanno firmate in ordine cronologico.`,
@@ -345,9 +349,11 @@ export default function CollaboratoreCompensation() {
     
     // Use the correct threshold status based on year
     const relevantThresholdStatus = targetYear === 2026 ? thresholdStatus2026 : thresholdStatus;
+    console.log('[handleOpenSignature] thresholdStatus:', { targetYear, is_blocked: relevantThresholdStatus?.is_blocked, yearly_total: relevantThresholdStatus?.yearly_total, willExceed5k, willExceed15k });
     
     // Check if blocked by threshold (already exceeded but not declared)
     if (relevantThresholdStatus?.is_blocked) {
+      console.log('[handleOpenSignature] EXIT: blocked by threshold', relevantThresholdStatus);
       Alert.alert(
         'Azione Bloccata',
         relevantThresholdStatus.block_reason || 'Devi prima firmare la dichiarazione di superamento soglia.',
@@ -372,16 +378,20 @@ export default function CollaboratoreCompensation() {
     // Check if this month is already signed - use matchesMonth for legacy support
     const signedRecord = records.find(r => matchesMonth(r.month, month) && r.year === targetYear && r.receipt_signed);
     if (signedRecord) {
+      console.log('[handleOpenSignature] EXIT: already signed');
       Alert.alert('Già firmata', 'La quietanza per questo mese è già stata firmata.');
       return;
     }
     
     // If this month will exceed a threshold, show declaration modal instead
     if (willExceed15k) {
+      console.log('[handleOpenSignature] → openDeclarationModalForMonth 15000');
       openDeclarationModalForMonth('15000', month, targetYear);
     } else if (willExceed5k) {
+      console.log('[handleOpenSignature] → openDeclarationModalForMonth 5000');
       openDeclarationModalForMonth('5000', month, targetYear);
     } else {
+      console.log('[handleOpenSignature] → openSignatureModal');
       // Open signature modal with all state in one update to prevent re-renders
       openSignatureModal(month, targetYear);
     }
@@ -1006,13 +1016,22 @@ export default function CollaboratoreCompensation() {
         style={[
           styles.monthCard,
           getCardStyle(),
-          // Threshold tint applied to ALL statuses (signed, blocked, pending, future)
-          // so that >5K months appear orange and >15K months appear purple even
-          // before signing.
-          isAfter15k && { backgroundColor: '#F3E5F5', borderColor: '#8E44AD' },
-          isAfter5k && !isAfter15k && { backgroundColor: '#FFF8E1', borderColor: '#F9A825' },
+          // Threshold tint applied ONLY to signed months. Pending/blocked/future
+          // months keep a white background but still show the >5K/>15K badge
+          // as a preview hint.
+          status === 'signed' && isAfter15k && { backgroundColor: '#F3E5F5', borderColor: '#8E44AD' },
+          status === 'signed' && isAfter5k && !isAfter15k && { backgroundColor: '#FFF8E1', borderColor: '#F9A825' },
         ]}
-        onPress={() => (status === 'pending' || status === 'blocked') && handleOpenSignature(month, displayYear)}
+        onPress={() => {
+          console.log('[COMPENSATION] Month card pressed:', { month, displayYear, status, loading });
+          if (status === 'pending' || status === 'blocked') {
+            handleOpenSignature(month, displayYear);
+          } else if (status === 'signed') {
+            Alert.alert('Già firmata', `La quietanza di ${MONTH_NAMES[month]} ${displayYear} è già stata firmata.`);
+          } else {
+            Alert.alert('Non disponibile', `Stato: ${status}. Mese ${month}/${displayYear}.`);
+          }
+        }}
         disabled={status === 'future'}
         data-testid={`month-card-${displayYear}-${month}`}
       >
