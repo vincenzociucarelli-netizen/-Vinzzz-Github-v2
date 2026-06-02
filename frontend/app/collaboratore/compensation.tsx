@@ -359,12 +359,14 @@ export default function CollaboratoreCompensation() {
     // wrongly attribute threshold-crossing to the current month).
     const yearRecords = records.filter(r => r.year === targetYear && r.receipt_signed && r.month < month);
     const yearTotalFromReceipts = yearRecords.reduce((sum, r) => sum + (r.amount_gross || r.amount || 0), 0);
-    // Include also the cumulative external compensations declared for this year
-    // so the first-time-exceeded flag reflects the REAL fiscal position.
+    // Include also:
+    //  - cumulative external compensations already declared for this year (in DB)
+    //  - the external amount just declared in the pre-sign modal (not yet in DB)
     const externalThisYearTotal = externalByYear[targetYear] || 0;
+    const externalJustDeclared = extDeclaration?.amount ?? 0;
     const yearTotalBeforeThis = ((targetYear === contractStartYearLocal)
       ? yearTotalFromReceipts + priorComp
-      : yearTotalFromReceipts) + externalThisYearTotal;
+      : yearTotalFromReceipts) + externalThisYearTotal + externalJustDeclared;
     
     const newTotal = yearTotalBeforeThis + amountForThisMonth;
     
@@ -1770,6 +1772,23 @@ export default function CollaboratoreCompensation() {
               || 0)
             : 0
         }
+        alreadyCumulated={(() => {
+          // Cumulativo già contabilizzato per quest'anno BEFORE this signing:
+          // tutte le quietanze firmate del nostro ASD nei mesi precedenti +
+          // tutti i compensi esterni dichiarati per quell'anno +
+          // prior_compensation se contract_start_year.
+          if (extPendingMonth == null || extPendingYear == null) return 0;
+          const signedBefore = records
+            .filter(r => r.year === extPendingYear && r.receipt_signed && (typeof r.month === 'number' ? r.month < extPendingMonth : true))
+            .reduce((s, r) => s + (r.amount_gross || r.amount || 0), 0);
+          const ext = externalByYear[extPendingYear] || 0;
+          const contractStartYearLocal = profile?.contract_start_date
+            ? parseInt(String(profile.contract_start_date).split('-')[0])
+            : null;
+          const prior = (extPendingYear === contractStartYearLocal)
+            ? (profile?.other_annual_compensation || 0) : 0;
+          return signedBefore + ext + prior;
+        })()}
         loading={signing || signingDeclaration}
         onCancel={handleExtCancel}
         onConfirm={handleExtConfirm}

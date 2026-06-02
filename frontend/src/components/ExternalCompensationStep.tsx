@@ -6,6 +6,12 @@ interface Props {
   visible: boolean;
   monthLabel: string;        // es. "Maggio 2026"
   ourAmount: number;         // importo che si firma con la nostra ASD
+  // Cumulativo annuale GIÀ in DB (somma di tutte le quietanze firmate dell'anno
+  // della nostra ASD + tutti gli importi esterni precedentemente dichiarati +
+  // eventuale prior_compensation del primo anno di contratto). NON include
+  // l'importo che si sta per firmare ora e nemmeno il nuovo importo esterno
+  // che l'utente sta per dichiarare in questo step.
+  alreadyCumulated?: number;
   loading?: boolean;
   onCancel: () => void;
   onConfirm: (data: { externalAmount: number; declaredNone: boolean }) => void;
@@ -21,6 +27,7 @@ export default function ExternalCompensationStep({
   visible,
   monthLabel,
   ourAmount,
+  alreadyCumulated = 0,
   loading,
   onCancel,
   onConfirm,
@@ -57,7 +64,10 @@ export default function ExternalCompensationStep({
   };
 
   const externalAmount = parseAmount();
-  const projectedTotal = ourAmount + (hasOther ? externalAmount : 0);
+  // 📌 Totale cumulativo ANNUO che entrerà nel calcolo soglie 5K/15K dopo
+  // questa firma: include quanto già firmato dell'anno + esterni già
+  // dichiarati + quanto si firma adesso + l'eventuale nuovo esterno
+  const projectedTotal = alreadyCumulated + ourAmount + (hasOther ? externalAmount : 0);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleCancel}>
@@ -76,14 +86,14 @@ export default function ExternalCompensationStep({
           <View style={styles.divider} />
 
           <Text style={styles.question}>
-            Dall'ultima firma (o dall'inizio dell'anno) ad oggi, hai percepito{' '}
+            <Text style={styles.bold}>Dall'ultima firma ad oggi</Text>, hai percepito{' '}
             <Text style={styles.bold}>altri compensi sportivi dilettantistici da altre ASD/SSD</Text>?
           </Text>
 
           <Text style={styles.hint}>
             Importante: vale il criterio per <Text style={styles.bold}>CASSA</Text> (data di
-            ricevimento), non per competenza. Concorre al cumulativo annuale per le soglie 5.000€ /
-            15.000€.
+            ricevimento), non per competenza. L'importo che dichiari si aggiungerà al cumulativo
+            annuale per le soglie 5.000€ / 15.000€.
           </Text>
 
           <View style={styles.choiceRow}>
@@ -132,7 +142,7 @@ export default function ExternalCompensationStep({
                 <Text style={styles.errorText}>Inserisci un importo maggiore di zero.</Text>
               )}
               <Text style={styles.preview}>
-                Totale che entrerà nel cumulativo:{' '}
+                Cumulativo annuo dopo la firma:{' '}
                 <Text style={styles.bold}>€ {projectedTotal.toFixed(2)}</Text>
               </Text>
             </View>
