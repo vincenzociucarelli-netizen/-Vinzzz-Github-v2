@@ -526,7 +526,9 @@ export default function CollaboratoreCompensation() {
   };
 
   const handleSign = async () => {
+    console.log('[handleSign] START', { signature: !!signature, selectedMonth, selectedYear, profile: !!profile, extDeclaration });
     if (!signature || !selectedMonth || !profile) {
+      console.log('[handleSign] EXIT: missing signature/month/profile');
       Alert.alert('Errore', 'Firma richiesta');
       return;
     }
@@ -554,15 +556,19 @@ export default function CollaboratoreCompensation() {
       const yearTotalBeforeThis = (selectedYear === contractStartYearLocal) 
         ? yearTotalFromReceipts + priorComp 
         : yearTotalFromReceipts;
-      
-      const newTotal = yearTotalBeforeThis + amountToSign;
-      
+
+      // 📌 Include also the EXTERNAL compensation declared in THIS signing step
+      // for the threshold flag computation (backend will recompute authoritatively).
+      const externalThisSign = extDeclaration?.amount ?? 0;
+      const newTotal = yearTotalBeforeThis + amountToSign + externalThisSign;
+
       // Check if THIS month causes the threshold to be exceeded
-      const exceeded5000 = newTotal > 5000 && yearTotalBeforeThis <= 5000;
-      const exceeded15000 = newTotal > 15000 && yearTotalBeforeThis <= 15000;
+      const exceeded5000 = newTotal > 5000 && (yearTotalBeforeThis + externalThisSign) <= 5000;
+      const exceeded15000 = newTotal > 15000 && (yearTotalBeforeThis + externalThisSign) <= 15000;
       
-      console.log('Threshold calculation:', { yearTotalBeforeThis, amountToSign, newTotal, exceeded5000, exceeded15000, priorComp, contractStartYearLocal, selectedYear });
+      console.log('[handleSign] Threshold calculation:', { yearTotalBeforeThis, amountToSign, externalThisSign, newTotal, exceeded5000, exceeded15000, priorComp, contractStartYearLocal, selectedYear });
       
+      console.log('[handleSign] Sending POST to /collaboratore/' + user?.id + '/compensation/receipt');
       const response = await api.post(`/collaboratore/${user?.id}/compensation/receipt`, {
         month: selectedMonth,
         year: selectedYear,
@@ -573,6 +579,7 @@ export default function CollaboratoreCompensation() {
         external_compensation_amount: extDeclaration?.amount ?? 0,
         external_compensation_none: extDeclaration?.none ?? false,
       });
+      console.log('[handleSign] POST OK', { status: response.status, data_keys: Object.keys(response.data || {}) });
       
       // Close modal FIRST, then show success message
       closeSignatureModal();
@@ -603,8 +610,13 @@ export default function CollaboratoreCompensation() {
       loadData();
       
     } catch (error: any) {
+      console.error('[handleSign] ERROR', error?.response?.status, error?.response?.data, error?.message);
       if (handleAnagraficaError(error, '/collaboratore/profile')) return;
-      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante la firma');
+      const detail = error?.response?.data?.detail;
+      const msg = typeof detail === 'string'
+        ? detail
+        : (detail?.message || error?.message || 'Errore durante la firma');
+      Alert.alert('Errore firma quietanza', `${msg}\n\nCodice HTTP: ${error?.response?.status || 'n/a'}`);
     } finally {
       setSigning(false);
     }
@@ -1460,6 +1472,25 @@ export default function CollaboratoreCompensation() {
                       Il sottoscritto dichiara di aver ricevuto il compenso sopra indicato per l'attività sportiva dilettantistica svolta nel mese di riferimento.
                     </Text>
                   </View>
+
+                  {/* 📌 Auto-dichiarazione compensi esterni (riepilogo) */}
+                  {extDeclaration && (extDeclaration.amount > 0 || extDeclaration.none) && (
+                    <View style={{ marginTop: 8, padding: 8, borderRadius: 6, backgroundColor: extDeclaration.amount > 0 ? '#FFF8E1' : '#E8F5E9', borderWidth: 1, borderColor: extDeclaration.amount > 0 ? '#F9A825' : '#2E7D32' }}>
+                      <Text style={{ fontSize: 10, color: '#666', marginBottom: 2, fontWeight: '600' }}>
+                        AUTO-DICHIARAZIONE ALTRE ASD/SSD
+                      </Text>
+                      {extDeclaration.amount > 0 ? (
+                        <Text style={{ fontSize: 11, color: '#333' }}>
+                          Ho dichiarato di aver ricevuto <Text style={{ fontWeight: '700' }}>{formatCurrency(extDeclaration.amount)}</Text> da altre ASD/SSD dall'ultima firma.{'\n'}
+                          Questo importo si sommerà al cumulativo annuo per il calcolo delle soglie 5K/15K.
+                        </Text>
+                      ) : (
+                        <Text style={{ fontSize: 11, color: '#333' }}>
+                          Ho dichiarato di NON aver ricevuto altri compensi da altre ASD/SSD.
+                        </Text>
+                      )}
+                    </View>
+                  )}
                 </View>
               </View>
 

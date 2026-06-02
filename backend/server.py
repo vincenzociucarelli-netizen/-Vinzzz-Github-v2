@@ -13425,13 +13425,12 @@ async def list_my_external_compensations(
 
 _ANAGRAFICA_REQUIRED_FIELDS: List[tuple] = [
     # (label, accepted_field_aliases) — l'utente passa il check se almeno un alias è valorizzato
+    # ⚠️ Manteniamo solo i campi STRETTAMENTE indispensabili al PDF della quietanza /
+    # comunicazione soglia. Indirizzo / CAP / Provincia / Città sono nice-to-have e
+    # vengono mostrati nel PDF se presenti, ma non bloccano la firma se mancanti.
     ("Codice Fiscale", ["fiscal_code"]),
     ("Data di nascita", ["date_of_birth", "birth_date"]),
     ("Luogo di nascita", ["place_of_birth", "birth_place"]),
-    ("Indirizzo di residenza", ["address"]),
-    ("Città di residenza", ["city"]),
-    ("CAP di residenza", ["postal_code", "zip_code", "cap"]),
-    ("Provincia di residenza", ["province"]),
 ]
 
 
