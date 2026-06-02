@@ -590,7 +590,11 @@ export default function CollaboratoreCompensation() {
         const pdfUrl = URL.createObjectURL(pdfBlob);
         const a = document.createElement('a');
         a.href = pdfUrl;
-        a.download = `Quietanza_${selectedMonth}_${selectedYear}.pdf`;
+        // Nome file univoco con userId+timestamp per evitare collisioni cache
+        const userTag = (profile?.full_name || 'utente').replace(/\s+/g, '');
+        const tsTag = Date.now();
+        const docTag = response.data.threshold_exceeded ? `Comunicazione${response.data.threshold_exceeded}` : 'Quietanza';
+        a.download = `${docTag}_${selectedMonth}_${selectedYear}_${userTag}_${tsTag}.pdf`;
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
         document.body.appendChild(a);
@@ -1434,6 +1438,47 @@ export default function CollaboratoreCompensation() {
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={true}
             >
+              {/* 📌 Banner anteprima superamento soglia (calcolato lato client) */}
+              {(() => {
+                if (!selectedMonth || !selectedYear || !profile) return null;
+                const recordsBeforeThis = records.filter(r => r.year === selectedYear && r.receipt_signed && r.month < selectedMonth);
+                const yearTotalBefore = recordsBeforeThis.reduce((s, r) => s + (r.amount_gross || r.amount || 0), 0);
+                const priorComp = (profile.contract_start_date && parseInt(String(profile.contract_start_date).split('-')[0]) === selectedYear)
+                  ? (profile.other_annual_compensation || 0) : 0;
+                const ext = extDeclaration?.amount ?? 0;
+                const myAmt = (records.find(r => matchesMonth(r.month, selectedMonth) && r.year === selectedYear)?.amount_gross
+                  || records.find(r => matchesMonth(r.month, selectedMonth) && r.year === selectedYear)?.amount
+                  || profile.monthly_compensation || 0);
+                const yearTotalBefore_full = yearTotalBefore + priorComp + ext;
+                const newTotal = yearTotalBefore_full + myAmt;
+                const willCross15k = newTotal > 15000 && yearTotalBefore_full <= 15000;
+                const willCross5k = !willCross15k && newTotal > 5000 && yearTotalBefore_full <= 5000;
+                if (!willCross5k && !willCross15k) return null;
+                return (
+                  <View style={{
+                    backgroundColor: willCross15k ? '#F3E5F5' : '#FFF3E0',
+                    borderWidth: 2,
+                    borderColor: willCross15k ? '#8E44AD' : '#F57C00',
+                    borderRadius: 8,
+                    padding: 12,
+                    marginBottom: 12,
+                  }} data-testid="threshold-warning-banner">
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                      <Ionicons name="warning" size={22} color={willCross15k ? '#8E44AD' : '#F57C00'} />
+                      <Text style={{ marginLeft: 8, fontWeight: '700', fontSize: 15, color: willCross15k ? '#8E44AD' : '#E65100' }}>
+                        ATTENZIONE — Superamento soglia {willCross15k ? '€ 15.000' : '€ 5.000'}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 12, color: '#333', lineHeight: 17 }}>
+                      Firmando questa quietanza supererai per la prima volta nell'anno la soglia dei{' '}
+                      <Text style={{ fontWeight: '700' }}>{willCross15k ? '€ 15.000' : '€ 5.000'}</Text>.
+                      {'\n'}Verrà generata una <Text style={{ fontWeight: '700' }}>Comunicazione di Superamento</Text> al posto della quietanza standard.
+                      {'\n\n'}Totale annuo dopo la firma: <Text style={{ fontWeight: '700' }}>{formatCurrency(newTotal)}</Text>
+                    </Text>
+                  </View>
+                );
+              })()}
+
               {/* Receipt Preview - Compact Version */}
               <View style={[styles.receiptPreview, { padding: 12, marginBottom: 8, backgroundColor: '#FFFBF0', borderWidth: 1, borderColor: '#E0D5C0' }]}>
                 <Text style={[styles.receiptTitle, { fontSize: 13, marginBottom: 8, textAlign: 'center', fontWeight: '700' }]}>

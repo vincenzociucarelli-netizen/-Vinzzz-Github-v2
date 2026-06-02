@@ -19597,6 +19597,8 @@ async def sign_collaboratore_compensation_receipt(
         "yearly_total": new_total,
         "exceeded_5000": first_time_exceeded_5000,
         "exceeded_15000": first_time_exceeded_15000,
+        "threshold_exceeded": "15000" if first_time_exceeded_15000 else ("5000" if first_time_exceeded_5000 else None),
+        "external_year_total": external_year_total,
         "pdf_base64": base64.b64encode(pdf_bytes).decode() if pdf_bytes else None,
         "message": "Quietanza firmata e salvata in archivio"
     }
@@ -22068,6 +22070,8 @@ async def admin_repair_orphaned_compensation_receipts(current_user = Depends(get
                     "receipt_signature_base64": None,
                     "received": False,
                     "received_date": None,
+                    "exceeded_5000": False,
+                    "exceeded_15000": False,
                 }},
             )
             fixed += 1
@@ -22082,6 +22086,24 @@ async def admin_repair_orphaned_compensation_receipts(current_user = Depends(get
                 "amount": comp.get("amount_gross"),
             })
 
+            # 🧹 Cleanup correlati: external_compensations dichiarate per quel mese
+            # + threshold_declarations e yearly_limits reset se è l'unico anno orfano
+            try:
+                if owner_id and comp.get("month") is not None and comp.get("year"):
+                    m_val = comp.get("month")
+                    try:
+                        m_int = int(m_val)
+                    except Exception:
+                        m_int = None
+                    if m_int is not None:
+                        await db.external_compensations.delete_many({
+                            "user_id": owner_id,
+                            "year": comp["year"],
+                            "related_receipt_month": m_int,
+                        })
+            except Exception:
+                pass
+
         per_collection[coll_name] = {"scanned": scanned, "other_society": other_soc, "fixed": fixed}
 
     logger.info(
@@ -22090,12 +22112,62 @@ async def admin_repair_orphaned_compensation_receipts(current_user = Depends(get
         f"per_collection={per_collection}"
     )
 
+    # 🧹 Reset finale threshold_declarations + yearly_limits per gli utenti
+    # che dopo la pulizia non hanno più alcuna quietanza firmata nell'anno
+    # (evita blocco soglie residue alle prossime firme)
+    affected_user_years: dict = {}
+    for r in repaired:
+        u = r.get("owner_id")
+        y = r.get("year")
+        if u and y:
+            affected_user_years.setdefault(u, set()).add(y)
+    cleanup_summary = {"threshold_declarations_removed": 0, "yearly_limits_reset": 0}
+    for u, years in affected_user_years.items():
+        for y in years:
+            # Conta se l'utente ha ancora qualche quietanza firmata in quell'anno
+            still_signed = 0
+            for coll_name, owner_field, _role in targets:
+                still_signed += await db[coll_name].count_documents({
+                    owner_field: u, "year": y, "receipt_signed": True,
+                })
+            if still_signed == 0:
+                try:
+                    res_t = await db.threshold_declarations.delete_many({
+                        "$or": [
+                            {"coach_id": u},
+                            {"collaboratore_id": u},
+                            {"dirigente_id": u},
+                            {"atleta_id": u},
+                            {"signer_id": u},
+                        ],
+                        "year": y,
+                    })
+                    cleanup_summary["threshold_declarations_removed"] += res_t.deleted_count
+                except Exception:
+                    pass
+                try:
+                    res_yl = await db.yearly_limits.update_many(
+                        {"user_id": u, "year": y},
+                        {"$set": {
+                            "exceeded_5000": False,
+                            "exceeded_5000_date": None,
+                            "exceeded_5000_declaration_id": None,
+                            "exceeded_15000": False,
+                            "exceeded_15000_date": None,
+                            "exceeded_15000_declaration_id": None,
+                        }},
+                    )
+                    cleanup_summary["yearly_limits_reset"] += res_yl.modified_count
+                except Exception:
+                    pass
+
     return {
         "message": f"{len(repaired)} compensation(s) sbloccate. Gli utenti potranno ora rifirmare le quietanze.",
         "count": len(repaired),
         "scanned": total_scanned,
         "filtered_other_society": total_other_soc,
         "per_collection": per_collection,
+        "cleanup": cleanup_summary,
         "repaired": repaired,
     }
 
