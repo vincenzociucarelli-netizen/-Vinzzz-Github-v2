@@ -13428,29 +13428,58 @@ _ANAGRAFICA_REQUIRED_FIELDS: List[tuple] = [
     # ⚠️ Manteniamo solo i campi STRETTAMENTE indispensabili al PDF della quietanza /
     # comunicazione soglia. Indirizzo / CAP / Provincia / Città sono nice-to-have e
     # vengono mostrati nel PDF se presenti, ma non bloccano la firma se mancanti.
+    # Stato di nascita è obbligatorio perché per i tesserati stranieri serve a
+    # validare il codice fiscale (es. cittadini non italiani con CF rilasciato
+    # dall'Agenzia delle Entrate hanno il codice paese estero).
     ("Codice Fiscale", ["fiscal_code"]),
     ("Data di nascita", ["date_of_birth", "birth_date"]),
     ("Luogo di nascita", ["place_of_birth", "birth_place"]),
+    ("Stato di nascita", ["country_of_birth", "birth_country", "nation_of_birth", "nationality"]),
 ]
 
 
 def _require_complete_anagrafica(user: dict) -> None:
     """Raise HTTPException(400) se l'utente non ha l'anagrafica completa.
-    Il check è necessario prima di generare quietanze/comunicazioni soglia
-    altrimenti il PDF risulterebbe con dati mancanti."""
+    Logica:
+      - Codice Fiscale, Data di nascita, Stato di nascita → SEMPRE obbligatori
+      - Luogo di nascita (comune) → obbligatorio SOLO se Stato = Italia
+        (per cittadini stranieri basta lo Stato di nascita estero)
+    """
     missing_labels: List[str] = []
-    for label, aliases in _ANAGRAFICA_REQUIRED_FIELDS:
-        ok = False
-        for f in aliases:
+
+    def _has(field_aliases: List[str]) -> bool:
+        for f in field_aliases:
             v = user.get(f)
             if v is None:
                 continue
             if isinstance(v, str) and not v.strip():
                 continue
-            ok = True
+            return True
+        return False
+
+    # Required: Codice Fiscale
+    if not _has(["fiscal_code"]):
+        missing_labels.append("Codice Fiscale")
+
+    # Required: Data di nascita
+    if not _has(["date_of_birth", "birth_date"]):
+        missing_labels.append("Data di nascita")
+
+    # Required: Stato di nascita
+    country = None
+    for f in ["country_of_birth", "birth_country", "nation_of_birth", "nationality"]:
+        v = user.get(f)
+        if isinstance(v, str) and v.strip():
+            country = v.strip()
             break
-        if not ok:
-            missing_labels.append(label)
+    if not country:
+        missing_labels.append("Stato di nascita")
+
+    # Conditionally required: Luogo di nascita SOLO se Stato = Italia
+    is_italian = country and country.strip().upper() in ("ITALIA", "ITALY", "IT")
+    if is_italian and not _has(["place_of_birth", "birth_place"]):
+        missing_labels.append("Luogo di nascita (comune italiano)")
+
     if missing_labels:
         raise HTTPException(
             status_code=400,
