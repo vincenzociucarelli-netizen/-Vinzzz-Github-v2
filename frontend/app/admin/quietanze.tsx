@@ -43,6 +43,54 @@ export default function QuietanzePage() {
   const [editAmount, setEditAmount] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Wipe user compensation data
+  const [wipeModalVisible, setWipeModalVisible] = useState(false);
+  const [wipeEmail, setWipeEmail] = useState('');
+  const [wiping, setWiping] = useState(false);
+
+  const handleWipeUser = async () => {
+    const email = wipeEmail.trim().toLowerCase();
+    if (!email) {
+      Alert.alert('Errore', 'Inserisci l\'email dell\'utente');
+      return;
+    }
+    const proceed = await new Promise<boolean>((resolve) => {
+      Alert.alert(
+        'Conferma cancellazione totale',
+        `Sto per cancellare DEFINITIVAMENTE tutte le quietanze, comunicazioni soglia e dichiarazioni di ${email}. Procedere?`,
+        [
+          { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Sì, cancella TUTTO', style: 'destructive', onPress: () => resolve(true) },
+        ]
+      );
+    });
+    if (!proceed) return;
+    try {
+      setWiping(true);
+      const res = await api.post('/admin/wipe-user-compensation-data', {
+        email,
+        confirm: 'YES_DELETE_ALL',
+      });
+      const d = res.data?.deleted || {};
+      Alert.alert(
+        'Pulizia completata',
+        `Utente: ${email}\n\n` +
+        `Compensations: ${(d.coach_compensations || 0) + (d.collaboratore_compensations || 0) + (d.dirigente_compensations || 0) + (d.atleta_pro_compensations || 0) + (d.compensations || 0)}\n` +
+        `Documenti firmati: ${d.signed_documents || 0}\n` +
+        `Dichiarazioni soglia: ${d.threshold_declarations || 0}\n` +
+        `File PDF su disco: ${d.files_removed || 0}\n` +
+        `yearly_limits reset: ${d.yearly_limits_reset || 0}`
+      );
+      setWipeModalVisible(false);
+      setWipeEmail('');
+      if (activeTab === 'gestione') loadReceipts();
+    } catch (e: any) {
+      Alert.alert('Errore', e.response?.data?.detail || 'Errore durante la pulizia');
+    } finally {
+      setWiping(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'gestione') {
       loadReceipts();
@@ -157,7 +205,13 @@ export default function QuietanzePage() {
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>📋 Quietanze</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity
+          onPress={() => setWipeModalVisible(true)}
+          data-testid="header-wipe-user-btn"
+          style={{ padding: 8 }}
+        >
+          <Ionicons name="trash-bin" size={22} color="#D32F2F" />
+        </TouchableOpacity>
       </View>
 
       {/* Tabs */}
@@ -425,6 +479,67 @@ export default function QuietanzePage() {
                 </View>
               </>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Wipe User Data Modal */}
+      <Modal
+        visible={wipeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setWipeModalVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 22 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Ionicons name="warning" size={26} color="#D32F2F" />
+              <Text style={{ fontSize: 18, fontWeight: '700', marginLeft: 10, color: '#D32F2F' }}>
+                Pulizia totale dati compensi
+              </Text>
+            </View>
+            <Text style={{ color: '#444', marginBottom: 14, lineHeight: 20 }}>
+              Cancella in modo DEFINITIVO tutte le quietanze, comunicazioni soglia, dichiarazioni soglia
+              e file PDF di un utente. Da usare per ripartire da zero in caso di test/bug.
+              {'\n\n'}
+              <Text style={{ fontWeight: '700', color: '#D32F2F' }}>Operazione irreversibile.</Text>
+            </Text>
+            <Text style={{ fontWeight: '600', marginBottom: 6 }}>Email utente</Text>
+            <TextInput
+              value={wipeEmail}
+              onChangeText={setWipeEmail}
+              placeholder="es. lella@test.com"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              data-testid="wipe-email-input"
+              style={{
+                borderWidth: 1, borderColor: '#ccc', borderRadius: 8,
+                paddingHorizontal: 12, paddingVertical: 10, fontSize: 15,
+                backgroundColor: '#fafafa', marginBottom: 16,
+              }}
+            />
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => { setWipeModalVisible(false); setWipeEmail(''); }}
+                disabled={wiping}
+                style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: '#e0e0e0' }}
+              >
+                <Text style={{ color: '#333', fontWeight: '600' }}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleWipeUser}
+                disabled={wiping}
+                data-testid="wipe-confirm-btn"
+                style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: '#D32F2F', opacity: wiping ? 0.6 : 1 }}
+              >
+                {wiping ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>Cancella TUTTO</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>

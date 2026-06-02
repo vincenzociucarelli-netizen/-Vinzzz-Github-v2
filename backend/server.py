@@ -27601,6 +27601,156 @@ async def admin_regenerate_all_receipts(current_user = Depends(get_current_user)
 # ─────────────────────────── /Rigenera quietanze ───────────────────────────
 
 
+@api_router.post("/admin/wipe-user-compensation-data")
+async def admin_wipe_user_compensation_data(
+    payload: dict = Body(...),
+    current_user = Depends(get_current_user),
+):
+    """Admin: wipe TOTALE dei dati compensi di un utente.
+    Cancella in modo definitivo:
+      - tutte le righe in collaboratore_compensations / coach_compensations /
+        dirigente_compensations / atleta_pro_compensations
+      - tutte le threshold_declarations
+      - tutti i signed_documents di tipo quietanza + comunicazione soglia +
+        dichiarazione soglia firmati da quell'utente
+
+    Body JSON: {"email": "user@example.com", "confirm": "YES_DELETE_ALL"}
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    email = (payload.get("email") or "").strip().lower()
+    confirm = payload.get("confirm")
+    if not email:
+        raise HTTPException(status_code=400, detail="email obbligatoria")
+    if confirm != "YES_DELETE_ALL":
+        raise HTTPException(status_code=400, detail='Aggiungi "confirm": "YES_DELETE_ALL" per procedere')
+
+    user = await db.users.find_one({"email": email}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail=f"Utente {email} non trovato")
+
+    user_id = user["id"]
+
+    # Multi-tenant safety: l'admin può cancellare solo utenti della propria società
+    society_id = current_user.get("society_id")
+    if society_id and user.get("society_id") and user["society_id"] != society_id:
+        raise HTTPException(status_code=403, detail="Utente di un'altra società")
+
+    deleted: dict = {}
+
+    # 1. Compensation rows (cancella indipendentemente dal tipo, l'utente può
+    #    essere coach/collaboratore/dirigente/atleta_pro o multi-ruolo)
+    for coll, key in [
+        ("coach_compensations", "coach_id"),
+        ("collaboratore_compensations", "collaboratore_id"),
+        ("dirigente_compensations", "dirigente_id"),
+        ("atleta_pro_compensations", "atleta_id"),
+        ("compensations", "coach_id"),  # legacy
+    ]:
+        try:
+            r = await db[coll].delete_many({key: user_id})
+            deleted[coll] = r.deleted_count
+        except Exception as e:
+            deleted[coll] = f"error: {e}"
+
+    # 2. Threshold declarations
+    try:
+        r = await db.threshold_declarations.delete_many({
+            "$or": [
+                {"coach_id": user_id},
+                {"collaboratore_id": user_id},
+                {"dirigente_id": user_id},
+                {"atleta_id": user_id},
+                {"signer_id": user_id},
+            ]
+        })
+        deleted["threshold_declarations"] = r.deleted_count
+    except Exception as e:
+        deleted["threshold_declarations"] = f"error: {e}"
+
+    # 3. Signed documents (quietanze + comunicazioni soglia + dichiarazioni)
+    receipt_doc_types = [
+        "compensation_receipt",
+        "coach_compensation_receipt",
+        "collaboratore_compensation_receipt",
+        "dirigente_compensation_receipt",
+        "atleta_pro_compensation_receipt",
+        "threshold_5000_communication",
+        "threshold_15000_communication",
+        "threshold_declaration_5000",
+        "threshold_declaration_15000",
+    ]
+    try:
+        # Recupera i pdf_path da cancellare anche dal filesystem
+        docs_to_delete = await db.signed_documents.find(
+            {
+                "$or": [
+                    {"coach_id": user_id},
+                    {"collaboratore_id": user_id},
+                    {"dirigente_id": user_id},
+                    {"atleta_id": user_id},
+                    {"signer_id": user_id},
+                ],
+                "document_type": {"$in": receipt_doc_types},
+            },
+            {"_id": 0, "id": 1, "pdf_path": 1, "document_type": 1},
+        ).to_list(5000)
+
+        files_removed = 0
+        for d in docs_to_delete:
+            p = d.get("pdf_path")
+            if p and os.path.exists(p):
+                try:
+                    os.remove(p)
+                    files_removed += 1
+                except Exception:
+                    pass
+
+        r = await db.signed_documents.delete_many({
+            "$or": [
+                {"coach_id": user_id},
+                {"collaboratore_id": user_id},
+                {"dirigente_id": user_id},
+                {"atleta_id": user_id},
+                {"signer_id": user_id},
+            ],
+            "document_type": {"$in": receipt_doc_types},
+        })
+        deleted["signed_documents"] = r.deleted_count
+        deleted["files_removed"] = files_removed
+    except Exception as e:
+        deleted["signed_documents"] = f"error: {e}"
+
+    # 4. Reset eventuali flag di soglia sui yearly_limits dell'utente
+    try:
+        r = await db.yearly_limits.update_many(
+            {"user_id": user_id},
+            {"$set": {
+                "exceeded_5000": False,
+                "exceeded_5000_date": None,
+                "exceeded_5000_declaration_id": None,
+                "exceeded_15000": False,
+                "exceeded_15000_date": None,
+                "exceeded_15000_declaration_id": None,
+            }},
+        )
+        deleted["yearly_limits_reset"] = r.modified_count
+    except Exception:
+        deleted["yearly_limits_reset"] = 0
+
+    logger.warning(
+        f"WIPE COMPENSATION DATA: admin={current_user.get('email')} target={email} ({user_id}) result={deleted}"
+    )
+
+    return {
+        "success": True,
+        "user_email": email,
+        "user_id": user_id,
+        "deleted": deleted,
+    }
+
+
 @api_router.post("/admin/athletes/image-consents/notify-team")
 async def admin_notify_team_image_consents(
     payload: dict = Body(...),
