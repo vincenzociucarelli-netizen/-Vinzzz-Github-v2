@@ -12966,6 +12966,125 @@ async def admin_create_collaboratore_receipt(
 
 
 # DELETE endpoints for unsigned receipts
+_MONTH_NAMES_IT = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
+
+
+def _month_query_or(month: int) -> dict:
+    """Match record sia se month è int sia se è la stringa italiana legacy."""
+    return {"$or": [{"month": int(month)}, {"month": _MONTH_NAMES_IT[month] if 1 <= month <= 12 else None}]}
+
+
+async def _full_delete_user_receipt(
+    user_id: str,
+    role: str,  # "collaboratore" | "coach" | "dirigente"
+    year: int,
+    month: int,
+) -> dict:
+    """Cancellazione completa di una quietanza per un utente.
+    Rimuove dalla collezione *_compensations + signed_documents +
+    file PDF su disco + threshold_declarations + external_compensations
+    di quel mese, e resetta i flag su yearly_limits.
+    Funziona sia per record con month=int sia con month=stringa legacy.
+    """
+    role_to_collection = {
+        "collaboratore": ("collaboratore_compensations", "collaboratore_id"),
+        "coach": ("coach_compensations", "coach_id"),
+        "dirigente": ("dirigente_compensations", "dirigente_id"),
+    }
+    collection_name, key = role_to_collection.get(role, (None, None))
+    if collection_name is None:
+        raise HTTPException(status_code=400, detail=f"Ruolo non supportato: {role}")
+
+    month_filter = _month_query_or(month)
+    base_q = {key: user_id, "year": year}
+    base_q.update(month_filter)
+
+    result_comp = await db[collection_name].delete_many(base_q)
+
+    # signed_documents: recupera per file cleanup e cancella
+    doc_q = {
+        "$or": [
+            {key: user_id},
+            {"signer_id": user_id},
+            {"collaboratore_id": user_id},
+            {"coach_id": user_id},
+            {"dirigente_id": user_id},
+            {"atleta_id": user_id},
+        ],
+        "year": year,
+    }
+    doc_q.update(month_filter)
+    files_removed = 0
+    async for d in db.signed_documents.find(doc_q, {"_id": 0, "id": 1, "pdf_path": 1}):
+        p = d.get("pdf_path")
+        if p and os.path.exists(p):
+            try:
+                os.remove(p)
+                files_removed += 1
+            except Exception:
+                pass
+    result_docs = await db.signed_documents.delete_many(doc_q)
+
+    # external_compensations dichiarate nel contesto di QUESTA quietanza
+    try:
+        await db.external_compensations.delete_many({
+            "user_id": user_id,
+            "year": year,
+            "related_receipt_month": int(month),
+        })
+    except Exception:
+        pass
+
+    # Se l'anno non ha più alcuna quietanza firmata, possiamo resettare
+    # i flag exceeded_5000/15000 + le threshold_declarations dell'anno
+    # per evitare blocchi residui sulle prossime firme.
+    remaining = await db[collection_name].count_documents({key: user_id, "year": year, "receipt_signed": True})
+    threshold_declarations_removed = 0
+    yearly_limits_reset = 0
+    if remaining == 0:
+        try:
+            r = await db.threshold_declarations.delete_many({
+                "$or": [{key: user_id}, {"signer_id": user_id}],
+                "year": year,
+            })
+            threshold_declarations_removed = r.deleted_count
+        except Exception:
+            pass
+        try:
+            r = await db.yearly_limits.update_many(
+                {"user_id": user_id, "year": year},
+                {"$set": {
+                    "exceeded_5000": False,
+                    "exceeded_5000_date": None,
+                    "exceeded_5000_declaration_id": None,
+                    "exceeded_15000": False,
+                    "exceeded_15000_date": None,
+                    "exceeded_15000_declaration_id": None,
+                }},
+            )
+            yearly_limits_reset = r.modified_count
+        except Exception:
+            pass
+
+    logger.info(
+        f"FULL DELETE RECEIPT user={user_id} role={role} {month}/{year} "
+        f"compensations={result_comp.deleted_count} signed_docs={result_docs.deleted_count} "
+        f"files={files_removed} thresholds={threshold_declarations_removed} "
+        f"yearly_limits_reset={yearly_limits_reset} remaining_signed={remaining}"
+    )
+
+    return {
+        "success": True,
+        "deleted_compensations": result_comp.deleted_count,
+        "deleted_documents": result_docs.deleted_count,
+        "files_removed": files_removed,
+        "threshold_declarations_removed": threshold_declarations_removed,
+        "yearly_limits_reset": yearly_limits_reset,
+        "remaining_signed_in_year": remaining,
+    }
+
+
 @api_router.delete("/admin/collaboratore/{collaboratore_id}/compensation/{year}/{month}")
 async def admin_delete_collaboratore_receipt(
     collaboratore_id: str,
@@ -12973,30 +13092,12 @@ async def admin_delete_collaboratore_receipt(
     month: int,
     current_user = Depends(get_current_user)
 ):
-    """Delete an unsigned receipt for a collaboratore"""
+    """Cancellazione COMPLETA di una quietanza (anche firmata) per un collaboratore.
+    Rimuove compensazione + documento firmato + file PDF + flag soglia residui."""
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Solo admin può eliminare quietanze")
-    
-    # Check if receipt exists and is not signed
-    receipt = await db.collaboratore_compensations.find_one({
-        "collaboratore_id": collaboratore_id,
-        "year": year,
-        "month": month
-    })
-    
-    if not receipt:
-        raise HTTPException(status_code=404, detail="Quietanza non trovata")
-    
-    if receipt.get("receipt_signed"):
-        raise HTTPException(status_code=400, detail="Non puoi eliminare una quietanza già firmata")
-    
-    await db.collaboratore_compensations.delete_one({
-        "collaboratore_id": collaboratore_id,
-        "year": year,
-        "month": month
-    })
-    
-    return {"message": f"Quietanza {month}/{year} eliminata"}
+    return await _full_delete_user_receipt(collaboratore_id, "collaboratore", year, month)
+
 
 @api_router.delete("/admin/dirigente/{dirigente_id}/compensation/{year}/{month}")
 async def admin_delete_dirigente_receipt(
@@ -13005,29 +13106,11 @@ async def admin_delete_dirigente_receipt(
     month: int,
     current_user = Depends(get_current_user)
 ):
-    """Delete an unsigned receipt for a dirigente"""
+    """Cancellazione COMPLETA di una quietanza (anche firmata) per un dirigente."""
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Solo admin può eliminare quietanze")
-    
-    receipt = await db.dirigente_compensations.find_one({
-        "dirigente_id": dirigente_id,
-        "year": year,
-        "month": month
-    })
-    
-    if not receipt:
-        raise HTTPException(status_code=404, detail="Quietanza non trovata")
-    
-    if receipt.get("receipt_signed"):
-        raise HTTPException(status_code=400, detail="Non puoi eliminare una quietanza già firmata")
-    
-    await db.dirigente_compensations.delete_one({
-        "dirigente_id": dirigente_id,
-        "year": year,
-        "month": month
-    })
-    
-    return {"message": f"Quietanza {month}/{year} eliminata"}
+    return await _full_delete_user_receipt(dirigente_id, "dirigente", year, month)
+
 
 @api_router.delete("/admin/coach/{coach_id}/compensation/{year}/{month}")
 async def admin_delete_coach_receipt(
@@ -13036,29 +13119,10 @@ async def admin_delete_coach_receipt(
     month: int,
     current_user = Depends(get_current_user)
 ):
-    """Delete an unsigned receipt for a coach"""
+    """Cancellazione COMPLETA di una quietanza (anche firmata) per un coach."""
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Solo admin può eliminare quietanze")
-    
-    receipt = await db.coach_compensations.find_one({
-        "coach_id": coach_id,
-        "year": year,
-        "month": month
-    })
-    
-    if not receipt:
-        raise HTTPException(status_code=404, detail="Quietanza non trovata")
-    
-    if receipt.get("receipt_signed"):
-        raise HTTPException(status_code=400, detail="Non puoi eliminare una quietanza già firmata")
-    
-    await db.coach_compensations.delete_one({
-        "coach_id": coach_id,
-        "year": year,
-        "month": month
-    })
-    
-    return {"message": f"Quietanza {month}/{year} eliminata"}
+    return await _full_delete_user_receipt(coach_id, "coach", year, month)
 
 
 

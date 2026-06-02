@@ -221,6 +221,36 @@ Il calcolo delle soglie 5K/15K deve tenere conto anche dei compensi sportivi che
 1. Login come collaboratore (Pedro o nuovo utente di test)
 2. Cliccare su un mese da firmare → deve comparire il modal "Prima di firmare"
 3. Scegliere "No, solo i compensi della nostra società" → prosegui → firma normale
+
+---
+
+## 🔧 02/06/2026 (tardo) — Fix bug cancellazione quietanze firmate
+
+### Problema riportato
+Dopo aver "accettato" la cancellazione delle quietanze 2026 di Pedro (e prima Lella), le card dei mesi rimanevano colorate (firmate) e non firmabili (click silenzioso).
+
+### Root cause
+L'endpoint `DELETE /api/admin/{role}/{user_id}/compensation/{year}/{month}` (riga 12969) aveva 3 bug:
+1. **Bloccava la cancellazione di quietanze firmate** con HTTP 400 "Non puoi eliminare una quietanza già firmata" — quindi il backend rispondeva errore e in DB non veniva cancellato nulla, mentre l'utente vedeva la conferma "Eliminata" sul frontend solo se non c'era stato errore (in alcuni casi l'errore non era visibile chiaramente).
+2. **Match `month: int` rigido**: alcuni record legacy hanno `month` come stringa italiana ("Settembre"). La query `{"month": 9}` non li trovava → 404.
+3. **Cancellava solo la riga compensation** lasciando residui in `signed_documents`, `threshold_declarations`, `external_compensations`, e i flag `exceeded_5000/15000` su `yearly_limits` rimanevano `true` → blocco firma residuo.
+
+### Fix
+Riscritti i 3 endpoint (`/admin/collaboratore/...`, `/admin/coach/...`, `/admin/dirigente/...`) tramite una helper unificata `_full_delete_user_receipt(user_id, role, year, month)`:
+- 🗑️ Cancella SEMPRE (anche firmate — è admin con conferma esplicita lato UI)
+- 🔍 Match month sia int sia stringa legacy (helper `_month_query_or`)
+- 🗂️ Cancella anche `signed_documents` (+ file PDF su disco) di quel mese/anno
+- 📋 Cancella `external_compensations` con `related_receipt_month = month`
+- 🧹 Se dopo la cancellazione non resta NESSUNA quietanza firmata in quell'anno, resetta anche `threshold_declarations` e i flag `exceeded_5000/15000` su `yearly_limits` (evita blocchi residui sulle nuove firme)
+
+### File modificati
+- `/app/backend/server.py` — rimossi i 3 endpoint vecchi + nuova helper `_full_delete_user_receipt` + helper `_month_query_or` + 3 endpoint slim che la richiamano
+
+### Da testare in produzione (dopo Save to GitHub)
+1. Pedro ha ancora le quietanze 2026 residue → vai su **Admin → Quietanze**, filtra Pedro, clicca **Elimina** su ogni quietanza 2026 → ora deve sparire (response dovrebbe mostrare `success: true, deleted_compensations: 1, deleted_documents: 1+, files_removed: N`)
+2. Dopo la cancellazione, login come Pedro → vai su Compensi 2026 → i mesi cancellati devono essere bianchi/pending → click su un mese → si apre il modal "Prima di firmare" (nuovo) → procede normalmente alla firma
+
+
 4. Provare con "Sì, ho ricevuto altri compensi" + es. 4.700€ → se col nostro importo si supera €5.000 deve attivare la Comunicazione di Superamento 5K
 5. Verificare in `db.external_compensations` che ci siano i record
 
