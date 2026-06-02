@@ -119,6 +119,8 @@ export default function CollaboratoreCompensation() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<CollaboratoreProfile | null>(null);
   const [records, setRecords] = useState<CompensationRecord[]>([]);
+  // Compensi esterni annuali dichiarati dall'utente per il calcolo proiettato delle soglie
+  const [externalByYear, setExternalByYear] = useState<{ [year: number]: number }>({});
   const [yearlyTotal, setYearlyTotal] = useState(0);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
@@ -275,6 +277,22 @@ export default function CollaboratoreCompensation() {
       } catch (err) {
         console.log('Error loading threshold status:', err);
       }
+
+      // Carica i compensi esterni auto-dichiarati raggruppati per anno
+      // (servono per il calcolo proiettato delle soglie 5K/15K sui mesi futuri).
+      try {
+        const extRes = await api.get('/me/external-compensations');
+        const items: Array<{ year: number; amount: number }> = extRes.data?.items || [];
+        const byYear: { [y: number]: number } = {};
+        for (const it of items) {
+          const y = Number(it.year);
+          byYear[y] = (byYear[y] || 0) + Number(it.amount || 0);
+        }
+        setExternalByYear(byYear);
+        console.log('[loadData] externalByYear loaded:', byYear);
+      } catch (err) {
+        console.log('Error loading external compensations:', err);
+      }
       
     } catch (error) {
       console.error('Error loading data:', error);
@@ -341,9 +359,12 @@ export default function CollaboratoreCompensation() {
     // wrongly attribute threshold-crossing to the current month).
     const yearRecords = records.filter(r => r.year === targetYear && r.receipt_signed && r.month < month);
     const yearTotalFromReceipts = yearRecords.reduce((sum, r) => sum + (r.amount_gross || r.amount || 0), 0);
-    const yearTotalBeforeThis = (targetYear === contractStartYearLocal) 
-      ? yearTotalFromReceipts + priorComp 
-      : yearTotalFromReceipts;
+    // Include also the cumulative external compensations declared for this year
+    // so the first-time-exceeded flag reflects the REAL fiscal position.
+    const externalThisYearTotal = externalByYear[targetYear] || 0;
+    const yearTotalBeforeThis = ((targetYear === contractStartYearLocal)
+      ? yearTotalFromReceipts + priorComp
+      : yearTotalFromReceipts) + externalThisYearTotal;
     
     const newTotal = yearTotalBeforeThis + amountForThisMonth;
     
@@ -557,16 +578,19 @@ export default function CollaboratoreCompensation() {
         ? yearTotalFromReceipts + priorComp 
         : yearTotalFromReceipts;
 
-      // 📌 Include also the EXTERNAL compensation declared in THIS signing step
+      // 📌 Include also the cumulative EXTERNAL compensations declared for THIS year
+      // (from previous signings) + the one declared in THIS signing step
       // for the threshold flag computation (backend will recompute authoritatively).
+      const externalThisYearTotalAlready = externalByYear[selectedYear] || 0;
       const externalThisSign = extDeclaration?.amount ?? 0;
-      const newTotal = yearTotalBeforeThis + amountToSign + externalThisSign;
+      const yearTotalBeforeThis_withExternal = yearTotalBeforeThis + externalThisYearTotalAlready + externalThisSign;
+      const newTotal = yearTotalBeforeThis_withExternal + amountToSign;
 
       // Check if THIS month causes the threshold to be exceeded
-      const exceeded5000 = newTotal > 5000 && (yearTotalBeforeThis + externalThisSign) <= 5000;
-      const exceeded15000 = newTotal > 15000 && (yearTotalBeforeThis + externalThisSign) <= 15000;
+      const exceeded5000 = newTotal > 5000 && yearTotalBeforeThis_withExternal <= 5000;
+      const exceeded15000 = newTotal > 15000 && yearTotalBeforeThis_withExternal <= 15000;
       
-      console.log('[handleSign] Threshold calculation:', { yearTotalBeforeThis, amountToSign, externalThisSign, newTotal, exceeded5000, exceeded15000, priorComp, contractStartYearLocal, selectedYear });
+      console.log('[handleSign] Threshold calculation:', { yearTotalBeforeThis, externalThisYearTotalAlready, externalThisSign, amountToSign, newTotal, exceeded5000, exceeded15000 });
       
       console.log('[handleSign] Sending POST to /collaboratore/' + user?.id + '/compensation/receipt');
       const response = await api.post(`/collaboratore/${user?.id}/compensation/receipt`, {
@@ -961,7 +985,11 @@ export default function CollaboratoreCompensation() {
     const years = Array.from(yearsSet).sort();
     for (const y of years) {
       thresholdsByYear[y] = { first5k: null, first15k: null };
+      // Base cumulato di partenza per quest'anno:
+      // - prior_compensation se contract_start_year
+      // - PIÙ tutti i compensi esterni dichiarati per quest'anno (per cassa)
       let cumul = (y === contractStartYear && priorCompensation > 0) ? priorCompensation : 0;
+      cumul += (externalByYear[y] || 0);
       for (let m = 1; m <= 12; m++) {
         const hasRecord = recordMap[`${y}-${m}`] !== undefined;
         // Project monthly default ONLY for months WITHIN the contract period.
@@ -1445,11 +1473,12 @@ export default function CollaboratoreCompensation() {
                 const yearTotalBefore = recordsBeforeThis.reduce((s, r) => s + (r.amount_gross || r.amount || 0), 0);
                 const priorComp = (profile.contract_start_date && parseInt(String(profile.contract_start_date).split('-')[0]) === selectedYear)
                   ? (profile.other_annual_compensation || 0) : 0;
-                const ext = extDeclaration?.amount ?? 0;
+                const extAlreadyDeclared = externalByYear[selectedYear] || 0;
+                const extNow = extDeclaration?.amount ?? 0;
                 const myAmt = (records.find(r => matchesMonth(r.month, selectedMonth) && r.year === selectedYear)?.amount_gross
                   || records.find(r => matchesMonth(r.month, selectedMonth) && r.year === selectedYear)?.amount
                   || profile.monthly_compensation || 0);
-                const yearTotalBefore_full = yearTotalBefore + priorComp + ext;
+                const yearTotalBefore_full = yearTotalBefore + priorComp + extAlreadyDeclared + extNow;
                 const newTotal = yearTotalBefore_full + myAmt;
                 const willCross15k = newTotal > 15000 && yearTotalBefore_full <= 15000;
                 const willCross5k = !willCross15k && newTotal > 5000 && yearTotalBefore_full <= 5000;
