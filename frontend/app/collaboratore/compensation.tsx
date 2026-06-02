@@ -19,6 +19,7 @@ import SignaturePadInline from '../../src/components/SignaturePadInline';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 import { handleAnagraficaError } from '../../src/utils/anagraficaError';
+import ExternalCompensationStep from '../../src/components/ExternalCompensationStep';
 const MONTH_NAMES = [
   '', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
@@ -170,6 +171,12 @@ export default function CollaboratoreCompensation() {
   const setSignature = (sig: string | null) => {
     setSignatureModalState(prev => ({ ...prev, signature: sig }));
   };
+
+  // External Compensation pre-step (auto-dichiarazione altre ASD/SSD)
+  const [extStepVisible, setExtStepVisible] = useState(false);
+  const [extPendingMonth, setExtPendingMonth] = useState<number | null>(null);
+  const [extPendingYear, setExtPendingYear] = useState<number | null>(null);
+  const [extDeclaration, setExtDeclaration] = useState<{ amount: number; none: boolean } | null>(null);
   
   // Declaration modal
   const [showDeclarationModal, setShowDeclarationModal] = useState(false);
@@ -276,7 +283,7 @@ export default function CollaboratoreCompensation() {
     }
   };
 
-  const handleOpenSignature = (month: number, year?: number) => {
+  const handleOpenSignature = (month: number, year?: number, opts?: { skipExtStep?: boolean }) => {
     console.log('[handleOpenSignature] called:', { month, year, loading });
     // Prevent action if still loading
     if (loading) {
@@ -384,6 +391,17 @@ export default function CollaboratoreCompensation() {
       return;
     }
     
+    // 📌 STEP PRE-FIRMA: chiedi sempre se ci sono altri compensi da ASD esterne.
+    // Una volta confermato dall'utente, lo state viene memorizzato e l'utente
+    // richiama questo handler con skipExtStep=true per proseguire al normale flusso.
+    if (!opts?.skipExtStep) {
+      console.log('[handleOpenSignature] → opening ExternalCompensationStep');
+      setExtPendingMonth(month);
+      setExtPendingYear(targetYear);
+      setExtStepVisible(true);
+      return;
+    }
+
     // If this month will exceed a threshold, show declaration modal instead
     if (willExceed15k) {
       console.log('[handleOpenSignature] → openDeclarationModalForMonth 15000');
@@ -396,6 +414,22 @@ export default function CollaboratoreCompensation() {
       // Open signature modal with all state in one update to prevent re-renders
       openSignatureModal(month, targetYear);
     }
+  };
+
+  // Callback dal modal ExternalCompensationStep
+  const handleExtConfirm = (data: { externalAmount: number; declaredNone: boolean }) => {
+    setExtDeclaration({ amount: data.externalAmount, none: data.declaredNone });
+    setExtStepVisible(false);
+    if (extPendingMonth != null && extPendingYear != null) {
+      // Re-entry nel flusso normale saltando il pre-step
+      handleOpenSignature(extPendingMonth, extPendingYear, { skipExtStep: true });
+    }
+  };
+
+  const handleExtCancel = () => {
+    setExtStepVisible(false);
+    setExtPendingMonth(null);
+    setExtPendingYear(null);
   };
 
   // New function to open declaration modal for a specific month
@@ -443,6 +477,8 @@ export default function CollaboratoreCompensation() {
         signature_base64: declarationSignature.replace('data:image/png;base64,', ''),
         exceeded_5000: declarationType === '5000',
         exceeded_15000: declarationType === '15000',
+        external_compensation_amount: extDeclaration?.amount ?? 0,
+        external_compensation_none: extDeclaration?.none ?? false,
       });
       
       const thresholdAmount = declarationType === '5000' ? '5.000' : '15.000';
@@ -472,6 +508,9 @@ export default function CollaboratoreCompensation() {
       
       setShowDeclarationModal(false);
       setDeclarationSignature(null);
+      setExtDeclaration(null);
+      setExtPendingMonth(null);
+      setExtPendingYear(null);
       
       // Delay loadData to avoid state conflicts
       setTimeout(() => {
@@ -531,6 +570,8 @@ export default function CollaboratoreCompensation() {
         signature_base64: signature.replace('data:image/png;base64,', ''),
         exceeded_5000: exceeded5000,
         exceeded_15000: exceeded15000,
+        external_compensation_amount: extDeclaration?.amount ?? 0,
+        external_compensation_none: extDeclaration?.none ?? false,
       });
       
       // Close modal FIRST, then show success message
@@ -555,7 +596,10 @@ export default function CollaboratoreCompensation() {
         'Quietanza Firmata',
         `Quietanza firmata con successo!\n\nLordo: € ${response.data.amount_gross.toFixed(2)}\nNetto: € ${response.data.amount_net.toFixed(2)}\n\nTotale annuo: € ${response.data.yearly_total.toFixed(2)}`
       );
-      
+
+      setExtDeclaration(null);
+      setExtPendingMonth(null);
+      setExtPendingYear(null);
       loadData();
       
     } catch (error: any) {
@@ -1604,6 +1648,27 @@ export default function CollaboratoreCompensation() {
           </View>
         </View>
       </Modal>
+
+      {/* Step pre-firma: dichiarazione altri compensi (altre ASD/SSD) */}
+      <ExternalCompensationStep
+        visible={extStepVisible}
+        monthLabel={
+          extPendingMonth != null && extPendingYear != null
+            ? `${MONTH_NAMES[extPendingMonth] || ''} ${extPendingYear}`
+            : ''
+        }
+        ourAmount={
+          extPendingMonth != null && extPendingYear != null
+            ? (records.find(r => matchesMonth(r.month, extPendingMonth) && r.year === extPendingYear)?.amount_gross
+              || records.find(r => matchesMonth(r.month, extPendingMonth) && r.year === extPendingYear)?.amount
+              || profile?.monthly_compensation
+              || 0)
+            : 0
+        }
+        loading={signing || signingDeclaration}
+        onCancel={handleExtCancel}
+        onConfirm={handleExtConfirm}
+      />
     </View>
   );
 }

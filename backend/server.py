@@ -12848,6 +12848,12 @@ class CompensationReceiptRequest(BaseModel):
     signature_base64: str
     exceeded_5000: bool = False
     exceeded_15000: bool = False
+    # Auto-dichiarazione INCREMENTALE: importo compensi sportivi percepiti
+    # da ALTRE ASD/SSD dall'ultima firma (o dall'inizio anno) ad oggi.
+    # Concorre al calcolo cumulativo annuo per le soglie 5K/15K (per cassa).
+    external_compensation_amount: float = 0.0
+    # Flag esplicito: "No, non ho ricevuto altri compensi"
+    external_compensation_none: bool = False
 
 class AdminCreateReceiptRequest(BaseModel):
     month: int
@@ -13247,6 +13253,112 @@ async def admin_create_dirigente_receipt(
 # ─────── Anagrafica completa check (richiesto prima delle firme) ───────
 
 
+# ─────── Auto-dichiarazione compensi esterni (altre ASD/SSD) ───────
+# Tracciamento INCREMENTALE auto-dichiarato per il calcolo cumulativo annuo
+# delle soglie 5K/15K (criterio per CASSA, non per competenza).
+# Ogni record rappresenta una dichiarazione fatta dall'utente in un dato
+# momento (es. al momento della firma di una quietanza) per l'incremento di
+# compensi sportivi percepiti da ALTRE ASD/SSD dall'ultima dichiarazione.
+
+class ExternalCompensationDeclaration(BaseModel):
+    id: str = Field(default_factory=lambda: str(ObjectId()))
+    user_id: str
+    year: int
+    amount: float = 0.0  # importo incrementale dichiarato
+    declared_none: bool = False  # se l'utente dichiara esplicitamente "0"
+    declared_at: datetime = Field(default_factory=datetime.utcnow)
+    # collegamento opzionale alla quietanza per cui è stata dichiarata
+    related_receipt_id: Optional[str] = None
+    related_receipt_month: Optional[int] = None
+    # società che riceveva la dichiarazione (multi-tenancy)
+    society_id: Optional[str] = None
+
+
+async def _get_year_external_compensations_total(user_id: str, year: int) -> float:
+    """Somma cumulativa degli importi dichiarati dall'utente per compensi
+    ricevuti da ALTRE ASD/SSD nell'anno indicato."""
+    try:
+        total = 0.0
+        async for d in db.external_compensations.find(
+            {"user_id": user_id, "year": year},
+            {"_id": 0, "amount": 1},
+        ):
+            total += float(d.get("amount") or 0)
+        return round(total, 2)
+    except Exception as ex:
+        logger.warning(f"_get_year_external_compensations_total failed for {user_id}/{year}: {ex}")
+        return 0.0
+
+
+async def _record_external_compensation_declaration(
+    user_id: str,
+    year: int,
+    amount: float,
+    declared_none: bool,
+    related_receipt_id: Optional[str] = None,
+    related_receipt_month: Optional[int] = None,
+    society_id: Optional[str] = None,
+) -> None:
+    """Salva una dichiarazione auto-incrementale. Se sia amount<=0 sia
+    declared_none=False (= utente non ha confermato), non salva."""
+    if not declared_none and (amount is None or amount <= 0):
+        return
+    doc = ExternalCompensationDeclaration(
+        user_id=user_id,
+        year=year,
+        amount=max(0.0, float(amount or 0)),
+        declared_none=bool(declared_none),
+        related_receipt_id=related_receipt_id,
+        related_receipt_month=related_receipt_month,
+        society_id=society_id,
+    ).dict()
+    await db.external_compensations.insert_one(doc)
+
+
+@api_router.post("/me/external-compensations")
+async def post_my_external_compensation(
+    payload: dict = Body(...),
+    current_user = Depends(get_current_user),
+):
+    """L'utente dichiara un incremento di compensi sportivi ricevuti da altre
+    ASD/SSD nell'anno indicato. Body: {amount, year, declared_none}"""
+    year = int(payload.get("year") or datetime.utcnow().year)
+    amount = float(payload.get("amount") or 0)
+    declared_none = bool(payload.get("declared_none", False))
+    if amount < 0:
+        raise HTTPException(status_code=400, detail="Importo non valido")
+    if not declared_none and amount <= 0:
+        raise HTTPException(status_code=400, detail="Specifica un importo > 0 oppure conferma 'nessun compenso'")
+    await _record_external_compensation_declaration(
+        user_id=current_user["id"],
+        year=year,
+        amount=amount,
+        declared_none=declared_none,
+        society_id=current_user.get("society_id"),
+    )
+    total = await _get_year_external_compensations_total(current_user["id"], year)
+    return {"success": True, "cumulative_year_total": total}
+
+
+@api_router.get("/me/external-compensations")
+async def list_my_external_compensations(
+    year: Optional[int] = None,
+    current_user = Depends(get_current_user),
+):
+    """Lista delle dichiarazioni di compensi esterni dell'utente."""
+    q: dict = {"user_id": current_user["id"]}
+    if year is not None:
+        q["year"] = int(year)
+    items: List[dict] = []
+    async for d in db.external_compensations.find(q, {"_id": 0}).sort("declared_at", 1):
+        items.append(d)
+    total = sum(float(i.get("amount") or 0) for i in items)
+    return {"items": items, "total": round(total, 2)}
+
+
+# ─────────────────────────── /Compensi esterni ───────────────────────────
+
+
 _ANAGRAFICA_REQUIRED_FIELDS: List[tuple] = [
     # (label, accepted_field_aliases) — l'utente passa il check se almeno un alias è valorizzato
     ("Codice Fiscale", ["fiscal_code"]),
@@ -13348,9 +13460,33 @@ async def sign_compensation_receipt(
         yearly_total = yearly_total_from_receipts + prior_compensation
     else:
         yearly_total = yearly_total_from_receipts
-    
+
+    # 📌 Compensi esterni auto-dichiarati (altre ASD/SSD) — criterio per CASSA.
+    # Salva l'eventuale incremento dichiarato in questo step di firma e somma
+    # il cumulativo annuo del totale esterno alle soglie.
+    if request.external_compensation_amount and request.external_compensation_amount > 0:
+        await _record_external_compensation_declaration(
+            user_id=coach_id,
+            year=request.year,
+            amount=float(request.external_compensation_amount),
+            declared_none=False,
+            related_receipt_month=request.month,
+            society_id=current_user.get("society_id"),
+        )
+    elif request.external_compensation_none:
+        await _record_external_compensation_declaration(
+            user_id=coach_id,
+            year=request.year,
+            amount=0.0,
+            declared_none=True,
+            related_receipt_month=request.month,
+            society_id=current_user.get("society_id"),
+        )
+    external_year_total = await _get_year_external_compensations_total(coach_id, request.year)
+    yearly_total = yearly_total + external_year_total
+
     new_total = yearly_total + request.amount_gross
-    logging.info(f"Compensation calculation: prior={prior_compensation}, yearly_receipts={yearly_total_from_receipts}, year={request.year}, contract_start_year={contract_start_year}, new_total={new_total}")
+    logging.info(f"Compensation calculation: prior={prior_compensation}, yearly_receipts={yearly_total_from_receipts}, external_year={external_year_total}, year={request.year}, contract_start_year={contract_start_year}, new_total={new_total}")
     
     # Calculate net amount (lordo = netto fino a €5.000)
     amount_net = request.amount_gross
@@ -18345,9 +18481,24 @@ async def sign_dirigente_compensation_receipt(
         yearly_total = yearly_total_from_receipts + prior_compensation
     else:
         yearly_total = yearly_total_from_receipts
-    
+
+    # 📌 Compensi esterni auto-dichiarati (altre ASD/SSD) — criterio per CASSA
+    if request.external_compensation_amount and request.external_compensation_amount > 0:
+        await _record_external_compensation_declaration(
+            user_id=dirigente_id, year=request.year,
+            amount=float(request.external_compensation_amount), declared_none=False,
+            related_receipt_month=request.month, society_id=current_user.get("society_id"),
+        )
+    elif request.external_compensation_none:
+        await _record_external_compensation_declaration(
+            user_id=dirigente_id, year=request.year, amount=0.0, declared_none=True,
+            related_receipt_month=request.month, society_id=current_user.get("society_id"),
+        )
+    external_year_total = await _get_year_external_compensations_total(dirigente_id, request.year)
+    yearly_total = yearly_total + external_year_total
+
     new_total = yearly_total + request.amount_gross
-    logging.info(f"Dirigente compensation calculation: prior={prior_compensation}, yearly_receipts={yearly_total_from_receipts}, year={request.year}, contract_start_year={contract_start_year}, new_total={new_total}")
+    logging.info(f"Dirigente compensation calculation: prior={prior_compensation}, yearly_receipts={yearly_total_from_receipts}, external_year={external_year_total}, year={request.year}, contract_start_year={contract_start_year}, new_total={new_total}")
     
     # Calculate net amount (lordo = netto fino a €5.000)
     amount_net = request.amount_gross
@@ -19069,7 +19220,23 @@ async def sign_collaboratore_compensation_receipt(
             contract_year = None
         if contract_year and contract_year == request.year:
             yearly_total += prior_compensation
-    
+
+    # 📌 Compensi esterni auto-dichiarati (altre ASD/SSD) — criterio per CASSA
+    if request.external_compensation_amount and request.external_compensation_amount > 0:
+        await _record_external_compensation_declaration(
+            user_id=collaboratore_id, year=request.year,
+            amount=float(request.external_compensation_amount), declared_none=False,
+            related_receipt_month=request.month, society_id=current_user.get("society_id"),
+        )
+    elif request.external_compensation_none:
+        await _record_external_compensation_declaration(
+            user_id=collaboratore_id, year=request.year, amount=0.0, declared_none=True,
+            related_receipt_month=request.month, society_id=current_user.get("society_id"),
+        )
+    external_year_total = await _get_year_external_compensations_total(collaboratore_id, request.year)
+    yearly_total = yearly_total + external_year_total
+    logging.info(f"Collaboratore compensation: yearly_total(after external)={yearly_total} external_year={external_year_total}")
+
     new_total = yearly_total + request.amount_gross
     
     # Check thresholds - superamento scatta da OLTRE la soglia (€5.001 e €15.001)

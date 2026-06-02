@@ -164,6 +164,68 @@ Era sbagliata perché `"5000" in "threshold_15000_communication"` ritorna **True
 ### Bug 4: Mancava "Mese di superamento: <Mese> <Anno>"
 Aggiunta riga **rossa in grassetto** sotto i titoli del PDF (sia 5k che 15k) con il riferimento al mese in cui si supera la soglia. Es: `Mese di superamento: Novembre 2025`.
 
+---
+
+## 🔧 02/06/2026 (ore 09:25 — CHECKPOINT STABILE)
+
+**📌 Punto di rollback dichiarato dall'utente**: se le modifiche successive a questa data/ora introducono regressioni, ripartire da qui. PPG + Pedro Pedretti funzionano correttamente: anagrafica + firma quietanze + colori + QR + threshold 5K/15K.
+
+---
+
+## 🔧 02/06/2026 (sera) — Compensi esterni auto-dichiarati (altre ASD/SSD)
+
+### Richiesta
+Il calcolo delle soglie 5K/15K deve tenere conto anche dei compensi sportivi che il tesserato riceve da ALTRE ASD/SSD diverse dalla nostra. Criterio: **per CASSA** (data di ricevimento), non per competenza. La domanda viene fatta al momento di ogni firma + (futuro) avviso schedulato mensile.
+
+### Flusso
+1. L'utente clicca su un mese da firmare
+2. Compare un modal pre-firma `ExternalCompensationStep` (sempre, obbligatorio):
+   - "Dall'ultima firma (o dall'inizio anno) ad oggi, hai percepito altri compensi sportivi da altre ASD/SSD?"
+   - **No, solo i compensi della nostra società** → invia `external_compensation_none=true`
+   - **Sì, ho ricevuto altri compensi** + importo € → invia `external_compensation_amount=X`
+3. Dopo conferma, l'utente prosegue al normale flusso di firma (signature pad o modal soglia)
+4. L'importo dichiarato viene salvato in `db.external_compensations` e SOMMATO al `yearly_total` per il calcolo delle soglie 5K/15K
+5. Se con il nuovo totale supera la soglia → si attiva automaticamente la Comunicazione di Superamento (come già succede oggi)
+
+### Backend
+- Modificata `CompensationReceiptRequest` con `external_compensation_amount: float = 0.0` + `external_compensation_none: bool = False`
+- Nuova classe `ExternalCompensationDeclaration` (Pydantic)
+- Nuova helper `_get_year_external_compensations_total(user_id, year)` — somma cumulativa annua
+- Nuova helper `_record_external_compensation_declaration(...)` — insert in DB
+- Endpoint `POST /api/me/external-compensations` — auto-dichiarazione standalone
+- Endpoint `GET /api/me/external-compensations?year=` — lista per audit
+- Integrazione nei 3 sign handler (coach/dirigente/collaboratore): record + somma a `yearly_total` PRIMA del calcolo `first_time_exceeded_5000/15000`
+
+### Frontend (collaboratore)
+- Nuovo component `/app/frontend/src/components/ExternalCompensationStep.tsx`
+- Modificato `collaboratore/compensation.tsx`:
+  - State: `extStepVisible`, `extPendingMonth/Year`, `extDeclaration`
+  - `handleOpenSignature` ora apre il modal pre-firma e ri-entra con `opts.skipExtStep=true` dopo la conferma
+  - `handleSign` e `handleSignDeclaration` aggiungono i campi `external_compensation_amount` e `external_compensation_none` al body POST
+  - Reset state dopo successo
+  - JSX: nuovo `<ExternalCompensationStep />` mounted a fine layout
+
+### TODO (prossime sessioni)
+- ⏳ Integrare in `coach/compensation.tsx` (medesimi state + JSX + POST extra fields)
+- ⏳ Integrare in `dirigente/compensation.tsx`
+- ⏳ Avviso schedulato mensile (cron) che ricorda di aggiornare i compensi esterni
+- ⏳ Blocco firma retroattivo: se l'utente dichiara importi che farebbero superare la soglia su mesi GIÀ firmati, generare Comunicazione di Superamento retroattiva con data odierna
+- ⏳ Sezione "Compensi esterni dichiarati" nel profilo utente (tabella audit)
+
+### File modificati/creati
+- `/app/backend/server.py` (+ ~120 righe: model + helper + 2 endpoint + integrazione in 3 sign handler)
+- `/app/frontend/src/components/ExternalCompensationStep.tsx` (NUOVO)
+- `/app/frontend/app/collaboratore/compensation.tsx` (integrazione completa)
+
+### Da testare in produzione (dopo Save to GitHub)
+1. Login come collaboratore (Pedro o nuovo utente di test)
+2. Cliccare su un mese da firmare → deve comparire il modal "Prima di firmare"
+3. Scegliere "No, solo i compensi della nostra società" → prosegui → firma normale
+4. Provare con "Sì, ho ricevuto altri compensi" + es. 4.700€ → se col nostro importo si supera €5.000 deve attivare la Comunicazione di Superamento 5K
+5. Verificare in `db.external_compensations` che ci siano i record
+
+
+
 Bug nascosto trovato: usavo `ITALIAN_MONTHS[...]` ma la costante si chiama `MONTH_NAMES` (dict). L'eccezione veniva silenziata dal try/except, quindi la riga non appariva senza errore visibile.
 
 ### Auto-fix esteso al pdf_base64 cache branch
