@@ -18,6 +18,7 @@ import { Ionicons } from '../../src/components/Icon';
 import SignaturePadInline from '../../src/components/SignaturePadInline';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
+import { handleAnagraficaError } from '../../src/utils/anagraficaError';
 const MONTH_NAMES = [
   '', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
@@ -478,6 +479,7 @@ export default function CollaboratoreCompensation() {
       }, 500);
       
     } catch (error: any) {
+      if (handleAnagraficaError(error, '/collaboratore/profile')) return;
       Alert.alert('Errore', error.response?.data?.detail || 'Errore durante la firma');
     } finally {
       setSigningDeclaration(false);
@@ -557,6 +559,7 @@ export default function CollaboratoreCompensation() {
       loadData();
       
     } catch (error: any) {
+      if (handleAnagraficaError(error, '/collaboratore/profile')) return;
       Alert.alert('Errore', error.response?.data?.detail || 'Errore durante la firma');
     } finally {
       setSigning(false);

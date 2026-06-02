@@ -113,6 +113,38 @@ Verifica automatica: ✓ 14/14 callers di `generate_threshold_*_pdf` e `generate
 Stesso pattern delle quietanze. `generate_threshold_5k_pdf` e `generate_threshold_15k_pdf` usavano `datetime.now()`. Aggiunto parametro `signed_at` con stesso fallback chain (signed_documents.signed_at → metadata persisted → comp.receipt_signed_date).
 
 ### Bug 2: PDF 15k mostrava € 5.000 (BUG GRAVE)
+
+---
+
+## 🔧 02/06/2026 (sera) — QR code ripristinato + Anagrafica obbligatoria pre-firma
+
+### 5️⃣ QR code mancante sui PDF firmati
+**Root cause**: In tutti e 4 i sign handler di compensi (`coach`, `dirigente`, `collaboratore`, `athlete`), `receipt_id` veniva generato con `str(uuid.uuid4())` **dopo** la chiamata a `generate_monthly_receipt_pdf()` / `generate_threshold_5k_pdf()` / `generate_threshold_15k_pdf()`. Quindi il parametro `document_id` arrivava `None` → il blocco `if document_id: ... QR ...` non eseguiva mai → nessun QR.
+**Fix**: spostato `receipt_id = str(uuid.uuid4())` PRIMA della generazione PDF nei 4 handler, e passato `document_id=receipt_id` a tutte e 3 le funzioni di generazione PDF. Ora ogni nuova quietanza / comunicazione soglia firmata avrà il QR di verifica autenticità.
+
+### 6️⃣ Anagrafica obbligatoria prima della firma di documenti
+**Richiesta**: nessun utente deve poter firmare quietanze/comunicazioni soglia senza prima aver compilato l'anagrafica completa.
+**Fix backend**: nuova helper `_require_complete_anagrafica(user)` che alza `HTTPException(400, detail={"code": "ANAGRAFICA_INCOMPLETA", "missing_labels": [...]})` se mancano:
+- Codice Fiscale (`fiscal_code`)
+- Data di nascita (`date_of_birth` / `birth_date`)
+- Luogo di nascita (`place_of_birth` / `birth_place`)
+- Indirizzo di residenza (`address`)
+- Città di residenza (`city`)
+- CAP (`postal_code` / `zip_code` / `cap`)
+- Provincia (`province`)
+
+La helper è chiamata all'inizio dei 4 sign handler: `/coach/{id}/compensation/receipt`, `/dirigente/{id}/compensation/receipt`, `/collaboratore/{id}/compensation/receipt`, `/athletes/{id}/compensation/receipt-sign`.
+
+**Fix frontend**: nuova utility `/app/frontend/src/utils/anagraficaError.ts → handleAnagraficaError(error, profileRoute)` che intercetta l'errore 400 ANAGRAFICA_INCOMPLETA e mostra un Alert con la lista dei campi mancanti + pulsante "Vai a Profilo". Integrata nei catch di `collaboratore/compensation.tsx`, `coach/compensation.tsx`, `dirigente/compensation.tsx`.
+
+### File modificati
+- `/app/backend/server.py` (helper `_require_complete_anagrafica` + chiamata nei 4 handler + `document_id=receipt_id` passato ai PDF generators)
+- `/app/frontend/src/utils/anagraficaError.ts` (NUOVO)
+- `/app/frontend/app/collaboratore/compensation.tsx`
+- `/app/frontend/app/coach/compensation.tsx`
+- `/app/frontend/app/dirigente/compensation.tsx`
+
+
 **Root cause**: in `_regenerate_threshold_communication_pdf` la riga:
 ```python
 threshold_type = "5000" if "5000" in doc_type else "15000"

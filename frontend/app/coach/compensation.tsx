@@ -18,6 +18,7 @@ import SocietyBranding from '../../src/components/SocietyBranding';
 import SignaturePadInline from '../../src/components/SignaturePadInline';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
+import { handleAnagraficaError } from '../../src/utils/anagraficaError';
 const MONTH_NAMES = [
   '', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
@@ -429,6 +430,7 @@ export default function CoachCompensation() {
       loadData(); // Reload to update status
       
     } catch (error: any) {
+      if (handleAnagraficaError(error, '/coach/profile')) return;
       Alert.alert('Errore', error.response?.data?.detail || 'Errore durante la firma');
     } finally {
       setSigningDeclaration(false);
@@ -497,6 +499,7 @@ export default function CoachCompensation() {
       loadData();
       
     } catch (error: any) {
+      if (handleAnagraficaError(error, '/coach/profile')) return;
       Alert.alert('Errore', error.response?.data?.detail || 'Errore durante la firma');
     } finally {
       setSigning(false);

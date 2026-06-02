@@ -7041,6 +7041,8 @@ async def sign_athlete_compensation_receipt_with_signature(
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
+
+    _require_complete_anagrafica(athlete)
     
     month = data.get("month")  # int 1-12
     year = data.get("year")
@@ -7100,6 +7102,8 @@ async def sign_athlete_compensation_receipt_with_signature(
     
     # Generate PDF
     try:
+        # Pre-generate the document id so we can embed it as QR code in the PDF
+        receipt_id = str(uuid.uuid4())
         if first_time_exceeded_15000:
             pdf_bytes = generate_threshold_15k_pdf(
                 society_name=society_name,
@@ -7110,6 +7114,7 @@ async def sign_athlete_compensation_receipt_with_signature(
                 society_city=society_city,
                 signed_at=now,
                 threshold_month=month,
+                document_id=receipt_id,
             )
             pdf_filename_prefix = "comunicazione_15k_atleta"
             doc_type = "threshold_15000_communication"
@@ -7123,6 +7128,7 @@ async def sign_athlete_compensation_receipt_with_signature(
                 society_city=society_city,
                 signed_at=now,
                 threshold_month=month,
+                document_id=receipt_id,
             )
             pdf_filename_prefix = "comunicazione_5k_atleta"
             doc_type = "threshold_5000_communication"
@@ -7136,6 +7142,7 @@ async def sign_athlete_compensation_receipt_with_signature(
                 amount_gross=amount_gross,
                 signature_base64=signature_base64,
                 signed_at=now,
+                document_id=receipt_id,
                 signer_id=athlete_id,
             )
             pdf_filename_prefix = "quietanza_atleta"
@@ -7145,7 +7152,6 @@ async def sign_athlete_compensation_receipt_with_signature(
         raise HTTPException(status_code=500, detail=f"Errore nella generazione del PDF: {str(e)}")
     
     # Save PDF
-    receipt_id = str(uuid.uuid4())
     pdf_filename = f"{pdf_filename_prefix}_{athlete_id}_{year}_{month:02d}_{receipt_id}.pdf"
     pdf_path = os.path.join(SIGNED_DOCS_DIR, pdf_filename)
     
@@ -13238,6 +13244,49 @@ async def admin_create_dirigente_receipt(
         await db.dirigente_compensations.insert_one(new_receipt)
         return {"message": f"Quietanza creata: {request.month}/{request.year} - €{request.amount_gross}", "created": True, "id": receipt_id}
 
+# ─────── Anagrafica completa check (richiesto prima delle firme) ───────
+
+
+_ANAGRAFICA_REQUIRED_FIELDS: List[tuple] = [
+    # (label, accepted_field_aliases) — l'utente passa il check se almeno un alias è valorizzato
+    ("Codice Fiscale", ["fiscal_code"]),
+    ("Data di nascita", ["date_of_birth", "birth_date"]),
+    ("Luogo di nascita", ["place_of_birth", "birth_place"]),
+    ("Indirizzo di residenza", ["address"]),
+    ("Città di residenza", ["city"]),
+    ("CAP di residenza", ["postal_code", "zip_code", "cap"]),
+    ("Provincia di residenza", ["province"]),
+]
+
+
+def _require_complete_anagrafica(user: dict) -> None:
+    """Raise HTTPException(400) se l'utente non ha l'anagrafica completa.
+    Il check è necessario prima di generare quietanze/comunicazioni soglia
+    altrimenti il PDF risulterebbe con dati mancanti."""
+    missing_labels: List[str] = []
+    for label, aliases in _ANAGRAFICA_REQUIRED_FIELDS:
+        ok = False
+        for f in aliases:
+            v = user.get(f)
+            if v is None:
+                continue
+            if isinstance(v, str) and not v.strip():
+                continue
+            ok = True
+            break
+        if not ok:
+            missing_labels.append(label)
+    if missing_labels:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": "ANAGRAFICA_INCOMPLETA",
+                "message": "Completa la tua anagrafica prima di firmare documenti. Campi mancanti: " + ", ".join(missing_labels),
+                "missing_labels": missing_labels,
+            },
+        )
+
+
 @api_router.post("/coach/{coach_id}/compensation/receipt")
 async def sign_compensation_receipt(
     coach_id: str,
@@ -13252,6 +13301,8 @@ async def sign_compensation_receipt(
     coach = await db.users.find_one({"id": coach_id})
     if not coach:
         raise HTTPException(status_code=404, detail="Coach non trovato")
+
+    _require_complete_anagrafica(coach)
     
     # Get society data from settings and societies collection
     society_settings = await db.settings.find_one({"type": "society"})
@@ -13370,6 +13421,8 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
 """
 
     try:
+        # Pre-generate the document id so we can embed it as QR code in the PDF
+        receipt_id = str(uuid.uuid4())
         # Generate the appropriate PDF based on threshold status
         if first_time_exceeded_15000:
             # Generate €15K threshold communication with metadata
@@ -13393,6 +13446,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 threshold_metadata=threshold_meta_15k,
                 signed_at=now,
                 threshold_month=request.month,
+                document_id=receipt_id,
             )
             pdf_filename_prefix = "comunicazione_15k"
             doc_type = "threshold_15000_communication"
@@ -13419,6 +13473,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 threshold_metadata=threshold_meta,
                 signed_at=now,
                 threshold_month=request.month,
+                document_id=receipt_id,
             )
             pdf_filename_prefix = "comunicazione_5k"
             doc_type = "threshold_5000_communication"
@@ -13434,7 +13489,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 amount_gross=request.amount_gross,
                 signature_base64=request.signature_base64,
                 signed_at=now,
-                document_id=None,  # set below after uuid
+                document_id=receipt_id,
                 signer_id=coach_id,
             )
             pdf_filename_prefix = "quietanza"
@@ -13445,7 +13500,6 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
         raise HTTPException(status_code=500, detail=f"Errore nella generazione del PDF: {str(e)}")
     
     # Save PDF
-    receipt_id = str(uuid.uuid4())
     pdf_filename = f"{pdf_filename_prefix}_{coach_id}_{request.year}_{request.month:02d}_{receipt_id}.pdf"
     pdf_path = os.path.join(SIGNED_DOCS_DIR, pdf_filename)
     
@@ -18244,6 +18298,8 @@ async def sign_dirigente_compensation_receipt(
     dirigente = await db.users.find_one({"id": dirigente_id})
     if not dirigente:
         raise HTTPException(status_code=404, detail="Dirigente non trovato")
+
+    _require_complete_anagrafica(dirigente)
     
     # Get society data from settings and societies collection
     society_settings = await db.settings.find_one({"type": "society"})
@@ -18344,6 +18400,8 @@ async def sign_dirigente_compensation_receipt(
             }
         
         # Generate the appropriate PDF based on threshold status
+        # Pre-generate the document id so we can embed it as QR code in the PDF
+        receipt_id = str(uuid.uuid4())
         if first_time_exceeded_15000:
             pdf_bytes = generate_threshold_15k_pdf(
                 society_name=society_name,
@@ -18355,6 +18413,7 @@ async def sign_dirigente_compensation_receipt(
                 threshold_metadata=threshold_meta,
                 signed_at=now,
                 threshold_month=request.month,
+                document_id=receipt_id,
             )
             pdf_filename_prefix = "comunicazione_15k_dirigente"
             doc_type = "threshold_15000_communication"
@@ -18370,6 +18429,7 @@ async def sign_dirigente_compensation_receipt(
                 threshold_metadata=threshold_meta,
                 signed_at=now,
                 threshold_month=request.month,
+                document_id=receipt_id,
             )
             pdf_filename_prefix = "comunicazione_5k_dirigente"
             doc_type = "threshold_5000_communication"
@@ -18384,6 +18444,7 @@ async def sign_dirigente_compensation_receipt(
                 amount_gross=request.amount_gross,
                 signature_base64=request.signature_base64,
                 signed_at=now,
+                document_id=receipt_id,
                 signer_id=dirigente_id,
             )
             pdf_filename_prefix = "quietanza_dirigente"
@@ -18394,7 +18455,6 @@ async def sign_dirigente_compensation_receipt(
         raise HTTPException(status_code=500, detail=f"Errore nella generazione del PDF: {str(e)}")
     
     # Save PDF
-    receipt_id = str(uuid.uuid4())
     pdf_filename = f"{pdf_filename_prefix}_{dirigente_id}_{request.year}_{request.month:02d}_{receipt_id}.pdf"
     pdf_path = os.path.join(SIGNED_DOCS_DIR, pdf_filename)
     
@@ -18946,6 +19006,8 @@ async def sign_collaboratore_compensation_receipt(
     collaboratore = await db.users.find_one({"id": collaboratore_id, "role": UserRole.COLLABORATORE})
     if not collaboratore:
         raise HTTPException(status_code=404, detail="Collaboratore non trovato")
+
+    _require_complete_anagrafica(collaboratore)
     
     # Check if already signed
     existing = await db.collaboratore_compensations.find_one({
@@ -19084,6 +19146,7 @@ async def sign_collaboratore_compensation_receipt(
                 threshold_metadata=threshold_meta_15k,
                 signed_at=now,
                 threshold_month=request.month,
+                document_id=receipt_id,
             )
             pdf_filename_prefix = "comunicazione_15k_collaboratore"
             doc_type = "threshold_15000_communication"
@@ -19110,6 +19173,7 @@ async def sign_collaboratore_compensation_receipt(
                 threshold_metadata=threshold_meta,
                 signed_at=now,
                 threshold_month=request.month,
+                document_id=receipt_id,
             )
             pdf_filename_prefix = "comunicazione_5k_collaboratore"
             doc_type = "threshold_5000_communication"
@@ -19125,6 +19189,7 @@ async def sign_collaboratore_compensation_receipt(
                 amount_gross=request.amount_gross,
                 signature_base64=request.signature_base64,
                 signed_at=now,
+                document_id=receipt_id,
                 signer_id=collaboratore_id,
             )
             pdf_filename_prefix = "quietanza_collaboratore"
