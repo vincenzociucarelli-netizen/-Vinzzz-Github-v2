@@ -21876,29 +21876,40 @@ async def _execute_document_deletion(doc: dict, deleted_by: dict):
         except Exception as e:
             logger.warning(f"Impossibile rimuovere file PDF {pdf_path}: {e}")
 
-    # Unlock compensation if it was a quietanza so the coach sees it as
-    # unsigned again and can re-sign with the correct data.
-    quietanza_types = (
+    # Unlock compensation if it was a quietanza OR a threshold communication
+    # so the user sees the month as unsigned again and can re-sign.
+    # NOTE: per i documenti threshold_5000/15000_communication la firma è
+    # collegata alla riga compensation come per una quietanza normale, quindi
+    # va sbloccata allo stesso modo.
+    unlockable_types = (
         "compensation_receipt",
         "coach_compensation_receipt",
         "collaboratore_compensation_receipt",
         "dirigente_compensation_receipt",
+        "atleta_pro_compensation_receipt",
+        "threshold_5000_communication",
+        "threshold_15000_communication",
     )
-    if doc.get("document_type") in quietanza_types:
+    if doc.get("document_type") in unlockable_types:
         comp_id = (doc.get("additional_data") or {}).get("compensation_id") or doc.get("related_entity_id")
         owner_id = (doc.get("coach_id") or doc.get("signer_id") or
-                    doc.get("collaboratore_id") or doc.get("dirigente_id"))
+                    doc.get("collaboratore_id") or doc.get("dirigente_id") or
+                    doc.get("atleta_id"))
         month_v = doc.get("month") or (doc.get("additional_data") or {}).get("month")
         year_v = doc.get("year") or (doc.get("additional_data") or {}).get("year")
         unlock_patch = {
             "$set": {
                 "receipt_signed": False,
                 "receipt_signed_at": None,
+                "receipt_signed_date": None,
                 "receipt_document_id": None,
                 "receipt_signature_base64": None,
+                "exceeded_5000": False,
+                "exceeded_15000": False,
             }
         }
-        # Try every compensation collection: by id first, then by owner+month+year
+        # Try every compensation collection: by id first, then by owner+month+year.
+        # Match month sia come int sia come stringa italiana legacy.
         collections_with_owner = [
             ("compensations", "coach_id"),
             ("coach_compensations", "coach_id"),
@@ -21913,11 +21924,16 @@ async def _execute_document_deletion(doc: dict, deleted_by: dict):
                     res = await db[coll].update_one({"id": comp_id}, unlock_patch)
                     total_unlocked += res.modified_count
             if owner_id and month_v is not None and year_v is not None and total_unlocked == 0:
+                try:
+                    m_int = int(month_v)
+                except Exception:
+                    m_int = None
+                month_match = {"$or": [{"month": int(month_v)} if m_int is not None else {"month": str(month_v)},
+                                       {"month": _MONTH_NAMES_IT[m_int] if (m_int and 1 <= m_int <= 12) else None}]} if m_int else {"month": month_v}
                 for coll, owner_field in collections_with_owner:
-                    res = await db[coll].update_many(
-                        {owner_field: owner_id, "month": int(month_v), "year": int(year_v)},
-                        unlock_patch,
-                    )
+                    base_q = {owner_field: owner_id, "year": int(year_v)}
+                    base_q.update(month_match)
+                    res = await db[coll].update_many(base_q, unlock_patch)
                     if res.modified_count:
                         total_unlocked += res.modified_count
                         logger.info(
@@ -21926,6 +21942,54 @@ async def _execute_document_deletion(doc: dict, deleted_by: dict):
                         )
         except Exception as e:
             logger.warning(f"Impossibile sbloccare compensation: {e}")
+
+        # 🧹 Cleanup correlati: external_compensations dichiarate per quel mese
+        try:
+            if owner_id and month_v is not None and year_v is not None:
+                try:
+                    m_int = int(month_v)
+                except Exception:
+                    m_int = None
+                if m_int is not None:
+                    await db.external_compensations.delete_many({
+                        "user_id": owner_id,
+                        "year": int(year_v),
+                        "related_receipt_month": m_int,
+                    })
+        except Exception:
+            pass
+
+        # 🧹 Threshold communication cancellata → cancella anche la dichiarazione
+        # soglia corrispondente (se presente) per quel singolo anno
+        try:
+            if doc.get("document_type") == "threshold_5000_communication":
+                t_type = "5000"
+            elif doc.get("document_type") == "threshold_15000_communication":
+                t_type = "15000"
+            else:
+                t_type = None
+            if t_type and owner_id and year_v is not None:
+                await db.threshold_declarations.delete_many({
+                    "$or": [
+                        {"coach_id": owner_id},
+                        {"collaboratore_id": owner_id},
+                        {"dirigente_id": owner_id},
+                        {"atleta_id": owner_id},
+                        {"signer_id": owner_id},
+                    ],
+                    "year": int(year_v),
+                    "threshold_type": t_type,
+                })
+                # Reset il flag corrispondente su yearly_limits
+                field_date = f"exceeded_{t_type}_date"
+                field_decl = f"exceeded_{t_type}_declaration_id"
+                field_flag = f"exceeded_{t_type}"
+                await db.yearly_limits.update_many(
+                    {"user_id": owner_id, "year": int(year_v)},
+                    {"$set": {field_flag: False, field_date: None, field_decl: None}},
+                )
+        except Exception as e:
+            logger.warning(f"Impossibile resettare threshold/yearly_limits: {e}")
 
     try:
         await db.audit_logs.insert_one({
