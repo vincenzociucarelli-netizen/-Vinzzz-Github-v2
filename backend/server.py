@@ -27917,6 +27917,12 @@ async def admin_wipe_user_compensation_data(
 
     email = (payload.get("email") or "").strip().lower()
     confirm = payload.get("confirm")
+    only_year = payload.get("year")  # opzionale: se specificato, ripulisce solo quell'anno
+    if only_year is not None:
+        try:
+            only_year = int(only_year)
+        except Exception:
+            raise HTTPException(status_code=400, detail='Il campo "year" deve essere un intero')
     if not email:
         raise HTTPException(status_code=400, detail="email obbligatoria")
     if confirm != "YES_DELETE_ALL":
@@ -27933,7 +27939,7 @@ async def admin_wipe_user_compensation_data(
     if society_id and user.get("society_id") and user["society_id"] != society_id:
         raise HTTPException(status_code=403, detail="Utente di un'altra società")
 
-    deleted: dict = {}
+    deleted: dict = {"year_filter": only_year}
 
     # 1. Compensation rows (cancella indipendentemente dal tipo, l'utente può
     #    essere coach/collaboratore/dirigente/atleta_pro o multi-ruolo)
@@ -27945,14 +27951,17 @@ async def admin_wipe_user_compensation_data(
         ("compensations", "coach_id"),  # legacy
     ]:
         try:
-            r = await db[coll].delete_many({key: user_id})
+            q = {key: user_id}
+            if only_year is not None:
+                q["year"] = only_year
+            r = await db[coll].delete_many(q)
             deleted[coll] = r.deleted_count
         except Exception as e:
             deleted[coll] = f"error: {e}"
 
     # 2. Threshold declarations
     try:
-        r = await db.threshold_declarations.delete_many({
+        q = {
             "$or": [
                 {"coach_id": user_id},
                 {"collaboratore_id": user_id},
@@ -27960,7 +27969,10 @@ async def admin_wipe_user_compensation_data(
                 {"atleta_id": user_id},
                 {"signer_id": user_id},
             ]
-        })
+        }
+        if only_year is not None:
+            q["year"] = only_year
+        r = await db.threshold_declarations.delete_many(q)
         deleted["threshold_declarations"] = r.deleted_count
     except Exception as e:
         deleted["threshold_declarations"] = f"error: {e}"
@@ -27979,17 +27991,20 @@ async def admin_wipe_user_compensation_data(
     ]
     try:
         # Recupera i pdf_path da cancellare anche dal filesystem
+        q = {
+            "$or": [
+                {"coach_id": user_id},
+                {"collaboratore_id": user_id},
+                {"dirigente_id": user_id},
+                {"atleta_id": user_id},
+                {"signer_id": user_id},
+            ],
+            "document_type": {"$in": receipt_doc_types},
+        }
+        if only_year is not None:
+            q["year"] = only_year
         docs_to_delete = await db.signed_documents.find(
-            {
-                "$or": [
-                    {"coach_id": user_id},
-                    {"collaboratore_id": user_id},
-                    {"dirigente_id": user_id},
-                    {"atleta_id": user_id},
-                    {"signer_id": user_id},
-                ],
-                "document_type": {"$in": receipt_doc_types},
-            },
+            q,
             {"_id": 0, "id": 1, "pdf_path": 1, "document_type": 1},
         ).to_list(5000)
 
@@ -28003,16 +28018,7 @@ async def admin_wipe_user_compensation_data(
                 except Exception:
                     pass
 
-        r = await db.signed_documents.delete_many({
-            "$or": [
-                {"coach_id": user_id},
-                {"collaboratore_id": user_id},
-                {"dirigente_id": user_id},
-                {"atleta_id": user_id},
-                {"signer_id": user_id},
-            ],
-            "document_type": {"$in": receipt_doc_types},
-        })
+        r = await db.signed_documents.delete_many(q)
         deleted["signed_documents"] = r.deleted_count
         deleted["files_removed"] = files_removed
     except Exception as e:
@@ -28020,8 +28026,11 @@ async def admin_wipe_user_compensation_data(
 
     # 4. Reset eventuali flag di soglia sui yearly_limits dell'utente
     try:
+        q = {"user_id": user_id}
+        if only_year is not None:
+            q["year"] = only_year
         r = await db.yearly_limits.update_many(
-            {"user_id": user_id},
+            q,
             {"$set": {
                 "exceeded_5000": False,
                 "exceeded_5000_date": None,
@@ -28034,6 +28043,16 @@ async def admin_wipe_user_compensation_data(
         deleted["yearly_limits_reset"] = r.modified_count
     except Exception:
         deleted["yearly_limits_reset"] = 0
+
+    # 5. external_compensations dichiarate per quell'anno
+    try:
+        q = {"user_id": user_id}
+        if only_year is not None:
+            q["year"] = only_year
+        r = await db.external_compensations.delete_many(q)
+        deleted["external_compensations"] = r.deleted_count
+    except Exception:
+        deleted["external_compensations"] = 0
 
     logger.warning(
         f"WIPE COMPENSATION DATA: admin={current_user.get('email')} target={email} ({user_id}) result={deleted}"

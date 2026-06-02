@@ -46,6 +46,7 @@ export default function QuietanzePage() {
   // Wipe user compensation data
   const [wipeModalVisible, setWipeModalVisible] = useState(false);
   const [wipeEmail, setWipeEmail] = useState('');
+  const [wipeYear, setWipeYear] = useState('');  // vuoto = tutti gli anni
   const [wiping, setWiping] = useState(false);
 
   const handleWipeUser = async () => {
@@ -54,35 +55,43 @@ export default function QuietanzePage() {
       Alert.alert('Errore', 'Inserisci l\'email dell\'utente');
       return;
     }
+    const yearInt = wipeYear.trim() ? parseInt(wipeYear.trim(), 10) : null;
+    if (wipeYear.trim() && (isNaN(yearInt as number) || (yearInt as number) < 2020 || (yearInt as number) > 2100)) {
+      Alert.alert('Errore', 'Anno non valido (lascia vuoto per cancellare tutti gli anni)');
+      return;
+    }
     const proceed = await new Promise<boolean>((resolve) => {
       Alert.alert(
-        'Conferma cancellazione totale',
-        `Sto per cancellare DEFINITIVAMENTE tutte le quietanze, comunicazioni soglia e dichiarazioni di ${email}. Procedere?`,
+        'Conferma cancellazione',
+        yearInt
+          ? `Sto per cancellare DEFINITIVAMENTE tutte le quietanze, comunicazioni soglia e dichiarazioni di ${email} per l'anno ${yearInt}. Procedere?`
+          : `Sto per cancellare DEFINITIVAMENTE tutte le quietanze, comunicazioni soglia e dichiarazioni di ${email} (TUTTI gli anni). Procedere?`,
         [
           { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
-          { text: 'Sì, cancella TUTTO', style: 'destructive', onPress: () => resolve(true) },
+          { text: 'Sì, cancella', style: 'destructive', onPress: () => resolve(true) },
         ]
       );
     });
     if (!proceed) return;
     try {
       setWiping(true);
-      const res = await api.post('/admin/wipe-user-compensation-data', {
-        email,
-        confirm: 'YES_DELETE_ALL',
-      });
+      const body: any = { email, confirm: 'YES_DELETE_ALL' };
+      if (yearInt) body.year = yearInt;
+      const res = await api.post('/admin/wipe-user-compensation-data', body);
       const d = res.data?.deleted || {};
       Alert.alert(
         'Pulizia completata',
-        `Utente: ${email}\n\n` +
+        `Utente: ${email}${yearInt ? `\nAnno: ${yearInt}` : '\nTutti gli anni'}\n\n` +
         `Compensations: ${(d.coach_compensations || 0) + (d.collaboratore_compensations || 0) + (d.dirigente_compensations || 0) + (d.atleta_pro_compensations || 0) + (d.compensations || 0)}\n` +
         `Documenti firmati: ${d.signed_documents || 0}\n` +
-        `Dichiarazioni soglia: ${d.threshold_declarations || 0}\n` +
         `File PDF su disco: ${d.files_removed || 0}\n` +
+        `Dichiarazioni soglia: ${d.threshold_declarations || 0}\n` +
+        `Compensi esterni: ${d.external_compensations || 0}\n` +
         `yearly_limits reset: ${d.yearly_limits_reset || 0}`
       );
       setWipeModalVisible(false);
       setWipeEmail('');
+      setWipeYear('');
       if (activeTab === 'gestione') loadReceipts();
     } catch (e: any) {
       Alert.alert('Errore', e.response?.data?.detail || 'Errore durante la pulizia');
@@ -516,12 +525,26 @@ export default function QuietanzePage() {
               style={{
                 borderWidth: 1, borderColor: '#ccc', borderRadius: 8,
                 paddingHorizontal: 12, paddingVertical: 10, fontSize: 15,
+                backgroundColor: '#fafafa', marginBottom: 12,
+              }}
+            />
+            <Text style={{ fontWeight: '600', marginBottom: 6 }}>Anno (opzionale)</Text>
+            <TextInput
+              value={wipeYear}
+              onChangeText={setWipeYear}
+              placeholder="es. 2026 — vuoto = tutti gli anni"
+              keyboardType="number-pad"
+              maxLength={4}
+              data-testid="wipe-year-input"
+              style={{
+                borderWidth: 1, borderColor: '#ccc', borderRadius: 8,
+                paddingHorizontal: 12, paddingVertical: 10, fontSize: 15,
                 backgroundColor: '#fafafa', marginBottom: 16,
               }}
             />
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10 }}>
               <TouchableOpacity
-                onPress={() => { setWipeModalVisible(false); setWipeEmail(''); }}
+                onPress={() => { setWipeModalVisible(false); setWipeEmail(''); setWipeYear(''); }}
                 disabled={wiping}
                 style={{ paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: '#e0e0e0' }}
               >
