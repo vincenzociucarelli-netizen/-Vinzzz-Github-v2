@@ -548,17 +548,23 @@ export default function CoachCompensation() {
       
       console.log('Threshold calculation:', { yearTotalBeforeThis, monthlyAmount, newTotal, exceeded5000, exceeded15000, priorComp, contractStartYearLocal, selectedYear, externalThisYearTotalAlready, externalThisSign });
       try { api.post('/debug/client-log', { message: '[Coach] handleSign before POST', data: { yearTotalBeforeThis, monthlyAmount, newTotal, exceeded5000, exceeded15000 } }); } catch {}
-      
+
+      // Log ATTEMPTING POST
+      try { await api.post('/debug/client-log', { message: '[Coach] handleSign ATTEMPTING POST', data: { url: `/coach/${user?.id}/compensation/receipt`, sigLen: sig.length } }); } catch {}
+
       const response = await api.post(`/coach/${user?.id}/compensation/receipt`, {
         month: selectedMonth,
         year: selectedYear,
-        amount_gross: monthlyAmount,  // Use the correct amount (custom or standard)
+        amount_gross: monthlyAmount,
         signature_base64: sig.replace('data:image/png;base64,', ''),
         exceeded_5000: exceeded5000,
         exceeded_15000: exceeded15000,
         external_compensation_amount: extDeclaration?.amount ?? 0,
         external_compensation_none: extDeclaration?.none ?? false,
       });
+
+      // Log POST OK
+      try { await api.post('/debug/client-log', { message: '[Coach] handleSign POST OK', data: { status: response.status, success: response.data?.success, hasPdf: !!response.data?.pdf_base64 } }); } catch {}
       
       // Close modal FIRST, then show success message
       closeSignatureModal();
