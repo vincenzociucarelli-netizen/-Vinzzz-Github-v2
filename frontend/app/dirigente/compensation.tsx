@@ -805,7 +805,14 @@ export default function DirigenteCompensation() {
     const years = Array.from(yearsSet).sort();
     for (const y of years) {
       thresholdsByYear[y] = { first5k: null, first15k: null };
-      let cumul = (y === contractStartYear && priorCompensation > 0) ? priorCompensation : 0;
+      // Includi prior_compensation + compensi esterni dichiarati per l'anno
+      let cumul = 0;
+      if (y === contractStartYear && priorCompensation > 0) cumul += priorCompensation;
+      const externalForYear = externalByYear[y] || 0;
+      if (externalForYear > 0) cumul += externalForYear;
+      const firstContractMonth = (y === contractStartYear && contractStartMonth) ? contractStartMonth : 1;
+      if (cumul > 5000) thresholdsByYear[y].first5k = firstContractMonth;
+      if (cumul > 15000) thresholdsByYear[y].first15k = firstContractMonth;
       for (let m = 1; m <= 12; m++) {
         const hasRecord = recordMap[`${y}-${m}`] !== undefined;
         // Project monthly default ONLY for months WITHIN the contract period.

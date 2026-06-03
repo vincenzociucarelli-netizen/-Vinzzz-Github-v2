@@ -45,6 +45,12 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **Frontend**: nuova pagina `/admin/external-compensations.tsx` con filtri (anno ± / solo esterni / ruolo), card espandibili per utente con breakdown numerico + timeline mensile dichiarazioni e quietanze, footer con totali aggregati. Export CSV (con BOM per Excel italiano).
 - **Menu**: nuova card "🏢 Compensi Esterni" su `/admin/index.tsx` subito dopo "Quietanze".
 
+### 🐛 Fix dashboard compensi coach/dirigente: i compensi esterni non venivano riflessi
+Dopo la cleanup, abbiamo visto che la card "Anno 2026" mostrava il "Totale Anno" senza includere i compensi esterni dichiarati, e il badge ">5K" non compariva sui mesi futuri.
+1. `getYearSummary()` (coach): include ora `externalTotal = externalByYear[year]` nel `totalProjected` + ritorna `externalTotal` per uso UI.
+2. Card "Anno X" (coach, entrambi i blocchi - primo anno + ultimo anno contratto): nuova riga `• Compensi esterni (altre ASD): €X` quando `externalTotal > 0`.
+3. `getProjectedThresholdMonths()` (coach + dirigente): il cumulativo parte ora da `priorCompensation + externalByYear[y]` invece di solo `priorCompensation`. Se gli esterni da soli superano una soglia, il primo mese di contratto viene marcato (così il badge ">5K" compare già a Gennaio se necessario). (Collaboratore già lo gestiva correttamente.)
+
 
 
 

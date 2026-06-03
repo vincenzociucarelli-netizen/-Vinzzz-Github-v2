@@ -719,7 +719,9 @@ export default function CoachCompensation() {
     // Add prior compensation only for the first year of contract
     const includePrior = year === contractStartYear;
     const prior = includePrior ? priorCompensation : 0;
-    const total = actualYearlyTotal + prior;  // Use actual amounts, not base
+    // External compensations declared for this year (altre ASD/SSD)
+    const externalTotal = externalByYear[year] || 0;
+    const total = actualYearlyTotal + prior + externalTotal;  // Use actual amounts + external
     
     // Calculate signed total for this year
     const signedTotal = records
@@ -735,8 +737,9 @@ export default function CoachCompensation() {
       supplementaryTotal,  // Amount above standard monthly
       specialMonths,  // Months with custom amounts
       priorCompensation: prior,
+      externalTotal,  // Compensi dichiarati da altre ASD/SSD
       totalProjected: total,
-      signedTotal: signedTotal + prior,
+      signedTotal: signedTotal + prior + externalTotal,
       months: monthsInYear,
     };
   };
@@ -1006,7 +1009,18 @@ export default function CoachCompensation() {
 
     for (const y of years) {
       thresholdsByYear[y] = { first5k: null, first15k: null };
-      let cumul = (y === contractStartYear && priorCompensation > 0) ? priorCompensation : 0;
+      // Inizia il cumulativo includendo:
+      // - prior_compensation (compensi pregressi del primo anno di contratto)
+      // - compensi esterni già dichiarati per l'anno (altre ASD/SSD)
+      let cumul = 0;
+      if (y === contractStartYear && priorCompensation > 0) cumul += priorCompensation;
+      const externalForYear = externalByYear[y] || 0;
+      if (externalForYear > 0) cumul += externalForYear;
+      // Se i soli esterni già superano una soglia, marca subito il primo mese
+      // utile (gennaio o primo mese del contratto), così la dashboard mostra il badge.
+      const firstContractMonth = (y === contractStartYear && contractStartMonth) ? contractStartMonth : 1;
+      if (cumul > 5000) thresholdsByYear[y].first5k = firstContractMonth;
+      if (cumul > 15000) thresholdsByYear[y].first15k = firstContractMonth;
       for (let m = 1; m <= 12; m++) {
         const hasRecord = recordMap[`${y}-${m}`] !== undefined;
         // Project monthly default ONLY for months WITHIN the contract period.
@@ -1343,6 +1357,9 @@ export default function CoachCompensation() {
                     {summary.priorCompensation > 0 && (
                       <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.priorCompensation)}</Text></Text>
                     )}
+                    {(summary.externalTotal || 0) > 0 && (
+                      <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Compensi esterni (altre ASD): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.externalTotal)}</Text></Text>
+                    )}
                     <Text style={{ fontSize: 15, color: exceeds15k ? '#8E44AD' : exceeds5k ? '#F57F17' : headerColor, fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.totalProjected)}</Text></Text>
                   </View>
                 </View>
@@ -1371,6 +1388,9 @@ export default function CoachCompensation() {
                     <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text></Text>
                     {(summary.specialMonths?.length > 0) && (
                       <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare ({summary.specialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(contractEndYear).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
+                    )}
+                    {(summary.externalTotal || 0) > 0 && (
+                      <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Compensi esterni (altre ASD): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.externalTotal)}</Text></Text>
                     )}
                     <Text style={{ fontSize: 15, color: exceeds15k ? '#8E44AD' : exceeds5k ? '#F57F17' : headerColor, fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.totalProjected)}</Text></Text>
                   </View>
