@@ -414,8 +414,9 @@ export default function DirigenteCompensation() {
     }
   };
 
-  const handleSign = async () => {
-    if (!signature || !selectedMonth || !profile) {
+  const handleSign = async (overrideSignature?: string) => {
+    const sig = overrideSignature || signature;
+    if (!sig || !selectedMonth || !profile) {
       Alert.alert('Errore', 'Firma richiesta');
       return;
     }
@@ -452,7 +453,7 @@ export default function DirigenteCompensation() {
         month: selectedMonth,
         year: selectedYear,
         amount_gross: amountToSign,
-        signature_base64: signature.replace('data:image/png;base64,', ''),
+        signature_base64: sig.replace('data:image/png;base64,', ''),
         exceeded_5000: exceeded5000,
         exceeded_15000: exceeded15000,
         external_compensation_amount: extDeclaration?.amount ?? 0,
@@ -1280,7 +1281,7 @@ export default function DirigenteCompensation() {
                     Alert.alert('Firma richiesta', 'Disegna la tua firma nel riquadro prima di confermare.');
                     return;
                   }
-                  handleSign();
+                  handleSign(sig);
                 }}
                 disabled={signing}
               >

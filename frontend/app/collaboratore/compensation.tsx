@@ -548,9 +548,10 @@ export default function CollaboratoreCompensation() {
     }
   };
 
-  const handleSign = async () => {
-    console.log('[handleSign] START', { signature: !!signature, selectedMonth, selectedYear, profile: !!profile, extDeclaration });
-    if (!signature || !selectedMonth || !profile) {
+  const handleSign = async (overrideSignature?: string) => {
+    const sig = overrideSignature || signature;
+    console.log('[handleSign] START', { signature: !!sig, selectedMonth, selectedYear, profile: !!profile, extDeclaration });
+    if (!sig || !selectedMonth || !profile) {
       console.log('[handleSign] EXIT: missing signature/month/profile');
       Alert.alert('Errore', 'Firma richiesta');
       return;
@@ -599,7 +600,7 @@ export default function CollaboratoreCompensation() {
         month: selectedMonth,
         year: selectedYear,
         amount_gross: amountToSign,
-        signature_base64: signature.replace('data:image/png;base64,', ''),
+        signature_base64: sig.replace('data:image/png;base64,', ''),
         exceeded_5000: exceeded5000,
         exceeded_15000: exceeded15000,
         external_compensation_amount: extDeclaration?.amount ?? 0,
@@ -1603,7 +1604,7 @@ export default function CollaboratoreCompensation() {
                     Alert.alert('Firma richiesta', 'Disegna la tua firma nel riquadro prima di confermare.');
                     return;
                   }
-                  handleSign();
+                  handleSign(sig);
                 }}
                 disabled={signing}
               >

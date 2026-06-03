@@ -493,11 +493,12 @@ export default function CoachCompensation() {
     }
   };
 
-  const handleSign = async () => {
-    console.log('[Coach handleSign] START', { signature: !!signature, selectedMonth, selectedYear, profile: !!profile, extDeclaration });
-    if (!signature || !selectedMonth || !profile) {
-      console.log('[Coach handleSign] EXIT: missing signature/month/profile');
-      Alert.alert('Errore', 'Firma richiesta');
+  const handleSign = async (overrideSignature?: string) => {
+    const sig = overrideSignature || signature;
+    console.log('[Coach handleSign] START', { signature: !!sig, selectedMonth, selectedYear, profile: !!profile, extDeclaration });
+    if (!sig || !selectedMonth || !profile) {
+      console.log('[Coach handleSign] EXIT: missing signature/month/profile', { sig: !!sig, selectedMonth, profile: !!profile });
+      Alert.alert('Errore', 'Firma richiesta o dati mancanti');
       return;
     }
     
@@ -545,7 +546,7 @@ export default function CoachCompensation() {
         month: selectedMonth,
         year: selectedYear,
         amount_gross: monthlyAmount,  // Use the correct amount (custom or standard)
-        signature_base64: signature.replace('data:image/png;base64,', ''),
+        signature_base64: sig.replace('data:image/png;base64,', ''),
         exceeded_5000: exceeded5000,
         exceeded_15000: exceeded15000,
         external_compensation_amount: extDeclaration?.amount ?? 0,
@@ -1471,7 +1472,8 @@ export default function CoachCompensation() {
                     Alert.alert('Firma richiesta', 'Disegna la tua firma nel riquadro prima di confermare.');
                     return;
                   }
-                  handleSign();
+                  // Passa la firma direttamente per evitare race condition con setSignature
+                  handleSign(sig);
                 }}
                 disabled={signing}
               >
