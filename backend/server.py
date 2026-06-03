@@ -6833,6 +6833,29 @@ async def set_athlete_compensation(athlete_id: str, data: dict, current_user = D
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
+    # 🔞 Atleta Pro = solo maggiorenni. I minorenni non possono ricevere compensi.
+    try:
+        bd = athlete.get("birth_date")
+        if bd:
+            from datetime import date as _date
+            if isinstance(bd, str):
+                bd_date = _date.fromisoformat(bd.split("T")[0])
+            elif hasattr(bd, "date"):
+                bd_date = bd.date()
+            else:
+                bd_date = bd
+            today = _date.today()
+            age = today.year - bd_date.year - ((today.month, today.day) < (bd_date.month, bd_date.day))
+            if age < 18:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Impossibile assegnare un compenso a un atleta minorenne. Atleta Pro disponibile solo dai 18 anni.",
+                )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.warning(f"[set_athlete_compensation] age check failed for {athlete_id}: {e}")
+    
     # Ensure athlete is marked as compensated
     if athlete.get("athlete_type") != "compensated":
         await db.athletes.update_one(
@@ -7031,6 +7054,15 @@ async def sign_athlete_compensation_receipt_with_signature(
     current_user = Depends(get_current_user)
 ):
     """Athlete signs their own monthly compensation receipt with digital signature"""
+    # 🔍 DEBUG ENTRY LOG
+    try:
+        logging.warning(
+            f"[ATHLETE-RECEIPT] ENTER athlete_id={athlete_id} user={current_user.get('email')} "
+            f"month={data.get('month')} year={data.get('year')} amt={data.get('amount_gross')} "
+            f"extAmt={data.get('external_compensation_amount')} extNone={data.get('external_compensation_none')}"
+        )
+    except Exception:
+        pass
     # Allow both athlete (signing their own) and admin
     if current_user["role"] == "athlete":
         if current_user.get("athlete_id") != athlete_id and current_user["id"] != athlete_id:
@@ -7041,6 +7073,29 @@ async def sign_athlete_compensation_receipt_with_signature(
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
+
+    # 🔞 Atleta Pro = solo maggiorenni
+    try:
+        bd = athlete.get("birth_date")
+        if bd:
+            from datetime import date as _date
+            if isinstance(bd, str):
+                bd_date = _date.fromisoformat(bd.split("T")[0])
+            elif hasattr(bd, "date"):
+                bd_date = bd.date()
+            else:
+                bd_date = bd
+            today = _date.today()
+            age = today.year - bd_date.year - ((today.month, today.day) < (bd_date.month, bd_date.day))
+            if age < 18:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Solo gli atleti maggiorenni possono firmare quietanze. Atleta Pro disponibile dai 18 anni.",
+                )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.warning(f"[ATHLETE-RECEIPT] age check failed for {athlete_id}: {e}")
 
     _require_complete_anagrafica(athlete)
     
@@ -7088,6 +7143,16 @@ async def sign_athlete_compensation_receipt_with_signature(
         yearly_total = yearly_total_from_receipts + prior_compensation
     else:
         yearly_total = yearly_total_from_receipts
+
+    # 📌 Compensi esterni auto-dichiarati (altre ASD/SSD) — criterio per CASSA.
+    # ⚠️ Calcolo "ipotetico": la scrittura del record external_compensation
+    # avviene SOLO dopo il salvataggio definitivo della quietanza (evita orfani).
+    external_amount_pending = float(data.get("external_compensation_amount") or 0)
+    external_none_pending = bool(data.get("external_compensation_none") or False)
+    external_year_total_before = await _get_year_external_compensations_total(athlete_id, year)
+    pending_external_amount = external_amount_pending if external_amount_pending > 0 else 0.0
+    external_year_total = external_year_total_before + pending_external_amount
+    yearly_total = yearly_total + external_year_total
     
     new_total = yearly_total + amount_gross
     
@@ -7237,6 +7302,22 @@ async def sign_athlete_compensation_receipt_with_signature(
     # If no existing record was updated, insert new one
     if result.matched_count == 0:
         await db.athlete_compensation_receipts.insert_one(receipt_data)
+    
+    # ✅ Quietanza salvata: ORA registra la dichiarazione esterna (evita orfani)
+    try:
+        if pending_external_amount > 0:
+            await _record_external_compensation_declaration(
+                user_id=athlete_id, year=year,
+                amount=pending_external_amount, declared_none=False,
+                related_receipt_month=month, society_id=athlete.get("society_id"),
+            )
+        elif external_none_pending:
+            await _record_external_compensation_declaration(
+                user_id=athlete_id, year=year, amount=0.0, declared_none=True,
+                related_receipt_month=month, society_id=athlete.get("society_id"),
+            )
+    except Exception as e:
+        logging.error(f"[ATHLETE-RECEIPT] external_compensation declaration FAILED (non-blocking): {e}")
     
     # Send emails
     athlete_email = athlete.get('email')

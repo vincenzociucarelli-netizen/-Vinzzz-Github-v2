@@ -51,6 +51,30 @@ Dopo la cleanup, abbiamo visto che la card "Anno 2026" mostrava il "Totale Anno"
 2. Card "Anno X" (coach, entrambi i blocchi - primo anno + ultimo anno contratto): nuova riga `• Compensi esterni (altre ASD): €X` quando `externalTotal > 0`.
 3. `getProjectedThresholdMonths()` (coach + dirigente): il cumulativo parte ora da `priorCompensation + externalByYear[y]` invece di solo `priorCompensation`. Se gli esterni da soli superano una soglia, il primo mese di contratto viene marcato (così il badge ">5K" compare già a Gennaio se necessario). (Collaboratore già lo gestiva correttamente.)
 
+## 🆕 03/06/2026 (notte) — Fase 1: Atleta Pro (atleti maggiorenni remunerati)
+
+Obiettivo: portare l'atleta remunerato a parità di funzionalità di Coach/Dirigente/Collaboratore (NESSUNA invenzione, replicare pattern esistente).
+
+### Backend
+1. `POST /athletes/{athlete_id}/compensation` (admin assegna): aggiunto **age check `>= 18`**. Se atleta è minorenne (calcolato da `birth_date`), 400 con messaggio "Atleta Pro disponibile solo dai 18 anni".
+2. `POST /athletes/{athlete_id}/compensation/receipt-sign` (atleta firma):
+   - Age check `>= 18`
+   - Supporto a payload `external_compensation_amount` e `external_compensation_none` (criterio per CASSA, identico a coach/dirigente/collaboratore)
+   - Calcolo "ipotetico" del totale (esterni inclusi) **PRIMA** della firma; la scrittura del record `external_compensations` avviene **SOLO DOPO** l'insert della receipt (stesso fix anti-orfani del 03/06).
+   - Logging `[ATHLETE-RECEIPT] ENTER` per debug Render.
+
+### Frontend
+- `/app/frontend/app/athlete/compensation.tsx`: rimosso il placeholder `ProFeatureLock`, ricostruita la pagina come **copia esatta** di `coach/compensation.tsx` (UX identica) con:
+  - Endpoint adattati: `GET /athletes/{id}/compensation/receipts` (con normalizzazione `signed → receipt_signed`, `amount → amount_gross` per compatibilità con UI coach) e `POST /athletes/{id}/compensation/receipt-sign`.
+  - `thresholdStatus` settato a `null` (atleta non ha l'endpoint dedicato; le soglie sono calcolate lato client da `getProjectedThresholdMonths` che usa records + `externalByYear`, IDENTICO a coach).
+  - Tutti gli altri fix di oggi ereditati: card "Anno X" con riga Compensi esterni, badge >5K/>15K, auto-crop firma PDF, retry su ERR_NETWORK, log dettagliato POST_ERROR.
+- Backup vecchio file mantenuto come `athlete/compensation.tsx.backup`.
+
+### Note di scope (Fase 1)
+- Sgancio genitori in-season e banner 18° compleanno: **Fase 3** (non incluso).
+- Soglie cumulative multi-ruolo (Atleta + Coach stessa persona): **Fase 2** (non incluso).
+- PDF Atleta Pro: usa gli stessi generatori esistenti (`generate_monthly_receipt_pdf`, `generate_threshold_5k_pdf`, `generate_threshold_15k_pdf`) → niente da fare.
+
 
 
 
