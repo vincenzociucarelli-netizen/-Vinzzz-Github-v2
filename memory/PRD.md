@@ -51,7 +51,17 @@ Dopo la cleanup, abbiamo visto che la card "Anno 2026" mostrava il "Totale Anno"
 2. Card "Anno X" (coach, entrambi i blocchi - primo anno + ultimo anno contratto): nuova riga `• Compensi esterni (altre ASD): €X` quando `externalTotal > 0`.
 3. `getProjectedThresholdMonths()` (coach + dirigente): il cumulativo parte ora da `priorCompensation + externalByYear[y]` invece di solo `priorCompensation`. Se gli esterni da soli superano una soglia, il primo mese di contratto viene marcato (così il badge ">5K" compare già a Gennaio se necessario). (Collaboratore già lo gestiva correttamente.)
 
-## 🆕 03/06/2026 (notte) — Fase 1: Atleta Pro (atleti maggiorenni remunerati)
+## 🆕 03/06/2026 (notte 2) — Sblocco "Atleti Pro" (ex Prime Squadre)
+
+- **Menu admin** (`admin/index.tsx`): rimosso completamente il branch `proEnabled` con paywall. La card ora è sempre attiva e cliccabile. Rinominata "Prime Squadre" → "Atleti Pro".
+- **Eliminato** il banner popup informativo "📅 Disponibile a pagamento dal 1° Luglio 2026" (rimosso insieme al ramo bloccato).
+- **Pagina principale** `admin/prime-squadre.tsx`: ripristinata la versione completa (987 righe) dal git commit `4a4b0f9f`, rinominati i 12 testi visibili "Prime Squadre" → "Atleti Pro". URL e endpoint API `/prime-squadre/...` mantenuti invariati per coerenza con il backend.
+- **Pagina dettaglio** `admin/prime-squadre/[id].tsx`: ripristinata la versione completa (634 righe) dal git commit `4a4b0f9f`, rinominato il testo visibile.
+- **Pagina admin compensi atleta** `admin/athlete/[id]/compensation.tsx`: ripristinata la versione completa (1252 righe) dal git commit `4a4b0f9f`, sostituendo il `ProFeatureLock`. Ora l'admin può visualizzare/gestire le quietanze atleta dal dettaglio.
+
+(Note: in `teams.tsx` e `team/[id].tsx` restano 3 commenti interni "Prime Squadre" — sono commenti del codice non visibili agli utenti finali, lasciati invariati.)
+
+
 
 Obiettivo: portare l'atleta remunerato a parità di funzionalità di Coach/Dirigente/Collaboratore (NESSUNA invenzione, replicare pattern esistente).
 
