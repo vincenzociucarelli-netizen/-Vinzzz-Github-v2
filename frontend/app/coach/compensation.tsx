@@ -561,6 +561,8 @@ export default function CoachCompensation() {
         exceeded_15000: exceeded15000,
         external_compensation_amount: extDeclaration?.amount ?? 0,
         external_compensation_none: extDeclaration?.none ?? false,
+      }, {
+        timeout: 90000, // 90s explicit timeout (Render cold-starts + PDF gen can be slow)
       });
 
       // Log POST OK
@@ -581,6 +583,19 @@ export default function CoachCompensation() {
       
     } catch (error: any) {
       console.error('[Coach handleSign] ERROR', error?.response?.status, error?.response?.data, error?.message);
+      // Remote log POST_ERROR so we can see it on Render (mobile users have no console)
+      try {
+        const errPayload = {
+          status: error?.response?.status ?? null,
+          data: typeof error?.response?.data === 'string' ? error.response.data.slice(0, 500) : error?.response?.data ?? null,
+          message: error?.message ?? null,
+          code: error?.code ?? null,
+          isAxios: !!error?.isAxiosError,
+          isNetwork: !error?.response,
+          url: error?.config?.url ?? null,
+        };
+        api.post('/debug/client-log', { message: '[Coach] handleSign POST_ERROR', data: errPayload });
+      } catch {}
       if (handleAnagraficaError(error, '/coach/profile')) return;
       const detail = error?.response?.data?.detail;
       const msg = typeof detail === 'string'
