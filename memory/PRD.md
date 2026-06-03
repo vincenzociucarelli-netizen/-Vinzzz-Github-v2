@@ -23,6 +23,23 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🆕 03/06/2026 — Fix firma quietanze (CORS + base64 + integrità DB)
+
+### Bug critici risolti
+1. **CORS `.com` non in whitelist**: utenti che accedevano da `registrateam.com` (PWA installate da vecchio dominio, link condivisi, bookmark, Google Search) ricevevano `ERR_NETWORK` perché il preflight CORS falliva con `400 Disallowed CORS origin`. Aggiunti `registrateam.com` e `www.registrateam.com` alla var Render `ALLOWED_ORIGINS`.
+2. **`UnboundLocalError: base64`** in `server.py` (righe 13922, 13969, 14412): import locale di `base64` dentro un `if` faceva trattare la variabile come locale, scatenando crash 500 alla prima POST che superava il check di soglia. Rimossi import locali, già esiste import globale alla riga 40.
+3. **Record `external_compensations` orfani**: ogni tentativo di firma fallito scriveva comunque il record di compensi esterni in DB PRIMA del crash. Fix: spostata la scrittura DOPO l'insert della quietanza in `sign_compensation_receipt` (coach), `sign_dirigente_compensation_receipt`, `sign_collaboratore_compensation_receipt`. Se la firma fallisce, nessun record sporco resta in DB.
+
+### Cleanup produzione
+- Fede (`fede@coach.com`): 15 `external_compensations` orfane + 3 coach_compensations + 3 signed_documents/PDF rimossi (year=2026)
+- Andrea Sarnari (`andrea.sarnari.73@gmail.com`): 5 `external_compensations` orfane rimosse (year=2026, 2025 preservato)
+- Endpoint usato: `POST /api/admin/wipe-user-compensation-data` con body `{"email":"...","confirm":"YES_DELETE_ALL","year":2026}`
+
+### Frontend
+- Timeout esplicito 90s + retry automatico 1.5s su `ERR_NETWORK`/`ECONNABORTED` in `/app/frontend/app/coach/compensation.tsx`
+- Log remoto dettagliato `POST_ERROR` con `code`/`isNetwork`/`url` per debug futuro
+
+
 ## 🆕 01/06/2026 — QR code di verifica autenticità sui PDF
 
 **Richiesta utente**: aggiungere QR code per la verifica pubblica dell'autenticità.
