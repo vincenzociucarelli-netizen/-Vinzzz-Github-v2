@@ -15150,6 +15150,24 @@ def generate_monthly_receipt_pdf(
                     else:
                         pixels[px, py] = (255, 255, 255)
             
+            # 🔍 Auto-crop dei margini bianchi: la firma viene tracciata in un
+            # canvas più ampio del tratto effettivo. Senza crop, dentro il box PDF
+            # (5-6cm) il tratto verrebbe scalato proporzionalmente e risulterebbe
+            # illeggibile (es. firma di Fede "piccolissima"). Ritagliamo al bbox
+            # del nero, con padding minimo.
+            try:
+                from PIL import ImageOps as _ImageOps
+                _bbox = _ImageOps.invert(sig_image.convert('L')).getbbox()
+                if _bbox:
+                    _pad = 15
+                    _l = max(0, _bbox[0] - _pad)
+                    _t = max(0, _bbox[1] - _pad)
+                    _r = min(sig_image.width, _bbox[2] + _pad)
+                    _b = min(sig_image.height, _bbox[3] + _pad)
+                    sig_image = sig_image.crop((_l, _t, _r, _b))
+            except Exception:
+                pass
+            
             sig_buffer = io.BytesIO()
             sig_image.save(sig_buffer, format='PNG')
             sig_buffer.seek(0)
@@ -16417,6 +16435,24 @@ def generate_privacy_consent_pdf(
                     else:
                         pixels[px, py] = (255, 255, 255)
             
+            # 🔍 Auto-crop dei margini bianchi: la firma viene tracciata in un
+            # canvas più ampio del tratto effettivo. Senza crop, dentro il box PDF
+            # (5-6cm) il tratto verrebbe scalato proporzionalmente e risulterebbe
+            # illeggibile (es. firma di Fede "piccolissima"). Ritagliamo al bbox
+            # del nero, con padding minimo.
+            try:
+                from PIL import ImageOps as _ImageOps
+                _bbox = _ImageOps.invert(sig_image.convert('L')).getbbox()
+                if _bbox:
+                    _pad = 15
+                    _l = max(0, _bbox[0] - _pad)
+                    _t = max(0, _bbox[1] - _pad)
+                    _r = min(sig_image.width, _bbox[2] + _pad)
+                    _b = min(sig_image.height, _bbox[3] + _pad)
+                    sig_image = sig_image.crop((_l, _t, _r, _b))
+            except Exception:
+                pass
+            
             sig_buffer = io.BytesIO()
             sig_image.save(sig_buffer, format='PNG')
             sig_buffer.seek(0)
@@ -16596,6 +16632,24 @@ def generate_threshold_5k_pdf(
                         pixels[px, py] = (0, 0, 0)
                     else:
                         pixels[px, py] = (255, 255, 255)
+            
+            # 🔍 Auto-crop dei margini bianchi: la firma viene tracciata in un
+            # canvas più ampio del tratto effettivo. Senza crop, dentro il box PDF
+            # (5-6cm) il tratto verrebbe scalato proporzionalmente e risulterebbe
+            # illeggibile (es. firma di Fede "piccolissima"). Ritagliamo al bbox
+            # del nero, con padding minimo.
+            try:
+                from PIL import ImageOps as _ImageOps
+                _bbox = _ImageOps.invert(sig_image.convert('L')).getbbox()
+                if _bbox:
+                    _pad = 15
+                    _l = max(0, _bbox[0] - _pad)
+                    _t = max(0, _bbox[1] - _pad)
+                    _r = min(sig_image.width, _bbox[2] + _pad)
+                    _b = min(sig_image.height, _bbox[3] + _pad)
+                    sig_image = sig_image.crop((_l, _t, _r, _b))
+            except Exception:
+                pass
             
             sig_buffer = io.BytesIO()
             sig_image.save(sig_buffer, format='PNG')
@@ -16805,6 +16859,24 @@ def generate_threshold_15k_pdf(
                     else:
                         pixels[px, py] = (255, 255, 255)
             
+            # 🔍 Auto-crop dei margini bianchi: la firma viene tracciata in un
+            # canvas più ampio del tratto effettivo. Senza crop, dentro il box PDF
+            # (5-6cm) il tratto verrebbe scalato proporzionalmente e risulterebbe
+            # illeggibile (es. firma di Fede "piccolissima"). Ritagliamo al bbox
+            # del nero, con padding minimo.
+            try:
+                from PIL import ImageOps as _ImageOps
+                _bbox = _ImageOps.invert(sig_image.convert('L')).getbbox()
+                if _bbox:
+                    _pad = 15
+                    _l = max(0, _bbox[0] - _pad)
+                    _t = max(0, _bbox[1] - _pad)
+                    _r = min(sig_image.width, _bbox[2] + _pad)
+                    _b = min(sig_image.height, _bbox[3] + _pad)
+                    sig_image = sig_image.crop((_l, _t, _r, _b))
+            except Exception:
+                pass
+            
             sig_buffer = io.BytesIO()
             sig_image.save(sig_buffer, format='PNG')
             sig_buffer.seek(0)
@@ -16981,6 +17053,20 @@ def generate_signed_pdf(
                         pixels[x, y] = (0, 0, 0)  # Make it pure black
                     else:  # Light pixel (background)
                         pixels[x, y] = (255, 255, 255)  # Make it pure white
+            
+            # 🔍 Auto-crop dei margini bianchi (vedi nota nelle altre quietanze)
+            try:
+                from PIL import ImageOps as _ImageOps
+                _bbox = _ImageOps.invert(sig_image.convert('L')).getbbox()
+                if _bbox:
+                    _pad = 15
+                    _l = max(0, _bbox[0] - _pad)
+                    _t = max(0, _bbox[1] - _pad)
+                    _r = min(sig_image.width, _bbox[2] + _pad)
+                    _b = min(sig_image.height, _bbox[3] + _pad)
+                    sig_image = sig_image.crop((_l, _t, _r, _b))
+            except Exception:
+                pass
             
             # Save to buffer
             sig_buffer = io.BytesIO()
