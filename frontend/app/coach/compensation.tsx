@@ -481,15 +481,22 @@ export default function CoachCompensation() {
       loadData(); // Reload to update status
       
     } catch (error: any) {
+      console.error('[Coach handleSignDeclaration] ERROR', error?.response?.status, error?.response?.data, error?.message);
       if (handleAnagraficaError(error, '/coach/profile')) return;
-      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante la firma');
+      const detail = error?.response?.data?.detail;
+      const msg = typeof detail === 'string'
+        ? detail
+        : (detail?.message || error?.message || 'Errore durante la firma');
+      Alert.alert('Errore firma', `${msg}\n\nCodice HTTP: ${error?.response?.status || 'n/a'}`);
     } finally {
       setSigningDeclaration(false);
     }
   };
 
   const handleSign = async () => {
+    console.log('[Coach handleSign] START', { signature: !!signature, selectedMonth, selectedYear, profile: !!profile, extDeclaration });
     if (!signature || !selectedMonth || !profile) {
+      console.log('[Coach handleSign] EXIT: missing signature/month/profile');
       Alert.alert('Errore', 'Firma richiesta');
       return;
     }
@@ -559,8 +566,13 @@ export default function CoachCompensation() {
       loadData();
       
     } catch (error: any) {
+      console.error('[Coach handleSign] ERROR', error?.response?.status, error?.response?.data, error?.message);
       if (handleAnagraficaError(error, '/coach/profile')) return;
-      Alert.alert('Errore', error.response?.data?.detail || 'Errore durante la firma');
+      const detail = error?.response?.data?.detail;
+      const msg = typeof detail === 'string'
+        ? detail
+        : (detail?.message || error?.message || 'Errore durante la firma');
+      Alert.alert('Errore firma quietanza', `${msg}\n\nCodice HTTP: ${error?.response?.status || 'n/a'}`);
     } finally {
       setSigning(false);
     }
@@ -1446,10 +1458,22 @@ export default function CoachCompensation() {
                 style={[
                   styles.modalButton, 
                   styles.confirmButton,
-                  !signature && styles.buttonDisabled
                 ]}
-                onPress={handleSign}
-                disabled={!signature || signing}
+                onPress={() => {
+                  // Forza il read della firma al momento del tap (utile su
+                  // mobile dove onEnd può non scattare per scroll/touch lift)
+                  let sig = signature;
+                  if (!sig && signatureRef.current) {
+                    sig = signatureRef.current.toDataURL();
+                    if (sig) setSignature(sig);
+                  }
+                  if (!sig) {
+                    Alert.alert('Firma richiesta', 'Disegna la tua firma nel riquadro prima di confermare.');
+                    return;
+                  }
+                  handleSign();
+                }}
+                disabled={signing}
               >
                 {signing ? (
                   <ActivityIndicator size="small" color="#fff" />

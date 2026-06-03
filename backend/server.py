@@ -13379,6 +13379,52 @@ async def _record_external_compensation_declaration(
     await db.external_compensations.insert_one(doc)
 
 
+@api_router.get("/me/anagrafica-check")
+async def my_anagrafica_check(current_user = Depends(get_current_user)):
+    """Diagnostica: ritorna lo stato dell'anagrafica dell'utente loggato senza
+    bloccare. Utile per capire quali campi mancano quando handleSign fallisce."""
+    u = await db.users.find_one({"id": current_user["id"]}, {"_id": 0})
+    if not u:
+        # Forse è un atleta
+        u = await db.athletes.find_one({"id": current_user["id"]}, {"_id": 0})
+    if not u:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+
+    try:
+        _require_complete_anagrafica(u)
+        return {
+            "complete": True,
+            "missing_labels": [],
+            "profile_snapshot": {
+                "fiscal_code": u.get("fiscal_code"),
+                "date_of_birth": u.get("date_of_birth"),
+                "birth_date": u.get("birth_date"),
+                "place_of_birth": u.get("place_of_birth"),
+                "birth_place": u.get("birth_place"),
+                "country_of_birth": u.get("country_of_birth"),
+                "birth_country": u.get("birth_country"),
+                "nationality": u.get("nationality"),
+            },
+        }
+    except HTTPException as ex:
+        det = ex.detail if isinstance(ex.detail, dict) else {"missing_labels": []}
+        return {
+            "complete": False,
+            "missing_labels": det.get("missing_labels", []),
+            "message": det.get("message", ""),
+            "profile_snapshot": {
+                "fiscal_code": u.get("fiscal_code"),
+                "date_of_birth": u.get("date_of_birth"),
+                "birth_date": u.get("birth_date"),
+                "place_of_birth": u.get("place_of_birth"),
+                "birth_place": u.get("birth_place"),
+                "country_of_birth": u.get("country_of_birth"),
+                "birth_country": u.get("birth_country"),
+                "nationality": u.get("nationality"),
+            },
+        }
+
+
 @api_router.post("/me/external-compensations")
 async def post_my_external_compensation(
     payload: dict = Body(...),

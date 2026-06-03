@@ -1592,13 +1592,20 @@ export default function CollaboratoreCompensation() {
               </TouchableOpacity>
               
               <TouchableOpacity
-                style={[
-                  styles.modalButton, 
-                  styles.confirmButton,
-                  !signature && styles.buttonDisabled
-                ]}
-                onPress={handleSign}
-                disabled={!signature || signing}
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={() => {
+                  let sig = signature;
+                  if (!sig && signatureRef.current) {
+                    sig = signatureRef.current.toDataURL();
+                    if (sig) setSignature(sig);
+                  }
+                  if (!sig) {
+                    Alert.alert('Firma richiesta', 'Disegna la tua firma nel riquadro prima di confermare.');
+                    return;
+                  }
+                  handleSign();
+                }}
+                disabled={signing}
               >
                 {signing ? (
                   <ActivityIndicator size="small" color="#fff" />
