@@ -13477,6 +13477,155 @@ async def list_my_external_compensations(
     return {"items": items, "total": round(total, 2)}
 
 
+# ─────────────────────── Riepilogo Admin compensi esterni ───────────────────────
+
+@api_router.get("/admin/external-compensations/summary")
+async def admin_external_compensations_summary(
+    year: int,
+    only_with_external: bool = False,
+    role: Optional[str] = None,
+    current_user = Depends(get_current_user),
+):
+    """Admin: riepilogo aggregato dei compensi esterni dichiarati nell'anno.
+
+    Per ogni utente che ha dichiarato compensi esterni o firmato quietanze:
+      - id, email, full_name, role
+      - n° dichiarazioni di compensi esterni
+      - totale esterno annuo
+      - totale interno annuo (quietanze firmate)
+      - prior_compensation (compenso da altre ASD dichiarato all'assunzione,
+        solo se anno = primo anno di contratto)
+      - totale cumulativo (interno + esterno + prior)
+      - exceeded_5000 / exceeded_15000 (calcolati su totale cumulativo)
+      - declarations: lista mese-per-mese (month, amount, declared_at, declared_none)
+
+    Query params:
+      - year (obbligatorio): anno solare
+      - only_with_external (default False): se True, esclude chi ha 0 esterni
+      - role (opz.): filtra per ruolo (coach/dirigente/collaboratore/atleta_pro)
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    society_id = current_user.get("society_id")
+
+    # 1. Aggrega per user_id le dichiarazioni di compensi esterni
+    external_by_user: Dict[str, Dict] = {}
+    ext_query: dict = {"year": int(year)}
+    if society_id:
+        ext_query["society_id"] = society_id
+    async for d in db.external_compensations.find(ext_query, {"_id": 0}):
+        uid = d.get("user_id")
+        if not uid:
+            continue
+        bucket = external_by_user.setdefault(uid, {"total": 0.0, "count": 0, "declarations": []})
+        amt = float(d.get("amount") or 0)
+        bucket["total"] += amt
+        bucket["count"] += 1
+        bucket["declarations"].append({
+            "month": d.get("related_receipt_month"),
+            "amount": amt,
+            "declared_none": bool(d.get("declared_none", False)),
+            "declared_at": d.get("declared_at"),
+        })
+
+    # 2. Aggrega per user_id i totali interni dalle quietanze firmate
+    internal_by_user: Dict[str, Dict] = {}
+    collections = [
+        ("coach_compensations", "coach_id", "coach"),
+        ("dirigente_compensations", "dirigente_id", "dirigente"),
+        ("collaboratore_compensations", "collaboratore_id", "collaboratore"),
+        ("atleta_pro_compensations", "atleta_id", "atleta_pro"),
+    ]
+    for coll_name, key, role_label in collections:
+        if role and role != role_label:
+            continue
+        q: dict = {"year": int(year), "receipt_signed": True}
+        async for c in db[coll_name].find(q, {"_id": 0, key: 1, "amount_gross": 1, "month": 1}):
+            uid = c.get(key)
+            if not uid:
+                continue
+            bucket = internal_by_user.setdefault(uid, {"total": 0.0, "months": []})
+            amt = float(c.get("amount_gross") or 0)
+            bucket["total"] += amt
+            bucket["months"].append({"month": c.get("month"), "amount_gross": amt})
+
+    # 3. Costruisci la lista finale unendo i due set di utenti
+    all_user_ids = set(external_by_user.keys()) | set(internal_by_user.keys())
+
+    rows: List[dict] = []
+    for uid in all_user_ids:
+        user = await db.users.find_one(
+            {"id": uid},
+            {"_id": 0, "id": 1, "email": 1, "full_name": 1, "role": 1,
+             "society_id": 1, "contract_start_date": 1, "other_annual_compensation": 1},
+        )
+        if not user:
+            continue
+        # Multi-tenant safety
+        if society_id and user.get("society_id") and user["society_id"] != society_id:
+            continue
+        if role and user.get("role") != role:
+            continue
+
+        ext = external_by_user.get(uid, {"total": 0.0, "count": 0, "declarations": []})
+        intern = internal_by_user.get(uid, {"total": 0.0, "months": []})
+
+        # Prior compensation se anno = primo anno di contratto
+        prior = 0.0
+        cs = user.get("contract_start_date")
+        try:
+            if cs:
+                cs_year = int(str(cs).split("T")[0].split("-")[0])
+                if cs_year == int(year):
+                    prior = float(user.get("other_annual_compensation") or 0)
+        except Exception:
+            prior = 0.0
+
+        total_cumulative = round(ext["total"] + intern["total"] + prior, 2)
+
+        # Ordina declarations per mese e timestamp
+        decl_sorted = sorted(
+            ext["declarations"],
+            key=lambda x: (x.get("month") or 0, str(x.get("declared_at") or "")),
+        )
+        months_sorted = sorted(intern["months"], key=lambda x: x.get("month") or 0)
+
+        rows.append({
+            "user_id": uid,
+            "email": user.get("email"),
+            "full_name": user.get("full_name"),
+            "role": user.get("role"),
+            "external_total": round(ext["total"], 2),
+            "external_declarations_count": ext["count"],
+            "internal_total": round(intern["total"], 2),
+            "internal_months_count": len(intern["months"]),
+            "prior_compensation": round(prior, 2),
+            "total_cumulative": total_cumulative,
+            "exceeded_5000": total_cumulative > 5000,
+            "exceeded_15000": total_cumulative > 15000,
+            "declarations": decl_sorted,
+            "internal_months": months_sorted,
+        })
+
+    # Filtro opzionale
+    if only_with_external:
+        rows = [r for r in rows if r["external_total"] > 0]
+
+    # Ordina: prima chi ha esterni più alti, poi cumulative
+    rows.sort(key=lambda r: (-r["external_total"], -r["total_cumulative"]))
+
+    return {
+        "year": int(year),
+        "society_id": society_id,
+        "rows_count": len(rows),
+        "rows": rows,
+    }
+
+
+
+
+
 # ─────────────────────────── /Compensi esterni ───────────────────────────
 
 

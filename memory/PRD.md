@@ -23,12 +23,13 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
-## 🆕 03/06/2026 — Fix firma quietanze (CORS + base64 + integrità DB)
+## 🆕 03/06/2026 — Fix firma quietanze (CORS + base64 + integrità DB) + Auto-crop firma + Riepilogo Compensi Esterni
 
 ### Bug critici risolti
 1. **CORS `.com` non in whitelist**: utenti che accedevano da `registrateam.com` (PWA installate da vecchio dominio, link condivisi, bookmark, Google Search) ricevevano `ERR_NETWORK` perché il preflight CORS falliva con `400 Disallowed CORS origin`. Aggiunti `registrateam.com` e `www.registrateam.com` alla var Render `ALLOWED_ORIGINS`.
 2. **`UnboundLocalError: base64`** in `server.py` (righe 13922, 13969, 14412): import locale di `base64` dentro un `if` faceva trattare la variabile come locale, scatenando crash 500 alla prima POST che superava il check di soglia. Rimossi import locali, già esiste import globale alla riga 40.
 3. **Record `external_compensations` orfani**: ogni tentativo di firma fallito scriveva comunque il record di compensi esterni in DB PRIMA del crash. Fix: spostata la scrittura DOPO l'insert della quietanza in `sign_compensation_receipt` (coach), `sign_dirigente_compensation_receipt`, `sign_collaboratore_compensation_receipt`. Se la firma fallisce, nessun record sporco resta in DB.
+4. **Firma piccolissima nel PDF**: la firma veniva renderizzata in tutto il canvas originale (es. 800x300) e con `preserveAspectRatio=True` veniva ridotta sproporzionatamente nel box PDF (5-6cm). Aggiunto **auto-crop** del bbox della firma (PIL ImageOps.invert + getbbox + crop con padding 15px) in tutti i 5 generatori PDF (quietanza, soglia 5k, soglia 15k, dichiarazione soglia, atleta pro).
 
 ### Cleanup produzione
 - Fede (`fede@coach.com`): 15 `external_compensations` orfane + 3 coach_compensations + 3 signed_documents/PDF rimossi (year=2026)
@@ -38,6 +39,13 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ### Frontend
 - Timeout esplicito 90s + retry automatico 1.5s su `ERR_NETWORK`/`ECONNABORTED` in `/app/frontend/app/coach/compensation.tsx`
 - Log remoto dettagliato `POST_ERROR` con `code`/`isNetwork`/`url` per debug futuro
+
+### 🆕 Nuova feature: Riepilogo Admin Compensi Esterni
+- **Backend**: `GET /api/admin/external-compensations/summary?year=YYYY&only_with_external=true&role=coach` — aggrega per utente: n° dichiarazioni esterne, totale esterno, totale interno (quietanze firmate), prior_compensation, totale cumulativo, flag soglie 5k/15k, lista mese-per-mese (dichiarazioni + quietanze). Multi-tenant safe.
+- **Frontend**: nuova pagina `/admin/external-compensations.tsx` con filtri (anno ± / solo esterni / ruolo), card espandibili per utente con breakdown numerico + timeline mensile dichiarazioni e quietanze, footer con totali aggregati. Export CSV (con BOM per Excel italiano).
+- **Menu**: nuova card "🏢 Compensi Esterni" su `/admin/index.tsx` subito dopo "Quietanze".
+
+
 
 
 ## 🆕 01/06/2026 — QR code di verifica autenticità sui PDF

@@ -1299,6 +1299,22 @@ export default function AdminDashboard() {
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
+          {/* Riepilogo Compensi Esterni (altre ASD/SSD) */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/external-compensations')}
+            data-testid="external-compensations-menu-card"
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#FFF3E0' }]}>
+              <Text style={{ fontSize: 26 }}>🏢</Text>
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Compensi Esterni</Text>
+              <Text style={styles.menuCardSubtitle}>Riepilogo dichiarazioni da altre Società</Text>
+            </View>
+            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
+          </TouchableOpacity>
+
           {/* Archivio Documenti Firmati */}
           <TouchableOpacity
             style={styles.menuCard}
