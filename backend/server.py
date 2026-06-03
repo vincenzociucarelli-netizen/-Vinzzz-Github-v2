@@ -13919,8 +13919,6 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
     # Le quietanze mensili standard vanno solo in archivio
     if coach_email and (first_time_exceeded_5000 or first_time_exceeded_15000):
         try:
-            import base64
-            
             alert_emoji = "🚨" if first_time_exceeded_15000 else "⚠️"
             threshold_text = "€15.000" if first_time_exceeded_15000 else "€5.000"
             
@@ -13966,8 +13964,6 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
     # Email to admin SOLO per superamento soglie €5.000/€15.000
     if admin_email and (first_time_exceeded_5000 or first_time_exceeded_15000):
         try:
-            import base64
-            
             alert_emoji = "🚨" if first_time_exceeded_15000 else "⚠️"
             threshold_text = "€15.000" if first_time_exceeded_15000 else "€5.000"
             urgency = "URGENTE" if first_time_exceeded_15000 else "ATTENZIONE"
@@ -14413,7 +14409,6 @@ Luogo e data: _________________, {now.strftime('%d/%m/%Y')}
     # Import email service
     try:
         from email_service import send_email_with_pdf
-        import base64
         
         pdf_base64 = base64.b64encode(pdf_bytes).decode()
         
