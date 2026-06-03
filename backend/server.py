@@ -14124,7 +14124,10 @@ async def get_coach_threshold_status(
         "coach_id": coach_id,
         "year": year
     }).to_list(12)
-    projected_total = prior_compensation if (contract_year == year) else 0
+    # 📌 Include anche i compensi esterni dichiarati nell'anno per il calcolo
+    # proiettato del mese di superamento delle soglie 5K/15K
+    coach_external_year_total = await _get_year_external_compensations_total(coach_id, year)
+    projected_total = (prior_compensation if (contract_year == year) else 0) + coach_external_year_total
     threshold_5k_month = 0
     threshold_15k_month = 0
     for m in months_in_year:
@@ -19006,7 +19009,10 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
     }).to_list(12)
     
     # Calculate projected total with actual amounts where available
-    projected_total = effective_prior
+    # Include anche i compensi esterni dichiarati nell'anno per il calcolo
+    # proiettato del mese di superamento delle soglie 5K/15K
+    dirig_external_year_total = await _get_year_external_compensations_total(dirigente_id, year)
+    projected_total = effective_prior + dirig_external_year_total
     threshold_5k_month = 0
     threshold_15k_month = 0
     for m in months_in_year:
@@ -19748,7 +19754,10 @@ async def get_collaboratore_threshold_status(
     }).to_list(12)
     
     eff_prior = prior_compensation if (collab_start_year_val and year == collab_start_year_val) else 0
-    proj_total = eff_prior
+    # 📌 Include anche i compensi esterni dichiarati nell'anno per il calcolo
+    # proiettato del mese di superamento delle soglie 5K/15K
+    eff_external_year = await _get_year_external_compensations_total(collaboratore_id, year)
+    proj_total = eff_prior + eff_external_year
     collab_threshold_5k_month = 0
     collab_threshold_15k_month = 0
     for m in collab_months_in_year:

@@ -19,6 +19,7 @@ import SignaturePadInline from '../../src/components/SignaturePadInline';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 import { handleAnagraficaError } from '../../src/utils/anagraficaError';
+import ExternalCompensationStep from '../../src/components/ExternalCompensationStep';
 const MONTH_NAMES = [
   '', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
@@ -107,6 +108,13 @@ export default function DirigenteCompensation() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<DirigenteProfile | null>(null);
   const [records, setRecords] = useState<CompensationRecord[]>([]);
+  // Compensi esterni annuali dichiarati dall'utente
+  const [externalByYear, setExternalByYear] = useState<{ [year: number]: number }>({});
+  // External Compensation pre-step
+  const [extStepVisible, setExtStepVisible] = useState(false);
+  const [extPendingMonth, setExtPendingMonth] = useState<number | null>(null);
+  const [extPendingYear, setExtPendingYear] = useState<number | null>(null);
+  const [extDeclaration, setExtDeclaration] = useState<{ amount: number; none: boolean } | null>(null);
   const [yearlyTotal, setYearlyTotal] = useState(0);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
@@ -203,6 +211,20 @@ export default function DirigenteCompensation() {
           console.log('Error loading 2026 threshold status:', err);
         }
       }
+
+      // Carica i compensi esterni auto-dichiarati raggruppati per anno
+      try {
+        const extRes = await api.get('/me/external-compensations');
+        const items: Array<{ year: number; amount: number }> = extRes.data?.items || [];
+        const byYear: { [y: number]: number } = {};
+        for (const it of items) {
+          const y = Number(it.year);
+          byYear[y] = (byYear[y] || 0) + Number(it.amount || 0);
+        }
+        setExternalByYear(byYear);
+      } catch (err) {
+        console.log('Error loading external compensations:', err);
+      }
       
     } catch (error) {
       console.error('Error loading data:', error);
@@ -211,9 +233,24 @@ export default function DirigenteCompensation() {
     }
   };
 
+  // Callback dal modal ExternalCompensationStep
+  const handleExtConfirm = (data: { externalAmount: number; declaredNone: boolean }) => {
+    setExtDeclaration({ amount: data.externalAmount, none: data.declaredNone });
+    setExtStepVisible(false);
+    if (extPendingMonth != null && extPendingYear != null) {
+      handleOpenSignature(extPendingMonth, extPendingYear, { skipExtStep: true });
+    }
+  };
+
+  const handleExtCancel = () => {
+    setExtStepVisible(false);
+    setExtPendingMonth(null);
+    setExtPendingYear(null);
+  };
+
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
 
-  const handleOpenSignature = (month: number, year?: number) => {
+  const handleOpenSignature = (month: number, year?: number, opts?: { skipExtStep?: boolean }) => {
     const targetYear = year || currentYear;
     
     // CRONOLOGICAL ORDER CHECK: prevent signing a month if any prior contract
@@ -255,9 +292,12 @@ export default function DirigenteCompensation() {
     
     const yearRecords = records.filter(r => r.year === targetYear && r.receipt_signed && r.month < month);
     const yearTotalFromReceipts = yearRecords.reduce((sum, r) => sum + (r.amount_gross || r.amount || 0), 0);
-    const yearTotalBeforeThis = (targetYear === contractStartYearLocal) 
-      ? yearTotalFromReceipts + priorComp 
-      : yearTotalFromReceipts;
+    // Include cumulative external + just-declared external
+    const externalThisYearTotal = externalByYear[targetYear] || 0;
+    const externalJustDeclared = extDeclaration?.amount ?? 0;
+    const yearTotalBeforeThis = ((targetYear === contractStartYearLocal)
+      ? yearTotalFromReceipts + priorComp
+      : yearTotalFromReceipts) + externalThisYearTotal + externalJustDeclared;
     
     const newTotal = yearTotalBeforeThis + amountForThisMonth;
     
@@ -294,7 +334,15 @@ export default function DirigenteCompensation() {
     setSelectedMonth(month);
     setSelectedYear(targetYear);
     setSignature(null);
-    
+
+    // 📌 STEP PRE-FIRMA: chiedi sempre se ci sono altri compensi da ASD esterne.
+    if (!opts?.skipExtStep) {
+      setExtPendingMonth(month);
+      setExtPendingYear(targetYear);
+      setExtStepVisible(true);
+      return;
+    }
+
     if (willExceed15k) {
       openDeclarationModalForMonth('15000', month, targetYear);
     } else if (willExceed5k) {
@@ -340,6 +388,8 @@ export default function DirigenteCompensation() {
         signature_base64: declarationSignature.replace('data:image/png;base64,', ''),
         exceeded_5000: declarationType === '5000',
         exceeded_15000: declarationType === '15000',
+        external_compensation_amount: extDeclaration?.amount ?? 0,
+        external_compensation_none: extDeclaration?.none ?? false,
       });
       
       const thresholdAmount = declarationType === '5000' ? '5.000' : '15.000';
@@ -351,6 +401,9 @@ export default function DirigenteCompensation() {
       );
       
       setShowDeclarationModal(false);
+      setExtDeclaration(null);
+      setExtPendingMonth(null);
+      setExtPendingYear(null);
       loadData();
       
     } catch (error: any) {
@@ -384,9 +437,11 @@ export default function DirigenteCompensation() {
         contractStartYearLocal = parseInt(profile.contract_start_date.split('-')[0]);
       }
       
-      const yearTotalBeforeThis = (selectedYear === contractStartYearLocal) 
-        ? yearTotalFromReceipts + priorComp 
-        : yearTotalFromReceipts;
+      const externalThisYearTotalAlready = externalByYear[selectedYear] || 0;
+      const externalThisSign = extDeclaration?.amount ?? 0;
+      const yearTotalBeforeThis = ((selectedYear === contractStartYearLocal)
+        ? yearTotalFromReceipts + priorComp
+        : yearTotalFromReceipts) + externalThisYearTotalAlready + externalThisSign;
       
       const newTotal = yearTotalBeforeThis + amountToSign;
       
@@ -400,6 +455,8 @@ export default function DirigenteCompensation() {
         signature_base64: signature.replace('data:image/png;base64,', ''),
         exceeded_5000: exceeded5000,
         exceeded_15000: exceeded15000,
+        external_compensation_amount: extDeclaration?.amount ?? 0,
+        external_compensation_none: extDeclaration?.none ?? false,
       });
       
       Alert.alert(
@@ -408,6 +465,9 @@ export default function DirigenteCompensation() {
       );
       
       setShowSignatureModal(false);
+      setExtDeclaration(null);
+      setExtPendingMonth(null);
+      setExtPendingYear(null);
       loadData();
       
     } catch (error: any) {
@@ -1366,6 +1426,40 @@ export default function DirigenteCompensation() {
           </View>
         </View>
       </Modal>
+
+      {/* Step pre-firma: dichiarazione altri compensi (altre ASD/SSD) */}
+      <ExternalCompensationStep
+        visible={extStepVisible}
+        monthLabel={
+          extPendingMonth != null && extPendingYear != null
+            ? `${MONTH_NAMES[extPendingMonth] || ''} ${extPendingYear}`
+            : ''
+        }
+        ourAmount={
+          extPendingMonth != null && extPendingYear != null
+            ? (records.find(r => matchesMonth(r.month, extPendingMonth) && r.year === extPendingYear)?.amount_gross
+              || records.find(r => matchesMonth(r.month, extPendingMonth) && r.year === extPendingYear)?.amount
+              || profile?.monthly_compensation
+              || 0)
+            : 0
+        }
+        alreadyCumulated={(() => {
+          if (extPendingMonth == null || extPendingYear == null) return 0;
+          const signedBefore = records
+            .filter(r => r.year === extPendingYear && r.receipt_signed && (typeof r.month === 'number' ? r.month < extPendingMonth : true))
+            .reduce((s, r) => s + (r.amount_gross || r.amount || 0), 0);
+          const ext = externalByYear[extPendingYear] || 0;
+          const contractStartYearLocal = profile?.contract_start_date
+            ? parseInt(String(profile.contract_start_date).split('-')[0])
+            : null;
+          const prior = (extPendingYear === contractStartYearLocal)
+            ? (profile?.other_annual_compensation || 0) : 0;
+          return signedBefore + ext + prior;
+        })()}
+        loading={signing || signingDeclaration}
+        onCancel={handleExtCancel}
+        onConfirm={handleExtConfirm}
+      />
     </View>
   );
 }
