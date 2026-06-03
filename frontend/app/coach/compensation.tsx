@@ -495,8 +495,14 @@ export default function CoachCompensation() {
 
   const handleSign = async (overrideSignature?: string) => {
     const sig = overrideSignature || signature;
+    // Log remoto per debug produzione (Fede / Andrea click che non vanno)
+    const logRemote = (msg: string, data: any = {}) => {
+      try { api.post('/debug/client-log', { message: `[Coach] ${msg}`, data }); } catch {}
+    };
+    logRemote('handleSign START', { hasSig: !!sig, sigLen: sig?.length || 0, selectedMonth, selectedYear, hasProfile: !!profile, extDeclaration });
     console.log('[Coach handleSign] START', { signature: !!sig, selectedMonth, selectedYear, profile: !!profile, extDeclaration });
     if (!sig || !selectedMonth || !profile) {
+      logRemote('handleSign EXIT: missing prereqs', { sig: !!sig, selectedMonth, profile: !!profile });
       console.log('[Coach handleSign] EXIT: missing signature/month/profile', { sig: !!sig, selectedMonth, profile: !!profile });
       Alert.alert('Errore', 'Firma richiesta o dati mancanti');
       return;
@@ -541,6 +547,7 @@ export default function CoachCompensation() {
       const exceeded15000 = newTotal > 15000 && yearTotalBeforeThis <= 15000;
       
       console.log('Threshold calculation:', { yearTotalBeforeThis, monthlyAmount, newTotal, exceeded5000, exceeded15000, priorComp, contractStartYearLocal, selectedYear, externalThisYearTotalAlready, externalThisSign });
+      try { api.post('/debug/client-log', { message: '[Coach] handleSign before POST', data: { yearTotalBeforeThis, monthlyAmount, newTotal, exceeded5000, exceeded15000 } }); } catch {}
       
       const response = await api.post(`/coach/${user?.id}/compensation/receipt`, {
         month: selectedMonth,

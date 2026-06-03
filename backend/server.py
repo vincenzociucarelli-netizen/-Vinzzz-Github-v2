@@ -13379,6 +13379,17 @@ async def _record_external_compensation_declaration(
     await db.external_compensations.insert_one(doc)
 
 
+@api_router.post("/debug/client-log")
+async def debug_client_log(payload: dict = Body(...), current_user = Depends(get_current_user)):
+    """Riceve log diagnostici dal client per debug remoto problemi UI."""
+    msg = payload.get("message", "")
+    extra = payload.get("data", {})
+    user_email = current_user.get("email", "?")
+    user_role = current_user.get("role", "?")
+    logger.warning(f"[CLIENT-LOG] {user_email} ({user_role}) → {msg} | {extra}")
+    return {"ok": True}
+
+
 @api_router.get("/me/anagrafica-check")
 async def my_anagrafica_check(current_user = Depends(get_current_user)):
     """Diagnostica: ritorna lo stato dell'anagrafica dell'utente loggato senza
