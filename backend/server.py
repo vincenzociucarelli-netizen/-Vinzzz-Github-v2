@@ -13621,27 +13621,14 @@ async def sign_compensation_receipt(
         yearly_total = yearly_total_from_receipts
 
     # 📌 Compensi esterni auto-dichiarati (altre ASD/SSD) — criterio per CASSA.
-    # Salva l'eventuale incremento dichiarato in questo step di firma e somma
-    # il cumulativo annuo del totale esterno alle soglie.
+    # ⚠️ NON scrivere ancora il record: calcoliamo il totale come se fosse
+    # dichiarato, ma la scrittura in DB avviene SOLO dopo che la quietanza
+    # è stata salvata con successo (evita record "orfani" se la firma fallisce).
+    external_year_total_before = await _get_year_external_compensations_total(coach_id, request.year)
+    pending_external_amount = 0.0
     if request.external_compensation_amount and request.external_compensation_amount > 0:
-        await _record_external_compensation_declaration(
-            user_id=coach_id,
-            year=request.year,
-            amount=float(request.external_compensation_amount),
-            declared_none=False,
-            related_receipt_month=request.month,
-            society_id=current_user.get("society_id"),
-        )
-    elif request.external_compensation_none:
-        await _record_external_compensation_declaration(
-            user_id=coach_id,
-            year=request.year,
-            amount=0.0,
-            declared_none=True,
-            related_receipt_month=request.month,
-            society_id=current_user.get("society_id"),
-        )
-    external_year_total = await _get_year_external_compensations_total(coach_id, request.year)
+        pending_external_amount = float(request.external_compensation_amount)
+    external_year_total = external_year_total_before + pending_external_amount
     yearly_total = yearly_total + external_year_total
 
     new_total = yearly_total + request.amount_gross
@@ -13911,6 +13898,31 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
             exceeded_15000_date=now if first_time_exceeded_15000 else None
         )
         await db.coach_compensations.insert_one(record.dict())
+    
+    # ✅ Quietanza salvata con successo: SOLO ORA registra la dichiarazione
+    # del compenso esterno (criterio per CASSA). In questo modo se qualcosa
+    # fosse fallito prima, nessun record "fantasma" resta in DB.
+    try:
+        if pending_external_amount > 0:
+            await _record_external_compensation_declaration(
+                user_id=coach_id,
+                year=request.year,
+                amount=pending_external_amount,
+                declared_none=False,
+                related_receipt_month=request.month,
+                society_id=current_user.get("society_id"),
+            )
+        elif request.external_compensation_none:
+            await _record_external_compensation_declaration(
+                user_id=coach_id,
+                year=request.year,
+                amount=0.0,
+                declared_none=True,
+                related_receipt_month=request.month,
+                society_id=current_user.get("society_id"),
+            )
+    except Exception as e:
+        logging.error(f"[COACH-RECEIPT] external_compensation declaration FAILED (non-blocking): {e}")
     
     # Send emails
     coach_email = coach.get('email')
@@ -18640,18 +18652,13 @@ async def sign_dirigente_compensation_receipt(
         yearly_total = yearly_total_from_receipts
 
     # 📌 Compensi esterni auto-dichiarati (altre ASD/SSD) — criterio per CASSA
+    # ⚠️ Calcolo "ipotetico" del totale: la scrittura del record external_compensation
+    # avviene SOLO dopo il salvataggio definitivo della quietanza (evita orfani).
+    external_year_total_before = await _get_year_external_compensations_total(dirigente_id, request.year)
+    pending_external_amount = 0.0
     if request.external_compensation_amount and request.external_compensation_amount > 0:
-        await _record_external_compensation_declaration(
-            user_id=dirigente_id, year=request.year,
-            amount=float(request.external_compensation_amount), declared_none=False,
-            related_receipt_month=request.month, society_id=current_user.get("society_id"),
-        )
-    elif request.external_compensation_none:
-        await _record_external_compensation_declaration(
-            user_id=dirigente_id, year=request.year, amount=0.0, declared_none=True,
-            related_receipt_month=request.month, society_id=current_user.get("society_id"),
-        )
-    external_year_total = await _get_year_external_compensations_total(dirigente_id, request.year)
+        pending_external_amount = float(request.external_compensation_amount)
+    external_year_total = external_year_total_before + pending_external_amount
     yearly_total = yearly_total + external_year_total
 
     new_total = yearly_total + request.amount_gross
@@ -18856,6 +18863,22 @@ async def sign_dirigente_compensation_receipt(
             exceeded_15000_date=now if first_time_exceeded_15000 else None
         )
         await db.dirigente_compensations.insert_one(record.dict())
+    
+    # ✅ Quietanza salvata: ORA registra la dichiarazione esterna (evita orfani)
+    try:
+        if pending_external_amount > 0:
+            await _record_external_compensation_declaration(
+                user_id=dirigente_id, year=request.year,
+                amount=pending_external_amount, declared_none=False,
+                related_receipt_month=request.month, society_id=current_user.get("society_id"),
+            )
+        elif request.external_compensation_none:
+            await _record_external_compensation_declaration(
+                user_id=dirigente_id, year=request.year, amount=0.0, declared_none=True,
+                related_receipt_month=request.month, society_id=current_user.get("society_id"),
+            )
+    except Exception as e:
+        logging.error(f"[DIRIGENTE-RECEIPT] external_compensation declaration FAILED (non-blocking): {e}")
     
     # Send emails
     dirigente_email = dirigente.get('email')
@@ -19382,18 +19405,13 @@ async def sign_collaboratore_compensation_receipt(
             yearly_total += prior_compensation
 
     # 📌 Compensi esterni auto-dichiarati (altre ASD/SSD) — criterio per CASSA
+    # ⚠️ Calcolo "ipotetico" del totale: la scrittura del record external_compensation
+    # avviene SOLO dopo il salvataggio definitivo della quietanza (evita orfani).
+    external_year_total_before = await _get_year_external_compensations_total(collaboratore_id, request.year)
+    pending_external_amount = 0.0
     if request.external_compensation_amount and request.external_compensation_amount > 0:
-        await _record_external_compensation_declaration(
-            user_id=collaboratore_id, year=request.year,
-            amount=float(request.external_compensation_amount), declared_none=False,
-            related_receipt_month=request.month, society_id=current_user.get("society_id"),
-        )
-    elif request.external_compensation_none:
-        await _record_external_compensation_declaration(
-            user_id=collaboratore_id, year=request.year, amount=0.0, declared_none=True,
-            related_receipt_month=request.month, society_id=current_user.get("society_id"),
-        )
-    external_year_total = await _get_year_external_compensations_total(collaboratore_id, request.year)
+        pending_external_amount = float(request.external_compensation_amount)
+    external_year_total = external_year_total_before + pending_external_amount
     yearly_total = yearly_total + external_year_total
     logging.info(f"Collaboratore compensation: yearly_total(after external)={yearly_total} external_year={external_year_total}")
 
@@ -19598,6 +19616,22 @@ async def sign_collaboratore_compensation_receipt(
             exceeded_15000_date=now if first_time_exceeded_15000 else None
         )
         await db.collaboratore_compensations.insert_one(new_record.dict())
+    
+    # ✅ Quietanza salvata: ORA registra la dichiarazione esterna (evita orfani)
+    try:
+        if pending_external_amount > 0:
+            await _record_external_compensation_declaration(
+                user_id=collaboratore_id, year=request.year,
+                amount=pending_external_amount, declared_none=False,
+                related_receipt_month=request.month, society_id=current_user.get("society_id"),
+            )
+        elif request.external_compensation_none:
+            await _record_external_compensation_declaration(
+                user_id=collaboratore_id, year=request.year, amount=0.0, declared_none=True,
+                related_receipt_month=request.month, society_id=current_user.get("society_id"),
+            )
+    except Exception as e:
+        logging.error(f"[COLLAB-RECEIPT] external_compensation declaration FAILED (non-blocking): {e}")
     
     # Send emails
     collaboratore_email = collaboratore.get('email')
