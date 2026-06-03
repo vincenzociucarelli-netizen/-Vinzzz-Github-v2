@@ -13555,6 +13555,16 @@ async def sign_compensation_receipt(
     current_user = Depends(get_current_user)
 ):
     """Coach firma la quietanza mensile di compenso sportivo dilettantistico"""
+    # 🔍 DEBUG ENTRY LOG — to confirm the request actually reaches the backend
+    try:
+        logging.warning(
+            f"[COACH-RECEIPT] ENTER coach_id={coach_id} user={current_user.get('email')} "
+            f"month={request.month} year={request.year} amount={request.amount_gross} "
+            f"sigLen={len(request.signature_base64 or '')} extAmt={request.external_compensation_amount} "
+            f"extNone={request.external_compensation_none}"
+        )
+    except Exception:
+        pass
     if current_user["role"] != UserRole.COACH or current_user["id"] != coach_id:
         raise HTTPException(status_code=403, detail="Solo il coach può firmare le proprie quietanze")
     

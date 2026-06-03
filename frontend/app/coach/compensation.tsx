@@ -549,10 +549,10 @@ export default function CoachCompensation() {
       console.log('Threshold calculation:', { yearTotalBeforeThis, monthlyAmount, newTotal, exceeded5000, exceeded15000, priorComp, contractStartYearLocal, selectedYear, externalThisYearTotalAlready, externalThisSign });
       try { api.post('/debug/client-log', { message: '[Coach] handleSign before POST', data: { yearTotalBeforeThis, monthlyAmount, newTotal, exceeded5000, exceeded15000 } }); } catch {}
 
-      // Log ATTEMPTING POST
-      try { await api.post('/debug/client-log', { message: '[Coach] handleSign ATTEMPTING POST', data: { url: `/coach/${user?.id}/compensation/receipt`, sigLen: sig.length } }); } catch {}
+      // Log ATTEMPTING POST (fire-and-forget so the main POST is not delayed)
+      try { api.post('/debug/client-log', { message: '[Coach] handleSign ATTEMPTING POST', data: { url: `/coach/${user?.id}/compensation/receipt`, sigLen: sig.length } }); } catch {}
 
-      const response = await api.post(`/coach/${user?.id}/compensation/receipt`, {
+      const receiptPayload = {
         month: selectedMonth,
         year: selectedYear,
         amount_gross: monthlyAmount,
@@ -561,9 +561,26 @@ export default function CoachCompensation() {
         exceeded_15000: exceeded15000,
         external_compensation_amount: extDeclaration?.amount ?? 0,
         external_compensation_none: extDeclaration?.none ?? false,
-      }, {
-        timeout: 90000, // 90s explicit timeout (Render cold-starts + PDF gen can be slow)
-      });
+      };
+
+      // Retry once on ERR_NETWORK / timeout (Render free tier sometimes resets the first connection)
+      let response: any;
+      try {
+        response = await api.post(`/coach/${user?.id}/compensation/receipt`, receiptPayload, {
+          timeout: 90000,
+        });
+      } catch (firstErr: any) {
+        const isNetErr = !firstErr?.response && (firstErr?.code === 'ERR_NETWORK' || firstErr?.code === 'ECONNABORTED' || firstErr?.message === 'Network Error');
+        if (!isNetErr) throw firstErr;
+        // Log retry attempt remotely
+        try { api.post('/debug/client-log', { message: '[Coach] handleSign RETRY after network error', data: { code: firstErr?.code, message: firstErr?.message } }); } catch {}
+        // Wait 1.5s then retry once (gives Render time to spin up / recover)
+        await new Promise(r => setTimeout(r, 1500));
+        response = await api.post(`/coach/${user?.id}/compensation/receipt`, receiptPayload, {
+          timeout: 120000, // longer timeout for the retry
+        });
+        try { api.post('/debug/client-log', { message: '[Coach] handleSign RETRY OK', data: { status: response.status } }); } catch {}
+      }
 
       // Log POST OK
       try { await api.post('/debug/client-log', { message: '[Coach] handleSign POST OK', data: { status: response.status, success: response.data?.success, hasPdf: !!response.data?.pdf_base64 } }); } catch {}
