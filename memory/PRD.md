@@ -51,6 +51,34 @@ Dopo la cleanup, abbiamo visto che la card "Anno 2026" mostrava il "Totale Anno"
 2. Card "Anno X" (coach, entrambi i blocchi - primo anno + ultimo anno contratto): nuova riga `• Compensi esterni (altre ASD): €X` quando `externalTotal > 0`.
 3. `getProjectedThresholdMonths()` (coach + dirigente): il cumulativo parte ora da `priorCompensation + externalByYear[y]` invece di solo `priorCompensation`. Se gli esterni da soli superano una soglia, il primo mese di contratto viene marcato (così il badge ">5K" compare già a Gennaio se necessario). (Collaboratore già lo gestiva correttamente.)
 
+## 🆕 04/06/2026 (sera) — Atleti maggiorenni: approvazione admin sostituisce mail di verifica + scelta tipo Standard/PRO
+
+### Nuovo flusso di registrazione atleti maggiorenni
+1. **Atleta 18+ si auto-registra** dalla pagina pubblica `register.tsx`
+2. **NESSUNA mail di verifica** (rimossa la chiamata `_send_verification_email`)
+3. Stato impostato a `pending` (sia su `users` che su `athletes`)
+4. Pagina post-registrazione: *"⏳ La tua iscrizione è in attesa di approvazione da parte della società..."*
+5. Login bloccato fino all'approvazione admin (messaggio "Account in attesa di approvazione dall'amministratore")
+
+### Approvazione admin con scelta tipo
+Nel banner admin "Atleti in Attesa di Approvazione" (già esistente), per ogni **atleta maggiorenne** (badge 18+) ora compaiono 2 bottoni invece del singolo ✓:
+- **STD** (verde) → `athlete_type=quota` — atleta che paga la quota stagionale come i minorenni
+- **PRO** (oro) → `athlete_type=compensated` + `is_compensated=true` — atleta remunerato (Atleti Pro)
+
+Per i minorenni resta il singolo bottone ✓ (flusso storico immutato).
+
+### Welcome email Atleti PRO
+Quando admin approva come `compensated`, viene inviata una mail di benvenuto al maggiorenne usando `send_transactional_email` da Brevo. La mail spiega che può accedere e firmare quietanze/compensi.
+
+### Modifiche dettagliate
+- **Backend** `server.py`:
+  - Registrazione adulto: `status="pending"`, `email_verified=True`, niente `email_verification_token`, niente invio mail
+  - Riattivazione adulto: stesso pattern (stesso file, blocco precedente)
+  - `AthleteApprovalUpdate`: nuovo campo `athlete_type` opzionale
+  - `PATCH /athletes/{id}/approval`: legge `athlete_type`, lo salva sull'athlete, invia welcome email se `compensated`
+- **Frontend** `register.tsx`: messaggio post-registrazione adulti aggiornato (no più "controlla email")
+- **Frontend** `admin/index.tsx`: 2 bottoni STD/PRO per atleti 18+, singolo ✓ per minorenni
+
 ## 🆕 04/06/2026 (mattina 3) — Livelli/Gradi Allenatore configurabili per società
 
 **Pattern identico a "Qualifiche Dirigenti"**: ogni società definisce nei propri settings i livelli previsti dalla federazione del proprio sport. Per la Pallavolo: Smart Coach, Allievo Allenatore, 1° Grado, 2° Grado, 3° Grado.

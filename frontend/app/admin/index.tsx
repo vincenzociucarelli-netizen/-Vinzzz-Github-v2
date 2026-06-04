@@ -892,20 +892,66 @@ export default function AdminDashboard() {
                   )}
                 </View>
                 <View style={styles.pendingAthleteActions}>
-                  <TouchableOpacity
-                    style={styles.approveButton}
-                    onPress={async () => {
-                      try {
-                        await api.patch(`/athletes/${athlete.id}/approval`, { status: 'trial' });
-                        showInfo('Approvato', `${athlete.full_name} è stato approvato in periodo di prova`);
-                        loadStats();
-                      } catch (e) {
-                        showInfo('Errore', 'Impossibile approvare l\'atleta');
-                      }
-                    }}
-                  >
-                    <Text style={{ color: '#fff', fontSize: 16 }}>✓</Text>
-                  </TouchableOpacity>
+                  {athlete.is_adult ? (
+                    <>
+                      {/* Approva come Atleta Standard (paga quota) */}
+                      <TouchableOpacity
+                        style={[styles.approveButton, { backgroundColor: '#34C759', minWidth: 38 }]}
+                        onPress={async () => {
+                          const confirm = Platform.OS === 'web'
+                            ? window.confirm(`Approvare ${athlete.full_name} come Atleta STANDARD (paga la quota)?`)
+                            : true;
+                          if (!confirm) return;
+                          try {
+                            await api.patch(`/athletes/${athlete.id}/approval`, { status: 'trial', athlete_type: 'quota' });
+                            showInfo('Approvato', `${athlete.full_name} approvato come Atleta Standard`);
+                            loadStats();
+                          } catch (e) {
+                            showInfo('Errore', 'Impossibile approvare l\'atleta');
+                          }
+                        }}
+                        data-testid={`approve-standard-${athlete.id}`}
+                      >
+                        <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>STD</Text>
+                      </TouchableOpacity>
+                      {/* Approva come Atleta PRO (remunerato) */}
+                      <TouchableOpacity
+                        style={[styles.approveButton, { backgroundColor: '#B8860B', minWidth: 38 }]}
+                        onPress={async () => {
+                          const confirm = Platform.OS === 'web'
+                            ? window.confirm(`Approvare ${athlete.full_name} come ATLETA PRO (riceve compenso)?\n\nVerrà inviata una mail di benvenuto.`)
+                            : true;
+                          if (!confirm) return;
+                          try {
+                            await api.patch(`/athletes/${athlete.id}/approval`, { status: 'trial', athlete_type: 'compensated' });
+                            showInfo('Approvato', `${athlete.full_name} approvato come Atleta PRO`);
+                            loadStats();
+                          } catch (e) {
+                            showInfo('Errore', 'Impossibile approvare l\'atleta');
+                          }
+                        }}
+                        data-testid={`approve-pro-${athlete.id}`}
+                      >
+                        <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>PRO</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    // Minorenne: bottone singolo (status trial, niente athlete_type)
+                    <TouchableOpacity
+                      style={styles.approveButton}
+                      onPress={async () => {
+                        try {
+                          await api.patch(`/athletes/${athlete.id}/approval`, { status: 'trial' });
+                          showInfo('Approvato', `${athlete.full_name} è stato approvato in periodo di prova`);
+                          loadStats();
+                        } catch (e) {
+                          showInfo('Errore', 'Impossibile approvare l\'atleta');
+                        }
+                      }}
+                    >
+                      <Text style={{ color: '#fff', fontSize: 16 }}>✓</Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     style={styles.rejectButton}
                     onPress={async () => {

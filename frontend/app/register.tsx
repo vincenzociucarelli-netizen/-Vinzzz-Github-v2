@@ -175,10 +175,10 @@ export default function Register() {
           invite_code: inviteCode.trim().toUpperCase(),
         });
         
-        // Athlete needs email verification
+        // Atleta maggiorenne: nessuna mail di verifica, va in attesa di approvazione admin
         showAlert(
-          'Registrazione completata!',
-          'Ti abbiamo inviato un\'email di verifica.\n\nControlla la tua casella di posta e clicca sul link per attivare il tuo account.\n\nSe non la trovi, controlla anche nello spam.',
+          '✅ Registrazione completata!',
+          'La tua iscrizione è stata inviata alla società.\n\n⏳ IMPORTANTE: La tua registrazione deve essere approvata da un Amministratore prima di poter accedere.\n\nTi contatteremo per accordarci. Una volta approvato, potrai accedere con le tue credenziali.',
           () => router.replace('/login')
         );
         return;

@@ -2329,7 +2329,7 @@ async def register_adult_athlete(data: AdultAthleteRegister):
             "is_withdrawn": False,
             "withdrawn_date": None,
             "withdrawn_reason": None,
-            "status": "pending_email",
+            "status": "pending",
             "parents_detached": True,
         }
         if data.first_name:
@@ -2346,9 +2346,8 @@ async def register_adult_athlete(data: AdultAthleteRegister):
             {"$set": reactivate_data}
         )
         
-        # Create user account for the reactivated athlete
+        # Create user account for the reactivated athlete (skip email verification)
         user_id = str(ObjectId())
-        email_verification_token = secrets.token_urlsafe(32)
         user = {
             "id": user_id,
             "society_id": society_id,
@@ -2360,11 +2359,10 @@ async def register_adult_athlete(data: AdultAthleteRegister):
             "last_name": data.last_name,
             "phone": data.phone,
             "is_active": True,
-            "status": "pending_email",
+            "status": "pending",  # In attesa di approvazione admin (skip email verify)
             "created_at": datetime.utcnow(),
             "athlete_id": existing_athlete["id"],
-            "email_verification_token": email_verification_token,
-            "email_verified": False,
+            "email_verified": True,  # No email verification step for adult athletes
         }
         await db.users.insert_one(user)
         
@@ -2374,13 +2372,10 @@ async def register_adult_athlete(data: AdultAthleteRegister):
             {"$set": {"linked_user_id": user_id}}
         )
         
-        # Send verification email
-        await _send_verification_email(data.email.lower(), email_verification_token, f"{data.first_name} {data.last_name}", society.get("name", ""))
-        
         return {
-            "message": "Registrazione completata! Controlla la tua email per attivare l'account.",
-            "status": "pending_email",
-            "requires_email_verification": True,
+            "message": "Registrazione completata. La tua iscrizione è in attesa di approvazione da parte della società.",
+            "status": "pending",
+            "requires_admin_approval": True,
         }
     
     # Generate unique athlete code
@@ -2412,8 +2407,8 @@ async def register_adult_athlete(data: AdultAthleteRegister):
         "team_id": None,
         "qr_code": qr_code,
         "qr_identifier": qr_id,
-        "status": "pending_email",
-        "athlete_type": "quota",
+        "status": "pending",  # In attesa di approvazione admin (skip email verify)
+        "athlete_type": "quota",  # Default; admin sceglie quota/compensated all'approvazione
         "parents_detached": True,
         "created_at": datetime.utcnow(),
         "registration_date": datetime.utcnow(),
@@ -2422,14 +2417,13 @@ async def register_adult_athlete(data: AdultAthleteRegister):
     
     await db.athletes.insert_one(athlete_dict)
     
-    # Create user account with email verification token
-    email_verification_token = secrets.token_urlsafe(32)
+    # Create user account WITHOUT email verification (admin approval replaces it)
     user = User(
         email=data.email.lower(),
         password_hash=hash_password(data.password),
         role="athlete",
         full_name=full_name,
-        status="pending_email",
+        status="pending",  # In attesa di approvazione admin
         society_id=society_id,
         first_name=data.first_name,
         last_name=data.last_name,
@@ -2438,8 +2432,7 @@ async def register_adult_athlete(data: AdultAthleteRegister):
     
     user_dict = user.dict()
     user_dict["athlete_id"] = athlete_id
-    user_dict["email_verification_token"] = email_verification_token
-    user_dict["email_verified"] = False
+    user_dict["email_verified"] = True  # Skip email verification for adult athletes
     
     await db.users.insert_one(user_dict)
     
@@ -2448,7 +2441,6 @@ async def register_adult_athlete(data: AdultAthleteRegister):
         {"id": athlete_id},
         {"$set": {"user_id": user_dict["id"]}}
     )
-    await _send_verification_email(data.email.lower(), email_verification_token, full_name, society.get("name", ""))
     
     # Save signed privacy/terms documents if consents provided
     if data.consents and data.consents.get("privacy_viewed"):
@@ -2550,9 +2542,9 @@ async def register_adult_athlete(data: AdultAthleteRegister):
         )
     
     return {
-        "message": "Registrazione completata! Controlla la tua email per attivare l'account.",
-        "status": "pending_email",
-        "requires_email_verification": True,
+        "message": "Registrazione completata. La tua iscrizione è in attesa di approvazione da parte della società.",
+        "status": "pending",
+        "requires_admin_approval": True,
     }
 
 
@@ -7453,6 +7445,7 @@ async def get_pending_athletes(current_user = Depends(get_current_user)):
 
 class AthleteApprovalUpdate(BaseModel):
     status: str  # trial, active, rejected
+    athlete_type: Optional[str] = None  # quota | compensated (per atleti maggiorenni: quota=paga, compensated=Atleta PRO)
 
 @api_router.patch("/athletes/{athlete_id}/approval")
 async def update_athlete_approval(athlete_id: str, data: AthleteApprovalUpdate, current_user = Depends(get_current_user)):
@@ -7473,6 +7466,16 @@ async def update_athlete_approval(athlete_id: str, data: AthleteApprovalUpdate, 
         "approved_at": datetime.utcnow(),
         "approved_by": current_user["id"]
     }
+    
+    # Tipo atleta scelto da admin all'approvazione
+    is_compensated_athlete = False
+    if data.athlete_type:
+        if data.athlete_type not in ("quota", "compensated"):
+            raise HTTPException(status_code=400, detail="athlete_type non valido. Usa: quota | compensated")
+        update_data["athlete_type"] = data.athlete_type
+        if data.athlete_type == "compensated":
+            update_data["is_compensated"] = True
+            is_compensated_athlete = True
     
     # If approving to trial, set trial end date from now
     if data.status == AthleteStatus.TRIAL:
@@ -7555,6 +7558,44 @@ async def update_athlete_approval(athlete_id: str, data: AthleteApprovalUpdate, 
                     )
                     await db.payments.insert_one(payment3.dict())
     
+    # 📨 Welcome email per Atleti PRO (atleti maggiorenni remunerati)
+    if is_compensated_athlete and data.status in [AthleteStatus.TRIAL, AthleteStatus.ACTIVE]:
+        try:
+            adult_user = await db.users.find_one(
+                {"athlete_id": athlete_id},
+                {"_id": 0, "email": 1, "full_name": 1},
+            )
+            if adult_user and adult_user.get("email"):
+                society = await db.societies.find_one(
+                    {"id": current_user.get("society_id")},
+                    {"_id": 0, "name": 1},
+                )
+                society_name = (society or {}).get("name", "")
+                subject = f"🏆 Benvenuto come Atleta PRO - {society_name}"
+                body_html = f"""
+                <p>Ciao <strong>{adult_user.get('full_name', '')}</strong>,</p>
+                <p>la società <strong>{society_name}</strong> ti ha approvato come <strong>Atleta PRO</strong>! 🎉</p>
+                <p>Da ora puoi accedere all'app RegistraTEAM con le credenziali che hai scelto in registrazione e:</p>
+                <ul>
+                  <li>Visualizzare i tuoi compensi mensili</li>
+                  <li>Firmare digitalmente le quietanze</li>
+                  <li>Gestire le dichiarazioni di compensi esterni</li>
+                  <li>Scaricare i PDF firmati</li>
+                </ul>
+                <p>In bocca al lupo per la nuova stagione!</p>
+                """
+                try:
+                    from email_service import send_transactional_email
+                    await send_transactional_email(
+                        to_email=adult_user["email"],
+                        subject=subject,
+                        html_content=body_html + _get_email_store_footer(),
+                    )
+                except Exception as e:
+                    logging.warning(f"[ATHLETE-APPROVAL] welcome email failed: {e}")
+        except Exception as e:
+            logging.error(f"[ATHLETE-APPROVAL] welcome email FAILED (non-blocking): {e}")
+
     status_text = {
         AthleteStatus.TRIAL: "approvato (periodo di prova)",
         AthleteStatus.ACTIVE: "approvato (attivo)",
