@@ -44,6 +44,10 @@ export default function OtherSettings() {
   const [dirigenteQualifications, setDirigenteQualifications] = useState<string[]>([]);
   const [newQualification, setNewQualification] = useState('');
 
+  // Livelli/Gradi Allenatore (coach)
+  const [coachLicenseLevels, setCoachLicenseLevels] = useState<string[]>([]);
+  const [newCoachLevel, setNewCoachLevel] = useState('');
+
   // Palestre
   const [venues, setVenues] = useState<{name: string, address: string, city: string}[]>([]);
   const [newVenueName, setNewVenueName] = useState('');
@@ -85,6 +89,7 @@ export default function OtherSettings() {
       setAthleteRoles(response.data.athlete_roles || []);
       setAthleteCharacteristics(response.data.athlete_characteristics || []);
       setDirigenteQualifications(response.data.dirigente_qualifications || []);
+      setCoachLicenseLevels(response.data.coach_license_levels || []);
       setVenues(response.data.venues || []);
       setSportImage(response.data.sport_image || null);
       setSportName(response.data.sport_praticato || response.data.sport_name || '');
@@ -106,6 +111,7 @@ export default function OtherSettings() {
       let finalRoles = athleteRoles;
       let finalChars = athleteCharacteristics;
       let finalQuals = dirigenteQualifications;
+      let finalCoachLevels = coachLicenseLevels;
       let finalVenues = venues;
       
       if (newRole.trim() && !athleteRoles.includes(newRole.trim())) {
@@ -123,6 +129,11 @@ export default function OtherSettings() {
         setDirigenteQualifications(finalQuals);
         setNewQualification('');
       }
+      if (newCoachLevel.trim() && !coachLicenseLevels.includes(newCoachLevel.trim())) {
+        finalCoachLevels = [...coachLicenseLevels, newCoachLevel.trim()];
+        setCoachLicenseLevels(finalCoachLevels);
+        setNewCoachLevel('');
+      }
       if (newVenueName.trim() && !venues.some(v => v.name.toLowerCase() === newVenueName.trim().toLowerCase())) {
         finalVenues = [...venues, {
           name: newVenueName.trim(),
@@ -139,6 +150,7 @@ export default function OtherSettings() {
         athlete_roles: finalRoles,
         athlete_characteristics: finalChars,
         dirigente_qualifications: finalQuals,
+        coach_license_levels: finalCoachLevels,
         venues: finalVenues,
         sport_image: sportImage,
         sport_praticato: sportName,
@@ -203,6 +215,17 @@ export default function OtherSettings() {
   };
   const removeQualification = (qual: string) => {
     setDirigenteQualifications(dirigenteQualifications.filter(q => q !== qual));
+  };
+
+  // Livelli/Gradi Allenatore
+  const addCoachLevel = () => {
+    if (newCoachLevel.trim() && !coachLicenseLevels.includes(newCoachLevel.trim())) {
+      setCoachLicenseLevels([...coachLicenseLevels, newCoachLevel.trim()]);
+      setNewCoachLevel('');
+    }
+  };
+  const removeCoachLevel = (level: string) => {
+    setCoachLicenseLevels(coachLicenseLevels.filter(l => l !== level));
   };
 
   // Palestre
@@ -479,6 +502,49 @@ export default function OtherSettings() {
                 <View key={index} style={[styles.tag, { backgroundColor: '#E8F5E9', borderColor: '#34C759' }]}>
                   <Text style={[styles.tagText, { color: '#2E7D32' }]}>{qual}</Text>
                   <TouchableOpacity onPress={() => removeQualification(qual)}>
+                    <Ionicons name="close-circle" size={18} color="#FF3B30" />
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+          </View>
+        </View>
+
+        {/* Livelli / Gradi Allenatore */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🏐 Livelli / Gradi Allenatore</Text>
+          <Text style={styles.sectionDesc}>
+            Definisci i livelli/gradi previsti dalla federazione per il tuo sport (es: Smart Coach, Allievo Allenatore, 1° Grado, 2° Grado, 3° Grado)
+          </Text>
+
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.tagInput}
+              value={newCoachLevel}
+              onChangeText={setNewCoachLevel}
+              placeholder="Aggiungi livello/grado..."
+              placeholderTextColor="#999"
+              onSubmitEditing={addCoachLevel}
+              returnKeyType="done"
+              data-testid="coach-level-input"
+            />
+            <TouchableOpacity
+              style={[styles.addBtn, { backgroundColor: '#1E88E5' }]}
+              onPress={addCoachLevel}
+              data-testid="add-coach-level-btn"
+            >
+              <Ionicons name="add" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.tagsContainer}>
+            {coachLicenseLevels.length === 0 ? (
+              <Text style={styles.emptyText}>Nessun livello definito</Text>
+            ) : (
+              coachLicenseLevels.map((level, index) => (
+                <View key={index} style={[styles.tag, { backgroundColor: '#E3F2FD', borderColor: '#1E88E5' }]}>
+                  <Text style={[styles.tagText, { color: '#0D47A1' }]}>{level}</Text>
+                  <TouchableOpacity onPress={() => removeCoachLevel(level)} data-testid={`remove-coach-level-${level}`}>
                     <Ionicons name="close-circle" size={18} color="#FF3B30" />
                   </TouchableOpacity>
                 </View>

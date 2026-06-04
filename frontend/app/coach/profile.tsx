@@ -80,6 +80,7 @@ export default function CoachProfile() {
     province: '',
     phone: '',
     coach_license_number: '',
+    coach_license_level: '',
     monthly_compensation: 0,
     other_annual_compensation: 0, // Compensi pregressi da altre società
     compensation_accepted: false,
@@ -134,6 +135,21 @@ export default function CoachProfile() {
   // Assigned teams
   const [teams, setTeams] = useState<Array<{id: string; name: string}>>([]);
 
+  // Coach license levels (gestiti dalle impostazioni società)
+  const [coachLicenseLevels, setCoachLicenseLevels] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Carico i livelli/gradi configurati dalla società
+    (async () => {
+      try {
+        const res = await api.get('/settings/society');
+        setCoachLicenseLevels(res.data?.coach_license_levels || []);
+      } catch (e) {
+        // silenzioso: se non disponibili, il campo resterà free-text fallback
+      }
+    })();
+  }, []);
+
   const loadProfile = async () => {
     try {
       const response = await api.get('/auth/me');
@@ -155,6 +171,7 @@ export default function CoachProfile() {
         province: data.province || '',
         phone: data.phone || '',
         coach_license_number: data.coach_license_number || '',
+        coach_license_level: data.coach_license_level || '',
         monthly_compensation: data.monthly_compensation || 0,
         other_annual_compensation: data.other_annual_compensation || 0,
         compensation_accepted: data.compensation_accepted || false,
@@ -187,6 +204,7 @@ export default function CoachProfile() {
         province: data.province || '',
         phone: data.phone || '',
         coach_license_number: data.coach_license_number || '',
+        coach_license_level: data.coach_license_level || '',
         monthly_compensation: data.monthly_compensation || 0,
         other_annual_compensation: data.other_annual_compensation || 0,
         compensation_accepted: data.compensation_accepted || false,
@@ -538,6 +556,7 @@ Società sportiva: ${societyName}
           province: editData.province,
           phone: editData.phone,
           coach_license_number: editData.coach_license_number,
+          coach_license_level: editData.coach_license_level,
           other_annual_compensation: editData.other_annual_compensation || 0,
         });
       } catch (error: any) {
@@ -583,6 +602,7 @@ Società sportiva: ${societyName}
         province: editData.province,
         phone: editData.phone,
         coach_license_number: editData.coach_license_number,
+        coach_license_level: editData.coach_license_level,
         other_annual_compensation: editData.other_annual_compensation || 0,
       });
       
@@ -1134,7 +1154,49 @@ Società sportiva: ${societyName}
               </View>
 
               {renderField('N° Tesserino Allenatore', profileData.coach_license_number, 'coach_license_number')}
-              {renderField('Livello / Grado', profileData.coach_license_level, 'coach_license_level')}
+
+              {/* Livello / Grado: select da impostazioni società. Se non configurati, fallback free-text. */}
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Livello / Grado</Text>
+                {editing ? (
+                  coachLicenseLevels.length > 0 ? (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingVertical: 4 }}>
+                      {coachLicenseLevels.map((lvl) => {
+                        const selected = (editData.coach_license_level || profileData.coach_license_level) === lvl;
+                        return (
+                          <TouchableOpacity
+                            key={lvl}
+                            onPress={() => setEditData({ ...editData, coach_license_level: selected ? '' : lvl })}
+                            style={{
+                              paddingHorizontal: 12,
+                              paddingVertical: 8,
+                              borderRadius: 18,
+                              borderWidth: 1,
+                              borderColor: selected ? '#1E88E5' : '#CBD5E1',
+                              backgroundColor: selected ? '#1E88E5' : '#fff',
+                            }}
+                            data-testid={`coach-level-pill-${lvl}`}
+                          >
+                            <Text style={{ color: selected ? '#fff' : '#1F2937', fontWeight: selected ? '700' : '500', fontSize: 13 }}>
+                              {lvl}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  ) : (
+                    <TextInput
+                      style={styles.input}
+                      value={editData.coach_license_level?.toString() || ''}
+                      onChangeText={(text) => setEditData({ ...editData, coach_license_level: text })}
+                      placeholder="Es. 1° Grado"
+                      placeholderTextColor="#999"
+                    />
+                  )
+                ) : (
+                  <Text style={styles.fieldValue}>{profileData.coach_license_level || '-'}</Text>
+                )}
+              </View>
             </View>
           )}
         </View>

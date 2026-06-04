@@ -51,6 +51,28 @@ Dopo la cleanup, abbiamo visto che la card "Anno 2026" mostrava il "Totale Anno"
 2. Card "Anno X" (coach, entrambi i blocchi - primo anno + ultimo anno contratto): nuova riga `• Compensi esterni (altre ASD): €X` quando `externalTotal > 0`.
 3. `getProjectedThresholdMonths()` (coach + dirigente): il cumulativo parte ora da `priorCompensation + externalByYear[y]` invece di solo `priorCompensation`. Se gli esterni da soli superano una soglia, il primo mese di contratto viene marcato (così il badge ">5K" compare già a Gennaio se necessario). (Collaboratore già lo gestiva correttamente.)
 
+## 🆕 04/06/2026 (mattina 3) — Livelli/Gradi Allenatore configurabili per società
+
+**Pattern identico a "Qualifiche Dirigenti"**: ogni società definisce nei propri settings i livelli previsti dalla federazione del proprio sport. Per la Pallavolo: Smart Coach, Allievo Allenatore, 1° Grado, 2° Grado, 3° Grado.
+
+### Backend
+- `server.py` modello `SocietySettings`: nuovo campo `coach_license_levels: Optional[List[str]]`
+- `routes/settings.py`: aggiunto `coach_license_levels` nei 2 default-values, nella response GET e nei `fields` accettati dal PATCH
+- Modello User già aveva `coach_license_level` (singolare = valore selezionato dall'utente), il campo testuale è ora vincolato ai valori della società
+
+### Frontend
+- `admin/settings/other.tsx`: nuova sezione **"🏐 Livelli / Gradi Allenatore"** subito dopo "Qualifiche Dirigenti", con input "Aggiungi livello/grado..." + pulsante "+" + pillole rimuovibili (stesso pattern delle qualifiche dirigenti)
+- `coach/profile.tsx`:
+  - Carica i livelli da `/settings/society` all'init
+  - Sostituito il TextInput free-text con **selettore a pillole** (toggle on/off) in modalità edit, che mostra solo i livelli configurati dalla società
+  - **Fallback intelligente**: se la società non ha ancora configurato i livelli, il campo resta TextInput libero (così non blocca chi non ha ancora compilato i settings)
+
+### Note operative
+Dopo il deploy:
+- L'admin deve aprire **Impostazioni → Altre Impostazioni → Livelli/Gradi Allenatore** e configurare i 5 livelli FIPAV per la propria società (è necessario fare anche se siamo Pallavolo Perugia perché il campo è multi-tenant e nuovo)
+- Una volta salvati, ogni Coach vedrà solo quei 5 valori selezionabili nel proprio profilo
+- Altre società (es. calcio, basket) potranno definire i propri livelli specifici (es. UEFA A, B, ...)
+
 ## 🆕 04/06/2026 (mattina 2) — Polishing Atleti Pro + campo "Livello / Grado" coach
 
 ### Modifiche UI
