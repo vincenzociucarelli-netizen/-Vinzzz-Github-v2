@@ -20482,16 +20482,10 @@ async def get_collaboratore_annual_compensation(
 async def get_prime_squadre_athletes(current_user = Depends(get_current_user)):
     """Get list of athletes, coaches, and dirigenti with compensation enabled (Prime Squadre members)"""
     if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin può accedere a Prime Squadre")
+        raise HTTPException(status_code=403, detail="Solo admin può accedere a Atleti Pro")
     
-    # Check if pro_enabled is true for this society
+    # Modulo "Atleti Pro" sbloccato per tutte le società (rimosso check pro_enabled)
     _sid = current_user.get("society_id")
-    _set_q = {"type": "society"}
-    if _sid:
-        _set_q["society_id"] = _sid
-    settings = await db.settings.find_one(_set_q)
-    if not settings or not settings.get("pro_enabled", False):
-        raise HTTPException(status_code=403, detail="Modulo Prime Squadre non attivato per questa società")
     
     # Get athletes with is_compensated = True (scoped by society)
     _a_q = {"is_compensated": True}
@@ -20570,16 +20564,10 @@ async def get_prime_squadre_athletes(current_user = Depends(get_current_user)):
 async def enable_athlete_compensation(athlete_id: str, current_user = Depends(get_current_user)):
     """Enable compensation for an athlete, coach or dirigente (add to Prime Squadre)"""
     if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin può gestire Prime Squadre")
+        raise HTTPException(status_code=403, detail="Solo admin può gestire Atleti Pro")
     
-    # Check if pro_enabled (society-scoped)
+    # Modulo "Atleti Pro" sbloccato per tutte le società (rimosso check pro_enabled)
     _sid = current_user.get("society_id")
-    _set_q = {"type": "society"}
-    if _sid:
-        _set_q["society_id"] = _sid
-    settings = await db.settings.find_one(_set_q)
-    if not settings or not settings.get("pro_enabled", False):
-        raise HTTPException(status_code=403, detail="Modulo Prime Squadre non attivato")
     
     # Check member limit (50) - count athletes, coaches, and dirigenti (society-scoped)
     _a_q = {"is_compensated": True}

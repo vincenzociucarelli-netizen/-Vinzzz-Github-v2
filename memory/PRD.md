@@ -51,6 +51,16 @@ Dopo la cleanup, abbiamo visto che la card "Anno 2026" mostrava il "Totale Anno"
 2. Card "Anno X" (coach, entrambi i blocchi - primo anno + ultimo anno contratto): nuova riga `• Compensi esterni (altre ASD): €X` quando `externalTotal > 0`.
 3. `getProjectedThresholdMonths()` (coach + dirigente): il cumulativo parte ora da `priorCompensation + externalByYear[y]` invece di solo `priorCompensation`. Se gli esterni da soli superano una soglia, il primo mese di contratto viene marcato (così il badge ">5K" compare già a Gennaio se necessario). (Collaboratore già lo gestiva correttamente.)
 
+## 🆕 04/06/2026 (mattina) — Sblocco backend Atleti Pro
+
+Dopo il deploy notturno, l'utente ha visto popup "Accesso Negato — Il modulo Atleti Pro non è attivo per questa società". Il check era backend-side basato su `settings.pro_enabled` per società.
+
+**Fix**: rimossi i 2 check `pro_enabled` che bloccavano l'accesso in `server.py`:
+- `GET /api/prime-squadre/athletes` (riga 20493) — caricamento lista atleti pro
+- `POST /api/prime-squadre/athletes/{id}/enable` (riga 20581) — aggiunta atleta/collaboratore al modulo
+
+Il campo `pro_enabled` resta nel modello settings e nell'endpoint `/prime-squadre/stats` (read-only, non blocca), per potenziale uso futuro (es. lotti aggiuntivi >50 tesserati). Aggiornati anche i messaggi di errore "Solo admin può accedere a Atleti Pro" / "Solo admin può gestire Atleti Pro".
+
 ## 🆕 03/06/2026 (notte 2) — Sblocco "Atleti Pro" (ex Prime Squadre)
 
 - **Menu admin** (`admin/index.tsx`): rimosso completamente il branch `proEnabled` con paywall. La card ora è sempre attiva e cliccabile. Rinominata "Prime Squadre" → "Atleti Pro".
