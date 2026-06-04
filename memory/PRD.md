@@ -51,6 +51,29 @@ Dopo la cleanup, abbiamo visto che la card "Anno 2026" mostrava il "Totale Anno"
 2. Card "Anno X" (coach, entrambi i blocchi - primo anno + ultimo anno contratto): nuova riga `• Compensi esterni (altre ASD): €X` quando `externalTotal > 0`.
 3. `getProjectedThresholdMonths()` (coach + dirigente): il cumulativo parte ora da `priorCompensation + externalByYear[y]` invece di solo `priorCompensation`. Se gli esterni da soli superano una soglia, il primo mese di contratto viene marcato (così il badge ">5K" compare già a Gennaio se necessario). (Collaboratore già lo gestiva correttamente.)
 
+## 🆕 04/06/2026 (sera 2) — Distinzione esplicita Squadre STD/PRO nel form admin
+
+L'utente ha chiesto che le squadre PRO non abbiano quote da pagare (atleti remunerati) mentre le STD restano come le giovanili. La logica backend già esisteva (`is_prima_squadra` esclude pagamenti), ma mancava una UI chiara nel form di creazione team.
+
+### Modifiche frontend admin
+- **`admin/teams.tsx` (form creazione)**: aggiunto **selettore visuale Tipo Squadra** subito dopo "Descrizione":
+  - 👥 **Standard** (verde) — Atleti che pagano quote
+  - 🏆 **PRO** (oro) — Atleti remunerati, NO quote
+  - La sezione "💶 Pagamenti" (Quota Totale + Rate) si nasconde automaticamente quando si seleziona PRO (logica già esistente, ora attivabile dal form)
+- **`admin/teams.tsx` (lista team)**: badge colorato STD/PRO sopra il dettaglio della quota:
+  - STD: `👥 STANDARD` + riga "Quota: €X"
+  - PRO: `🏆 PRO` + riga "Squadra PRO · Atleti remunerati (no quote)"
+- **`admin/team/[id].tsx` (modifica team)**: rinominato il toggle da "Prima Squadra" → "🏆 Squadra PRO" con hint chiaro "Atleti remunerati (nessuna quota da pagare) + rifinitura abilitata"
+
+### Visibilità
+La distinzione STD/PRO è **visibile SOLO all'admin** — atleti/parent/coach/dirigente non vedono il flag e percepiscono la squadra come tutte le altre (verificato: nessun riferimento `is_prima_squadra` nelle pagine non-admin).
+
+### Note tecniche
+Backend già configurato per:
+- `total_amount: 0` + `installments: []` quando `is_prima_squadra=true`
+- Salta la creazione automatica di pagamenti quote (`installment_1_amount=0`)
+- Esclude la squadra dai report pagamenti
+
 ## 🆕 04/06/2026 (sera) — Atleti maggiorenni: approvazione admin sostituisce mail di verifica + scelta tipo Standard/PRO
 
 ### Nuovo flusso di registrazione atleti maggiorenni

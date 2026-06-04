@@ -506,14 +506,24 @@ export default function TeamsScreen() {
               </View>
             </View>
             {!item.is_prima_squadra && (
-              <Text style={styles.teamAmount}>
-                Quota: {formatCurrency(item.total_amount || 0)}
-              </Text>
+              <>
+                <View style={{ alignSelf: 'flex-start', backgroundColor: '#E8F5E9', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginTop: 4 }}>
+                  <Text style={{ fontSize: 10, color: '#1B5E20', fontWeight: '700' }}>👥 STANDARD</Text>
+                </View>
+                <Text style={styles.teamAmount}>
+                  Quota: {formatCurrency(item.total_amount || 0)}
+                </Text>
+              </>
             )}
             {item.is_prima_squadra && (
-              <Text style={[styles.teamAmount, { color: '#B8860B' }]}>
-                ⭐ Prima Squadra
-              </Text>
+              <>
+                <View style={{ alignSelf: 'flex-start', backgroundColor: '#FFF8E1', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginTop: 4 }}>
+                  <Text style={{ fontSize: 10, color: '#B8860B', fontWeight: '700' }}>🏆 PRO</Text>
+                </View>
+                <Text style={[styles.teamAmount, { color: '#B8860B' }]}>
+                  Squadra PRO · Atleti remunerati (no quote)
+                </Text>
+              </>
             )}
           </View>
           <Ionicons name="chevron-forward" size={20} color="#999" />
@@ -606,6 +616,55 @@ export default function TeamsScreen() {
                 multiline
                 numberOfLines={2}
               />
+
+              {/* Tipo squadra: STD (paga quote) o PRO (atleti remunerati, no quote) */}
+              <Text style={styles.label}>Tipo Squadra</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    paddingVertical: 12,
+                    paddingHorizontal: 14,
+                    borderRadius: 10,
+                    borderWidth: 2,
+                    borderColor: !isPrimaSquadra ? '#34C759' : '#E5E7EB',
+                    backgroundColor: !isPrimaSquadra ? '#E8F5E9' : '#fff',
+                    alignItems: 'center',
+                  }}
+                  onPress={() => setIsPrimaSquadra(false)}
+                  data-testid="team-type-std-btn"
+                >
+                  <Text style={{ fontSize: 18, marginBottom: 2 }}>👥</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: !isPrimaSquadra ? '#1B5E20' : '#666' }}>
+                    Standard
+                  </Text>
+                  <Text style={{ fontSize: 10, color: '#666', marginTop: 2, textAlign: 'center' }}>
+                    Atleti che pagano quote
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    paddingVertical: 12,
+                    paddingHorizontal: 14,
+                    borderRadius: 10,
+                    borderWidth: 2,
+                    borderColor: isPrimaSquadra ? '#B8860B' : '#E5E7EB',
+                    backgroundColor: isPrimaSquadra ? '#FFF8E1' : '#fff',
+                    alignItems: 'center',
+                  }}
+                  onPress={() => setIsPrimaSquadra(true)}
+                  data-testid="team-type-pro-btn"
+                >
+                  <Text style={{ fontSize: 18, marginBottom: 2 }}>🏆</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: isPrimaSquadra ? '#B8860B' : '#666' }}>
+                    PRO
+                  </Text>
+                  <Text style={{ fontSize: 10, color: '#666', marginTop: 2, textAlign: 'center' }}>
+                    Atleti remunerati, NO quote
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
               <Text style={styles.sectionTitle}>🏟️ Allenamenti Settimanali</Text>
               <Text style={styles.hint}>Minimo 2, massimo 10 allenamenti</Text>

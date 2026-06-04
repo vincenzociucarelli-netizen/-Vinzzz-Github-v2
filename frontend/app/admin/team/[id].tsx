@@ -678,10 +678,10 @@ export default function TeamDetail() {
               />
               <View style={styles.primaSquadraTextContainer}>
                 <Text style={[styles.primaSquadraLabel, isPrimaSquadra && styles.primaSquadraLabelActive]}>
-                  Prima Squadra
+                  🏆 Squadra PRO
                 </Text>
                 <Text style={styles.primaSquadraHint}>
-                  Gli atleti ricevono compensi (nessun pagamento quote) + rifinitura
+                  Atleti remunerati (nessuna quota da pagare) + rifinitura abilitata
                 </Text>
               </View>
             </TouchableOpacity>
