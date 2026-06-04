@@ -515,7 +515,11 @@ export default function CollaboratoreCompensation() {
         const pdfUrl = URL.createObjectURL(pdfBlob);
         const a = document.createElement('a');
         a.href = pdfUrl;
-        a.download = `Dichiarazione_Soglia_${declarationType}_${monthName}_${selectedYear}.pdf`;
+        // Nome file leggibile: "Cognome Nome - Dichiarazione soglia Xk - MM-YYYY.pdf"
+        const userNameDecl = (profile?.full_name || 'utente').trim();
+        const mmDecl = String(selectedMonth).padStart(2, '0');
+        const declLabel = `Dichiarazione soglia ${declarationType === '5000' ? '5k' : '15k'}`;
+        a.download = `${userNameDecl} - ${declLabel} - ${mmDecl}-${selectedYear}.pdf`;
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
         document.body.appendChild(a);
@@ -617,11 +621,13 @@ export default function CollaboratoreCompensation() {
         const pdfUrl = URL.createObjectURL(pdfBlob);
         const a = document.createElement('a');
         a.href = pdfUrl;
-        // Nome file univoco con userId+timestamp per evitare collisioni cache
-        const userTag = (profile?.full_name || 'utente').replace(/\s+/g, '');
-        const tsTag = Date.now();
-        const docTag = response.data.threshold_exceeded ? `Comunicazione${response.data.threshold_exceeded}` : 'Quietanza';
-        a.download = `${docTag}_${selectedMonth}_${selectedYear}_${userTag}_${tsTag}.pdf`;
+        // Nome file leggibile: "Cognome Nome - Tipo documento - MM-YYYY.pdf"
+        const userName = (profile?.full_name || 'utente').trim();
+        const mm = String(selectedMonth).padStart(2, '0');
+        const docTypeLabel = response.data.threshold_exceeded
+          ? `Superamento soglia ${response.data.threshold_exceeded === '5000' ? '5k' : '15k'}`
+          : 'Quietanza';
+        a.download = `${userName} - ${docTypeLabel} - ${mm}-${selectedYear}.pdf`;
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
         document.body.appendChild(a);
