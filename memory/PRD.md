@@ -51,6 +51,21 @@ Dopo la cleanup, abbiamo visto che la card "Anno 2026" mostrava il "Totale Anno"
 2. Card "Anno X" (coach, entrambi i blocchi - primo anno + ultimo anno contratto): nuova riga `• Compensi esterni (altre ASD): €X` quando `externalTotal > 0`.
 3. `getProjectedThresholdMonths()` (coach + dirigente): il cumulativo parte ora da `priorCompensation + externalByYear[y]` invece di solo `priorCompensation`. Se gli esterni da soli superano una soglia, il primo mese di contratto viene marcato (così il badge ">5K" compare già a Gennaio se necessario). (Collaboratore già lo gestiva correttamente.)
 
+## 🆕 04/06/2026 (mattina 2) — Polishing Atleti Pro + campo "Livello / Grado" coach
+
+### Modifiche UI
+- **Card menu admin "Atleti Pro"**: sottotitolo cambiato da "Compensi atleti e collaboratori serie maggiori" → "Compensi atleti serie maggiori" (collaboratori/coach/dirigenti sono già gestiti nelle squadre normali).
+
+### Nuovo campo `coach_license_level` (Livello / Grado allenatore)
+- **Backend** (`server.py`):
+  - Aggiunto al modello `User` (riga 454) e `UserCreate` (riga 619)
+  - Salvato in `user_dict` durante registrazione (riga 1766)
+  - Aggiunto a `UserProfileUpdate` (riga 3600) e applicato nel PATCH `/auth/me` (riga 3655)
+  - Esposto nella response di `GET /users/{user_id}` (admin coach detail, riga 4810)
+- **Frontend**:
+  - `admin/coach/[id].tsx`: aggiunta riga "Livello / Grado" sotto "N. Tesserino" nella sezione dati coach (vista admin, read-only)
+  - `coach/profile.tsx`: nuovo campo editabile "Livello / Grado" sotto "N° Tesserino Allenatore" nel profilo coach (l'allenatore può inserirlo/aggiornarlo dal suo profilo)
+
 ## 🆕 04/06/2026 (mattina) — Sblocco backend Atleti Pro
 
 Dopo il deploy notturno, l'utente ha visto popup "Accesso Negato — Il modulo Atleti Pro non è attivo per questa società". Il check era backend-side basato su `settings.pro_enabled` per società.

@@ -1134,6 +1134,7 @@ Società sportiva: ${societyName}
               </View>
 
               {renderField('N° Tesserino Allenatore', profileData.coach_license_number, 'coach_license_number')}
+              {renderField('Livello / Grado', profileData.coach_license_level, 'coach_license_level')}
             </View>
           )}
         </View>

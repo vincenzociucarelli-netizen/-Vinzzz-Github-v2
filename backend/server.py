@@ -451,6 +451,7 @@ class User(BaseModel):
     
     # Coach specific - Tesserino
     coach_license_number: Optional[str] = None  # Numero tesserino allenatore
+    coach_license_level: Optional[str] = None  # Livello / Grado (es. "1° Grado", "Allievo Allenatore", "Allenatore di 1° Grado", etc.)
     coach_license_expiry: Optional[datetime] = None
     
     # Coach specific - Compensi
@@ -615,6 +616,7 @@ class UserCreate(BaseModel):
     province: Optional[str] = None
     phone: Optional[str] = None
     coach_license_number: Optional[str] = None
+    coach_license_level: Optional[str] = None
     data_password: Optional[str] = None  # Password protezione dati per genitori
     consents: Optional[dict] = None  # GDPR consents from registration
 
@@ -1761,6 +1763,8 @@ async def register(user_data: UserCreate, request: Request):
         user_dict["province"] = user_data.province.strip().upper()
     if user_data.coach_license_number:
         user_dict["coach_license_number"] = user_data.coach_license_number.strip()
+    if getattr(user_data, "coach_license_level", None):
+        user_dict["coach_license_level"] = user_data.coach_license_level.strip()
 
     await db.users.insert_one(user_dict)
     
@@ -3593,6 +3597,7 @@ class UserProfileUpdate(BaseModel):
     province: Optional[str] = None
     phone: Optional[str] = None
     coach_license_number: Optional[str] = None
+    coach_license_level: Optional[str] = None  # Livello / Grado allenatore
     collaboratore_license_number: Optional[str] = None  # License number for collaboratori
     # Documento di identità
     identity_document_type: Optional[str] = None  # Carta di identità, Patente, Passaporto
@@ -3647,6 +3652,8 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
         update_dict["phone"] = data.phone
     if data.coach_license_number is not None:
         update_dict["coach_license_number"] = data.coach_license_number
+    if data.coach_license_level is not None:
+        update_dict["coach_license_level"] = data.coach_license_level
     if data.collaboratore_license_number is not None:
         update_dict["collaboratore_license_number"] = data.collaboratore_license_number
     # Documento di identità
@@ -4800,6 +4807,7 @@ async def get_user_detail(user_id: str, current_user = Depends(get_current_user)
         # Fiscal
         "fiscal_code": user.get("fiscal_code"),
         "coach_license_number": user.get("coach_license_number"),
+        "coach_license_level": user.get("coach_license_level"),
         # Qualification (for dirigenti)
         "qualification": user.get("qualification"),
         "qualifications": user.get("qualifications", []),

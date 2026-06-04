@@ -917,6 +917,10 @@ export default function AdminCoachDetail() {
             <Text style={styles.label}>N. Tesserino</Text>
             <Text style={[styles.value, styles.valueCode]}>{coach.coach_license_number || '-'}</Text>
           </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.label}>Livello / Grado</Text>
+            <Text style={styles.value}>{coach.coach_license_level || '-'}</Text>
+          </View>
         </View>
 
         {/* Squadre Assegnate */}

@@ -1243,7 +1243,7 @@ export default function AdminDashboard() {
             </View>
             <View style={styles.menuCardContent}>
               <Text style={[styles.menuCardTitle, { color: '#B8860B' }]}>Atleti Pro</Text>
-              <Text style={styles.menuCardSubtitle}>Compensi atleti e collaboratori serie maggiori</Text>
+              <Text style={styles.menuCardSubtitle}>Compensi atleti serie maggiori</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <View style={{ backgroundColor: '#4CAF50', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
