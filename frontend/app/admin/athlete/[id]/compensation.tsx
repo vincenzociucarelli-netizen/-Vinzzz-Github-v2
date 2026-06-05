@@ -338,6 +338,37 @@ export default function AthleteCompensation() {
     return yearlyData;
   };
 
+  // 📊 Calcolo MESE PREDITTIVO di superamento soglie 5k/15k per ogni anno del contratto
+  // Cumulativo: prior_compensation (solo primo anno) + monthly × mese.
+  // Restituisce { [year]: { first5kMonth: 'Gennaio'|null, first15kMonth: 'Aprile'|null } }
+  const getProjectedThresholdMonths = (): { [year: number]: { first5k: string | null, first15k: string | null } } => {
+    const monthly = parseFloat(monthlyCompensation) || 0;
+    const prior = parseFloat(otherAnnualCompensation) || 0;
+    const result: { [year: number]: { first5k: string | null, first15k: string | null } } = {};
+    if (!contractStartDate || !contractEndDate || monthly <= 0) return result;
+    const startISO = formatDateToISO(contractStartDate) || contractStartDate;
+    const endISO = formatDateToISO(contractEndDate) || contractEndDate;
+    const start = new Date(startISO);
+    const end = new Date(endISO);
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return result;
+    const contractStartYear = start.getFullYear();
+    const cumulByYear: { [year: number]: number } = {};
+    const current = new Date(start.getFullYear(), start.getMonth(), 1);
+    while (current <= end) {
+      const y = current.getFullYear();
+      if (!result[y]) result[y] = { first5k: null, first15k: null };
+      if (cumulByYear[y] === undefined) {
+        cumulByYear[y] = y === contractStartYear ? prior : 0;
+      }
+      cumulByYear[y] += monthly;
+      const monthName = MONTHS[current.getMonth()];
+      if (cumulByYear[y] > 5000 && result[y].first5k === null) result[y].first5k = monthName;
+      if (cumulByYear[y] > 15000 && result[y].first15k === null) result[y].first15k = monthName;
+      current.setMonth(current.getMonth() + 1);
+    }
+    return result;
+  };
+
   // Get months in contract range
   const getContractMonths = () => {
     if (!contractStartDate || !contractEndDate) return [];
@@ -631,6 +662,53 @@ export default function AthleteCompensation() {
             </View>
           )}
         </View>
+
+        {/* Banner predittivi superamento soglie (stessi del coach) */}
+        {contractMonths.length > 0 && !editing && (() => {
+          const projections = getProjectedThresholdMonths();
+          const years = Object.keys(projections).map(Number).sort((a, b) => a - b);
+          const banners: any[] = [];
+          for (const y of years) {
+            const p = projections[y];
+            if (p.first5k) {
+              banners.push(
+                <View key={`th5k-${y}`} style={{ backgroundColor: '#FFF8E1', borderLeftWidth: 4, borderLeftColor: '#F57F17', padding: 12, borderRadius: 8, marginBottom: 8 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#E65100', marginBottom: 4 }}>
+                    ⚠️ Anno {y}: Soglia dei €5.000
+                  </Text>
+                  <Text style={{ fontSize: 13, color: '#E65100', lineHeight: 18 }}>
+                    Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{p.first5k}</Text> supererà la soglia previdenziale di €5.000.
+                  </Text>
+                  <Text style={{ fontSize: 11, color: '#E65100', fontStyle: 'italic', marginTop: 4 }}>
+                    Contributi previdenziali INPS
+                  </Text>
+                </View>
+              );
+            }
+            if (p.first15k) {
+              banners.push(
+                <View key={`th15k-${y}`} style={{ backgroundColor: '#F3E5F5', borderLeftWidth: 4, borderLeftColor: '#8E44AD', padding: 12, borderRadius: 8, marginBottom: 8 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#8E44AD', marginBottom: 4 }}>
+                    🚨 Anno {y}: Soglia dei €15.000
+                  </Text>
+                  <Text style={{ fontSize: 13, color: '#8E44AD', lineHeight: 18 }}>
+                    Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{p.first15k}</Text> supererà la soglia fiscale di €15.000.
+                  </Text>
+                  <Text style={{ fontSize: 11, color: '#8E44AD', fontStyle: 'italic', marginTop: 4 }}>
+                    Tassazione IRPEF obbligatoria
+                  </Text>
+                </View>
+              );
+            }
+          }
+          if (banners.length === 0) return null;
+          return (
+            <View style={[styles.card, { paddingVertical: 14 }]}>
+              <Text style={[styles.cardTitle, { marginBottom: 10 }]}>📈 Previsione superamento soglie</Text>
+              {banners}
+            </View>
+          );
+        })()}
 
         {/* Yearly Breakdown - Detailed Calculations */}
         {contractMonths.length > 0 && !editing && (

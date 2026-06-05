@@ -51,6 +51,20 @@ Dopo la cleanup, abbiamo visto che la card "Anno 2026" mostrava il "Totale Anno"
 2. Card "Anno X" (coach, entrambi i blocchi - primo anno + ultimo anno contratto): nuova riga `• Compensi esterni (altre ASD): €X` quando `externalTotal > 0`.
 3. `getProjectedThresholdMonths()` (coach + dirigente): il cumulativo parte ora da `priorCompensation + externalByYear[y]` invece di solo `priorCompensation`. Se gli esterni da soli superano una soglia, il primo mese di contratto viene marcato (così il badge ">5K" compare già a Gennaio se necessario). (Collaboratore già lo gestiva correttamente.)
 
+## 🆕 05/06/2026 (mattina 2) — Banner predittivi soglie su Compensi atleta + ruoli pre-popolati
+
+### Foto 2 — Ruolo atleta da settings società
+- **La logica era già in place** (`admin/athlete/[id].tsx` riga 1898-1942): mostra pillole se `availableRoles` ha valori, altrimenti TextInput libero
+- Mancava il pre-popolamento dei ruoli sulla società Pallavolo Perugia
+- **Pre-popolato in produzione via PATCH `/api/settings/society`**:
+  - `athlete_roles`: `["Palleggiatore", "Schiacciatore", "Opposto", "Centrale", "Libero"]`
+  - I `coach_license_levels` non si sono ancora salvati perché Render non ha il deploy con il nuovo campo (sarà disponibile dopo prossimo Save to GitHub)
+
+### Foto 1 — Banner predittivi superamento soglie su scheda compensi atleta
+- **Lato atleta** (`/app/frontend/app/athlete/compensation.tsx`): già presenti (ereditati dalla copia del coach del 3/06/2026)
+- **Lato admin** (`/app/frontend/app/admin/athlete/[id]/compensation.tsx`): nuova funzione `getProjectedThresholdMonths()` che calcola il mese previsto di superamento 5k/15k per ogni anno del contratto + nuova card "📈 Previsione superamento soglie" con 2 banner (5k arancio, 15k viola) inseriti SOPRA la sezione "📊 Calcoli Annuali"
+- Banner identici nel testo a quelli del coach: *"Con la quietanza del mese di [Mese] supererà la soglia previdenziale di €5.000"*
+
 ## 🆕 05/06/2026 (mattina) — Cambio email da admin con verifica via link + bottone UI
 
 ### Sblocco
