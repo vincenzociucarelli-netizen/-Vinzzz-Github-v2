@@ -1568,6 +1568,60 @@ async def update_my_society(update_data: dict, current_user = Depends(get_curren
     
     return {"message": "Società aggiornata"}
 
+@api_router.post("/admin/users/{user_id}/change-email")
+async def admin_change_user_email(user_id: str, payload: dict, current_user = Depends(get_current_user)):
+    """Admin-only: change a user's email. Accepts user_id OR athlete_id.
+    Verifica nuova email univoca, aggiorna user, e (se atleta) anche il record athlete.
+    Setta automaticamente email_verified=True (l'admin si assume la responsabilità).
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può cambiare email")
+    new_email = (payload.get("new_email") or "").strip().lower()
+    if not new_email or "@" not in new_email:
+        raise HTTPException(status_code=400, detail="Email non valida")
+
+    # Trova user (per user_id o athlete_id)
+    user = await db.users.find_one({"id": user_id})
+    if not user:
+        user = await db.users.find_one({"athlete_id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    # Multi-tenant safety
+    if current_user.get("society_id") and user.get("society_id") and \
+            current_user["society_id"] != user["society_id"]:
+        raise HTTPException(status_code=403, detail="L'utente appartiene a un'altra società")
+
+    # Verifica univocità nuova email (no conflitti su altri user)
+    existing = await db.users.find_one(
+        {"email": new_email, "id": {"$ne": user["id"]}},
+        {"_id": 0, "id": 1},
+    )
+    if existing:
+        raise HTTPException(status_code=409, detail="Email già usata da un altro utente")
+
+    old_email = user.get("email")
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {
+            "email": new_email,
+            "email_verified": True,
+            "email_verification_token": None,
+            "email_changed_by": current_user["id"],
+            "email_changed_at": datetime.now(timezone.utc).isoformat(),
+            "previous_email": old_email,
+        }}
+    )
+    # Aggiorna anche record athlete se applicabile
+    athlete_id = user.get("athlete_id")
+    if athlete_id:
+        await db.athletes.update_one(
+            {"id": athlete_id},
+            {"$set": {"email": new_email}}
+        )
+    logging.warning(f"[ADMIN-CHANGE-EMAIL] admin={current_user.get('email')} user={user['id']} old={old_email} new={new_email}")
+    return {"message": "Email aggiornata con successo", "old_email": old_email, "new_email": new_email}
+
+
 @api_router.post("/admin/users/{user_id}/force-verify-email")
 async def admin_force_verify_email(user_id: str, current_user = Depends(get_current_user)):
     """Admin-only: force verify a user's email without sending the link.
