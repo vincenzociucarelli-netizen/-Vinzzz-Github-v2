@@ -17,6 +17,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
+import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import { Ionicons } from '../../../src/components/Icon';
 import { SportIcon } from '../../../src/components/SportIcon';
 
@@ -638,6 +639,14 @@ export default function AdminCollaboratoreDetail() {
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Email:</Text>
             <Text style={styles.infoValue}>{collaboratore.email}</Text>
+          </View>
+          <View style={{ marginTop: 4, marginBottom: 4 }}>
+            <ChangeEmailButton
+              userId={collaboratore.id}
+              userName={collaboratore.full_name}
+              currentEmail={collaboratore.email}
+              onSuccess={(newEmail) => setCollaboratore({ ...collaboratore, email: newEmail })}
+            />
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Telefono:</Text>

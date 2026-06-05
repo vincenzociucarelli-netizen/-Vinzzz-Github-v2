@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
+import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import { Ionicons } from '../../../src/components/Icon';
 import { Athlete, Team, Payment, Certificate } from '../../../src/types';
 import { format } from 'date-fns';
@@ -2567,6 +2568,14 @@ export default function AdminAthleteDetail() {
                   <View style={styles.infoRow}>
                     <Text style={styles.label}>Email</Text>
                     <Text style={styles.value}>{athlete.email || '-'}</Text>
+                  </View>
+                  <View style={{ marginTop: 4, marginBottom: 8 }}>
+                    <ChangeEmailButton
+                      userId={athlete.id}
+                      userName={athlete.full_name}
+                      currentEmail={athlete.email}
+                      onSuccess={(newEmail) => setAthlete({ ...athlete, email: newEmail })}
+                    />
                   </View>
                   <View style={styles.infoRow}>
                     <Text style={styles.label}>Tel. Atleta</Text>

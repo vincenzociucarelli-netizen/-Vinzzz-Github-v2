@@ -18,6 +18,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
+import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import { Ionicons } from '../../../src/components/Icon';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -818,6 +819,14 @@ export default function AdminDirigenteDetail() {
           <View style={styles.infoRow}>
             <Text style={styles.label}>Email</Text>
             <Text style={styles.value}>{dirigente.email}</Text>
+          </View>
+          <View style={{ marginTop: 4, marginBottom: 4 }}>
+            <ChangeEmailButton
+              userId={dirigente.id}
+              userName={dirigente.full_name}
+              currentEmail={dirigente.email}
+              onSuccess={(newEmail) => setDirigente({ ...dirigente, email: newEmail })}
+            />
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.label}>Telefono</Text>

@@ -51,6 +51,35 @@ Dopo la cleanup, abbiamo visto che la card "Anno 2026" mostrava il "Totale Anno"
 2. Card "Anno X" (coach, entrambi i blocchi - primo anno + ultimo anno contratto): nuova riga `• Compensi esterni (altre ASD): €X` quando `externalTotal > 0`.
 3. `getProjectedThresholdMonths()` (coach + dirigente): il cumulativo parte ora da `priorCompensation + externalByYear[y]` invece di solo `priorCompensation`. Se gli esterni da soli superano una soglia, il primo mese di contratto viene marcato (così il badge ">5K" compare già a Gennaio se necessario). (Collaboratore già lo gestiva correttamente.)
 
+## 🆕 05/06/2026 (mattina) — Cambio email da admin con verifica via link + bottone UI
+
+### Sblocco
+- **Chiara Zorzi** (`chiara.z@test.com`) sbloccata via `POST /admin/users/{athlete_id}/force-verify-email`.
+
+### Endpoint admin "Cambia email"
+- `POST /api/admin/users/{user_id}/change-email`
+  - Accetta sia `user_id` che `athlete_id` (cerca in entrambi)
+  - Body: `{"new_email": "..."}`
+  - Verifica univocità nuova email
+  - Multi-tenant safe
+  - **Setta `email_verified=False`** + nuovo `email_verification_token`
+  - Invia mail di verifica via Brevo all'utente al nuovo indirizzo (l'utente deve cliccare il link per confermare)
+  - Aggiorna anche record `athlete` collegato
+  - Log audit `[ADMIN-CHANGE-EMAIL]` su Render
+
+### Componente UI riutilizzabile
+- Nuovo file `/app/frontend/src/components/admin/ChangeEmailButton.tsx`
+  - Bottone "✉️ Cambia email" + modal di conferma
+  - Mostra email attuale, input nuova email, hint che spiega il flusso di verifica via link
+  - Loading state e gestione errori
+  - Callback `onSuccess` per aggiornare lo state della parent page
+
+### Inserito nelle 4 schede admin
+- `admin/coach/[id].tsx` → riga Email
+- `admin/dirigente/[id].tsx` → riga Email
+- `admin/collaboratore/[id].tsx` → riga Email
+- `admin/athlete/[id].tsx` → riga Email (sezione Dati personali)
+
 ## 🆕 04/06/2026 (sera 2) — Distinzione esplicita Squadre STD/PRO nel form admin
 
 L'utente ha chiesto che le squadre PRO non abbiano quote da pagare (atleti remunerati) mentre le STD restano come le giovanili. La logica backend già esisteva (`is_prima_squadra` esclude pagamenti), ma mancava una UI chiara nel form di creazione team.

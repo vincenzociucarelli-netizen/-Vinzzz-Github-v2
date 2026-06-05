@@ -1572,7 +1572,9 @@ async def update_my_society(update_data: dict, current_user = Depends(get_curren
 async def admin_change_user_email(user_id: str, payload: dict, current_user = Depends(get_current_user)):
     """Admin-only: change a user's email. Accepts user_id OR athlete_id.
     Verifica nuova email univoca, aggiorna user, e (se atleta) anche il record athlete.
-    Setta automaticamente email_verified=True (l'admin si assume la responsabilità).
+    NB: l'admin cambia l'email ma la nuova deve essere RIVERIFICATA dall'utente
+    tramite link inviato via Brevo. Lo status torna a `pending_email` per gli atleti
+    minorenni / `pending_email_user` per gli adulti finché non clicca il link.
     """
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può cambiare email")
@@ -1600,12 +1602,13 @@ async def admin_change_user_email(user_id: str, payload: dict, current_user = De
         raise HTTPException(status_code=409, detail="Email già usata da un altro utente")
 
     old_email = user.get("email")
+    new_token = secrets.token_urlsafe(32)
     await db.users.update_one(
         {"id": user["id"]},
         {"$set": {
             "email": new_email,
-            "email_verified": True,
-            "email_verification_token": None,
+            "email_verified": False,
+            "email_verification_token": new_token,
             "email_changed_by": current_user["id"],
             "email_changed_at": datetime.now(timezone.utc).isoformat(),
             "previous_email": old_email,
@@ -1618,8 +1621,36 @@ async def admin_change_user_email(user_id: str, payload: dict, current_user = De
             {"id": athlete_id},
             {"$set": {"email": new_email}}
         )
-    logging.warning(f"[ADMIN-CHANGE-EMAIL] admin={current_user.get('email')} user={user['id']} old={old_email} new={new_email}")
-    return {"message": "Email aggiornata con successo", "old_email": old_email, "new_email": new_email}
+
+    # Invia mail di verifica al nuovo indirizzo
+    try:
+        society = await db.societies.find_one(
+            {"id": user.get("society_id")},
+            {"_id": 0, "name": 1},
+        )
+        full_name = user.get("full_name") or user.get("first_name") or ""
+        await _send_verification_email(
+            new_email,
+            new_token,
+            full_name,
+            (society or {}).get("name", ""),
+        )
+        verification_sent = True
+    except Exception as e:
+        logging.error(f"[ADMIN-CHANGE-EMAIL] verification email failed: {e}")
+        verification_sent = False
+
+    logging.warning(
+        f"[ADMIN-CHANGE-EMAIL] admin={current_user.get('email')} user={user['id']} "
+        f"old={old_email} new={new_email} verification_sent={verification_sent}"
+    )
+    return {
+        "message": "Email aggiornata. Verifica inviata al nuovo indirizzo." if verification_sent
+                   else "Email aggiornata, ma invio mail di verifica fallito.",
+        "old_email": old_email,
+        "new_email": new_email,
+        "verification_sent": verification_sent,
+    }
 
 
 @api_router.post("/admin/users/{user_id}/force-verify-email")
