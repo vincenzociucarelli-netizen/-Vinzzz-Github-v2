@@ -51,6 +51,24 @@ Dopo la cleanup, abbiamo visto che la card "Anno 2026" mostrava il "Totale Anno"
 2. Card "Anno X" (coach, entrambi i blocchi - primo anno + ultimo anno contratto): nuova riga `• Compensi esterni (altre ASD): €X` quando `externalTotal > 0`.
 3. `getProjectedThresholdMonths()` (coach + dirigente): il cumulativo parte ora da `priorCompensation + externalByYear[y]` invece di solo `priorCompensation`. Se gli esterni da soli superano una soglia, il primo mese di contratto viene marcato (così il badge ">5K" compare già a Gennaio se necessario). (Collaboratore già lo gestiva correttamente.)
 
+## 🆕 05/06/2026 (pomeriggio) — Preset Pallavolo FIPAV (1-click import)
+
+### Backend
+- Nuovo endpoint `POST /api/settings/society/import-preset` (in `routes/settings.py`)
+- Costante `SPORT_PRESETS` con dizionario per ogni sport. Pallavolo include:
+  - `athlete_roles`: Palleggiatore, Schiacciatore, Opposto, Centrale, Libero
+  - `athlete_characteristics`: Mancino, Buon servizio, Buona ricezione, Buona difesa, Buon attacco
+  - `dirigente_qualifications`: Dirigente accompagnatore, Dirigente arbitro, Segnapunti, Refertista, Allenatore di sostegno
+  - `coach_license_levels`: Smart Coach, Allievo Allenatore, 1° Grado, 2° Grado, 3° Grado
+- Body: `{"sport": "pallavolo", "overwrite": false}` — default fa MERGE preservando valori esistenti
+- Multi-tenant safe (upsert su `{type: "society", society_id: X}`)
+- Risposta `counts`: per ogni campo restituisce `{before, after, added}`
+
+### Frontend
+- `admin/settings/other.tsx`: nuova card "🏐 Preset Pallavolo FIPAV" in cima alla pagina (sfondo giallo, bordo oro)
+- Bottone "📥 Importa preset Pallavolo FIPAV" mostra confirm dialog con lista valori → POST → toast con `counts` → ricarica i 4 array nello state
+- Pronto per estensione futura ad altri sport (basta aggiungere chiave a `SPORT_PRESETS`)
+
 ## 🆕 05/06/2026 (mattina 2) — Banner predittivi soglie su Compensi atleta + ruoli pre-popolati
 
 ### Foto 2 — Ruolo atleta da settings società

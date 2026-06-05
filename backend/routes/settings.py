@@ -19,6 +19,66 @@ from routes.primary_admin import is_primary_admin, has_valid_primary_declaration
 router = APIRouter()
 
 
+# ─────────────────────── Preset per sport ───────────────────────
+# Liste di default per ogni sport. L'admin può importarle in 1 click
+# dalla pagina Impostazioni → Altre Impostazioni → "Importa preset".
+SPORT_PRESETS = {
+    "pallavolo": {
+        "athlete_roles": ["Palleggiatore", "Schiacciatore", "Opposto", "Centrale", "Libero"],
+        "athlete_characteristics": ["Mancino", "Buon servizio", "Buona ricezione", "Buona difesa", "Buon attacco"],
+        "dirigente_qualifications": ["Dirigente accompagnatore", "Dirigente arbitro", "Segnapunti", "Refertista", "Allenatore di sostegno"],
+        "coach_license_levels": ["Smart Coach", "Allievo Allenatore", "1° Grado", "2° Grado", "3° Grado"],
+    },
+}
+
+
+@router.post("/settings/society/import-preset")
+async def import_society_preset(payload: dict, current_user=Depends(get_current_user)):
+    """Admin-only: importa preset di tassonomie per uno sport.
+
+    Body: { "sport": "pallavolo", "overwrite": false }
+    Default: overwrite=false → fa MERGE (aggiunge solo i valori mancanti)
+    """
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sport = (payload.get("sport") or "").strip().lower()
+    overwrite = bool(payload.get("overwrite", False))
+    if sport not in SPORT_PRESETS:
+        raise HTTPException(status_code=400, detail=f"Sport '{sport}' non disponibile. Sport supportati: {list(SPORT_PRESETS.keys())}")
+
+    preset = SPORT_PRESETS[sport]
+    society_id = current_user.get("society_id")
+    settings_filter = {"type": "society"}
+    if society_id:
+        settings_filter["society_id"] = society_id
+
+    existing = await db.settings.find_one(settings_filter, {"_id": 0}) or {}
+    update_fields = {}
+    counts = {}
+    for key, preset_values in preset.items():
+        current_values = existing.get(key) or []
+        if overwrite:
+            merged = list(preset_values)
+        else:
+            # merge preserving order: existing first, then new ones not yet present
+            merged = list(current_values)
+            for v in preset_values:
+                if v not in merged:
+                    merged.append(v)
+        update_fields[key] = merged
+        counts[key] = {"before": len(current_values), "after": len(merged), "added": len(merged) - len(current_values)}
+
+    # upsert settings doc
+    update_fields["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.settings.update_one(
+        settings_filter,
+        {"$set": update_fields, "$setOnInsert": {**settings_filter, "created_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True,
+    )
+    return {"success": True, "sport": sport, "overwrite": overwrite, "counts": counts}
+
+
+
 @router.api_route("/settings/society/logo.png", methods=["GET", "HEAD"])
 async def get_society_logo_image(request: Request, society_id: Optional[str] = None):
     """Serve society logo as PNG image.

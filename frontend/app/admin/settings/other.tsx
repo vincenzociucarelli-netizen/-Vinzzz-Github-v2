@@ -277,6 +277,42 @@ export default function OtherSettings() {
       <InstitutionalBanner />
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Preset rapido per sport */}
+        <View style={[styles.section, { backgroundColor: '#FFF8E1', borderWidth: 1, borderColor: '#FFD54F' }]}>
+          <Text style={styles.sectionTitle}>🏐 Preset Pallavolo FIPAV</Text>
+          <Text style={styles.sectionDesc}>
+            Carica con un click i ruoli atleti, le caratteristiche, le qualifiche dirigenti e i livelli allenatore previsti dal regolamento FIPAV. I valori esistenti vengono preservati: vengono aggiunti solo quelli mancanti.
+          </Text>
+          <TouchableOpacity
+            style={{ backgroundColor: '#F57F17', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 10, alignItems: 'center', marginTop: 10 }}
+            onPress={async () => {
+              const confirm = Platform.OS === 'web'
+                ? window.confirm('Importare il preset Pallavolo FIPAV?\n\nVerranno aggiunti (senza sovrascrivere):\n• Ruoli atleti: Palleggiatore, Schiacciatore, Opposto, Centrale, Libero\n• Caratteristiche: Mancino, Buon servizio, Buona ricezione, Buona difesa, Buon attacco\n• Qualifiche dirigenti: Dirigente accompagnatore, Segnapunti, Refertista, ...\n• Livelli coach: Smart Coach, Allievo Allenatore, 1° / 2° / 3° Grado')
+                : true;
+              if (!confirm) return;
+              try {
+                const res = await api.post('/settings/society/import-preset', { sport: 'pallavolo' });
+                const counts = res.data?.counts || {};
+                const added = Object.entries(counts).map(([k, v]: any) => `${k}: +${v.added}`).join('\n');
+                if (Platform.OS === 'web') window.alert(`✅ Preset importato!\n\n${added || 'Nessun nuovo valore (già tutti presenti)'}`);
+                // Ricarica i settings dalla pagina
+                const fresh = await api.get('/settings/society');
+                setAthleteRoles(fresh.data.athlete_roles || []);
+                setAthleteCharacteristics(fresh.data.athlete_characteristics || []);
+                setDirigenteQualifications(fresh.data.dirigente_qualifications || []);
+                setCoachLicenseLevels(fresh.data.coach_license_levels || []);
+              } catch (e: any) {
+                if (Platform.OS === 'web') window.alert('Errore: ' + (e?.response?.data?.detail || e?.message || 'Impossibile importare preset'));
+              }
+            }}
+            data-testid="import-preset-pallavolo-btn"
+          >
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+              📥 Importa preset Pallavolo FIPAV
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Stagione Sportiva */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Stagione Sportiva</Text>
