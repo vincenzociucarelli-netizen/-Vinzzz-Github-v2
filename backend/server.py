@@ -1568,6 +1568,25 @@ async def update_my_society(update_data: dict, current_user = Depends(get_curren
     
     return {"message": "Società aggiornata"}
 
+@api_router.get("/admin/users/find-by-email/{email}")
+async def admin_find_user_by_email(email: str, current_user = Depends(get_current_user)):
+    """Admin: trova un user dato l'email (utile per troubleshooting account orfani)."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    user = await db.users.find_one(
+        {"email": email.strip().lower()},
+        {"_id": 0, "id": 1, "email": 1, "full_name": 1, "role": 1, "status": 1,
+         "email_verified": 1, "athlete_id": 1, "society_id": 1, "previous_email": 1},
+    )
+    if not user:
+        raise HTTPException(status_code=404, detail=f"Nessun user con email {email}")
+    if current_user.get("society_id") and user.get("society_id") and \
+            current_user["society_id"] != user["society_id"]:
+        raise HTTPException(status_code=403, detail="L'utente appartiene a un'altra società")
+    return user
+
+
+
 @api_router.post("/admin/users/{user_id}/change-email")
 async def admin_change_user_email(user_id: str, payload: dict, current_user = Depends(get_current_user)):
     """Admin-only: change a user's email. Accepts user_id OR athlete_id.
