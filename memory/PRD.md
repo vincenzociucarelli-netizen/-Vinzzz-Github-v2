@@ -23,6 +23,35 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🆕 07/06/2026 — Atleti Pro Fase 2: Soglie cumulative Coach + Atleta PRO
+
+### Goal
+Quando un utente ricopre **due ruoli compensati** nella stessa società (es. Coach + Atleta PRO), le soglie €5.000 / €15.000 (Riforma Sport) devono essere calcolate sulla **somma cumulativa** dei compensi delle due posizioni + compensi esterni dichiarati.
+
+### Backend (`server.py`)
+- **Nuove helper**:
+  - `_find_linked_athlete_pro_for_user(user_id)` → cerca un record `athletes` con `is_compensated=True` linkato all'utente (via `user_id`/`linked_user_id`/`email`/`fiscal_code`) **nella stessa società**.
+  - `_find_linked_compensated_user_for_athlete(athlete)` → cerca un user (role coach/dirigente/collaboratore/admin) collegato all'atleta PRO **nella stessa società**.
+  - `_get_signed_yearly_total_as_coach(coach_user_id, year)` e `_get_signed_yearly_total_as_atleta_pro(athlete_id, year)` → somme delle quietanze firmate dell'anno.
+- **`GET /api/coach/{coach_id}/threshold-status/{year}`**:
+  - `yearly_total` ora include i compensi firmati dell'Atleta PRO linkato (se presente).
+  - La proiezione mensile (`threshold_month` per 5k/15k) include anche il monthly compensation dell'Atleta PRO.
+  - Nuovo blocco di risposta `cumulative`: `{is_dual_role, athlete_pro_id, athlete_pro_yearly_total, athlete_pro_monthly_compensation, external_year_total}`.
+- **`GET /api/prime-squadre/athletes/{athlete_id}/threshold-status/{year}`**:
+  - Estesa con la stessa logica simmetrica: somma i compensi firmati come Coach (se l'utente è dual-role), include i compensi esterni nella proiezione, calcola `threshold_5k_month` / `threshold_15k_month`.
+  - Nuovo blocco `cumulative`: `{is_dual_role, linked_coach_user_id, coach_yearly_total, coach_monthly_compensation, external_year_total}`.
+  - Mantiene retrocompatibilità: campo `monthly_compensation` resta quello dell'atleta; `yearly_total` mostra il totale firmato cumulativo.
+
+### Test (dati sintetici)
+Persona Mario Dual = Coach (400€/mese) + Atleta PRO (300€/mese) + 500€ esterni:
+- Coach POV: `yearly_total=2100` (1200 coach + 900 atleta pro), `cumulative.is_dual_role=true`, `threshold_5k_month=7` (luglio: 500+700×7=5400) ✅
+- Atleta PRO POV: `yearly_total=2100`, `cumulative.linked_coach_user_id=...`, stessi 7 mesi proiettati ✅
+- Single-role regression: Atleta PRO disattivato → `yearly_total=1200`, `is_dual_role=false`, proiezione 5k a dicembre ✅
+
+### Frontend
+Nessuna modifica necessaria al frontend: i campi storici (`yearly_total`, `threshold_month`) ora restituiscono valori cumulativi. Il nuovo blocco `cumulative` è disponibile per future visualizzazioni (es. badge "Doppio ruolo" sulla dashboard compensi).
+
+
 ## 🆕 07/06/2026 — Fix "Impossibile caricare i dati" su login Atleta (Alice)
 
 ### Bug

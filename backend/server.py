@@ -13611,6 +13611,104 @@ async def _get_year_external_compensations_total(user_id: str, year: int) -> flo
         return 0.0
 
 
+async def _find_linked_athlete_pro_for_user(user_id: str) -> Optional[dict]:
+    """Cerca un record `athletes` con is_compensated=True che condivide
+    identità (user_id, linked_user_id, email o fiscal_code) con l'utente
+    indicato, NELLA STESSA società. Usato per soglie cumulative Coach+Atleta PRO.
+    Ritorna il documento athlete o None.
+    """
+    try:
+        user = await db.users.find_one(
+            {"id": user_id},
+            {"_id": 0, "id": 1, "email": 1, "fiscal_code": 1, "society_id": 1},
+        )
+        if not user:
+            return None
+        society_id = user.get("society_id")
+        or_clauses = [{"user_id": user_id}, {"linked_user_id": user_id}]
+        if user.get("email"):
+            or_clauses.append({"email": user["email"].lower()})
+        if user.get("fiscal_code"):
+            or_clauses.append({"fiscal_code": user["fiscal_code"].upper()})
+            or_clauses.append({"fiscal_code": user["fiscal_code"]})
+        query = {"is_compensated": True, "$or": or_clauses}
+        if society_id:
+            query["society_id"] = society_id
+        return await db.athletes.find_one(query)
+    except Exception as ex:
+        logger.warning(f"_find_linked_athlete_pro_for_user failed for {user_id}: {ex}")
+        return None
+
+
+async def _find_linked_compensated_user_for_athlete(athlete: dict) -> Optional[dict]:
+    """Cerca un user record (role coach/dirigente/collaboratore/admin) che
+    condivide identità con l'atleta PRO indicato (email/fiscal_code) NELLA
+    STESSA società e che ha `is_compensated=True` o `monthly_compensation>0`.
+    Ritorna il documento user o None.
+    """
+    try:
+        society_id = athlete.get("society_id")
+        or_clauses = []
+        # Direct link from athlete record
+        for k in ("linked_user_id", "user_id"):
+            if athlete.get(k):
+                or_clauses.append({"id": athlete[k]})
+        if athlete.get("email"):
+            or_clauses.append({"email": athlete["email"].lower()})
+        if athlete.get("fiscal_code"):
+            or_clauses.append({"fiscal_code": athlete["fiscal_code"].upper()})
+            or_clauses.append({"fiscal_code": athlete["fiscal_code"]})
+        if not or_clauses:
+            return None
+        query = {
+            "role": {"$in": ["coach", "dirigente", "collaboratore", "admin"]},
+            "$or": or_clauses,
+        }
+        if society_id:
+            query["society_id"] = society_id
+        # Prefer users that actually have compensation set
+        candidates = await db.users.find(query).to_list(5)
+        if not candidates:
+            return None
+        for c in candidates:
+            if c.get("is_compensated") or (c.get("monthly_compensation") or 0) > 0:
+                return c
+        return candidates[0]
+    except Exception as ex:
+        logger.warning(f"_find_linked_compensated_user_for_athlete failed: {ex}")
+        return None
+
+
+async def _get_signed_yearly_total_as_coach(coach_user_id: str, year: int) -> float:
+    """Somma compensi firmati come Coach/Dirigente/Collaboratore (coach_compensations) per l'anno."""
+    try:
+        total = 0.0
+        async for r in db.coach_compensations.find(
+            {"coach_id": coach_user_id, "year": year, "receipt_signed": True},
+            {"_id": 0, "amount_gross": 1, "amount": 1},
+        ):
+            total += float(r.get("amount_gross") or r.get("amount") or 0)
+        return round(total, 2)
+    except Exception as ex:
+        logger.warning(f"_get_signed_yearly_total_as_coach failed for {coach_user_id}/{year}: {ex}")
+        return 0.0
+
+
+async def _get_signed_yearly_total_as_atleta_pro(athlete_id: str, year: int) -> float:
+    """Somma compensi firmati come Atleta PRO (atleta_pro_compensations) per l'anno."""
+    try:
+        total = 0.0
+        async for r in db.atleta_pro_compensations.find(
+            {"atleta_id": athlete_id, "year": year, "receipt_signed": True},
+            {"_id": 0, "amount_gross": 1, "amount": 1},
+        ):
+            total += float(r.get("amount_gross") or r.get("amount") or 0)
+        return round(total, 2)
+    except Exception as ex:
+        logger.warning(f"_get_signed_yearly_total_as_atleta_pro failed for {athlete_id}/{year}: {ex}")
+        return 0.0
+
+
 async def _record_external_compensation_declaration(
     user_id: str,
     year: int,
@@ -14487,6 +14585,21 @@ async def get_coach_threshold_status(
     
     yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
     
+    # 🆕 FASE 2 — Soglie cumulative Coach + Atleta PRO
+    # Se l'utente ha ANCHE un record Atleta PRO nella stessa società, somma
+    # le sue quietanze firmate al totale annuale (ai fini delle soglie 5k/15k).
+    linked_athlete_pro = await _find_linked_athlete_pro_for_user(coach_id)
+    athlete_pro_yearly_total = 0.0
+    athlete_pro_monthly_compensation = 0.0
+    if linked_athlete_pro:
+        athlete_pro_yearly_total = await _get_signed_yearly_total_as_atleta_pro(
+            linked_athlete_pro["id"], year
+        )
+        athlete_pro_monthly_compensation = float(
+            linked_athlete_pro.get("monthly_compensation") or 0
+        )
+        yearly_total += athlete_pro_yearly_total
+    
     # Add prior compensation if this is the first year of the contract
     prior_compensation = coach.get("other_annual_compensation", 0) or coach.get("prior_year_compensation", 0) or 0
     contract_start = coach.get("contract_start_date")
@@ -14608,12 +14721,25 @@ async def get_coach_threshold_status(
     # 📌 Include anche i compensi esterni dichiarati nell'anno per il calcolo
     # proiettato del mese di superamento delle soglie 5K/15K
     coach_external_year_total = await _get_year_external_compensations_total(coach_id, year)
+    # 🆕 FASE 2 — Per la proiezione cumulativa Coach+Atleta PRO, includi anche
+    # i record mensili dell'Atleta PRO (firmati o previsti)
+    athlete_pro_year_records: list = []
+    if linked_athlete_pro:
+        athlete_pro_year_records = await db.atleta_pro_compensations.find({
+            "atleta_id": linked_athlete_pro["id"],
+            "year": year
+        }).to_list(12)
     projected_total = (prior_compensation if (contract_year == year) else 0) + coach_external_year_total
     threshold_5k_month = 0
     threshold_15k_month = 0
     for m in months_in_year:
         existing = next((r for r in all_year_records if r.get("month") == m), None)
         amt = existing.get("amount_gross", existing.get("amount", monthly_compensation)) if existing else monthly_compensation
+        # 🆕 FASE 2 — Aggiungi il compenso Atleta PRO dello stesso mese (se presente / previsto)
+        if linked_athlete_pro:
+            ap_existing = next((r for r in athlete_pro_year_records if r.get("month") == m), None)
+            ap_amt = ap_existing.get("amount_gross", ap_existing.get("amount", athlete_pro_monthly_compensation)) if ap_existing else athlete_pro_monthly_compensation
+            amt += ap_amt
         projected_total += amt
         if projected_total > 5000 and threshold_5k_month == 0:
             threshold_5k_month = m
@@ -14637,6 +14763,14 @@ async def get_coach_threshold_status(
         "prior_compensation": prior_compensation,
         "total_with_prior": yearly_total,
         "yearly_total_without_prior": yearly_total - prior_compensation if prior_compensation > 0 else yearly_total,
+        # 🆕 FASE 2 — Info cumulativa Coach + Atleta PRO
+        "cumulative": {
+            "is_dual_role": bool(linked_athlete_pro),
+            "athlete_pro_id": linked_athlete_pro["id"] if linked_athlete_pro else None,
+            "athlete_pro_yearly_total": athlete_pro_yearly_total,
+            "athlete_pro_monthly_compensation": athlete_pro_monthly_compensation,
+            "external_year_total": coach_external_year_total,
+        },
         "thresholds": {
             "5000": {
                 "threshold": 5000,
@@ -21043,7 +21177,8 @@ async def sign_athlete_compensation_receipt(
 
 @api_router.get("/prime-squadre/athletes/{athlete_id}/threshold-status/{year}")
 async def get_athlete_threshold_status(athlete_id: str, year: int, current_user = Depends(get_current_user)):
-    """Get threshold status for an athlete/coach/dirigente in a specific year"""
+    """Get threshold status for an athlete/coach/dirigente in a specific year.
+    🆕 FASE 2 — Soglie cumulative Atleta PRO + Coach + Compensi esterni."""
     # Allow admin or the athlete viewing their own threshold status
     if current_user["role"] == "athlete":
         if current_user.get("athlete_id") != athlete_id and current_user["id"] != athlete_id:
@@ -21083,12 +21218,39 @@ async def get_athlete_threshold_status(athlete_id: str, year: int, current_user 
     
     yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
     
+    # 🆕 FASE 2 — Compensi esterni dichiarati (per user_id corretto)
+    # Per atleti: user_id è quello dell'utente collegato (linked_user_id / user_id)
+    if member_type == "athlete":
+        ext_user_id = member.get("linked_user_id") or member.get("user_id")
+    else:
+        ext_user_id = athlete_id
+    external_year_total = 0.0
+    if ext_user_id:
+        external_year_total = await _get_year_external_compensations_total(ext_user_id, year)
+    
+    # 🆕 FASE 2 — Se l'Atleta PRO è ANCHE Coach/Dirigente nella stessa società,
+    # somma i compensi firmati come Coach (coach_compensations).
+    linked_coach_user = None
+    coach_yearly_total = 0.0
+    coach_monthly_compensation = 0.0
+    if member_type == "athlete":
+        linked_coach_user = await _find_linked_compensated_user_for_athlete(member)
+        if linked_coach_user:
+            coach_yearly_total = await _get_signed_yearly_total_as_coach(
+                linked_coach_user["id"], year
+            )
+            coach_monthly_compensation = float(linked_coach_user.get("monthly_compensation") or 0)
+            yearly_total += coach_yearly_total
+    
     # Add prior compensation if this is the first year of contract
     contract_start = member.get("contract_start_date")
     contract_start_year = None
     if contract_start:
         if isinstance(contract_start, str):
-            contract_start_year = int(contract_start.split('-')[0])
+            try:
+                contract_start_year = int(contract_start.split('-')[0])
+            except Exception:
+                contract_start_year = None
         elif hasattr(contract_start, 'year'):
             contract_start_year = contract_start.year
     
@@ -21098,7 +21260,71 @@ async def get_athlete_threshold_status(athlete_id: str, year: int, current_user 
     exceeded_5000_record = next((r for r in yearly_records if r.get("exceeded_5000")), None)
     exceeded_15000_record = next((r for r in yearly_records if r.get("exceeded_15000")), None)
     
-    next_total = yearly_total + monthly_compensation
+    # 🆕 FASE 2 — Proiezione mensile cumulativa (come per il coach)
+    contract_end = member.get("contract_end_date")
+    contract_start_month = 9
+    contract_end_month = 6
+    contract_end_year = None
+    if contract_start:
+        try:
+            contract_start_month = int(str(contract_start).split('-')[1])
+        except Exception:
+            pass
+    if contract_end:
+        try:
+            contract_end_month = int(str(contract_end).split('-')[1])
+            contract_end_year = int(str(contract_end).split('-')[0].split('T')[0])
+        except Exception:
+            pass
+    if contract_start_year and year == contract_start_year:
+        months_in_year = list(range(contract_start_month, 13))
+    elif contract_end_year and year == contract_end_year:
+        months_in_year = list(range(1, contract_end_month + 1))
+    else:
+        months_in_year = list(range(1, 13))
+    
+    # Tutti i record di entrambe le posizioni per la proiezione mensile
+    if member_type == "athlete":
+        all_athlete_pro_records = await db.atleta_pro_compensations.find({
+            "atleta_id": athlete_id, "year": year
+        }).to_list(12)
+    else:
+        all_athlete_pro_records = []
+    all_coach_records: list = []
+    if linked_coach_user:
+        all_coach_records = await db.coach_compensations.find({
+            "coach_id": linked_coach_user["id"], "year": year
+        }).to_list(12)
+    
+    base_proj = external_year_total + (
+        prior_compensation if (contract_start_year == year) else 0
+    )
+    projected_total = base_proj
+    threshold_5k_month = 0
+    threshold_15k_month = 0
+    for m in months_in_year:
+        # Componente Atleta PRO (o Coach diretto)
+        if member_type == "athlete":
+            ap_rec = next((r for r in all_athlete_pro_records if r.get("month") == m), None)
+            ap_amt = ap_rec.get("amount_gross", ap_rec.get("amount", monthly_compensation)) if ap_rec else monthly_compensation
+        else:
+            ap_rec = next((r for r in yearly_records if r.get("month") == m), None)
+            ap_amt = ap_rec.get("amount_gross", ap_rec.get("amount", monthly_compensation)) if ap_rec else monthly_compensation
+        amt = ap_amt
+        # Componente Coach collegato (solo se atleta dual-role)
+        if linked_coach_user:
+            c_rec = next((r for r in all_coach_records if r.get("month") == m), None)
+            c_amt = c_rec.get("amount_gross", c_rec.get("amount", coach_monthly_compensation)) if c_rec else coach_monthly_compensation
+            amt += c_amt
+        projected_total += amt
+        if projected_total > 5000 and threshold_5k_month == 0:
+            threshold_5k_month = m
+        if projected_total > 15000 and threshold_15k_month == 0:
+            threshold_15k_month = m
+    
+    # Approaching basato su totale cumulativo + monthly cumulativo
+    cumulative_monthly = monthly_compensation + coach_monthly_compensation
+    next_total = yearly_total + cumulative_monthly
     approaching_5000 = (yearly_total < 5000 and next_total > 4500)
     approaching_15000 = (yearly_total < 15000 and next_total > 14500)
     
@@ -21108,18 +21334,28 @@ async def get_athlete_threshold_status(athlete_id: str, year: int, current_user 
         "monthly_compensation": monthly_compensation,
         "prior_compensation": prior_compensation,
         "yearly_total": yearly_total,
+        # 🆕 FASE 2 — Info cumulativa Atleta PRO + Coach
+        "cumulative": {
+            "is_dual_role": bool(linked_coach_user),
+            "linked_coach_user_id": linked_coach_user["id"] if linked_coach_user else None,
+            "coach_yearly_total": coach_yearly_total,
+            "coach_monthly_compensation": coach_monthly_compensation,
+            "external_year_total": external_year_total,
+        },
         "thresholds": {
             "5000": {
                 "threshold": 5000,
                 "exceeded": exceeded_5000_record is not None,
                 "exceeded_month": exceeded_5000_record.get("month") if exceeded_5000_record else None,
-                "approaching": approaching_5000
+                "approaching": approaching_5000,
+                "threshold_month": threshold_5k_month,
             },
             "15000": {
                 "threshold": 15000,
                 "exceeded": exceeded_15000_record is not None,
                 "exceeded_month": exceeded_15000_record.get("month") if exceeded_15000_record else None,
-                "approaching": approaching_15000
+                "approaching": approaching_15000,
+                "threshold_month": threshold_15k_month,
             }
         }
     }
