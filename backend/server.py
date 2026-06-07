@@ -3594,96 +3594,118 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
     user.pop("password_hash", None)
     user.pop("hashed_password", None)
     
-    # For collaboratori/coaches, resolve team IDs to names
-    if user.get("assigned_teams"):
-        teams = await db.teams.find(
-            {"id": {"$in": user["assigned_teams"]}},
-            {"_id": 0, "name": 1},
-        ).to_list(100)
-        team_names = [t.get("name", "Squadra") for t in teams]
-        user["assigned_team_names"] = team_names
-    
-    # SELF-HEAL: For athletes missing the athlete_id link, attempt to recover
-    # the link by looking up the athletes collection via user_id / linked_user_id / email.
-    # This protects users registered through legacy or interrupted flows.
-    if user.get("role") == "athlete" and not user.get("athlete_id"):
-        recovered = await db.athletes.find_one(
-            {
-                "$or": [
-                    {"user_id": user["id"]},
-                    {"linked_user_id": user["id"]},
-                    {"email": (user.get("email") or "").lower()},
-                ]
-            },
-            {"_id": 0, "id": 1},
-        )
-        if recovered and recovered.get("id"):
-            await db.users.update_one(
-                {"id": user["id"]},
-                {"$set": {"athlete_id": recovered["id"]}},
-            )
-            user["athlete_id"] = recovered["id"]
-            logging.info(f"[AUTH-ME] Self-healed missing athlete_id for user {user['id']} -> {recovered['id']}")
+    # 🛡️ RESILIENCE: any failure in the post-processing below should NOT bubble
+    # up as a 500 — return the baseline user record so the frontend dashboard can
+    # render at minimum. The error is logged for offline debugging.
+    try:
+        # For collaboratori/coaches, resolve team IDs to names
+        if user.get("assigned_teams"):
+            teams = await db.teams.find(
+                {"id": {"$in": user["assigned_teams"]}},
+                {"_id": 0, "name": 1},
+            ).to_list(100)
+            team_names = [t.get("name", "Squadra") for t in teams]
+            user["assigned_team_names"] = team_names
+        
+        # SELF-HEAL: For athletes missing the athlete_id link, attempt to recover
+        # the link by looking up the athletes collection via user_id / linked_user_id / email.
+        # This protects users registered through legacy or interrupted flows.
+        if user.get("role") == "athlete" and not user.get("athlete_id"):
+            try:
+                recovered = await db.athletes.find_one(
+                    {
+                        "$or": [
+                            {"user_id": user["id"]},
+                            {"linked_user_id": user["id"]},
+                            {"email": (user.get("email") or "").lower()},
+                        ]
+                    },
+                    {"_id": 0, "id": 1},
+                )
+                if recovered and recovered.get("id"):
+                    await db.users.update_one(
+                        {"id": user["id"]},
+                        {"$set": {"athlete_id": recovered["id"]}},
+                    )
+                    user["athlete_id"] = recovered["id"]
+                    logging.info(f"[AUTH-ME] Self-healed missing athlete_id for user {user['id']} -> {recovered['id']}")
+            except Exception as heal_err:
+                logging.warning(f"[AUTH-ME] Self-heal failed for user {user.get('id')}: {heal_err}")
 
-    # For athletes, also get data from athletes collection
-    if user.get("role") == "athlete" and user.get("athlete_id"):
-        athlete_proj = {"_id": 0, "trial_end_date": 1}
-        if include_images:
-            athlete_proj["athlete_photo"] = 1
-            athlete_proj["athlete_photo_artistic"] = 1
-        athlete = await db.athletes.find_one(
-            {"id": user["athlete_id"]},
-            athlete_proj,
-        )
-        if athlete:
+        # For athletes, also get data from athletes collection
+        if user.get("role") == "athlete" and user.get("athlete_id"):
+            athlete_proj = {"_id": 0, "trial_end_date": 1}
             if include_images:
-                if athlete.get("athlete_photo"):
-                    user["athlete_photo"] = athlete["athlete_photo"]
-                if athlete.get("athlete_photo_artistic"):
-                    user["athlete_photo_artistic"] = athlete["athlete_photo_artistic"]
-            # Include trial_end_date for GDPR compliance flow
-            if athlete.get("trial_end_date"):
-                trial_date = athlete["trial_end_date"]
-                user["trial_end_date"] = trial_date.isoformat() if hasattr(trial_date, 'isoformat') else trial_date
-            # Include date_of_birth if not in user record
-            if not user.get("date_of_birth") and athlete.get("date_of_birth"):
-                dob = athlete["date_of_birth"]
-                user["date_of_birth"] = dob.isoformat() if hasattr(dob, 'isoformat') else dob
-            # Include country_of_birth from athlete record if not in user
-            if not user.get("country_of_birth") and athlete.get("country_of_birth"):
-                user["country_of_birth"] = athlete["country_of_birth"]
-            # Include privacy_accepted from athlete record if not in user
-            if user.get("privacy_accepted") is None and athlete.get("privacy_accepted") is not None:
-                user["privacy_accepted"] = athlete["privacy_accepted"]
-            # Include medical certificate metadata
-            for cert_field in ["medical_certificate_expiry", "medical_certificate_issue_date", 
-                             "medical_certificate_verified", "medical_certificate_inserted_by_name",
-                             "medical_certificate_verified_by_name", "medical_certificate_verified_at"]:
-                if athlete.get(cert_field) is not None:
-                    user[cert_field] = athlete[cert_field]
-            # Include athlete's own ID for certificate API calls
-            user["athlete_record_id"] = athlete["id"]
-            # Include Lite access fields
-            user["nome_lite"] = athlete.get("nome_lite", "")
-            user["minor_access_enabled"] = athlete.get("minor_access_enabled", False)
+                athlete_proj["athlete_photo"] = 1
+                athlete_proj["athlete_photo_artistic"] = 1
+            athlete = await db.athletes.find_one(
+                {"id": user["athlete_id"]},
+                athlete_proj,
+            )
+            if athlete:
+                if include_images:
+                    if athlete.get("athlete_photo"):
+                        user["athlete_photo"] = athlete["athlete_photo"]
+                    if athlete.get("athlete_photo_artistic"):
+                        user["athlete_photo_artistic"] = athlete["athlete_photo_artistic"]
+                # Include trial_end_date for GDPR compliance flow
+                if athlete.get("trial_end_date"):
+                    trial_date = athlete["trial_end_date"]
+                    user["trial_end_date"] = trial_date.isoformat() if hasattr(trial_date, 'isoformat') else trial_date
+                # Include date_of_birth if not in user record
+                if not user.get("date_of_birth") and athlete.get("date_of_birth"):
+                    dob = athlete["date_of_birth"]
+                    user["date_of_birth"] = dob.isoformat() if hasattr(dob, 'isoformat') else dob
+                # Include country_of_birth from athlete record if not in user
+                if not user.get("country_of_birth") and athlete.get("country_of_birth"):
+                    user["country_of_birth"] = athlete["country_of_birth"]
+                # Include privacy_accepted from athlete record if not in user
+                if user.get("privacy_accepted") is None and athlete.get("privacy_accepted") is not None:
+                    user["privacy_accepted"] = athlete["privacy_accepted"]
+                # Include medical certificate metadata
+                for cert_field in ["medical_certificate_expiry", "medical_certificate_issue_date", 
+                                 "medical_certificate_verified", "medical_certificate_inserted_by_name",
+                                 "medical_certificate_verified_by_name", "medical_certificate_verified_at"]:
+                    if athlete.get(cert_field) is not None:
+                        user[cert_field] = athlete[cert_field]
+                # Include athlete's own ID for certificate API calls
+                user["athlete_record_id"] = athlete["id"]
+                # Include Lite access fields
+                user["nome_lite"] = athlete.get("nome_lite", "")
+                user["minor_access_enabled"] = athlete.get("minor_access_enabled", False)
 
-    # Flag account istituzionale (società) — usato dal frontend per:
-    # - mostrare badge "Account Istituzionale"
-    # - nascondere opzioni riservate a persone fisiche (es. "Dirigente" su select-role)
-    if user.get("role") == "admin":
-        from routes.primary_admin import looks_like_society_name, is_society_institutional_email
-        user["is_institutional_account"] = bool(
-            looks_like_society_name(user.get("full_name", ""))
-            or await is_society_institutional_email(user.get("email", ""))
+        # Flag account istituzionale (società) — usato dal frontend per:
+        # - mostrare badge "Account Istituzionale"
+        # - nascondere opzioni riservate a persone fisiche (es. "Dirigente" su select-role)
+        if user.get("role") == "admin":
+            from routes.primary_admin import looks_like_society_name, is_society_institutional_email
+            user["is_institutional_account"] = bool(
+                looks_like_society_name(user.get("full_name", ""))
+                or await is_society_institutional_email(user.get("email", ""))
+            )
+
+        # Strip heavy base64 image fields unless explicitly requested.
+        # These can weigh ~500KB+ each and are not needed for most navigation.
+        # Dedicated endpoints serve the images (cached by the browser).
+        if not include_images:
+            for _f in HEAVY_IMAGE_FIELDS:
+                if _f in user:
+                    user[_f] = None
+
+    except Exception as post_err:
+        import traceback
+        logging.error(
+            f"[AUTH-ME] Post-processing failed for user {user.get('id')} ({user.get('email')}): "
+            f"{type(post_err).__name__}: {post_err}\n{traceback.format_exc()}"
         )
-
-    # Strip heavy base64 image fields unless explicitly requested.
-    # These can weigh ~500KB+ each and are not needed for most navigation.
-    # Dedicated endpoints serve the images (cached by the browser).
-    if not include_images:
-        for _f in HEAVY_IMAGE_FIELDS:
-            if _f in user:
-                user[_f] = None
+        # Ensure sensitive fields are still removed even on error
+        user.pop("password_hash", None)
+        user.pop("hashed_password", None)
+        # Strip heavy image fields to keep payload light
+        if not include_images:
+            for _f in HEAVY_IMAGE_FIELDS:
+                if _f in user:
+                    user[_f] = None
 
     return user
 
