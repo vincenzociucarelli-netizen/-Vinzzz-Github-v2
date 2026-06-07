@@ -222,52 +222,72 @@ export default function AthleteScreen() {
   const loadData = async () => {
     try {
       // Load athlete profile
-      const meResponse = await api.get('/auth/me');
-      const athleteData = meResponse.data;
-      
+      let athleteData: any = null;
+      try {
+        const meResponse = await api.get('/auth/me');
+        athleteData = meResponse.data;
+      } catch (meErr) {
+        console.error('loadData: /auth/me failed', meErr);
+        showAlert('Errore', 'Impossibile caricare i dati');
+        return;
+      }
+
+      // Set baseline profile from /auth/me so the dashboard never goes blank
+      setProfile(athleteData);
+
       // For athletes, we need to get their athlete record
       if (athleteData.athlete_id) {
-        const athleteResponse = await api.get(`/athletes/${athleteData.athlete_id}`);
-        setProfile(athleteResponse.data);
-        
-        // Parse contract dates
-        if (athleteResponse.data.contract_start_date) {
-          const startDate = new Date(athleteResponse.data.contract_start_date);
-          setContractStartYear(startDate.getFullYear());
-          setContractStartMonth(startDate.getMonth() + 1);
-        }
-        if (athleteResponse.data.contract_end_date) {
-          const endDate = new Date(athleteResponse.data.contract_end_date);
-          setContractEndYear(endDate.getFullYear());
-          setContractEndMonth(endDate.getMonth() + 1);
-        }
-        
-        // Load receipts
-        const receiptsResponse = await api.get(`/athletes/${athleteData.athlete_id}/compensation/receipts`);
-        setReceipts(receiptsResponse.data || []);
-        
-        // Load coach info if athlete has a team
-        if (athleteResponse.data.team_id) {
-          try {
-            const coachResponse = await api.get(`/teams/${athleteResponse.data.team_id}/coach`);
-            if (coachResponse.data) {
-              setCoachInfo(coachResponse.data);
-            }
-          } catch (coachError) {
-            console.log('No coach info available');
+        try {
+          const athleteResponse = await api.get(`/athletes/${athleteData.athlete_id}`);
+          setProfile(athleteResponse.data);
+
+          // Parse contract dates
+          if (athleteResponse.data.contract_start_date) {
+            const startDate = new Date(athleteResponse.data.contract_start_date);
+            setContractStartYear(startDate.getFullYear());
+            setContractStartMonth(startDate.getMonth() + 1);
           }
+          if (athleteResponse.data.contract_end_date) {
+            const endDate = new Date(athleteResponse.data.contract_end_date);
+            setContractEndYear(endDate.getFullYear());
+            setContractEndMonth(endDate.getMonth() + 1);
+          }
+
+          // Load coach info if athlete has a team
+          if (athleteResponse.data.team_id) {
+            try {
+              const coachResponse = await api.get(`/teams/${athleteResponse.data.team_id}/coach`);
+              if (coachResponse.data) {
+                setCoachInfo(coachResponse.data);
+              }
+            } catch (coachError) {
+              console.log('No coach info available');
+            }
+          }
+        } catch (athleteErr) {
+          console.warn('loadData: /athletes/{id} failed, keeping baseline profile', athleteErr);
         }
-      } else {
-        // Direct athlete user
-        setProfile(athleteData);
+
+        // Load receipts (best effort)
+        try {
+          const receiptsResponse = await api.get(`/athletes/${athleteData.athlete_id}/compensation/receipts`);
+          setReceipts(receiptsResponse.data || []);
+        } catch (rErr) {
+          console.warn('loadData: receipts failed', rErr);
+          setReceipts([]);
+        }
       }
-      
-      // Load society settings
-      const settingsResponse = await api.get('/settings/society');
-      setSocietySettings(settingsResponse.data);
-      setSocietyEmail(settingsResponse.data?.email || '');
-      setSocietyName(settingsResponse.data?.name || settingsResponse.data?.ragione_sociale || '');
-      
+
+      // Load society settings (best effort)
+      try {
+        const settingsResponse = await api.get('/settings/society');
+        setSocietySettings(settingsResponse.data);
+        setSocietyEmail(settingsResponse.data?.email || '');
+        setSocietyName(settingsResponse.data?.name || settingsResponse.data?.ragione_sociale || '');
+      } catch (sErr) {
+        console.warn('loadData: society settings failed', sErr);
+      }
+
       // Load trial status data for adult athletes
       if (athleteData.athlete_id) {
         try {
@@ -279,7 +299,7 @@ export default function AthleteScreen() {
           setEndTrialStatus(endTrialRes.data);
         } catch (e) { /* end-trial status not available */ }
       }
-      
+
       // Load expiring notifications
       try {
         const notifResponse = await api.get('/notifications/expiring');
@@ -287,7 +307,7 @@ export default function AthleteScreen() {
       } catch (notifError) {
         console.log('Could not load notifications');
       }
-      
+
       // Load commitments (trainings + matches) for next 7 days
       try {
         const commitmentsResponse = await api.get('/athlete/commitments');
@@ -295,7 +315,7 @@ export default function AthleteScreen() {
       } catch {
         console.log('Could not load commitments');
       }
-      
+
     } catch (error: any) {
       console.error('Error loading data:', error);
       showAlert('Errore', 'Impossibile caricare i dati');

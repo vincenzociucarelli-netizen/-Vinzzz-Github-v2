@@ -3603,6 +3603,28 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
         team_names = [t.get("name", "Squadra") for t in teams]
         user["assigned_team_names"] = team_names
     
+    # SELF-HEAL: For athletes missing the athlete_id link, attempt to recover
+    # the link by looking up the athletes collection via user_id / linked_user_id / email.
+    # This protects users registered through legacy or interrupted flows.
+    if user.get("role") == "athlete" and not user.get("athlete_id"):
+        recovered = await db.athletes.find_one(
+            {
+                "$or": [
+                    {"user_id": user["id"]},
+                    {"linked_user_id": user["id"]},
+                    {"email": (user.get("email") or "").lower()},
+                ]
+            },
+            {"_id": 0, "id": 1},
+        )
+        if recovered and recovered.get("id"):
+            await db.users.update_one(
+                {"id": user["id"]},
+                {"$set": {"athlete_id": recovered["id"]}},
+            )
+            user["athlete_id"] = recovered["id"]
+            logging.info(f"[AUTH-ME] Self-healed missing athlete_id for user {user['id']} -> {recovered['id']}")
+
     # For athletes, also get data from athletes collection
     if user.get("role") == "athlete" and user.get("athlete_id"):
         athlete_proj = {"_id": 0, "trial_end_date": 1}

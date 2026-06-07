@@ -23,6 +23,19 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🆕 07/06/2026 — Fix "Impossibile caricare i dati" su login Atleta (Alice)
+
+### Bug
+Atleti adulti registrati con il nuovo flow Admin Approval vedevano il popup "Impossibile caricare i dati" al primo login. Causa principale: una singola API non-critica (es. `/athletes/{id}/compensation/receipts`) o un campo `athlete_id` mancante nel record `users` faceva crashare l'intera `loadData`.
+
+### Fix
+1. **Backend `GET /api/auth/me` self-heal** (`server.py` ~riga 3606): se l'utente ha `role == "athlete"` ma manca `athlete_id`, ora cerca il record `athletes` per `user_id` / `linked_user_id` / `email` e:
+   - persiste il link in DB (`users.athlete_id = athlete.id`),
+   - restituisce comunque `athlete_id` nella risposta corrente.
+2. **Frontend `athlete/index.tsx`**: ogni chiamata API (athlete record, receipts, settings/society) è ora isolata in un proprio try/catch. Una failure su una singola API NON triggera più il popup globale; il dashboard mostra i dati disponibili da `/auth/me` come baseline.
+3. **Test e2e** verificato: registrato un atleta adulto, approvato come PRO, fatto login → dashboard si apre correttamente senza popup, sia con link `athlete_id` intatto sia dopo aver rimosso `athlete_id` dal record user (self-heal funzionante).
+
+
 ## 🆕 03/06/2026 — Fix firma quietanze (CORS + base64 + integrità DB) + Auto-crop firma + Riepilogo Compensi Esterni
 
 ### Bug critici risolti
