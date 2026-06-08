@@ -23,6 +23,33 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🆕 08/06/2026 — Fix bundle Atleta PRO (Alice Zorzi): 4 bug critici risolti
+
+### 🐛 Bug 1 — Route "Il Mio Profilo" → Unmatched Route
+- **Causa**: `router.push('/athletes/profile')` in `athlete/compensation.tsx` (cartella esistente è `/athlete/profile`, plurale errato).
+- **Fix**: corretti i 3 link errati (1 button + 2 fallback in `handleAnagraficaError`).
+
+### 🐛 Bug 2 + Bug 3 (stessa root cause) — Date contratto & compenso mensile invisibili al dashboard atleta
+- **Causa**: `/api/auth/me` non copiava i campi compensation dal record `athletes`. Il frontend `compensation.tsx` leggeva `profile.monthly_compensation` / `profile.contract_start_date` dal /auth/me → erano `undefined` → dashboard mostrava €0,00 e "Date contratto non impostate"; firma quietanza calcolava soglie su contratto inesistente → crash visivo dei mesi.
+- **Fix backend `server.py /auth/me`**: aggiunti alla projection e al copy-over i campi `monthly_compensation`, `is_compensated`, `athlete_type`, `contract_start_date`, `contract_end_date`, `iban`, `other_annual_compensation`, `team_id`.
+- Date contract_start/end normalizzate in ISO string nel response.
+
+### 🐛 Bug 4 — Firma privacy NON richiesta al salvataggio profilo Atleta
+- **Causa**: `handleSave` in `athlete/profile.tsx` salvava solo i dati ma non triggava `setShowPrivacyModal(true)` (al contrario di Coach/Dirigente).
+- **Fix**: dopo il PATCH /auth/me, se `privacyAccepted === false` mostra il `GDPRPrivacyModal` (stesso flow del Coach). Se già accettata, mostra solo l'alert di successo.
+
+### 🐛 BONUS — Root cause del 500 di Alice in produzione (anche Bug originale "Impossibile caricare i dati")
+- **Causa scoperta**: la projection MongoDB di `db.athletes.find_one(...)` includeva `_id: 0` ma NON `id: 1`, quindi `athlete["id"]` su riga `user["athlete_record_id"] = athlete["id"]` lanciava `KeyError: 'id'` → HTTP 500.
+- **Fix definitivo**: aggiunto `"id": 1` alla `athlete_proj`. Il try/except globale aggiunto in precedenza ha protetto dal 500 lato API ma `athlete_record_id` rimaneva `None`; ora popolato correttamente.
+
+### Test e2e (preview)
+Atleta PRO con `monthly=3750€`, contratto `2026-01-01 → 2026-05-31`, IBAN, `is_compensated=true`:
+- `/auth/me` ritorna tutti i campi corretti ✅
+- `athlete_record_id` popolato ✅
+- HTTP 200 ✅
+- Errore precedente catturato e loggato come `KeyError: 'id'` (visibile in Render log se l'utente vuole verifica retroattiva).
+
+
 ## 🆕 07/06/2026 — Atleti Pro Fase 2: Soglie cumulative Coach + Atleta PRO
 
 ### Goal

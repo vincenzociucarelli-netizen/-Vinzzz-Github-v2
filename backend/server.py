@@ -3634,7 +3634,31 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
 
         # For athletes, also get data from athletes collection
         if user.get("role") == "athlete" and user.get("athlete_id"):
-            athlete_proj = {"_id": 0, "trial_end_date": 1}
+            athlete_proj = {
+                "_id": 0,
+                "id": 1,
+                "trial_end_date": 1,
+                # 🆕 FASE 2 — campi compensation atleta PRO necessari al dashboard
+                "monthly_compensation": 1,
+                "is_compensated": 1,
+                "athlete_type": 1,
+                "contract_start_date": 1,
+                "contract_end_date": 1,
+                "iban": 1,
+                "other_annual_compensation": 1,
+                "team_id": 1,
+                "date_of_birth": 1,
+                "country_of_birth": 1,
+                "privacy_accepted": 1,
+                "medical_certificate_expiry": 1,
+                "medical_certificate_issue_date": 1,
+                "medical_certificate_verified": 1,
+                "medical_certificate_inserted_by_name": 1,
+                "medical_certificate_verified_by_name": 1,
+                "medical_certificate_verified_at": 1,
+                "nome_lite": 1,
+                "minor_access_enabled": 1,
+            }
             if include_images:
                 athlete_proj["athlete_photo"] = 1
                 athlete_proj["athlete_photo_artistic"] = 1
@@ -3668,6 +3692,17 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
                                  "medical_certificate_verified_by_name", "medical_certificate_verified_at"]:
                     if athlete.get(cert_field) is not None:
                         user[cert_field] = athlete[cert_field]
+                # 🆕 FASE 2 — Compensation fields per dashboard Atleta PRO
+                # Necessario perché compensation.tsx legge questi campi direttamente dal /auth/me
+                for comp_field in ["monthly_compensation", "is_compensated", "athlete_type",
+                                  "contract_start_date", "contract_end_date", "iban",
+                                  "other_annual_compensation", "team_id"]:
+                    if athlete.get(comp_field) is not None:
+                        val = athlete[comp_field]
+                        # Normalize date fields to ISO string
+                        if comp_field in ("contract_start_date", "contract_end_date") and hasattr(val, 'isoformat'):
+                            val = val.isoformat()
+                        user[comp_field] = val
                 # Include athlete's own ID for certificate API calls
                 user["athlete_record_id"] = athlete["id"]
                 # Include Lite access fields

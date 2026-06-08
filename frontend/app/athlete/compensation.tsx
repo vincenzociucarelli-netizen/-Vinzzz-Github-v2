@@ -483,7 +483,7 @@ export default function AthleteCompensation() {
       
     } catch (error: any) {
       console.error('[Coach handleSignDeclaration] ERROR', error?.response?.status, error?.response?.data, error?.message);
-      if (handleAnagraficaError(error, '/athletes/profile')) return;
+      if (handleAnagraficaError(error, '/athlete/profile')) return;
       const detail = error?.response?.data?.detail;
       const msg = typeof detail === 'string'
         ? detail
@@ -616,7 +616,7 @@ export default function AthleteCompensation() {
         };
         api.post('/debug/client-log', { message: '[Athlete] handleSign POST_ERROR', data: errPayload });
       } catch {}
-      if (handleAnagraficaError(error, '/athletes/profile')) return;
+      if (handleAnagraficaError(error, '/athlete/profile')) return;
       const detail = error?.response?.data?.detail;
       const msg = typeof detail === 'string'
         ? detail
@@ -1278,7 +1278,7 @@ export default function AthleteCompensation() {
           
           <TouchableOpacity 
             style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F8FF', padding: 10, borderRadius: 8 }}
-            onPress={() => router.push('/athletes/profile')}
+            onPress={() => router.push('/athlete/profile')}
           >
             <Ionicons name="create-outline" size={18} color="#007AFF" />
             <Text style={{ marginLeft: 8, color: '#007AFF', fontWeight: '500' }}>Il Mio Profilo</Text>

@@ -500,9 +500,17 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
         athlete_license_number: editData.athlete_license_number,
       });
       
-      showAlert('Successo', 'Profilo aggiornato con successo');
       setEditing(false);
       await loadProfile();
+      
+      // 🆕 Se la privacy NON è ancora stata firmata, mostra il modal subito
+      // dopo il salvataggio (stesso flow di Coach/Dirigente). Altrimenti
+      // mostra solo l'alert di successo.
+      if (!privacyAccepted) {
+        setShowPrivacyModal(true);
+      } else {
+        showAlert('Successo', 'Profilo aggiornato con successo');
+      }
     } catch (error) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
     } finally {
