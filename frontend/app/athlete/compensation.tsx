@@ -1250,7 +1250,30 @@ export default function AthleteCompensation() {
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
             <Ionicons name="person-circle" size={50} color="#007AFF" />
             <View style={{ marginLeft: 12, flex: 1 }}>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#333' }}>{profile?.full_name || 'Coach'}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#333' }}>{profile?.full_name || 'Coach'}</Text>
+                {profile?.identity_verified && (
+                  <View
+                    data-testid="identity-verified-badge"
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      marginLeft: 8,
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      backgroundColor: '#E8F5E9',
+                      borderColor: '#2E7D32',
+                      borderWidth: 1,
+                      borderRadius: 12,
+                    }}
+                  >
+                    <Ionicons name="shield-checkmark" size={14} color="#2E7D32" />
+                    <Text style={{ marginLeft: 4, fontSize: 11, color: '#2E7D32', fontWeight: '700' }}>
+                      Identità verificata
+                    </Text>
+                  </View>
+                )}
+              </View>
               <Text style={{ fontSize: 13, color: '#666' }}>Compenso mensile: {formatCurrency((profile?.monthly_compensation || 0))}</Text>
             </View>
           </View>

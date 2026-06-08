@@ -23,6 +23,31 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🆕 08/06/2026 — Badge "Identità Verificata" (Atleta)
+
+### Goal
+Mostra un badge verde "Identità verificata" accanto al nome dell'atleta sul dashboard compensi, quando tutti e 3 i requisiti sono soddisfatti.
+
+### Backend (`server.py` /auth/me)
+- Aggiunto campo computed `identity_verified: bool` nella risposta `/api/auth/me` (per atleta/coach/dirigente/collaboratore).
+- Logica:
+  - **Privacy firmata**: `user.privacy_accepted == True`
+  - **Anagrafica completa**: tutti i campi `first_name`, `last_name`, `fiscal_code`, `date_of_birth`, `address`, `phone` valorizzati
+  - **Cert. medico verificato** (solo per atleti): `medical_certificate_verified == True`
+
+### Frontend (`athlete/compensation.tsx`)
+- Aggiunta pill verde accanto al nome con icona `shield-checkmark` e testo "Identità verificata".
+- Visibile solo quando `profile.identity_verified === true`. `data-testid="identity-verified-badge"`.
+
+### Test (preview)
+- Stato "privacy mancante" → `identity_verified=False` ✅
+- Tutti i requisiti soddisfatti → `identity_verified=True` ✅
+- Cert. revocato → `identity_verified=False` ✅
+
+### Estensione futura
+Stesso campo già disponibile per Coach/Dirigente/Collaboratore (senza cert. medico). Sarà sufficiente aggiungere il badge anche nei rispettivi dashboard quando lo richiederai.
+
+
 ## 🆕 08/06/2026 — Fix bundle Atleta PRO (Alice Zorzi): 4 bug critici risolti
 
 ### 🐛 Bug 1 — Route "Il Mio Profilo" → Unmatched Route

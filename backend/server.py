@@ -3709,6 +3709,27 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
                 user["nome_lite"] = athlete.get("nome_lite", "")
                 user["minor_access_enabled"] = athlete.get("minor_access_enabled", False)
 
+        # 🆕 Computed flag "identity_verified": true se l'utente ha
+        # (a) firmato la privacy, (b) completato l'anagrafica essenziale,
+        # (c) certificato medico verificato (per gli atleti).
+        # Mostrato come badge accanto al nome nel dashboard atleta/coach/dirigente.
+        if user.get("role") in ("athlete", "coach", "dirigente", "collaboratore"):
+            required_fields = [
+                "first_name", "last_name", "fiscal_code",
+                "date_of_birth", "address", "phone",
+            ]
+            anagrafica_complete = all(
+                bool(user.get(f) and str(user.get(f)).strip())
+                for f in required_fields
+            )
+            privacy_ok = bool(user.get("privacy_accepted"))
+            if user.get("role") == "athlete":
+                cert_ok = bool(user.get("medical_certificate_verified"))
+            else:
+                # Per ruoli non-atleta non richiediamo il cert. medico
+                cert_ok = True
+            user["identity_verified"] = bool(privacy_ok and anagrafica_complete and cert_ok)
+
         # Flag account istituzionale (società) — usato dal frontend per:
         # - mostrare badge "Account Istituzionale"
         # - nascondere opzioni riservate a persone fisiche (es. "Dirigente" su select-role)
