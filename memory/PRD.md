@@ -23,6 +23,25 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🆕 08/06/2026 — Fix Atleta PRO: Quietanze visibili correttamente al primo load + Registro Profilo
+
+### 🐛 Bug A — Dashboard atleta "Tocca per firmare" anche sui mesi già firmati (poi magicamente firmati dopo click)
+**Causa:** in `athlete/compensation.tsx` la chiamata `/athletes/${athleteId}/compensation/receipts` usava `user?.athlete_id || user?.id` ma all'inizio il context `user` (da AuthContext) può non avere ancora `athlete_id` → ricadeva su `user.id` → endpoint cercava athlete con id=user.id → ritornava `[]` → tutti i mesi mostravano "Tocca per firmare". Solo quando una seconda load partiva con athlete_id corretto, l'UI si aggiornava (effetto "magia" descritto dall'utente).
+
+**Fix:** usare direttamente `profileRes.data?.athlete_id || profileRes.data?.athlete_record_id` (dal `/auth/me` appena ricevuto in `loadData`).
+
+### 🐛 Bug B — Registro Quietanze nel Profilo Atleta non segna i mesi firmati
+**Causa:** in `athlete/profile.tsx` la sezione "Registro Quietanze" controllava `receipt?.receipt_signed === true` ma il backend atleta salva `signed: true` (non `receipt_signed`). Inoltre il match `r.month === monthInt` falliva con il formato stringa legacy.
+
+**Fix:**
+- Aggiunto `isReceiptSignedFlag(r)` tollerante: `receipt_signed === true || signed === true`.
+- Aggiunto `matchMonth(r, monthInt)` tollerante per: `number 1-12`, stringa italiana ("Settembre"), `month_name`.
+- Applicato anche nel calcolo di `thresholdsByYear`.
+
+### Test (Node)
+5 scenari Set-Dic 2025 (firmati) + Gen 2026 (non firmato) → tutti OK ✅
+
+
 ## 🆕 08/06/2026 — Fix Admin View: Quietanze firmate non risultavano visivamente
 
 ### Bug

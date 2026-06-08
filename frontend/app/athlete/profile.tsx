@@ -1134,12 +1134,31 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             <Text style={styles.cardTitle}>📅 Registro Quietanze</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
               {(() => {
+                // 🐛 FIX: handle both new (number 1-12) and legacy (italian string) month formats
+                // and both `receipt_signed` (coach format) and `signed` (athlete backend format).
+                const MONTH_NAMES_IT = ['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+                const matchMonth = (r: any, monthInt: number) => {
+                  if (typeof r.month === 'number') return r.month === monthInt;
+                  if (typeof r.month === 'string') {
+                    const idx = MONTH_NAMES_IT.indexOf(r.month);
+                    if (idx === monthInt) return true;
+                  }
+                  if (typeof r.month_name === 'string') {
+                    const idx = MONTH_NAMES_IT.indexOf(r.month_name);
+                    if (idx === monthInt) return true;
+                  }
+                  return false;
+                };
+                const isReceiptSignedFlag = (r: any) => r?.receipt_signed === true || r?.signed === true;
+
                 // Find first month where each threshold was exceeded PER YEAR
                 const sortedReceipts = [...signedReceipts]
-                  .filter(r => r.receipt_signed)
+                  .filter(r => isReceiptSignedFlag(r))
                   .sort((a, b) => {
                     if (a.year !== b.year) return a.year - b.year;
-                    return a.month - b.month;
+                    const am = typeof a.month === 'number' ? a.month : MONTH_NAMES_IT.indexOf(a.month);
+                    const bm = typeof b.month === 'number' ? b.month : MONTH_NAMES_IT.indexOf(b.month);
+                    return am - bm;
                   });
                 
                 // Track thresholds PER YEAR (they reset each calendar year)
@@ -1149,11 +1168,12 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                   if (!thresholdsByYear[r.year]) {
                     thresholdsByYear[r.year] = { first5k: null, first15k: null };
                   }
+                  const rMonthNum = typeof r.month === 'number' ? r.month : MONTH_NAMES_IT.indexOf(r.month);
                   if (r.exceeded_5000 && thresholdsByYear[r.year].first5k === null) {
-                    thresholdsByYear[r.year].first5k = r.month;
+                    thresholdsByYear[r.year].first5k = rMonthNum;
                   }
                   if (r.exceeded_15000 && thresholdsByYear[r.year].first15k === null) {
-                    thresholdsByYear[r.year].first15k = r.month;
+                    thresholdsByYear[r.year].first15k = rMonthNum;
                   }
                 }
                 
@@ -1170,8 +1190,8 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                   const [year, monthNum] = month.key.split('-');
                   const yearInt = parseInt(year);
                   const monthInt = parseInt(monthNum);
-                  const receipt = signedReceipts.find(r => r.year === yearInt && r.month === monthInt);
-                  const isSigned = receipt?.receipt_signed === true;
+                  const receipt = signedReceipts.find(r => r.year === yearInt && matchMonth(r, monthInt));
+                  const isSigned = isReceiptSignedFlag(receipt);
                   
                   // Check if THIS is the threshold month (for badge)
                   const isThreshold5k = receipt?.exceeded_5000 === true;

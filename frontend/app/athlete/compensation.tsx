@@ -233,8 +233,11 @@ export default function AthleteCompensation() {
       setPriorCompensation(profileRes.data.other_annual_compensation || 0);
       
       // Load ALL compensation records (not filtered by year)
-      // For athletes, profile.id is the athlete_id from /auth/me which is athlete_id mapping
-      const athleteId = user?.athlete_id || user?.id;
+      // 🐛 FIX: usa SEMPRE l'athlete_id dal /auth/me response appena ricevuto
+      // (il context `user` può non avere ancora `athlete_id` al primo render,
+      // causando una chiamata a /athletes/{user.id}/compensation/receipts
+      // che ritorna [] e fa apparire i mesi già firmati come "Tocca per firmare").
+      const athleteId = profileRes.data?.athlete_id || profileRes.data?.athlete_record_id || user?.athlete_id || user?.id;
       const recordsRes = await api.get(`/athletes/${athleteId}/compensation/receipts`);
       // Normalize athlete receipts to match the schema used by the UI
       // (UI was originally built for /coach/.../compensation which uses
