@@ -398,12 +398,32 @@ export default function AthleteCompensation() {
     return months;
   };
 
+  // Map mese ITALIANO -> numero 1-12 (per matching robusto con il backend che
+  // salva sia il numero che il nome). Necessario perché lo storage storico
+  // può contenere `month` come numero (1-12), come `month_name` ("Gennaio"),
+  // o come stringa legacy in `month`.
+  const monthNameToNumber = (name: string): number | null => {
+    const idx = MONTHS.findIndex(m => m.toLowerCase() === (name || '').toLowerCase());
+    return idx >= 0 ? idx + 1 : null;
+  };
+
+  const matchesReceipt = (r: any, month: string, year: number): boolean => {
+    if (r.year !== year) return false;
+    const monthNum = monthNameToNumber(month);
+    // Match number form (1-12)
+    if (typeof r.month === 'number' && monthNum !== null && r.month === monthNum) return true;
+    // Match name form (legacy or month_name field)
+    if (typeof r.month === 'string' && r.month.toLowerCase() === (month || '').toLowerCase()) return true;
+    if (typeof r.month_name === 'string' && r.month_name.toLowerCase() === (month || '').toLowerCase()) return true;
+    return false;
+  };
+
   const isReceiptSigned = (month: string, year: number) => {
-    return signedReceipts.some(r => r.month === month && r.year === year && r.signed);
+    return signedReceipts.some(r => matchesReceipt(r, month, year) && r.signed);
   };
 
   const getReceiptSignedDate = (month: string, year: number) => {
-    const receipt = signedReceipts.find(r => r.month === month && r.year === year && r.signed);
+    const receipt = signedReceipts.find(r => matchesReceipt(r, month, year) && r.signed);
     return receipt?.signed_date;
   };
 

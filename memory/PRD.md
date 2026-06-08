@@ -23,6 +23,25 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🆕 08/06/2026 — Fix Admin View: Quietanze firmate non risultavano visivamente
+
+### Bug
+Admin → Atleta → Compensi Atleta mostrava: "Quietanze firmate: 2 / 9" (contatore corretto) ma TUTTI i 9 mesi apparivano "In attesa" (nessuno verde/firmato).
+
+### Root cause
+Il backend `sign_athlete_compensation_receipt_with_signature` salva `month` come **intero 1-12** in `athlete_compensation_receipts` (+ campo aggiuntivo `month_name` in italiano). Il frontend admin `compensation.tsx` faceva il match `r.month === m.month` confrontando un numero con una stringa italiana → sempre `false` → tutti i box mostravano "In attesa". Il counter `signedReceipts.filter(r => r.signed).length` era invece corretto perché contava solo il flag `signed`.
+
+### Fix (`admin/athlete/[id]/compensation.tsx`)
+- Aggiunte helper `monthNameToNumber()` e `matchesReceipt(r, month, year)` che matchano in modo flessibile:
+  - `r.month` come **numero** (1-12) → confronto con `monthNameToNumber('Settembre')` = 9
+  - `r.month` come **stringa legacy** ("Settembre") → confronto case-insensitive
+  - `r.month_name` come stringa → fallback
+- `isReceiptSigned` e `getReceiptSignedDate` ora usano `matchesReceipt`.
+
+### Test
+5 scenari verificati con script Node: nuovo formato numerico, formato legacy stringa, mese non firmato, anno errato → tutti OK ✅.
+
+
 ## 🆕 08/06/2026 — Badge "Identità Verificata" (Atleta)
 
 ### Goal
