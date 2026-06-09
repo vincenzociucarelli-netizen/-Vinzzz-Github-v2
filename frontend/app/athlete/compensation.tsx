@@ -238,7 +238,16 @@ export default function AthleteCompensation() {
       // causando una chiamata a /athletes/{user.id}/compensation/receipts
       // che ritorna [] e fa apparire i mesi già firmati come "Tocca per firmare").
       const athleteId = profileRes.data?.athlete_id || profileRes.data?.athlete_record_id || user?.athlete_id || user?.id;
-      const recordsRes = await api.get(`/athletes/${athleteId}/compensation/receipts`);
+      // 🚀 Carico in PARALLELO records + external compensations per minimizzare il
+      // tempo di "loading off" e impedire che l'utente veda i box "Tocca per firmare"
+      // prima che i record arrivino.
+      const [recordsRes, extResult] = await Promise.all([
+        api.get(`/athletes/${athleteId}/compensation/receipts`),
+        api.get('/me/external-compensations').catch((err) => {
+          console.log('Error loading external compensations:', err);
+          return null;
+        }),
+      ]);
       // Normalize athlete receipts to match the schema used by the UI
       // (UI was originally built for /coach/.../compensation which uses
       //  `receipt_signed` and `amount_gross` instead of `signed` and `amount`).
@@ -269,18 +278,15 @@ export default function AthleteCompensation() {
       setThresholdStatus(null);
       setThresholdStatus2026(null);
       
-      // Carica i compensi esterni auto-dichiarati raggruppati per anno
-      try {
-        const extRes = await api.get('/me/external-compensations');
-        const items: Array<{ year: number; amount: number }> = extRes.data?.items || [];
+      // Apply external compensations result (loaded in parallel above)
+      if (extResult?.data) {
+        const items: Array<{ year: number; amount: number }> = extResult.data.items || [];
         const byYear: { [y: number]: number } = {};
         for (const it of items) {
           const y = Number(it.year);
           byYear[y] = (byYear[y] || 0) + Number(it.amount || 0);
         }
         setExternalByYear(byYear);
-      } catch (err) {
-        console.log('Error loading external compensations:', err);
       }
 
     } catch (error) {
