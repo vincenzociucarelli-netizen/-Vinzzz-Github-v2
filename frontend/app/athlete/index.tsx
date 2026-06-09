@@ -1306,6 +1306,9 @@ export default function AthleteScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* 🆕 Switch dual-role: Atleta PRO ↔ Coach (visibile solo se atleta promosso) */}
+      <SwitchAccountButton />
+
       {/* Profile Card */}
       <View style={styles.profileCard}>
         <View style={styles.profileAvatar}>
