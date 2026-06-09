@@ -3730,6 +3730,30 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
                 cert_ok = True
             user["identity_verified"] = bool(privacy_ok and anagrafica_complete and cert_ok)
 
+        # 🆕 FASE 2B — Per i coach promossi da atleta (linked_athlete_id),
+        # se i dati bancari del coach sono vuoti, falli vedere dall'atleta linked.
+        # Così Alice (dual-role) vede subito IBAN già compilato dal suo profilo atleta.
+        if user.get("role") in ("coach", "dirigente", "collaboratore") and user.get("linked_athlete_id"):
+            need_iban = not (user.get("iban") or "").strip()
+            need_holder = not (user.get("iban_holder_first_name") or user.get("iban_holder_last_name"))
+            need_bank = not (user.get("bank_name") or "").strip()
+            if need_iban or need_holder or need_bank:
+                linked_ath = await db.athletes.find_one(
+                    {"id": user["linked_athlete_id"]},
+                    {"_id": 0, "iban": 1, "iban_holder_first_name": 1,
+                     "iban_holder_last_name": 1, "bank_name": 1},
+                )
+                if linked_ath:
+                    if need_iban and linked_ath.get("iban"):
+                        user["iban"] = linked_ath["iban"]
+                    if need_holder:
+                        if linked_ath.get("iban_holder_first_name"):
+                            user["iban_holder_first_name"] = linked_ath["iban_holder_first_name"]
+                        if linked_ath.get("iban_holder_last_name"):
+                            user["iban_holder_last_name"] = linked_ath["iban_holder_last_name"]
+                    if need_bank and linked_ath.get("bank_name"):
+                        user["bank_name"] = linked_ath["bank_name"]
+
         # Flag account istituzionale (società) — usato dal frontend per:
         # - mostrare badge "Account Istituzionale"
         # - nascondere opzioni riservate a persone fisiche (es. "Dirigente" su select-role)

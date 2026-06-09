@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -45,8 +46,12 @@ export default function SwitchAccountButton() {
       const newToken = res.data?.token;
       const newRole = res.data?.role;
       if (!newToken) throw new Error('Token mancante');
-      // Aggiorna lo store auth e ricarica /auth/me con il nuovo token
-      const meRes = await api.get('/auth/me', { headers: { Authorization: `Bearer ${newToken}` } });
+      // 🐛 FIX: l'interceptor di `api` sovrascrive sempre l'header Authorization
+      // con il token in AsyncStorage. Quindi DEVO salvare il nuovo token PRIMA
+      // di chiamare /auth/me — altrimenti otterrei i dati del ruolo precedente
+      // e il _layout.tsx del nuovo ruolo mi sbatterebbe fuori al login.
+      await AsyncStorage.setItem('token', newToken);
+      const meRes = await api.get('/auth/me');
       await setUser(meRes.data, newToken);
       // Redirect al dashboard del nuovo ruolo
       const target = newRole === 'coach' ? '/coach'

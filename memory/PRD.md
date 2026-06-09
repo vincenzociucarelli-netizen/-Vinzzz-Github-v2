@@ -23,6 +23,18 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🆕 09/06/2026 — Fix Switch dual-role + Dati Bancari coach Alice
+
+### 🐛 Foto 1 — Click su "Passa a Modalità Atleta" → buttata fuori al login
+**Causa:** l'interceptor di `api.ts` sovrascrive SEMPRE l'header Authorization col token in AsyncStorage. Il mio override locale `headers: { Authorization: 'Bearer ' + newToken }` veniva ignorato → la `/auth/me` ritornava il VECCHIO user (coach) col vecchio token. `setUser(coachUser, newToken)` salvava `user.role='coach'` → `router.replace('/athlete')` → `athlete/_layout.tsx` controllava `user.role !== 'athlete'` → redirect al login.
+**Fix (`SwitchAccountButton.tsx`):** salvo il `newToken` in AsyncStorage **PRIMA** di chiamare `/auth/me`, così l'interceptor lo userà automaticamente. Ora la chiamata ritorna l'utente del nuovo ruolo correttamente.
+
+### 🐛 Foto 2 — Dati Bancari coach Alice non visibili (campi vuoti)
+Alice era stata promossa col VECCHIO codice di `promote-to-coach` che non copiava IBAN/Intestatario/Banca dall'atleta al nuovo user coach. I campi rimanevano vuoti nel suo profilo coach.
+**Fix retroattivo (`/auth/me` backend):** se `role ∈ {coach, dirigente, collaboratore}` E `linked_athlete_id` esiste E i campi bancari sono vuoti → fallback automatico dai dati bancari dell'atleta linked. Test ✅: coach senza IBAN + atleta con IBAN `IT99X...` → `/auth/me` ritorna IBAN e holder dall'atleta.
+**Effetto pratico per Alice:** dopo il deploy, dal suo profilo coach (anche dalla vista admin coach) vedrà i dati bancari già popolati. Se vuole modificarli, salva e i nuovi valori avranno priorità sul fallback.
+
+
 ## 🆕 09/06/2026 — Fix bundle Admin/Atleta (3 bug)
 
 ### 🐛 Bug 1 — Modal "Promuovi a Coach": livello/grado come TextInput libero
