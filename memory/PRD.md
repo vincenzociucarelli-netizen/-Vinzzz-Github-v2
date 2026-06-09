@@ -23,6 +23,41 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🆕 08/06/2026 — Fase 2B: UI Admin "Promuovi Atleta a Coach" (dual-role)
+
+### Goal
+Permettere all'admin di creare un secondo account Coach collegato a un Atleta PRO esistente. Le soglie €5K/€15K vengono calcolate cumulativamente per la stessa persona (atleta + coach) tramite il codice fiscale.
+
+### Backend
+- **`POST /api/admin/athletes/{athlete_id}/promote-to-coach`**
+  - Input: `coach_email` (diversa dall'atleta), `coach_password` (min 6), `team_id`, `monthly_compensation`, `coach_level` (opzionale)
+  - Validazioni: atleta PRO esistente con CF impostato, email coach univoca, team in stessa società
+  - Crea un user role=coach con stesso CF, anagrafica copiata, contratto default oggi → 30 giugno prossimo
+  - Audit fields: `linked_athlete_id`, `promoted_from_athlete_id`, `promoted_at`, `promoted_by`
+- **`GET /api/admin/athletes/{athlete_id}/linked-coach`**
+  - Ritorna info sul coach collegato (se esiste) per mostrare il badge "Anche Coach" sul profilo atleta
+
+### Frontend (`admin/athlete/[id].tsx`)
+- Card Compensi Premium → sotto "Gestisci Compensi e Quietanze":
+  - Se atleta NON è ancora coach → bottone arancione **"🎓 Aggiungi anche come Coach"**
+  - Se atleta È già coach → badge blu **"Anche Coach (Doppio Ruolo)"** con email, squadre, compenso, link rapido alla scheda Coach
+- Modal con form: email coach (suggerimento auto `nome.coach@dominio`), password temporanea, squadra (Picker da `/teams`), livello (Picker da `coach_license_levels` settings, fallback TextInput), compenso mensile
+
+### Come si attiva ora ✅
+1. Admin → Atleta Alice → tab Dati → card Compensi → bottone "Aggiungi anche come Coach"
+2. Compila email coach diversa (es. `alice.coach@…`), password, squadra (qualsiasi), livello opzionale, compenso
+3. Sistema crea account coach con stesso CF di Alice
+4. Soglie cumulative €5K/€15K attive automaticamente (sia dalla vista Atleta sia dalla vista Coach)
+
+### Test e2e (preview)
+| Scenario | Risultato |
+|----------|-----------|
+| Stato iniziale (atleta senza coach) — GET `/linked-coach` | `{linked: false}` ✅ |
+| POST `/promote-to-coach` con team Under 14 + 300€/mese | `{coach_user_id: ..., linked_athlete_id: ...}` ✅ |
+| GET `/linked-coach` post-promozione | `{linked: true, assigned_teams: ["Under 14"], coach_level: "1° livello FIPAV"}` ✅ |
+| Threshold cumulativo atleta | `is_dual_role: true, coach_monthly_compensation: 300` ✅ |
+
+
 ## 🆕 08/06/2026 — Fix Atleta PRO: Quietanze visibili correttamente al primo load + Registro Profilo
 
 ### 🐛 Bug A — Dashboard atleta "Tocca per firmare" anche sui mesi già firmati (poi magicamente firmati dopo click)

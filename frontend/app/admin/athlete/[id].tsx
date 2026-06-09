@@ -233,6 +233,18 @@ export default function AdminAthleteDetail() {
   const [athleteNotes, setAthleteNotes] = useState('');
   const [athleteCharacteristics, setAthleteCharacteristics] = useState<string[]>([]);
   const [availableRoles, setAvailableRoles] = useState<string[]>([]);
+
+  // 🆕 FASE 2B — Promozione Atleta PRO a Coach (dual-role)
+  const [promoteCoachModalVisible, setPromoteCoachModalVisible] = useState(false);
+  const [promoteCoachEmail, setPromoteCoachEmail] = useState('');
+  const [promoteCoachPassword, setPromoteCoachPassword] = useState('');
+  const [promoteCoachTeamId, setPromoteCoachTeamId] = useState('');
+  const [promoteCoachCompensation, setPromoteCoachCompensation] = useState('');
+  const [promoteCoachLevel, setPromoteCoachLevel] = useState('');
+  const [promoteCoachAvailableTeams, setPromoteCoachAvailableTeams] = useState<Team[]>([]);
+  const [promoteCoachLevels, setPromoteCoachLevels] = useState<string[]>([]);
+  const [promoteCoachSubmitting, setPromoteCoachSubmitting] = useState(false);
+  const [linkedCoach, setLinkedCoach] = useState<any>(null);
   const [availableCharacteristics, setAvailableCharacteristics] = useState<string[]>([]);
   const [photoModalVisible, setPhotoModalVisible] = useState(false);
   
@@ -337,6 +349,59 @@ export default function AdminAthleteDetail() {
     }
   };
 
+  // 🆕 FASE 2B — Promozione Atleta PRO a Coach (dual-role)
+  const openPromoteToCoachModal = async () => {
+    try {
+      const [teamsRes, settingsRes] = await Promise.all([
+        api.get('/teams'),
+        api.get('/settings/society').catch(() => ({ data: {} })),
+      ]);
+      const allTeams: Team[] = (teamsRes.data || []).filter((t: any) => t.is_active !== false);
+      setPromoteCoachAvailableTeams(allTeams);
+      setPromoteCoachLevels(settingsRes.data?.coach_license_levels || []);
+      // Suggerisci email coach derivata dall'email atleta
+      const base = (athlete?.email || '').split('@');
+      const suggested = base.length === 2 ? `${base[0]}.coach@${base[1]}` : '';
+      setPromoteCoachEmail(suggested);
+      setPromoteCoachPassword('');
+      setPromoteCoachTeamId('');
+      setPromoteCoachCompensation('');
+      setPromoteCoachLevel('');
+      setPromoteCoachModalVisible(true);
+    } catch (e) {
+      Alert.alert('Errore', 'Impossibile caricare le squadre');
+    }
+  };
+
+  const submitPromoteToCoach = async () => {
+    if (!promoteCoachEmail || !promoteCoachPassword || !promoteCoachTeamId) {
+      Alert.alert('Dati mancanti', 'Compila email, password e squadra del coach.');
+      return;
+    }
+    setPromoteCoachSubmitting(true);
+    try {
+      const res = await api.post(`/admin/athletes/${id}/promote-to-coach`, {
+        coach_email: promoteCoachEmail.trim().toLowerCase(),
+        coach_password: promoteCoachPassword,
+        team_id: promoteCoachTeamId,
+        monthly_compensation: parseFloat(promoteCoachCompensation || '0') || 0,
+        coach_level: promoteCoachLevel || null,
+      });
+      setPromoteCoachModalVisible(false);
+      Alert.alert(
+        '✅ Atleta promosso a Coach',
+        `Account coach creato: ${res.data.coach_email}\n\n` +
+        'Le soglie cumulative €5K/€15K sono ora attive automaticamente. ' +
+        'Comunica la password temporanea all\'atleta affinché possa accedere come Coach.'
+      );
+      await loadData();
+    } catch (e: any) {
+      Alert.alert('Errore', e?.response?.data?.detail || 'Promozione fallita');
+    } finally {
+      setPromoteCoachSubmitting(false);
+    }
+  };
+
   // Formatta automaticamente la data come GG/MM/AAAA
   const formatDateInput = (text: string) => {
     // Rimuovi tutto tranne i numeri
@@ -380,6 +445,13 @@ export default function AdminAthleteDetail() {
           setCompensation(compRes.data);
         } catch (e) {
           setCompensation(null);
+        }
+        // 🆕 FASE 2B — Check se l'atleta è anche Coach (dual-role)
+        try {
+          const linkedRes = await api.get(`/admin/athletes/${id}/linked-coach`);
+          setLinkedCoach(linkedRes.data?.linked ? linkedRes.data : null);
+        } catch (e) {
+          setLinkedCoach(null);
         }
       }
       
@@ -3085,6 +3157,64 @@ export default function AdminAthleteDetail() {
                     <Text style={styles.compensationButtonText}>Gestisci Compensi e Quietanze</Text>
                     <Ionicons name="chevron-forward" size={20} color="#fff" />
                   </TouchableOpacity>
+
+                  {/* 🆕 FASE 2B — Promozione Atleta PRO a Coach (dual-role) */}
+                  {linkedCoach ? (
+                    <View
+                      data-testid="linked-coach-badge"
+                      style={{
+                        marginTop: 12, padding: 12, backgroundColor: '#E3F2FD',
+                        borderRadius: 8, borderWidth: 1, borderColor: '#1976D2',
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                        <Ionicons name="people-circle" size={22} color="#1976D2" />
+                        <Text style={{ marginLeft: 6, fontWeight: '700', color: '#1976D2', fontSize: 14 }}>
+                          Anche Coach (Doppio Ruolo)
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 12, color: '#333' }}>
+                        Email: {linkedCoach.coach_email}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#333' }}>
+                        Squadre: {(linkedCoach.assigned_teams || []).join(', ') || '—'}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#333' }}>
+                        Compenso coach: € {Number(linkedCoach.monthly_compensation || 0).toFixed(2)}/mese
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#666', marginTop: 6, fontStyle: 'italic' }}>
+                        ✓ Soglie €5K/€15K calcolate cumulativamente (atleta + coach)
+                      </Text>
+                      <TouchableOpacity
+                        data-testid="open-linked-coach-btn"
+                        onPress={() => router.push(`/admin/coach/${linkedCoach.coach_user_id}`)}
+                        style={{ marginTop: 8, alignSelf: 'flex-start' }}
+                      >
+                        <Text style={{ color: '#1976D2', fontWeight: '600' }}>Apri scheda Coach →</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      data-testid="promote-to-coach-btn"
+                      onPress={openPromoteToCoachModal}
+                      style={{
+                        marginTop: 12, padding: 14, backgroundColor: '#FFF8E1',
+                        borderRadius: 8, borderWidth: 1, borderColor: '#F9A825',
+                        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                      }}
+                    >
+                      <View style={{ flex: 1, paddingRight: 8 }}>
+                        <Text style={{ fontWeight: '700', color: '#F57F17', fontSize: 14 }}>
+                          🎓 Aggiungi anche come Coach
+                        </Text>
+                        <Text style={{ fontSize: 11, color: '#666', marginTop: 2 }}>
+                          Per atleti che allenano una squadra. Le soglie €5K/€15K verranno calcolate
+                          cumulativamente (atleta + coach).
+                        </Text>
+                      </View>
+                      <Ionicons name="add-circle" size={28} color="#F57F17" />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </>
             )}
@@ -3329,6 +3459,121 @@ export default function AdminAthleteDetail() {
             </View>
           </View>
           </ScrollView>
+        </View>
+      </Modal>
+
+      {/* 🆕 FASE 2B — Modal Promozione Atleta a Coach */}
+      <Modal
+        visible={promoteCoachModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setPromoteCoachModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxWidth: 480 }]}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="people-circle" size={32} color="#F57F17" />
+              <Text style={[styles.modalTitle, { color: '#F57F17' }]}>Promuovi a Coach</Text>
+            </View>
+            <Text style={[styles.modalSubtitle, { marginBottom: 12 }]}>
+              Crea un secondo account Coach per <Text style={{ fontWeight: '700' }}>{athlete?.full_name}</Text>.
+              Le soglie €5K / €15K verranno calcolate cumulativamente (atleta + coach) automaticamente
+              tramite il codice fiscale.
+            </Text>
+            <ScrollView style={{ maxHeight: 420 }}>
+              {/* Email coach */}
+              <Text style={{ fontWeight: '600', marginBottom: 4, marginTop: 4 }}>Email Coach *</Text>
+              <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>
+                Deve essere diversa da quella dell'atleta. La password andrà comunicata manualmente.
+              </Text>
+              <TextInput
+                data-testid="promote-coach-email-input"
+                value={promoteCoachEmail}
+                onChangeText={setPromoteCoachEmail}
+                placeholder="alice.coach@dominio.it"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                style={styles.input}
+              />
+              {/* Password */}
+              <Text style={{ fontWeight: '600', marginBottom: 4, marginTop: 12 }}>Password temporanea *</Text>
+              <TextInput
+                data-testid="promote-coach-password-input"
+                value={promoteCoachPassword}
+                onChangeText={setPromoteCoachPassword}
+                placeholder="Min. 6 caratteri"
+                secureTextEntry
+                style={styles.input}
+              />
+              {/* Team */}
+              <Text style={{ fontWeight: '600', marginBottom: 4, marginTop: 12 }}>Squadra assegnata *</Text>
+              <View style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8 }}>
+                <Picker
+                  selectedValue={promoteCoachTeamId}
+                  onValueChange={setPromoteCoachTeamId}
+                  data-testid="promote-coach-team-picker"
+                >
+                  <Picker.Item label="-- Seleziona squadra --" value="" />
+                  {promoteCoachAvailableTeams.map((t) => (
+                    <Picker.Item key={t.id} label={t.name} value={t.id} />
+                  ))}
+                </Picker>
+              </View>
+              {/* Livello */}
+              <Text style={{ fontWeight: '600', marginBottom: 4, marginTop: 12 }}>Livello / Grado (opzionale)</Text>
+              {promoteCoachLevels.length > 0 ? (
+                <View style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8 }}>
+                  <Picker
+                    selectedValue={promoteCoachLevel}
+                    onValueChange={setPromoteCoachLevel}
+                    data-testid="promote-coach-level-picker"
+                  >
+                    <Picker.Item label="-- Nessuno --" value="" />
+                    {promoteCoachLevels.map((lvl) => (
+                      <Picker.Item key={lvl} label={lvl} value={lvl} />
+                    ))}
+                  </Picker>
+                </View>
+              ) : (
+                <TextInput
+                  data-testid="promote-coach-level-input"
+                  value={promoteCoachLevel}
+                  onChangeText={setPromoteCoachLevel}
+                  placeholder="es. 1° livello FIPAV"
+                  style={styles.input}
+                />
+              )}
+              {/* Compenso */}
+              <Text style={{ fontWeight: '600', marginBottom: 4, marginTop: 12 }}>Compenso mensile coach (€)</Text>
+              <TextInput
+                data-testid="promote-coach-compensation-input"
+                value={promoteCoachCompensation}
+                onChangeText={setPromoteCoachCompensation}
+                placeholder="0.00"
+                keyboardType="decimal-pad"
+                style={styles.input}
+              />
+            </ScrollView>
+            <View style={{ flexDirection: 'row', marginTop: 16, gap: 8 }}>
+              <TouchableOpacity
+                data-testid="promote-coach-cancel-btn"
+                onPress={() => setPromoteCoachModalVisible(false)}
+                style={[styles.cancelBtn, { flex: 1 }]}
+              >
+                <Text style={styles.cancelBtnText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                data-testid="promote-coach-submit-btn"
+                onPress={submitPromoteToCoach}
+                disabled={promoteCoachSubmitting}
+                style={[styles.saveBtn, { flex: 1, backgroundColor: '#F57F17' }]}
+              >
+                <Text style={styles.saveBtnText}>
+                  {promoteCoachSubmitting ? 'Creazione...' : 'Crea Coach'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </Modal>
 

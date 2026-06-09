@@ -13787,6 +13787,163 @@ async def _get_signed_yearly_total_as_atleta_pro(athlete_id: str, year: int) -> 
         return 0.0
 
 
+# ╭──────────────────────────────────────────────────────────────╮
+# │  🆕 FASE 2B — Promozione Atleta PRO a Coach (dual-role)     │
+# ╰──────────────────────────────────────────────────────────────╯
+class PromoteAthleteToCoachRequest(BaseModel):
+    coach_email: str  # email del nuovo account coach (deve essere diversa da quella atleta)
+    coach_password: str  # password temporanea (verrà comunicata manualmente all'atleta)
+    team_id: str  # squadra che il coach allenerà
+    monthly_compensation: float = 0.0  # compenso mensile come coach
+    coach_level: Optional[str] = None  # es. "1° livello FIPAV"
+    contract_start_date: Optional[str] = None  # default = oggi
+    contract_end_date: Optional[str] = None  # default = 30 giugno prossimo
+
+
+@api_router.post("/admin/athletes/{athlete_id}/promote-to-coach")
+async def promote_athlete_to_coach(
+    athlete_id: str,
+    request: PromoteAthleteToCoachRequest,
+    current_user = Depends(get_current_user),
+):
+    """🆕 FASE 2B — Crea un account Coach collegato a un Atleta PRO esistente.
+    Il match per le soglie cumulative avviene automaticamente via codice fiscale
+    e società comune (vedi `_find_linked_athlete_pro_for_user`)."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo gli admin possono promuovere atleti a coach")
+    
+    # Atleta deve esistere ed essere PRO/compensated
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    if not athlete.get("is_compensated"):
+        raise HTTPException(
+            status_code=400,
+            detail="Solo gli Atleti PRO (compensated) possono essere promossi a Coach. Imposta prima il tipo come 'Pro / Compensato'.",
+        )
+    
+    # Validazione email coach
+    coach_email = (request.coach_email or "").strip().lower()
+    if not coach_email or "@" not in coach_email:
+        raise HTTPException(status_code=400, detail="Email coach non valida")
+    if coach_email == (athlete.get("email") or "").lower():
+        raise HTTPException(
+            status_code=400,
+            detail="L'email del coach deve essere DIVERSA da quella dell'atleta (es. alice.coach@…). "
+                   "Le soglie cumulative verranno comunque calcolate insieme tramite il codice fiscale.",
+        )
+    existing_user = await db.users.find_one({"email": coach_email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Esiste già un utente con questa email")
+    
+    # Validazione password
+    if not request.coach_password or len(request.coach_password) < 6:
+        raise HTTPException(status_code=400, detail="La password deve avere almeno 6 caratteri")
+    
+    # Validazione team
+    team = await db.teams.find_one({"id": request.team_id, "society_id": athlete.get("society_id")})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata nella società")
+    
+    # Validazione CF (necessario per il match cumulativo)
+    fiscal_code = (athlete.get("fiscal_code") or "").upper().strip()
+    if not fiscal_code:
+        raise HTTPException(
+            status_code=400,
+            detail="L'atleta non ha il codice fiscale impostato. Il CF è necessario per collegare i due ruoli ai fini delle soglie cumulative.",
+        )
+    
+    # Date contratto (default = oggi → 30 giugno prossimo)
+    today = datetime.utcnow().date()
+    contract_start = request.contract_start_date or today.isoformat()
+    if request.contract_end_date:
+        contract_end = request.contract_end_date
+    else:
+        end_year = today.year if today.month < 7 else today.year + 1
+        contract_end = f"{end_year}-06-30"
+    
+    # Crea l'account coach
+    coach_user_id = str(uuid.uuid4()).replace("-", "")[:24]
+    pwd_hash = hash_password(request.coach_password)
+    coach_doc = {
+        "id": coach_user_id,
+        "email": coach_email,
+        "role": "coach",
+        "full_name": athlete.get("full_name", ""),
+        "first_name": athlete.get("first_name", ""),
+        "last_name": athlete.get("last_name", ""),
+        "fiscal_code": fiscal_code,
+        "date_of_birth": athlete.get("date_of_birth"),
+        "place_of_birth": athlete.get("place_of_birth"),
+        "country_of_birth": athlete.get("country_of_birth"),
+        "address": athlete.get("address"),
+        "city": athlete.get("city"),
+        "postal_code": athlete.get("postal_code"),
+        "province": athlete.get("province"),
+        "phone": athlete.get("phone"),
+        "society_id": athlete.get("society_id"),
+        "status": "approved",
+        "password_hash": pwd_hash,
+        "monthly_compensation": float(request.monthly_compensation or 0),
+        "is_compensated": True,
+        "coach_level": request.coach_level or "",
+        "assigned_teams": [request.team_id],
+        "contract_start_date": contract_start,
+        "contract_end_date": contract_end,
+        # 🔗 Link esplicito all'atleta PRO collegato (audit / future use)
+        "linked_athlete_id": athlete_id,
+        "promoted_from_athlete_id": athlete_id,
+        "promoted_at": datetime.utcnow(),
+        "promoted_by": current_user["id"],
+        "created_at": datetime.utcnow(),
+        "privacy_accepted": False,
+    }
+    await db.users.insert_one(coach_doc)
+    
+    # Audit log
+    logging.info(
+        f"[PROMOTE-COACH] Atleta {athlete_id} promosso a Coach (user_id={coach_user_id}, "
+        f"team={request.team_id}, monthly={request.monthly_compensation}€) da admin {current_user['id']}"
+    )
+    
+    return {
+        "message": "Atleta promosso a Coach con successo. Soglie cumulative attive automaticamente.",
+        "coach_user_id": coach_user_id,
+        "coach_email": coach_email,
+        "team_id": request.team_id,
+        "monthly_compensation": request.monthly_compensation,
+        "linked_athlete_id": athlete_id,
+    }
+
+
+@api_router.get("/admin/athletes/{athlete_id}/linked-coach")
+async def get_athlete_linked_coach(athlete_id: str, current_user = Depends(get_current_user)):
+    """Ritorna info sul coach collegato a un atleta PRO (se esiste).
+    Usato dall'UI per mostrare il badge "Anche Coach"."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    athlete = await db.athletes.find_one({"id": athlete_id}, {"_id": 0, "id": 1, "fiscal_code": 1, "email": 1, "society_id": 1})
+    if not athlete:
+        return {"linked": False}
+    coach = await _find_linked_compensated_user_for_athlete(athlete)
+    if not coach:
+        return {"linked": False}
+    # Resolve team names
+    team_names = []
+    if coach.get("assigned_teams"):
+        teams = await db.teams.find({"id": {"$in": coach["assigned_teams"]}}, {"_id": 0, "id": 1, "name": 1}).to_list(20)
+        team_names = [t.get("name", "") for t in teams]
+    return {
+        "linked": True,
+        "coach_user_id": coach["id"],
+        "coach_email": coach.get("email", ""),
+        "coach_name": coach.get("full_name", ""),
+        "monthly_compensation": coach.get("monthly_compensation", 0),
+        "assigned_teams": team_names,
+        "coach_level": coach.get("coach_level", ""),
+    }
+
+
 async def _record_external_compensation_declaration(
     user_id: str,
     year: int,
