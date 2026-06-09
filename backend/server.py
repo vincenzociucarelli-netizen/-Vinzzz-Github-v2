@@ -13815,13 +13815,16 @@ async def _get_signed_yearly_total_as_atleta_pro(athlete_id: str, year: int) -> 
 # │  🆕 FASE 2B — Promozione Atleta PRO a Coach (dual-role)     │
 # ╰──────────────────────────────────────────────────────────────╯
 class PromoteAthleteToCoachRequest(BaseModel):
-    coach_email: str  # email del nuovo account coach (deve essere diversa da quella atleta)
-    coach_password: str  # password temporanea (verrà comunicata manualmente all'atleta)
-    team_id: str  # squadra che il coach allenerà
-    monthly_compensation: float = 0.0  # compenso mensile come coach
-    coach_level: Optional[str] = None  # es. "1° livello FIPAV"
-    contract_start_date: Optional[str] = None  # default = oggi
-    contract_end_date: Optional[str] = None  # default = 30 giugno prossimo
+    # 🆕 email/password ora OPZIONALI: l'atleta usa SOLO la sua email atleta per il
+    # login; il coach viene creato con email interna alias (es. "alice.z@test.com#coach")
+    # mai usata per autenticarsi. Lo switch dal frontend usa SwitchAccountButton.
+    coach_email: Optional[str] = None  # legacy: se fornita, deve essere diversa dall'atleta
+    coach_password: Optional[str] = None  # legacy
+    team_id: str
+    monthly_compensation: float = 0.0
+    coach_level: Optional[str] = None
+    contract_start_date: Optional[str] = None
+    contract_end_date: Optional[str] = None
 
 
 @api_router.get("/auth/linked-accounts")
@@ -13935,23 +13938,42 @@ async def promote_athlete_to_coach(
             detail="Solo gli Atleti PRO (compensated) possono essere promossi a Coach. Imposta prima il tipo come 'Pro / Compensato'.",
         )
     
-    # Validazione email coach
-    coach_email = (request.coach_email or "").strip().lower()
-    if not coach_email or "@" not in coach_email:
-        raise HTTPException(status_code=400, detail="Email coach non valida")
-    if coach_email == (athlete.get("email") or "").lower():
-        raise HTTPException(
-            status_code=400,
-            detail="L'email del coach deve essere DIVERSA da quella dell'atleta (es. alice.coach@…). "
-                   "Le soglie cumulative verranno comunque calcolate insieme tramite il codice fiscale.",
-        )
-    existing_user = await db.users.find_one({"email": coach_email})
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Esiste già un utente con questa email")
+    athlete_email = (athlete.get("email") or "").lower().strip()
+    if not athlete_email:
+        raise HTTPException(status_code=400, detail="Atleta senza email — impossibile creare account coach collegato")
+
+    # 🆕 Default: il coach NON ha credenziali proprie. Userà SEMPRE quelle dell'atleta
+    # e farà lo switch dalla dashboard. L'email coach è un alias interno (#coach)
+    # che non interferisce con il login.
+    coach_email = (request.coach_email or "").strip().lower() or f"{athlete_email}#coach"
+    # Validation: solo se l'admin ha esplicitamente passato un'email "vera" (no alias #)
+    # la consideriamo come account separato (compat legacy).
+    is_alias = coach_email.endswith("#coach") or "#" in coach_email
+    if not is_alias:
+        if "@" not in coach_email:
+            raise HTTPException(status_code=400, detail="Email coach non valida")
+        if coach_email == athlete_email:
+            raise HTTPException(
+                status_code=400,
+                detail="Se vuoi usare l'email dell'atleta lascia il campo vuoto: il coach userà l'email atleta tramite lo switch.",
+            )
+        existing_user = await db.users.find_one({"email": coach_email})
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Esiste già un utente con questa email")
+    else:
+        # Per gli alias verifica solo che non ci sia già un coach collegato a questo atleta
+        existing_alias = await db.users.find_one({"linked_athlete_id": athlete_id, "role": "coach"})
+        if existing_alias:
+            raise HTTPException(status_code=400, detail="Atleta già promosso a Coach")
     
-    # Validazione password
-    if not request.coach_password or len(request.coach_password) < 6:
-        raise HTTPException(status_code=400, detail="La password deve avere almeno 6 caratteri")
+    # Password: solo se l'admin ha fornito una password "vera" (account separato).
+    # Altrimenti generiamo una random — non sarà mai usata per il login.
+    if request.coach_password:
+        if len(request.coach_password) < 6:
+            raise HTTPException(status_code=400, detail="La password deve avere almeno 6 caratteri")
+        password_to_hash = request.coach_password
+    else:
+        password_to_hash = uuid.uuid4().hex  # random, mai usata per login esterno
     
     # Validazione team
     team = await db.teams.find_one({"id": request.team_id, "society_id": athlete.get("society_id")})
@@ -13977,7 +13999,7 @@ async def promote_athlete_to_coach(
     
     # Crea l'account coach
     coach_user_id = str(uuid.uuid4()).replace("-", "")[:24]
-    pwd_hash = hash_password(request.coach_password)
+    pwd_hash = hash_password(password_to_hash)
     coach_doc = {
         "id": coach_user_id,
         "email": coach_email,
@@ -14034,10 +14056,48 @@ async def promote_athlete_to_coach(
     }
 
 
+@api_router.delete("/admin/athletes/{athlete_id}/promote-to-coach")
+async def unlink_athlete_coach(athlete_id: str, current_user = Depends(get_current_user)):
+    """🆕 Annulla la promozione: rimuove il record coach collegato all'atleta.
+    Utile per ri-promuovere con il nuovo flow (email/password atleta) atleti già
+    promossi col vecchio codice (es. Alice → alice.coach@…).
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    # Cerca per linked_athlete_id o tramite CF
+    coach = await db.users.find_one({
+        "$or": [
+            {"linked_athlete_id": athlete_id},
+            {"promoted_from_athlete_id": athlete_id},
+        ],
+        "role": "coach",
+    })
+    if not coach:
+        coach = await _find_linked_compensated_user_for_athlete(athlete)
+        if not coach:
+            raise HTTPException(status_code=404, detail="Nessun coach collegato")
+    coach_id = coach["id"]
+    # Soft check: il coach non deve avere quietanze firmate (per audit) — se le ha, blocca
+    has_signed = await db.coach_compensations.find_one(
+        {"coach_id": coach_id, "$or": [{"signed": True}, {"receipt_signed": True}]}
+    )
+    if has_signed:
+        raise HTTPException(
+            status_code=400,
+            detail="Il coach collegato ha quietanze firmate. Per integrità contabile non è possibile rimuoverlo.",
+        )
+    result = await db.users.delete_one({"id": coach_id})
+    logging.info(
+        f"[UNLINK-COACH] Rimosso coach {coach_id} (atleta {athlete_id}) da admin {current_user['id']}"
+    )
+    return {"message": "Promozione annullata", "removed_user_id": coach_id, "deleted": result.deleted_count}
+
+
 @api_router.get("/admin/athletes/{athlete_id}/linked-coach")
 async def get_athlete_linked_coach(athlete_id: str, current_user = Depends(get_current_user)):
-    """Ritorna info sul coach collegato a un atleta PRO (se esiste).
-    Usato dall'UI per mostrare il badge "Anche Coach"."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin")
     athlete = await db.athletes.find_one({"id": athlete_id}, {"_id": 0, "id": 1, "fiscal_code": 1, "email": 1, "society_id": 1})

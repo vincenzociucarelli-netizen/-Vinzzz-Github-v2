@@ -23,6 +23,39 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🆕 09/06/2026 — Login UNIFICATO per atleta+coach (una sola email)
+
+### Goal
+L'atleta dual-role usa SOLO la sua email atleta (es. `alice.z@test.com`) per il login. Lo switch al ruolo Coach avviene dalla dashboard, senza credenziali separate.
+
+### Backend (`server.py`)
+- **`POST /api/admin/athletes/{id}/promote-to-coach`**: campi `coach_email` e `coach_password` resi **opzionali**. Se omessi:
+  - email coach generata internamente come alias: `{email_atleta}#coach` (non valida per login esterno: il `#` fa fallire la validazione Pydantic email)
+  - password coach generata random (mai usata per login)
+- **`DELETE /api/admin/athletes/{id}/promote-to-coach`**: nuovo endpoint per **annullare la promozione** (rimuove il record coach collegato). Blocca se ci sono quietanze firmate. Utile per ri-promuovere atleti già promossi col vecchio codice (come Alice → `alice.coach@…`).
+
+### Frontend (`admin/athlete/[id].tsx`)
+- Modal **"Promuovi a Coach"** semplificato:
+  - Rimossi i campi Email Coach e Password Coach
+  - Testo aggiornato: "L'atleta userà le SUE stesse credenziali per il login"
+  - Solo campi richiesti: Squadra, Livello (opzionale), Compenso
+- Badge "Anche Coach (Doppio Ruolo)" ora ha **2 azioni**: "Apri scheda Coach →" e **"Annulla promozione"** (con conferma, blocca se ci sono quietanze firmate)
+
+### Test e2e (preview) ✅
+| Step | Risultato |
+|------|-----------|
+| Promote SENZA email/password | `coach_email: "unimail@test.com#coach"` (alias interno) |
+| Login con email atleta | `role: athlete` (NON coach) |
+| Tentativo login con alias `#coach` | **rifiutato** dal validatore Pydantic (`# invalid in email`) |
+| Switch dalla dashboard atleta | `role: coach` ✅ |
+| DELETE unlink | `deleted: 1, "Promozione annullata"` |
+
+### Workflow Alice (passo passo)
+1. Admin → Atleti → Alice → badge "Anche Coach" → clic **"Annulla promozione"** (rimuove l'attuale `alice.coach@test.com`)
+2. Stesso punto → bottone arancione "🎓 Aggiungi anche come Coach" → modal semplificato (solo squadra + compenso) → conferma
+3. Alice si logga con `alice.z@test.com` (unica email) + sua password atleta → vede il bottone **"Passa a Modalità Coach"** sotto l'header → click → entra in modalità Coach senza re-credenziali
+
+
 ## 🆕 09/06/2026 — Fix Switch dual-role + Dati Bancari coach Alice
 
 ### 🐛 Foto 1 — Click su "Passa a Modalità Atleta" → buttata fuori al login

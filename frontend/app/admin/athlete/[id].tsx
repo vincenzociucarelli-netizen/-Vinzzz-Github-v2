@@ -374,15 +374,15 @@ export default function AdminAthleteDetail() {
   };
 
   const submitPromoteToCoach = async () => {
-    if (!promoteCoachEmail || !promoteCoachPassword || !promoteCoachTeamId) {
-      Alert.alert('Dati mancanti', 'Compila email, password e squadra del coach.');
+    if (!promoteCoachTeamId) {
+      Alert.alert('Dati mancanti', 'Seleziona la squadra del coach.');
       return;
     }
     setPromoteCoachSubmitting(true);
     try {
       const res = await api.post(`/admin/athletes/${id}/promote-to-coach`, {
-        coach_email: promoteCoachEmail.trim().toLowerCase(),
-        coach_password: promoteCoachPassword,
+        // 🆕 Niente email/password: l'atleta userà SEMPRE le sue credenziali atleta
+        // e farà lo switch dalla dashboard
         team_id: promoteCoachTeamId,
         monthly_compensation: parseFloat(promoteCoachCompensation || '0') || 0,
         coach_level: promoteCoachLevel || null,
@@ -390,9 +390,9 @@ export default function AdminAthleteDetail() {
       setPromoteCoachModalVisible(false);
       Alert.alert(
         '✅ Atleta promosso a Coach',
-        `Account coach creato: ${res.data.coach_email}\n\n` +
-        'Le soglie cumulative €5K/€15K sono ora attive automaticamente. ' +
-        'Comunica la password temporanea all\'atleta affinché possa accedere come Coach.'
+        'L\'atleta userà le SUE credenziali atleta per il login. ' +
+        'Dalla sua dashboard troverà il pulsante "Passa a Modalità Coach". ' +
+        'Le soglie cumulative €5K/€15K sono ora attive automaticamente.'
       );
       await loadData();
     } catch (e: any) {
@@ -3185,13 +3185,37 @@ export default function AdminAthleteDetail() {
                       <Text style={{ fontSize: 11, color: '#666', marginTop: 6, fontStyle: 'italic' }}>
                         ✓ Soglie €5K/€15K calcolate cumulativamente (atleta + coach)
                       </Text>
-                      <TouchableOpacity
-                        data-testid="open-linked-coach-btn"
-                        onPress={() => router.push(`/admin/coach/${linkedCoach.coach_user_id}`)}
-                        style={{ marginTop: 8, alignSelf: 'flex-start' }}
-                      >
-                        <Text style={{ color: '#1976D2', fontWeight: '600' }}>Apri scheda Coach →</Text>
-                      </TouchableOpacity>
+                      <View style={{ flexDirection: 'row', marginTop: 8, gap: 12 }}>
+                        <TouchableOpacity
+                          data-testid="open-linked-coach-btn"
+                          onPress={() => router.push(`/admin/coach/${linkedCoach.coach_user_id}`)}
+                        >
+                          <Text style={{ color: '#1976D2', fontWeight: '600' }}>Apri scheda Coach →</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          data-testid="unlink-coach-btn"
+                          onPress={() => {
+                            Alert.alert(
+                              'Annulla promozione?',
+                              'Rimuoverò il profilo Coach collegato. Potrai ricrearlo subito col nuovo flow (login con email atleta). Quietanze già firmate impediscono la rimozione.',
+                              [
+                                { text: 'Annulla', style: 'cancel' },
+                                { text: 'Rimuovi', style: 'destructive', onPress: async () => {
+                                  try {
+                                    await api.delete(`/admin/athletes/${id}/promote-to-coach`);
+                                    setLinkedCoach(null);
+                                    Alert.alert('OK', 'Coach rimosso. Ora puoi ricreare la promozione col nuovo flow.');
+                                  } catch (e: any) {
+                                    Alert.alert('Errore', e?.response?.data?.detail || 'Rimozione fallita');
+                                  }
+                                }},
+                              ]
+                            );
+                          }}
+                        >
+                          <Text style={{ color: '#C62828', fontWeight: '600' }}>Annulla promozione</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   ) : (
                     <TouchableOpacity
@@ -3476,37 +3500,13 @@ export default function AdminAthleteDetail() {
               <Text style={[styles.modalTitle, { color: '#F57F17' }]}>Promuovi a Coach</Text>
             </View>
             <Text style={[styles.modalSubtitle, { marginBottom: 12 }]}>
-              Crea un secondo account Coach per <Text style={{ fontWeight: '700' }}>{athlete?.full_name}</Text>.
-              Le soglie €5K / €15K verranno calcolate cumulativamente (atleta + coach) automaticamente
-              tramite il codice fiscale.
+              Crea un secondo profilo Coach per <Text style={{ fontWeight: '700' }}>{athlete?.full_name}</Text>.{'\n'}
+              L'atleta userà <Text style={{ fontWeight: '700' }}>le SUE stesse credenziali</Text> per il login,
+              e dalla dashboard troverà il pulsante "Passa a Modalità Coach". Le soglie €5K/€15K vengono calcolate cumulativamente.
             </Text>
             <ScrollView style={{ maxHeight: 420 }}>
-              {/* Email coach */}
-              <Text style={{ fontWeight: '600', marginBottom: 4, marginTop: 4 }}>Email Coach *</Text>
-              <Text style={{ fontSize: 11, color: '#666', marginBottom: 4 }}>
-                Deve essere diversa da quella dell'atleta. La password andrà comunicata manualmente.
-              </Text>
-              <TextInput
-                data-testid="promote-coach-email-input"
-                value={promoteCoachEmail}
-                onChangeText={setPromoteCoachEmail}
-                placeholder="alice.coach@dominio.it"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                style={styles.input}
-              />
-              {/* Password */}
-              <Text style={{ fontWeight: '600', marginBottom: 4, marginTop: 12 }}>Password temporanea *</Text>
-              <TextInput
-                data-testid="promote-coach-password-input"
-                value={promoteCoachPassword}
-                onChangeText={setPromoteCoachPassword}
-                placeholder="Min. 6 caratteri"
-                secureTextEntry
-                style={styles.input}
-              />
               {/* Team */}
-              <Text style={{ fontWeight: '600', marginBottom: 4, marginTop: 12 }}>Squadra assegnata *</Text>
+              <Text style={{ fontWeight: '600', marginBottom: 4, marginTop: 4 }}>Squadra assegnata *</Text>
               <View style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8 }}>
                 <Picker
                   selectedValue={promoteCoachTeamId}
