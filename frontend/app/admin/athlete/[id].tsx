@@ -3535,13 +3535,28 @@ export default function AdminAthleteDetail() {
                   </Picker>
                 </View>
               ) : (
-                <TextInput
-                  data-testid="promote-coach-level-input"
-                  value={promoteCoachLevel}
-                  onChangeText={setPromoteCoachLevel}
-                  placeholder="es. 1° livello FIPAV"
-                  style={styles.input}
-                />
+                <View
+                  data-testid="promote-coach-no-levels-warning"
+                  style={{
+                    padding: 10, backgroundColor: '#FFF3E0',
+                    borderRadius: 8, borderWidth: 1, borderColor: '#F57C00',
+                  }}
+                >
+                  <Text style={{ fontSize: 12, color: '#E65100', marginBottom: 6 }}>
+                    Nessun livello configurato per la società. Aggiungili da
+                    Impostazioni → Altro → Livelli/Gradi Coach.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setPromoteCoachModalVisible(false);
+                      router.push('/admin/settings/other');
+                    }}
+                  >
+                    <Text style={{ color: '#1976D2', fontWeight: '600', fontSize: 13 }}>
+                      → Apri Impostazioni
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               )}
               {/* Compenso */}
               <Text style={{ fontWeight: '600', marginBottom: 4, marginTop: 12 }}>Compenso mensile coach (€)</Text>

@@ -255,19 +255,17 @@ export default function AthleteCompensation() {
 
   // Handle date input - keeps Italian format (DD/MM/YYYY) in state
   const handleDateInput = (text: string, setter: (val: string) => void) => {
-    // Remove any non-digit and non-slash characters
-    const cleaned = text.replace(/[^\d\/]/g, '');
+    // Strip TUTTI i caratteri non numerici (inclusi gli slash legacy),
+    // poi ricostruisci con gli slash nelle posizioni giuste.
+    // Questo permette di cancellare correttamente con il backspace senza
+    // che gli slash vengano re-inseriti automaticamente.
+    let cleaned = text.replace(/[^0-9]/g, '').slice(0, 8);
     let formatted = cleaned;
-    
-    // Auto-add slashes for better UX
-    if (cleaned.length === 2 && !cleaned.includes('/')) {
-      formatted = cleaned + '/';
-    } else if (cleaned.length === 5 && cleaned.split('/').length === 2) {
-      formatted = cleaned + '/';
+    if (cleaned.length > 4) {
+      formatted = `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}/${cleaned.slice(4)}`;
+    } else if (cleaned.length > 2) {
+      formatted = `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`;
     }
-    
-    // Keep the date in Italian format (DD/MM/YYYY)
-    // Conversion to ISO happens only during save
     setter(formatted);
   };
 

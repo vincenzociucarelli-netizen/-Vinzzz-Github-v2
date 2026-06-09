@@ -13970,6 +13970,11 @@ async def promote_athlete_to_coach(
         "postal_code": athlete.get("postal_code"),
         "province": athlete.get("province"),
         "phone": athlete.get("phone"),
+        # 🆕 Copy-over dati bancari dall'atleta (saranno comunque modificabili dal coach nel suo profilo)
+        "iban": athlete.get("iban", ""),
+        "iban_holder_first_name": athlete.get("iban_holder_first_name") or athlete.get("first_name", ""),
+        "iban_holder_last_name": athlete.get("iban_holder_last_name") or athlete.get("last_name", ""),
+        "bank_name": athlete.get("bank_name", ""),
         "society_id": athlete.get("society_id"),
         "status": "approved",
         "password_hash": pwd_hash,

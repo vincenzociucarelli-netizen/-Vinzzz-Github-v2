@@ -23,6 +23,26 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🆕 09/06/2026 — Fix bundle Admin/Atleta (3 bug)
+
+### 🐛 Bug 1 — Modal "Promuovi a Coach": livello/grado come TextInput libero
+**Causa:** se la società non aveva configurato `coach_license_levels` nei settings, il modal mostrava un TextInput libero ("es. 1° livello FIPAV") invece del Picker.
+**Fix:** rimosso il TextInput fallback. Ora se la lista è vuota appare un box arancione di warning con link **"→ Apri Impostazioni"** che porta a `/admin/settings/other` per configurare i livelli. Il Picker resta l'unico modo per scegliere un livello (coerenza con la registrazione coach standard).
+
+### 🐛 Bug 2 — Dati Bancari NON visibili sulla scheda Coach di Alice (post-promote)
+**Causa:** la funzione `promote-to-coach` non copiava IBAN / intestatario / banca dall'athlete record nel nuovo user record coach.
+**Fix backend:** ora il documento coach include `iban`, `iban_holder_first_name`, `iban_holder_last_name`, `bank_name` letti dall'atleta. Per atleti **già promossi** (come Alice) i dati non si sincronizzano retroattivamente — l'admin può:
+- aprire la scheda Coach → tasto "Modifica" → inserire IBAN
+- oppure Alice può usare lo switch → profilo coach → inserire IBAN nel suo profilo (campo `Dati Bancari` editabile)
+
+### 🐛 Bug 3 — Cancellazione bloccata dallo slash `/` nei campi data + doppio slash
+**Causa:** `handleDateInput` in `admin/athlete/[id]/compensation.tsx` preservava gli slash esistenti e ne aggiungeva di nuovi quando length==5 + split('/')==2 → ogni backspace sullo slash veniva immediatamente "ripristinato".
+**Fix:** riscritto come **digits-only** + ricostruzione. Ora:
+- "11/02/" → backspace → "11/02" ✅ (non si re-aggiunge `/`)
+- "31//05/202" → "31/05/202" ✅ (doppio slash sanitizzato)
+- Tutti gli scenari di cancellazione testati ✅
+
+
 ## 🆕 08/06/2026 — Switch dual-role Atleta ↔ Coach (un click, no re-login)
 
 ### Goal
