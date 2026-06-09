@@ -13800,6 +13800,95 @@ class PromoteAthleteToCoachRequest(BaseModel):
     contract_end_date: Optional[str] = None  # default = 30 giugno prossimo
 
 
+@api_router.get("/auth/linked-accounts")
+async def get_linked_accounts(current_user = Depends(get_current_user)):
+    """🆕 Switch dual-role: ritorna gli account collegati al user corrente
+    (atleta ↔ coach). Usato dal frontend per mostrare il bottone "Passa a Modalità X".
+    """
+    user_id = current_user["id"]
+    role = current_user.get("role")
+    linked = []
+
+    if role == "athlete" and current_user.get("athlete_id"):
+        # Cerca un coach collegato all'atleta (via promote-to-coach o stesso CF/email)
+        athlete = await db.athletes.find_one(
+            {"id": current_user["athlete_id"]},
+            {"_id": 0, "id": 1, "email": 1, "fiscal_code": 1, "society_id": 1},
+        )
+        if athlete:
+            coach = await _find_linked_compensated_user_for_athlete(athlete)
+            if coach and coach.get("id") != user_id:
+                linked.append({
+                    "user_id": coach["id"],
+                    "role": coach.get("role", "coach"),
+                    "email": coach.get("email", ""),
+                    "label": f"Modalità {(coach.get('role') or 'coach').capitalize()}",
+                })
+    elif role in ("coach", "dirigente", "collaboratore"):
+        # Cerca un atleta PRO collegato (via fiscal_code o linked_athlete_id)
+        user_full = await db.users.find_one(
+            {"id": user_id},
+            {"_id": 0, "id": 1, "email": 1, "fiscal_code": 1, "society_id": 1, "linked_athlete_id": 1},
+        )
+        if user_full:
+            ath = None
+            if user_full.get("linked_athlete_id"):
+                ath = await db.athletes.find_one({"id": user_full["linked_athlete_id"]})
+            if not ath:
+                ath = await _find_linked_athlete_pro_for_user(user_id)
+            if ath:
+                # Trova il user associato all'atleta
+                ath_user = await db.users.find_one(
+                    {"athlete_id": ath["id"], "role": "athlete"},
+                    {"_id": 0, "id": 1, "email": 1, "athlete_id": 1},
+                )
+                if ath_user and ath_user.get("id") != user_id:
+                    linked.append({
+                        "user_id": ath_user["id"],
+                        "role": "athlete",
+                        "email": ath_user.get("email", ""),
+                        "label": "Modalità Atleta",
+                    })
+    return {"current_role": role, "linked_accounts": linked}
+
+
+@api_router.post("/auth/switch-account")
+async def switch_to_linked_account(data: dict, current_user = Depends(get_current_user)):
+    """🆕 Genera un nuovo JWT per uno degli account collegati al user corrente
+    (atleta ↔ coach). Validazione: l'account target deve essere collegato (CF / linked fields).
+    """
+    target_user_id = (data or {}).get("target_user_id")
+    if not target_user_id:
+        raise HTTPException(status_code=400, detail="target_user_id richiesto")
+    if target_user_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Sei già su questo account")
+
+    # Verifica che il target sia effettivamente collegato
+    accounts = await get_linked_accounts(current_user)  # type: ignore
+    allowed = {a["user_id"] for a in accounts.get("linked_accounts", [])}
+    if target_user_id not in allowed:
+        raise HTTPException(status_code=403, detail="Account non collegato al tuo profilo")
+
+    target = await db.users.find_one({"id": target_user_id})
+    if not target:
+        raise HTTPException(status_code=404, detail="Account collegato non trovato")
+
+    # Stessa società (sicurezza ulteriore)
+    if target.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Account in società diversa")
+
+    new_token = create_token(
+        target["id"],
+        target.get("role", "athlete"),
+        athlete_id=target.get("athlete_id"),
+    )
+    logging.info(
+        f"[SWITCH-ACCOUNT] User {current_user['id']} ({current_user.get('role')}) "
+        f"→ {target['id']} ({target.get('role')})"
+    )
+    return {"token": new_token, "role": target.get("role"), "user_id": target["id"]}
+
+
 @api_router.post("/admin/athletes/{athlete_id}/promote-to-coach")
 async def promote_athlete_to_coach(
     athlete_id: str,

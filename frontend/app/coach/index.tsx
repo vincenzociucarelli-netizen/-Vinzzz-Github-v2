@@ -26,6 +26,7 @@ import { it } from 'date-fns/locale';
 import { SportIcon } from '../../src/components/SportIcon';
 import { OnboardingTutorial, COACH_STEPS } from '../../src/components/OnboardingTutorial';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import SwitchAccountButton from '../../src/components/SwitchAccountButton';
 
 // Web QR Scanner
 let Html5QrcodeScanner: any = null;
@@ -1267,6 +1268,9 @@ export default function CoachScreen() {
           <Ionicons name="log-out-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
+
+      {/* 🆕 Switch dual-role: Coach ↔ Atleta (visibile solo se collegato) */}
+      <SwitchAccountButton />
 
       {/* Banner richieste cancellazione in attesa */}
       {pendingDeletions.length > 0 && (

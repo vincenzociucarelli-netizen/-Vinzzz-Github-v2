@@ -22,6 +22,7 @@ import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
 import { SportIcon } from '../../src/components/SportIcon';
 import { OnboardingTutorial, ATHLETE_STEPS } from '../../src/components/OnboardingTutorial';
 import SignaturePadInline, { SignaturePadInlineRef } from '../../src/components/SignaturePadInline';
+import SwitchAccountButton from '../../src/components/SwitchAccountButton';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 const MONTH_NAMES = [
@@ -448,6 +449,9 @@ export default function AthleteScreen() {
             <Ionicons name="log-out-outline" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
+        
+        {/* 🆕 Switch dual-role: Atleta ↔ Coach (visibile solo se atleta promosso) */}
+        <SwitchAccountButton />
         
         {/* Compact Profile Header */}
         <View style={{ backgroundColor: '#fff', borderRadius: 12, marginHorizontal: 16, marginBottom: 12, padding: 14, borderWidth: 1, borderColor: '#e0e0e0' }}>

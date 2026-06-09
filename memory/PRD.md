@@ -23,6 +23,43 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🆕 08/06/2026 — Switch dual-role Atleta ↔ Coach (un click, no re-login)
+
+### Goal
+Replicare il pattern "Passa a Modalità Dirigente" del Dirigente/Admin anche per l'Atleta PRO che è stato promosso Coach. Un click → switch al dashboard del ruolo opposto senza re-login manuale.
+
+### Backend (`server.py`)
+- **`GET /api/auth/linked-accounts`**: ritorna gli account collegati al user corrente (atleta→coach o coach→atleta) tramite CF/email/società comune. Risposta: `{current_role, linked_accounts: [{user_id, role, email, label}]}`.
+- **`POST /api/auth/switch-account`**: prende `{target_user_id}`, valida che sia in `/auth/linked-accounts`, genera un nuovo JWT per il target. Ritorna `{token, role, user_id}`. Audit log `[SWITCH-ACCOUNT] User X (role) → Y (role)`.
+
+### Frontend
+- Nuovo componente `src/components/SwitchAccountButton.tsx` (mostrato solo se esiste un account collegato):
+  - Pillola colorata in base al ruolo target (azzurro per Coach, arancione per Atleta)
+  - Al click: POST `/auth/switch-account` → aggiorna `authStore` con nuovo token+user → `router.replace('/coach' o '/athlete')`
+  - `data-testid="switch-account-btn"`
+- Montato in:
+  - `app/athlete/index.tsx` (header dashboard atleta)
+  - `app/coach/index.tsx` (header dashboard coach)
+
+### Test e2e (preview) ✅
+| Direzione | Risultato |
+|-----------|-----------|
+| Atleta logato → `/auth/linked-accounts` | `linked_accounts: [{role: 'coach', label: 'Modalità Coach'}]` |
+| POST `/auth/switch-account` (athlete→coach) | nuovo JWT con `role: 'coach'` |
+| `/auth/me` col nuovo token | `role: coach, email: switch.coach@…` |
+| Coach → `/auth/linked-accounts` | `linked_accounts: [{role: 'athlete', label: 'Modalità Atleta'}]` (ritorno disponibile) |
+
+### Sicurezza
+- Lo switch verifica appartenenza alla **stessa società** + match via CF/email collegati (non possibile saltare ad account arbitrari)
+- Audit log su ogni switch (Render → cerca `[SWITCH-ACCOUNT]`)
+
+### UX risultante per Alice
+1. Alice si logga col suo account atleta (`alice.z@…`) → vede pillola azzurra **"Passa a Modalità Coach"** sotto l'header
+2. Click → ricarica come `/coach` senza inserire credenziali
+3. Dal dashboard coach vede pillola arancione **"Passa a Modalità Atleta"** per tornare
+4. **UN solo set di credenziali da memorizzare** dal punto di vista UX, anche se in DB esistono due account.
+
+
 ## 🆕 08/06/2026 — Fase 2B: UI Admin "Promuovi Atleta a Coach" (dual-role)
 
 ### Goal
