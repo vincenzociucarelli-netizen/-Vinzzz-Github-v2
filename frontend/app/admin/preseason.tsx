@@ -66,6 +66,7 @@ export default function PreseasonAdmin() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [responses, setResponses] = useState<ResponseItem[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>('all');
@@ -104,22 +105,39 @@ export default function PreseasonAdmin() {
     }
     setCreating(true);
     try {
-      await api.post('/preseason/campaigns', {
+      const payload = {
         title: newTitle.trim(),
         season: newSeason.trim(),
         description: newDesc.trim(),
         open_date: newOpenDate.trim() || null,
         close_date: newCloseDate.trim() || null,
-      });
+      };
+      if (editingId) {
+        await api.patch(`/preseason/campaigns/${editingId}`, payload);
+      } else {
+        await api.post('/preseason/campaigns', payload);
+      }
       setShowCreate(false);
+      setEditingId(null);
       setNewTitle(''); setNewSeason(''); setNewDesc(''); setNewOpenDate(''); setNewCloseDate('');
       loadCampaigns();
-      showAlert('Successo', 'Campagna creata!');
+      showAlert('Successo', editingId ? 'Campagna aggiornata!' : 'Campagna creata!');
     } catch (err: any) {
       showAlert('Errore', err.response?.data?.detail || 'Errore');
     } finally {
       setCreating(false);
     }
+  };
+
+  // 🆕 Apre il modal in modalità "modifica" pre-popolando i campi
+  const handleOpenEdit = (campaign: Campaign) => {
+    setEditingId(campaign.id);
+    setNewTitle(campaign.title || '');
+    setNewSeason(campaign.season || '');
+    setNewDesc(campaign.description || '');
+    setNewOpenDate(campaign.open_date || '');
+    setNewCloseDate(campaign.close_date || '');
+    setShowCreate(true);
   };
 
   const handleToggleActive = async (campaign: Campaign) => {
@@ -276,7 +294,7 @@ export default function PreseasonAdmin() {
         </View>
         <TouchableOpacity
           style={{ backgroundColor: '#0D47A1', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}
-          onPress={() => setShowCreate(true)}
+          onPress={() => { setEditingId(null); setNewTitle(''); setNewSeason(''); setNewDesc(''); setNewOpenDate(''); setNewCloseDate(''); setShowCreate(true); }}
           data-testid="create-campaign-btn"
         >
           <Ionicons name="add" size={18} color="#fff" />
@@ -397,6 +415,14 @@ export default function PreseasonAdmin() {
               >
                 <Ionicons name={c.is_active ? 'pause' : 'play'} size={14} color="#666" />
                 <Text style={{ fontSize: 12, fontWeight: '600', color: '#666' }}>{c.is_active ? 'Chiudi' : 'Riapri'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#E3F2FD', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}
+                onPress={() => handleOpenEdit(c)}
+                data-testid={`edit-campaign-${c.id}`}
+              >
+                <Ionicons name="create-outline" size={14} color="#1565C0" />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#1565C0' }}>Modifica</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFEBEE', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}
@@ -676,12 +702,14 @@ export default function PreseasonAdmin() {
       )}
 
       {/* Create Campaign Modal */}
-      <Modal visible={showCreate} animationType="fade" transparent onRequestClose={() => setShowCreate(false)}>
+      <Modal visible={showCreate} animationType="fade" transparent onRequestClose={() => { setShowCreate(false); setEditingId(null); }}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 440, overflow: 'hidden' }}>
             <View style={{ backgroundColor: '#0D47A1', paddingVertical: 14, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Nuova Campagna Pre-iscrizione</Text>
-              <TouchableOpacity onPress={() => setShowCreate(false)}>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>
+                {editingId ? 'Modifica Campagna Pre-iscrizione' : 'Nuova Campagna Pre-iscrizione'}
+              </Text>
+              <TouchableOpacity onPress={() => { setShowCreate(false); setEditingId(null); }}>
                 <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
@@ -717,7 +745,9 @@ export default function PreseasonAdmin() {
                 data-testid="confirm-create-campaign"
               >
                 {creating ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="megaphone" size={18} color="#fff" />}
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>{creating ? 'Creazione...' : 'Crea Campagna'}</Text>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                  {creating ? (editingId ? 'Salvataggio...' : 'Creazione...') : (editingId ? 'Salva Modifiche' : 'Crea Campagna')}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
