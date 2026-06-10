@@ -136,13 +136,8 @@ export default function PreseasonAdmin() {
       return;
     }
 
-    // Valida e converte date italiane gg/mm/aaaa in ISO per il backend
-    const openIso = newOpenDate.trim() ? italianToIsoDate(newOpenDate.trim()) : null;
+    // Valida e converte data chiusura italiana gg/mm/aaaa in ISO per il backend
     const closeIso = newCloseDate.trim() ? italianToIsoDate(newCloseDate.trim()) : null;
-    if (newOpenDate.trim() && !openIso) {
-      showAlert('Errore', 'Data di apertura non valida. Usa il formato gg/mm/aaaa');
-      return;
-    }
     if (newCloseDate.trim() && !closeIso) {
       showAlert('Errore', 'Data di chiusura non valida. Usa il formato gg/mm/aaaa');
       return;
@@ -154,7 +149,7 @@ export default function PreseasonAdmin() {
         title: newTitle.trim(),
         season: newSeason.trim(),
         description: newDesc.trim(),
-        open_date: openIso,
+        open_date: null,
         close_date: closeIso,
       };
       if (editingId) {
@@ -353,8 +348,10 @@ export default function PreseasonAdmin() {
           <View key={c.id} style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: c.is_active ? '#2E7D32' : '#999' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '800', color: '#1565C0', marginBottom: 4, letterSpacing: 0.3 }}>
+                  Stagione {c.season}
+                </Text>
                 <Text style={{ fontSize: 17, fontWeight: '700', color: '#0D47A1' }} data-testid={`campaign-title-${c.id}`}>{c.title}</Text>
-                <Text style={{ fontSize: 13, color: '#555', marginTop: 3 }}>Stagione {c.season}</Text>
               </View>
               <View style={{
                 backgroundColor: c.is_active ? '#E8F5E9' : '#F5F5F5',
@@ -369,9 +366,6 @@ export default function PreseasonAdmin() {
             {/* Descrizione mostrata a chi si iscrive */}
             {c.description ? (
               <View style={{ marginTop: 10, backgroundColor: '#F8F9FB', borderLeftWidth: 3, borderLeftColor: '#1565C0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#1565C0', marginBottom: 4, letterSpacing: 0.3 }}>
-                  MESSAGGIO MOSTRATO A CHI SI ISCRIVE
-                </Text>
                 <Text style={{ fontSize: 14, color: '#333', lineHeight: 20 }} data-testid={`campaign-description-${c.id}`}>
                   {c.description}
                 </Text>
@@ -785,38 +779,23 @@ export default function PreseasonAdmin() {
                 data-testid="new-campaign-desc"
               />
 
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={lbl}>Data apertura</Text>
-                  <TextInput
-                    style={inp}
-                    value={newOpenDate}
-                    onChangeText={(t) => setNewOpenDate(formatDateInput(t))}
-                    placeholder="gg/mm/aaaa"
-                    placeholderTextColor="#AAA"
-                    keyboardType="numeric"
-                    inputMode="numeric"
-                    maxLength={10}
-                    data-testid="new-campaign-open"
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={lbl}>Data chiusura</Text>
-                  <TextInput
-                    style={inp}
-                    value={newCloseDate}
-                    onChangeText={(t) => setNewCloseDate(formatDateInput(t))}
-                    placeholder="gg/mm/aaaa"
-                    placeholderTextColor="#AAA"
-                    keyboardType="numeric"
-                    inputMode="numeric"
-                    maxLength={10}
-                    data-testid="new-campaign-close"
-                  />
-                </View>
+              <View>
+                <Text style={lbl}>Data chiusura</Text>
+                <TextInput
+                  style={inp}
+                  value={newCloseDate}
+                  onChangeText={(t) => setNewCloseDate(formatDateInput(t))}
+                  placeholder="gg/mm/aaaa"
+                  placeholderTextColor="#AAA"
+                  keyboardType="numeric"
+                  inputMode="numeric"
+                  maxLength={10}
+                  data-testid="new-campaign-close"
+                />
               </View>
               <Text style={{ fontSize: 12, color: '#777', marginTop: 6, lineHeight: 16 }}>
-                Inserisci solo i numeri: le barre vengono aggiunte automaticamente (es. 01092026 → 01/09/2026).
+                Inserisci solo i numeri: le barre vengono aggiunte automaticamente (es. 01092026 → 01/09/2026).{'\n'}
+                La campagna è attiva dal momento della creazione fino alla data di chiusura.
               </Text>
 
               <TouchableOpacity
