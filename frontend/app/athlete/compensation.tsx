@@ -272,11 +272,23 @@ export default function AthleteCompensation() {
       const total = (currentYear === startYear) ? totalFromReceipts + priorComp : totalFromReceipts;
       setYearlyTotal(total);
       
-      // Athletes don't have a /threshold-status endpoint — soglie sono calcolate
-      // lato client da getProjectedThresholdMonths() che già usa records + externalByYear.
-      // Lasciamo thresholdStatus a null, evitando le chiamate non disponibili.
-      setThresholdStatus(null);
-      setThresholdStatus2026(null);
+      // Athletes hanno l'endpoint dedicato `/prime-squadre/athletes/{id}/threshold-status/{year}`.
+      // Carica i threshold per i 2 anni del contratto in parallelo (best-effort).
+      const startY = startYear;
+      const endY = endYear || startYear;
+      try {
+        const calls = [api.get(`/prime-squadre/athletes/${athleteId}/threshold-status/${startY}`).catch(() => null)];
+        if (endY && endY !== startY) {
+          calls.push(api.get(`/prime-squadre/athletes/${athleteId}/threshold-status/${endY}`).catch(() => null));
+        }
+        const tsResults = await Promise.all(calls);
+        setThresholdStatus(tsResults[0]?.data || null);
+        setThresholdStatus2026(tsResults[1]?.data || null);
+      } catch (err) {
+        console.log('Athlete threshold-status fetch failed (banners hidden)', err);
+        setThresholdStatus(null);
+        setThresholdStatus2026(null);
+      }
       
       // Apply external compensations result (loaded in parallel above)
       if (extResult?.data) {
