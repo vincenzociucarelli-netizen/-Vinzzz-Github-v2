@@ -3737,11 +3737,12 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
             need_iban = not (user.get("iban") or "").strip()
             need_holder = not (user.get("iban_holder_first_name") or user.get("iban_holder_last_name"))
             need_bank = not (user.get("bank_name") or "").strip()
-            if need_iban or need_holder or need_bank:
+            need_gender = not (user.get("gender") or "").strip()
+            if need_iban or need_holder or need_bank or need_gender:
                 linked_ath = await db.athletes.find_one(
                     {"id": user["linked_athlete_id"]},
                     {"_id": 0, "iban": 1, "iban_holder_first_name": 1,
-                     "iban_holder_last_name": 1, "bank_name": 1},
+                     "iban_holder_last_name": 1, "bank_name": 1, "gender": 1, "sesso": 1},
                 )
                 if linked_ath:
                     if need_iban and linked_ath.get("iban"):
@@ -3753,6 +3754,16 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
                             user["iban_holder_last_name"] = linked_ath["iban_holder_last_name"]
                     if need_bank and linked_ath.get("bank_name"):
                         user["bank_name"] = linked_ath["bank_name"]
+                    if need_gender:
+                        ath_g = linked_ath.get("gender") or linked_ath.get("sesso")
+                        if ath_g:
+                            user["gender"] = str(ath_g).upper()
+        
+        # 🆕 FIX: coach_license_level vs coach_level (alias retro-compat). Se il
+        # campo nuovo è vuoto ma il legacy esiste, esponilo via campo nuovo.
+        if user.get("role") in ("coach", "dirigente", "collaboratore"):
+            if not (user.get("coach_license_level") or "").strip() and user.get("coach_level"):
+                user["coach_license_level"] = user["coach_level"]
 
         # Flag account istituzionale (società) — usato dal frontend per:
         # - mostrare badge "Account Istituzionale"
@@ -14011,6 +14022,7 @@ async def promote_athlete_to_coach(
         "date_of_birth": athlete.get("date_of_birth"),
         "place_of_birth": athlete.get("place_of_birth"),
         "country_of_birth": athlete.get("country_of_birth"),
+        "gender": athlete.get("gender") or athlete.get("sesso") or None,
         "address": athlete.get("address"),
         "city": athlete.get("city"),
         "postal_code": athlete.get("postal_code"),
@@ -14026,6 +14038,9 @@ async def promote_athlete_to_coach(
         "password_hash": pwd_hash,
         "monthly_compensation": float(request.monthly_compensation or 0),
         "is_compensated": True,
+        # 🐛 FIX: il frontend coach/profile.tsx legge `coach_license_level`,
+        # NON `coach_level`. Salviamo ENTRAMBI per retro-compat.
+        "coach_license_level": request.coach_level or "",
         "coach_level": request.coach_level or "",
         "assigned_teams": [request.team_id],
         "contract_start_date": contract_start,
