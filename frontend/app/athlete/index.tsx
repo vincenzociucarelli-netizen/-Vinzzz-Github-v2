@@ -362,15 +362,25 @@ export default function AthleteScreen() {
     return months;
   };
 
+  // 🐛 FIX: il backend salva `month` come numero (1-12); il codice legacy lo
+  // confrontava con la stringa italiana "Settembre" → mai match → tutti i mesi
+  // firmati apparivano come "Tocca per firmare". Ora match flessibile.
+  const matchReceiptMonth = (r: any, monthInt: number): boolean => {
+    const monthName = MONTH_NAMES_FULL[monthInt];
+    if (typeof r.month === 'number') return r.month === monthInt;
+    if (typeof r.month === 'string') return r.month === monthName;
+    if (typeof r.month_name === 'string') return r.month_name === monthName;
+    return false;
+  };
+  const isReceiptSignedFlag = (r: any) => r?.signed === true || r?.receipt_signed === true;
+
   const isReceiptSigned = (year: number, month: number) => {
-    const monthName = MONTH_NAMES_FULL[month];
-    return receipts.some(r => r.year === year && r.month === monthName && r.signed);
+    return receipts.some(r => r.year === year && matchReceiptMonth(r, month) && isReceiptSignedFlag(r));
   };
 
   const getReceiptSignedDate = (year: number, month: number) => {
-    const monthName = MONTH_NAMES_FULL[month];
-    const receipt = receipts.find(r => r.year === year && r.month === monthName && r.signed);
-    return receipt?.signed_date;
+    const receipt = receipts.find(r => r.year === year && matchReceiptMonth(r, month) && isReceiptSignedFlag(r));
+    return receipt?.signed_date || receipt?.receipt_signed_date;
   };
 
   const isMonthAvailable = (year: number, month: number) => {

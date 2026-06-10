@@ -23,6 +23,42 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🆕 10/06/2026 — Bug FINALMENTE risolto: "Tocca per firmare" sui mesi firmati (athlete/index.tsx)
+
+### Root cause REALE (scoperta grazie agli screenshot DevTools dell'utente)
+Il bug NON era in `athlete/compensation.tsx` (quella pagina già funzionava perfettamente — Foto 1 confermava). Il bug era nella **pagina dashboard atleta `/athlete/index.tsx`** sezione "Riepilogo Quietanze".
+
+Codice incriminato in `isReceiptSigned` e `getReceiptSignedDate`:
+```js
+const monthName = MONTH_NAMES_FULL[month];  // → "Settembre"
+return receipts.some(r => r.year === year && r.month === monthName && r.signed);
+//                                            ^^^^^^^^^^^^^^^^^^^^^^^
+//   r.month è SEMPRE int (1-12) dal backend → mai === "Settembre" → mai trovato
+```
+
+L'utente vedeva tutti i 4 mesi del 2025 in stato pending. Al click veniva rediretto a `/athlete/compensation?month=9&year=2025` (pagina diversa) che usava `matchesMonth` corretto → mostrava i mesi firmati. Da qui il "magia dopo il tap".
+
+### Fix
+Riscritto il match in `athlete/index.tsx` con tolleranza multi-formato (numero / stringa italiana legacy / `month_name`) e supporto sia `signed` sia `receipt_signed`:
+```js
+const matchReceiptMonth = (r, monthInt) => {
+  if (typeof r.month === 'number') return r.month === monthInt;
+  if (typeof r.month === 'string') return r.month === MONTH_NAMES_FULL[monthInt];
+  if (typeof r.month_name === 'string') return r.month_name === MONTH_NAMES_FULL[monthInt];
+  return false;
+};
+const isReceiptSignedFlag = (r) => r?.signed === true || r?.receipt_signed === true;
+```
+
+### Test (Node) ✅
+- Settembre 2025 (numero 9) → signed ✓
+- Ottobre 2025 → signed ✓
+- Novembre 2025 (receipt_signed) → signed ✓
+- Dicembre 2025 → signed ✓
+- Gennaio 2025 (non in records) → unsigned ✓
+- Legacy "Settembre" stringa 2024 → signed ✓
+
+
 ## 🆕 09/06/2026 — Login UNIFICATO per atleta+coach (una sola email)
 
 ### Goal
