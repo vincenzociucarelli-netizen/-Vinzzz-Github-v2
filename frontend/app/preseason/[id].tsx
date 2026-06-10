@@ -167,7 +167,7 @@ export default function PublicPreseasonForm() {
             {campaign?.title}
           </Text>
           {campaign?.description ? (
-            <Text style={{ fontSize: 13, color: '#888', marginTop: 10, textAlign: 'center', lineHeight: 20, maxWidth: 380 }}>
+            <Text style={{ fontSize: 15, color: '#333', marginTop: 12, textAlign: 'center', lineHeight: 22, maxWidth: 500, paddingHorizontal: 8 }} data-testid="campaign-description-public">
               {campaign.description}
             </Text>
           ) : null}

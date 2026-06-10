@@ -366,6 +366,18 @@ export default function PreseasonAdmin() {
               </View>
             </View>
 
+            {/* Descrizione mostrata a chi si iscrive */}
+            {c.description ? (
+              <View style={{ marginTop: 10, backgroundColor: '#F8F9FB', borderLeftWidth: 3, borderLeftColor: '#1565C0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#1565C0', marginBottom: 4, letterSpacing: 0.3 }}>
+                  MESSAGGIO MOSTRATO A CHI SI ISCRIVE
+                </Text>
+                <Text style={{ fontSize: 14, color: '#333', lineHeight: 20 }} data-testid={`campaign-description-${c.id}`}>
+                  {c.description}
+                </Text>
+              </View>
+            ) : null}
+
             {/* Stats row */}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 12, flexWrap: 'wrap' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
