@@ -300,7 +300,11 @@ export default function PublicPreseasonForm() {
           {playedVolleyball === true && (
             <>
               <View style={{ marginBottom: 14 }}>
-                <Text style={labelStyle}>Gia iscritto nella societa?</Text>
+                <Text style={labelStyle}>
+                  {campaign?.society_name
+                    ? `Sei già stato/a iscritto/a a ${campaign.society_name}?`
+                    : 'Sei già stato/a iscritto/a in passato alla nostra società?'}
+                </Text>
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
                   <TouchableOpacity
                     style={[chipStyle, alreadyMember && chipActiveStyle]}
