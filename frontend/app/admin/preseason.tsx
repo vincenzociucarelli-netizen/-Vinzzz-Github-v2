@@ -61,6 +61,38 @@ const showAlert = (title: string, message: string) => {
   else { Alert.alert(title, message); }
 };
 
+// Auto-formatta input data come gg/mm/aaaa mentre l'utente digita
+const formatDateInput = (text: string): string => {
+  const digits = (text || '').replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+};
+
+// Converte data ISO (YYYY-MM-DD o YYYY-MM-DDTHH:..) in formato italiano gg/mm/aaaa
+const isoToItalianDate = (iso?: string | null): string => {
+  if (!iso) return '';
+  const datePart = String(iso).split('T')[0];
+  const m = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+  // Se è già in formato italiano, restituisci così com'è
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(datePart)) return datePart;
+  return '';
+};
+
+// Converte data italiana gg/mm/aaaa in ISO YYYY-MM-DD per il backend.
+// Restituisce null se incompleta/invalida.
+const italianToIsoDate = (it: string): string | null => {
+  if (!it) return null;
+  const m = it.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return null;
+  const day = parseInt(m[1], 10);
+  const month = parseInt(m[2], 10);
+  const year = parseInt(m[3], 10);
+  if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1900) return null;
+  return `${m[3]}-${m[2]}-${m[1]}`;
+};
+
 export default function PreseasonAdmin() {
   const router = useRouter();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -103,14 +135,27 @@ export default function PreseasonAdmin() {
       showAlert('Errore', 'Inserisci titolo e stagione');
       return;
     }
+
+    // Valida e converte date italiane gg/mm/aaaa in ISO per il backend
+    const openIso = newOpenDate.trim() ? italianToIsoDate(newOpenDate.trim()) : null;
+    const closeIso = newCloseDate.trim() ? italianToIsoDate(newCloseDate.trim()) : null;
+    if (newOpenDate.trim() && !openIso) {
+      showAlert('Errore', 'Data di apertura non valida. Usa il formato gg/mm/aaaa');
+      return;
+    }
+    if (newCloseDate.trim() && !closeIso) {
+      showAlert('Errore', 'Data di chiusura non valida. Usa il formato gg/mm/aaaa');
+      return;
+    }
+
     setCreating(true);
     try {
       const payload = {
         title: newTitle.trim(),
         season: newSeason.trim(),
         description: newDesc.trim(),
-        open_date: newOpenDate.trim() || null,
-        close_date: newCloseDate.trim() || null,
+        open_date: openIso,
+        close_date: closeIso,
       };
       if (editingId) {
         await api.patch(`/preseason/campaigns/${editingId}`, payload);
@@ -135,8 +180,8 @@ export default function PreseasonAdmin() {
     setNewTitle(campaign.title || '');
     setNewSeason(campaign.season || '');
     setNewDesc(campaign.description || '');
-    setNewOpenDate(campaign.open_date || '');
-    setNewCloseDate(campaign.close_date || '');
+    setNewOpenDate(isoToItalianDate(campaign.open_date));
+    setNewCloseDate(isoToItalianDate(campaign.close_date));
     setShowCreate(true);
   };
 
@@ -293,12 +338,12 @@ export default function PreseasonAdmin() {
           <Text style={{ fontSize: 20, fontWeight: '700', color: '#0D47A1' }}>Pre-iscrizioni</Text>
         </View>
         <TouchableOpacity
-          style={{ backgroundColor: '#0D47A1', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+          style={{ backgroundColor: '#0D47A1', borderRadius: 10, paddingHorizontal: 18, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}
           onPress={() => { setEditingId(null); setNewTitle(''); setNewSeason(''); setNewDesc(''); setNewOpenDate(''); setNewCloseDate(''); setShowCreate(true); }}
           data-testid="create-campaign-btn"
         >
-          <Ionicons name="add" size={18} color="#fff" />
-          <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Nuova Campagna</Text>
+          <Ionicons name="add" size={20} color="#fff" />
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Nuova Campagna</Text>
         </TouchableOpacity>
       </View>
 
@@ -315,52 +360,52 @@ export default function PreseasonAdmin() {
           <View key={c.id} style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: c.is_active ? '#2E7D32' : '#999' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: '#0D47A1' }} data-testid={`campaign-title-${c.id}`}>{c.title}</Text>
-                <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Stagione {c.season}</Text>
+                <Text style={{ fontSize: 17, fontWeight: '700', color: '#0D47A1' }} data-testid={`campaign-title-${c.id}`}>{c.title}</Text>
+                <Text style={{ fontSize: 13, color: '#555', marginTop: 3 }}>Stagione {c.season}</Text>
               </View>
               <View style={{
                 backgroundColor: c.is_active ? '#E8F5E9' : '#F5F5F5',
-                borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4,
+                borderRadius: 14, paddingHorizontal: 12, paddingVertical: 5,
               }}>
-                <Text style={{ fontSize: 11, fontWeight: '600', color: c.is_active ? '#2E7D32' : '#999' }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: c.is_active ? '#2E7D32' : '#999' }}>
                   {c.is_active ? 'Attiva' : 'Chiusa'}
                 </Text>
               </View>
             </View>
 
             {/* Stats row */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 10, flexWrap: 'wrap' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Ionicons name="people" size={16} color="#1565C0" />
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#1565C0' }}>{c.response_count}</Text>
-                <Text style={{ fontSize: 11, color: '#888' }}>risposte</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 12, flexWrap: 'wrap' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Ionicons name="people" size={18} color="#1565C0" />
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#1565C0' }}>{c.response_count}</Text>
+                <Text style={{ fontSize: 13, color: '#555' }}>risposte</Text>
               </View>
               {(c as any).missing_parents > 0 && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFF3E0', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>
-                  <Ionicons name="alert-circle" size={14} color="#E65100" />
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#E65100' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFF3E0', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+                  <Ionicons name="alert-circle" size={16} color="#E65100" />
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#E65100' }}>
                     {(c as any).missing_parents} genitori mancanti
                   </Text>
                 </View>
               )}
               {(c as any).missing_parents === 0 && (c as any).total_parents > 0 && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#E8F5E9', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>
-                  <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#2E7D32' }}>Tutti hanno risposto</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#E8F5E9', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+                  <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#2E7D32' }}>Tutti hanno risposto</Text>
                 </View>
               )}
               {c.close_date && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Ionicons name="calendar" size={14} color="#888" />
-                  <Text style={{ fontSize: 11, color: '#888' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <Ionicons name="calendar" size={16} color="#555" />
+                  <Text style={{ fontSize: 13, color: '#555' }}>
                     Scade: {new Date(c.close_date).toLocaleDateString('it-IT')}
                   </Text>
                 </View>
               )}
               {c.last_notification_sent && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Ionicons name="notifications" size={14} color="#6A1B9A" />
-                  <Text style={{ fontSize: 11, color: '#6A1B9A' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <Ionicons name="notifications" size={16} color="#6A1B9A" />
+                  <Text style={{ fontSize: 13, color: '#6A1B9A' }}>
                     Notifiche: {c.notification_count || 0}x
                   </Text>
                 </View>
@@ -368,122 +413,122 @@ export default function PreseasonAdmin() {
             </View>
 
             {/* Actions */}
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
               <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#E3F2FD', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E3F2FD', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 }}
                 onPress={() => viewResponses(c)}
                 data-testid={`view-responses-${c.id}`}
               >
-                <Ionicons name="list" size={14} color="#1565C0" />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: '#1565C0' }}>Risposte</Text>
+                <Ionicons name="list" size={16} color="#1565C0" />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#1565C0' }}>Risposte</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#E8F5E9', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E8F5E9', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 }}
                 onPress={() => handleExport(c.id)}
                 data-testid={`export-${c.id}`}
               >
-                <Ionicons name="download-outline" size={14} color="#2E7D32" />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: '#2E7D32' }}>CSV</Text>
+                <Ionicons name="download-outline" size={16} color="#2E7D32" />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#2E7D32' }}>CSV</Text>
               </TouchableOpacity>
               {c.is_active && (
                 <TouchableOpacity
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EDE7F6', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, opacity: sendingNotifications === c.id ? 0.6 : 1 }}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#EDE7F6', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, opacity: sendingNotifications === c.id ? 0.6 : 1 }}
                   onPress={() => handleSendNotifications(c)}
                   disabled={sendingNotifications === c.id}
                   data-testid={`send-notifications-${c.id}`}
                 >
                   {sendingNotifications === c.id ? (
-                    <ActivityIndicator size={14} color="#6A1B9A" />
+                    <ActivityIndicator size={16} color="#6A1B9A" />
                   ) : (
-                    <Ionicons name="notifications-outline" size={14} color="#6A1B9A" />
+                    <Ionicons name="notifications-outline" size={16} color="#6A1B9A" />
                   )}
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#6A1B9A' }}>Notifica</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#6A1B9A' }}>Notifica</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFF3E0', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF3E0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 }}
                 onPress={() => copyLink(c.id)}
                 data-testid={`copy-link-${c.id}`}
               >
-                <Ionicons name="link" size={14} color="#E65100" />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: '#E65100' }}>Link</Text>
+                <Ionicons name="link" size={16} color="#E65100" />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#E65100' }}>Link</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F5F5F5', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F5F5F5', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 }}
                 onPress={() => handleToggleActive(c)}
                 data-testid={`toggle-active-${c.id}`}
               >
-                <Ionicons name={c.is_active ? 'pause' : 'play'} size={14} color="#666" />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: '#666' }}>{c.is_active ? 'Chiudi' : 'Riapri'}</Text>
+                <Ionicons name={c.is_active ? 'pause' : 'play'} size={16} color="#666" />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#666' }}>{c.is_active ? 'Chiudi' : 'Riapri'}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#E3F2FD', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E3F2FD', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 }}
                 onPress={() => handleOpenEdit(c)}
                 data-testid={`edit-campaign-${c.id}`}
               >
-                <Ionicons name="create-outline" size={14} color="#1565C0" />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: '#1565C0' }}>Modifica</Text>
+                <Ionicons name="create-outline" size={16} color="#1565C0" />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#1565C0' }}>Modifica</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFEBEE', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFEBEE', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 }}
                 onPress={() => handleDelete(c)}
                 data-testid={`delete-campaign-${c.id}`}
               >
-                <Ionicons name="trash-outline" size={14} color="#C62828" />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: '#C62828' }}>Elimina</Text>
+                <Ionicons name="trash-outline" size={16} color="#C62828" />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#C62828' }}>Elimina</Text>
               </TouchableOpacity>
             </View>
 
             {/* Auto-Reminders Section */}
             {c.is_active && (
-              <View style={{ marginTop: 12, backgroundColor: '#FAFAFA', borderRadius: 8, padding: 12 }}>
+              <View style={{ marginTop: 14, backgroundColor: '#FAFAFA', borderRadius: 10, padding: 14 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="alarm-outline" size={16} color={c.auto_reminders_enabled ? '#E65100' : '#999'} />
-                    <Text style={{ fontSize: 12, fontWeight: '600', color: c.auto_reminders_enabled ? '#E65100' : '#999' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Ionicons name="alarm-outline" size={18} color={c.auto_reminders_enabled ? '#E65100' : '#999'} />
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: c.auto_reminders_enabled ? '#E65100' : '#666' }}>
                       Promemoria automatici
                     </Text>
                   </View>
                   <TouchableOpacity
                     style={{
                       backgroundColor: c.auto_reminders_enabled ? '#E65100' : '#DDD',
-                      borderRadius: 12, width: 44, height: 24, justifyContent: 'center',
-                      paddingHorizontal: 2,
+                      borderRadius: 14, width: 52, height: 28, justifyContent: 'center',
+                      paddingHorizontal: 3,
                     }}
                     onPress={() => handleToggleReminders(c)}
                     disabled={togglingReminders === c.id}
                     data-testid={`toggle-reminders-${c.id}`}
                   >
                     <View style={{
-                      width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff',
+                      width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff',
                       alignSelf: c.auto_reminders_enabled ? 'flex-end' : 'flex-start',
                     }} />
                   </TouchableOpacity>
                 </View>
                 {c.auto_reminders_enabled && (
-                  <View style={{ marginTop: 8 }}>
-                    <Text style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>Frequenza invio:</Text>
-                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                  <View style={{ marginTop: 12 }}>
+                    <Text style={{ fontSize: 13, color: '#555', marginBottom: 8, fontWeight: '600' }}>Frequenza invio:</Text>
+                    <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                       {[3, 5, 7, 14].map(days => (
                         <TouchableOpacity
                           key={days}
                           style={{
                             backgroundColor: (c.reminder_frequency_days || 7) === days ? '#E65100' : '#EEE',
-                            borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4,
+                            borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8,
                           }}
                           onPress={() => handleChangeFrequency(c, days)}
                         >
                           <Text style={{
-                            fontSize: 11, fontWeight: '600',
-                            color: (c.reminder_frequency_days || 7) === days ? '#fff' : '#666',
+                            fontSize: 13, fontWeight: '700',
+                            color: (c.reminder_frequency_days || 7) === days ? '#fff' : '#555',
                           }}>
-                            {days}gg
+                            {days} giorni
                           </Text>
                         </TouchableOpacity>
                       ))}
                     </View>
                     {c.last_auto_reminder_sent && (
-                      <Text style={{ fontSize: 10, color: '#AAA', marginTop: 6 }}>
+                      <Text style={{ fontSize: 13, color: '#555', marginTop: 10, lineHeight: 18 }}>
                         Ultimo invio: {new Date(c.last_auto_reminder_sent).toLocaleDateString('it-IT')} ({c.auto_reminder_count || 0}x)
                       </Text>
                     )}
@@ -726,13 +771,36 @@ export default function PreseasonAdmin() {
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={lbl}>Data apertura</Text>
-                  <TextInput style={inp} value={newOpenDate} onChangeText={setNewOpenDate} placeholder="AAAA-MM-GG" data-testid="new-campaign-open" />
+                  <TextInput
+                    style={inp}
+                    value={newOpenDate}
+                    onChangeText={(t) => setNewOpenDate(formatDateInput(t))}
+                    placeholder="gg/mm/aaaa"
+                    placeholderTextColor="#AAA"
+                    keyboardType="numeric"
+                    inputMode="numeric"
+                    maxLength={10}
+                    data-testid="new-campaign-open"
+                  />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={lbl}>Data chiusura</Text>
-                  <TextInput style={inp} value={newCloseDate} onChangeText={setNewCloseDate} placeholder="AAAA-MM-GG" data-testid="new-campaign-close" />
+                  <TextInput
+                    style={inp}
+                    value={newCloseDate}
+                    onChangeText={(t) => setNewCloseDate(formatDateInput(t))}
+                    placeholder="gg/mm/aaaa"
+                    placeholderTextColor="#AAA"
+                    keyboardType="numeric"
+                    inputMode="numeric"
+                    maxLength={10}
+                    data-testid="new-campaign-close"
+                  />
                 </View>
               </View>
+              <Text style={{ fontSize: 12, color: '#777', marginTop: 6, lineHeight: 16 }}>
+                Inserisci solo i numeri: le barre vengono aggiunte automaticamente (es. 01092026 → 01/09/2026).
+              </Text>
 
               <TouchableOpacity
                 style={{

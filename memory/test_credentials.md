@@ -2,7 +2,7 @@
 
 ## Admin (persona fisica - può firmare come LR o autorizzato)
 - Email: vincenzo.ciucarelli@gmail.com
-- Password: Test123
+- Password: Test1234
 
 ## Admin (account intestato alla SOCIETÀ - NON può firmare come LR)
 - Email: pallavoloperugia@gmail.com

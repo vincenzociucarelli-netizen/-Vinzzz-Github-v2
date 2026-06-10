@@ -23,6 +23,26 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Luca Bianchi: padre di Marco e Laura, registrato via invito
 - Atleti: Giulia Rossi, Sara Rossi, Marco Bianchi (Belgio), Laura Bianchi (Danimarca)
 
+## 🆕 10/06/2026 — UX Pre-iscrizioni Admin (admin/preseason.tsx)
+
+### Cosa è stato fatto
+1. **Auto-formattazione date `gg/mm/aaaa`**: inserendo solo numeri (es. `01092026`), gli slash vengono aggiunti automaticamente (`01/09/2026`). Funziona sia in creazione che in modifica. Helper `formatDateInput`, `isoToItalianDate`, `italianToIsoDate`.
+2. **Conversione ISO ↔ Italiano**: il backend continua a ricevere/restituire ISO `YYYY-MM-DD`, ma l'utente vede sempre `gg/mm/aaaa`.
+3. **Validazione**: data non valida → alert "Data di apertura non valida. Usa il formato gg/mm/aaaa".
+4. **Pulsanti card più grandi e leggibili**: paddingHorizontal 10→14, paddingVertical 6→10, fontSize 12→13, icone 14→16. Pulsante "+ Nuova Campagna" anch'esso più visibile.
+5. **Sezione "Promemoria automatici" leggibile**: testo "Ultimo invio" passato da fontSize 10 colore `#AAA` (illeggibile) a fontSize 13 colore `#555`. Toggle ingrandito (44x24 → 52x28). Bottoni frequenza più cliccabili.
+6. **Stats row card leggibili**: numeri "15 risposte", "30 genitori mancanti", "Scade: ...", "Notifiche: 1x" portati da fontSize 11 a 13/15, colore `#888` → `#555`.
+7. **Nota informativa sotto le date**: "Inserisci solo i numeri: le barre vengono aggiunte automaticamente (es. 01092026 → 01/09/2026)."
+
+### File modificato
+- `/app/frontend/app/admin/preseason.tsx`
+
+### Note tecniche operative
+- Expo è in modalità **static serve** (`npx serve -s dist`), non dev server. Per applicare modifiche al frontend bisogna fare `npx expo export -p web --output-dir dist-new`, copiare il contenuto in `dist/` e `sudo supervisorctl restart expo`.
+- Password Admin Vincenzo Ciucarelli verificata: `Test1234` (test_credentials.md aggiornato di conseguenza).
+
+## Credenziali Test (famiglia allargata) — DUPLICATO STORICO
+
 ## 🆕 10/06/2026 — Bug FINALMENTE risolto: "Tocca per firmare" sui mesi firmati (athlete/index.tsx)
 
 ### Root cause REALE (scoperta grazie agli screenshot DevTools dell'utente)
