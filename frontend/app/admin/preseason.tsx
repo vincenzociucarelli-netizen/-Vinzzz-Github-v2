@@ -325,7 +325,8 @@ export default function PreseasonAdmin() {
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: '#F5F7FA' }} contentContainerStyle={{ padding: 16 }}>
+    <View style={{ flex: 1, backgroundColor: '#F5F7FA' }}>
+    <ScrollView style={{ flex: 1, backgroundColor: '#F5F7FA' }} contentContainerStyle={{ padding: 16, paddingBottom: 110 }}>
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -337,14 +338,6 @@ export default function PreseasonAdmin() {
         </TouchableOpacity>
           <Text style={{ fontSize: 20, fontWeight: '700', color: '#0D47A1' }}>Pre-iscrizioni</Text>
         </View>
-        <TouchableOpacity
-          style={{ backgroundColor: '#0D47A1', borderRadius: 10, paddingHorizontal: 18, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}
-          onPress={() => { setEditingId(null); setNewTitle(''); setNewSeason(''); setNewDesc(''); setNewOpenDate(''); setNewCloseDate(''); setShowCreate(true); }}
-          data-testid="create-campaign-btn"
-        >
-          <Ionicons name="add" size={20} color="#fff" />
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Nuova Campagna</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Campaigns List */}
@@ -766,7 +759,19 @@ export default function PreseasonAdmin() {
               <TextInput style={inp} value={newSeason} onChangeText={setNewSeason} placeholder="Es: 2026/2027" data-testid="new-campaign-season" />
 
               <Text style={lbl}>Descrizione</Text>
-              <TextInput style={[inp, { height: 60 }]} value={newDesc} onChangeText={setNewDesc} placeholder="Testo introduttivo (opzionale)" multiline data-testid="new-campaign-desc" />
+              <Text style={{ fontSize: 12, color: '#777', marginTop: -2, marginBottom: 6, lineHeight: 16 }}>
+                Questo testo viene mostrato a chi si iscrive: scrivi qualcosa di accogliente e chiaro.
+              </Text>
+              <TextInput
+                style={[inp, { minHeight: 130, height: 130, textAlignVertical: 'top', paddingTop: 10, paddingBottom: 10 }]}
+                value={newDesc}
+                onChangeText={setNewDesc}
+                placeholder="Es. Ciao! Ti proponiamo una pre-iscrizione non vincolante per organizzare al meglio la prossima stagione."
+                placeholderTextColor="#AAA"
+                multiline
+                numberOfLines={6}
+                data-testid="new-campaign-desc"
+              />
 
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <View style={{ flex: 1 }}>
@@ -822,6 +827,34 @@ export default function PreseasonAdmin() {
         </View>
       </Modal>
     </ScrollView>
+
+    {/* Floating Action Button - Nuova Campagna */}
+    <TouchableOpacity
+      style={{
+        position: 'absolute',
+        right: 20,
+        bottom: 24,
+        backgroundColor: '#0D47A1',
+        borderRadius: 28,
+        paddingHorizontal: 20,
+        paddingVertical: 14,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+        zIndex: 100,
+      }}
+      onPress={() => { setEditingId(null); setNewTitle(''); setNewSeason(''); setNewDesc(''); setNewOpenDate(''); setNewCloseDate(''); setShowCreate(true); }}
+      data-testid="create-campaign-btn"
+    >
+      <Ionicons name="add-circle" size={22} color="#fff" />
+      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Nuova Campagna</Text>
+    </TouchableOpacity>
+    </View>
   );
 }
 
