@@ -16,6 +16,31 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 11/06/2026 — P1: Fix PDF retroattivo soglia €5K/€15K (firme fuori ordine)
+
+### Problema
+Le firme di quietanze fatte fuori ordine cronologico (es. firma Settembre prima, Gennaio dopo) NON generavano il PDF di soglia €5K/€15K per il mese che cronologicamente attraversava la soglia. La query MongoDB usava `"month": {"$lt": request.month}` ignorando i mesi successivi già firmati.
+
+### Fix
+1. **Nuovo helper** `_detect_threshold_crossings_chronological()` in `server.py` (~riga 13824):
+   - Costruisce mappa `monthly: dict[1..12]` con importi firmati + nuovo importo + prior + external
+   - Scorre cronologicamente i 12 mesi e individua il primo mese in cui il cumulativo attraversa 5K e 15K
+   - Ritorna `(month_5k, month_15k)` o `None`
+2. **3 endpoint patchati** con la stessa logica:
+   - Coach signing (riga ~14531)
+   - Dirigente signing (riga ~19684)
+   - Collaboratore signing (riga ~20429, gestisce 2 collezioni `collaboratore_compensations` + `coach_compensations`)
+3. Query MongoDB cambiata: `"month": {"$lt": request.month}` → `"month": {"$ne": request.month}` (recupera tutte le firme dell'anno, esclude solo il mese corrente)
+
+### Test
+- `/app/backend/tests/test_threshold_chronological.py` con 7 test pytest, tutti passati ✅
+- Casi coperti: firme sequenziali, retroattive, prior+external imputati a gennaio, soglia 15K, no superamento
+
+### Limitazione
+Il fix è **forward-looking**: si applica solo alle NUOVE firme. Per casi storici (es. il gennaio mancante di Alice in produzione) bisogna:
+- Eliminare il record `coach_compensations` di Gennaio 2025 di Alice
+- Ri-firmare Gennaio dal frontend → il nuovo helper genererà il PDF €5K correttamente
+
 ## Credenziali Test (famiglia allargata)
 - Admin: `vincenzo.ciucarelli@gmail.com`
 - Mario Rossi: `mario@test.com` (padre di Giulia + Sara)

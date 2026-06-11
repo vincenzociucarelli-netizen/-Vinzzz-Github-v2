@@ -13822,6 +13822,47 @@ async def _get_signed_yearly_total_as_atleta_pro(athlete_id: str, year: int) -> 
         return 0.0
 
 
+def _detect_threshold_crossings_chronological(
+    signed_by_month: dict,
+    new_month: int,
+    new_amount: float,
+    prior_compensation: float = 0.0,
+    external_total: float = 0.0,
+):
+    """
+    Calcola in quale mese cronologico (1..12) il cumulativo annuo attraversa la soglia
+    €5.000 e €15.000, considerando TUTTI i mesi firmati (anche quelli successivi al mese
+    che si sta firmando ora) per gestire correttamente le firme retroattive fuori ordine.
+
+    Args:
+        signed_by_month: dict {mese -> importo già firmato per quel mese, ESCLUSO new_month}
+        new_month: mese (1..12) che si sta firmando ora
+        new_amount: importo della firma corrente
+        prior_compensation: compenso pregresso dichiarato (contato come gennaio, proxy)
+        external_total: totale compensi esterni anno (contato come gennaio, proxy)
+
+    Returns:
+        tuple (month_5k, month_15k): mese cronologico in cui si è superata ciascuna soglia,
+        oppure None se non superata.
+    """
+    monthly = {m: float(signed_by_month.get(m, 0) or 0) for m in range(1, 13)}
+    monthly[new_month] = monthly.get(new_month, 0) + float(new_amount or 0)
+    # Prior compensation ed external: imputati a gennaio (sono "ricevuti" prima del primo mese sportivo)
+    monthly[1] = monthly.get(1, 0) + float(prior_compensation or 0) + float(external_total or 0)
+
+    cumulative = 0.0
+    month_5k = None
+    month_15k = None
+    for m in range(1, 13):
+        prev = cumulative
+        cumulative += monthly[m]
+        if month_5k is None and cumulative > 5000 and prev <= 5000:
+            month_5k = m
+        if month_15k is None and cumulative > 15000 and prev <= 15000:
+            month_15k = m
+    return (month_5k, month_15k)
+
+
 # ╭──────────────────────────────────────────────────────────────╮
 # │  🆕 FASE 2B — Promozione Atleta PRO a Coach (dual-role)     │
 # ╰──────────────────────────────────────────────────────────────╯
@@ -14527,15 +14568,17 @@ async def sign_compensation_receipt(
     prior_compensation = coach.get("other_annual_compensation", 0) or 0
     
     # Calculate yearly totals to check thresholds
-    # IMPORTANT: Exclude the current month from calculation to avoid counting it twice
+    # 🆕 FIX P1: recuperiamo TUTTE le firme dell'anno (escluso solo il mese che si sta firmando ora)
+    # per gestire correttamente le firme retroattive fuori ordine cronologico.
     yearly_records = await db.coach_compensations.find({
         "coach_id": coach_id,
         "year": request.year,
-        "receipt_signed": True,  # Only count already SIGNED receipts
-        "month": {"$lt": request.month}  # Only months BEFORE this one (chronological order)
+        "receipt_signed": True,
+        "month": {"$ne": request.month}
     }).to_list(12)
     
-    yearly_total_from_receipts = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
+    signed_by_month = {r["month"]: float(r.get("amount_gross", r.get("amount", 0)) or 0) for r in yearly_records}
+    yearly_total_from_receipts = sum(signed_by_month.values())
     
     # Add prior compensation to the first year of contract
     contract_start = coach.get("contract_start_date")
@@ -14571,10 +14614,19 @@ async def sign_compensation_receipt(
     deductions = 0.0
     
     # Determina se QUESTA è la prima volta che si supera €5.000 o €15.000
-    # Il backend deve calcolare questo, non affidarsi al frontend
-    # NOTA: superamento scatta da OLTRE la soglia (€5.001 e €15.001)
-    first_time_exceeded_5000 = (new_total > 5000 and yearly_total <= 5000)
-    first_time_exceeded_15000 = (new_total > 15000 and yearly_total <= 15000)
+    # 🆕 FIX P1: usa calcolo cronologico cumulativo per gestire correttamente le firme
+    # retroattive fuori ordine. La soglia "scatta" nel mese che CRONOLOGICAMENTE attraversa
+    # il limite, non nel mese in cui viene firmato in DB.
+    prior_for_year = prior_compensation if (contract_start_year and request.year == contract_start_year) else 0
+    month_5k, month_15k = _detect_threshold_crossings_chronological(
+        signed_by_month=signed_by_month,
+        new_month=request.month,
+        new_amount=request.amount_gross,
+        prior_compensation=prior_for_year,
+        external_total=external_year_total,
+    )
+    first_time_exceeded_5000 = (month_5k == request.month)
+    first_time_exceeded_15000 = (month_15k == request.month)
     
     # Log per debug
     logging.info(f"Threshold check: yearly_total={yearly_total}, new_total={new_total}, first_5k={first_time_exceeded_5000}, first_15k={first_time_exceeded_15000}")
@@ -19680,15 +19732,17 @@ async def sign_dirigente_compensation_receipt(
     prior_compensation = dirigente.get("other_annual_compensation", 0) or 0
     
     # Calculate yearly totals to check thresholds
-    # IMPORTANT: Exclude the current month from calculation to avoid counting it twice
+    # 🆕 FIX P1: recupera TUTTE le firme dell'anno (escluso solo il mese corrente) per
+    # gestire correttamente le firme retroattive fuori ordine cronologico.
     yearly_records = await db.dirigente_compensations.find({
         "dirigente_id": dirigente_id,
         "year": request.year,
-        "receipt_signed": True,  # Only count already SIGNED receipts
-        "month": {"$lt": request.month}  # Only months BEFORE this one (chronological order)
+        "receipt_signed": True,
+        "month": {"$ne": request.month}
     }).to_list(12)
     
-    yearly_total_from_receipts = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
+    signed_by_month = {r["month"]: float(r.get("amount_gross", r.get("amount", 0)) or 0) for r in yearly_records}
+    yearly_total_from_receipts = sum(signed_by_month.values())
     
     # Add prior compensation to the first year of contract
     contract_start = dirigente.get("contract_start_date")
@@ -19723,9 +19777,17 @@ async def sign_dirigente_compensation_receipt(
     deductions = 0.0
     
     # Determina se QUESTA è la prima volta che si supera €5.000 o €15.000
-    # NOTA: superamento scatta da OLTRE la soglia (€5.001 e €15.001)
-    first_time_exceeded_5000 = (new_total > 5000 and yearly_total <= 5000)
-    first_time_exceeded_15000 = (new_total > 15000 and yearly_total <= 15000)
+    # 🆕 FIX P1: usa calcolo cronologico cumulativo (gestisce firme retroattive fuori ordine).
+    prior_for_year = prior_compensation if (contract_start_year and request.year == contract_start_year) else 0
+    month_5k, month_15k = _detect_threshold_crossings_chronological(
+        signed_by_month=signed_by_month,
+        new_month=request.month,
+        new_amount=request.amount_gross,
+        prior_compensation=prior_for_year,
+        external_total=external_year_total,
+    )
+    first_time_exceeded_5000 = (month_5k == request.month)
+    first_time_exceeded_15000 = (month_15k == request.month)
     
     logging.info(f"Dirigente threshold check: yearly_total={yearly_total}, new_total={new_total}, first_5k={first_time_exceeded_5000}, first_15k={first_time_exceeded_15000}")
     
@@ -20425,12 +20487,13 @@ async def sign_collaboratore_compensation_receipt(
     logging.info(f"Collaboratore receipt: admin_email={admin_email}")
     
     # Calculate yearly total - check both collections (collaboratore_compensations and coach_compensations)
-    # IMPORTANT: Exclude the current month from calculation to avoid counting it twice
+    # 🆕 FIX P1: recupera TUTTE le firme dell'anno (escluso solo il mese corrente) per gestire
+    # correttamente le firme retroattive fuori ordine cronologico.
     yearly_records = await db.collaboratore_compensations.find({
         "collaboratore_id": collaboratore_id,
         "year": request.year,
         "receipt_signed": True,
-        "month": {"$lt": request.month}  # Only months BEFORE this one (chronological order)
+        "month": {"$ne": request.month}
     }).to_list(12)
     
     # Also check coach_compensations as backup (some data may be stored there)
@@ -20438,11 +20501,22 @@ async def sign_collaboratore_compensation_receipt(
         "coach_id": collaboratore_id,
         "year": request.year,
         "receipt_signed": True,
-        "month": {"$lt": request.month}  # Only months BEFORE this one (chronological order)
+        "month": {"$ne": request.month}
     }).to_list(12)
     
-    yearly_total_collab = sum(r.get("amount_gross", 0) for r in yearly_records)
-    yearly_total_coach = sum(r.get("amount_gross", 0) for r in coach_records)
+    # Combina importi per mese da entrambe le collezioni
+    signed_by_month: dict = {}
+    for r in yearly_records:
+        m = r.get("month")
+        if m:
+            signed_by_month[m] = signed_by_month.get(m, 0) + float(r.get("amount_gross", 0) or 0)
+    for r in coach_records:
+        m = r.get("month")
+        if m:
+            signed_by_month[m] = signed_by_month.get(m, 0) + float(r.get("amount_gross", 0) or 0)
+    
+    yearly_total_collab = sum(float(r.get("amount_gross", 0) or 0) for r in yearly_records)
+    yearly_total_coach = sum(float(r.get("amount_gross", 0) or 0) for r in coach_records)
     yearly_total = yearly_total_collab + yearly_total_coach  # Combine both
     
     # Check both field names for prior compensation (other_annual_compensation is the primary one)
@@ -20471,11 +20545,18 @@ async def sign_collaboratore_compensation_receipt(
 
     new_total = yearly_total + request.amount_gross
     
-    # Check thresholds - superamento scatta da OLTRE la soglia (€5.001 e €15.001)
-    # €5.000 esatti = ancora esente, €5.001 = superamento previdenziale
-    # €15.000 esatti = ancora solo contributi, €15.001 = superamento fiscale
-    first_time_exceeded_5000 = yearly_total <= 5000 and new_total > 5000
-    first_time_exceeded_15000 = yearly_total <= 15000 and new_total > 15000
+    # Check thresholds - 🆕 FIX P1: usa calcolo cronologico cumulativo
+    # (gestisce firme retroattive fuori ordine)
+    prior_for_year = prior_compensation if (contract_year and contract_year == request.year) else 0
+    month_5k, month_15k = _detect_threshold_crossings_chronological(
+        signed_by_month=signed_by_month,
+        new_month=request.month,
+        new_amount=request.amount_gross,
+        prior_compensation=prior_for_year,
+        external_total=external_year_total,
+    )
+    first_time_exceeded_5000 = (month_5k == request.month)
+    first_time_exceeded_15000 = (month_15k == request.month)
     
     # Detailed logging for debugging
     logging.info(f"=== COLLABORATORE RECEIPT THRESHOLD CHECK ===")
