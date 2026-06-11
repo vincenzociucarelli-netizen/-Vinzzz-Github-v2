@@ -23,6 +23,7 @@ class SocietySettingsUpdate(BaseModel):
     province: Optional[str] = None
     fiscal_code: Optional[str] = None
     partita_iva: Optional[str] = None
+    codice_sdi: Optional[str] = None
     phone: Optional[str] = None
     phone2: Optional[str] = None
     president_name: Optional[str] = None

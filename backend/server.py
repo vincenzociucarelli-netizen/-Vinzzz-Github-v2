@@ -24367,6 +24367,7 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
     pec = society.get("pec", "")
     fiscal_code = society.get("fiscal_code", "")
     partita_iva = society.get("partita_iva", "")
+    codice_sdi = society.get("codice_sdi", "")
     president = society.get("president_name", "")
     affiliations = society.get("affiliations", [])
     logo_data = society.get("logo")
@@ -24501,6 +24502,10 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
     # Partita IVA
     if partita_iva:
         y_left = draw_field(col_left_x, y_left, "P. IVA", partita_iva, bold_value=True)
+    
+    # Codice SDI (fatturazione elettronica)
+    if codice_sdi:
+        y_left = draw_field(col_left_x, y_left, "Codice SDI", codice_sdi.upper(), bold_value=True)
     
     # RIGHT COLUMN: Email, PEC, Telefono, Presidente
     y_right = body_y

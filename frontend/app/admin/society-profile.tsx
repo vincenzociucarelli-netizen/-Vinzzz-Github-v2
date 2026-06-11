@@ -53,6 +53,7 @@ export default function SocietyProfile() {
   const [province, setProvince] = useState('');
   const [fiscalCode, setFiscalCode] = useState('');
   const [partitaIva, setPartitaIva] = useState('');
+  const [codiceSdi, setCodiceSdi] = useState('');
   const [cellulare, setCellulare] = useState('');
   const [phone2, setPhone2] = useState('');
   const [presidentName, setPresidentName] = useState('');
@@ -84,6 +85,7 @@ export default function SocietyProfile() {
       setProvince(response.data.province || '');
       setFiscalCode(response.data.fiscal_code || '');
       setPartitaIva(response.data.partita_iva || '');
+      setCodiceSdi(response.data.codice_sdi || '');
       setCellulare(response.data.phone || '');
       setPhone2(response.data.phone2 || '');
       setPresidentName(response.data.president_name || '');
@@ -121,6 +123,7 @@ export default function SocietyProfile() {
         province: province,
         fiscal_code: fiscalCode,
         partita_iva: partitaIva,
+        codice_sdi: codiceSdi,
         phone: cellulare,
         phone2: phone2,
         president_name: presidentName,
@@ -202,6 +205,7 @@ export default function SocietyProfile() {
     if (societyPec) lines.push(`PEC: ${societyPec}`);
     if (fiscalCode) lines.push(`C.F.: ${fiscalCode}`);
     if (partitaIva) lines.push(`P.IVA: ${partitaIva}`);
+    if (codiceSdi) lines.push(`Codice SDI: ${codiceSdi.toUpperCase()}`);
     if (presidentName) lines.push(`Presidente: ${presidentName}`);
     if (affiliations.length > 0) {
       lines.push('');
@@ -432,6 +436,7 @@ export default function SocietyProfile() {
               </View>
               <InfoRow icon="card" label="Codice Fiscale" value={fiscalCode} />
               {partitaIva ? <InfoRow icon="receipt" label="Partita IVA" value={partitaIva} /> : null}
+              {codiceSdi ? <InfoRow icon="document-text" label="Codice SDI" value={codiceSdi.toUpperCase()} /> : null}
               <InfoRow icon="person" label="Presidente" value={presidentName} />
             </View>
 
@@ -547,6 +552,20 @@ export default function SocietyProfile() {
               <TextInput style={styles.input} value={fiscalCode} onChangeText={setFiscalCode} placeholder="12345678901" placeholderTextColor="#999" autoCapitalize="characters" />
               <Text style={styles.inputLabel}>Partita IVA</Text>
               <TextInput style={styles.input} value={partitaIva} onChangeText={setPartitaIva} placeholder="12345678901" placeholderTextColor="#999" keyboardType="numeric" />
+              <Text style={styles.inputLabel}>Codice SDI</Text>
+              <Text style={{ fontSize: 11, color: '#777', marginTop: -4, marginBottom: 6 }}>
+                Stringa alfanumerica di 7 caratteri usata dai fornitori per emettere le fatture elettroniche.
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={codiceSdi}
+                onChangeText={(t) => setCodiceSdi(t.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7))}
+                placeholder="ABCDE12"
+                placeholderTextColor="#999"
+                autoCapitalize="characters"
+                maxLength={7}
+                data-testid="codice-sdi-input"
+              />
               <Text style={styles.inputLabel}>Presidente</Text>
               <TextInput style={styles.input} value={presidentName} onChangeText={setPresidentName} placeholder="Mario Rossi" placeholderTextColor="#999" />
             </View>

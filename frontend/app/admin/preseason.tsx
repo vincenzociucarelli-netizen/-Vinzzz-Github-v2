@@ -393,6 +393,19 @@ export default function PreseasonAdmin() {
                   <Text style={{ fontSize: 13, fontWeight: '600', color: '#2E7D32' }}>Tutti hanno risposto</Text>
                 </View>
               )}
+              {c.created_at && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <Ionicons name="time-outline" size={16} color="#2E7D32" />
+                  <Text style={{ fontSize: 13, color: '#2E7D32', fontWeight: '600' }}>
+                    {(() => {
+                      const days = Math.max(0, Math.floor((Date.now() - new Date(c.created_at).getTime()) / 86400000));
+                      if (days === 0) return 'Aperta oggi';
+                      if (days === 1) return 'Aperta da 1 giorno';
+                      return `Aperta da ${days} giorni`;
+                    })()}
+                  </Text>
+                </View>
+              )}
               {c.close_date && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                   <Ionicons name="calendar" size={16} color="#555" />
