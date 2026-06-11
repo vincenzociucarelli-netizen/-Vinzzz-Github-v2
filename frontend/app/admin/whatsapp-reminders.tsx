@@ -22,6 +22,7 @@ const CASE_COLORS: Record<string, { bg: string; fg: string; icon: string }> = {
 type Contact = { name: string; phone: string; role: string };
 type CaseRow = {
   case: string;
+  case_key?: string;
   label: string;
   athlete_id?: string | null;
   athlete_name?: string | null;
@@ -70,6 +71,28 @@ export default function WhatsAppRemindersPage() {
     acc[c.case] = (acc[c.case] || 0) + 1;
     return acc;
   }, {});
+
+  const dismissCase = async (row: CaseRow) => {
+    if (!row.case_key) return;
+    const target = row.athlete_name || `${row.user_role || ''} ${row.contacts[0]?.name || ''}`.trim() || 'questo sollecito';
+    const confirmMsg = `Nascondere il sollecito "${row.label}" per ${target}?\n\nNon verrà più mostrato nella lista. Potrai ripristinarlo in futuro dalle impostazioni.`;
+    const ok = Platform.OS === 'web' ? window.confirm(confirmMsg) : true;
+    if (!ok) return;
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const r = await fetch(`${API}/api/admin/whatsapp/dismiss`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ case_key: row.case_key }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      // Rimuovi subito dalla UI (ottimistico) + ricarica per allineamento
+      setCases(prev => prev.filter(c => c.case_key !== row.case_key));
+    } catch (e) {
+      console.warn('dismiss error', e);
+      if (Platform.OS === 'web') window.alert('Impossibile nascondere il sollecito');
+    }
+  };
 
   const openReminderModal = async (row: CaseRow, contact: Contact) => {
     setSelected({ row, contact });
@@ -223,6 +246,14 @@ export default function WhatsAppRemindersPage() {
                         : `${row.days_overdue}g`}
                     </Text>
                   </View>
+                  <TouchableOpacity
+                    onPress={() => dismissCase(row)}
+                    style={styles.dismissBtn}
+                    data-testid={`dismiss-${row.case_key || idx}`}
+                    accessibilityLabel="Nascondi sollecito"
+                  >
+                    <Ionicons name="close" size={18} color="#999" />
+                  </TouchableOpacity>
                 </View>
 
                 {row.data_context && Object.keys(row.data_context).length > 0 && (
@@ -372,6 +403,7 @@ const styles = StyleSheet.create({
   caseTarget: { fontSize: 13, color: '#666', marginTop: 2 },
   daysBadge: { paddingHorizontal: 9, paddingVertical: 4, borderRadius: 12 },
   daysBadgeText: { fontSize: 12, fontWeight: '700' },
+  dismissBtn: { marginLeft: 6, width: 30, height: 30, borderRadius: 15, backgroundColor: '#F5F5F5', alignItems: 'center', justifyContent: 'center' },
   contextRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8, paddingLeft: 50 },
   contextText: { fontSize: 12, color: '#555' },
   lastRemBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6, paddingLeft: 50 },

@@ -28641,6 +28641,24 @@ async def get_pending_reminders(current_user=Depends(get_current_user)):
     # Reminders log (this society)
     reminders_log = await db.whatsapp_reminders.find({"society_id": sid}).to_list(2000)
 
+    # 🆕 Casi dismissati dall'admin (collezione whatsapp_reminders_dismissed)
+    dismissed_keys = set()
+    async for d in db.whatsapp_reminders_dismissed.find(
+        {"society_id": sid}, {"_id": 0, "case_key": 1}
+    ):
+        if d.get("case_key"):
+            dismissed_keys.add(d["case_key"])
+
+    def _make_case_key(case_type: str, athlete_id=None, user_id=None, year=None, month=None) -> str:
+        parts = [
+            case_type,
+            f"a:{athlete_id}" if athlete_id else "a:none",
+            f"u:{user_id}" if user_id else "u:none",
+            f"y:{year}" if year else "y:none",
+            f"m:{month}" if month else "m:none",
+        ]
+        return "|".join(parts)
+
     # Restrict by team if coach
     coach_team_ids: Optional[List[str]] = None
     if role == UserRole.COACH:
@@ -28702,19 +28720,22 @@ async def get_pending_reminders(current_user=Depends(get_current_user)):
         if is_in_trial and ts and not trial_doc_signed:
             days_since = (today - ts).days
             if days_since >= settings["trial_start_unsigned"]["threshold_days"]:
-                last = _wa_last_reminder(reminders_log, "trial_start_unsigned", ath_id, None)
-                cases.append({
-                    "case": "trial_start_unsigned",
-                    "label": settings["trial_start_unsigned"]["label"],
-                    "athlete_id": ath_id,
-                    "athlete_name": full_name,
-                    "team_id": ath.get("team_id"),
-                    "contacts": contacts,
-                    "data_context": {"start_date": ts.strftime("%d/%m/%Y")},
-                    "days_overdue": days_since,
-                    "last_reminder_at": (last or {}).get("sent_at"),
-                    "template": settings["trial_start_unsigned"]["template"],
-                })
+                ck = _make_case_key("trial_start_unsigned", athlete_id=ath_id)
+                if ck not in dismissed_keys:
+                    last = _wa_last_reminder(reminders_log, "trial_start_unsigned", ath_id, None)
+                    cases.append({
+                        "case": "trial_start_unsigned",
+                        "case_key": ck,
+                        "label": settings["trial_start_unsigned"]["label"],
+                        "athlete_id": ath_id,
+                        "athlete_name": full_name,
+                        "team_id": ath.get("team_id"),
+                        "contacts": contacts,
+                        "data_context": {"start_date": ts.strftime("%d/%m/%Y")},
+                        "days_overdue": days_since,
+                        "last_reminder_at": (last or {}).get("sent_at"),
+                        "template": settings["trial_start_unsigned"]["template"],
+                    })
 
         # (b/c/d) trial ended
         if te and te <= today:
@@ -28724,52 +28745,61 @@ async def get_pending_reminders(current_user=Depends(get_current_user)):
             cert_expiry = ath.get("medical_certificate_expiry")
             has_cert = bool(cert_expiry)
             if not has_cert and days_since_end >= settings["trial_end_no_certificate"]["threshold_days"]:
-                last = _wa_last_reminder(reminders_log, "trial_end_no_certificate", ath_id, None)
-                cases.append({
-                    "case": "trial_end_no_certificate",
-                    "label": settings["trial_end_no_certificate"]["label"],
-                    "athlete_id": ath_id,
-                    "athlete_name": full_name,
-                    "team_id": ath.get("team_id"),
-                    "contacts": contacts,
-                    "data_context": {"end_date": te.strftime("%d/%m/%Y")},
-                    "days_overdue": days_since_end,
-                    "last_reminder_at": (last or {}).get("sent_at"),
-                    "template": settings["trial_end_no_certificate"]["template"],
-                })
+                ck = _make_case_key("trial_end_no_certificate", athlete_id=ath_id)
+                if ck not in dismissed_keys:
+                    last = _wa_last_reminder(reminders_log, "trial_end_no_certificate", ath_id, None)
+                    cases.append({
+                        "case": "trial_end_no_certificate",
+                        "case_key": ck,
+                        "label": settings["trial_end_no_certificate"]["label"],
+                        "athlete_id": ath_id,
+                        "athlete_name": full_name,
+                        "team_id": ath.get("team_id"),
+                        "contacts": contacts,
+                        "data_context": {"end_date": te.strftime("%d/%m/%Y")},
+                        "days_overdue": days_since_end,
+                        "last_reminder_at": (last or {}).get("sent_at"),
+                        "template": settings["trial_end_no_certificate"]["template"],
+                    })
 
             # (c) no privacy
             if not privacy_signed and days_since_end >= settings["trial_end_no_privacy"]["threshold_days"]:
-                last = _wa_last_reminder(reminders_log, "trial_end_no_privacy", ath_id, None)
-                cases.append({
-                    "case": "trial_end_no_privacy",
-                    "label": settings["trial_end_no_privacy"]["label"],
-                    "athlete_id": ath_id,
-                    "athlete_name": full_name,
-                    "team_id": ath.get("team_id"),
-                    "contacts": contacts,
-                    "data_context": {"end_date": te.strftime("%d/%m/%Y")},
-                    "days_overdue": days_since_end,
-                    "last_reminder_at": (last or {}).get("sent_at"),
-                    "template": settings["trial_end_no_privacy"]["template"],
-                })
+                ck = _make_case_key("trial_end_no_privacy", athlete_id=ath_id)
+                if ck not in dismissed_keys:
+                    last = _wa_last_reminder(reminders_log, "trial_end_no_privacy", ath_id, None)
+                    cases.append({
+                        "case": "trial_end_no_privacy",
+                        "case_key": ck,
+                        "label": settings["trial_end_no_privacy"]["label"],
+                        "athlete_id": ath_id,
+                        "athlete_name": full_name,
+                        "team_id": ath.get("team_id"),
+                        "contacts": contacts,
+                        "data_context": {"end_date": te.strftime("%d/%m/%Y")},
+                        "days_overdue": days_since_end,
+                        "last_reminder_at": (last or {}).get("sent_at"),
+                        "template": settings["trial_end_no_privacy"]["template"],
+                    })
 
             # (d) no decision (status still pending_certificate/pending_decision)
             decision_pending = status in ("pending_decision", "pending_certificate", "pending_trial") and is_trial is False
             if decision_pending and days_since_end >= settings["trial_end_no_decision"]["threshold_days"]:
-                last = _wa_last_reminder(reminders_log, "trial_end_no_decision", ath_id, None)
-                cases.append({
-                    "case": "trial_end_no_decision",
-                    "label": settings["trial_end_no_decision"]["label"],
-                    "athlete_id": ath_id,
-                    "athlete_name": full_name,
-                    "team_id": ath.get("team_id"),
-                    "contacts": contacts,
-                    "data_context": {"end_date": te.strftime("%d/%m/%Y")},
-                    "days_overdue": days_since_end,
-                    "last_reminder_at": (last or {}).get("sent_at"),
-                    "template": settings["trial_end_no_decision"]["template"],
-                })
+                ck = _make_case_key("trial_end_no_decision", athlete_id=ath_id)
+                if ck not in dismissed_keys:
+                    last = _wa_last_reminder(reminders_log, "trial_end_no_decision", ath_id, None)
+                    cases.append({
+                        "case": "trial_end_no_decision",
+                        "case_key": ck,
+                        "label": settings["trial_end_no_decision"]["label"],
+                        "athlete_id": ath_id,
+                        "athlete_name": full_name,
+                        "team_id": ath.get("team_id"),
+                        "contacts": contacts,
+                        "data_context": {"end_date": te.strftime("%d/%m/%Y")},
+                        "days_overdue": days_since_end,
+                        "last_reminder_at": (last or {}).get("sent_at"),
+                        "template": settings["trial_end_no_decision"]["template"],
+                    })
 
         # (f) certificate expiring/expired
         cert_expiry = ath.get("medical_certificate_expiry")
@@ -28779,20 +28809,23 @@ async def get_pending_reminders(current_user=Depends(get_current_user)):
                 days_to = (ce - today).days
                 thresh = settings["certificate_expiring"]["threshold_days"]
                 if days_to <= thresh:
-                    last = _wa_last_reminder(reminders_log, "certificate_expiring", ath_id, None)
-                    cases.append({
-                        "case": "certificate_expiring",
-                        "label": settings["certificate_expiring"]["label"],
-                        "athlete_id": ath_id,
-                        "athlete_name": full_name,
-                        "team_id": ath.get("team_id"),
-                        "contacts": contacts,
-                        "data_context": {"expiry_date": ce.strftime("%d/%m/%Y")},
-                        "days_overdue": max(0, -days_to),
-                        "expires_in_days": days_to,
-                        "last_reminder_at": (last or {}).get("sent_at"),
-                        "template": settings["certificate_expiring"]["template"],
-                    })
+                    ck = _make_case_key("certificate_expiring", athlete_id=ath_id)
+                    if ck not in dismissed_keys:
+                        last = _wa_last_reminder(reminders_log, "certificate_expiring", ath_id, None)
+                        cases.append({
+                            "case": "certificate_expiring",
+                            "case_key": ck,
+                            "label": settings["certificate_expiring"]["label"],
+                            "athlete_id": ath_id,
+                            "athlete_name": full_name,
+                            "team_id": ath.get("team_id"),
+                            "contacts": contacts,
+                            "data_context": {"expiry_date": ce.strftime("%d/%m/%Y")},
+                            "days_overdue": max(0, -days_to),
+                            "expires_in_days": days_to,
+                            "last_reminder_at": (last or {}).get("sent_at"),
+                            "template": settings["certificate_expiring"]["template"],
+                        })
 
     # (e) Unsigned receipts (only admin sees)
     if role == UserRole.ADMIN:
@@ -28835,10 +28868,19 @@ async def get_pending_reminders(current_user=Depends(get_current_user)):
                 if not phone:
                     continue
                 month_label = comp.get("month_name") or f"{comp.get('month')}/{comp.get('year')}"
+                ck = _make_case_key(
+                    "unsigned_receipt",
+                    user_id=owner_id,
+                    year=comp.get("year"),
+                    month=comp.get("month"),
+                )
+                if ck in dismissed_keys:
+                    continue
                 last = _wa_last_reminder(reminders_log, "unsigned_receipt", None, owner_id)
                 # Also key on month so multiple months don't collapse
                 cases.append({
                     "case": "unsigned_receipt",
+                    "case_key": ck,
                     "label": settings["unsigned_receipt"]["label"],
                     "athlete_id": None,
                     "athlete_name": None,
@@ -28868,6 +28910,50 @@ async def get_pending_reminders(current_user=Depends(get_current_user)):
         "cases": cases,
         "society_name": (await db.societies.find_one({"id": sid}, {"_id": 0, "name": 1}) or {}).get("name") if sid else None,
     }
+
+
+class WhatsAppDismissRequest(BaseModel):
+    case_key: str
+
+
+@api_router.post("/admin/whatsapp/dismiss")
+async def dismiss_whatsapp_reminder(body: WhatsAppDismissRequest, current_user=Depends(get_current_user)):
+    """Nasconde un sollecito WhatsApp dalla lista pendenti.
+    Il sollecito ricomparirà solo se l'admin lo ripristina con 'restore'.
+    """
+    role = current_user["role"]
+    if role not in (UserRole.ADMIN, UserRole.COACH):
+        raise HTTPException(status_code=403, detail="Solo admin o coach")
+    if not body.case_key or "|" not in body.case_key:
+        raise HTTPException(status_code=400, detail="case_key non valido")
+
+    sid = current_user.get("society_id")
+    # Upsert: se già esistente, aggiorna solo dismissed_at
+    await db.whatsapp_reminders_dismissed.update_one(
+        {"society_id": sid, "case_key": body.case_key},
+        {"$set": {
+            "society_id": sid,
+            "case_key": body.case_key,
+            "dismissed_at": datetime.now(timezone.utc).isoformat(),
+            "dismissed_by": current_user.get("id"),
+            "dismissed_by_name": current_user.get("full_name") or current_user.get("email"),
+        }},
+        upsert=True,
+    )
+    return {"success": True, "case_key": body.case_key}
+
+
+@api_router.post("/admin/whatsapp/dismiss/restore")
+async def restore_whatsapp_reminder(body: WhatsAppDismissRequest, current_user=Depends(get_current_user)):
+    """Ripristina un sollecito WhatsApp precedentemente nascosto."""
+    role = current_user["role"]
+    if role not in (UserRole.ADMIN, UserRole.COACH):
+        raise HTTPException(status_code=403, detail="Solo admin o coach")
+    sid = current_user.get("society_id")
+    result = await db.whatsapp_reminders_dismissed.delete_one(
+        {"society_id": sid, "case_key": body.case_key}
+    )
+    return {"success": True, "deleted": result.deleted_count}
 
 
 @api_router.post("/admin/whatsapp/settings/reset-defaults")
