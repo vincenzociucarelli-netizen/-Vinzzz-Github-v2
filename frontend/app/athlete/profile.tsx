@@ -1079,7 +1079,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
                 )}
               </View>
 
-              {!isQuotaAthlete && renderField('N° Tesserino', profileData.athlete_license_number, 'athlete_license_number')}
+              {/* 🆕 Rimosso campo "N° Tesserino" — è specifico del Coach, non dell'Atleta */}
             </View>
           )}
         </View>
