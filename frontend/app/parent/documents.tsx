@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -119,9 +120,9 @@ export default function ParentDocuments() {
 
   const openDocument = async (docId: string, docTitle?: string) => {
     try {
+      const token = (typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null) || await AsyncStorage.getItem('token');
+      const baseUrl = api.defaults.baseURL || '';
       if (Platform.OS === 'web') {
-        const token = localStorage.getItem('token') || '';
-        const baseUrl = api.defaults.baseURL || '';
         const response = await fetch(`${baseUrl}/documents/signed/${docId}/pdf`, {
           headers: { 'Authorization': `Bearer ${token}` },
         });
@@ -135,13 +136,30 @@ export default function ParentDocuments() {
           return;
         }
         const blobUrl = window.URL.createObjectURL(blob);
-        // Open in IN-APP modal so the user can close it with the visible
-        // "Chiudi" button or with hardware back, without being kicked out
-        // of the webapp.
         setPdfViewer({ visible: true, url: blobUrl, title: docTitle });
       } else {
-        const url = `${api.defaults.baseURL}/documents/signed/${docId}/pdf`;
-        await Linking.openURL(url);
+        // 🔐 SECURITY FIX: mai più Linking.openURL su URL autenticato (apriva browser
+        // esterno senza Bearer, leakando documenti di altri utenti).
+        // Scarichiamo il PDF con auth e lo apriamo localmente via expo-sharing.
+        const FileSystem = await import('expo-file-system');
+        const Sharing = await import('expo-sharing');
+        const response = await fetch(`${baseUrl}/documents/signed/${docId}/pdf`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!response.ok) {
+          Alert.alert('Errore', `Impossibile scaricare il documento: ${response.status}`);
+          return;
+        }
+        const arrayBuf = await response.arrayBuffer();
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
+        const safeTitle = (docTitle || `documento_${docId}`).replace(/[^\w.\-]+/g, '_');
+        const localUri = `${FileSystem.cacheDirectory}${safeTitle}.pdf`;
+        await FileSystem.writeAsStringAsync(localUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(localUri, { mimeType: 'application/pdf', dialogTitle: docTitle || 'Documento' });
+        } else {
+          Alert.alert('Documento salvato', `Il PDF è stato salvato in:\n${localUri}`);
+        }
       }
     } catch (error: any) {
       console.error('Error opening document:', error);

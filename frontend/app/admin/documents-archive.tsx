@@ -315,8 +315,32 @@ export default function DocumentsArchive() {
           window.alert(`Errore nel download: ${fetchError.message || 'Errore sconosciuto'}`);
         }
       } else {
-        // For mobile, use Linking
-        Linking.openURL(downloadUrl);
+        // 🔐 SECURITY FIX: niente più Linking.openURL su URL autenticato.
+        // Scarico il PDF con Bearer e lo apro localmente via expo-sharing.
+        try {
+          const FileSystem = await import('expo-file-system');
+          const Sharing = await import('expo-sharing');
+          const response = await fetch(downloadUrl, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/pdf' },
+          });
+          if (!response.ok) {
+            Alert.alert('Errore', `Impossibile scaricare: ${response.status}`);
+            return;
+          }
+          const arrayBuf = await response.arrayBuffer();
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuf)));
+          const safeName = (doc.pdf_filename || `documento_${doc.id}`).replace(/[^\w.\-]+/g, '_');
+          const localUri = `${FileSystem.cacheDirectory}${safeName}`;
+          await FileSystem.writeAsStringAsync(localUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(localUri, { mimeType: 'application/pdf', dialogTitle: 'Documento' });
+          } else {
+            Alert.alert('Documento salvato', `PDF salvato in:\n${localUri}`);
+          }
+        } catch (mobileErr: any) {
+          console.error('Mobile download error:', mobileErr);
+          Alert.alert('Errore', 'Impossibile aprire il documento sul dispositivo');
+        }
       }
     } catch (error: any) {
       console.error('Download error:', error);
