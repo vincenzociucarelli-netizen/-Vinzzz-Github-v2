@@ -73,6 +73,9 @@ interface CoachProfile {
   contract_start_date?: string;
   contract_end_date?: string;
   other_annual_compensation?: number; // Prior compensation
+  // 🆕 UNIFICAZIONE: Atleta PRO compenso mensile (se anche atleta linked)
+  linked_athlete_monthly_compensation?: number;
+  linked_athlete_full_name?: string | null;
 }
 
 interface ThresholdStatus {
@@ -1494,11 +1497,30 @@ export default function CoachCompensation() {
               {/* Receipt Preview */}
               <View style={styles.receiptPreviewCompact}>
                 <Text style={styles.receiptTitleCompact}>QUIETANZA COMPENSO SPORTIVO DILETTANTISTICO</Text>
-                <Text style={styles.receiptTextCompact}>
-                  Collaboratore: {profile?.full_name} • Mese: {MONTH_NAMES[selectedMonth || 0]} {selectedYear}{'\n'}
-                  Compenso lordo: {formatCurrency((profile?.monthly_compensation || 0))}{'\n'}
-                  Il collaboratore dichiara che non sono intervenute variazioni rispetto all'autocertificazione precedente.
-                </Text>
+                {(() => {
+                  const coachAmt = profile?.monthly_compensation || 0;
+                  const athleteAmt = profile?.linked_athlete_monthly_compensation || 0;
+                  const hasSplit = coachAmt > 0 && athleteAmt > 0;
+                  const total = coachAmt + athleteAmt;
+                  if (hasSplit) {
+                    return (
+                      <Text style={styles.receiptTextCompact}>
+                        Collaboratore: {profile?.full_name} • Mese: {MONTH_NAMES[selectedMonth || 0]} {selectedYear}{'\n'}
+                        Compenso da Coach: {formatCurrency(coachAmt)}{'\n'}
+                        Compenso da Atleta: {formatCurrency(athleteAmt)}{'\n'}
+                        <Text style={{ fontWeight: '700' }}>Compenso lordo totale: {formatCurrency(total)}</Text>{'\n'}
+                        Il collaboratore dichiara che non sono intervenute variazioni rispetto all'autocertificazione precedente.
+                      </Text>
+                    );
+                  }
+                  return (
+                    <Text style={styles.receiptTextCompact}>
+                      Collaboratore: {profile?.full_name} • Mese: {MONTH_NAMES[selectedMonth || 0]} {selectedYear}{'\n'}
+                      Compenso lordo: {formatCurrency(coachAmt)}{'\n'}
+                      Il collaboratore dichiara che non sono intervenute variazioni rispetto all'autocertificazione precedente.
+                    </Text>
+                  );
+                })()}
               </View>
 
               {/* Signature Pad */}

@@ -3738,26 +3738,33 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
             need_holder = not (user.get("iban_holder_first_name") or user.get("iban_holder_last_name"))
             need_bank = not (user.get("bank_name") or "").strip()
             need_gender = not (user.get("gender") or "").strip()
-            if need_iban or need_holder or need_bank or need_gender:
-                linked_ath = await db.athletes.find_one(
-                    {"id": user["linked_athlete_id"]},
-                    {"_id": 0, "iban": 1, "iban_holder_first_name": 1,
-                     "iban_holder_last_name": 1, "bank_name": 1, "gender": 1, "sesso": 1},
-                )
-                if linked_ath:
-                    if need_iban and linked_ath.get("iban"):
-                        user["iban"] = linked_ath["iban"]
-                    if need_holder:
-                        if linked_ath.get("iban_holder_first_name"):
-                            user["iban_holder_first_name"] = linked_ath["iban_holder_first_name"]
-                        if linked_ath.get("iban_holder_last_name"):
-                            user["iban_holder_last_name"] = linked_ath["iban_holder_last_name"]
-                    if need_bank and linked_ath.get("bank_name"):
-                        user["bank_name"] = linked_ath["bank_name"]
-                    if need_gender:
-                        ath_g = linked_ath.get("gender") or linked_ath.get("sesso")
-                        if ath_g:
-                            user["gender"] = str(ath_g).upper()
+            # 🆕 UNIFICAZIONE: porta sempre il monthly_compensation dell'atleta PRO
+            linked_ath = await db.athletes.find_one(
+                {"id": user["linked_athlete_id"]},
+                {"_id": 0, "iban": 1, "iban_holder_first_name": 1,
+                 "iban_holder_last_name": 1, "bank_name": 1, "gender": 1, "sesso": 1,
+                 "monthly_compensation": 1, "athlete_type": 1,
+                 "first_name": 1, "last_name": 1},
+            )
+            if linked_ath:
+                # Esposizione campi extra per UI compenso unificato
+                user["linked_athlete_monthly_compensation"] = float(linked_ath.get("monthly_compensation") or 0)
+                user["linked_athlete_full_name"] = (
+                    f"{linked_ath.get('first_name','').strip()} {linked_ath.get('last_name','').strip()}"
+                ).strip() or None
+                if need_iban and linked_ath.get("iban"):
+                    user["iban"] = linked_ath["iban"]
+                if need_holder:
+                    if linked_ath.get("iban_holder_first_name"):
+                        user["iban_holder_first_name"] = linked_ath["iban_holder_first_name"]
+                    if linked_ath.get("iban_holder_last_name"):
+                        user["iban_holder_last_name"] = linked_ath["iban_holder_last_name"]
+                if need_bank and linked_ath.get("bank_name"):
+                    user["bank_name"] = linked_ath["bank_name"]
+                if need_gender:
+                    ath_g = linked_ath.get("gender") or linked_ath.get("sesso")
+                    if ath_g:
+                        user["gender"] = str(ath_g).upper()
         
         # 🆕 FIX: coach_license_level vs coach_level (alias retro-compat). Se il
         # campo nuovo è vuoto ma il legacy esiste, esponilo via campo nuovo.
@@ -14722,6 +14729,33 @@ Il collaboratore dichiara di aver superato, nell'anno {request.year}, la soglia 
 Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti da tale superamento.
 """
 
+    # 🆕 UNIFICAZIONE COACH + ATLETA PRO
+    # Se il coach è anche atleta PRO (linked_athlete_id), nella quietanza mensile includiamo
+    # ANCHE l'importo atleta PRO. Il PDF mostra "Compenso Coach + Compenso Atleta + Totale".
+    linked_athlete_id_raw = coach.get("linked_athlete_id")
+    coach_amount_for_pdf: Optional[float] = None
+    athlete_pro_amount_for_pdf: Optional[float] = None
+    linked_athlete_doc: Optional[dict] = None
+    if linked_athlete_id_raw:
+        linked_athlete_doc = await db.athletes.find_one(
+            {"id": linked_athlete_id_raw},
+            {"_id": 0, "id": 1, "monthly_compensation": 1, "athlete_type": 1, "first_name": 1, "last_name": 1},
+        )
+        if linked_athlete_doc:
+            athlete_monthly = float(linked_athlete_doc.get("monthly_compensation") or 0)
+            if athlete_monthly > 0:
+                # request.amount_gross arriva dal frontend già come "compenso coach"
+                # Adesso lo trasformiamo in TOTALE includendo l'atleta PRO.
+                coach_amount_for_pdf = float(request.amount_gross or 0)
+                athlete_pro_amount_for_pdf = athlete_monthly
+                # 🔄 OVERRIDE: il PDF e il record useranno il TOTALE (coach + atleta)
+                request.amount_gross = round(coach_amount_for_pdf + athlete_pro_amount_for_pdf, 2)
+                new_total = yearly_total + request.amount_gross
+                logging.info(
+                    f"[UNIFIED] coach {coach_id} ha linked_athlete={linked_athlete_id_raw}: "
+                    f"coach={coach_amount_for_pdf} + atleta={athlete_pro_amount_for_pdf} = {request.amount_gross}"
+                )
+
     try:
         # Pre-generate the document id so we can embed it as QR code in the PDF
         receipt_id = str(uuid.uuid4())
@@ -14793,6 +14827,8 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 signed_at=now,
                 document_id=receipt_id,
                 signer_id=coach_id,
+                coach_amount=coach_amount_for_pdf,
+                athlete_pro_amount=athlete_pro_amount_for_pdf,
             )
             pdf_filename_prefix = "quietanza"
             doc_type = "compensation_receipt"
@@ -14918,6 +14954,44 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
             exceeded_15000_date=now if first_time_exceeded_15000 else None
         )
         await db.coach_compensations.insert_one(record.dict())
+    
+    # 🆕 UNIFICAZIONE: se il coach è anche atleta PRO, crea record gemello in
+    # athlete_compensation_receipts così la dashboard atleta mostra il mese come firmato.
+    if linked_athlete_doc and athlete_pro_amount_for_pdf and athlete_pro_amount_for_pdf > 0:
+        try:
+            existing_athlete_rec = await db.athlete_compensation_receipts.find_one(
+                {"athlete_id": linked_athlete_doc["id"], "year": request.year, "month": request.month},
+                {"_id": 0, "id": 1},
+            )
+            athlete_rec_payload = {
+                "athlete_id": linked_athlete_doc["id"],
+                "year": request.year,
+                "month": request.month,
+                "amount": athlete_pro_amount_for_pdf,
+                "amount_gross": athlete_pro_amount_for_pdf,
+                "signed": True,
+                "signed_at": now,
+                "signature_base64": request.signature_base64,
+                "linked_coach_receipt_id": receipt_id,
+                "linked_signed_document_id": document_id,
+                "unified_with_coach": True,
+                "month_name": month_name,
+            }
+            if existing_athlete_rec:
+                await db.athlete_compensation_receipts.update_one(
+                    {"id": existing_athlete_rec["id"]},
+                    {"$set": athlete_rec_payload},
+                )
+            else:
+                athlete_rec_payload["id"] = str(uuid.uuid4())
+                athlete_rec_payload["created_at"] = now
+                await db.athlete_compensation_receipts.insert_one(athlete_rec_payload)
+            logging.info(
+                f"[UNIFIED] quietanza atleta PRO gemella salvata per atleta "
+                f"{linked_athlete_doc['id']} {request.year}-{request.month:02d}"
+            )
+        except Exception as ex:
+            logging.warning(f"[UNIFIED] errore creazione record atleta PRO gemello: {ex}")
     
     # ✅ Quietanza salvata con successo: SOLO ORA registra la dichiarazione
     # del compenso esterno (criterio per CASSA). In questo modo se qualcosa
@@ -16091,11 +16165,17 @@ def generate_monthly_receipt_pdf(
     signer_id: Optional[str] = None,
     ip_address: Optional[str] = None,
     document_hash: Optional[str] = None,
+    coach_amount: Optional[float] = None,
+    athlete_pro_amount: Optional[float] = None,
 ) -> bytes:
     """Generate monthly compensation receipt PDF with proper formatting.
 
     `signed_at` is the ORIGINAL signing date (str ISO or datetime). Falls back
     to today only when missing — should never happen for a signed receipt.
+
+    🆕 Se vengono passati `coach_amount` e `athlete_pro_amount` (entrambi > 0),
+    il PDF mostra la suddivisione "Compenso Coach + Compenso Atleta PRO + Totale"
+    invece di una singola riga. `amount_gross` rimane il TOTALE (somma dei due).
     """
     if not HAS_PDF_GENERATION:
         raise HTTPException(status_code=500, detail="PDF generation not available")
@@ -16144,7 +16224,19 @@ def generate_monthly_receipt_pdf(
     # Amount - ONLY GROSS, no net
     y -= 1.2*cm
     c.setFont("Helvetica-Bold", 11)
-    c.drawString(2*cm, y, f"Compenso lordo: € {amount_gross:.2f}")
+    # 🆕 Doppio compenso (Coach + Atleta PRO) — mostra suddivisione + totale
+    has_split = (coach_amount is not None and athlete_pro_amount is not None
+                 and coach_amount > 0 and athlete_pro_amount > 0)
+    if has_split:
+        c.setFont("Helvetica", 10)
+        c.drawString(2*cm, y, f"Compenso da Coach: € {coach_amount:.2f}")
+        y -= 0.55*cm
+        c.drawString(2*cm, y, f"Compenso da Atleta: € {athlete_pro_amount:.2f}")
+        y -= 0.65*cm
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(2*cm, y, f"Compenso lordo totale: € {amount_gross:.2f}")
+    else:
+        c.drawString(2*cm, y, f"Compenso lordo: € {amount_gross:.2f}")
     
     # Declaration text
     y -= 1.5*cm
