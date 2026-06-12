@@ -19,6 +19,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import InstitutionalBadge from '../../src/components/InstitutionalBadge';
 import InstitutionalBanner from '../../src/components/InstitutionalBanner';
+import CompensationExportModal from '../../src/components/admin/CompensationExportModal';
 
 // Emoji icons for reliable cross-platform support
 const Icons = {
@@ -100,6 +101,8 @@ export default function AdminDashboard() {
   const [inviteForm, setInviteForm] = useState({ email: '', first_name: '', last_name: '' });
   const [proEnabled, setProEnabled] = useState<boolean>(false);
   const [waCount, setWaCount] = useState<number>(0);
+  // 🆕 13/06/2026 — Modal export Riepilogo Compensi Annuale
+  const [showCompensationExport, setShowCompensationExport] = useState(false);
   // Optimistic logo rendering: try to load the image first; only hide on real error.
   // This avoids issues with HEAD probes failing on some backend versions while
   // GET requests work fine.
@@ -736,6 +739,13 @@ export default function AdminDashboard() {
           </View>
         )}
 
+        {/* 🆕 13/06/2026 — Modal Export Riepilogo Compensi XLSX */}
+        <CompensationExportModal
+          visible={showCompensationExport}
+          onClose={() => setShowCompensationExport(false)}
+        />
+
+
         {/* Invite Email Modal */}
         {showInviteModal && (
           <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginHorizontal: 16, borderWidth: 1, borderColor: '#e0e0e0', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }}>
@@ -1327,6 +1337,22 @@ export default function AdminDashboard() {
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>Compensi Esterni</Text>
               <Text style={styles.menuCardSubtitle}>Riepilogo dichiarazioni da altre Società</Text>
+            </View>
+            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
+          </TouchableOpacity>
+
+          {/* 🆕 13/06/2026 — Riepilogo Compensi Annuale (Export XLSX) */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => setShowCompensationExport(true)}
+            testID="compensation-export-menu-card"
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#E8F5E9' }]}>
+              <Text style={{ fontSize: 26 }}>📊</Text>
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Riepilogo Compensi Annuale</Text>
+              <Text style={styles.menuCardSubtitle}>Esporta XLSX per il commercialista (range custom)</Text>
             </View>
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>

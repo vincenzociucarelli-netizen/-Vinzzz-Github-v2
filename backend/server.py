@@ -27858,6 +27858,352 @@ async def export_registro_xlsx(current_user = Depends(get_current_user)):
 
 
 
+
+# ╭──────────────────────────────────────────────────────────────╮
+# │  🆕 13/06/2026 — EXPORT RIEPILOGO COMPENSI XLSX (Range custom)│
+# │  Range arbitrario dal..al, regola Quartili Settimanali       │
+# ╰──────────────────────────────────────────────────────────────╯
+
+def _calculate_person_range_total(
+    contract_start: Optional[date],
+    contract_end: Optional[date],
+    monthly_amount: float,
+    range_start: Optional[date],
+    range_end: Optional[date],
+) -> float:
+    """Somma proporzionale del compenso su un range di date arbitrario,
+    applicando la regola dei quartili settimanali mese per mese.
+
+    Il contratto viene clampato sul range, poi si itera mese per mese."""
+    try:
+        amount = float(monthly_amount or 0)
+    except (TypeError, ValueError):
+        return 0.0
+    if amount <= 0 or not contract_start or not range_start or not range_end:
+        return 0.0
+
+    # Clamp contratto sul range richiesto
+    effective_start = max(contract_start, range_start)
+    effective_end = min(contract_end, range_end) if contract_end else range_end
+    if effective_end < effective_start:
+        return 0.0
+
+    total = 0.0
+    cur = date(effective_start.year, effective_start.month, 1)
+    end_marker = date(effective_end.year, effective_end.month, 1)
+    while cur <= end_marker:
+        partial, _q = _calculate_proportional_amount_quartile(
+            effective_start, effective_end, amount, cur.year, cur.month,
+        )
+        total += partial
+        if cur.month == 12:
+            cur = date(cur.year + 1, 1, 1)
+        else:
+            cur = date(cur.year, cur.month + 1, 1)
+    return round(total, 2)
+
+
+@api_router.get("/admin/compensation-summary/default-range")
+async def get_compensation_default_range(current_user = Depends(get_current_user)):
+    """Restituisce date di default per il range del report XLSX, basate sulle
+    impostazioni stagione della società. Se mancano, ritorna null/null."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    society_id = current_user.get("society_id")
+    settings = await db.settings.find_one({"society_id": society_id, "type": "society"}, {"_id": 0})
+    if not settings:
+        settings = await db.settings.find_one({"type": "society"}, {"_id": 0})
+
+    if not settings:
+        return {"start_date": None, "end_date": None, "label": None}
+
+    s_month = settings.get("season_start_month")
+    s_day = settings.get("season_start_day")
+    e_month = settings.get("season_end_month")
+    e_day = settings.get("season_end_day")
+
+    if not (s_month and s_day and e_month and e_day):
+        return {"start_date": None, "end_date": None, "label": None}
+
+    now = datetime.now(timezone.utc)
+    # Determina anno stagione corrente
+    try:
+        start_this_year = date(now.year, int(s_month), int(s_day))
+    except ValueError:
+        return {"start_date": None, "end_date": None, "label": None}
+
+    if now.date() >= start_this_year:
+        # Siamo già DOPO l'inizio stagione → stagione = (now.year, now.year+1) o stessa year
+        season_start = start_this_year
+        if int(e_month) < int(s_month) or (int(e_month) == int(s_month) and int(e_day) < int(s_day)):
+            season_end = date(now.year + 1, int(e_month), int(e_day))
+        else:
+            season_end = date(now.year, int(e_month), int(e_day))
+    else:
+        # Siamo PRIMA dell'inizio stagione → stagione precedente
+        season_start = date(now.year - 1, int(s_month), int(s_day))
+        if int(e_month) < int(s_month) or (int(e_month) == int(s_month) and int(e_day) < int(s_day)):
+            season_end = date(now.year, int(e_month), int(e_day))
+        else:
+            season_end = date(now.year - 1, int(e_month), int(e_day))
+
+    label = f"Stagione {season_start.year}/{season_end.year}" if season_start.year != season_end.year else f"Stagione {season_start.year}"
+    return {
+        "start_date": season_start.isoformat(),
+        "end_date": season_end.isoformat(),
+        "label": label,
+    }
+
+
+@api_router.get("/admin/compensation-summary/export-xlsx")
+async def export_compensation_summary_xlsx(
+    start_date: str,
+    end_date: str,
+    current_user = Depends(get_current_user),
+):
+    """🆕 Export Excel del Riepilogo Compensi per tutta la società, range date custom.
+    Include tutti i ruoli compensati (Coach, Dirigente, Collaboratore, Atleta PRO).
+    Colonne: Cognome, Nome, Ruolo, Inizio Contratto, Fine Contratto, Compenso/mese,
+    Totale nel range (quartili), Esterni nel range, Soglia €5K, Soglia €15K, Note.
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    # Parse date
+    try:
+        range_start = datetime.fromisoformat(start_date[:10]).date()
+        range_end = datetime.fromisoformat(end_date[:10]).date()
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=400, detail="Date non valide. Usa YYYY-MM-DD.")
+
+    if range_end < range_start:
+        raise HTTPException(status_code=400, detail="end_date precede start_date")
+
+    society_id = current_user.get("society_id")
+    if not society_id:
+        raise HTTPException(status_code=400, detail="Società non determinabile")
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+    from openpyxl.utils import get_column_letter
+    from io import BytesIO
+
+    # === Recupera tutti gli utenti compensati della società ===
+    compensated_roles = ("coach", "dirigente", "collaboratore", "admin")
+    users_cursor = db.users.find(
+        {
+            "society_id": society_id,
+            "role": {"$in": list(compensated_roles)},
+        },
+        {
+            "_id": 0, "id": 1, "first_name": 1, "last_name": 1, "role": 1,
+            "monthly_compensation": 1, "contract_start_date": 1, "contract_end_date": 1,
+            "other_annual_compensation": 1, "fiscal_code": 1, "email": 1,
+        },
+    )
+    users_compensated = []
+    async for u in users_cursor:
+        if float(u.get("monthly_compensation") or 0) > 0 or u.get("contract_start_date"):
+            users_compensated.append(u)
+
+    # === Recupera athlete records PRO della società ===
+    athletes_cursor = db.athletes.find(
+        {"society_id": society_id, "$or": [{"is_compensated": True}, {"monthly_compensation": {"$gt": 0}}]},
+        {
+            "_id": 0, "id": 1, "first_name": 1, "last_name": 1,
+            "monthly_compensation": 1, "contract_start_date": 1, "contract_end_date": 1,
+            "other_annual_compensation": 1, "fiscal_code": 1, "user_id": 1,
+        },
+    )
+    athletes_pro = []
+    async for a in athletes_cursor:
+        athletes_pro.append(a)
+
+    # === Compensi esterni nel range (per anno solare toccato) ===
+    years_in_range = list(range(range_start.year, range_end.year + 1))
+
+    async def _external_total_for_person(uid_candidates: list) -> float:
+        if not uid_candidates:
+            return 0.0
+        total = 0.0
+        for uid in uid_candidates:
+            for y in years_in_range:
+                total += await _get_year_external_compensations_total(uid, y)
+        return round(total, 2)
+
+    # === Costruzione righe ===
+    rows = []
+    role_label_map = {
+        "coach": "Allenatore",
+        "dirigente": "Dirigente",
+        "collaboratore": "Collaboratore",
+        "admin": "Admin/Dirigente",
+        "athlete_pro": "Atleta PRO",
+    }
+
+    for u in users_compensated:
+        c_start = _parse_contract_date(u.get("contract_start_date"))
+        c_end = _parse_contract_date(u.get("contract_end_date"))
+        c_monthly = float(u.get("monthly_compensation") or 0)
+        range_total = _calculate_person_range_total(c_start, c_end, c_monthly, range_start, range_end)
+        external_total = await _external_total_for_person([u["id"]])
+        rows.append({
+            "last_name": u.get("last_name") or "",
+            "first_name": u.get("first_name") or "",
+            "fiscal_code": u.get("fiscal_code") or "",
+            "role": role_label_map.get(u.get("role", ""), u.get("role", "")),
+            "contract_start": c_start.isoformat() if c_start else "",
+            "contract_end": c_end.isoformat() if c_end else "",
+            "monthly": c_monthly,
+            "range_total": range_total,
+            "external_total": external_total,
+            "note": "" if c_end else "Contratto senza data fine",
+        })
+
+    for a in athletes_pro:
+        c_start = _parse_contract_date(a.get("contract_start_date"))
+        c_end = _parse_contract_date(a.get("contract_end_date"))
+        c_monthly = float(a.get("monthly_compensation") or 0)
+        range_total = _calculate_person_range_total(c_start, c_end, c_monthly, range_start, range_end)
+        # Per l'atleta cerchiamo external sia su athlete.id sia su user_id collegato
+        uid_candidates = [a["id"]]
+        if a.get("user_id"):
+            uid_candidates.append(a["user_id"])
+        external_total = await _external_total_for_person(uid_candidates)
+        rows.append({
+            "last_name": a.get("last_name") or "",
+            "first_name": a.get("first_name") or "",
+            "fiscal_code": a.get("fiscal_code") or "",
+            "role": role_label_map["athlete_pro"],
+            "contract_start": c_start.isoformat() if c_start else "",
+            "contract_end": c_end.isoformat() if c_end else "",
+            "monthly": c_monthly,
+            "range_total": range_total,
+            "external_total": external_total,
+            "note": "Date contratto incomplete" if not (c_start and c_end) else "",
+        })
+
+    # Ordina per cognome, nome
+    rows.sort(key=lambda r: (r["last_name"].lower(), r["first_name"].lower()))
+
+    # === Genera Workbook ===
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Riepilogo Compensi"
+
+    # Intestazione del report (riga 1)
+    range_label = f"Dal {range_start.strftime('%d/%m/%Y')} al {range_end.strftime('%d/%m/%Y')}"
+    ws.cell(row=1, column=1, value="Riepilogo Compensi - " + range_label)
+    ws.cell(row=1, column=1).font = Font(bold=True, size=14, color="1565C0")
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=11)
+    ws.cell(row=1, column=1).alignment = Alignment(horizontal="center", vertical="center")
+
+    # Sottotitolo (riga 2)
+    settings_doc = await db.settings.find_one({"society_id": society_id, "type": "society"}, {"_id": 0}) or {}
+    society_name = settings_doc.get("name") or settings_doc.get("society_name") or ""
+    sub = f"{society_name} — Generato il {datetime.now().strftime('%d/%m/%Y %H:%M')} — Regola Quartili Settimanali"
+    ws.cell(row=2, column=1, value=sub)
+    ws.cell(row=2, column=1).font = Font(italic=True, color="666666", size=10)
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=11)
+    ws.cell(row=2, column=1).alignment = Alignment(horizontal="center")
+
+    # Headers (riga 4)
+    headers = [
+        "Cognome", "Nome", "Codice Fiscale", "Ruolo",
+        "Inizio Contratto", "Fine Contratto", "Compenso/Mese (€)",
+        "Totale nel Range (€)", "Esterni nel Range (€)",
+        "Supera €5K", "Supera €15K", "Note",
+    ]
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="1565C0", end_color="1565C0", fill_type="solid")
+    thin = Side(border_style="thin", color="999999")
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+    header_row = 4
+    for col, h in enumerate(headers, 1):
+        c = ws.cell(row=header_row, column=col, value=h)
+        c.font = header_font
+        c.fill = header_fill
+        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        c.border = border
+
+    # Righe dati
+    for idx, r in enumerate(rows, header_row + 1):
+        ws.cell(row=idx, column=1, value=r["last_name"])
+        ws.cell(row=idx, column=2, value=r["first_name"])
+        ws.cell(row=idx, column=3, value=r["fiscal_code"])
+        ws.cell(row=idx, column=4, value=r["role"])
+        ws.cell(row=idx, column=5, value=datetime.fromisoformat(r["contract_start"]).strftime("%d/%m/%Y") if r["contract_start"] else "")
+        ws.cell(row=idx, column=6, value=datetime.fromisoformat(r["contract_end"]).strftime("%d/%m/%Y") if r["contract_end"] else "")
+        ws.cell(row=idx, column=7, value=round(r["monthly"], 2))
+        ws.cell(row=idx, column=8, value=round(r["range_total"], 2))
+        ws.cell(row=idx, column=9, value=round(r["external_total"], 2))
+        ws.cell(row=idx, column=10, value="SÌ" if r["range_total"] > 5000 else "")
+        ws.cell(row=idx, column=11, value="SÌ" if r["range_total"] > 15000 else "")
+        ws.cell(row=idx, column=12, value=r["note"])
+        # Colora la riga se supera soglie
+        if r["range_total"] > 15000:
+            row_fill = PatternFill(start_color="F3E5F5", end_color="F3E5F5", fill_type="solid")
+        elif r["range_total"] > 5000:
+            row_fill = PatternFill(start_color="FFF3E0", end_color="FFF3E0", fill_type="solid")
+        else:
+            row_fill = None
+        for col in range(1, 13):
+            cell = ws.cell(row=idx, column=col)
+            cell.border = border
+            if col in (7, 8, 9):
+                cell.number_format = '#,##0.00 €'
+                cell.alignment = Alignment(horizontal="right")
+            elif col in (10, 11):
+                cell.alignment = Alignment(horizontal="center")
+                cell.font = Font(bold=True, color="8E44AD" if col == 11 and cell.value else "F57F17" if col == 10 and cell.value else "333333")
+            if row_fill:
+                cell.fill = row_fill
+
+    # Riga totali
+    total_row = header_row + len(rows) + 1
+    if rows:
+        ws.cell(row=total_row, column=1, value="TOTALI").font = Font(bold=True)
+        ws.cell(row=total_row, column=7, value=f"=SUM(G{header_row+1}:G{total_row-1})").number_format = '#,##0.00 €'
+        ws.cell(row=total_row, column=8, value=f"=SUM(H{header_row+1}:H{total_row-1})").number_format = '#,##0.00 €'
+        ws.cell(row=total_row, column=9, value=f"=SUM(I{header_row+1}:I{total_row-1})").number_format = '#,##0.00 €'
+        for col in range(1, 13):
+            ws.cell(row=total_row, column=col).font = Font(bold=True)
+            ws.cell(row=total_row, column=col).fill = PatternFill(start_color="E0E0E0", end_color="E0E0E0", fill_type="solid")
+            ws.cell(row=total_row, column=col).border = border
+
+    # Larghezza colonne
+    widths = [14, 14, 18, 16, 14, 14, 16, 18, 18, 11, 11, 28]
+    for i, w in enumerate(widths, 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+    ws.row_dimensions[1].height = 24
+    ws.row_dimensions[header_row].height = 32
+
+    # Nota piè di pagina
+    note_row = total_row + 2
+    ws.cell(row=note_row, column=1, value=(
+        "Note: La 'Regola dei Quartili Settimanali' calcola compensi proporzionali per mesi parziali "
+        "(1 sett.=25%, 2=50%, 3=75%, 4=100%). 'Esterni nel Range' è la somma dichiarata per gli anni "
+        "solari toccati dal range, non proporzionata."
+    ))
+    ws.cell(row=note_row, column=1).font = Font(italic=True, color="666666", size=9)
+    ws.cell(row=note_row, column=1).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=note_row, start_column=1, end_row=note_row, end_column=12)
+    ws.row_dimensions[note_row].height = 40
+
+    # Stream
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    filename = f"riepilogo_compensi_{range_start.strftime('%Y%m%d')}_{range_end.strftime('%Y%m%d')}.xlsx"
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 # Include the router in the main app
 # ==================== PRE-SEASON CAMPAIGN ====================
 
