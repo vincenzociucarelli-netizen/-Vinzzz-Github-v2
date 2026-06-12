@@ -16275,7 +16275,8 @@ def generate_gdpr_adult_privacy_pdf(
     society_id: str,
     consent_data: dict = None,
     signer_role: str = "",
-    signer_country_of_birth: str = ""
+    signer_country_of_birth: str = "",
+    document_id: Optional[str] = None
 ) -> bytes:
     """Generate GDPR-compliant privacy consent PDF for adults (collaboratori, coach, dirigenti, atleti maggiorenni)"""
     if not HAS_PDF_GENERATION:
@@ -16576,6 +16577,25 @@ def generate_gdpr_adult_privacy_pdf(
     c.setFont("Helvetica", 8)
     c.setFillColor(colors.black)
     c.drawCentredString(width/2, 1.5*cm, "Pagina 2 di 2")
+
+    # 🆕 QR code (bottom-right) — verifica autenticità della firma
+    if document_id:
+        try:
+            verify_url = _public_verify_url(document_id)
+            qr_png = _generate_qr_png(verify_url)
+            if qr_png:
+                from reportlab.lib.utils import ImageReader
+                qr_reader = ImageReader(io.BytesIO(qr_png))
+                qr_size = 2.2 * cm
+                qr_x = width - qr_size - 1.5 * cm
+                qr_y = 0.8 * cm
+                c.drawImage(qr_reader, qr_x, qr_y, width=qr_size, height=qr_size, preserveAspectRatio=True, mask='auto')
+                c.setFont("Helvetica", 6)
+                c.setFillColorRGB(0.4, 0.4, 0.4)
+                c.drawCentredString(qr_x + qr_size / 2, qr_y - 0.2 * cm, "Verifica autenticità")
+                c.setFillColorRGB(0, 0, 0)
+        except Exception:
+            pass
     
     c.save()
     return buffer.getvalue()
@@ -16603,7 +16623,8 @@ def generate_gdpr_minor_privacy_pdf(
     document_hash: str,
     user_id: str,
     society_id: str,
-    consent_data: dict = None
+    consent_data: dict = None,
+    document_id: Optional[str] = None
 ) -> bytes:
     if not HAS_PDF_GENERATION:
         raise HTTPException(status_code=500, detail="PDF generation not available")
@@ -17002,6 +17023,25 @@ def generate_gdpr_minor_privacy_pdf(
     c.setFont("Helvetica", 8)
     c.setFillColor(colors.black)
     c.drawCentredString(width/2, 1.5*cm, "Pagina 3 di 3")
+
+    # 🆕 QR code (bottom-right) — verifica autenticità della firma
+    if document_id:
+        try:
+            verify_url = _public_verify_url(document_id)
+            qr_png = _generate_qr_png(verify_url)
+            if qr_png:
+                from reportlab.lib.utils import ImageReader
+                qr_reader = ImageReader(io.BytesIO(qr_png))
+                qr_size = 2.2 * cm
+                qr_x = width - qr_size - 1.5 * cm
+                qr_y = 0.8 * cm
+                c.drawImage(qr_reader, qr_x, qr_y, width=qr_size, height=qr_size, preserveAspectRatio=True, mask='auto')
+                c.setFont("Helvetica", 6)
+                c.setFillColorRGB(0.4, 0.4, 0.4)
+                c.drawCentredString(qr_x + qr_size / 2, qr_y - 0.2 * cm, "Verifica autenticità")
+                c.setFillColorRGB(0, 0, 0)
+        except Exception:
+            pass
     
     c.save()
     return buffer.getvalue()
@@ -18199,6 +18239,8 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
             doc_timestamp = datetime.now(timezone.utc).isoformat()
             doc_version = "1.0"
             doc_hash = hashlib.sha256(f"{request.signer_name}{doc_timestamp}".encode()).hexdigest()[:16]
+            # 🆕 Genera il document_id PRIMA del PDF (serve per il QR di autenticità)
+            document_id = str(uuid.uuid4())
             
             # Use the new GDPR adult privacy PDF format
             pdf_bytes = generate_gdpr_adult_privacy_pdf(
@@ -18225,7 +18267,8 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
                 society_id=current_user.get("society_id", ""),
                 consent_data=getattr(request, 'consent_data', None),
                 signer_role=role or current_user.get("role", ""),
-                signer_country_of_birth=user_data.get("country_of_birth", "") or athlete_data.get("country_of_birth", "") or ""
+                signer_country_of_birth=user_data.get("country_of_birth", "") or athlete_data.get("country_of_birth", "") or "",
+                document_id=document_id
             )
         else:
             pdf_bytes = generate_signed_pdf(
@@ -18240,8 +18283,7 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
         logging.error(f"Error generating PDF: {e}")
         raise HTTPException(status_code=500, detail=f"Errore nella generazione del PDF: {str(e)}")
     
-    # Generate file path and save PDF to disk
-    document_id = str(uuid.uuid4())
+    # Generate file path and save PDF to disk (document_id già generato sopra)
     timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_doc_type = request.document_type.replace(" ", "_").lower()
     filename = f"{safe_doc_type}_{document_id}_{timestamp_str}.pdf"
@@ -18633,6 +18675,7 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
                     society_id=document.get("society_id", ""),
                     consent_data=consent_data,
                     signer_role=signer.get("role", "") if signer else "",
+                    document_id=document.get("id")
                 )
             else:
                 # Minor privacy - parent signed for child. Use minor generator.
@@ -18668,6 +18711,7 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
                     user_id=document.get("signer_id", ""),
                     society_id=document.get("society_id", ""),
                     consent_data=consent_data,
+                    document_id=document.get("id")
                 )
             
             if pdf_bytes:
@@ -18941,6 +18985,8 @@ async def sign_gdpr_privacy_document(
         )
     
     # Generate PDF based on document type
+    # 🆕 document_id generato PRIMA del PDF (serve per il QR di autenticità)
+    document_id = str(uuid.uuid4())
     try:
         if request.document_type == "gdpr_adult":
             # Get signer data from request or current_user
@@ -18984,7 +19030,8 @@ async def sign_gdpr_privacy_document(
                 society_id=society_id,
                 consent_data=request.consent_data,
                 signer_role=current_user.get("role", ""),
-                signer_country_of_birth=full_user.get("country_of_birth", "") if full_user else ""
+                signer_country_of_birth=full_user.get("country_of_birth", "") if full_user else "",
+                document_id=document_id
             )
             
             doc_title = "Informativa Privacy GDPR - Staff"
@@ -19068,7 +19115,8 @@ async def sign_gdpr_privacy_document(
                 document_hash=document_hash,
                 user_id=current_user["id"],
                 society_id=society_id,
-                consent_data=request.consent_data
+                consent_data=request.consent_data,
+                document_id=document_id
             )
             
             doc_title = f"Informativa Privacy GDPR - Minore {minor_full_name}"
@@ -19087,8 +19135,7 @@ async def sign_gdpr_privacy_document(
         logging.error(f"Error generating GDPR PDF: {e}")
         raise HTTPException(status_code=500, detail=f"Errore nella generazione del PDF: {str(e)}")
     
-    # Save PDF to disk
-    document_id = str(uuid.uuid4())
+    # Save PDF to disk (document_id già generato sopra)
     timestamp_file = datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_doc_type = request.document_type.replace(" ", "_").lower()
     filename = f"{safe_doc_type}_{document_id}_{timestamp_file}.pdf"
