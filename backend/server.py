@@ -7362,13 +7362,17 @@ async def sign_athlete_compensation_receipt_with_signature(
     prior_compensation = athlete.get("other_annual_compensation", 0) or 0
     
     # Calculate yearly totals
+    # 🆕 FIX P1: recupera TUTTE le firme dell'anno (escluso solo il mese corrente) per gestire
+    # correttamente le firme retroattive fuori ordine cronologico.
     yearly_receipts = await db.athlete_compensation_receipts.find({
         "athlete_id": athlete_id,
         "year": year,
-        "signed": True
+        "signed": True,
+        "month": {"$ne": month}
     }).to_list(12)
     
-    yearly_total_from_receipts = sum(r.get("amount", 0) for r in yearly_receipts)
+    signed_by_month = {r["month"]: float(r.get("amount", 0) or 0) for r in yearly_receipts}
+    yearly_total_from_receipts = sum(signed_by_month.values())
     
     # Check contract start year for prior compensation
     contract_start = athlete.get("contract_start_date")
@@ -7396,9 +7400,18 @@ async def sign_athlete_compensation_receipt_with_signature(
     
     new_total = yearly_total + amount_gross
     
-    # Threshold checks - superamento scatta da OLTRE la soglia (€5.001 e €15.001)
-    first_time_exceeded_5000 = (new_total > 5000 and yearly_total <= 5000)
-    first_time_exceeded_15000 = (new_total > 15000 and yearly_total <= 15000)
+    # Threshold checks — 🆕 FIX P1 applicato anche all'Atleta PRO: usa calcolo cronologico
+    # cumulativo per gestire correttamente le firme retroattive fuori ordine.
+    prior_for_year = prior_compensation if (contract_start_year and year == contract_start_year) else 0
+    month_5k, month_15k = _detect_threshold_crossings_chronological(
+        signed_by_month=signed_by_month,
+        new_month=month,
+        new_amount=amount_gross,
+        prior_compensation=prior_for_year,
+        external_total=external_year_total,
+    )
+    first_time_exceeded_5000 = (month_5k == month)
+    first_time_exceeded_15000 = (month_15k == month)
     
     now = datetime.utcnow()
     month_names = ["", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
