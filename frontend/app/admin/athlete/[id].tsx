@@ -19,6 +19,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
+import PersonCompensationSummary from '../../../src/components/admin/PersonCompensationSummary';
 import { Ionicons } from '../../../src/components/Icon';
 import { Athlete, Team, Payment, Certificate } from '../../../src/types';
 import { format } from 'date-fns';
@@ -3171,6 +3172,14 @@ export default function AdminAthleteDetail() {
                     <Text style={styles.compensationButtonText}>Gestisci Compensi e Quietanze</Text>
                     <Ionicons name="chevron-forward" size={20} color="#fff" />
                   </TouchableOpacity>
+
+                  {/* 🆕 13/06/2026 — Riepilogo Compensi Unificato (Fase 2 - Quartili Settimanali) */}
+                  {athlete?.id && (
+                    <PersonCompensationSummary
+                      personId={athlete.id}
+                      initialYear={new Date().getFullYear()}
+                    />
+                  )}
 
                   {/* 🆕 FASE 2B — Promozione Atleta PRO a Coach (dual-role) */}
                   {linkedCoach ? (

@@ -11,7 +11,7 @@ import hashlib
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Any
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 try:
     from zoneinfo import ZoneInfo  # Python 3.9+
     _IT_TZ = ZoneInfo("Europe/Rome")
@@ -13881,6 +13881,360 @@ def _detect_threshold_crossings_chronological(
         if month_15k is None and cumulative > 15000 and prev <= 15000:
             month_15k = m
     return (month_5k, month_15k)
+
+
+# ╭──────────────────────────────────────────────────────────────╮
+# │  🆕 13/06/2026 — RIEPILOGO COMPENSI UNIFICATO (Fase 2)       │
+# │  Regola dei QUARTILI SETTIMANALI per mesi parziali           │
+# ╰──────────────────────────────────────────────────────────────╯
+
+def _parse_contract_date(value) -> Optional[date]:
+    """Normalizza data contratto (str ISO o datetime) in datetime.date.
+    Ritorna None se non parsabile o vuoto."""
+    if not value:
+        return None
+    try:
+        if isinstance(value, date) and not isinstance(value, datetime):
+            return value
+        if isinstance(value, datetime):
+            return value.date()
+        s = str(value).strip()
+        if not s:
+            return None
+        # Tronca al solo prefisso YYYY-MM-DD
+        s = s[:10]
+        return datetime.fromisoformat(s).date()
+    except Exception:
+        return None
+
+
+def _calculate_proportional_amount_quartile(
+    contract_start: Optional[date],
+    contract_end: Optional[date],
+    monthly_amount: float,
+    year: int,
+    month: int,
+) -> tuple:
+    """🆕 13/06/2026 — Regola dei QUARTILI SETTIMANALI per il calcolo del
+    compenso proporzionale in un mese parziale di contratto.
+
+    Divide il mese in 4 "quartili" (settimane simboliche). I giorni di
+    sovrapposizione tra il contratto e il mese determinano quale quartile
+    applicare:
+        - 4 settimane (mese pieno) → 100% del compenso
+        - 3 settimane → 75%
+        - 2 settimane → 50%
+        - 1 settimana → 25%
+
+    Formula: quartile = round(days_worked / (days_in_month / 4)), clamped 1..4
+
+    Esempi (ottobre 31gg):
+        - 08/10 → 31/10 (24gg): 24/7.75 ≈ 3.1 → 3 → 75% (€225 se monthly=€300)
+        - 26/10 → 31/10 (6gg): 6/7.75 ≈ 0.77 → 1 → 25% (€75 se monthly=€300)
+
+    Returns: (importo_arrotondato, quartile_0_to_4)
+        - quartile=0 se il contratto NON copre nemmeno un giorno del mese
+    """
+    try:
+        amount = float(monthly_amount or 0)
+    except (TypeError, ValueError):
+        return 0.0, 0
+    if amount <= 0 or contract_start is None:
+        return 0.0, 0
+
+    # Range del mese richiesto
+    try:
+        month_start = date(year, month, 1)
+    except ValueError:
+        return 0.0, 0
+    if month == 12:
+        month_end = date(year, 12, 31)
+    else:
+        month_end = date(year, month + 1, 1) - timedelta(days=1)
+
+    # Intersezione contratto ↔ mese
+    effective_start = max(month_start, contract_start)
+    effective_end = month_end if contract_end is None else min(month_end, contract_end)
+
+    if effective_end < effective_start:
+        return 0.0, 0
+
+    days_worked = (effective_end - effective_start).days + 1
+    days_in_month = (month_end - month_start).days + 1  # 28/29/30/31
+
+    if days_worked >= days_in_month:
+        quartile = 4
+    else:
+        week_size = days_in_month / 4.0
+        quartile = round(days_worked / week_size) if week_size > 0 else 0
+        quartile = max(1, min(4, quartile))
+
+    proportional = amount * quartile / 4.0
+    return round(proportional, 2), quartile
+
+
+def _calculate_ras_total(
+    contract_start: Optional[date],
+    contract_end: Optional[date],
+    monthly_amount: float,
+) -> float:
+    """Totale "Comunicazione RAS" = somma di TUTTI i compensi proporzionali
+    su tutti i mesi coperti dal contratto (regola quartili).
+    Se contract_end è None, il RAS non è calcolabile → ritorna 0 (con flag su
+    chi chiama). Il frontend mostrerà un avviso."""
+    if not contract_start or not contract_end or not monthly_amount or monthly_amount <= 0:
+        return 0.0
+    if contract_end < contract_start:
+        return 0.0
+    total = 0.0
+    # Itera mese per mese dall'inizio alla fine del contratto
+    cur = date(contract_start.year, contract_start.month, 1)
+    end_marker = date(contract_end.year, contract_end.month, 1)
+    while cur <= end_marker:
+        amount, _q = _calculate_proportional_amount_quartile(
+            contract_start, contract_end, monthly_amount, cur.year, cur.month,
+        )
+        total += amount
+        # avanza al mese successivo
+        if cur.month == 12:
+            cur = date(cur.year + 1, 1, 1)
+        else:
+            cur = date(cur.year, cur.month + 1, 1)
+    return round(total, 2)
+
+
+def _calculate_fiscal_year_total(
+    contract_start: Optional[date],
+    contract_end: Optional[date],
+    monthly_amount: float,
+    year: int,
+) -> dict:
+    """Totale anno solare = somma compensi proporzionali nei 12 mesi dell'anno
+    (regola quartili). Ritorna anche breakdown per mese."""
+    breakdown = []
+    total = 0.0
+    for m in range(1, 13):
+        amount, quartile = _calculate_proportional_amount_quartile(
+            contract_start, contract_end, monthly_amount, year, m,
+        )
+        breakdown.append({"month": m, "amount": amount, "quartile": quartile})
+        total += amount
+    return {"total": round(total, 2), "breakdown": breakdown}
+
+
+@api_router.get("/admin/persons/{user_id}/compensation-summary")
+async def admin_person_compensation_summary(
+    user_id: str,
+    year: Optional[int] = None,
+    current_user = Depends(get_current_user),
+):
+    """🆕 13/06/2026 — RIEPILOGO COMPENSI UNIFICATO per persona dual-role.
+
+    Restituisce 3 sezioni:
+    - **ras_summary**: totale "Comunicazione RAS" (intero contratto sommando
+       Coach + Atleta PRO se dual-role) con regola dei quartili.
+    - **fiscal_year_current**: anno fiscale richiesto (default = anno corrente)
+       con quartili + compensi esterni + pregresso (solo se è il primo anno).
+    - **fiscal_year_next**: anno fiscale Y+1, stesso schema (senza pregresso).
+
+    Risolve sia user_id atleta che user_id coach: cerca automaticamente il
+    record collegato dell'altra entità (dual-role) tramite CF/email/society.
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    # Determina la persona partendo da user_id (può essere user.id o athlete.id)
+    user = await db.users.find_one({"id": user_id})
+    athlete = None
+    if user:
+        athlete_id_from_user = user.get("athlete_id") or user.get("athlete_record_id")
+        if athlete_id_from_user:
+            athlete = await db.athletes.find_one({"id": athlete_id_from_user})
+        if not athlete:
+            athlete = await _find_linked_athlete_pro_for_user(user["id"])
+    else:
+        # Tenta come athlete.id
+        athlete = await db.athletes.find_one({"id": user_id})
+        if athlete:
+            user = await _find_linked_compensated_user_for_athlete(athlete)
+
+    if not user and not athlete:
+        raise HTTPException(status_code=404, detail="Persona non trovata")
+
+    # Multi-tenant check
+    society_id = (user or {}).get("society_id") or (athlete or {}).get("society_id")
+    if current_user.get("society_id") and society_id and \
+            current_user["society_id"] != society_id:
+        raise HTTPException(status_code=403, detail="Persona appartiene a un'altra società")
+
+    # Anno corrente default
+    if year is None:
+        year = datetime.now(timezone.utc).year
+    year_next = year + 1
+
+    # === Estrai dati Coach (da users) ===
+    coach_section = None
+    coach_first_year = None
+    coach_prior = 0.0
+    if user and user.get("role") in ("coach", "dirigente", "collaboratore", "admin"):
+        c_start = _parse_contract_date(user.get("contract_start_date"))
+        c_end = _parse_contract_date(user.get("contract_end_date"))
+        c_monthly = float(user.get("monthly_compensation") or 0)
+        if c_monthly > 0 or c_start:
+            coach_prior = float(user.get("other_annual_compensation") or 0)
+            ras_total = _calculate_ras_total(c_start, c_end, c_monthly)
+            coach_section = {
+                "role": user.get("role", "coach"),
+                "contract_start": c_start.isoformat() if c_start else None,
+                "contract_end": c_end.isoformat() if c_end else None,
+                "monthly_amount": c_monthly,
+                "ras_total": ras_total,
+                "ras_calculable": bool(c_start and c_end),
+                "fiscal_year": _calculate_fiscal_year_total(c_start, c_end, c_monthly, year),
+                "fiscal_year_next": _calculate_fiscal_year_total(c_start, c_end, c_monthly, year_next),
+            }
+            if c_start:
+                coach_first_year = c_start.year
+
+    # === Estrai dati Atleta PRO (da athletes) ===
+    athlete_section = None
+    athlete_first_year = None
+    athlete_prior = 0.0
+    if athlete and (athlete.get("is_compensated") or float(athlete.get("monthly_compensation") or 0) > 0):
+        a_start = _parse_contract_date(athlete.get("contract_start_date"))
+        a_end = _parse_contract_date(athlete.get("contract_end_date"))
+        a_monthly = float(athlete.get("monthly_compensation") or 0)
+        athlete_prior = float(athlete.get("other_annual_compensation") or 0)
+        ras_total_a = _calculate_ras_total(a_start, a_end, a_monthly)
+        athlete_section = {
+            "role": "athlete",
+            "contract_start": a_start.isoformat() if a_start else None,
+            "contract_end": a_end.isoformat() if a_end else None,
+            "monthly_amount": a_monthly,
+            "ras_total": ras_total_a,
+            "ras_calculable": bool(a_start and a_end),
+            "fiscal_year": _calculate_fiscal_year_total(a_start, a_end, a_monthly, year),
+            "fiscal_year_next": _calculate_fiscal_year_total(a_start, a_end, a_monthly, year_next),
+        }
+        if a_start:
+            athlete_first_year = a_start.year
+
+    if not coach_section and not athlete_section:
+        # Nessun rapporto compensato attivo — risposta vuota ma valida
+        return {
+            "user_id": user["id"] if user else None,
+            "athlete_id": athlete["id"] if athlete else None,
+            "person_name": ((user or {}).get("first_name") or "") + " " + ((user or {}).get("last_name") or "") if user else (((athlete or {}).get("first_name") or "") + " " + ((athlete or {}).get("last_name") or "")),
+            "year": year,
+            "year_next": year_next,
+            "is_dual_role": False,
+            "has_compensation": False,
+            "ras_summary": None,
+            "fiscal_year_current": None,
+            "fiscal_year_next": None,
+        }
+
+    is_dual_role = bool(coach_section and athlete_section)
+
+    # === Pregresso UNIFICATO per persona ===
+    # Solo il valore non-zero (preferendo athlete se entrambi presenti per evitare doppio
+    # conteggio: cfr. PRD "campo unico per persona, no migrazione retroattiva").
+    # Se entrambi non-zero, sommiamo (l'admin ha esplicitamente dichiarato 2 valori).
+    if coach_prior > 0 and athlete_prior > 0:
+        unified_prior = round(coach_prior + athlete_prior, 2)
+    else:
+        unified_prior = round(max(coach_prior, athlete_prior), 2)
+
+    # === Primo anno fiscale (per imputazione del pregresso) ===
+    first_year_candidates = [y for y in (coach_first_year, athlete_first_year) if y is not None]
+    earliest_first_year = min(first_year_candidates) if first_year_candidates else None
+
+    # === Supplementari = compensi esterni (per CASSA) ===
+    external_user_id = user["id"] if user else (athlete or {}).get("user_id") or (athlete or {}).get("linked_user_id")
+    external_athlete_id = athlete["id"] if athlete else None
+
+    async def _sum_external(year_target: int) -> float:
+        total = 0.0
+        if external_user_id:
+            total += await _get_year_external_compensations_total(external_user_id, year_target)
+        if external_athlete_id and external_athlete_id != external_user_id:
+            total += await _get_year_external_compensations_total(external_athlete_id, year_target)
+        return round(total, 2)
+
+    external_current = await _sum_external(year)
+    external_next = await _sum_external(year_next)
+
+    # === RAS SUMMARY ===
+    ras_coach_total = coach_section["ras_total"] if coach_section else 0.0
+    ras_athlete_total = athlete_section["ras_total"] if athlete_section else 0.0
+    ras_supplementary = 0.0  # esterni NON inclusi nella RAS (RAS = solo contratto societario)
+    ras_grand_total = round(ras_coach_total + ras_athlete_total + ras_supplementary, 2)
+    ras_calculable = (
+        (coach_section is None or coach_section["ras_calculable"]) and
+        (athlete_section is None or athlete_section["ras_calculable"])
+    )
+
+    # === FISCAL YEAR (corrente) ===
+    fy_coach = coach_section["fiscal_year"]["total"] if coach_section else 0.0
+    fy_athlete = athlete_section["fiscal_year"]["total"] if athlete_section else 0.0
+    is_first_year_current = (earliest_first_year is not None and year == earliest_first_year)
+    prior_current = unified_prior if is_first_year_current else 0.0
+    fy_current_total = round(fy_coach + fy_athlete + external_current + prior_current, 2)
+
+    # === FISCAL YEAR (successivo) ===
+    fy_coach_next = coach_section["fiscal_year_next"]["total"] if coach_section else 0.0
+    fy_athlete_next = athlete_section["fiscal_year_next"]["total"] if athlete_section else 0.0
+    is_first_year_next = (earliest_first_year is not None and year_next == earliest_first_year)
+    prior_next = unified_prior if is_first_year_next else 0.0
+    fy_next_total = round(fy_coach_next + fy_athlete_next + external_next + prior_next, 2)
+
+    person_name = ((user or {}).get("first_name") or (athlete or {}).get("first_name") or "") + " " + \
+                  ((user or {}).get("last_name") or (athlete or {}).get("last_name") or "")
+
+    return {
+        "user_id": user["id"] if user else None,
+        "athlete_id": athlete["id"] if athlete else None,
+        "person_name": person_name.strip(),
+        "year": year,
+        "year_next": year_next,
+        "is_dual_role": is_dual_role,
+        "has_compensation": True,
+        "unified_prior_compensation": unified_prior,
+        "earliest_first_year": earliest_first_year,
+        "ras_summary": {
+            "coach_total": ras_coach_total,
+            "athlete_total": ras_athlete_total,
+            "supplementary": ras_supplementary,
+            "grand_total": ras_grand_total,
+            "ras_calculable": ras_calculable,
+        },
+        "fiscal_year_current": {
+            "year": year,
+            "coach_total": fy_coach,
+            "athlete_total": fy_athlete,
+            "supplementary": external_current,
+            "prior_compensation": prior_current,
+            "is_first_year": is_first_year_current,
+            "grand_total": fy_current_total,
+            "exceeds_5k": fy_current_total > 5000,
+            "exceeds_15k": fy_current_total > 15000,
+        },
+        "fiscal_year_next": {
+            "year": year_next,
+            "coach_total": fy_coach_next,
+            "athlete_total": fy_athlete_next,
+            "supplementary": external_next,
+            "prior_compensation": prior_next,
+            "is_first_year": is_first_year_next,
+            "grand_total": fy_next_total,
+            "exceeds_5k": fy_next_total > 5000,
+            "exceeds_15k": fy_next_total > 15000,
+        },
+        "coach_section": coach_section,
+        "athlete_section": athlete_section,
+    }
+
+
 
 
 # ╭──────────────────────────────────────────────────────────────╮
