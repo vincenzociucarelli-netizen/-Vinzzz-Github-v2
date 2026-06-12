@@ -23,7 +23,7 @@ export default function PrivacyPolicyPage() {
       <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
         <Text style={styles.mainTitle}>RegistraTEAM</Text>
         <Text style={styles.subtitle}>Informativa Privacy (GDPR — UE 2016/679)</Text>
-        <Text style={styles.updateDate}>Ultimo aggiornamento: 2 maggio 2026 — v2.0</Text>
+        <Text style={styles.updateDate}>Ultimo aggiornamento: 12 giugno 2026 — v2.1</Text>
 
         <View style={styles.infoBox}>
           <Ionicons name="shield-checkmark" size={20} color="#1565C0" />
@@ -44,9 +44,10 @@ export default function PrivacyPolicyPage() {
           <B>3.1 Dati anagrafici e di contatto</B>{'\n'}
           Nome, cognome, data e luogo di nascita, codice fiscale, indirizzo di residenza, email, numero di telefono.{'\n\n'}
           <B>3.2 Dati relativi ai minori</B>{'\n'}
-          Per i minorenni: consenso firmato da entrambi i genitori/tutori, dati anagrafici dei genitori, eventuali dati di un tutore legale. Accesso specifico per i tutori.{'\n\n'}
+          Per i minorenni: consenso firmato da un genitore/tutore, dati anagrafici dei genitori, eventuali dati di un tutore legale. Accesso specifico per i tutori.{'\n\n'}
           <B>3.3 Dati sanitari (art. 9 GDPR — categoria particolare)</B>{'\n'}
-          Certificato di idoneità sportiva (tipologia: agonistica/non agonistica, data rilascio, data scadenza, medico certificatore). Il certificato in PDF è conservato in forma cifrata e accessibile solo agli admin della Società.{'\n\n'}
+          Della certificazione di idoneità sportiva (agonistica/non agonistica) vengono registrati esclusivamente i metadati strettamente necessari: tipologia, data di rilascio, data di scadenza e medico certificatore. {'\n'}
+          <B>Il certificato medico in PDF NON viene conservato sui server della Società</B>: l'utente carica unicamente le date di emissione e di scadenza, che vengono successivamente convalidate dall'Admin della Società. L'originale resta in possesso dell'atleta/famiglia (o del medico certificatore, secondo i termini di legge).{'\n\n'}
           <B>3.4 Dati tecnici e di log</B>{'\n'}
           IP di accesso, timestamp di login, identificativo QR personale, sessioni. Usati esclusivamente per sicurezza e audit.{'\n\n'}
           <B>3.5 Dati amministrativi e fiscali</B>{'\n'}
@@ -87,7 +88,8 @@ export default function PrivacyPolicyPage() {
 
         <Sec title="8. Conservazione dei dati">
           {'\u2022'} <B>Durante il rapporto associativo</B>: per tutto il tempo necessario.{'\n'}
-          {'\u2022'} <B>Dopo la cessazione</B>: 10 anni per obblighi fiscali (art. 2220 c.c.), 5 anni per dati sanitari (certificati medici). Audit log conservati 5 anni.{'\n'}
+          {'\u2022'} <B>Dopo la cessazione</B>: 10 anni per obblighi fiscali (art. 2220 c.c.). Audit log conservati 5 anni.{'\n'}
+          {'\u2022'} <B>Certificato medico</B>: il PDF dell'idoneità sportiva NON viene conservato dalla Società. Si registrano solo le date di emissione e scadenza, che vengono cancellate dopo la cessazione del rapporto associativo (salvo specifici obblighi di legge).{'\n'}
           {'\u2022'} <B>Dati sensibili minori</B>: 1 anno oltre il compimento della maggiore età salvo specifici obblighi.{'\n'}
           Scaduti i termini i dati vengono cancellati o anonimizzati.
         </Sec>
@@ -109,7 +111,7 @@ export default function PrivacyPolicyPage() {
         </Sec>
 
         <Sec title="11. Minori">
-          Il servizio tratta dati di minori solo con il consenso firmato di entrambi i genitori/tutori. Per atleti dai 14 anni è previsto un account personale ma vincolato all'approvazione del genitore per le azioni sensibili.
+          Il servizio tratta dati di minori solo con il consenso firmato di un genitore/tutore. Per atleti dai 14 anni è previsto un account personale ma vincolato all'approvazione del genitore per le azioni sensibili.
         </Sec>
 
         <Sec title="12. Data Breach">
