@@ -3177,59 +3177,117 @@ export default function AdminAthleteDetail() {
                     <View
                       data-testid="linked-coach-badge"
                       style={{
-                        marginTop: 12, padding: 12, backgroundColor: '#E3F2FD',
-                        borderRadius: 8, borderWidth: 1, borderColor: '#1976D2',
+                        marginTop: 14,
+                        backgroundColor: '#0D1B2A',
+                        borderRadius: 12,
+                        padding: 16,
+                        shadowColor: '#000',
+                        shadowOpacity: 0.15,
+                        shadowRadius: 8,
+                        shadowOffset: { width: 0, height: 4 },
+                        elevation: 4,
                       }}
                     >
-                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                        <Ionicons name="people-circle" size={22} color="#1976D2" />
-                        <Text style={{ marginLeft: 6, fontWeight: '700', color: '#1976D2', fontSize: 14 }}>
-                          Anche Coach (Doppio Ruolo)
+                      {/* Header */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                        <View style={{
+                          width: 36, height: 36, borderRadius: 18, backgroundColor: '#1565C0',
+                          alignItems: 'center', justifyContent: 'center', marginRight: 10,
+                        }}>
+                          <Ionicons name="people-circle" size={22} color="#fff" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontWeight: '800', color: '#fff', fontSize: 15 }}>
+                            Anche Coach (Doppio Ruolo)
+                          </Text>
+                          <Text style={{ fontSize: 11, color: '#90CAF9', marginTop: 1 }}>
+                            Atleta retribuito + collaboratore tecnico
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Info coach */}
+                      <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: 12 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <Text style={{ fontSize: 12, color: '#B0BEC5' }}>Email Coach</Text>
+                          <Text style={{ fontSize: 12, color: '#fff', fontWeight: '600' }}>{linkedCoach.coach_email}</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <Text style={{ fontSize: 12, color: '#B0BEC5' }}>Squadre</Text>
+                          <Text style={{ fontSize: 12, color: '#fff', fontWeight: '600' }}>{(linkedCoach.assigned_teams || []).join(', ') || '—'}</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                          <Text style={{ fontSize: 12, color: '#B0BEC5' }}>Compenso Coach</Text>
+                          <Text style={{ fontSize: 13, color: '#FFD54F', fontWeight: '800' }}>€ {Number(linkedCoach.monthly_compensation || 0).toFixed(2)}/mese</Text>
+                        </View>
+                      </View>
+
+                      {/* Info soglie cumulative */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 6 }}>
+                        <Ionicons name="checkmark-circle" size={14} color="#66BB6A" />
+                        <Text style={{ fontSize: 11, color: '#B0BEC5', flex: 1 }}>
+                          Soglie €5K/€15K calcolate cumulativamente (atleta + coach)
                         </Text>
                       </View>
-                      <Text style={{ fontSize: 12, color: '#333' }}>
-                        Email: {linkedCoach.coach_email}
-                      </Text>
-                      <Text style={{ fontSize: 12, color: '#333' }}>
-                        Squadre: {(linkedCoach.assigned_teams || []).join(', ') || '—'}
-                      </Text>
-                      <Text style={{ fontSize: 12, color: '#333' }}>
-                        Compenso coach: € {Number(linkedCoach.monthly_compensation || 0).toFixed(2)}/mese
-                      </Text>
-                      <Text style={{ fontSize: 11, color: '#666', marginTop: 6, fontStyle: 'italic' }}>
-                        ✓ Soglie €5K/€15K calcolate cumulativamente (atleta + coach)
-                      </Text>
-                      <View style={{ flexDirection: 'row', marginTop: 8, gap: 12 }}>
-                        <TouchableOpacity
-                          data-testid="open-linked-coach-btn"
-                          onPress={() => router.push(`/admin/coach/${linkedCoach.coach_user_id}`)}
-                        >
-                          <Text style={{ color: '#1976D2', fontWeight: '600' }}>Apri scheda Coach →</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          data-testid="unlink-coach-btn"
-                          onPress={() => {
-                            Alert.alert(
-                              'Annulla promozione?',
-                              'Rimuoverò il profilo Coach collegato. Potrai ricrearlo subito col nuovo flow (login con email atleta). Quietanze già firmate impediscono la rimozione.',
-                              [
-                                { text: 'Annulla', style: 'cancel' },
-                                { text: 'Rimuovi', style: 'destructive', onPress: async () => {
-                                  try {
-                                    await api.delete(`/admin/athletes/${id}/promote-to-coach`);
-                                    setLinkedCoach(null);
-                                    Alert.alert('OK', 'Coach rimosso. Ora puoi ricreare la promozione col nuovo flow.');
-                                  } catch (e: any) {
-                                    Alert.alert('Errore', e?.response?.data?.detail || 'Rimozione fallita');
-                                  }
-                                }},
-                              ]
-                            );
-                          }}
-                        >
-                          <Text style={{ color: '#C62828', fontWeight: '600' }}>Annulla promozione</Text>
-                        </TouchableOpacity>
-                      </View>
+
+                      {/* A — Pulsante primario "Apri scheda Coach" */}
+                      <TouchableOpacity
+                        data-testid="open-linked-coach-btn"
+                        onPress={() => router.push(`/admin/coach/${linkedCoach.coach_user_id}`)}
+                        style={{
+                          marginTop: 14,
+                          backgroundColor: '#1565C0',
+                          borderRadius: 10,
+                          paddingVertical: 13,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 8,
+                        }}
+                      >
+                        <Ionicons name="open" size={18} color="#fff" />
+                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                          Apri scheda Coach
+                        </Text>
+                      </TouchableOpacity>
+
+                      {/* Separatore */}
+                      <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginTop: 16, marginBottom: 10 }} />
+
+                      {/* B — Azione distruttiva secondaria "Rimuovi ruolo Coach" */}
+                      <TouchableOpacity
+                        data-testid="unlink-coach-btn"
+                        onPress={() => {
+                          Alert.alert(
+                            'Rimuovere il ruolo Coach?',
+                            "L'atleta tornerà ad essere solo Atleta PRO. Il profilo Coach verrà eliminato (con squadre e impostazioni). Potrai ricrearlo in qualsiasi momento. Le quietanze coach già firmate impediscono la rimozione.",
+                            [
+                              { text: 'Annulla', style: 'cancel' },
+                              { text: 'Rimuovi ruolo Coach', style: 'destructive', onPress: async () => {
+                                try {
+                                  await api.delete(`/admin/athletes/${id}/promote-to-coach`);
+                                  setLinkedCoach(null);
+                                  Alert.alert('OK', 'Ruolo Coach rimosso correttamente.');
+                                } catch (e: any) {
+                                  Alert.alert('Errore', e?.response?.data?.detail || 'Rimozione fallita');
+                                }
+                              }},
+                            ]
+                          );
+                        }}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
+                          paddingVertical: 8,
+                        }}
+                      >
+                        <Ionicons name="person-remove-outline" size={14} color="#EF9A9A" />
+                        <Text style={{ color: '#EF9A9A', fontSize: 12, fontWeight: '600' }}>
+                          Rimuovi ruolo Coach
+                        </Text>
+                      </TouchableOpacity>
                     </View>
                   ) : (
                     <TouchableOpacity
