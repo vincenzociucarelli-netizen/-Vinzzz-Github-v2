@@ -20,6 +20,35 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 
 **Status**: ✅ Implementato e testato (testing agent 100% backend + frontend, iteration 70).
 
+### Cosa è stato consegnato (singola persona — Fase 2)
+[...vedi commit precedente: helper Quartili + endpoint /admin/persons/{id}/compensation-summary]
+
+---
+
+## 🆕 13/06/2026 — EXPORT XLSX RIEPILOGO COMPENSI ANNUALE ✅ COMPLETATO
+
+**Status**: ✅ Implementato e testato (testing agent 100% backend + frontend, iteration 71, zero issue).
+
+### Cosa è stato consegnato (export societario)
+1. **Backend** (`/app/backend/server.py`, dopo riga 27860):
+   - `_calculate_person_range_total(contract_start, contract_end, monthly, range_start, range_end)`: helper che clampa il contratto sul range e somma proporzionalmente usando la regola Quartili.
+   - `GET /api/admin/compensation-summary/default-range`: ritorna `{start_date, end_date, label}` calcolato da `settings.season_*` della società (default Pallavolo Perugia = 01/07/2025 → 30/06/2026 "Stagione 2025/2026"). Restituisce null/null se la stagione non è configurata.
+   - `GET /api/admin/compensation-summary/export-xlsx?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD`: scarica un file XLSX con tutte le persone compensate della società (Coach, Dirigente, Collaboratore, Atleta PRO), colonne: Cognome, Nome, CF, Ruolo, Inizio Contratto, Fine Contratto, Compenso/Mese, **Totale nel Range** (quartili), **Esterni nel Range** (colonna SEPARATA, non sommata), Supera €5K, Supera €15K, Note + riga TOTALI con formule =SUM().
+
+2. **Frontend** (`/app/frontend/src/components/admin/CompensationExportModal.tsx`):
+   - Modal con input data masked gg/mm/aaaa
+   - Pre-popolamento automatico dalla stagione società (badge "Stagione 2025/2026")
+   - Bottone verde "Scarica XLSX" + download blob su web / Sharing su mobile
+   - Validazione locale (data fine > data inizio) + 400 lato backend
+   - Card di accesso in `/admin` (index): "📊 Riepilogo Compensi Annuale" sotto "🏢 Compensi Esterni"
+
+### Decisioni di design
+- **Range custom > anno solare**: una società con esercizio non-solare (es. 1/9–31/8) può scegliere qualsiasi range.
+- **Compensi esterni separati**: colonna dedicata "Esterni nel Range" che NON viene sommata al totale del range — coerente con la richiesta esplicita del PO. Per i compensi esterni si sommano gli importi degli anni solari toccati dal range (non si proporzionano i mesi, perché il dato è annuale).
+- **Quartili applicati anche all'export**: la Regola dei Quartili Settimanali si applica sia ai mesi parziali iniziali/finali del contratto sia ai mesi parziali del range (es. esercizio che inizia il 15 del mese → quartile 2).
+- **Multi-tenant**: filtro `society_id` su `users` e `athletes`.
+
+---
 ### Cosa è stato consegnato
 1. **Backend** (`/app/backend/server.py`):
    - `_parse_contract_date()` — normalizza date contratto (ISO string / datetime / date)
