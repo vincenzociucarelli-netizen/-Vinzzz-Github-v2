@@ -19,9 +19,14 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## 🆕 13/06/2026 — Pianificazione Riepilogo Compensi Unificato (PROSSIMA SESSIONE)
 
 ### Regole confermate dall'utente
-1. **Mese parziale - Regola del 15**:
-   - Inizio contratto ≤ 15 del mese → mese pieno; ≥ 16 → mezzo mese
-   - Fine contratto ≤ 15 → mezzo mese; ≥ 16 → mese pieno
+1. **Mese parziale - Regola dei QUARTILI SETTIMANALI** (sostituisce la vecchia regola del 15):
+   - 4 settimane → 100% del compenso
+   - 3 settimane → 75%
+   - 2 settimane → 50%
+   - 1 settimana → 25%
+   - Formula: `quartile = round(days_worked_in_month / (days_in_month / 4))` clampato 1..4
+   - Importo proporzionale: `monthly_amount × (quartile / 4)`
+   - Esempi (ottobre 31gg): contratto 08/10→31/10 (24gg) → 75% € 225; contratto 26/10→31/10 (6gg) → 25% € 75
 2. **Quietanze fuori range contratto**: accetta e calcola, niente blocco UI
 3. **Pregresso**: campo unico per Utente (non per ruolo), si conta solo nel primo anno solare
 4. **UI**: dashboard ADMIN unificata (una sola schermata raggiungibile sia da coach che da atleta)
