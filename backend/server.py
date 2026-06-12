@@ -16371,6 +16371,20 @@ def generate_monthly_receipt_pdf(
     except Exception:
         pass
 
+    # 🆕 Nota dual-role (bonifico unico Coach + Atleta PRO)
+    if has_split:
+        try:
+            c.setFont("Helvetica-Oblique", 8)
+            c.setFillColorRGB(0.35, 0.35, 0.35)
+            c.drawCentredString(
+                width / 2,
+                1.3 * cm,
+                "Documento generato per dual-role Coach + Atleta — bonifico unico",
+            )
+            c.setFillColorRGB(0, 0, 0)
+        except Exception:
+            pass
+
     c.save()
     return buffer.getvalue()
 
