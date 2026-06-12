@@ -14301,6 +14301,29 @@ async def list_my_external_compensations(
     return {"items": items, "total": round(total, 2)}
 
 
+@api_router.get("/admin/users/{user_id}/external-compensations")
+async def admin_user_external_compensations(
+    user_id: str,
+    year: Optional[int] = None,
+    current_user = Depends(get_current_user),
+):
+    """Admin: lista delle dichiarazioni di compensi esterni di un utente specifico.
+    Serve all'admin per ricostruire il cumulativo cronologico con esterni inclusi."""
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    q: dict = {"user_id": user_id}
+    if year is not None:
+        q["year"] = int(year)
+    sid = current_user.get("society_id")
+    if sid:
+        q["society_id"] = sid
+    items: List[dict] = []
+    async for d in db.external_compensations.find(q, {"_id": 0}).sort("declared_at", 1):
+        items.append(d)
+    total = sum(float(i.get("amount") or 0) for i in items)
+    return {"items": items, "total": round(total, 2)}
+
+
 # ─────────────────────── Riepilogo Admin compensi esterni ───────────────────────
 
 @api_router.get("/admin/external-compensations/summary")

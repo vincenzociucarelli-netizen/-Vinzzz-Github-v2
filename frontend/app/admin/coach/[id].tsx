@@ -121,6 +121,8 @@ export default function AdminCoachDetail() {
   
   // Quietanze firmate reali dal database
   const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
+  // 🆕 Compensi esterni dichiarati dal coach (per calcolo soglie con esterni)
+  const [externalDeclarations, setExternalDeclarations] = useState<any[]>([]);
   
   // Modal per visualizzare le quietanze firmate
   const [receiptsModalVisible, setReceiptsModalVisible] = useState(false);
@@ -225,6 +227,15 @@ export default function AdminCoachDetail() {
       } catch (compError) {
         console.log('No compensation data available');
         setSignedReceipts([]);
+      }
+      
+      // 🆕 Carica anche i compensi esterni dichiarati dal coach (per soglie cumulative cronologiche)
+      try {
+        const extRes = await api.get(`/admin/users/${id}/external-compensations`);
+        setExternalDeclarations(Array.isArray(extRes.data?.items) ? extRes.data.items : []);
+      } catch (extError) {
+        console.log('No external declarations available');
+        setExternalDeclarations([]);
       }
       
       // Load user's signed documents
@@ -2057,7 +2068,17 @@ export default function AdminCoachDetail() {
                 if (priorComp > 0) {
                   cumulativeByYear[contractYear] = priorComp;
                 }
-                
+
+                // 🆕 Mappa external compensations per (year, month) — imputati al mese in cui sono stati dichiarati
+                const externalByYearMonth: { [key: string]: number } = {};
+                for (const ext of (externalDeclarations || [])) {
+                  const y = Number(ext.year);
+                  const m = Number(ext.related_receipt_month || ext.month);
+                  if (!y || !m) continue;
+                  const k = `${y}-${m}`;
+                  externalByYearMonth[k] = (externalByYearMonth[k] || 0) + (Number(ext.amount) || 0);
+                }
+
                 for (const r of sortedForCalc) {
                   if (!thresholdsByYear[r.year]) {
                     thresholdsByYear[r.year] = { first5k: null, first15k: null };
@@ -2066,7 +2087,10 @@ export default function AdminCoachDetail() {
                     cumulativeByYear[r.year] = r.year === contractYear ? (priorComp || 0) : 0;
                   }
                   
-                  cumulativeByYear[r.year] += (r.amount_gross || r.amount || 0);
+                  // 🆕 Somma l'importo interno + eventuali esterni dichiarati nello stesso mese
+                  const internalAmt = r.amount_gross || r.amount || 0;
+                  const externalAmt = externalByYearMonth[`${r.year}-${r.month}`] || 0;
+                  cumulativeByYear[r.year] += internalAmt + externalAmt;
                   
                   if (cumulativeByYear[r.year] > 5000 && thresholdsByYear[r.year].first5k === null) {
                     thresholdsByYear[r.year].first5k = r.month;
