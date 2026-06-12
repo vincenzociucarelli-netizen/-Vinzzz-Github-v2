@@ -47,7 +47,7 @@ export default function PrivacyPolicyPage() {
           Per i minorenni: consenso firmato da un genitore/tutore, dati anagrafici dei genitori, eventuali dati di un tutore legale. Accesso specifico per i tutori.{'\n\n'}
           <B>3.3 Dati sanitari (art. 9 GDPR — categoria particolare)</B>{'\n'}
           Della certificazione di idoneità sportiva (agonistica/non agonistica) vengono registrati esclusivamente i metadati strettamente necessari: tipologia, data di rilascio, data di scadenza e medico certificatore. {'\n'}
-          <B>Il certificato medico in PDF NON viene conservato sui server della Società</B>: l'utente carica unicamente le date di emissione e di scadenza, che vengono successivamente convalidate dall'Admin della Società. L'originale resta in possesso dell'atleta/famiglia (o del medico certificatore, secondo i termini di legge).{'\n\n'}
+          <B>Il certificato medico in PDF NON viene conservato sui server della Società</B>: l'utente carica unicamente le date di emissione e di scadenza, che vengono successivamente convalidate dall'Admin della Società. L'originale cartaceo del certificato dovrà essere consegnato alla Società, che provvederà alla sua custodia nei propri archivi.{'\n\n'}
           <B>3.4 Dati tecnici e di log</B>{'\n'}
           IP di accesso, timestamp di login, identificativo QR personale, sessioni. Usati esclusivamente per sicurezza e audit.{'\n\n'}
           <B>3.5 Dati amministrativi e fiscali</B>{'\n'}
@@ -89,7 +89,7 @@ export default function PrivacyPolicyPage() {
         <Sec title="8. Conservazione dei dati">
           {'\u2022'} <B>Durante il rapporto associativo</B>: per tutto il tempo necessario.{'\n'}
           {'\u2022'} <B>Dopo la cessazione</B>: 10 anni per obblighi fiscali (art. 2220 c.c.). Audit log conservati 5 anni.{'\n'}
-          {'\u2022'} <B>Certificato medico</B>: il PDF dell'idoneità sportiva NON viene conservato dalla Società. Si registrano solo le date di emissione e scadenza, che vengono cancellate dopo la cessazione del rapporto associativo (salvo specifici obblighi di legge).{'\n'}
+          {'\u2022'} <B>Certificato medico</B>: il PDF dell'idoneità sportiva NON viene conservato dalla Società. Si registrano solo le date di emissione e scadenza, che vengono cancellate dopo la cessazione del rapporto associativo. L'originale cartaceo del certificato consegnato alla Società viene custodito nei propri archivi secondo i termini di legge.{'\n'}
           {'\u2022'} <B>Dati sensibili minori</B>: 1 anno oltre il compimento della maggiore età salvo specifici obblighi.{'\n'}
           Scaduti i termini i dati vengono cancellati o anonimizzati.
         </Sec>
