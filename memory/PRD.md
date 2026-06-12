@@ -16,6 +16,25 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 13/06/2026 — Pianificazione Riepilogo Compensi Unificato (PROSSIMA SESSIONE)
+
+### Regole confermate dall'utente
+1. **Mese parziale - Regola del 15**:
+   - Inizio contratto ≤ 15 del mese → mese pieno; ≥ 16 → mezzo mese
+   - Fine contratto ≤ 15 → mezzo mese; ≥ 16 → mese pieno
+2. **Quietanze fuori range contratto**: accetta e calcola, niente blocco UI
+3. **Pregresso**: campo unico per Utente (non per ruolo), si conta solo nel primo anno solare
+4. **UI**: dashboard ADMIN unificata (una sola schermata raggiungibile sia da coach che da atleta)
+
+### Lavoro pianificato
+- Endpoint backend `GET /api/admin/persons/{user_id}/compensation-summary?year=Y`
+  - Restituisce: Comunicazione RAS (totale contratto sommando tutti i rapporti) + Anno solare (con regola 15) + Pregresso primo anno
+  - Somme supplementari = bonus società + external_compensations
+- Helper `_calculate_proportional_amount(contract_start, contract_end, monthly_amount, year)` con regola 15
+- Migrazione `other_annual_compensation` da Coach a User (campo univoco per persona)
+- UI riepilogo 3 box estesa con righe separate per Coach/Atleta
+- Test pytest dedicato
+
 ## 🆕 11/06/2026 — P1: Fix PDF retroattivo soglia €5K/€15K (firme fuori ordine)
 
 ### Problema
