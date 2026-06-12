@@ -16,6 +16,34 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 13/06/2026 — FASE 2 RIEPILOGO COMPENSI UNIFICATO ✅ COMPLETATA
+
+**Status**: ✅ Implementato e testato (testing agent 100% backend + frontend, iteration 70).
+
+### Cosa è stato consegnato
+1. **Backend** (`/app/backend/server.py`):
+   - `_parse_contract_date()` — normalizza date contratto (ISO string / datetime / date)
+   - `_calculate_proportional_amount_quartile()` — Regola dei Quartili Settimanali (1 sett=25%, 2=50%, 3=75%, 4=100%)
+   - `_calculate_ras_total()` — somma su tutti i mesi del contratto
+   - `_calculate_fiscal_year_total()` — somma sui 12 mesi di un anno solare, con breakdown
+   - `GET /api/admin/persons/{user_id}/compensation-summary?year=Y` — endpoint admin-only multi-tenant, risolve sia user_id (coach) sia athlete_id (atleta PRO), supporta dual-role
+2. **Frontend** (`/app/frontend/src/components/admin/PersonCompensationSummary.tsx`):
+   - Componente riutilizzabile con 3 box (RAS / Anno Fiscale Corrente / Anno Fiscale Successivo)
+   - Selettore anno fiscale ‹ ›, badge dual-role, badge soglie €5k/€15k
+   - Montato in `/app/frontend/app/admin/coach/[id].tsx` e `/app/frontend/app/admin/athlete/[id].tsx`
+3. **Test pytest**: `/app/backend/tests/test_quartile_calculation.py` (21/21 ✅) + `/app/backend/tests/test_compensation_summary_endpoint.py` (8/8 ✅ creato dal testing agent)
+
+### Verifica reale (coach Fede Rica, contratto 01/09/2025–30/06/2026, 1700€/mese)
+- RAS Totale: **€ 17.000** (10 mesi pieni)
+- Anno Fiscale 2026: **€ 10.200** + badge ⚠️ Supera €5.000
+- Anno 2025: € 20.000 (€ 6.800 + € 13.200 pregresso unificato, perché 2025 è il primo anno)
+
+### Regola "pregresso unificato per persona" (no doppio conteggio)
+- Coach.other_annual_compensation + Athlete.other_annual_compensation: se **entrambi > 0** vengono **sommati** (admin ha esplicitamente dichiarato 2 valori); altrimenti si prende il `max()` → evita doppio conteggio se lo stesso dato è stato impostato in entrambe le entità.
+- Imputato SOLO nel primo anno solare (= `min(coach_contract_start.year, athlete_contract_start.year)`).
+
+---
+
 ## 🆕 13/06/2026 — Pianificazione Riepilogo Compensi Unificato (PROSSIMA SESSIONE)
 
 ### Regole confermate dall'utente
