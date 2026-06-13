@@ -15,8 +15,8 @@ import {
   StyleSheet, Platform, Image,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { Ionicons } from '../../../src/components/Icon';
-import api from '../../../src/services/api';
+import { Ionicons } from '../../../../src/components/Icon';
+import api from '../../../../src/services/api';
 
 interface PersonProfile {
   user_id: string | null;
