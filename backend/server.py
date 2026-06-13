@@ -13977,30 +13977,30 @@ def _calculate_ras_total(
     contract_start: Optional[date],
     contract_end: Optional[date],
     monthly_amount: float,
-) -> float:
+) -> dict:
     """Totale "Comunicazione RAS" = somma di TUTTI i compensi proporzionali
     su tutti i mesi coperti dal contratto (regola quartili).
-    Se contract_end è None, il RAS non è calcolabile → ritorna 0 (con flag su
-    chi chiama). Il frontend mostrerà un avviso."""
+    Ritorna {total, breakdown} per consentire dettaglio mese-per-mese in UI.
+    Se contract_end è None, il RAS non è calcolabile → total=0."""
     if not contract_start or not contract_end or not monthly_amount or monthly_amount <= 0:
-        return 0.0
+        return {"total": 0.0, "breakdown": []}
     if contract_end < contract_start:
-        return 0.0
+        return {"total": 0.0, "breakdown": []}
     total = 0.0
-    # Itera mese per mese dall'inizio alla fine del contratto
+    breakdown = []
     cur = date(contract_start.year, contract_start.month, 1)
     end_marker = date(contract_end.year, contract_end.month, 1)
     while cur <= end_marker:
-        amount, _q = _calculate_proportional_amount_quartile(
+        amount, quartile = _calculate_proportional_amount_quartile(
             contract_start, contract_end, monthly_amount, cur.year, cur.month,
         )
+        breakdown.append({"year": cur.year, "month": cur.month, "amount": amount, "quartile": quartile})
         total += amount
-        # avanza al mese successivo
         if cur.month == 12:
             cur = date(cur.year + 1, 1, 1)
         else:
             cur = date(cur.year, cur.month + 1, 1)
-    return round(total, 2)
+    return {"total": round(total, 2), "breakdown": breakdown}
 
 
 def _calculate_fiscal_year_total(
@@ -14082,13 +14082,14 @@ async def admin_person_compensation_summary(
         c_monthly = float(user.get("monthly_compensation") or 0)
         if c_monthly > 0 or c_start:
             coach_prior = float(user.get("other_annual_compensation") or 0)
-            ras_total = _calculate_ras_total(c_start, c_end, c_monthly)
+            ras_data = _calculate_ras_total(c_start, c_end, c_monthly)
             coach_section = {
                 "role": user.get("role", "coach"),
                 "contract_start": c_start.isoformat() if c_start else None,
                 "contract_end": c_end.isoformat() if c_end else None,
                 "monthly_amount": c_monthly,
-                "ras_total": ras_total,
+                "ras_total": ras_data["total"],
+                "ras_breakdown": ras_data["breakdown"],
                 "ras_calculable": bool(c_start and c_end),
                 "fiscal_year": _calculate_fiscal_year_total(c_start, c_end, c_monthly, year),
                 "fiscal_year_next": _calculate_fiscal_year_total(c_start, c_end, c_monthly, year_next),
@@ -14105,13 +14106,14 @@ async def admin_person_compensation_summary(
         a_end = _parse_contract_date(athlete.get("contract_end_date"))
         a_monthly = float(athlete.get("monthly_compensation") or 0)
         athlete_prior = float(athlete.get("other_annual_compensation") or 0)
-        ras_total_a = _calculate_ras_total(a_start, a_end, a_monthly)
+        ras_data_a = _calculate_ras_total(a_start, a_end, a_monthly)
         athlete_section = {
             "role": "athlete",
             "contract_start": a_start.isoformat() if a_start else None,
             "contract_end": a_end.isoformat() if a_end else None,
             "monthly_amount": a_monthly,
-            "ras_total": ras_total_a,
+            "ras_total": ras_data_a["total"],
+            "ras_breakdown": ras_data_a["breakdown"],
             "ras_calculable": bool(a_start and a_end),
             "fiscal_year": _calculate_fiscal_year_total(a_start, a_end, a_monthly, year),
             "fiscal_year_next": _calculate_fiscal_year_total(a_start, a_end, a_monthly, year_next),

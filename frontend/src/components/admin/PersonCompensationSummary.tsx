@@ -1,16 +1,14 @@
 /**
  * 🆕 13/06/2026 — RIEPILOGO COMPENSI UNIFICATO (Fase 2 PRD)
  *
- * Componente Admin-only che mostra 3 box per persona dual-role:
- *  1. 📊 Comunicazione RAS — totale intero contratto (regola quartili settimanali)
- *  2. 📅 Anno Fiscale Corrente — proiezione anno solare + esterni + pregresso
- *  3. 📅 Anno Fiscale Successivo — proiezione anno Y+1
+ * v2 (13/06/2026 mattina): Refactor per feedback PO Vincenzo
+ *  A) Selettore anno RIMOSSO → mostra automaticamente AMBEDUE gli anni della stagione
+ *  B1) "Anno Fiscale 2025 (1° anno)" → "Anno Fiscale 2025 — sino al 31/12/2025"
+ *  B2) "Pregresso (1° anno)" → "Percepito sino al [contract_start - 1]"
+ *  C1) Periodo contrattuale "Contratto: dal gg/mm/aaaa al gg/mm/aaaa" sotto ogni ruolo
+ *  C2) Click su riga importo → accordion con breakdown mensile (regola Quartili)
  *
  * Endpoint: GET /api/admin/persons/{user_id}/compensation-summary?year=Y
- *
- * Montato in:
- *   - /app/frontend/app/admin/coach/[id].tsx
- *   - /app/frontend/app/admin/athlete/[id].tsx
  */
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, TouchableOpacity, StyleSheet } from 'react-native';
@@ -19,12 +17,28 @@ import { Ionicons } from '../Icon';
 import { formatCurrency } from '../../utils/formatCurrency';
 
 interface PersonCompensationSummaryProps {
-  /** user_id (coach/dirigente/collaboratore) OR athlete_id — il backend risolve entrambi */
   personId: string;
-  /** Anno fiscale corrente. Default = anno corrente */
+  /** Anno fiscale corrente — default = anno corrente. La UI mostra anche Y+1 */
   initialYear?: number;
-  /** Mostra il bottone di refresh */
-  showRefresh?: boolean;
+}
+
+interface BreakdownItem {
+  year?: number;
+  month: number;
+  amount: number;
+  quartile: number;
+}
+
+interface SectionData {
+  role: string;
+  contract_start: string | null;
+  contract_end: string | null;
+  monthly_amount: number;
+  ras_total: number;
+  ras_breakdown?: BreakdownItem[];
+  ras_calculable: boolean;
+  fiscal_year: { total: number; breakdown: BreakdownItem[] };
+  fiscal_year_next: { total: number; breakdown: BreakdownItem[] };
 }
 
 interface FiscalYearBlock {
@@ -58,40 +72,90 @@ interface SummaryData {
   } | null;
   fiscal_year_current: FiscalYearBlock | null;
   fiscal_year_next: FiscalYearBlock | null;
-  coach_section?: any;
-  athlete_section?: any;
+  coach_section?: SectionData | null;
+  athlete_section?: SectionData | null;
 }
+
+// === Helpers data ===
+const MONTHS_IT = [
+  '', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre',
+];
+
+const isoToDdmmyyyy = (iso?: string | null): string => {
+  if (!iso) return '';
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : '';
+};
+
+const isoDayBefore = (iso?: string | null): string => {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    d.setDate(d.getDate() - 1);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${d.getFullYear()}`;
+  } catch { return ''; }
+};
+
+const earliestIso = (...isos: Array<string | null | undefined>): string | null => {
+  const valid = isos.filter(Boolean) as string[];
+  if (!valid.length) return null;
+  return valid.sort()[0];
+};
+
+const quartileLabel = (q: number) => {
+  if (q === 4) return 'mese pieno';
+  if (q === 3) return '3 sett./4';
+  if (q === 2) return '2 sett./4';
+  if (q === 1) return '1 sett./4';
+  return 'fuori contratto';
+};
 
 export const PersonCompensationSummary: React.FC<PersonCompensationSummaryProps> = ({
   personId,
   initialYear,
-  showRefresh = true,
 }) => {
   const [data, setData] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [year, setYear] = useState<number>(initialYear || new Date().getFullYear());
+  // Stato per accordion: chiave "scope:role" (es. "ras:coach", "fy_current:athlete")
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
-  const fetchSummary = async (targetYear: number) => {
-    if (!personId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.get(`/admin/persons/${personId}/compensation-summary`, {
-        params: { year: targetYear },
-      });
-      setData(res.data);
-    } catch (e: any) {
-      setError(e?.response?.data?.detail || 'Errore nel caricamento del riepilogo');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const toggle = (key: string) => setExpanded(p => ({ ...p, [key]: !p[key] }));
 
   useEffect(() => {
-    fetchSummary(year);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [personId, year]);
+    if (!personId) return;
+    const startYear = initialYear || new Date().getFullYear();
+    setLoading(true);
+    setError(null);
+    let cancelled = false;
+    (async () => {
+      try {
+        // 1ª chiamata: prendo anno corrente e leggo earliest_first_year
+        let res = await api.get(`/admin/persons/${personId}/compensation-summary`, {
+          params: { year: startYear },
+        });
+        // Se la persona ha contratti su più anni e l'anno corrente non è il primo
+        // della stagione, rifaccio la chiamata con l'anno solare di inizio contratto
+        // per mostrare i 2 box rilevanti (1° e 2° anno della stagione).
+        const efy = res.data?.earliest_first_year;
+        if (efy && efy < startYear && !cancelled) {
+          res = await api.get(`/admin/persons/${personId}/compensation-summary`, {
+            params: { year: efy },
+          });
+        }
+        if (!cancelled) setData(res.data);
+      } catch (e: any) {
+        if (!cancelled) setError(e?.response?.data?.detail || 'Errore nel caricamento');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [personId, initialYear]);
 
   if (loading) {
     return (
@@ -101,7 +165,6 @@ export const PersonCompensationSummary: React.FC<PersonCompensationSummaryProps>
       </View>
     );
   }
-
   if (error) {
     return (
       <View style={styles.errorContainer} testID="person-compensation-summary-error">
@@ -110,51 +173,178 @@ export const PersonCompensationSummary: React.FC<PersonCompensationSummaryProps>
       </View>
     );
   }
+  if (!data || !data.has_compensation) return null;
 
-  if (!data || !data.has_compensation) {
-    return null;
-  }
+  // === Pregresso label: "Percepito sino al [earliest_contract_start - 1]" ===
+  const earliestStart = earliestIso(
+    data.coach_section?.contract_start,
+    data.athlete_section?.contract_start,
+  );
+  const priorLabel = earliestStart
+    ? `Percepito sino al ${isoDayBefore(earliestStart)}`
+    : 'Pregresso (primo anno)';
+
+  const renderRoleLine = (
+    section: SectionData | null | undefined,
+    label: string,
+    scope: 'ras' | 'fy_current' | 'fy_next',
+    importToShow: number,
+    breakdownSource?: BreakdownItem[],
+  ) => {
+    if (!section || importToShow <= 0) return null;
+    const key = `${scope}:${section.role}`;
+    const isOpen = !!expanded[key];
+    const breakdown = (breakdownSource || []).filter(b => b.amount > 0);
+    const periodLabel = `Dal ${isoToDdmmyyyy(section.contract_start)} al ${isoToDdmmyyyy(section.contract_end) || '—'}`;
+    return (
+      <View style={styles.roleBlock}>
+        <TouchableOpacity
+          style={styles.roleHeader}
+          onPress={() => toggle(key)}
+          testID={`${scope}-${section.role}-toggle`}
+          activeOpacity={0.65}
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={styles.roleLabel}>{label}</Text>
+            <Text style={styles.contractRange}>Contratto: {periodLabel}</Text>
+          </View>
+          <View style={styles.roleRight}>
+            <Text style={styles.roleAmount}>{formatCurrency(importToShow)}</Text>
+            <Ionicons
+              name={isOpen ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color="#777"
+              style={{ marginLeft: 4 }}
+            />
+          </View>
+        </TouchableOpacity>
+
+        {isOpen && (
+          <View style={styles.breakdownBox} testID={`${scope}-${section.role}-breakdown`}>
+            {breakdown.length === 0 ? (
+              <Text style={styles.breakdownEmpty}>Nessun mese nel periodo selezionato.</Text>
+            ) : (
+              <>
+                <Text style={styles.breakdownHeader}>
+                  Calcolo (regola quartili): €{section.monthly_amount.toFixed(2)}/mese × percentuale settimanale
+                </Text>
+                {breakdown.map((b, i) => (
+                  <View key={i} style={styles.breakdownRow}>
+                    <Text style={styles.breakdownLabel}>
+                      {MONTHS_IT[b.month]} {b.year ?? ''}
+                    </Text>
+                    <Text style={styles.breakdownCalc}>
+                      €{section.monthly_amount.toFixed(2)} × {b.quartile * 25}% ({quartileLabel(b.quartile)})
+                    </Text>
+                    <Text style={styles.breakdownAmount}>{formatCurrency(b.amount)}</Text>
+                  </View>
+                ))}
+                <View style={styles.breakdownTotal}>
+                  <Text style={styles.breakdownTotalLabel}>Totale</Text>
+                  <Text style={styles.breakdownTotalAmount}>{formatCurrency(importToShow)}</Text>
+                </View>
+              </>
+            )}
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  const renderFiscalBox = (block: FiscalYearBlock | null, scope: 'fy_current' | 'fy_next') => {
+    if (!block) return null;
+    if (block.grand_total <= 0 && !block.is_first_year) return null;
+    const titleSuffix = `sino al 31/12/${block.year}`;
+    return (
+      <View
+        style={[styles.box, scope === 'fy_current' ? styles.boxFiscal : styles.boxFiscalNext]}
+        testID={`summary-box-${scope}`}
+      >
+        <Text style={styles.boxTitle}>📅 Anno Fiscale {block.year}</Text>
+        <Text style={styles.boxSubtitle}>{titleSuffix}</Text>
+
+        {/* Coach */}
+        {renderRoleLine(
+          data.coach_section,
+          'Compensi Coach/Dirigente',
+          scope,
+          block.coach_total,
+          scope === 'fy_current'
+            ? data.coach_section?.fiscal_year.breakdown
+            : data.coach_section?.fiscal_year_next.breakdown,
+        )}
+
+        {/* Atleta */}
+        {renderRoleLine(
+          data.athlete_section,
+          'Compensi Atleta PRO',
+          scope,
+          block.athlete_total,
+          scope === 'fy_current'
+            ? data.athlete_section?.fiscal_year.breakdown
+            : data.athlete_section?.fiscal_year_next.breakdown,
+        )}
+
+        {/* Esterni */}
+        {block.supplementary > 0 && (
+          <View style={styles.simpleRow}>
+            <Text style={styles.rowLabel}>Compensi esterni (altre ASD)</Text>
+            <Text style={[styles.rowValue, { color: '#1565C0' }]}>{formatCurrency(block.supplementary)}</Text>
+          </View>
+        )}
+
+        {/* Pregresso (con label dinamica) */}
+        {block.prior_compensation > 0 && (
+          <View style={styles.simpleRow}>
+            <Text style={styles.rowLabel}>{priorLabel}</Text>
+            <Text style={[styles.rowValue, { color: '#E65100' }]}>{formatCurrency(block.prior_compensation)}</Text>
+          </View>
+        )}
+
+        <View style={styles.divider} />
+        <View style={styles.simpleRow}>
+          <Text style={[styles.rowLabel, styles.rowBold]}>TOTALE ANNO</Text>
+          <Text
+            style={[styles.rowValue, styles.rowBold, {
+              color: block.exceeds_15k ? '#8E44AD' : block.exceeds_5k ? '#F57F17' : '#2E7D32',
+            }]}
+            testID={`${scope}-grand-total`}
+          >
+            {formatCurrency(block.grand_total)}
+          </Text>
+        </View>
+
+        {block.exceeds_15k && (
+          <View style={styles.thresholdBadge15k}>
+            <Text style={styles.thresholdBadgeText}>🚨 Supera €15.000 (IRPEF)</Text>
+          </View>
+        )}
+        {!block.exceeds_15k && block.exceeds_5k && (
+          <View style={styles.thresholdBadge5k}>
+            <Text style={styles.thresholdBadgeText}>⚠️ Supera €5.000 (INPS)</Text>
+          </View>
+        )}
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container} testID="person-compensation-summary">
-      {/* Header */}
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>📊 Riepilogo Compensi {data.is_dual_role ? '(Doppio Ruolo)' : ''}</Text>
-          <Text style={styles.subtitle}>
-            Calcolo unificato con regola dei quartili settimanali
-          </Text>
-        </View>
-        <View style={styles.yearSwitch}>
-          <TouchableOpacity
-            onPress={() => setYear(year - 1)}
-            style={styles.yearBtn}
-            testID="summary-year-prev"
-          >
-            <Ionicons name="chevron-back" size={16} color="#1565C0" />
-          </TouchableOpacity>
-          <Text style={styles.yearLabel}>{year}</Text>
-          <TouchableOpacity
-            onPress={() => setYear(year + 1)}
-            style={styles.yearBtn}
-            testID="summary-year-next"
-          >
-            <Ionicons name="chevron-forward" size={16} color="#1565C0" />
-          </TouchableOpacity>
+          <Text style={styles.subtitle}>Calcolo unificato con regola dei quartili settimanali</Text>
         </View>
       </View>
 
-      {/* Dual-role badge */}
       {data.is_dual_role && (
         <View style={styles.dualBadge} testID="dual-role-badge">
           <Ionicons name="people" size={14} color="#fff" />
-          <Text style={styles.dualBadgeText}>
-            Coach + Atleta PRO — soglie cumulative
-          </Text>
+          <Text style={styles.dualBadgeText}>Coach + Atleta PRO — soglie cumulative</Text>
         </View>
       )}
 
-      {/* Box 1: Comunicazione RAS */}
+      {/* Box RAS */}
       {data.ras_summary && (
         <View style={[styles.box, styles.boxRas]} testID="summary-box-ras">
           <Text style={styles.boxTitle}>📋 Comunicazione RAS (intero contratto)</Text>
@@ -163,168 +353,46 @@ export const PersonCompensationSummary: React.FC<PersonCompensationSummaryProps>
               ⚠️ Date contratto incomplete: totale non calcolabile fino alla compilazione.
             </Text>
           )}
-          {data.ras_summary.coach_total > 0 && (
-            <Row label="Compensi Coach/Dirigente" value={data.ras_summary.coach_total} />
+
+          {renderRoleLine(
+            data.coach_section,
+            'Compensi Coach/Dirigente',
+            'ras',
+            data.ras_summary.coach_total,
+            data.coach_section?.ras_breakdown,
           )}
-          {data.ras_summary.athlete_total > 0 && (
-            <Row label="Compensi Atleta PRO" value={data.ras_summary.athlete_total} />
+
+          {renderRoleLine(
+            data.athlete_section,
+            'Compensi Atleta PRO',
+            'ras',
+            data.ras_summary.athlete_total,
+            data.athlete_section?.ras_breakdown,
           )}
-          {data.ras_summary.supplementary > 0 && (
-            <Row label="Somme supplementari" value={data.ras_summary.supplementary} color="#1565C0" />
-          )}
+
           <View style={styles.divider} />
-          <Row
-            label="TOTALE RAS"
-            value={data.ras_summary.grand_total}
-            bold
-            color="#2E7D32"
-            testID="ras-grand-total"
-          />
+          <View style={styles.simpleRow}>
+            <Text style={[styles.rowLabel, styles.rowBold]}>TOTALE RAS</Text>
+            <Text style={[styles.rowValue, styles.rowBold, { color: '#2E7D32' }]} testID="ras-grand-total">
+              {formatCurrency(data.ras_summary.grand_total)}
+            </Text>
+          </View>
         </View>
       )}
 
-      {/* Box 2: Anno Fiscale Corrente */}
-      {data.fiscal_year_current && (
-        <View style={[styles.box, styles.boxFiscal]} testID="summary-box-fiscal-current">
-          <Text style={styles.boxTitle}>
-            📅 Anno Fiscale {data.fiscal_year_current.year} {data.fiscal_year_current.is_first_year && '(1° anno)'}
-          </Text>
-          {data.fiscal_year_current.coach_total > 0 && (
-            <Row label="Compensi Coach/Dirigente" value={data.fiscal_year_current.coach_total} />
-          )}
-          {data.fiscal_year_current.athlete_total > 0 && (
-            <Row label="Compensi Atleta PRO" value={data.fiscal_year_current.athlete_total} />
-          )}
-          {data.fiscal_year_current.supplementary > 0 && (
-            <Row
-              label="Compensi esterni (altre ASD)"
-              value={data.fiscal_year_current.supplementary}
-              color="#1565C0"
-            />
-          )}
-          {data.fiscal_year_current.prior_compensation > 0 && (
-            <Row
-              label="Pregresso (1° anno)"
-              value={data.fiscal_year_current.prior_compensation}
-              color="#E65100"
-            />
-          )}
-          <View style={styles.divider} />
-          <Row
-            label="TOTALE ANNO"
-            value={data.fiscal_year_current.grand_total}
-            bold
-            color={
-              data.fiscal_year_current.exceeds_15k
-                ? '#8E44AD'
-                : data.fiscal_year_current.exceeds_5k
-                ? '#F57F17'
-                : '#2E7D32'
-            }
-            testID="fiscal-current-grand-total"
-          />
-          {data.fiscal_year_current.exceeds_15k && (
-            <View style={styles.thresholdBadge15k}>
-              <Text style={styles.thresholdBadgeText}>🚨 Supera €15.000 (IRPEF)</Text>
-            </View>
-          )}
-          {!data.fiscal_year_current.exceeds_15k && data.fiscal_year_current.exceeds_5k && (
-            <View style={styles.thresholdBadge5k}>
-              <Text style={styles.thresholdBadgeText}>⚠️ Supera €5.000 (INPS)</Text>
-            </View>
-          )}
-        </View>
-      )}
+      {/* Box Anno Corrente */}
+      {renderFiscalBox(data.fiscal_year_current, 'fy_current')}
 
-      {/* Box 3: Anno Fiscale Successivo */}
-      {data.fiscal_year_next && data.fiscal_year_next.grand_total > 0 && (
-        <View style={[styles.box, styles.boxFiscalNext]} testID="summary-box-fiscal-next">
-          <Text style={styles.boxTitle}>
-            📅 Anno Fiscale {data.fiscal_year_next.year} {data.fiscal_year_next.is_first_year && '(1° anno)'}
-          </Text>
-          {data.fiscal_year_next.coach_total > 0 && (
-            <Row label="Compensi Coach/Dirigente" value={data.fiscal_year_next.coach_total} />
-          )}
-          {data.fiscal_year_next.athlete_total > 0 && (
-            <Row label="Compensi Atleta PRO" value={data.fiscal_year_next.athlete_total} />
-          )}
-          {data.fiscal_year_next.supplementary > 0 && (
-            <Row
-              label="Compensi esterni (altre ASD)"
-              value={data.fiscal_year_next.supplementary}
-              color="#1565C0"
-            />
-          )}
-          {data.fiscal_year_next.prior_compensation > 0 && (
-            <Row
-              label="Pregresso (1° anno)"
-              value={data.fiscal_year_next.prior_compensation}
-              color="#E65100"
-            />
-          )}
-          <View style={styles.divider} />
-          <Row
-            label="TOTALE ANNO"
-            value={data.fiscal_year_next.grand_total}
-            bold
-            color={
-              data.fiscal_year_next.exceeds_15k
-                ? '#8E44AD'
-                : data.fiscal_year_next.exceeds_5k
-                ? '#F57F17'
-                : '#2E7D32'
-            }
-            testID="fiscal-next-grand-total"
-          />
-          {data.fiscal_year_next.exceeds_15k && (
-            <View style={styles.thresholdBadge15k}>
-              <Text style={styles.thresholdBadgeText}>🚨 Supera €15.000 (IRPEF)</Text>
-            </View>
-          )}
-          {!data.fiscal_year_next.exceeds_15k && data.fiscal_year_next.exceeds_5k && (
-            <View style={styles.thresholdBadge5k}>
-              <Text style={styles.thresholdBadgeText}>⚠️ Supera €5.000 (INPS)</Text>
-            </View>
-          )}
-        </View>
-      )}
+      {/* Box Anno Successivo */}
+      {renderFiscalBox(data.fiscal_year_next, 'fy_next')}
 
       <Text style={styles.footnote}>
-        💡 La regola dei quartili settimanali calcola compensi proporzionali per mesi parziali:
-        1 sett. = 25%, 2 = 50%, 3 = 75%, 4 = 100%.
+        💡 Tocca una riga per vedere il dettaglio mensile. La regola dei quartili settimanali calcola
+        compensi proporzionali per mesi parziali: 1 sett.=25%, 2=50%, 3=75%, 4=100%.
       </Text>
-
-      {showRefresh && (
-        <TouchableOpacity
-          onPress={() => fetchSummary(year)}
-          style={styles.refreshBtn}
-          testID="summary-refresh-btn"
-        >
-          <Ionicons name="refresh" size={14} color="#1565C0" />
-          <Text style={styles.refreshText}>Aggiorna</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 };
-
-const Row: React.FC<{
-  label: string;
-  value: number;
-  color?: string;
-  bold?: boolean;
-  testID?: string;
-}> = ({ label, value, color = '#333', bold = false, testID }) => (
-  <View style={styles.row}>
-    <Text style={[styles.rowLabel, bold && styles.rowBold]}>{label}</Text>
-    <Text
-      style={[styles.rowValue, { color }, bold && styles.rowBold]}
-      testID={testID}
-    >
-      {formatCurrency(value)}
-    </Text>
-  </View>
-);
 
 const styles = StyleSheet.create({
   container: {
@@ -357,24 +425,9 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   errorText: { color: '#C62828', fontSize: 13, flex: 1 },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
+  headerRow: { marginBottom: 12 },
   title: { fontSize: 16, fontWeight: '700', color: '#1A237E' },
   subtitle: { fontSize: 11, color: '#777', marginTop: 2 },
-  yearSwitch: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E3F2FD',
-    borderRadius: 8,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-  },
-  yearBtn: { padding: 4 },
-  yearLabel: { fontSize: 14, fontWeight: '600', color: '#1565C0', minWidth: 50, textAlign: 'center' },
   dualBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -387,6 +440,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dualBadgeText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+
   box: {
     borderRadius: 10,
     padding: 12,
@@ -396,26 +450,64 @@ const styles = StyleSheet.create({
   boxRas: { backgroundColor: '#F1F8E9', borderColor: '#AED581' },
   boxFiscal: { backgroundColor: '#FFF8E1', borderColor: '#FFD54F' },
   boxFiscalNext: { backgroundColor: '#E1F5FE', borderColor: '#81D4FA' },
-  boxTitle: { fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 8 },
-  row: {
+  boxTitle: { fontSize: 14, fontWeight: '700', color: '#333' },
+  boxSubtitle: { fontSize: 12, color: '#666', marginBottom: 8, fontStyle: 'italic' },
+
+  // Riga ruolo (tappable per dettaglio)
+  roleBlock: { marginVertical: 4 },
+  roleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+  },
+  roleLabel: { fontSize: 13, color: '#333', fontWeight: '500' },
+  contractRange: { fontSize: 11, color: '#777', marginTop: 1 },
+  roleRight: { flexDirection: 'row', alignItems: 'center' },
+  roleAmount: { fontSize: 14, fontWeight: '600', color: '#222' },
+
+  // Accordion dettaglio
+  breakdownBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 6,
+    padding: 10,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  breakdownHeader: { fontSize: 11, color: '#1565C0', fontWeight: '600', marginBottom: 6 },
+  breakdownEmpty: { fontSize: 12, color: '#999', fontStyle: 'italic' },
+  breakdownRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingVertical: 3,
   },
+  breakdownLabel: { fontSize: 12, color: '#555', minWidth: 90 },
+  breakdownCalc: { fontSize: 11, color: '#888', flex: 1, paddingHorizontal: 6 },
+  breakdownAmount: { fontSize: 12, color: '#333', fontWeight: '500' },
+  breakdownTotal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 6,
+    marginTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#BDBDBD',
+  },
+  breakdownTotalLabel: { fontSize: 12, fontWeight: '700', color: '#1A237E' },
+  breakdownTotalAmount: { fontSize: 13, fontWeight: '700', color: '#2E7D32' },
+
+  // Righe semplici (esterni, pregresso, totale)
+  simpleRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4, paddingHorizontal: 4 },
   rowLabel: { fontSize: 13, color: '#555', flex: 1 },
   rowValue: { fontSize: 13, fontWeight: '500' },
   rowBold: { fontSize: 15, fontWeight: '700' },
-  divider: {
-    height: 1,
-    backgroundColor: '#BDBDBD',
-    marginVertical: 6,
-  },
-  warning: {
-    fontSize: 12,
-    color: '#E65100',
-    fontStyle: 'italic',
-    marginBottom: 6,
-  },
+
+  divider: { height: 1, backgroundColor: '#BDBDBD', marginVertical: 6 },
+  warning: { fontSize: 12, color: '#E65100', fontStyle: 'italic', marginBottom: 6 },
+
   thresholdBadge5k: {
     backgroundColor: '#FFF3E0',
     borderWidth: 1,
@@ -435,6 +527,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   thresholdBadgeText: { fontSize: 12, fontWeight: '700', color: '#333' },
+
   footnote: {
     fontSize: 11,
     color: '#888',
@@ -442,16 +535,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     lineHeight: 16,
   },
-  refreshBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-end',
-    marginTop: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    gap: 4,
-  },
-  refreshText: { fontSize: 12, color: '#1565C0', fontWeight: '600' },
 });
 
 export default PersonCompensationSummary;
