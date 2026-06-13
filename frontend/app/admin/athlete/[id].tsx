@@ -3175,7 +3175,7 @@ export default function AdminAthleteDetail() {
 
                   {/* 🆕 13/06/2026 — Riepilogo Compensi Doppio Ruolo: RIMOSSO da qui
                       e spostato in /admin/persona/[id]/compensi (Step 2). */}
-                  {athlete?.id && <DualRoleHubBanner personId={athlete.id} />}
+                  {athlete?.id && <DualRoleHubBanner personId={athlete.id} currentRole="atleta" />}
 
                   {/* 🆕 FASE 2B — Promozione Atleta PRO a Coach (dual-role) */}
                   {linkedCoach ? (

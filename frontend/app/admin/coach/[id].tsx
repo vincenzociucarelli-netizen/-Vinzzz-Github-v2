@@ -1001,7 +1001,7 @@ export default function AdminCoachDetail() {
 
         {/* 🆕 13/06/2026 — Riepilogo Compensi Doppio Ruolo: RIMOSSO da qui
             e spostato in /admin/persona/[id]/compensi (Step 2). */}
-        {coach?.id && <DualRoleHubBanner personId={coach.id} />}
+        {coach?.id && <DualRoleHubBanner personId={coach.id} currentRole="coach" />}
 
         {/* Compenso */}
         <View style={styles.card}>
