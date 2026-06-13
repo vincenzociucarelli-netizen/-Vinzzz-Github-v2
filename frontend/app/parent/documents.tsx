@@ -230,7 +230,8 @@ export default function ParentDocuments() {
         if (!newWindow) {
           const a = document.createElement('a');
           a.href = blobUrl;
-          a.download = `${doc.document_title || 'documento'}.pdf`;
+          // 🔒 13/06/2026 - GDPR Data Leak fix: filename univoco per documento
+          a.download = `${doc.document_title || 'documento'}_${(doc.id || '').slice(-8)}.pdf`.replace(/[^\w.\-]+/g, '_');
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);

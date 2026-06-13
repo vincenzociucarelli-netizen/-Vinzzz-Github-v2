@@ -1186,7 +1186,8 @@ Società sportiva: ${societyName}
                         });
                         const blob = new Blob([response.data], { type: 'application/pdf' });
                         const url = window.URL.createObjectURL(blob);
-                        const filename = `${doc.document_title || 'documento'}.pdf`.replace(/[^\w.\-]+/g, '_');
+                        // 🔒 13/06/2026 - GDPR Data Leak fix: filename univoco per documento
+                        const filename = `${doc.document_title || 'documento'}_${(doc.id || '').slice(-8)}.pdf`.replace(/[^\w.\-]+/g, '_');
                         const a = document.createElement('a');
                         a.href = url;
                         a.download = filename;
@@ -1494,7 +1495,8 @@ Società sportiva: ${societyName}
                         });
                         const blob = new Blob([response.data], { type: 'application/pdf' });
                         const url = window.URL.createObjectURL(blob);
-                        const filename = `${doc.document_title || 'documento'}.pdf`.replace(/[^\w.\-]+/g, '_');
+                        // 🔒 13/06/2026 - GDPR Data Leak fix: filename univoco per documento
+                        const filename = `${doc.document_title || 'documento'}_${(doc.id || '').slice(-8)}.pdf`.replace(/[^\w.\-]+/g, '_');
                         const a = document.createElement('a');
                         a.href = url;
                         a.download = filename;
