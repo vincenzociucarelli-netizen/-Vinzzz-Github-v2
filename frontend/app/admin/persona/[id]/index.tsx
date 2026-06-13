@@ -105,8 +105,9 @@ export default function PersonaHubPage() {
     if (data.user_id) router.push(`/admin/coach/${data.user_id}`);
   };
   const goCompensi = () => {
-    // Step 2: pagina compensi unificata. Per ora rimanda al riepilogo nel coach
-    if (data.user_id) router.push(`/admin/coach/${data.user_id}`);
+    // Pagina compensi unificata Doppio Ruolo
+    const hubId = data.user_id || data.athlete_id;
+    if (hubId) router.push(`/admin/persona/${hubId}/compensi`);
   };
 
   return (

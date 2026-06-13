@@ -16,7 +16,7 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
-## 🆕 13/06/2026 (mattina) — REFACTOR Fase 2 dopo feedback PO ✅
+## 🆕 13/06/2026 (pomeriggio) — STEP 1 REFACTOR HUB PERSONA ✅
 
 **Status**: ✅ Testato (iteration 72, 27/27 backend + frontend 100%, zero issue).
 
