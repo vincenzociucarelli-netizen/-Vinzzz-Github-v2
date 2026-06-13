@@ -20,6 +20,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import PersonCompensationSummary from '../../../src/components/admin/PersonCompensationSummary';
+import DualRoleHubBanner from '../../../src/components/admin/DualRoleHubBanner';
 import { Ionicons } from '../../../src/components/Icon';
 import { Athlete, Team, Payment, Certificate } from '../../../src/types';
 import { format } from 'date-fns';
@@ -3173,13 +3174,9 @@ export default function AdminAthleteDetail() {
                     <Ionicons name="chevron-forward" size={20} color="#fff" />
                   </TouchableOpacity>
 
-                  {/* 🆕 13/06/2026 — Riepilogo Compensi Unificato (Fase 2 - Quartili Settimanali) */}
-                  {athlete?.id && (
-                    <PersonCompensationSummary
-                      personId={athlete.id}
-                      initialYear={new Date().getFullYear()}
-                    />
-                  )}
+                  {/* 🆕 13/06/2026 — Riepilogo Compensi Doppio Ruolo: RIMOSSO da qui
+                      e spostato in /admin/persona/[id]/compensi (Step 2). */}
+                  {athlete?.id && <DualRoleHubBanner personId={athlete.id} />}
 
                   {/* 🆕 FASE 2B — Promozione Atleta PRO a Coach (dual-role) */}
                   {linkedCoach ? (

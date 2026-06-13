@@ -14022,6 +14022,78 @@ def _calculate_fiscal_year_total(
     return {"total": round(total, 2), "breakdown": breakdown}
 
 
+
+@api_router.get("/admin/persons/{user_id}/profile")
+async def admin_person_profile(
+    user_id: str,
+    current_user = Depends(get_current_user),
+):
+    """🆕 13/06/2026 — Hub Persona: ritorna anagrafica unificata + status dual-role.
+    Risolve sia user_id (coach/dirigente) sia athlete_id."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    athlete = None
+    if user:
+        athlete_id_from_user = user.get("athlete_id") or user.get("athlete_record_id")
+        if athlete_id_from_user:
+            athlete = await db.athletes.find_one({"id": athlete_id_from_user}, {"_id": 0})
+        if not athlete:
+            athlete = await _find_linked_athlete_pro_for_user(user["id"])
+    else:
+        athlete = await db.athletes.find_one({"id": user_id}, {"_id": 0})
+        if athlete:
+            user = await _find_linked_compensated_user_for_athlete(athlete)
+
+    if not user and not athlete:
+        raise HTTPException(status_code=404, detail="Persona non trovata")
+
+    society_id = (user or {}).get("society_id") or (athlete or {}).get("society_id")
+    if current_user.get("society_id") and society_id and current_user["society_id"] != society_id:
+        raise HTTPException(status_code=403, detail="Persona di altra società")
+
+    has_athlete_role = bool(athlete)
+    has_coach_role = bool(user and user.get("role") in ("coach", "dirigente", "collaboratore", "admin")
+                          and (float(user.get("monthly_compensation") or 0) > 0 or user.get("contract_start_date")))
+    is_dual_role = has_athlete_role and has_coach_role
+
+    def _safe(d, *keys):
+        for k in keys:
+            v = (d or {}).get(k)
+            if v not in (None, ""):
+                return v
+        return None
+
+    profile = {
+        "first_name": _safe(user, "first_name") or _safe(athlete, "first_name") or "",
+        "last_name": _safe(user, "last_name") or _safe(athlete, "last_name") or "",
+        "fiscal_code": _safe(user, "fiscal_code") or _safe(athlete, "fiscal_code") or "",
+        "email": _safe(user, "email") or _safe(athlete, "email") or "",
+        "phone": _safe(user, "phone") or _safe(athlete, "phone") or "",
+        "birth_date": _safe(user, "birth_date") or _safe(athlete, "birth_date"),
+        "birth_place": _safe(user, "birth_place") or _safe(athlete, "birth_place"),
+        "address": _safe(user, "address") or _safe(athlete, "address"),
+        "city": _safe(user, "city") or _safe(athlete, "city"),
+        "province": _safe(user, "province") or _safe(athlete, "province"),
+        "postal_code": _safe(user, "postal_code") or _safe(athlete, "postal_code"),
+        "photo_url": _safe(user, "photo_url") or _safe(athlete, "photo_url"),
+        "qr_identifier": _safe(athlete, "qr_identifier") or _safe(user, "qr_identifier"),
+    }
+
+    return {
+        "user_id": user["id"] if user else None,
+        "athlete_id": athlete["id"] if athlete else None,
+        "society_id": society_id,
+        "is_dual_role": is_dual_role,
+        "has_athlete_role": has_athlete_role,
+        "has_coach_role": has_coach_role,
+        "coach_role_name": (user or {}).get("role") if has_coach_role else None,
+        "profile": profile,
+    }
+
+
+
 @api_router.get("/admin/persons/{user_id}/compensation-summary")
 async def admin_person_compensation_summary(
     user_id: str,

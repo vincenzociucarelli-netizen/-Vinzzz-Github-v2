@@ -21,6 +21,7 @@ import api from '../../../src/services/api';
 import { Ionicons } from '../../../src/components/Icon';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import PersonCompensationSummary from '../../../src/components/admin/PersonCompensationSummary';
+import DualRoleHubBanner from '../../../src/components/admin/DualRoleHubBanner';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { SportIcon } from '../../../src/components/SportIcon';
@@ -999,13 +1000,9 @@ export default function AdminCoachDetail() {
           )}
         </View>
 
-        {/* 🆕 13/06/2026 — Riepilogo Compensi Unificato (Fase 2) */}
-        {coach?.id && (
-          <PersonCompensationSummary
-            personId={coach.id}
-            initialYear={new Date().getFullYear()}
-          />
-        )}
+        {/* 🆕 13/06/2026 — Riepilogo Compensi Doppio Ruolo: RIMOSSO da qui
+            e spostato in /admin/persona/[id]/compensi (Step 2). */}
+        {coach?.id && <DualRoleHubBanner personId={coach.id} />}
 
         {/* Compenso */}
         <View style={styles.card}>
