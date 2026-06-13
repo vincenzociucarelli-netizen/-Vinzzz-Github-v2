@@ -13791,6 +13791,16 @@ async def _find_linked_compensated_user_for_athlete(athlete: dict) -> Optional[d
         if athlete.get("fiscal_code"):
             or_clauses.append({"fiscal_code": athlete["fiscal_code"].upper()})
             or_clauses.append({"fiscal_code": athlete["fiscal_code"]})
+        # 🆕 13/06/2026 — Fallback: nome+cognome (case-insensitive) per società
+        # quando il record athletes non ha CF/email allineati col record user
+        if athlete.get("first_name") and athlete.get("last_name"):
+            import re as _re
+            fn_pattern = f"^{_re.escape(athlete['first_name'].strip())}$"
+            ln_pattern = f"^{_re.escape(athlete['last_name'].strip())}$"
+            or_clauses.append({
+                "first_name": {"$regex": fn_pattern, "$options": "i"},
+                "last_name": {"$regex": ln_pattern, "$options": "i"},
+            })
         if not or_clauses:
             return None
         query = {
