@@ -16,7 +16,33 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
-## 🆕 13/06/2026 (pomeriggio) — STEP 1 REFACTOR HUB PERSONA ✅
+## 🆕 13/06/2026 (sera) — STEP 1 HUB PERSONA + BANNER SWITCHER ✅
+
+**Status**: ✅ Completato e in deploy su produzione.
+
+### Cosa è stato consegnato in giornata
+1. **Fix GDPR Data Leak download PDF**: filename univoco con `doc.id` (no più conflitti Chrome con file di altri utenti)
+2. **Refactor UX Riepilogo Compensi**: niente selettore anno, label "sino al 31/12", "Percepito sino al [contract−1]", click sulla riga → accordion mensile con regola quartili
+3. **Export XLSX Riepilogo Annuale** con range date custom (dal..al) — default = stagione società
+4. **Hub Persona** `/admin/persona/[id]` per dual-role + endpoint backend `GET /api/admin/persons/{id}/profile`
+5. **Banner Switcher** (v2) con 3 tab Atleta/Coach/Anagrafica in cima alle schede ruolo
+6. **Fallback linking** Atleta↔Coach via nome+cognome quando CF/email non matchano
+7. **Rimozione duplicati**: PersonCompensationSummary non più nelle schede Coach/Atleta (verrà mostrato solo nella pagina compensi unificata Step 2)
+8. **Fix import build Vercel** (file spostato da `[id].tsx` → `[id]/index.tsx`)
+
+### Cosa rimane per Step 2 (prossima sessione)
+- **Pagina Compensi Unificata** `/admin/persona/[id]/compensi` con:
+  - Box anno con colori dinamici: 🟢 verde (<5K) / 🟧 arancio (>5K non firmata) / 🟪 viola (>15K non firmata) / 🟦 azzurro (soglia firmata)
+  - **Calendario mensilità colorato** (caselle B = righe Atleta + Coach affiancate per ogni mese)
+  - Stato per mese: ⬜ grigio (futuro) / 🟢 verde (quietanzata <5K) / 🟧 arancio (>5K) / 🟪 viola (>15K)
+  - Storico quietanze unificato Coach + Atleta
+  - Integrazione col popup "Prima di firmare" esistente per compensi esterni cronologici
+
+### Cosa rimane per Step 3
+- (Opzionale) Refactor profondo per rimuovere card "Dati Personali" dalle schede Atleta/Coach quando dual-role
+- (Opzionale) Auto-redirect dalle liste atleti/coach all'Hub Persona se dual-role
+
+---
 
 **Status**: ✅ Testato (iteration 72, 27/27 backend + frontend 100%, zero issue).
 
