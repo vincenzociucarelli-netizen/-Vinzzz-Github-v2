@@ -226,7 +226,7 @@ export const PersonCompensationSummary: React.FC<PersonCompensationSummaryProps>
             ) : (
               <>
                 <Text style={styles.breakdownHeader}>
-                  Calcolo (regola quartili): €{section.monthly_amount.toFixed(2)}/mese × percentuale settimanale
+                  Calcolo (regola quartili): {formatCurrency(section.monthly_amount)}/mese × percentuale settimanale
                 </Text>
                 {breakdown.map((b, i) => (
                   <View key={i} style={styles.breakdownRow}>
@@ -234,7 +234,7 @@ export const PersonCompensationSummary: React.FC<PersonCompensationSummaryProps>
                       {MONTHS_IT[b.month]} {b.year ?? ''}
                     </Text>
                     <Text style={styles.breakdownCalc}>
-                      €{section.monthly_amount.toFixed(2)} × {b.quartile * 25}% ({quartileLabel(b.quartile)})
+                      {formatCurrency(section.monthly_amount)} × {b.quartile * 25}% ({quartileLabel(b.quartile)})
                     </Text>
                     <Text style={styles.breakdownAmount}>{formatCurrency(b.amount)}</Text>
                   </View>

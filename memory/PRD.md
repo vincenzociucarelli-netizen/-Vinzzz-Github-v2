@@ -16,7 +16,23 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
-## 🆕 13/06/2026 — FASE 2 RIEPILOGO COMPENSI UNIFICATO ✅ COMPLETATA
+## 🆕 13/06/2026 (mattina) — REFACTOR Fase 2 dopo feedback PO ✅
+
+**Status**: ✅ Testato (iteration 72, 27/27 backend + frontend 100%, zero issue).
+
+### Modifiche UX (richieste dal PO Vincenzo)
+- **A) Selettore anno RIMOSSO**: la card mostra automaticamente i 2 anni fiscali della stagione (es. Anno 2025 + Anno 2026 per stagione 2025/2026). Il frontend rileva `earliest_first_year < currentYear` e rifa la chiamata con quell'anno.
+- **B1) Titoli box**: "Anno Fiscale 2025 (1° anno)" → **"Anno Fiscale 2025"** con sottotitolo italic **"sino al 31/12/2025"**.
+- **B2) Etichetta pregresso dinamica**: "Pregresso (1° anno)" → **"Percepito sino al [contract_start - 1]"** (es. 31/08/2025 se contratto inizia 01/09/2025). Calcolata sulla data più antica tra Coach e Atleta per dual-role.
+- **C1) Periodo contrattuale visibile**: sotto ogni ruolo "Contratto: Dal gg/mm/aaaa al gg/mm/aaaa".
+- **C2) Click → accordion breakdown mensile** con regola Quartili: "Settembre 2025 — €1.700,00 × 100% (mese pieno) — € 1.700,00".
+
+### Backend
+- `_calculate_ras_total()` ora ritorna `dict {total, breakdown}` (era float). `breakdown` = array `[{year, month, amount, quartile}, ...]`.
+- Endpoint `/admin/persons/{id}/compensation-summary` espone `ras_breakdown` sia in `coach_section` sia in `athlete_section`. Mantiene `earliest_first_year`.
+- Test pytest aggiornati (21/21) + nuovo `test_compensation_summary_breakdown.py` (6/6).
+
+---
 
 **Status**: ✅ Implementato e testato (testing agent 100% backend + frontend, iteration 70).
 
