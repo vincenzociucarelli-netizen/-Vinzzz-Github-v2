@@ -19,6 +19,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
+import PersonCompensationSummary from '../../../src/components/admin/PersonCompensationSummary';
 import DualRoleHubBanner from '../../../src/components/admin/DualRoleHubBanner';
 import { Ionicons } from '../../../src/components/Icon';
 import { Athlete, Team, Payment, Certificate } from '../../../src/types';

@@ -14272,6 +14272,37 @@ async def admin_person_compensation_summary(
     prior_next = unified_prior if is_first_year_next else 0.0
     fy_next_total = round(fy_coach_next + fy_athlete_next + external_next + prior_next, 2)
 
+    # === 🆕 14/06/2026 — Mese di superamento soglie €5K/€15K ===
+    # Scorre cronologicamente mese per mese, somma cumulativa (Coach + Atleta + esterni dell'anno + pregresso),
+    # restituisce il PRIMO mese in cui il cumulato supera ciascuna soglia.
+    def _month_breaches(year_target: int, prior_amount: float, external_year_total: float) -> dict:
+        # Distribuiamo gli esterni dell'anno come "cumulato" al 1° gennaio per semplicità (sono dichiarati annualmente).
+        # Il pregresso (other_annual) viene contato solo nel primo anno solare.
+        cum = round(prior_amount + external_year_total, 2)
+        if cum > 15000:
+            return {"month_exceed_5k": 0, "month_exceed_15k": 0}  # 0 = già superato all'inizio anno
+        exceed_5k = 0 if cum > 5000 else None
+        exceed_15k = None
+        coach_bd = (coach_section["fiscal_year"]["breakdown"] if coach_section and year_target == year
+                    else coach_section["fiscal_year_next"]["breakdown"] if coach_section and year_target == year_next
+                    else [])
+        athlete_bd = (athlete_section["fiscal_year"]["breakdown"] if athlete_section and year_target == year
+                      else athlete_section["fiscal_year_next"]["breakdown"] if athlete_section and year_target == year_next
+                      else [])
+        coach_by_month = {b["month"]: b["amount"] for b in coach_bd}
+        athlete_by_month = {b["month"]: b["amount"] for b in athlete_bd}
+        for m in range(1, 13):
+            cum = round(cum + coach_by_month.get(m, 0) + athlete_by_month.get(m, 0), 2)
+            if exceed_5k is None and cum > 5000:
+                exceed_5k = m
+            if exceed_15k is None and cum > 15000:
+                exceed_15k = m
+                break
+        return {"month_exceed_5k": exceed_5k, "month_exceed_15k": exceed_15k}
+
+    breaches_current = _month_breaches(year, prior_current, external_current)
+    breaches_next = _month_breaches(year_next, prior_next, external_next)
+
     person_name = ((user or {}).get("first_name") or (athlete or {}).get("first_name") or "") + " " + \
                   ((user or {}).get("last_name") or (athlete or {}).get("last_name") or "")
 
@@ -14302,6 +14333,8 @@ async def admin_person_compensation_summary(
             "grand_total": fy_current_total,
             "exceeds_5k": fy_current_total > 5000,
             "exceeds_15k": fy_current_total > 15000,
+            "month_exceed_5k": breaches_current["month_exceed_5k"],
+            "month_exceed_15k": breaches_current["month_exceed_15k"],
         },
         "fiscal_year_next": {
             "year": year_next,
@@ -14313,6 +14346,8 @@ async def admin_person_compensation_summary(
             "grand_total": fy_next_total,
             "exceeds_5k": fy_next_total > 5000,
             "exceeds_15k": fy_next_total > 15000,
+            "month_exceed_5k": breaches_next["month_exceed_5k"],
+            "month_exceed_15k": breaches_next["month_exceed_15k"],
         },
         "coach_section": coach_section,
         "athlete_section": athlete_section,

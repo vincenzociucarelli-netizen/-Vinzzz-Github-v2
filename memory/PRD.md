@@ -16,7 +16,27 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
-## 🆕 13/06/2026 (sera) — STEP 1 HUB PERSONA + BANNER SWITCHER ✅
+## 🆕 14/06/2026 — PULIZIA RIEPILOGHI VECCHI + MESE SUPERAMENTO SOGLIE ✅
+
+**Status**: ✅ Pronto per deploy.
+
+### Modifiche di oggi
+1. **🚫 Nascosti** i blocchi legacy nella scheda Coach (`{false && ...}`):
+   - "📄 Comunicazione RAS - Totale Contratto" + "📊 Calcolo per Anno Solare" (versione editing + versione lettura)
+   - 3 box "Soglia €5K", "Soglia €15K", "Dichiarazione firmata" (editing + lettura)
+   - Mantenute "Già Percepito" e "Genera Quietanza Personalizzata" (utili).
+2. **♻️ Rimesso** `PersonCompensationSummary` come unica fonte di verità nelle schede Coach e Atleta.
+3. **🆕 Aggiunto** nel backend: campi `month_exceed_5k` e `month_exceed_15k` in `fiscal_year_current` e `fiscal_year_next` (mese di superamento cronologico cumulato Coach+Atleta+esterni+pregresso).
+4. **🆕 Aggiornato** UI: i badge soglia ora mostrano *"⚠️ Supera €5.000 **nel mese di Marzo** (INPS)"* e *"🚨 Supera €15.000 **nel mese di Marzo** (IRPEF)"*.
+
+### Verifica reale
+Coach Fede (€1700/mese gen-giu 2026): mese 3 (Marzo) supera €5K ✅. Totale anno €10.200, mai supera €15K ✅.
+
+### Da fare lato utente Atleta/Coach (prossima sessione)
+- Replicare le stesse modifiche lato non-admin (dashboard atleta + dashboard coach).
+- Email unica per dual-role (no più `*.coach@*`): rimuovere richiesta di seconda email nel flusso "Promuovi ad allenatore" + cleanup DB.
+
+---
 
 **Status**: ✅ Completato e in deploy su produzione.
 

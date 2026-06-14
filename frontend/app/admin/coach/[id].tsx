@@ -20,6 +20,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import { Ionicons } from '../../../src/components/Icon';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
+import PersonCompensationSummary from '../../../src/components/admin/PersonCompensationSummary';
 import DualRoleHubBanner from '../../../src/components/admin/DualRoleHubBanner';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -999,9 +1000,9 @@ export default function AdminCoachDetail() {
           )}
         </View>
 
-        {/* 🆕 13/06/2026 — Riepilogo Compensi Doppio Ruolo: RIMOSSO da qui
-            e spostato in /admin/persona/[id]/compensi (Step 2). */}
+        {/* 🆕 14/06/2026 — Riepilogo Compensi Doppio Ruolo (fonte unica di verità) */}
         {coach?.id && <DualRoleHubBanner personId={coach.id} currentRole="coach" />}
+        {coach?.id && <PersonCompensationSummary personId={coach.id} />}
 
         {/* Compenso */}
         <View style={styles.card}>
@@ -1132,8 +1133,8 @@ export default function AdminCoachDetail() {
                 Importo dichiarato dal coach percepito prima dell'assunzione (Gen-Ago se assunto a Set)
               </Text>
               
-              {/* Preview calcoli */}
-              {contractStartDate && contractEndDate && (
+              {/* Preview calcoli — 🚫 14/06/2026: nascosto, sostituito dal Riepilogo Compensi Doppio Ruolo */}
+              {false && contractStartDate && contractEndDate && (
                 <View style={{ marginTop: 20 }}>
                   {(() => {
                     const breakdown = getCompensationBreakdown();
@@ -1219,8 +1220,8 @@ export default function AdminCoachDetail() {
               )}
             </View>
 
-            {/* Threshold Warnings for Admin - same as Coach view */}
-            {(thresholdStatus || thresholdStatus2) && (
+            {/* Threshold Warnings for Admin — 🚫 14/06/2026: nascosto, sostituito dal Riepilogo Compensi Doppio Ruolo */}
+            {false && (thresholdStatus || thresholdStatus2) && (
               <View style={{ marginTop: 8, gap: 10 }}>
                 {/* Warning: approaching €5.000 - YEAR 1 */}
                 {thresholdStatus?.thresholds?.['5000']?.needs_warning && !thresholdStatus?.thresholds?.['5000']?.declaration_signed && (
@@ -1334,8 +1335,8 @@ export default function AdminCoachDetail() {
                 </View>
               )}
               
-              {/* Calcolo per Anno Solare - Stesso formato del collaboratore */}
-              {(coach.contract_start_date || coach.contract_end_date) && (() => {
+              {/* Calcolo per Anno Solare — 🚫 14/06/2026: nascosto, sostituito dal Riepilogo Compensi Doppio Ruolo */}
+              {false && (coach.contract_start_date || coach.contract_end_date) && (() => {
                 const breakdown = getCompensationBreakdown();
                 const yearlyBreakdown = getYearlyBreakdown();
                 const years = Object.keys(yearlyBreakdown).map(Number).sort();
@@ -1418,8 +1419,8 @@ export default function AdminCoachDetail() {
             </>
           )}
 
-          {/* Threshold Warnings - SEMPRE visibili (anche in modalità lettura) */}
-          {!editing && (thresholdStatus || thresholdStatus2) && (
+          {/* Threshold Warnings — 🚫 14/06/2026: nascosto, sostituito dal Riepilogo Compensi Doppio Ruolo */}
+          {false && !editing && (thresholdStatus || thresholdStatus2) && (
             <View style={{ marginTop: 12, gap: 10 }}>
               {/* Warning: approaching €5.000 - YEAR 1 */}
               {thresholdStatus?.thresholds?.['5000']?.needs_warning && !thresholdStatus?.thresholds?.['5000']?.declaration_signed && (
