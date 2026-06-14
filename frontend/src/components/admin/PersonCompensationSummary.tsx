@@ -254,7 +254,8 @@ export const PersonCompensationSummary: React.FC<PersonCompensationSummaryProps>
   };
 
   const renderMonthCalendar = (block: FiscalYearBlock, scope: 'fy_current' | 'fy_next') => {
-    // Cumulato mese per mese (Coach + Atleta dal breakdown + esterni cumulati al 1° gennaio + pregresso solo 1° anno)
+    // Cumulato mese per mese (Coach + Atleta dal breakdown)
+    // Pregresso + esterni si sommano al PRIMO mese attivo (non a gennaio)
     const coachBd = (scope === 'fy_current'
       ? data.coach_section?.fiscal_year.breakdown
       : data.coach_section?.fiscal_year_next.breakdown) || [];
@@ -262,25 +263,37 @@ export const PersonCompensationSummary: React.FC<PersonCompensationSummaryProps>
       ? data.athlete_section?.fiscal_year.breakdown
       : data.athlete_section?.fiscal_year_next.breakdown) || [];
     const coachByMonth: Record<number, number> = {};
-    coachBd.forEach(b => { coachByMonth[b.month] = (coachByMonth[b.month] || 0) + b.amount; });
+    coachBd.forEach(b => { if ((b.amount || 0) > 0) coachByMonth[b.month] = (coachByMonth[b.month] || 0) + b.amount; });
     const athleteByMonth: Record<number, number> = {};
-    athleteBd.forEach(b => { athleteByMonth[b.month] = (athleteByMonth[b.month] || 0) + b.amount; });
+    athleteBd.forEach(b => { if ((b.amount || 0) > 0) athleteByMonth[b.month] = (athleteByMonth[b.month] || 0) + b.amount; });
 
-    const baseCum = (block.supplementary || 0) + (block.prior_compensation || 0);
-    let cum = baseCum;
+    // Trova i mesi attivi (in cui c'è Coach o Atleta in quell'anno)
+    const activeSet = new Set<number>([
+      ...Object.keys(coachByMonth).map(Number),
+      ...Object.keys(athleteByMonth).map(Number),
+    ]);
+    const activeMonths = Array.from(activeSet).sort((a, b) => a - b);
+    if (activeMonths.length === 0) return null;
+    const firstActive = activeMonths[0];
+    const lastActive = activeMonths[activeMonths.length - 1];
+
+    const externalAndPrior = (block.supplementary || 0) + (block.prior_compensation || 0);
+    let cum = 0;
     const months: Array<{ m: number; cum: number; monthAmount: number; color: string; border: string; }> = [];
-    for (let m = 1; m <= 12; m++) {
+    for (let m = firstActive; m <= lastActive; m++) {
       const monthAmount = (coachByMonth[m] || 0) + (athleteByMonth[m] || 0);
-      cum = cum + monthAmount;
+      // Al PRIMO mese attivo aggiungo anche pregresso + esterni dell'anno
+      if (m === firstActive) {
+        cum = cum + externalAndPrior + monthAmount;
+      } else {
+        cum = cum + monthAmount;
+      }
       let color = '#E8F5E9'; // verde <5k
       let border = '#A5D6A7';
       if (cum > 15000) { color = '#F3E5F5'; border = '#CE93D8'; } // viola
       else if (cum > 5000) { color = '#FFF3E0'; border = '#FFB74D'; } // arancio
       months.push({ m, cum, monthAmount, color, border });
     }
-
-    const hasAnyAmount = months.some(x => x.monthAmount > 0) || baseCum > 0;
-    if (!hasAnyAmount) return null;
 
     return (
       <View style={styles.calendarBox} testID={`monthly-calendar-${scope}`}>
@@ -375,9 +388,7 @@ export const PersonCompensationSummary: React.FC<PersonCompensationSummaryProps>
           <View style={styles.thresholdBadge5k}>
             <Text style={styles.thresholdBadgeText}>
               ⚠️ Supera €5.000{
-                block.month_exceed_5k === 0
-                  ? ' all\'inizio dell\'anno'
-                  : block.month_exceed_5k && block.month_exceed_5k > 0
+                block.month_exceed_5k && block.month_exceed_5k > 0
                   ? ` nel mese di ${MONTHS_IT[block.month_exceed_5k]}`
                   : ''
               } (INPS)
@@ -388,9 +399,7 @@ export const PersonCompensationSummary: React.FC<PersonCompensationSummaryProps>
           <View style={styles.thresholdBadge15k}>
             <Text style={styles.thresholdBadgeText}>
               🚨 Supera €15.000{
-                block.month_exceed_15k === 0
-                  ? ' all\'inizio dell\'anno'
-                  : block.month_exceed_15k && block.month_exceed_15k > 0
+                block.month_exceed_15k && block.month_exceed_15k > 0
                   ? ` nel mese di ${MONTHS_IT[block.month_exceed_15k]}`
                   : ''
               } (IRPEF)

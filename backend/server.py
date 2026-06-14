@@ -14272,27 +14272,34 @@ async def admin_person_compensation_summary(
     prior_next = unified_prior if is_first_year_next else 0.0
     fy_next_total = round(fy_coach_next + fy_athlete_next + external_next + prior_next, 2)
 
-    # === 🆕 14/06/2026 — Mese di superamento soglie €5K/€15K ===
-    # Scorre cronologicamente mese per mese, somma cumulativa (Coach + Atleta + esterni dell'anno + pregresso),
-    # restituisce il PRIMO mese in cui il cumulato supera ciascuna soglia.
+    # === 🆕 14/06/2026 (v2) — Mese di superamento soglie €5K/€15K ===
+    # Logica corretta: il cumulato CRONOLOGICO scatta dal PRIMO mese attivo del contratto
+    # nell'anno fiscale considerato. Pregresso + esterni vengono aggiunti al primo mese
+    # attivo (non al 1° gennaio), perché prima del contratto non c'è attività dichiarata.
     def _month_breaches(year_target: int, prior_amount: float, external_year_total: float) -> dict:
-        # Distribuiamo gli esterni dell'anno come "cumulato" al 1° gennaio per semplicità (sono dichiarati annualmente).
-        # Il pregresso (other_annual) viene contato solo nel primo anno solare.
-        cum = round(prior_amount + external_year_total, 2)
-        if cum > 15000:
-            return {"month_exceed_5k": 0, "month_exceed_15k": 0}  # 0 = già superato all'inizio anno
-        exceed_5k = 0 if cum > 5000 else None
-        exceed_15k = None
         coach_bd = (coach_section["fiscal_year"]["breakdown"] if coach_section and year_target == year
                     else coach_section["fiscal_year_next"]["breakdown"] if coach_section and year_target == year_next
                     else [])
         athlete_bd = (athlete_section["fiscal_year"]["breakdown"] if athlete_section and year_target == year
                       else athlete_section["fiscal_year_next"]["breakdown"] if athlete_section and year_target == year_next
                       else [])
-        coach_by_month = {b["month"]: b["amount"] for b in coach_bd}
-        athlete_by_month = {b["month"]: b["amount"] for b in athlete_bd}
-        for m in range(1, 13):
-            cum = round(cum + coach_by_month.get(m, 0) + athlete_by_month.get(m, 0), 2)
+        coach_by_month = {b["month"]: b["amount"] for b in coach_bd if b.get("amount", 0) > 0}
+        athlete_by_month = {b["month"]: b["amount"] for b in athlete_bd if b.get("amount", 0) > 0}
+        # Primo mese attivo (Coach o Atleta hanno compensi > 0 in quell'anno)
+        active_months = sorted(set(coach_by_month.keys()) | set(athlete_by_month.keys()))
+        first_active = active_months[0] if active_months else None
+        if first_active is None:
+            return {"month_exceed_5k": None, "month_exceed_15k": None}
+        exceed_5k = None
+        exceed_15k = None
+        cum = 0.0
+        for m in range(first_active, 13):
+            month_amount = coach_by_month.get(m, 0) + athlete_by_month.get(m, 0)
+            # Al PRIMO mese attivo aggiungo anche pregresso + esterni dell'anno
+            if m == first_active:
+                cum = round(cum + prior_amount + external_year_total + month_amount, 2)
+            else:
+                cum = round(cum + month_amount, 2)
             if exceed_5k is None and cum > 5000:
                 exceed_5k = m
             if exceed_15k is None and cum > 15000:

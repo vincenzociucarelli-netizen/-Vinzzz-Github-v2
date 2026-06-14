@@ -16,6 +16,40 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 14/06/2026 (v3) — CALENDARIO CRONOLOGICO CORRETTO ✅
+
+**Status**: ✅ Fix completati (segnalazione utente con 2 foto annotate il 14/06 notte).
+
+### Errori segnalati dall'utente
+1. ❌ Calendario 2025 mostrava Gen-Ago con €6.850 (pre-contratto): SBAGLIATO. Il contratto Atleta inizia 01/09/2025, quei mesi non devono esistere.
+2. ❌ Badge "Supera €5.000 all'inizio dell'anno" SBAGLIATO: il pregresso 3.850 < 5K, quindi solo a Settembre con +3.750 atleta = 7.600 supera la soglia.
+3. ❌ Calendario 2026 mostrava Giu-Dic post-contratto: SBAGLIATO. Contratto finisce 31/05/2026.
+4. ❌ Logica del cumulo: pregresso + esterni devono essere aggiunti al PRIMO mese attivo, non al 1° gennaio.
+
+### Fix applicati
+**Backend `_month_breaches`** (`/app/backend/server.py`):
+- Trova il primo mese attivo dell'anno fiscale (dove Coach o Atleta hanno amount > 0)
+- Filtra i mesi con amount = 0 dal breakdown
+- Il pregresso + esterni vengono aggiunti al primo mese attivo (non al 1° gennaio)
+- `month_exceed_5k` e `month_exceed_15k` ora ritornano il mese REALE di superamento (no più 0)
+
+**Frontend `renderMonthCalendar`** (`/app/frontend/src/components/admin/PersonCompensationSummary.tsx`):
+- Filtra mesi con amount = 0
+- Mostra solo i mesi dal primo all'ultimo attivo (es. 2025 = Set-Dic, 2026 = Gen-Mag)
+- Pregresso + esterni cumulati al primo mese attivo
+- Rimossa logica "all'inizio dell'anno" nei badge (non più necessaria)
+
+### Verifica API
+Esempio reale: utente test con contratto Coach 09/2025-06/2026, pregresso €13.200
+- 2025: tot=€20.000, supera 5K=Sett(9), supera 15K=Ott(10) ✅
+- 2026: tot=€10.200, supera 5K=Mar(3), no 15K ✅
+
+### Files modificati
+- ✏️ `/app/backend/server.py` (funzione `_month_breaches`)
+- ✏️ `/app/frontend/src/components/admin/PersonCompensationSummary.tsx`
+
+---
+
 ## 🆕 14/06/2026 — CALENDARIO MENSILE + GIÀ PERCEPITO NEL HUB ✅
 
 **Status**: ✅ Pronto per deploy (richiesta utente con foto annotate del 14/06 sera).
