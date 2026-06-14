@@ -1,22 +1,30 @@
 /**
  * 🆕 13/06/2026 — PAGINA COMPENSI UNIFICATA Doppio Ruolo
  *
- * Step 1 (questa sessione): Mostra il Riepilogo Compensi unificato Coach+Atleta
- * con la regola dei Quartili Settimanali. Riusa il componente PersonCompensationSummary.
- *
- * Step 2/3 (prossime sessioni): aggiungeremo qui:
- *  - Colori dinamici dei box (verde/arancio/viola/azzurro)
- *  - Calendario mensilità colorato
- *  - Storico quietanze unificato Atleta + Coach
+ * Step 1 (13/06): Riepilogo Compensi unificato Coach+Atleta con quartili.
+ * Step 2 (14/06): + Calendario mensile colorato (verde/arancio/viola) + Box "Già Percepito" coach.
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '../../../../src/components/Icon';
+import api from '../../../../src/services/api';
 import PersonCompensationSummary from '../../../../src/components/admin/PersonCompensationSummary';
+import CoachReceiptsSummary from '../../../../src/components/admin/CoachReceiptsSummary';
 
 export default function PersonaCompensiPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const [profile, setProfile] = useState<{ user_id: string | null; has_coach_role: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!id) return;
+    api.get(`/admin/persons/${id}/profile`)
+      .then(res => setProfile({
+        user_id: res.data?.user_id || null,
+        has_coach_role: !!res.data?.has_coach_role,
+      }))
+      .catch(() => setProfile(null));
+  }, [id]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 60 }}>
@@ -36,16 +44,10 @@ export default function PersonaCompensiPage() {
           />
         )}
 
-        <View style={styles.comingSoon}>
-          <Ionicons name="construct" size={22} color="#1565C0" />
-          <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={styles.csTitle}>Calendario mensilità colorato</Text>
-            <Text style={styles.csSub}>
-              In arrivo: caselle verde/arancio/viola/azzurro per ogni mese del contratto
-              con stato quietanza e soglie €5K / €15K.
-            </Text>
-          </View>
-        </View>
+        {/* 🆕 14/06/2026 — Riepilogo "Già Percepito" Coach con modal quietanze */}
+        {profile?.has_coach_role && profile.user_id && (
+          <CoachReceiptsSummary coachUserId={profile.user_id} />
+        )}
       </View>
     </ScrollView>
   );

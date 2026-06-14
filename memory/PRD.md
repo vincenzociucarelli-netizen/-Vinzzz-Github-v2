@@ -16,6 +16,32 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 14/06/2026 — CALENDARIO MENSILE + GIÀ PERCEPITO NEL HUB ✅
+
+**Status**: ✅ Pronto per deploy (richiesta utente con foto annotate del 14/06 sera).
+
+### Modifiche di oggi (sessione 3)
+1. **🎨 Sfondo dinamico box Anno Fiscale** in `PersonCompensationSummary.tsx`:
+   - Verde (`#E8F5E9`) se totale ≤ €5K
+   - Arancio (`#FFF3E0`) se €5K < totale ≤ €15K
+   - Viola (`#F3E5F5`) se totale > €15K
+   - Stesso schema in tutti gli anni fiscali (rimossi i precedenti gialli/azzurri statici).
+2. **📅 "all'inizio dell'anno"**: i badge "⚠️ Supera €5.000" e "🚨 Supera €15.000" ora mostrano `all'inizio dell'anno` quando il backend ritorna `month_exceed_X = 0` (caso in cui pregresso + esterni fanno scattare la soglia al 1° gennaio).
+3. **📆 Calendario mensile colorato** (12 caselle Gen-Dic) sotto ogni box fiscale: ogni cella mostra il cumulato e si colora verde/arancio/viola in base alla soglia raggiunta.
+4. **💰 "Già Percepito" spostato nel Hub Compensi**: 
+   - Nuovo componente `/src/components/admin/CoachReceiptsSummary.tsx` con card cliccabile + modal lista quietanze firmate (con tag `>5K` e `>15K`).
+   - Inserito in `/admin/persona/[id]/compensi.tsx`.
+   - Nascosto (`{false && …}`) il vecchio box "💰 Già Percepito" nella pagina `/admin/coach/[id].tsx`.
+   - Lasciati intatti: importo mensile (€/mese), badge "Accettato dal coach", bottone "Genera Quietanza Personalizzata".
+
+### Files modificati / creati
+- ✏️ `/app/frontend/src/components/admin/PersonCompensationSummary.tsx` — sfondo dinamico, "all'inizio dell'anno", calendario mensile
+- 🆕 `/app/frontend/src/components/admin/CoachReceiptsSummary.tsx` (NEW)
+- ✏️ `/app/frontend/app/admin/persona/[id]/compensi.tsx` — fetch profile + render `CoachReceiptsSummary`
+- ✏️ `/app/frontend/app/admin/coach/[id].tsx` — nascosto vecchio box "Già Percepito"
+
+---
+
 ## 🆕 14/06/2026 — RIMOZIONE SCHEDA COMPENSI DUPLICATA + DOPPIO BADGE 5K/15K ✅
 
 **Status**: ✅ Pronto per deploy (richiesta utente con foto annotate).

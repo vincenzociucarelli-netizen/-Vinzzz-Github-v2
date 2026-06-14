@@ -1491,8 +1491,8 @@ export default function AdminCoachDetail() {
           )}
 
           
-          {/* Totale già percepito (quietanze firmate) */}
-          {signedReceipts.filter((r: any) => r.receipt_signed).length > 0 && (
+          {/* Totale già percepito (quietanze firmate) — 🚫 14/06/2026: spostato in Hub Compensi */}
+          {false && signedReceipts.filter((r: any) => r.receipt_signed).length > 0 && (
             <TouchableOpacity 
               style={{ marginTop: 12, padding: 12, backgroundColor: '#E3F2FD', borderRadius: 8, borderWidth: 1, borderColor: '#90CAF9' }}
               onPress={() => setReceiptsModalVisible(true)}

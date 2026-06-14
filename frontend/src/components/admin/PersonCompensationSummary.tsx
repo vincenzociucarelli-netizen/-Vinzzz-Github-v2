@@ -253,13 +253,68 @@ export const PersonCompensationSummary: React.FC<PersonCompensationSummaryProps>
     );
   };
 
+  const renderMonthCalendar = (block: FiscalYearBlock, scope: 'fy_current' | 'fy_next') => {
+    // Cumulato mese per mese (Coach + Atleta dal breakdown + esterni cumulati al 1° gennaio + pregresso solo 1° anno)
+    const coachBd = (scope === 'fy_current'
+      ? data.coach_section?.fiscal_year.breakdown
+      : data.coach_section?.fiscal_year_next.breakdown) || [];
+    const athleteBd = (scope === 'fy_current'
+      ? data.athlete_section?.fiscal_year.breakdown
+      : data.athlete_section?.fiscal_year_next.breakdown) || [];
+    const coachByMonth: Record<number, number> = {};
+    coachBd.forEach(b => { coachByMonth[b.month] = (coachByMonth[b.month] || 0) + b.amount; });
+    const athleteByMonth: Record<number, number> = {};
+    athleteBd.forEach(b => { athleteByMonth[b.month] = (athleteByMonth[b.month] || 0) + b.amount; });
+
+    const baseCum = (block.supplementary || 0) + (block.prior_compensation || 0);
+    let cum = baseCum;
+    const months: Array<{ m: number; cum: number; monthAmount: number; color: string; border: string; }> = [];
+    for (let m = 1; m <= 12; m++) {
+      const monthAmount = (coachByMonth[m] || 0) + (athleteByMonth[m] || 0);
+      cum = cum + monthAmount;
+      let color = '#E8F5E9'; // verde <5k
+      let border = '#A5D6A7';
+      if (cum > 15000) { color = '#F3E5F5'; border = '#CE93D8'; } // viola
+      else if (cum > 5000) { color = '#FFF3E0'; border = '#FFB74D'; } // arancio
+      months.push({ m, cum, monthAmount, color, border });
+    }
+
+    const hasAnyAmount = months.some(x => x.monthAmount > 0) || baseCum > 0;
+    if (!hasAnyAmount) return null;
+
+    return (
+      <View style={styles.calendarBox} testID={`monthly-calendar-${scope}`}>
+        <Text style={styles.calendarTitle}>📆 Calendario mensile {block.year}</Text>
+        <Text style={styles.calendarSubtitle}>Cumulato cronologico — Verde {'<'}5K · Arancio 5K-15K · Viola {'>'}15K</Text>
+        <View style={styles.calendarGrid}>
+          {months.map(item => (
+            <View
+              key={item.m}
+              style={[styles.monthCell, { backgroundColor: item.color, borderColor: item.border }]}
+              testID={`calendar-month-${block.year}-${item.m}`}
+            >
+              <Text style={styles.monthCellLabel}>{MONTHS_IT[item.m].slice(0,3)}</Text>
+              <Text style={styles.monthCellCum}>{formatCurrency(item.cum)}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  };
+
   const renderFiscalBox = (block: FiscalYearBlock | null, scope: 'fy_current' | 'fy_next') => {
     if (!block) return null;
     if (block.grand_total <= 0 && !block.is_first_year) return null;
     const titleSuffix = `sino al 31/12/${block.year}`;
+    // 🆕 14/06/2026 — Sfondo dinamico in base al totale dell'anno (verde/arancio/viola)
+    const boxBgStyle = block.exceeds_15k
+      ? styles.boxFiscalOver15k
+      : block.exceeds_5k
+      ? styles.boxFiscalOver5k
+      : styles.boxFiscalUnder5k;
     return (
       <View
-        style={[styles.box, scope === 'fy_current' ? styles.boxFiscal : styles.boxFiscalNext]}
+        style={[styles.box, boxBgStyle]}
         testID={`summary-box-${scope}`}
       >
         <Text style={styles.boxTitle}>📅 Anno Fiscale {block.year}</Text>
@@ -319,21 +374,32 @@ export const PersonCompensationSummary: React.FC<PersonCompensationSummaryProps>
         {block.exceeds_5k && (
           <View style={styles.thresholdBadge5k}>
             <Text style={styles.thresholdBadgeText}>
-              ⚠️ Supera €5.000{block.month_exceed_5k && block.month_exceed_5k > 0
-                ? ` nel mese di ${MONTHS_IT[block.month_exceed_5k]}`
-                : ''} (INPS)
+              ⚠️ Supera €5.000{
+                block.month_exceed_5k === 0
+                  ? ' all\'inizio dell\'anno'
+                  : block.month_exceed_5k && block.month_exceed_5k > 0
+                  ? ` nel mese di ${MONTHS_IT[block.month_exceed_5k]}`
+                  : ''
+              } (INPS)
             </Text>
           </View>
         )}
         {block.exceeds_15k && (
           <View style={styles.thresholdBadge15k}>
             <Text style={styles.thresholdBadgeText}>
-              🚨 Supera €15.000{block.month_exceed_15k && block.month_exceed_15k > 0
-                ? ` nel mese di ${MONTHS_IT[block.month_exceed_15k]}`
-                : ''} (IRPEF)
+              🚨 Supera €15.000{
+                block.month_exceed_15k === 0
+                  ? ' all\'inizio dell\'anno'
+                  : block.month_exceed_15k && block.month_exceed_15k > 0
+                  ? ` nel mese di ${MONTHS_IT[block.month_exceed_15k]}`
+                  : ''
+              } (IRPEF)
             </Text>
           </View>
         )}
+
+        {/* 🆕 14/06/2026 — Calendario mensile colorato per soglie */}
+        {renderMonthCalendar(block, scope)}
       </View>
     );
   };
@@ -458,8 +524,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   boxRas: { backgroundColor: '#F1F8E9', borderColor: '#AED581' },
-  boxFiscal: { backgroundColor: '#FFF8E1', borderColor: '#FFD54F' },
-  boxFiscalNext: { backgroundColor: '#E1F5FE', borderColor: '#81D4FA' },
+  boxFiscalUnder5k: { backgroundColor: '#E8F5E9', borderColor: '#A5D6A7' },   // verde
+  boxFiscalOver5k:  { backgroundColor: '#FFF3E0', borderColor: '#FFB74D' },   // arancio
+  boxFiscalOver15k: { backgroundColor: '#F3E5F5', borderColor: '#CE93D8' },   // viola
   boxTitle: { fontSize: 14, fontWeight: '700', color: '#333' },
   boxSubtitle: { fontSize: 12, color: '#666', marginBottom: 8, fontStyle: 'italic' },
 
@@ -537,6 +604,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   thresholdBadgeText: { fontSize: 12, fontWeight: '700', color: '#333' },
+
+  // 🆕 14/06/2026 — Calendario mensile colorato
+  calendarBox: {
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+  },
+  calendarTitle: { fontSize: 12, fontWeight: '700', color: '#333', marginBottom: 2 },
+  calendarSubtitle: { fontSize: 10, color: '#666', marginBottom: 8, fontStyle: 'italic' },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  monthCell: {
+    width: '15.4%',
+    minWidth: 52,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+    borderRadius: 5,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  monthCellLabel: { fontSize: 10, fontWeight: '700', color: '#333' },
+  monthCellCum: { fontSize: 9, color: '#555', marginTop: 1 },
 
   footnote: {
     fontSize: 11,
