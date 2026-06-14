@@ -20,7 +20,6 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import { Ionicons } from '../../../src/components/Icon';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
-import PersonCompensationSummary from '../../../src/components/admin/PersonCompensationSummary';
 import DualRoleHubBanner from '../../../src/components/admin/DualRoleHubBanner';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -1000,9 +999,10 @@ export default function AdminCoachDetail() {
           )}
         </View>
 
-        {/* 🆕 14/06/2026 — Riepilogo Compensi Doppio Ruolo (fonte unica di verità) */}
+        {/* 🆕 14/06/2026 — Hub Doppio Ruolo (link al riepilogo compensi unificato)
+            ❌ 13/06/2026 — Riepilogo Compensi rimosso da qui per evitare duplicazione:
+            è ora accessibile UNICAMENTE dal Hub Persona (/admin/persona/[id]/compensi) */}
         {coach?.id && <DualRoleHubBanner personId={coach.id} currentRole="coach" />}
-        {coach?.id && <PersonCompensationSummary personId={coach.id} />}
 
         {/* Compenso */}
         <View style={styles.card}>

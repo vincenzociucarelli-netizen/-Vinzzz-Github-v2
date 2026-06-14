@@ -16,6 +16,26 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 14/06/2026 — RIMOZIONE SCHEDA COMPENSI DUPLICATA + DOPPIO BADGE 5K/15K ✅
+
+**Status**: ✅ Pronto per deploy (richiesta utente con foto annotate).
+
+### Modifiche di oggi (sessione 2)
+1. **🗑️ Rimosso** `<PersonCompensationSummary />` dalla pagina `/admin/coach/[id].tsx` (riga 1005) — era il "schedone doppio" segnalato dall'utente sotto la X rossa. Resta solo `DualRoleHubBanner` per navigare al Hub.
+2. **🧹 Rimossi** import inutili di `PersonCompensationSummary` da `app/admin/coach/[id].tsx` e `app/admin/athlete/[id].tsx`.
+3. **🆕 Badge cumulativi**: in `PersonCompensationSummary.tsx` ora si mostrano **entrambi** i badge "⚠️ Supera €5.000 nel mese di X (INPS)" e "🚨 Supera €15.000 nel mese di Y (IRPEF)" nello stesso box, invece di essere mutuamente esclusivi. Applicato a fiscal_year_current e fiscal_year_next.
+
+### Risultato atteso
+- Pagina Coach: NO riepilogo compensi (solo card Compensi base + banner Hub).
+- Hub `/admin/persona/[id]/compensi`: riepilogo unico, con entrambi i badge soglia visibili dove applicabile (es. Zorzi Alice 2025 mostra sia "⚠️ Supera €5.000" che "🚨 Supera €15.000 nel mese di Novembre").
+
+### Files modificati
+- `/app/frontend/src/components/admin/PersonCompensationSummary.tsx`
+- `/app/frontend/app/admin/coach/[id].tsx`
+- `/app/frontend/app/admin/athlete/[id].tsx`
+
+---
+
 ## 🆕 14/06/2026 — PULIZIA RIEPILOGHI VECCHI + MESE SUPERAMENTO SOGLIE ✅
 
 **Status**: ✅ Pronto per deploy.

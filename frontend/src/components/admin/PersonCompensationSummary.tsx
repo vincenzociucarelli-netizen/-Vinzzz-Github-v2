@@ -316,21 +316,21 @@ export const PersonCompensationSummary: React.FC<PersonCompensationSummaryProps>
           </Text>
         </View>
 
+        {block.exceeds_5k && (
+          <View style={styles.thresholdBadge5k}>
+            <Text style={styles.thresholdBadgeText}>
+              ⚠️ Supera €5.000{block.month_exceed_5k && block.month_exceed_5k > 0
+                ? ` nel mese di ${MONTHS_IT[block.month_exceed_5k]}`
+                : ''} (INPS)
+            </Text>
+          </View>
+        )}
         {block.exceeds_15k && (
           <View style={styles.thresholdBadge15k}>
             <Text style={styles.thresholdBadgeText}>
               🚨 Supera €15.000{block.month_exceed_15k && block.month_exceed_15k > 0
                 ? ` nel mese di ${MONTHS_IT[block.month_exceed_15k]}`
                 : ''} (IRPEF)
-            </Text>
-          </View>
-        )}
-        {!block.exceeds_15k && block.exceeds_5k && (
-          <View style={styles.thresholdBadge5k}>
-            <Text style={styles.thresholdBadgeText}>
-              ⚠️ Supera €5.000{block.month_exceed_5k && block.month_exceed_5k > 0
-                ? ` nel mese di ${MONTHS_IT[block.month_exceed_5k]}`
-                : ''} (INPS)
             </Text>
           </View>
         )}
