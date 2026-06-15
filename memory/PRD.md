@@ -16,6 +16,24 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🌙 15/06/2026 — NOTA DI DESIGN PER DOMANI: Calendario stato quietanze
+
+**Decisione utente** (rispondendo al suggerimento ✅/⏳): NO icone, replicare il pattern dirigente/collaboratore già esistente.
+
+**Pattern target**:
+- Mese **NON quietanzato** → casella **bianca/non colorata**, con badge piccolo in alto a destra (`5K` o `15K`) SE quel mese fa scattare la soglia cumulativa
+- Mese **quietanzato (firmato)** → casella **colorata** (verde <5K / arancio 5K-15K / viola >15K)
+
+**File di riferimento da studiare**:
+- `/app/frontend/app/admin/dirigente/[id].tsx`
+- `/app/frontend/app/admin/collaboratore/[id].tsx`
+
+**Cosa serve nel payload**:
+- `signed_months` per Coach e Atleta (lista dei mesi con quietanza firmata nell'anno)
+- Già abbiamo il dato in `coach_compensations` e `athlete_compensation_receipts` filtrando per `receipt_signed=true`
+
+---
+
 ## 🆕 15/06/2026 — CALENDARIO: ESTERNI PER MESE EFFETTIVO ✅
 
 ### Errore segnalato dall'utente (continuazione del 14/06 notte)
