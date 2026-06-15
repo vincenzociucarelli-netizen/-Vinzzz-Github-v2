@@ -20,6 +20,8 @@ import {
 import api from '../../services/api';
 import { Ionicons } from '../Icon';
 import { formatCurrency } from '../../utils/formatCurrency';
+import { THRESHOLD_COLORS, getThresholdState } from '../../utils/thresholdColors';
+import { calculateThresholds, type MonthAmount } from '../../utils/thresholdCalculator';
 
 interface PersonReceiptsSummaryProps {
   personId: string;
@@ -136,54 +138,48 @@ export const CoachReceiptsSummary: React.FC<PersonReceiptsSummaryProps> = ({ per
 
   const totalSigned = unified.reduce((s, r) => s + r.amount, 0);
 
-  // === Calcolo cumulo cronologico per ogni anno (stessa logica del backend) ===
-  // Costruisco breakdown coach + atleta + esterni per anno
+  // === Calcolo cumulo cronologico per ogni anno (delegato a utility condivisa) ===
+  // Aggrego coach + atleta + esterni per (anno, mese), poi calcolo soglie con la
+  // funzione `calculateThresholds` riusabile (stessa logica del backend `_month_breaches`).
+  const monthAmounts: MonthAmount[] = [];
   const fyBlocks: Record<number, any> = {};
   if (summary?.fiscal_year_current) fyBlocks[summary.fiscal_year_current.year] = summary.fiscal_year_current;
   if (summary?.fiscal_year_next) fyBlocks[summary.fiscal_year_next.year] = summary.fiscal_year_next;
 
-  // Per ogni anno, costruisco mappa { mese: cumulato_fine_mese }
-  const cumByYearMonth: Record<string, number> = {};
-  const thresholdsByYear: Record<number, { first5k: number | null; first15k: number | null }> = {};
+  let contractStartYear: number | undefined;
+  let priorCompensation = 0;
   for (const yStr of Object.keys(fyBlocks)) {
     const y = Number(yStr);
     const block = fyBlocks[y];
+    if (block.is_first_year) {
+      contractStartYear = y;
+      priorCompensation = block.prior_compensation || 0;
+    }
     const coachBd = (y === summary?.fiscal_year_current?.year
       ? summary?.coach_section?.fiscal_year?.breakdown
       : summary?.coach_section?.fiscal_year_next?.breakdown) || [];
     const athleteBd = (y === summary?.fiscal_year_current?.year
       ? summary?.athlete_section?.fiscal_year?.breakdown
       : summary?.athlete_section?.fiscal_year_next?.breakdown) || [];
-    const coachByMonth: Record<number, number> = {};
-    coachBd.forEach((b: any) => { if ((b.amount || 0) > 0) coachByMonth[b.month] = (coachByMonth[b.month] || 0) + b.amount; });
-    const athleteByMonth: Record<number, number> = {};
-    athleteBd.forEach((b: any) => { if ((b.amount || 0) > 0) athleteByMonth[b.month] = (athleteByMonth[b.month] || 0) + b.amount; });
-    const activeMonths = Array.from(new Set<number>([
-      ...Object.keys(coachByMonth).map(Number),
-      ...Object.keys(athleteByMonth).map(Number),
-    ])).sort((a, b) => a - b);
-    if (activeMonths.length === 0) {
-      thresholdsByYear[y] = { first5k: null, first15k: null };
-      continue;
-    }
-    const firstActive = activeMonths[0];
-    const lastActive = activeMonths[activeMonths.length - 1];
-    const externalByMonth = block.supplementary_by_month || {};
-    const priorBoost = block.is_first_year ? (block.prior_compensation || 0) : 0;
-    let cum = 0;
-    let first5k: number | null = null;
-    let first15k: number | null = null;
-    for (let m = firstActive; m <= lastActive; m++) {
-      const ext = Number(externalByMonth[String(m)] || externalByMonth[m as any] || 0);
-      const monthAmount = (coachByMonth[m] || 0) + (athleteByMonth[m] || 0) + ext;
-      if (m === firstActive) cum = cum + priorBoost + monthAmount;
-      else cum = cum + monthAmount;
-      cumByYearMonth[`${y}-${m}`] = cum;
-      if (first5k === null && cum > 5000) first5k = m;
-      if (first15k === null && cum > 15000) first15k = m;
-    }
-    thresholdsByYear[y] = { first5k, first15k };
+    const merged: Record<number, number> = {};
+    coachBd.forEach((b: any) => { if ((b.amount || 0) > 0) merged[b.month] = (merged[b.month] || 0) + b.amount; });
+    athleteBd.forEach((b: any) => { if ((b.amount || 0) > 0) merged[b.month] = (merged[b.month] || 0) + b.amount; });
+    const ext = block.supplementary_by_month || {};
+    Object.entries(ext).forEach(([m, a]) => {
+      const mi = Number(m);
+      const ai = Number(a) || 0;
+      if (mi >= 1 && mi <= 12 && ai > 0) merged[mi] = (merged[mi] || 0) + ai;
+    });
+    Object.entries(merged).forEach(([m, a]) => {
+      monthAmounts.push({ year: y, month: Number(m), amount: a });
+    });
   }
+
+  const { thresholdsByYear, cumulativeByYearMonth } = calculateThresholds({
+    monthAmounts,
+    priorCompensation,
+    contractStartYear,
+  });
 
   // Ordino per anno DESC, mese DESC (più recente in alto)
   const sortedDisplay = [...unified].sort((a, b) =>
@@ -241,17 +237,17 @@ export const CoachReceiptsSummary: React.FC<PersonReceiptsSummaryProps> = ({ per
 
               {sortedDisplay.map((rec, idx) => {
                 const t = thresholdsByYear[rec.year] || { first5k: null, first15k: null };
-                const cum = cumByYearMonth[`${rec.year}-${rec.month}`] || 0;
-                const isAfter15k = cum > 15000;
-                const isAfter5k = cum > 5000;
+                const cum = cumulativeByYearMonth[`${rec.year}-${rec.month}`] || 0;
+                const state = getThresholdState(cum);
+                const palette = THRESHOLD_COLORS[state];
                 const isThreshold5kMonth = t.first5k === rec.month;
                 const isThreshold15kMonth = t.first15k === rec.month;
                 return (
                   <View
                     key={`r-${rec.year}-${rec.month}-${rec.role}-${idx}`}
                     style={[styles.receiptRow, {
-                      backgroundColor: isAfter15k ? '#F3E5F5' : isAfter5k ? '#FFF3E0' : '#E8F5E9',
-                      borderLeftColor: isAfter15k ? '#8E44AD' : isAfter5k ? '#FF9800' : '#4CAF50',
+                      backgroundColor: palette.background,
+                      borderLeftColor: palette.accent,
                     }]}
                   >
                     <View style={styles.receiptLeft}>
@@ -260,12 +256,12 @@ export const CoachReceiptsSummary: React.FC<PersonReceiptsSummaryProps> = ({ per
                         <Text style={styles.receiptRole}>{rec.role === 'coach' ? '  (Coach)' : '  (Atleta)'}</Text>
                       </Text>
                       {isThreshold15kMonth && (
-                        <View style={[styles.tag, { backgroundColor: '#8E44AD' }]}>
+                        <View style={[styles.tag, { backgroundColor: THRESHOLD_COLORS.over15k.accent }]}>
                           <Text style={styles.tagText}>{'>'}15K</Text>
                         </View>
                       )}
                       {isThreshold5kMonth && !isThreshold15kMonth && (
-                        <View style={[styles.tag, { backgroundColor: '#FF9800' }]}>
+                        <View style={[styles.tag, { backgroundColor: THRESHOLD_COLORS.between5k15k.accent }]}>
                           <Text style={styles.tagText}>{'>'}5K</Text>
                         </View>
                       )}

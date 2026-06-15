@@ -16,6 +16,34 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 15/06/2026 (pomeriggio) — UTILITY CONDIVISE colori + calcolo soglie ✅
+
+Primo passo verso il Single Source of Truth: creati due file utility riusabili.
+
+### Files creati
+- ✅ `/app/frontend/src/utils/thresholdColors.ts`
+  - Costanti `THRESHOLD_COLORS.under5k / between5k15k / over15k` (background + border + text + accent)
+  - Helper `getThresholdState(cumulative)` → `'under5k' | 'between5k15k' | 'over15k'`
+  - Helper `getThresholdPalette(cumulative)` → restituisce direttamente la palette giusta
+- ✅ `/app/frontend/src/utils/thresholdCalculator.ts`
+  - Funzione `calculateThresholds({monthAmounts, priorCompensation, contractStartYear})` → `{thresholdsByYear, cumulativeByYearMonth}`
+  - Helper `isMonthAfterThreshold(month, year, thresholdsByYear, '5k'|'15k')`
+  - Logica matematicamente identica al backend `_month_breaches`
+
+### Refactor applicato
+- ✏️ `/app/frontend/src/components/admin/CoachReceiptsSummary.tsx` ora usa le utility (rimosse ~50 righe di logica inline, sostituite con 3 chiamate alle utility).
+
+### Da fare in step successivi
+Allineare i 4 file utente al nuovo pattern (uno alla volta, per sicurezza):
+- [ ] `/app/frontend/app/athlete/compensation.tsx`
+- [ ] `/app/frontend/app/coach/compensation.tsx`
+- [ ] `/app/frontend/app/collaboratore/compensation.tsx`
+- [ ] `/app/frontend/app/dirigente/compensation.tsx`
+
+Dopodiché si potrà creare il backend endpoint unico e rifattorizzare in modo definitivo.
+
+---
+
 ## 🌙 15/06/2026 — PRIORITÀ DOMANI: Single Source of Truth quietanze
 
 **Proposta utente** (notte 15/06): evitare il DOPPIO CALCOLO del cumulo/colore/badge soglie. Attualmente il lato Alice (collaboratore/atleta) e il lato Admin (`CoachReceiptsSummary`) ricalcolano entrambi lo stesso cumulo cronologico → rischio divergenza.
