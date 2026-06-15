@@ -10,7 +10,7 @@ import uuid
 import hashlib
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Dict
 from datetime import datetime, timedelta, timezone, date
 try:
     from zoneinfo import ZoneInfo  # Python 3.9+
@@ -13744,6 +13744,24 @@ async def _get_year_external_compensations_total(user_id: str, year: int) -> flo
         return 0.0
 
 
+async def _get_year_external_by_month(user_id: str, year: int) -> Dict[int, float]:
+    """🆕 14/06/2026 — Esterni distribuiti per mese (in base a `related_receipt_month`).
+    Gli esterni senza mese vengono ignorati: il calendario li aggregherà solo quando
+    saranno legati a una quietanza (mese chiarito)."""
+    res: Dict[int, float] = {}
+    try:
+        async for d in db.external_compensations.find(
+            {"user_id": user_id, "year": year},
+            {"_id": 0, "amount": 1, "related_receipt_month": 1},
+        ):
+            m = d.get("related_receipt_month")
+            if m and isinstance(m, int) and 1 <= m <= 12:
+                res[m] = round(res.get(m, 0.0) + float(d.get("amount") or 0), 2)
+    except Exception as ex:
+        logger.warning(f"_get_year_external_by_month failed for {user_id}/{year}: {ex}")
+    return res
+
+
 async def _find_linked_athlete_pro_for_user(user_id: str) -> Optional[dict]:
     """Cerca un record `athletes` con is_compensated=True che condivide
     identità (user_id, linked_user_id, email o fiscal_code) con l'utente
@@ -14248,6 +14266,20 @@ async def admin_person_compensation_summary(
     external_current = await _sum_external(year)
     external_next = await _sum_external(year_next)
 
+    # 🆕 14/06/2026 — Esterni distribuiti per mese (per cumulo cronologico corretto)
+    async def _sum_external_by_month(year_target: int) -> Dict[int, float]:
+        merged: Dict[int, float] = {}
+        if external_user_id:
+            for m, a in (await _get_year_external_by_month(external_user_id, year_target)).items():
+                merged[m] = round(merged.get(m, 0.0) + a, 2)
+        if external_athlete_id and external_athlete_id != external_user_id:
+            for m, a in (await _get_year_external_by_month(external_athlete_id, year_target)).items():
+                merged[m] = round(merged.get(m, 0.0) + a, 2)
+        return merged
+
+    external_by_month_current = await _sum_external_by_month(year)
+    external_by_month_next = await _sum_external_by_month(year_next)
+
     # === RAS SUMMARY ===
     ras_coach_total = coach_section["ras_total"] if coach_section else 0.0
     ras_athlete_total = athlete_section["ras_total"] if athlete_section else 0.0
@@ -14272,11 +14304,12 @@ async def admin_person_compensation_summary(
     prior_next = unified_prior if is_first_year_next else 0.0
     fy_next_total = round(fy_coach_next + fy_athlete_next + external_next + prior_next, 2)
 
-    # === 🆕 14/06/2026 (v2) — Mese di superamento soglie €5K/€15K ===
+    # === 🆕 14/06/2026 (v3) — Mese di superamento soglie €5K/€15K ===
     # Logica corretta: il cumulato CRONOLOGICO scatta dal PRIMO mese attivo del contratto
-    # nell'anno fiscale considerato. Pregresso + esterni vengono aggiunti al primo mese
-    # attivo (non al 1° gennaio), perché prima del contratto non c'è attività dichiarata.
-    def _month_breaches(year_target: int, prior_amount: float, external_year_total: float) -> dict:
+    # nell'anno fiscale considerato. Gli esterni si sommano nel MESE in cui sono stati
+    # dichiarati (related_receipt_month). Il pregresso si aggiunge al primo mese attivo
+    # SOLO nel primo anno fiscale del contratto.
+    def _month_breaches(year_target: int, prior_amount: float, external_by_month: Dict[int, float]) -> dict:
         coach_bd = (coach_section["fiscal_year"]["breakdown"] if coach_section and year_target == year
                     else coach_section["fiscal_year_next"]["breakdown"] if coach_section and year_target == year_next
                     else [])
@@ -14294,10 +14327,9 @@ async def admin_person_compensation_summary(
         exceed_15k = None
         cum = 0.0
         for m in range(first_active, 13):
-            month_amount = coach_by_month.get(m, 0) + athlete_by_month.get(m, 0)
-            # Al PRIMO mese attivo aggiungo anche pregresso + esterni dell'anno
+            month_amount = coach_by_month.get(m, 0) + athlete_by_month.get(m, 0) + (external_by_month.get(m, 0) or 0)
             if m == first_active:
-                cum = round(cum + prior_amount + external_year_total + month_amount, 2)
+                cum = round(cum + prior_amount + month_amount, 2)
             else:
                 cum = round(cum + month_amount, 2)
             if exceed_5k is None and cum > 5000:
@@ -14307,8 +14339,8 @@ async def admin_person_compensation_summary(
                 break
         return {"month_exceed_5k": exceed_5k, "month_exceed_15k": exceed_15k}
 
-    breaches_current = _month_breaches(year, prior_current, external_current)
-    breaches_next = _month_breaches(year_next, prior_next, external_next)
+    breaches_current = _month_breaches(year, prior_current, external_by_month_current)
+    breaches_next = _month_breaches(year_next, prior_next, external_by_month_next)
 
     person_name = ((user or {}).get("first_name") or (athlete or {}).get("first_name") or "") + " " + \
                   ((user or {}).get("last_name") or (athlete or {}).get("last_name") or "")
@@ -14335,6 +14367,7 @@ async def admin_person_compensation_summary(
             "coach_total": fy_coach,
             "athlete_total": fy_athlete,
             "supplementary": external_current,
+            "supplementary_by_month": external_by_month_current,
             "prior_compensation": prior_current,
             "is_first_year": is_first_year_current,
             "grand_total": fy_current_total,
@@ -14348,6 +14381,7 @@ async def admin_person_compensation_summary(
             "coach_total": fy_coach_next,
             "athlete_total": fy_athlete_next,
             "supplementary": external_next,
+            "supplementary_by_month": external_by_month_next,
             "prior_compensation": prior_next,
             "is_first_year": is_first_year_next,
             "grand_total": fy_next_total,

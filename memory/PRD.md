@@ -16,6 +16,41 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 15/06/2026 — CALENDARIO: ESTERNI PER MESE EFFETTIVO ✅
+
+### Errore segnalato dall'utente (continuazione del 14/06 notte)
+"Nel 2026 si riparte da ZERO. A gennaio cumulato = €3.750 atleta + €300 coach + EVENTUALI compensi esterni che non sappiamo finché non firma la quietanza di gennaio."
+
+### Fix applicato (v3 logica esterni)
+**Concetto**: gli esterni dell'anno NON vanno cumulati tutti al primo mese — vanno applicati SOLO nel mese in cui sono dichiarati (firma quietanza → `related_receipt_month`).
+
+**Backend** (`server.py`):
+- Nuovo helper `_get_year_external_by_month(user_id, year)` → ritorna `{month: amount}` filtrato per `related_receipt_month`.
+- `_month_breaches(prior, external_by_month)`: pregresso al primo mese attivo SOLO se `is_first_year`, esterni sommati nel mese di dichiarazione.
+- Aggiunto `supplementary_by_month` al payload `fiscal_year_current` e `fiscal_year_next`.
+
+**Frontend** (`PersonCompensationSummary.tsx`):
+- `renderMonthCalendar` legge `supplementary_by_month` e somma gli esterni nel mese corrispondente.
+- Pregresso applicato al primo mese attivo solo se `block.is_first_year`.
+
+### Risultato
+Esempio Zorzi Alice (contratto Atleta dal 01/09/2025 al 31/05/2026, pregresso €3.850):
+- **2025** (first_year=true):
+  - Set: 3.850 (pregresso) + 3.750 (atleta) = €7.600 → ARANCIO ⚠️ supera €5K
+  - Ott: 7.600 + 3.750 + 300 (coach) = €11.650 → arancio
+  - Nov: 11.650 + 3.750 + 300 = €15.700 → VIOLA 🚨 supera €15K
+  - Dic: 15.700 + 4.050 = €19.750 → viola
+- **2026** (first_year=false, nessun pregresso, nessun esterno ancora dichiarato):
+  - Gen: 3.750 + 300 = €4.050 → VERDE
+  - Feb: 4.050 + 4.050 = €8.100 → ARANCIO (>5K)
+  - ...quando l'atleta firma la quietanza di gennaio e dichiara €15.000 esterni → cum gennaio diventa €19.050 → viola
+
+### Files
+- ✏️ `/app/backend/server.py` (Dict import, `_get_year_external_by_month`, `_sum_external_by_month`, `_month_breaches` v3, payload con `supplementary_by_month`)
+- ✏️ `/app/frontend/src/components/admin/PersonCompensationSummary.tsx` (TypeScript interface + logica calendario)
+
+---
+
 ## 🆕 14/06/2026 (v3) — CALENDARIO CRONOLOGICO CORRETTO ✅
 
 **Status**: ✅ Fix completati (segnalazione utente con 2 foto annotate il 14/06 notte).

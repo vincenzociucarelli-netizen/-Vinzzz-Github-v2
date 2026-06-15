@@ -46,6 +46,7 @@ interface FiscalYearBlock {
   coach_total: number;
   athlete_total: number;
   supplementary: number;
+  supplementary_by_month?: Record<string, number>;
   prior_compensation: number;
   is_first_year: boolean;
   grand_total: number;
@@ -277,14 +278,16 @@ export const PersonCompensationSummary: React.FC<PersonCompensationSummaryProps>
     const firstActive = activeMonths[0];
     const lastActive = activeMonths[activeMonths.length - 1];
 
-    const externalAndPrior = (block.supplementary || 0) + (block.prior_compensation || 0);
+    // Esterni distribuiti per mese (related_receipt_month). Pregresso al primo mese attivo SE primo anno.
+    const externalByMonth = block.supplementary_by_month || {};
+    const priorBoost = block.is_first_year ? (block.prior_compensation || 0) : 0;
     let cum = 0;
     const months: Array<{ m: number; cum: number; monthAmount: number; color: string; border: string; }> = [];
     for (let m = firstActive; m <= lastActive; m++) {
-      const monthAmount = (coachByMonth[m] || 0) + (athleteByMonth[m] || 0);
-      // Al PRIMO mese attivo aggiungo anche pregresso + esterni dell'anno
+      const ext = Number(externalByMonth[String(m)] || externalByMonth[m as any] || 0);
+      const monthAmount = (coachByMonth[m] || 0) + (athleteByMonth[m] || 0) + ext;
       if (m === firstActive) {
-        cum = cum + externalAndPrior + monthAmount;
+        cum = cum + priorBoost + monthAmount;
       } else {
         cum = cum + monthAmount;
       }
