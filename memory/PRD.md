@@ -20,19 +20,24 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 
 **Proposta utente** (notte 15/06): evitare il DOPPIO CALCOLO del cumulo/colore/badge soglie. Attualmente il lato Alice (collaboratore/atleta) e il lato Admin (`CoachReceiptsSummary`) ricalcolano entrambi lo stesso cumulo cronologico → rischio divergenza.
 
-**Soluzione architetturale**:
-- Backend: nuovo endpoint `GET /api/persons/{id}/signed-receipts-with-thresholds/{year}` che ritorna le quietanze firmate (Coach + Atleta) con:
-  - `month`, `year`, `amount`, `role`
-  - `cumulative_after_this_month`
-  - `color`: `green` / `orange` / `purple`
-  - `badge`: `null` / `'5K'` / `'15K'` (solo sul primo mese di superamento)
-- Frontend: sia il lato Alice (foto 4 pattern Pedro) sia il `CoachReceiptsSummary` lato admin chiamano lo STESSO endpoint e renderizzano direttamente colori/badge dal payload (zero ricalcolo).
+### ⚠️ ORDINE CORRETTO DI SVILUPPO (utente ha ammesso che abbiamo lavorato all'inverso)
+**1️⃣ PRIMO — Lato Alice/utente**:
+   - Pattern Pedro foto 4 (quadrati colorati per mese + badge `>5K`/`>15K` in alto a destra)
+   - File: `app/athlete/compensation.tsx`, `app/coach/compensation.tsx`, `app/collaboratore/compensation.tsx`
+   - QUI vive la logica madre: cumulo cronologico, colori, badge
+   - Quando Alice firma → sistema "stampa" stato sulla quietanza
 
-**File di riferimento (lato utente già con logica giusta)**:
-- `/app/frontend/app/collaboratore/compensation.tsx` — righe 1036-1122 (`cumulativeByYear`, `thresholdsByYear`, `isAfter5k`/`isAfter15k` → backgroundColor)
-- Stesso pattern in `/app/frontend/app/coach/compensation.tsx`, `/app/frontend/app/athlete/compensation.tsx`
+**2️⃣ POI — Backend endpoint unico**:
+   - `GET /api/persons/{id}/signed-receipts-with-thresholds/{year}`
+   - Espone lo stato calcolato secondo la logica del lato utente
+   - Campi: `month`, `year`, `amount`, `role`, `cumulative_after_this_month`, `color` (green/orange/purple), `badge` (null/'5K'/'15K')
 
-**Plus**: lato admin pattern dirigente/collaboratore (caselle bianche se non firmate + badge `>5K`/`>15K` in alto a destra).
+**3️⃣ INFINE — Lato Admin**:
+   - `CoachReceiptsSummary` diventa un semplice consumer dell'endpoint (no ricalcolo)
+   - Hub Compensi mostra esattamente lo stesso colore/badge che vede Alice
+
+### Stato attuale (provvisorio, da rifattorizzare)
+Il `CoachReceiptsSummary` di oggi usa la STESSA formula matematica di `_month_breaches` del backend → matematicamente coerente con il calcolo centrale, ma non è il pattern Single Source of Truth pulito. Funzionerà fino a quando non lo rifattorizziamo.
 
 ---
 
