@@ -16,6 +16,27 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 15/06/2026 (sera) — RIMOSSE SEZIONI DUPLICATE LATO ATLETA ✅
+
+Su segnalazione utente (4 foto annotate con cerchi rossi):
+
+### Cosa è stato rimosso (perché duplicato)
+1. **`/app/frontend/app/athlete/index.tsx`** — Rimossi i blocchi:
+   - "Yearly Breakdown" per ogni anno fiscale del contratto (Anno 2025 Inizio Contratto / Anno 2026 Fine Contratto)
+   - "Riepilogo Quietanze" (Quietanze firmate X/Y + Totale contratto)
+   - **Perché**: queste info sono già perfettamente presenti nella pagina dedicata `/athlete/compensation` ("Compensi Sportivi" - sezione "Calcolo per Anno Solare" + "Comunicazione RAS").
+   - **Tenuti intatti**: dati personali, periodo contratto, prossimi impegni, link IBAN, link "Modifica Profilo".
+
+2. **`/app/frontend/app/athlete/profile.tsx`** — Rimosso:
+   - "📅 Registro Quietanze" (mini grid con caselle colorate dei mesi).
+   - **Perché**: identico al pattern già presente in `/athlete/compensation`. L'atleta accede a quel dettaglio dal link "Quietanze Mensili" appena sopra (che è stato MANTENUTO).
+   - **Tenuti intatti**: tutti i dati profilo, link "Quietanze Mensili", "Compenso Accettato", Versione Lite, PIN, etc.
+
+### Risultato
+La pagina "Compensi Sportivi" (foto 3, perfetta) resta UNICA fonte di visualizzazione delle quietanze + calcolo soglie. Nessuna duplicazione né conflitto di dati tra dashboard, profilo e pagina compensi.
+
+---
+
 ## 🆕 15/06/2026 (pomeriggio) — UTILITY CONDIVISE colori + calcolo soglie ✅
 
 Primo passo verso il Single Source of Truth: creati due file utility riusabili.
