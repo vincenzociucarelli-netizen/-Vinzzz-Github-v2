@@ -254,70 +254,6 @@ export const PersonCompensationSummary: React.FC<PersonCompensationSummaryProps>
     );
   };
 
-  const renderMonthCalendar = (block: FiscalYearBlock, scope: 'fy_current' | 'fy_next') => {
-    // Cumulato mese per mese (Coach + Atleta dal breakdown)
-    // Pregresso + esterni si sommano al PRIMO mese attivo (non a gennaio)
-    const coachBd = (scope === 'fy_current'
-      ? data.coach_section?.fiscal_year.breakdown
-      : data.coach_section?.fiscal_year_next.breakdown) || [];
-    const athleteBd = (scope === 'fy_current'
-      ? data.athlete_section?.fiscal_year.breakdown
-      : data.athlete_section?.fiscal_year_next.breakdown) || [];
-    const coachByMonth: Record<number, number> = {};
-    coachBd.forEach(b => { if ((b.amount || 0) > 0) coachByMonth[b.month] = (coachByMonth[b.month] || 0) + b.amount; });
-    const athleteByMonth: Record<number, number> = {};
-    athleteBd.forEach(b => { if ((b.amount || 0) > 0) athleteByMonth[b.month] = (athleteByMonth[b.month] || 0) + b.amount; });
-
-    // Trova i mesi attivi (in cui c'è Coach o Atleta in quell'anno)
-    const activeSet = new Set<number>([
-      ...Object.keys(coachByMonth).map(Number),
-      ...Object.keys(athleteByMonth).map(Number),
-    ]);
-    const activeMonths = Array.from(activeSet).sort((a, b) => a - b);
-    if (activeMonths.length === 0) return null;
-    const firstActive = activeMonths[0];
-    const lastActive = activeMonths[activeMonths.length - 1];
-
-    // Esterni distribuiti per mese (related_receipt_month). Pregresso al primo mese attivo SE primo anno.
-    const externalByMonth = block.supplementary_by_month || {};
-    const priorBoost = block.is_first_year ? (block.prior_compensation || 0) : 0;
-    let cum = 0;
-    const months: Array<{ m: number; cum: number; monthAmount: number; color: string; border: string; }> = [];
-    for (let m = firstActive; m <= lastActive; m++) {
-      const ext = Number(externalByMonth[String(m)] || externalByMonth[m as any] || 0);
-      const monthAmount = (coachByMonth[m] || 0) + (athleteByMonth[m] || 0) + ext;
-      if (m === firstActive) {
-        cum = cum + priorBoost + monthAmount;
-      } else {
-        cum = cum + monthAmount;
-      }
-      let color = '#E8F5E9'; // verde <5k
-      let border = '#A5D6A7';
-      if (cum > 15000) { color = '#F3E5F5'; border = '#CE93D8'; } // viola
-      else if (cum > 5000) { color = '#FFF3E0'; border = '#FFB74D'; } // arancio
-      months.push({ m, cum, monthAmount, color, border });
-    }
-
-    return (
-      <View style={styles.calendarBox} testID={`monthly-calendar-${scope}`}>
-        <Text style={styles.calendarTitle}>📆 Calendario mensile {block.year}</Text>
-        <Text style={styles.calendarSubtitle}>Cumulato cronologico — Verde {'<'}5K · Arancio 5K-15K · Viola {'>'}15K</Text>
-        <View style={styles.calendarGrid}>
-          {months.map(item => (
-            <View
-              key={item.m}
-              style={[styles.monthCell, { backgroundColor: item.color, borderColor: item.border }]}
-              testID={`calendar-month-${block.year}-${item.m}`}
-            >
-              <Text style={styles.monthCellLabel}>{MONTHS_IT[item.m].slice(0,3)}</Text>
-              <Text style={styles.monthCellCum}>{formatCurrency(item.cum)}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-    );
-  };
-
   const renderFiscalBox = (block: FiscalYearBlock | null, scope: 'fy_current' | 'fy_next') => {
     if (!block) return null;
     if (block.grand_total <= 0 && !block.is_first_year) return null;
@@ -467,9 +403,6 @@ export const PersonCompensationSummary: React.FC<PersonCompensationSummaryProps>
             </Text>
           </View>
         )}
-
-        {/* 🆕 14/06/2026 — Calendario mensile colorato per soglie */}
-        {renderMonthCalendar(block, scope)}
       </View>
     );
   };
@@ -674,30 +607,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   thresholdBadgeText: { fontSize: 12, fontWeight: '700', color: '#333' },
-
-  // 🆕 14/06/2026 — Calendario mensile colorato
-  calendarBox: {
-    backgroundColor: 'rgba(255,255,255,0.55)',
-    borderRadius: 8,
-    padding: 10,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-  },
-  calendarTitle: { fontSize: 12, fontWeight: '700', color: '#333', marginBottom: 2 },
-  calendarSubtitle: { fontSize: 10, color: '#666', marginBottom: 8, fontStyle: 'italic' },
-  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  monthCell: {
-    width: '15.4%',
-    minWidth: 52,
-    paddingVertical: 4,
-    paddingHorizontal: 2,
-    borderRadius: 5,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  monthCellLabel: { fontSize: 10, fontWeight: '700', color: '#333' },
-  monthCellCum: { fontSize: 9, color: '#555', marginTop: 1 },
 
   footnote: {
     fontSize: 11,

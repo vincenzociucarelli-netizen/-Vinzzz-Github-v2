@@ -16,6 +16,26 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🌙 15/06/2026 — PRIORITÀ DOMANI: Single Source of Truth quietanze
+
+**Proposta utente** (notte 15/06): evitare il DOPPIO CALCOLO del cumulo/colore/badge soglie. Attualmente il lato Alice (collaboratore/atleta) e il lato Admin (`CoachReceiptsSummary`) ricalcolano entrambi lo stesso cumulo cronologico → rischio divergenza.
+
+**Soluzione architetturale**:
+- Backend: nuovo endpoint `GET /api/persons/{id}/signed-receipts-with-thresholds/{year}` che ritorna le quietanze firmate (Coach + Atleta) con:
+  - `month`, `year`, `amount`, `role`
+  - `cumulative_after_this_month`
+  - `color`: `green` / `orange` / `purple`
+  - `badge`: `null` / `'5K'` / `'15K'` (solo sul primo mese di superamento)
+- Frontend: sia il lato Alice (foto 4 pattern Pedro) sia il `CoachReceiptsSummary` lato admin chiamano lo STESSO endpoint e renderizzano direttamente colori/badge dal payload (zero ricalcolo).
+
+**File di riferimento (lato utente già con logica giusta)**:
+- `/app/frontend/app/collaboratore/compensation.tsx` — righe 1036-1122 (`cumulativeByYear`, `thresholdsByYear`, `isAfter5k`/`isAfter15k` → backgroundColor)
+- Stesso pattern in `/app/frontend/app/coach/compensation.tsx`, `/app/frontend/app/athlete/compensation.tsx`
+
+**Plus**: lato admin pattern dirigente/collaboratore (caselle bianche se non firmate + badge `>5K`/`>15K` in alto a destra).
+
+---
+
 ## 🌙 15/06/2026 — NOTA DI DESIGN PER DOMANI: Calendario stato quietanze
 
 **Decisione utente** (rispondendo al suggerimento ✅/⏳): NO icone, replicare il pattern dirigente/collaboratore già esistente.
