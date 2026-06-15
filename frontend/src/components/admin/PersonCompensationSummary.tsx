@@ -358,13 +358,71 @@ export const PersonCompensationSummary: React.FC<PersonCompensationSummaryProps>
             : data.athlete_section?.fiscal_year_next.breakdown,
         )}
 
-        {/* Esterni */}
-        {block.supplementary > 0 && (
-          <View style={styles.simpleRow}>
-            <Text style={styles.rowLabel}>Compensi esterni (altre ASD)</Text>
-            <Text style={[styles.rowValue, { color: '#1565C0' }]}>{formatCurrency(block.supplementary)}</Text>
-          </View>
-        )}
+        {/* Esterni — riga collassabile con breakdown mensile (related_receipt_month) */}
+        {block.supplementary > 0 && (() => {
+          const extKey = `${scope}-external`;
+          const isOpenExt = !!expanded[extKey];
+          const extByMonth = block.supplementary_by_month || {};
+          const extEntries = Object.entries(extByMonth)
+            .map(([m, a]) => ({ m: Number(m), amount: Number(a) || 0 }))
+            .filter(e => e.amount > 0)
+            .sort((a, b) => a.m - b.m);
+          return (
+            <View style={styles.roleBlock}>
+              <TouchableOpacity
+                style={styles.roleHeader}
+                onPress={() => toggle(extKey)}
+                testID={`${scope}-external-toggle`}
+                activeOpacity={0.65}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.roleLabel}>Compensi esterni (altre ASD)</Text>
+                  <Text style={styles.contractRange}>
+                    {extEntries.length > 0
+                      ? `${extEntries.length} dichiarazion${extEntries.length === 1 ? 'e' : 'i'} nel ${block.year}`
+                      : 'Nessuna dichiarazione collegata a un mese'}
+                  </Text>
+                </View>
+                <View style={styles.roleRight}>
+                  <Text style={[styles.roleAmount, { color: '#1565C0' }]}>{formatCurrency(block.supplementary)}</Text>
+                  <Ionicons
+                    name={isOpenExt ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color="#777"
+                    style={{ marginLeft: 4 }}
+                  />
+                </View>
+              </TouchableOpacity>
+
+              {isOpenExt && (
+                <View style={styles.breakdownBox} testID={`${scope}-external-breakdown`}>
+                  {extEntries.length === 0 ? (
+                    <Text style={styles.breakdownEmpty}>
+                      Importo totale dichiarato ma senza mese collegato (es. dichiarazione antecedente).
+                    </Text>
+                  ) : (
+                    <>
+                      <Text style={styles.breakdownHeader}>
+                        Dichiarazioni collegate alle quietanze firmate (per mese)
+                      </Text>
+                      {extEntries.map((e, i) => (
+                        <View key={i} style={styles.breakdownRow}>
+                          <Text style={styles.breakdownLabel}>{MONTHS_IT[e.m]} {block.year}</Text>
+                          <Text style={styles.breakdownCalc}>Dichiarazione esterna</Text>
+                          <Text style={[styles.breakdownAmount, { color: '#1565C0' }]}>{formatCurrency(e.amount)}</Text>
+                        </View>
+                      ))}
+                      <View style={styles.breakdownTotal}>
+                        <Text style={styles.breakdownTotalLabel}>Totale esterni {block.year}</Text>
+                        <Text style={[styles.breakdownTotalAmount, { color: '#1565C0' }]}>{formatCurrency(block.supplementary)}</Text>
+                      </View>
+                    </>
+                  )}
+                </View>
+              )}
+            </View>
+          );
+        })()}
 
         {/* Pregresso (con label dinamica) */}
         {block.prior_compensation > 0 && (
