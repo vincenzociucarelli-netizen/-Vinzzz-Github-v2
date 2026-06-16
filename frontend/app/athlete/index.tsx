@@ -1680,7 +1680,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#1565C0',
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
     paddingBottom: 15,
     paddingHorizontal: 20,
@@ -1691,7 +1691,7 @@ const styles = StyleSheet.create({
     color: '#FFD700',
   },
   profileCard: {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#1565C0',
     paddingHorizontal: 20,
     paddingBottom: 24,
     alignItems: 'center',
@@ -1987,7 +1987,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   summaryCard: {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#1565C0',
     marginHorizontal: 16,
     marginTop: 16,
     borderRadius: 16,

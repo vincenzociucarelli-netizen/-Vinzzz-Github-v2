@@ -16,6 +16,26 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 16/06/2026 (sera++) — FIX SDI + Sfondo Dashboard Atleta ✅
+
+### Problema 1: Codice SDI invisibile nella pagina Profilo Società
+**Causa**: la riga "Codice SDI" era mostrata SOLO se `codiceSdi` aveva un valore (condizione `{codiceSdi ? ... : null}`).
+**Fix** in `/app/frontend/app/admin/society-profile.tsx`: la riga viene ora mostrata SEMPRE in lettura, con valore `— (da inserire per fatturazione elettronica)` se non impostato.
+**Risultato**: l'admin vede sempre il campo SDI nella sezione "Dati Fiscali" e capisce a colpo d'occhio se è valorizzato o meno. Una volta inserito nel form di modifica e salvato, comparirà sia in lettura che nel JPG del biglietto da visita (backend già pronto da 11/06).
+
+### Problema 2: Sfondo "nero" della dashboard atleta poco gradevole
+**Causa**: 3 punti in `/app/frontend/app/athlete/index.tsx` usavano `backgroundColor: '#1a1a2e'` (blu navy molto scuro, quasi nero):
+- `header` (riga 1683)
+- `profileCard` (riga 1694)
+- `summaryCard` (riga 1990)
+**Fix**: tutti e 3 sostituiti con `#1565C0` (blu primario coerente con il resto del design RegistraTEAM).
+
+### Files
+- ✏️ `/app/frontend/app/admin/society-profile.tsx`
+- ✏️ `/app/frontend/app/athlete/index.tsx`
+
+---
+
 ## 🆕 16/06/2026 (sera+) — BANNER ATLETA/COACH replicati anche su `/coach/compensation` ✅
 
 Su conferma utente ("Ok vai"), ho replicato il pattern dei 2 banner dual-role anche nella pagina compensi del lato Coach (`/app/frontend/app/coach/compensation.tsx`):

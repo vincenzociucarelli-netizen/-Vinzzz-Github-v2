@@ -436,7 +436,12 @@ export default function SocietyProfile() {
               </View>
               <InfoRow icon="card" label="Codice Fiscale" value={fiscalCode} />
               {partitaIva ? <InfoRow icon="receipt" label="Partita IVA" value={partitaIva} /> : null}
-              {codiceSdi ? <InfoRow icon="document-text" label="Codice SDI" value={codiceSdi.toUpperCase()} /> : null}
+              {/* 🆕 16/06/2026 — SDI sempre visibile (anche vuoto) per non lasciare il campo "fantasma" */}
+              <InfoRow
+                icon="document-text"
+                label="Codice SDI"
+                value={codiceSdi ? codiceSdi.toUpperCase() : '— (da inserire per fatturazione elettronica)'}
+              />
               <InfoRow icon="person" label="Presidente" value={presidentName} />
             </View>
 
