@@ -130,6 +130,19 @@ export default function AthleteCompensation() {
   const [thresholdStatus, setThresholdStatus] = useState<ThresholdStatus | null>(null);
   const [thresholdStatus2026, setThresholdStatus2026] = useState<ThresholdStatus | null>(null);
   
+  // 🆕 16/06/2026 — Dati Dual-Role per banner atleta/coach in alto
+  const [dualRoleInfo, setDualRoleInfo] = useState<{
+    is_dual_role: boolean;
+    athlete: { team_name: string; monthly_compensation: number; contract_start_date: string | null; contract_end_date: string | null; } | null;
+    coach: { team_name: string; monthly_compensation: number; contract_start_date: string | null; contract_end_date: string | null; } | null;
+  } | null>(null);
+  
+  useEffect(() => {
+    api.get('/auth/me/dual-role-info')
+      .then(res => setDualRoleInfo(res.data || null))
+      .catch(() => setDualRoleInfo(null));
+  }, []);
+  
   // Signature modal for receipts - consolidated into a single state object to prevent re-renders
   const [signatureModalState, setSignatureModalState] = useState<{
     visible: boolean;
@@ -1295,31 +1308,12 @@ export default function AthleteCompensation() {
                   </View>
                 )}
               </View>
-              <Text style={{ fontSize: 13, color: '#666' }}>Compenso mensile: {formatCurrency((profile?.monthly_compensation || 0))}</Text>
+              {/* 🚫 16/06/2026 — "Compenso mensile" inline RIMOSSO: ora c'è il banner dedicato qui sotto */}
             </View>
           </View>
-          
-          {/* Contract Period - Full dates */}
-          {profile?.contract_start_date && profile?.contract_end_date && (
-            <View style={{ 
-              backgroundColor: '#E8F4FD', 
-              padding: 12, 
-              borderRadius: 8, 
-              marginBottom: 12,
-              borderWidth: 1,
-              borderColor: '#007AFF',
-              borderStyle: 'dashed'
-            }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 14, marginRight: 6 }}>📅</Text>
-                <Text style={{ fontSize: 14, color: '#333', fontWeight: '500' }}>Periodo Contratto</Text>
-              </View>
-              <Text style={{ fontSize: 18, color: '#007AFF', fontWeight: 'bold', marginTop: 4, textAlign: 'center' }}>
-                {formatContractDate(profile.contract_start_date!)} - {formatContractDate(profile.contract_end_date!)}
-              </Text>
-            </View>
-          )}
-          
+
+          {/* 🚫 16/06/2026 — "Periodo Contratto" RIMOSSO: spostato dentro il banner Atleta qui sotto */}
+
           <TouchableOpacity 
             style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F8FF', padding: 10, borderRadius: 8 }}
             onPress={() => router.push('/athlete/profile')}
@@ -1330,7 +1324,49 @@ export default function AthleteCompensation() {
             <Ionicons name="chevron-forward" size={18} color="#007AFF" style={{ marginLeft: 8 }} />
           </TouchableOpacity>
         </View>
-        
+
+        {/* 🆕 16/06/2026 — Banner Atleta: Squadra + Compenso + Periodo Contratto */}
+        {dualRoleInfo?.athlete && (
+          <View style={styles.roleBanner} data-testid="banner-atleta">
+            <View style={styles.roleBannerHeader}>
+              <Text style={styles.roleBannerEmoji}>🏐</Text>
+              <Text style={styles.roleBannerTitle}>Compenso Atleta</Text>
+              {dualRoleInfo.athlete.team_name ? (
+                <Text style={styles.roleBannerTeam}>{dualRoleInfo.athlete.team_name}</Text>
+              ) : null}
+            </View>
+            <Text style={styles.roleBannerAmount}>
+              {formatCurrency(dualRoleInfo.athlete.monthly_compensation || 0)} / mese
+            </Text>
+            {(dualRoleInfo.athlete.contract_start_date || dualRoleInfo.athlete.contract_end_date) && (
+              <Text style={styles.roleBannerDates}>
+                dal {formatContractDate(dualRoleInfo.athlete.contract_start_date || '')} al {formatContractDate(dualRoleInfo.athlete.contract_end_date || '')}
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* 🆕 16/06/2026 — Banner Coach: visibile solo se utente è dual-role */}
+        {dualRoleInfo?.coach && (
+          <View style={[styles.roleBanner, styles.roleBannerCoach]} data-testid="banner-coach">
+            <View style={styles.roleBannerHeader}>
+              <Text style={styles.roleBannerEmoji}>🏋️</Text>
+              <Text style={styles.roleBannerTitle}>Compenso Coach</Text>
+              {dualRoleInfo.coach.team_name ? (
+                <Text style={styles.roleBannerTeam}>{dualRoleInfo.coach.team_name}</Text>
+              ) : null}
+            </View>
+            <Text style={styles.roleBannerAmount}>
+              {formatCurrency(dualRoleInfo.coach.monthly_compensation || 0)} / mese
+            </Text>
+            {(dualRoleInfo.coach.contract_start_date || dualRoleInfo.coach.contract_end_date) && (
+              <Text style={styles.roleBannerDates}>
+                dal {formatContractDate(dualRoleInfo.coach.contract_start_date || '')} al {formatContractDate(dualRoleInfo.coach.contract_end_date || '')}
+              </Text>
+            )}
+          </View>
+        )}
+
         {/* Year Summaries - Contract-based - ENHANCED STYLE */}
         {contractStartYear && contractEndYear && (
           <>
@@ -2302,6 +2338,44 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderLeftWidth: 4,
     borderLeftColor: '#1976D2',
+  },
+  // 🆕 16/06/2026 — Banner Atleta/Coach
+  roleBanner: {
+    backgroundColor: '#FFF8E1',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9800',
+  },
+  roleBannerCoach: {
+    backgroundColor: '#F3E5F5',
+    borderLeftColor: '#8E44AD',
+  },
+  roleBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginBottom: 6,
+  },
+  roleBannerEmoji: { fontSize: 20, marginRight: 8 },
+  roleBannerTitle: { fontSize: 15, fontWeight: '700', color: '#333' },
+  roleBannerTeam: {
+    fontSize: 13,
+    color: '#555',
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  roleBannerAmount: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1565C0',
+    marginVertical: 2,
+  },
+  roleBannerDates: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
   },
   unifiedBannerPeriod: {
     fontSize: 14,

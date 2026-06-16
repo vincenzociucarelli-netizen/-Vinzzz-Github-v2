@@ -1084,76 +1084,15 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           )}
         </View>
 
-        {/* Compensation Info - Only show for compensated athletes */}
-        {!isQuotaAthlete && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>💰 Compenso Mensile</Text>
-          <View style={styles.fieldContainer}>
-            <Text style={styles.compensationAmount}>
-              {profileData.monthly_compensation > 0 
-                ? `€ ${profileData.monthly_compensation.toFixed(2)}`
-                : 'Non ancora impostato'}
-            </Text>
-          </View>
-          
-          {profileData.monthly_compensation > 0 && !profileData.compensation_accepted && (
-            <TouchableOpacity
-              style={styles.acceptButton}
-              onPress={handleAcceptCompensation}
-            >
-              <Ionicons name="checkmark-circle" size={20} color="#fff" />
-              <Text style={styles.acceptButtonText}>Accetta Compenso</Text>
-            </TouchableOpacity>
-          )}
-
-          {profileData.compensation_accepted && (
-            <View style={styles.acceptedBadge}>
-              <Ionicons name="checkmark-circle" size={18} color="#34C759" />
-              <Text style={styles.acceptedBadgeText}>Compenso Accettato</Text>
-            </View>
-          )}
-
-          {/* Link to Compensation Page with Receipts */}
-          {profileData.monthly_compensation > 0 && profileData.compensation_accepted && (
-            <TouchableOpacity
-              style={styles.compensationLinkButton}
-              onPress={() => router.push('/athlete/compensation')}
-              data-testid="compensation-receipts-btn"
-            >
-              <Ionicons name="document-text" size={20} color="#007AFF" />
-              <Text style={styles.compensationLinkText}>Quietanze Mensili</Text>
-              <Ionicons name="chevron-forward" size={20} color="#007AFF" />
-            </TouchableOpacity>
-          )}
-        </View>
-        )}
+        {/* 🚫 16/06/2026 — Card "Compenso Mensile" RIMOSSA da qui:
+            le info compenso + contratto sono ora mostrate come banner nella pagina
+            "Compensi Sportivi" (/athlete/compensation). */}
 
         {/* 🚫 15/06/2026 — Registro Quietanze RIMOSSO da qui:
             duplicava le info già presenti nella pagina /athlete/compensation
             (vedi link "Quietanze Mensili" qui sopra). */}
 
-        {/* 🆕 16/06/2026 — Periodo Contratto (spostato dalla dashboard) */}
-        {!isQuotaAthlete && (profileData.contract_start_date || profileData.contract_end_date) && (
-          <View style={styles.card} data-testid="contract-period-card">
-            <Text style={styles.cardTitle}>📅 Periodo Contratto</Text>
-            <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Inizio</Text>
-              <Text style={styles.fieldValue}>
-                {profileData.contract_start_date
-                  ? new Date(profileData.contract_start_date).toLocaleDateString('it-IT')
-                  : '—'}
-              </Text>
-            </View>
-            <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>Fine</Text>
-              <Text style={styles.fieldValue}>
-                {profileData.contract_end_date
-                  ? new Date(profileData.contract_end_date).toLocaleDateString('it-IT')
-                  : '—'}
-              </Text>
-            </View>
-          </View>
-        )}
+        {/* 🚫 16/06/2026 — Periodo Contratto NON va qui (è in /athlete/compensation come banner). */}
 
         {/* 🆕 16/06/2026 — Dati Bancari (spostati dalla dashboard) */}
         {!isQuotaAthlete && profileData.iban && (

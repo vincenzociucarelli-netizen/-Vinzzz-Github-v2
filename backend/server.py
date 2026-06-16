@@ -14465,6 +14465,92 @@ async def get_linked_accounts(current_user = Depends(get_current_user)):
     return {"current_role": role, "linked_accounts": linked}
 
 
+@api_router.get("/auth/me/dual-role-info")
+async def get_dual_role_info(current_user = Depends(get_current_user)):
+    """🆕 16/06/2026 — Restituisce le info necessarie per i 2 banner in `/athlete/compensation`:
+    - athlete: team_name + monthly_compensation + contract_start_date + contract_end_date
+    - coach (se dual-role): team_name + monthly_compensation + contract_start_date + contract_end_date
+    """
+    user_id = current_user["id"]
+    role = current_user.get("role")
+    sid = current_user.get("society_id")
+
+    async def _team_names_for_athlete(athlete_doc):
+        team_ids = athlete_doc.get("team_ids") or []
+        if not team_ids and athlete_doc.get("team_id"):
+            team_ids = [athlete_doc["team_id"]]
+        if not team_ids:
+            return ""
+        names = []
+        async for t in db.teams.find({"id": {"$in": team_ids}}, {"_id": 0, "name": 1}):
+            if t.get("name"):
+                names.append(t["name"])
+        return " / ".join(names) if names else ""
+
+    async def _team_names_for_coach(coach_user):
+        team_ids = coach_user.get("assigned_teams") or []
+        if not team_ids:
+            return ""
+        names = []
+        async for t in db.teams.find({"id": {"$in": team_ids}}, {"_id": 0, "name": 1}):
+            if t.get("name"):
+                names.append(t["name"])
+        return " / ".join(names) if names else ""
+
+    athlete_info = None
+    coach_info = None
+
+    # Info Atleta (se current user è atleta)
+    if role == "athlete" and current_user.get("athlete_id"):
+        ath = await db.athletes.find_one(
+            {"id": current_user["athlete_id"]},
+            {"_id": 0},
+        )
+        if ath:
+            athlete_info = {
+                "team_name": await _team_names_for_athlete(ath),
+                "monthly_compensation": ath.get("monthly_compensation") or current_user.get("monthly_compensation") or 0,
+                "contract_start_date": ath.get("contract_start_date") or current_user.get("contract_start_date"),
+                "contract_end_date": ath.get("contract_end_date") or current_user.get("contract_end_date"),
+            }
+        # Info Coach collegato (se dual-role)
+        coach_user = await _find_linked_compensated_user_for_athlete(ath) if ath else None
+        if coach_user and coach_user.get("id") != user_id:
+            coach_info = {
+                "team_name": await _team_names_for_coach(coach_user),
+                "monthly_compensation": coach_user.get("monthly_compensation") or 0,
+                "contract_start_date": coach_user.get("contract_start_date"),
+                "contract_end_date": coach_user.get("contract_end_date"),
+            }
+
+    # Info Coach (se current user è coach)
+    elif role in ("coach", "dirigente", "collaboratore"):
+        coach_user = await db.users.find_one({"id": user_id}, {"_id": 0})
+        if coach_user:
+            coach_info = {
+                "team_name": await _team_names_for_coach(coach_user),
+                "monthly_compensation": coach_user.get("monthly_compensation") or 0,
+                "contract_start_date": coach_user.get("contract_start_date"),
+                "contract_end_date": coach_user.get("contract_end_date"),
+            }
+        # Info Atleta collegato (se dual-role)
+        ath = await _find_linked_athlete_pro_for_user(user_id)
+        if ath:
+            athlete_info = {
+                "team_name": await _team_names_for_athlete(ath),
+                "monthly_compensation": ath.get("monthly_compensation") or 0,
+                "contract_start_date": ath.get("contract_start_date"),
+                "contract_end_date": ath.get("contract_end_date"),
+            }
+
+    return {
+        "current_role": role,
+        "is_dual_role": bool(athlete_info and coach_info),
+        "athlete": athlete_info,
+        "coach": coach_info,
+    }
+
+
 @api_router.post("/auth/switch-account")
 async def switch_to_linked_account(data: dict, current_user = Depends(get_current_user)):
     """🆕 Genera un nuovo JWT per uno degli account collegati al user corrente

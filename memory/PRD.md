@@ -16,6 +16,39 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 16/06/2026 (sera) — REVISIONE: Banner Atleta/Coach in `/athlete/compensation` ✅
+
+**Cambio di strategia rispetto alla mattina**: l'utente ha rivisto la richiesta — Compenso + Periodo Contratto NON vanno nel profilo personale, ma vanno come **2 banner colorati in alto** alla pagina "Compensi Sportivi" (`/athlete/compensation`).
+
+### Modifiche
+**Backend** — nuovo endpoint `/app/backend/server.py`:
+- `GET /api/auth/me/dual-role-info` → ritorna `{current_role, is_dual_role, athlete: {team_name, monthly_compensation, contract_start_date, contract_end_date} | null, coach: {...} | null}`
+- Per atleta dual-role: trova il coach collegato via `_find_linked_compensated_user_for_athlete`
+- Per coach dual-role: trova l'atleta PRO collegato via `_find_linked_athlete_pro_for_user`
+
+**Frontend `/app/frontend/app/athlete/profile.tsx`**:
+- Rimossa card "💰 Compenso Mensile"
+- Rimossa card "📅 Periodo Contratto" (aggiunta ieri)
+- 🏦 Card "Dati Bancari" RIMANE nel profilo
+
+**Frontend `/app/frontend/app/athlete/compensation.tsx`**:
+- Rimosso "Compenso mensile: €..." inline sotto il nome
+- Rimossa la card "Periodo Contratto" tratteggiata
+- Aggiunti 2 nuovi banner colorati in alto:
+  - 🏐 **Banner Atleta** (giallo arancio): `[Squadra] – €X/mese – dal GG/MM/AAAA al GG/MM/AAAA`
+  - 🏋️ **Banner Coach** (viola, solo se dual-role): `[Squadra] – €X/mese – dal... al...`
+- Stili `roleBanner`, `roleBannerCoach`, `roleBannerHeader`, ecc. aggiunti
+
+### Verifica API
+`GET /api/auth/me/dual-role-info` con admin test → `{current_role: 'admin', is_dual_role: false, athlete: null, coach: null}` ✅
+
+### Files
+- ✏️ `/app/backend/server.py` (nuovo endpoint)
+- ✏️ `/app/frontend/app/athlete/compensation.tsx` (banner + state + fetch + stili)
+- ✏️ `/app/frontend/app/athlete/profile.tsx` (rimozione card compenso/contratto)
+
+---
+
 ## 🆕 16/06/2026 (pomeriggio) — SPOSTAMENTO INFO SENSIBILI: Dashboard → Profilo ✅
 
 Su segnalazione utente (foto annotate con cerchi rossi):
