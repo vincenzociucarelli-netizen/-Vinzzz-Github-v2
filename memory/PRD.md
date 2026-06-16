@@ -16,6 +16,29 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 16/06/2026 (sera++++) — CENTRALIZZAZIONE COLORI DEL BRAND ✅
+
+Su richiesta utente, creato file unico per i colori principali del brand.
+
+### File creato
+- ✅ `/app/frontend/src/utils/brandColors.ts`
+  - `BRAND_COLORS.primary` = `'#1565C0'` (blu primario RegistraTEAM)
+  - `primaryDark`, `primaryLight`, `primarySoft` (varianti)
+  - `accentGold` / `accentGoldDark`
+  - Stati semantici: `success`, `warning`, `danger` + relative versioni "Soft"
+  - Testi: `inkDark`, `inkBody`, `inkMuted`, `inkSubtle`
+  - Superfici: `surfaceWhite`, `surfacePage`, `surfaceCard`, `surfaceDivider`
+
+### Strategia di migrazione
+Il file è disponibile da subito per **tutti i nuovi sviluppi**. Per gli ex-hardcoded esistenti, faremo migrazione incrementale: quando tocchiamo un file, sostituiamo l'hardcoded con la costante. Niente big-bang per evitare regressioni visuali.
+
+### Benefici futuri
+- 🎨 Cambio brand color → 1 modifica in 1 file
+- 🌙 Dark mode → variante `BRAND_COLORS_DARK` + hook tema
+- 🏢 White-label multi-società → per ogni società un override dei `primary` colors
+
+---
+
 ## 🆕 16/06/2026 (sera+++) — UNIFORMITÀ COLORE BACKGROUND PRIMARIO ✅
 
 Su richiesta utente ("uniforma, mi piace l'uniformità"):
