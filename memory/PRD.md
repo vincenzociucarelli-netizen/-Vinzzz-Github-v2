@@ -16,6 +16,31 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 16/06/2026 (sera+) — BANNER ATLETA/COACH replicati anche su `/coach/compensation` ✅
+
+Su conferma utente ("Ok vai"), ho replicato il pattern dei 2 banner dual-role anche nella pagina compensi del lato Coach (`/app/frontend/app/coach/compensation.tsx`):
+
+### Modifiche
+- Aggiunto state `dualRoleInfo` + `useEffect` fetch `/api/auth/me/dual-role-info` (identico a athlete/compensation)
+- Rimosso "Compenso mensile: €..." inline sotto il nome del coach
+- Rimosso il box tratteggiato "Periodo Contratto"
+- Aggiunti 2 banner:
+  - 🏋️ **Banner Coach** (viola): mostrato per primo (vista principale del lato coach)
+  - 🏐 **Banner Atleta** (giallo arancio): mostrato sotto SE l'utente è anche atleta PRO (dual-role)
+- Aggiunti stili `roleBanner`, `roleBannerAtleta`, `roleBannerHeader`, ecc.
+
+### Risultato
+Quando un dual-role apre la sua dashboard:
+- Su `/athlete/compensation` vede: 🏐 Atleta in alto + 🏋️ Coach sotto (se dual-role)
+- Su `/coach/compensation` vede: 🏋️ Coach in alto + 🏐 Atleta sotto (se dual-role)
+
+Stessa identica esperienza, ruolo "primario" in alto.
+
+### Files
+- ✏️ `/app/frontend/app/coach/compensation.tsx`
+
+---
+
 ## 🆕 16/06/2026 (sera) — REVISIONE: Banner Atleta/Coach in `/athlete/compensation` ✅
 
 **Cambio di strategia rispetto alla mattina**: l'utente ha rivisto la richiesta — Compenso + Periodo Contratto NON vanno nel profilo personale, ma vanno come **2 banner colorati in alto** alla pagina "Compensi Sportivi" (`/athlete/compensation`).
