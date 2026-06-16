@@ -14732,6 +14732,71 @@ async def promote_athlete_to_coach(
     }
 
 
+@api_router.post("/admin/migrate-legacy-coach-emails")
+async def migrate_legacy_coach_emails(current_user = Depends(get_current_user)):
+    """🆕 16/06/2026 — Migra account coach legacy con email del formato `<localpart>.coach@<domain>`
+    (creati prima di Email Unica Dual-Role) in alias `<email_atleta>#coach`.
+
+    Effetti:
+    - Trova tutti i coach con email che NON è già un alias (#coach)
+    - Per ognuno cerca l'atleta collegato via `linked_athlete_id` o CF condiviso
+    - Se l'email coach è del formato `.coach@` (legacy), la sostituisce con alias `<email_atleta>#coach`
+    - L'utente conserva storico, ma da quel momento NON potrà più loggare con quell'email coach
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo gli admin possono eseguire la migrazione")
+
+    migrated = []
+    skipped = []
+    errors = []
+
+    async for coach in db.users.find({"role": "coach"}, {"_id": 0}):
+        coach_email = (coach.get("email") or "").strip().lower()
+        if not coach_email or "#" in coach_email:
+            continue  # già alias o vuoto
+
+        # Detecta pattern legacy ".coach@" oppure "_coach@"
+        is_legacy = ".coach@" in coach_email or "_coach@" in coach_email or coach_email.endswith(".coach")
+        if not is_legacy:
+            skipped.append({"coach_id": coach.get("id"), "email": coach_email, "reason": "non legacy"})
+            continue
+
+        # Trova l'atleta collegato
+        athlete = None
+        linked_aid = coach.get("linked_athlete_id")
+        if linked_aid:
+            athlete = await db.athletes.find_one({"id": linked_aid}, {"_id": 0, "email": 1, "fiscal_code": 1})
+        if not athlete and coach.get("fiscal_code"):
+            athlete = await db.athletes.find_one(
+                {"fiscal_code": coach["fiscal_code"], "is_compensated": True},
+                {"_id": 0, "email": 1, "id": 1},
+            )
+        if not athlete or not athlete.get("email"):
+            errors.append({"coach_id": coach.get("id"), "email": coach_email, "reason": "atleta o email atleta non trovato"})
+            continue
+
+        new_alias = f"{athlete['email'].strip().lower()}#coach"
+        # Evita collisioni
+        existing = await db.users.find_one({"email": new_alias, "id": {"$ne": coach.get("id")}})
+        if existing:
+            errors.append({"coach_id": coach.get("id"), "email": coach_email, "reason": f"alias già usato da {existing.get('id')}"})
+            continue
+
+        await db.users.update_one(
+            {"id": coach.get("id")},
+            {"$set": {"email": new_alias, "linked_athlete_id": athlete.get("id") or linked_aid}},
+        )
+        migrated.append({"coach_id": coach.get("id"), "old_email": coach_email, "new_email": new_alias})
+
+    return {
+        "migrated_count": len(migrated),
+        "skipped_count": len(skipped),
+        "errors_count": len(errors),
+        "migrated": migrated,
+        "errors": errors[:20],  # primi 20 errori per il log
+    }
+
+
 @api_router.delete("/admin/athletes/{athlete_id}/promote-to-coach")
 async def unlink_athlete_coach(athlete_id: str, current_user = Depends(get_current_user)):
     """🆕 Annulla la promozione: rimuove il record coach collegato all'atleta.

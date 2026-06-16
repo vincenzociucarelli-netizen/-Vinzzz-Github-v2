@@ -16,6 +16,47 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 16/06/2026 (sera+++++ FINALE) — TASK A: Email Unica Dual-Role + Verifica Task B ✅
+
+### 🟠 TASK A — Email Unica Dual-Role (~50 crediti)
+
+**Stato pre-esistente**: il backend già supportava di default l'email unica via alias `{email_atleta}#coach`:
+- `PromoteAthleteToCoachRequest.coach_email` è Optional → se non fornito, alias automatico
+- Frontend (`app/admin/athlete/[id].tsx:384-390`) NON passa più email/password → flow già "email unica" by default
+
+**Cosa mancava**: endpoint di **migrazione** per gli account legacy `*.coach@*` creati con il vecchio codice.
+
+**Fix applicato**:
+- Nuovo endpoint backend `POST /api/admin/migrate-legacy-coach-emails` (`/app/backend/server.py`):
+  - Trova tutti gli utenti coach con email non-alias
+  - Detecta pattern legacy (`.coach@`, `_coach@`, `.coach`)
+  - Per ognuno cerca l'atleta collegato (via `linked_athlete_id` o CF condiviso)
+  - Sostituisce email con alias `{email_atleta}#coach`
+  - Skip + error reporting per casi anomali (collisioni, atleta mancante)
+- Endpoint testato: ✅ `{migrated_count: 0, skipped_count: 6, errors_count: 0}` (in sviluppo non c'erano legacy)
+- L'utente può lanciarlo manualmente in produzione una volta dopo il deploy:
+  ```
+  curl -X POST https://app.production/api/admin/migrate-legacy-coach-emails -H "Authorization: Bearer <admin_token>"
+  ```
+
+### 🔵 TASK B — Hub Persona lato Utente (~0 crediti, già implementato!)
+
+Verifica: **il Hub Persona lato Utente è già completamente operativo** grazie al lavoro recente:
+- ✅ `SwitchAccountButton` (`src/components/SwitchAccountButton.tsx`) usato in `athlete/index.tsx` (2x) + `coach/index.tsx` → quick switch dual-role con un tap
+- ✅ Banner dual-role atleta+coach in `/athlete/compensation` e `/coach/compensation` (entrambi visibili simultaneamente quando dual-role)
+- ✅ Endpoint `/api/auth/me/dual-role-info` per dati unificati
+- ✅ La logica di link bidirezionale (Atleta → Coach via `_find_linked_compensated_user_for_athlete`; Coach → Atleta via `_find_linked_athlete_pro_for_user`) è funzionante
+
+Risultato: l'utente dual-role Alice (atleta + coach) vede dalla sua dashboard atleta un pulsante "Passa a Coach", e dalla pagina Compensi Sportivi vede ENTRAMBI i banner (Atleta + Coach). Esperienza unificata già completa.
+
+### Files modificati
+- ✏️ `/app/backend/server.py` (nuovo endpoint `POST /admin/migrate-legacy-coach-emails`)
+
+### Crediti utilizzati
+~30-40 crediti totali (molto meno della stima, perché Task B era già implementato).
+
+---
+
 ## 🆕 16/06/2026 (sera++++) — CENTRALIZZAZIONE COLORI DEL BRAND ✅
 
 Su richiesta utente, creato file unico per i colori principali del brand.
