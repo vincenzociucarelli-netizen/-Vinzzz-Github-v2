@@ -1328,18 +1328,8 @@ export default function AthleteScreen() {
           </Text>
         </View>
         <Text style={styles.profileName}>{profile.full_name}</Text>
-        <Text style={styles.profileCompensation}>
-          Compenso mensile: {formatCurrency(profile.monthly_compensation)}
-        </Text>
-        
-        {/* Contract Period */}
-        {profile.contract_start_date && profile.contract_end_date && (
-          <View style={styles.contractPeriod}>
-            <Text style={styles.contractPeriodText}>
-              Periodo Contratto: {formatDateIT(profile.contract_start_date)} - {formatDateIT(profile.contract_end_date)}
-            </Text>
-          </View>
-        )}
+        {/* 🚫 16/06/2026 — Compenso mensile + Periodo Contratto SPOSTATI nella pagina
+            "Dati Personali" (/athlete/profile) per non avere info sensibili in bella vista. */}
       </View>
 
 
@@ -1652,30 +1642,8 @@ export default function AthleteScreen() {
           duplicavano le info già presenti nella pagina /athlete/compensation
           (sezione "Calcolo per Anno Solare" + "Quietanze Mensili"). */}
 
-      {/* Bank Info */}
-      {profile.iban && (
-        <View style={styles.bankCard}>
-          <Text style={styles.bankTitle}>Dati Bancari</Text>
-          <View style={styles.bankRow}>
-            <Text style={styles.bankLabel}>IBAN:</Text>
-            <Text style={styles.bankValue}>{profile.iban}</Text>
-          </View>
-          {(profile.iban_holder_last_name || profile.iban_holder_first_name) && (
-            <View style={styles.bankRow}>
-              <Text style={styles.bankLabel}>Intestatario:</Text>
-              <Text style={styles.bankValue}>
-                {profile.iban_holder_last_name} {profile.iban_holder_first_name}
-              </Text>
-            </View>
-          )}
-          {profile.bank_name && (
-            <View style={styles.bankRow}>
-              <Text style={styles.bankLabel}>Banca:</Text>
-              <Text style={styles.bankValue}>{profile.bank_name}</Text>
-            </View>
-          )}
-        </View>
-      )}
+      {/* 🚫 16/06/2026 — Dati Bancari SPOSTATI nella pagina "Dati Personali"
+          (/athlete/profile) per non avere info sensibili in bella vista. */}
 
       <View style={{ height: 40 }} />
     </ScrollView>

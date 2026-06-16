@@ -16,6 +16,30 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 16/06/2026 (pomeriggio) — SPOSTAMENTO INFO SENSIBILI: Dashboard → Profilo ✅
+
+Su segnalazione utente (foto annotate con cerchi rossi):
+
+### Cosa è stato spostato dalla dashboard atleta al profilo
+**RIMOSSI da `/app/frontend/app/athlete/index.tsx`** (dashboard "Il Mio Profilo"):
+- 🚫 "Compenso mensile" visibile sotto il nome (in bella vista appena si entra)
+- 🚫 "Periodo Contratto" (date inizio/fine)
+- 🚫 Card "Dati Bancari" (IBAN, Intestatario, Banca)
+
+**AGGIUNTI in `/app/frontend/app/athlete/profile.tsx`** (pagina "Dati Personali"):
+- ✅ Card "📅 Periodo Contratto" (inizio/fine in formato italiano)
+- ✅ Card "🏦 Dati Bancari" (IBAN, Intestatario, Banca)
+- ✅ Card "💰 Compenso Mensile" era già presente nel profilo
+
+### Risultato
+La dashboard atleta ora mostra solo nome + avatar nella Profile Card (info pubbliche). Tutti i dati sensibili (compenso, contratto, banca) sono raggiungibili solo via "Dati Personali → Visualizza e modifica i tuoi dati".
+
+### Files modificati
+- ✏️ `/app/frontend/app/athlete/index.tsx`
+- ✏️ `/app/frontend/app/athlete/profile.tsx`
+
+---
+
 ## 🆕 16/06/2026 — DEAD CODE CLEANUP `signedReceipts` ✅
 
 Rimosso state inutilizzato + relativo fetch API da:

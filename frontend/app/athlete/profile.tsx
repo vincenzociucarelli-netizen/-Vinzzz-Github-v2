@@ -1132,6 +1132,52 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             duplicava le info già presenti nella pagina /athlete/compensation
             (vedi link "Quietanze Mensili" qui sopra). */}
 
+        {/* 🆕 16/06/2026 — Periodo Contratto (spostato dalla dashboard) */}
+        {!isQuotaAthlete && (profileData.contract_start_date || profileData.contract_end_date) && (
+          <View style={styles.card} data-testid="contract-period-card">
+            <Text style={styles.cardTitle}>📅 Periodo Contratto</Text>
+            <View style={styles.fieldContainer}>
+              <Text style={styles.fieldLabel}>Inizio</Text>
+              <Text style={styles.fieldValue}>
+                {profileData.contract_start_date
+                  ? new Date(profileData.contract_start_date).toLocaleDateString('it-IT')
+                  : '—'}
+              </Text>
+            </View>
+            <View style={styles.fieldContainer}>
+              <Text style={styles.fieldLabel}>Fine</Text>
+              <Text style={styles.fieldValue}>
+                {profileData.contract_end_date
+                  ? new Date(profileData.contract_end_date).toLocaleDateString('it-IT')
+                  : '—'}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* 🆕 16/06/2026 — Dati Bancari (spostati dalla dashboard) */}
+        {!isQuotaAthlete && profileData.iban && (
+          <View style={styles.card} data-testid="bank-data-card">
+            <Text style={styles.cardTitle}>🏦 Dati Bancari</Text>
+            <View style={styles.fieldContainer}>
+              <Text style={styles.fieldLabel}>IBAN</Text>
+              <Text style={styles.fieldValue}>{profileData.iban}</Text>
+            </View>
+            {profileData.account_holder && (
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Intestatario</Text>
+                <Text style={styles.fieldValue}>{profileData.account_holder}</Text>
+              </View>
+            )}
+            {profileData.bank_name && (
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Banca</Text>
+                <Text style={styles.fieldValue}>{profileData.bank_name}</Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Versione Lite Section */}
         <View style={styles.card} data-testid="lite-access-section">
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
