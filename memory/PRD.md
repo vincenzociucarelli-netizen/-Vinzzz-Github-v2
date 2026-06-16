@@ -16,6 +16,19 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 16/06/2026 — DEAD CODE CLEANUP `signedReceipts` ✅
+
+Rimosso state inutilizzato + relativo fetch API da:
+- `/app/frontend/app/coach/profile.tsx` (state + fetch `/coach/{id}/compensation`)
+- `/app/frontend/app/collaboratore/profile.tsx` (state + fetch `/collaboratore/{id}/compensation`)
+- `/app/frontend/app/dirigente/profile.tsx` (state + fetch `/dirigente/{id}/compensation`)
+
+**Benefici**: -3 chiamate API inutili al caricamento profilo, codice più leggibile, niente più variabili "fantasma".
+
+**Verifica**: `grep signedReceipts` su tutti e 3 i file → 0 risultati ✅.
+
+---
+
 ## 🆕 15/06/2026 (sera) — RIMOSSE SEZIONI DUPLICATE LATO ATLETA ✅
 
 Su segnalazione utente (4 foto annotate con cerchi rossi):

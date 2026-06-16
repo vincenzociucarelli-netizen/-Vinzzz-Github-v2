@@ -86,7 +86,6 @@ export default function CollaboratoreProfile() {
 
   const [editData, setEditData] = useState({ ...profileData });
   const [compensationHistory, setCompensationHistory] = useState({});
-  const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
   const [over5000Limit, setOver5000Limit] = useState({});
   const [hasExceeded5000, setHasExceeded5000] = useState(false);
   const [hasExceeded15000, setHasExceeded15000] = useState(false);
@@ -223,14 +222,6 @@ export default function CollaboratoreProfile() {
         }
       } catch (e) {
         console.log('Using default society name');
-      }
-      
-      // Load signed receipts
-      try {
-        const receiptsRes = await api.get(`/collaboratore/${data.id}/compensation`);
-        setSignedReceipts(receiptsRes.data || []);
-      } catch (e) {
-        console.log('No receipts found');
       }
       
       // Load my signed documents (privacy, receipts, etc.)

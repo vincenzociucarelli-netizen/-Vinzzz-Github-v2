@@ -65,9 +65,6 @@ export default function DirigenteProfile() {
   const [showConsents, setShowConsents] = useState(false);
   const [societyName, setSocietyName] = useState('PALLAVOLO PERUGIA SSD A RL');
   
-  // Signed receipts for compact view
-  const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
-  
   // My documents (privacy, receipts, etc.)
   const [myDocuments, setMyDocuments] = useState<any[]>([]);
   const [showAllDocumentsModal, setShowAllDocumentsModal] = useState(false);
@@ -225,16 +222,6 @@ export default function DirigenteProfile() {
         }
       } catch (e) {
         console.log('Using default society name');
-      }
-      
-      // Load signed receipts
-      try {
-        const receiptsRes = await api.get(`/dirigente/${user?.id}/compensation`);
-        if (Array.isArray(receiptsRes.data)) {
-          setSignedReceipts(receiptsRes.data.filter((r: any) => r.receipt_signed));
-        }
-      } catch (err) {
-        console.log('No compensation data');
       }
       
       // Load my signed documents (privacy, receipts, etc.)
