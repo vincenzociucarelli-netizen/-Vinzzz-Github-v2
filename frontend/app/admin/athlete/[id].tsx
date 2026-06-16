@@ -5015,7 +5015,7 @@ const styles = StyleSheet.create({
   },
   // Compensation Styles
   compensationCard: {
-    backgroundColor: '#1a1a2e',
+    backgroundColor: '#1565C0',
     borderRadius: 16,
     padding: 20,
     marginTop: 16,

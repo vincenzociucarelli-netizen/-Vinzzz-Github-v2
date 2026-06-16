@@ -16,6 +16,25 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 16/06/2026 (sera+++) — UNIFORMITÀ COLORE BACKGROUND PRIMARIO ✅
+
+Su richiesta utente ("uniforma, mi piace l'uniformità"):
+
+### Audit eseguito
+- 18 occorrenze totali di `#1a1a2e` in app/ + src/
+- Solo **2 erano backgroundColor** da cambiare:
+  - `/app/frontend/app/athlete/index.tsx` (3 punti: header, profileCard, summaryCard) — già fatto stamattina
+  - `/app/frontend/app/admin/athlete/[id].tsx:5018` (compensationCard) — fatto ora
+- Le altre 16 erano `color:` (font color per testi/titoli) — NON toccate per non rendere i testi blu su sfondo bianco
+
+### Risultato
+Tutta l'app ora usa `#1565C0` (blu primario RegistraTEAM) come background per banner principali, mai più nero/grigio scuro su sfondo bianco. Coerenza visiva 100%.
+
+### Files
+- ✏️ `/app/frontend/app/admin/athlete/[id].tsx` (compensationCard)
+
+---
+
 ## 🆕 16/06/2026 (sera++) — FIX SDI + Sfondo Dashboard Atleta ✅
 
 ### Problema 1: Codice SDI invisibile nella pagina Profilo Società
