@@ -15,6 +15,37 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 🆕 17/06/2026 (afternoon) — Coach Level Picker: Multi-select Smart Coach + 1°/2°/3° ✅
+
+**Task**: il picker "Livello / Grado" era già visivamente pronto (chip selector da impostazioni società), ma in single-select. L'utente ha chiarito che **Smart Coach** può essere selezionato da solo OPPURE abbinato a uno dei 3 gradi maggiori (1°/2°/3°). **Allievo Allenatore** invece resta esclusivo (non compatibile con Smart Coach).
+
+### Modifiche applicate
+- **`app/coach/profile.tsx`** linee 1149-1213: sostituita la logica single-toggle con multi-select intelligente.
+- Stato salvato come stringa CSV `"Smart Coach, 1° Grado"` nel campo `coach_license_level` (retro-compatibile con valore singolo).
+- Regole di toggle:
+  - **Smart Coach** (toggle): aggiunge/rimuove `Smart Coach`. Se presente Allievo Allenatore, lo rimuove (incompatibili).
+  - **Allievo Allenatore**: ESCLUSIVO. Sostituisce tutta la selezione corrente (anche Smart Coach).
+  - **1°/2°/3° Grado**: mutualmente esclusivi tra loro, ma compatibili con Smart Coach (che resta selezionato).
+
+### Test unitari
+- Creato `/app/frontend/scripts/test-coach-level-toggle.js` con 9 scenari (PASS tutti):
+  1. Add Smart Coach to empty ✅
+  2. Add 1° Grado preserves Smart Coach ✅
+  3. Switch 1°→2° keeps Smart Coach ✅
+  4. Allievo exclusive: removes all others ✅
+  5. Smart Coach removes Allievo (incompatible) ✅
+  6. Toggle off Smart Coach keeps 1° Grado ✅
+  7. Toggle off 1° Grado keeps Smart Coach ✅
+  8. Add 3° Grado to empty ✅
+  9. Add Smart Coach to 2° Grado (compatible) ✅
+- Esegui con: `node /app/frontend/scripts/test-coach-level-toggle.js`
+
+### Note tecniche
+- Bundle aggiornato e servito da `dist/` (`entry-6492942f9761a8b208e0043cd9ca825e.js`).
+- Il backend già accetta stringhe arbitrarie nel campo `coach_license_level`, quindi nessuna migration richiesta.
+- L'admin settings (`app/admin/settings/other.tsx`) consente di configurare i livelli disponibili: rimangono semplici stringhe (Smart Coach, Allievo Allenatore, 1° Grado, 2° Grado, 3° Grado).
+
+
 ## 🆕 17/06/2026 — UX Quick Links: "Vai a Compensi Sportivi" su Dashboard ✅
 
 **Task**: spostare l'accesso a "Compensi Sportivi" dal profilo alla dashboard per UX migliore.

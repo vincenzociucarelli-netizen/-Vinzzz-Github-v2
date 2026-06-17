@@ -1146,35 +1146,65 @@ Società sportiva: ${societyName}
 
               {renderField('N° Tesserino Allenatore', profileData.coach_license_number, 'coach_license_number')}
 
-              {/* Livello / Grado: select da impostazioni società. Se non configurati, fallback free-text. */}
+              {/* Livello / Grado: select da impostazioni società. Smart Coach può essere
+                  selezionato da solo OPPURE abbinato a 1°/2°/3° Grado.
+                  Allievo Allenatore è esclusivo (no Smart Coach in abbinamento). */}
               <View style={styles.fieldContainer}>
                 <Text style={styles.fieldLabel}>Livello / Grado</Text>
                 {editing ? (
                   coachLicenseLevels.length > 0 ? (
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingVertical: 4 }}>
-                      {coachLicenseLevels.map((lvl) => {
-                        const selected = (editData.coach_license_level || profileData.coach_license_level) === lvl;
-                        return (
-                          <TouchableOpacity
-                            key={lvl}
-                            onPress={() => setEditData({ ...editData, coach_license_level: selected ? '' : lvl })}
-                            style={{
-                              paddingHorizontal: 12,
-                              paddingVertical: 8,
-                              borderRadius: 18,
-                              borderWidth: 1,
-                              borderColor: selected ? '#1E88E5' : '#CBD5E1',
-                              backgroundColor: selected ? '#1E88E5' : '#fff',
-                            }}
-                            data-testid={`coach-level-pill-${lvl}`}
-                          >
-                            <Text style={{ color: selected ? '#fff' : '#1F2937', fontWeight: selected ? '700' : '500', fontSize: 13 }}>
-                              {lvl}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
+                    (() => {
+                      const raw = (editData.coach_license_level ?? profileData.coach_license_level ?? '').toString();
+                      const selectedLevels = raw.split(',').map(s => s.trim()).filter(Boolean);
+                      const isSmartCoach = (lvl: string) => lvl.toLowerCase().includes('smart');
+                      const isAllievo = (lvl: string) => lvl.toLowerCase().includes('allievo');
+                      const toggleLevel = (lvl: string) => {
+                        const already = selectedLevels.includes(lvl);
+                        let next: string[];
+                        if (already) {
+                          next = selectedLevels.filter(x => x !== lvl);
+                        } else if (isSmartCoach(lvl)) {
+                          // Aggiunge Smart Coach: se c'è Allievo, lo rimuove (incompatibili)
+                          next = [...selectedLevels.filter(x => !isAllievo(x)), lvl];
+                        } else if (isAllievo(lvl)) {
+                          // Allievo: sostituisce tutto, esclusivo
+                          next = [lvl];
+                        } else {
+                          // 1°/2°/3° Grado: sostituisce eventuale altro grado, mantiene Smart Coach se presente
+                          next = [...selectedLevels.filter(x => isSmartCoach(x)), lvl];
+                        }
+                        // Smart Coach prima, poi gli altri
+                        next.sort((a, b) => (isSmartCoach(a) ? -1 : isSmartCoach(b) ? 1 : 0));
+                        setEditData({ ...editData, coach_license_level: next.join(', ') });
+                      };
+                      return (
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingVertical: 4 }}>
+                          {coachLicenseLevels.map((lvl) => {
+                            const selected = selectedLevels.includes(lvl);
+                            return (
+                              <TouchableOpacity
+                                key={lvl}
+                                onPress={() => toggleLevel(lvl)}
+                                style={{
+                                  paddingHorizontal: 12,
+                                  paddingVertical: 8,
+                                  borderRadius: 18,
+                                  borderWidth: 1,
+                                  borderColor: selected ? '#1E88E5' : '#CBD5E1',
+                                  backgroundColor: selected ? '#1E88E5' : '#fff',
+                                }}
+                                data-testid={`coach-level-pill-${lvl}`}
+                                testID={`coach-level-pill-${lvl}`}
+                              >
+                                <Text style={{ color: selected ? '#fff' : '#1F2937', fontWeight: selected ? '700' : '500', fontSize: 13 }}>
+                                  {lvl}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      );
+                    })()
                   ) : (
                     <View>
                       <View style={{ padding: 8, backgroundColor: '#FFF3E0', borderRadius: 6, marginBottom: 8 }}>
