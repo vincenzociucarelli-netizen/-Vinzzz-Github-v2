@@ -1094,28 +1094,9 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
 
         {/* 🚫 16/06/2026 — Periodo Contratto NON va qui (è in /athlete/compensation come banner). */}
 
-        {/* 🆕 16/06/2026 — Dati Bancari (spostati dalla dashboard) */}
-        {!isQuotaAthlete && profileData.iban && (
-          <View style={styles.card} data-testid="bank-data-card">
-            <Text style={styles.cardTitle}>🏦 Dati Bancari</Text>
-            <View style={styles.fieldContainer}>
-              <Text style={styles.fieldLabel}>IBAN</Text>
-              <Text style={styles.fieldValue}>{profileData.iban}</Text>
-            </View>
-            {profileData.account_holder && (
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Intestatario</Text>
-                <Text style={styles.fieldValue}>{profileData.account_holder}</Text>
-              </View>
-            )}
-            {profileData.bank_name && (
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Banca</Text>
-                <Text style={styles.fieldValue}>{profileData.bank_name}</Text>
-              </View>
-            )}
-          </View>
-        )}
+        {/* 🚫 16/06/2026 (sera) — Card "Dati Bancari" SPOSTATA in /athlete/compensation
+            (sezione Compensi con intestatario + IBAN + nome banca).
+            Logica: i dati bancari riguardano i compensi, non il profilo personale. */}
 
         {/* Versione Lite Section */}
         <View style={styles.card} data-testid="lite-access-section">

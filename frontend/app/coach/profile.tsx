@@ -1176,13 +1176,20 @@ Società sportiva: ${societyName}
                       })}
                     </View>
                   ) : (
-                    <TextInput
-                      style={styles.input}
-                      value={editData.coach_license_level?.toString() || ''}
-                      onChangeText={(text) => setEditData({ ...editData, coach_license_level: text })}
-                      placeholder="Es. 1° Grado"
-                      placeholderTextColor="#999"
-                    />
+                    <View>
+                      <View style={{ padding: 8, backgroundColor: '#FFF3E0', borderRadius: 6, marginBottom: 8 }}>
+                        <Text style={{ fontSize: 11, color: '#E65100' }}>
+                          ℹ️ Nessun livello/grado configurato dalla società. Chiedi all'admin di aggiungerli da "Altre Impostazioni → Livelli/Gradi Coach", oppure inserisci il tuo grado liberamente qui sotto.
+                        </Text>
+                      </View>
+                      <TextInput
+                        style={styles.input}
+                        value={editData.coach_license_level?.toString() || ''}
+                        onChangeText={(text) => setEditData({ ...editData, coach_license_level: text })}
+                        placeholder="Es. 1° Grado"
+                        placeholderTextColor="#999"
+                      />
+                    </View>
                   )
                 ) : (
                   <Text style={styles.fieldValue}>{profileData.coach_license_level || '-'}</Text>

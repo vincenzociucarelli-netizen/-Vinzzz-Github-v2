@@ -73,6 +73,10 @@ interface CoachProfile {
   contract_start_date?: string;
   contract_end_date?: string;
   other_annual_compensation?: number; // Prior compensation
+  iban?: string;
+  account_holder?: string;
+  bank_name?: string;
+  identity_verified?: boolean;
 }
 
 interface ThresholdStatus {
@@ -1325,7 +1329,7 @@ export default function AthleteCompensation() {
           </TouchableOpacity>
         </View>
 
-        {/* 🆕 16/06/2026 — Banner Atleta: Squadra + Compenso + Periodo Contratto */}
+        {/* 🆕 17/06/2026 — Banner Atleta: Squadra + Compenso + Periodo Contratto */}
         {dualRoleInfo?.athlete && (
           <View style={styles.roleBanner} data-testid="banner-atleta">
             <View style={styles.roleBannerHeader}>
@@ -1364,6 +1368,32 @@ export default function AthleteCompensation() {
                 dal {formatContractDate(dualRoleInfo.coach.contract_start_date || '')} al {formatContractDate(dualRoleInfo.coach.contract_end_date || '')}
               </Text>
             )}
+          </View>
+        )}
+
+        {/* 🆕 17/06/2026 — Card "Dati Bancari" (spostata dal profilo). 
+            Logica: i dati bancari sono pertinenti ai compensi, non al profilo personale. */}
+        {(profile?.iban || profile?.account_holder || profile?.bank_name) && (
+          <View style={styles.bankCard} data-testid="bank-card-compensation">
+            <Text style={styles.bankCardTitle}>🏦 Dati Bancari</Text>
+            {profile?.account_holder ? (
+              <View style={styles.bankRow}>
+                <Text style={styles.bankLabel}>Intestatario</Text>
+                <Text style={styles.bankValue}>{profile.account_holder}</Text>
+              </View>
+            ) : null}
+            {profile?.iban ? (
+              <View style={styles.bankRow}>
+                <Text style={styles.bankLabel}>IBAN</Text>
+                <Text style={styles.bankValue}>{profile.iban}</Text>
+              </View>
+            ) : null}
+            {profile?.bank_name ? (
+              <View style={styles.bankRow}>
+                <Text style={styles.bankLabel}>Banca</Text>
+                <Text style={styles.bankValue}>{profile.bank_name}</Text>
+              </View>
+            ) : null}
           </View>
         )}
 
@@ -2338,6 +2368,45 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderLeftWidth: 4,
     borderLeftColor: '#1976D2',
+  },
+  // 🆕 17/06/2026 — Card Dati Bancari (sezione compensi)
+  bankCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#1565C0',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  bankCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1565C0',
+    marginBottom: 10,
+  },
+  bankRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E0E0E0',
+  },
+  bankLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '600',
+  },
+  bankValue: {
+    fontSize: 13,
+    color: '#333',
+    fontWeight: '500',
+    flex: 1,
+    textAlign: 'right',
   },
   // 🆕 16/06/2026 — Banner Atleta/Coach
   roleBanner: {
