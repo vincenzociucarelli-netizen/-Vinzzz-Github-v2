@@ -1421,15 +1421,35 @@ export default function AthleteCompensation() {
                 const totalBase = (summary1.yearlyFromContractBase || 0) + (summary2.yearlyFromContractBase || 0);
                 const totalSupplementary = (summary1.supplementaryTotal || 0) + (summary2.supplementaryTotal || 0);
                 const allSpecialMonths = [...(summary1.specialMonths || []).map((s: any) => ({ ...s, year: contractStartYear })), ...((summary2 as any).specialMonths || []).map((s: any) => ({ ...s, year: contractEndYear }))];
-                const grandTotal = totalBase + totalSupplementary;
                 const months1 = getContractMonthsForYear(contractStartYear).length;
                 const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
                 const totalMonths = months1 + months2;
-                
+
+                // 🆕 17/06/2026 — Se l'utente è dual-role, aggiungo il compenso Coach al totale RAS
+                let coachBase = 0;
+                let coachMonths = 0;
+                if (dualRoleInfo?.coach && dualRoleInfo.coach.monthly_compensation > 0) {
+                  const cStart = dualRoleInfo.coach.contract_start_date ? new Date(dualRoleInfo.coach.contract_start_date) : null;
+                  const cEnd = dualRoleInfo.coach.contract_end_date ? new Date(dualRoleInfo.coach.contract_end_date) : null;
+                  if (cStart && cEnd) {
+                    coachMonths = (cEnd.getFullYear() - cStart.getFullYear()) * 12 + (cEnd.getMonth() - cStart.getMonth()) + 1;
+                    if (coachMonths < 0) coachMonths = 0;
+                    coachBase = coachMonths * dualRoleInfo.coach.monthly_compensation;
+                  }
+                }
+
+                const grandTotal = totalBase + totalSupplementary + coachBase;
+
                 return (
                   <View style={{ marginTop: 8 }}>
-                    <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(totalBase)}</Text></Text>
+                    <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso Atleta: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(totalBase)}</Text></Text>
                     <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({totalMonths} mesi × {formatCurrency(profile?.monthly_compensation || 0)})</Text>
+                    {coachBase > 0 && (
+                      <>
+                        <Text style={{ fontSize: 13, color: '#1565C0', marginTop: 6, marginBottom: 4 }}>• Compenso Coach: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(coachBase)}</Text></Text>
+                        <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({coachMonths} mesi × {formatCurrency(dualRoleInfo!.coach!.monthly_compensation)})</Text>
+                      </>
+                    )}
                     {allSpecialMonths.length > 0 && (
                       <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare ({allSpecialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(s.year).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(totalSupplementary)}</Text></Text>
                     )}

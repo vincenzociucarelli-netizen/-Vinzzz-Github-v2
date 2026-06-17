@@ -1256,18 +1256,9 @@ Società sportiva: ${societyName}
             </View>
           )}
 
-          {/* Link to Compensation Page with Receipts */}
-          {profileData.monthly_compensation > 0 && profileData.compensation_accepted && (
-            <TouchableOpacity
-              style={styles.compensationLinkButton}
-              onPress={() => router.push('/coach/compensation')}
-              data-testid="compensation-receipts-btn"
-            >
-              <Ionicons name="document-text" size={22} color="#fff" />
-              <Text style={styles.compensationLinkText}>Quietanze Mensili</Text>
-              <Ionicons name="chevron-forward" size={22} color="#fff" />
-            </TouchableOpacity>
-          )}
+          {/* 🚫 17/06/2026 — Link "Quietanze Mensili" RIMOSSO da qui:
+              ora il pulsante "Vai a Compensi Sportivi" è in evidenza nella dashboard
+              (subito sotto SwitchAccountButton). Vedi /coach/index.tsx. */}
           
           {/* Squadre Assegnate */}
           {teams.length > 0 && (

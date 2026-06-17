@@ -94,7 +94,7 @@ export default function SwitchAccountButton() {
         <Text style={{ fontSize: 13, fontWeight: '600', color: palette.text }}>
           {switching ? 'Cambio in corso...' : `Passa a ${linked.label}`}
         </Text>
-        <Text style={{ fontSize: 11, color: '#666' }}>{linked.email}</Text>
+        {/* 🚫 17/06/2026 — Email alias nascosta (l'utente vede solo "Passa a Coach" senza l'alias #coach) */}
       </View>
       <Ionicons name="arrow-forward-circle" size={24} color={palette.border} />
     </TouchableOpacity>

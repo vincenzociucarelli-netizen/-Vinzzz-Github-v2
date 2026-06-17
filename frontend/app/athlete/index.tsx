@@ -1320,6 +1320,25 @@ export default function AthleteScreen() {
       {/* 🆕 Switch dual-role: Atleta PRO ↔ Coach (visibile solo se atleta promosso) */}
       <SwitchAccountButton />
 
+      {/* 🆕 17/06/2026 — Accesso diretto alla pagina "Compensi Sportivi"
+          (richiesto da utente: link spostato dal profilo alla dashboard per UX migliore). */}
+      <TouchableOpacity
+        style={styles.compensationQuickLink}
+        onPress={() => router.push('/athlete/compensation')}
+        data-testid="athlete-compensation-quick-link"
+        testID="athlete-compensation-quick-link"
+        activeOpacity={0.85}
+      >
+        <View style={styles.compensationQuickLinkIconBox}>
+          <Ionicons name="cash" size={22} color="#fff" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.compensationQuickLinkTitle}>Vai a Compensi Sportivi</Text>
+          <Text style={styles.compensationQuickLinkSubtitle}>Quietanze, soglie e calendario pagamenti</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={22} color="#fff" />
+      </TouchableOpacity>
+
       {/* Profile Card */}
       <View style={styles.profileCard}>
         <View style={styles.profileAvatar}>
@@ -2289,6 +2308,41 @@ const styles = StyleSheet.create({
   notificationDate: {
     fontSize: 12,
     color: '#666',
+    marginTop: 2,
+  },
+  compensationQuickLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1565C0',
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    gap: 12,
+    shadowColor: '#1565C0',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  compensationQuickLinkIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compensationQuickLinkTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFD700',
+  },
+  compensationQuickLinkSubtitle: {
+    fontSize: 12,
+    color: '#E3F2FD',
     marginTop: 2,
   },
 });

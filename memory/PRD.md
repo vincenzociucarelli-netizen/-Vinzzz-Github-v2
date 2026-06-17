@@ -15,6 +15,26 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 🆕 17/06/2026 — UX Quick Links: "Vai a Compensi Sportivi" su Dashboard ✅
+
+**Task**: spostare l'accesso a "Compensi Sportivi" dal profilo alla dashboard per UX migliore.
+
+### Modifiche applicate
+- **`app/athlete/index.tsx`** (branch atleta compensato): aggiunto `TouchableOpacity` con `data-testid="athlete-compensation-quick-link"` subito sotto `<SwitchAccountButton />`. Stile blu primario (`#1565C0`) con titolo dorato (`#FFD700`) per evidenza brand.
+- **`app/coach/index.tsx`** (return "Teams & Athletes Mode"): aggiunto identico button con `data-testid="coach-compensation-quick-link"`. Naviga a `/coach/compensation`.
+- **`app/coach/profile.tsx`**: rimosso il `TouchableOpacity` "Quietanze Mensili" (precedente link a `/coach/compensation`) dalla card "💰 Compenso Mensile". Manteniamo solo il dato del compenso, i compensi pregressi editabili e il badge "Compenso Accettato".
+
+### Verifica visiva
+- ✅ Coach dashboard mostra banner blu "Vai a Compensi Sportivi" sotto l'header e sopra il tab bar.
+- ✅ Atleta dashboard mostra banner blu "Vai a Compensi Sportivi" sotto l'header.
+- ✅ Click → navigazione a `/athlete/compensation` o `/coach/compensation` (confermato).
+- ✅ Coach profilo: "Quietanze Mensili" non più presente.
+
+### Note tecniche
+- L'ambiente `expo` gira da `dist/` statico (`npx serve -s dist -l 3000`), quindi gli edit a `.tsx` **non sono hot-reload**. Per vedere le modifiche bisogna eseguire `cd /app/frontend && npx expo export -p web --output-dir dist` (≈90s).
+- Su Atleti non compensati (`athlete_type != 'compensated'`) il button NON viene mostrato perché la pagina rientra nel branch `if (!profile || profile.athlete_type !== 'compensated')` con UI dedicata (quota).
+
+
 
 ## 🆕 16/06/2026 (sera+++++ FINALE) — TASK A: Email Unica Dual-Role + Verifica Task B ✅
 

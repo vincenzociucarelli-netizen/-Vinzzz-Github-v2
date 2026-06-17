@@ -9,9 +9,10 @@
 - Password: Test123
 - Nota: il nome profilo è "PALLAVOLO PERUGIA SSD A RL", quindi la modal di dichiarazione disabilita l'opzione "Legale Rappresentante" (può solo firmare come "incaricato" se serve come account operativo)
 
-## Coach (Alice)
+## Coach (Alice LUPI)
 - Email: alice@test.com
-- Password: (verificare nel DB - non è Test123)
+- Password: Test1234 (resettata 17/06/2026)
+- Note: compenso mensile 2500€, compensi pregressi 4750€, contratto 01/08/2025 - 30/06/2026
 
 ## Coach (Vito)
 - Email: vito@test.com
@@ -19,7 +20,7 @@
 
 ## Atleta 18+ (Fabia)
 - Email: fabia@test.com
-- Password: Test123
+- Password: Test1234
 
 ## Atleta 18+ (Marco - TEST)
 - Email: marcob@test.com
@@ -36,3 +37,12 @@
 ## Coach (Sara)
 - Email: sara@test.com
 - Password: (verificare nel DB)
+
+## Atleta COMPENSATO (per test threshold/compensi)
+- Email: testalice1780817007@test.com
+- Password: Test1234 (resettata 17/06/2026)
+- athlete_type: compensated
+
+## ⚠️ Note operative
+- Le tabelle `login_rate_limits` bloccano gli account dopo 15 tentativi falliti. Per sbloccare: `db.login_rate_limits.delete_many({})`.
+- Il campo password in `users` è `password_hash` (bcrypt), NON `password`. Reset: `bcrypt.hashpw(b'Test1234', bcrypt.gensalt()).decode()`.
