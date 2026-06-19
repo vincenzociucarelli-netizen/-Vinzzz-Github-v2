@@ -9,6 +9,7 @@ import {
   Platform,
   Modal,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
@@ -128,6 +129,11 @@ export default function CoachCompensation() {
   const [contractStartMonth, setContractStartMonth] = useState<number | null>(null);
   const [contractEndMonth, setContractEndMonth] = useState<number | null>(null);
   const [priorCompensation, setPriorCompensation] = useState(0);
+  // 🆕 19/06/2026 — Edit pregressi + accept compenso (migrato da /coach/profile)
+  const [editingPrior, setEditingPrior] = useState(false);
+  const [priorDraft, setPriorDraft] = useState('0');
+  const [savingPrior, setSavingPrior] = useState(false);
+  const [acceptingComp, setAcceptingComp] = useState(false);
   
   // Threshold status
   const [thresholdStatus, setThresholdStatus] = useState<ThresholdStatus | null>(null);
@@ -196,6 +202,43 @@ export default function CoachCompensation() {
   useEffect(() => {
     loadData();
   }, [currentYear]);
+
+  // 🆕 19/06/2026 — Salvataggio compensi pregressi (migrato da /coach/profile)
+  const handleSavePrior = async () => {
+    const parsed = parseFloat((priorDraft || '0').replace(',', '.'));
+    if (Number.isNaN(parsed) || parsed < 0) {
+      Alert.alert('Errore', 'Inserisci un importo valido (numero ≥ 0).');
+      return;
+    }
+    try {
+      setSavingPrior(true);
+      await api.patch('/auth/me', { other_annual_compensation: parsed });
+      setPriorCompensation(parsed);
+      setProfile(prev => prev ? { ...prev, other_annual_compensation: parsed } : prev);
+      setEditingPrior(false);
+      Alert.alert('Salvato', 'Compensi pregressi aggiornati.');
+    } catch (err) {
+      console.error('Errore salvataggio pregressi:', err);
+      Alert.alert('Errore', 'Impossibile salvare. Riprova.');
+    } finally {
+      setSavingPrior(false);
+    }
+  };
+
+  // 🆕 19/06/2026 — Accettazione compenso (migrato da /coach/profile)
+  const handleAcceptCompensation = async () => {
+    try {
+      setAcceptingComp(true);
+      await api.patch('/auth/me', { compensation_accepted: true });
+      setProfile(prev => prev ? { ...prev, compensation_accepted: true } : prev);
+      Alert.alert('Compenso accettato', 'La tua accettazione è stata registrata.');
+    } catch (err) {
+      console.error('Errore accettazione compenso:', err);
+      Alert.alert('Errore', 'Impossibile accettare il compenso. Riprova.');
+    } finally {
+      setAcceptingComp(false);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -1302,6 +1345,100 @@ export default function CoachCompensation() {
           </View>
         )}
 
+        {/* 🆕 19/06/2026 — Card "Azioni Compenso": pregressi editabili + accettazione (migrato da /coach/profile) */}
+        {(profile?.monthly_compensation ?? 0) > 0 && (
+          <View style={styles.compActionsCard} data-testid="coach-compensation-actions">
+            <Text style={styles.compActionsTitle}>💼 Azioni Compenso</Text>
+
+            {/* Compensi Pregressi */}
+            <View style={{ marginBottom: 14 }}>
+              <Text style={styles.compActionsLabel}>COMPENSI PREGRESSI (NELL'ANNO)</Text>
+              {editingPrior ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                  <Text style={{ fontSize: 18, marginRight: 6, color: '#1F2937' }}>€</Text>
+                  <TextInput
+                    style={styles.compActionsInput}
+                    value={priorDraft}
+                    onChangeText={setPriorDraft}
+                    keyboardType="numeric"
+                    placeholder="0.00"
+                    placeholderTextColor="#999"
+                    data-testid="prior-comp-input"
+                    testID="prior-comp-input"
+                  />
+                  <TouchableOpacity
+                    style={[styles.compActionsBtn, { backgroundColor: '#34C759', marginLeft: 8 }]}
+                    onPress={handleSavePrior}
+                    disabled={savingPrior}
+                    data-testid="prior-comp-save"
+                    testID="prior-comp-save"
+                  >
+                    {savingPrior ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.compActionsBtnText}>Salva</Text>}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.compActionsBtn, { backgroundColor: '#9CA3AF', marginLeft: 6 }]}
+                    onPress={() => { setEditingPrior(false); setPriorDraft(String(priorCompensation)); }}
+                    disabled={savingPrior}
+                    data-testid="prior-comp-cancel"
+                    testID="prior-comp-cancel"
+                  >
+                    <Text style={styles.compActionsBtnText}>Annulla</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                  <Text style={styles.compActionsValue}>{formatCurrency(priorCompensation)}</Text>
+                  <TouchableOpacity
+                    style={[styles.compActionsBtn, { backgroundColor: '#1565C0', marginLeft: 12 }]}
+                    onPress={() => { setPriorDraft(String(priorCompensation)); setEditingPrior(true); }}
+                    data-testid="prior-comp-edit"
+                    testID="prior-comp-edit"
+                  >
+                    <Ionicons name="create-outline" size={16} color="#fff" />
+                    <Text style={[styles.compActionsBtnText, { marginLeft: 4 }]}>Modifica</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              <Text style={styles.compActionsHelp}>
+                Importo totale di compensi sportivi già percepiti nell'anno corrente (per il calcolo delle soglie fiscali €5k/€15k).
+              </Text>
+            </View>
+
+            {/* Accettazione compenso */}
+            {!profile?.compensation_accepted ? (
+              <View>
+                <View style={styles.compActionsWarn}>
+                  <Ionicons name="warning" size={18} color="#856404" />
+                  <Text style={styles.compActionsWarnText}>
+                    Il tuo compenso mensile richiede accettazione. Clicca il pulsante qui sotto per confermare.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.compActionsAcceptBtn}
+                  onPress={handleAcceptCompensation}
+                  disabled={acceptingComp}
+                  data-testid="accept-compensation-btn"
+                  testID="accept-compensation-btn"
+                >
+                  {acceptingComp ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                      <Text style={styles.compActionsAcceptText}>Accetta Compenso {formatCurrency(profile?.monthly_compensation || 0)}</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.compActionsAcceptedBadge} data-testid="compensation-accepted-badge">
+                <Ionicons name="checkmark-circle" size={18} color="#34C759" />
+                <Text style={styles.compActionsAcceptedText}>Compenso Accettato</Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* 🆕 16/06/2026 — Banner Atleta: visibile solo se utente è dual-role */}
         {dualRoleInfo?.athlete && (
           <View style={[styles.roleBanner, styles.roleBannerAtleta]} data-testid="banner-atleta">
@@ -2403,5 +2540,112 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  // 🆕 19/06/2026 — Card "Azioni Compenso" (pregressi + accettazione, migrato da /coach/profile)
+  compActionsCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#1565C0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  compActionsTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1565C0',
+    marginBottom: 10,
+  },
+  compActionsLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#6B7280',
+    letterSpacing: 0.4,
+  },
+  compActionsValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  compActionsInput: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 16,
+    color: '#1F2937',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  compActionsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  compActionsBtnText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  compActionsHelp: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 6,
+    fontStyle: 'italic',
+  },
+  compActionsWarn: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFF3CD',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF9500',
+  },
+  compActionsWarnText: {
+    flex: 1,
+    color: '#856404',
+    fontSize: 12,
+    marginLeft: 6,
+    fontWeight: '500',
+  },
+  compActionsAcceptBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#34C759',
+    paddingVertical: 12,
+    borderRadius: 10,
+    gap: 8,
+  },
+  compActionsAcceptText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+  compActionsAcceptedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#34C759',
+  },
+  compActionsAcceptedText: {
+    color: '#1B5E20',
+    fontWeight: '700',
+    fontSize: 14,
+    marginLeft: 6,
   },
 });

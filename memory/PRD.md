@@ -15,6 +15,39 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 🆕 19/06/2026 — Pulizia profilo Coach: Compenso e Pregressi → spostati in /coach/compensation ✅
+
+**Task**: l'utente ha indicato (con segno rosso su screenshot) che dalla card "Dati Anagrafici" del coach vanno rimossi €300 Compenso Mensile, Compensi Pregressi e badge "Compenso Accettato" perché già presenti nella sezione "Compensi Sportivi". L'utente ha scelto Opzione A: **migrazione completa** delle funzioni nella pagina compensi (per non perdere editing pregressi e accettazione compenso).
+
+### Modifiche applicate
+- **`app/coach/compensation.tsx`**:
+  - Import `TextInput` aggiunto.
+  - Aggiunti state: `editingPrior`, `priorDraft`, `savingPrior`, `acceptingComp`.
+  - Aggiunti handler `handleSavePrior()` (PATCH `/auth/me` con `other_annual_compensation`) e `handleAcceptCompensation()` (PATCH `/auth/me` con `compensation_accepted: true`).
+  - Nuova card "💼 Azioni Compenso" subito sotto il Banner Coach: pregressi editabili in-place (toggle Modifica/Salva/Annulla) + pulsante "Accetta Compenso" se non accettato + badge verde "Compenso Accettato" se già accettato.
+  - Aggiunti stili: `compActionsCard`, `compActionsBtn`, `compActionsInput`, `compActionsAcceptBtn`, `compActionsAcceptedBadge`, ecc.
+- **`app/coach/profile.tsx`**:
+  - Rimossa l'intera card "💰 Compenso Mensile" (display €, campo COMPENSI PREGRESSI editabile, warning "richiede accettazione", pulsante "Accetta Compenso", badge "Compenso Accettato").
+  - "Squadre Assegnate" estratta in una **card dedicata** (titolo "🏐 Squadre Assegnate") immediatamente dopo Dati Anagrafici.
+  - Funzione `handleAcceptCompensation` ora "dead code" (lint warning, ignorabile).
+
+### Test API confermati
+Su `alice@test.com` (compenso accettato, pregressi 4750€):
+- ✅ `PATCH /api/auth/me` con `other_annual_compensation: 1234.50` → response "Profilo aggiornato", verifica GET = 1234.5
+- ✅ Restore a 4750 → response "Profilo aggiornato"
+- ✅ `compensation_accepted: True` preservato
+
+### Verifica bundle
+Bundle `entry-c593053dc0b93d97c7fa9b476e8a994a.js` (6.5 MB) contiene:
+- ✅ `coach-compensation-actions` data-testid (×1)
+- ✅ `prior-comp-edit` data-testid (×1)
+- ✅ `accept-compensation-btn` data-testid (×1)
+- ✅ Nessuna occorrenza residua di "💰 Compenso Mensile" o "COMPENSI PREGRESSI" nel profilo coach (solo nei commenti di documentazione).
+
+### TODO collegati
+- I file `app/athlete/profile.tsx` e `app/athlete/compensation.tsx` potrebbero meritare la stessa simmetria (atleta compensato), ma l'atleta NON ha attualmente la "Accetta Compenso" e i Compensi Pregressi NON erano editabili in nessun punto del lato atleta. Quindi nessuna migrazione necessaria lì.
+
+
 ## 🆕 17/06/2026 (afternoon) — Coach Level Picker: Multi-select Smart Coach + 1°/2°/3° ✅
 
 **Task**: il picker "Livello / Grado" era già visivamente pronto (chip selector da impostazioni società), ma in single-select. L'utente ha chiarito che **Smart Coach** può essere selezionato da solo OPPURE abbinato a uno dei 3 gradi maggiori (1°/2°/3°). **Allievo Allenatore** invece resta esclusivo (non compatibile con Smart Coach).

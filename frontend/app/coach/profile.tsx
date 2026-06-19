@@ -1229,84 +1229,28 @@ Società sportiva: ${societyName}
           )}
         </View>
 
-        {/* Compensation Info */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>💰 Compenso Mensile</Text>
-          <View style={styles.fieldContainer}>
-            <Text style={styles.compensationAmount}>
-              {profileData.monthly_compensation > 0 
-                ? `€ ${profileData.monthly_compensation.toFixed(2)}`
-                : 'Non ancora impostato'}
-            </Text>
-          </View>
-          
-          {/* Prior Compensation Field */}
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>COMPENSI PREGRESSI (NELL'ANNO)</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-              <Text style={{ fontSize: 18, marginRight: 4 }}>€</Text>
-              <TextInput
-                style={[styles.inputField, { flex: 1, paddingVertical: 10, fontSize: 18 }]}
-                value={editData.other_annual_compensation?.toString() || '0'}
-                onChangeText={(text) => {
-                  const numValue = parseFloat(text.replace(',', '.')) || 0;
-                  setEditData({...editData, other_annual_compensation: numValue});
-                }}
-                keyboardType="numeric"
-                placeholder="0.00"
-                placeholderTextColor="#999"
-              />
-            </View>
-            <Text style={{ fontSize: 11, color: '#666', marginTop: 4, fontStyle: 'italic' }}>
-              Inserisci l'importo totale di compensi sportivi già percepiti nell'anno corrente (per il calcolo delle soglie fiscali)
-            </Text>
-          </View>
-          
-          {profileData.monthly_compensation > 0 && !profileData.compensation_accepted && (
-            <View style={{ marginBottom: 12 }}>
-              <View style={{ backgroundColor: '#FFF3CD', padding: 12, borderRadius: 8, marginBottom: 10, borderLeftWidth: 4, borderLeftColor: '#FF9500' }}>
-                <Text style={{ color: '#856404', fontSize: 13, fontWeight: '500' }}>
-                  ⚠️ Il tuo compenso mensile richiede accettazione. Clicca il pulsante qui sotto per confermare.
-                </Text>
-              </View>
+        {/* 🚫 19/06/2026 — Card "Compenso Mensile" RIMOSSA da qui.
+            Compenso, Compensi Pregressi (editabili), pulsante "Accetta Compenso"
+            e badge "Compenso Accettato" sono ora nella pagina /coach/compensation
+            sotto la card "💼 Azioni Compenso". Vedi /coach/compensation.tsx. */}
+
+        {/* 🏐 Squadre Assegnate (card dedicata) */}
+        {teams.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>🏐 Squadre Assegnate</Text>
+            {teams.map((team) => (
               <TouchableOpacity
-                style={styles.acceptButton}
-                onPress={handleAcceptCompensation}
+                key={team.id}
+                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }}
+                onPress={() => router.push(`/coach/team/${team.id}`)}
+                data-testid={`coach-team-link-${team.id}`}
               >
-                <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                <Text style={styles.acceptButtonText}>Accetta Compenso {formatCurrency(profileData.monthly_compensation)}</Text>
+                <Text style={{ fontSize: 14, color: '#333' }}>• </Text>
+                <Text style={{ fontSize: 14, color: '#1565C0', textDecorationLine: 'underline' }}>{team.name}</Text>
               </TouchableOpacity>
-            </View>
-          )}
-
-          {profileData.compensation_accepted && (
-            <View style={styles.acceptedBadge}>
-              <Ionicons name="checkmark-circle" size={18} color="#34C759" />
-              <Text style={styles.acceptedBadgeText}>Compenso Accettato</Text>
-            </View>
-          )}
-
-          {/* 🚫 17/06/2026 — Link "Quietanze Mensili" RIMOSSO da qui:
-              ora il pulsante "Vai a Compensi Sportivi" è in evidenza nella dashboard
-              (subito sotto SwitchAccountButton). Vedi /coach/index.tsx. */}
-          
-          {/* Squadre Assegnate */}
-          {teams.length > 0 && (
-            <View style={{ marginTop: 12, backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: '#FF9800' }}>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#E65100', marginBottom: 8 }}>🏐 Squadre Assegnate</Text>
-              {teams.map((team) => (
-                <TouchableOpacity 
-                  key={team.id}
-                  style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 4 }}
-                  onPress={() => router.push(`/coach/team/${team.id}`)}
-                >
-                  <Text style={{ fontSize: 13, color: '#333' }}>• </Text>
-                  <Text style={{ fontSize: 13, color: '#1565C0', textDecorationLine: 'underline' }}>{team.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
+            ))}
+          </View>
+        )}
 
         {/* I Miei Documenti */}
         <View style={styles.card}>
