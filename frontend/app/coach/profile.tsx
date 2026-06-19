@@ -1234,23 +1234,9 @@ Società sportiva: ${societyName}
             e badge "Compenso Accettato" sono ora nella pagina /coach/compensation
             sotto la card "💼 Azioni Compenso". Vedi /coach/compensation.tsx. */}
 
-        {/* 🏐 Squadre Assegnate (card dedicata) */}
-        {teams.length > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>🏐 Squadre Assegnate</Text>
-            {teams.map((team) => (
-              <TouchableOpacity
-                key={team.id}
-                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }}
-                onPress={() => router.push(`/coach/team/${team.id}`)}
-                data-testid={`coach-team-link-${team.id}`}
-              >
-                <Text style={{ fontSize: 14, color: '#333' }}>• </Text>
-                <Text style={{ fontSize: 14, color: '#1565C0', textDecorationLine: 'underline' }}>{team.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+        {/* 🚫 19/06/2026 — Card "🏐 Squadre Assegnate" RIMOSSA da qui:
+            le squadre sono già visibili nella dashboard coach (prima pagina) sotto
+            "Le Mie Squadre" → evita duplicazione. */}
 
         {/* I Miei Documenti */}
         <View style={styles.card}>
