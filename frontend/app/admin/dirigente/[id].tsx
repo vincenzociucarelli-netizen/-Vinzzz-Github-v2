@@ -19,6 +19,7 @@ import { Picker } from '@react-native-picker/picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
+import AdminPersonTabs, { TabSection, type AdminPersonTab } from '../../../src/components/admin/AdminPersonTabs';
 import { Ionicons } from '../../../src/components/Icon';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -76,6 +77,8 @@ export default function AdminDirigenteDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [dirigente, setDirigente] = useState<Dirigente | null>(null);
+  // 🆕 19/06/2026 — Tab attivo (Da fare / Anagrafica / Compensi)
+  const [activeTab, setActiveTab] = useState<AdminPersonTab>('anagrafica');
   // Last reset audit info (admin info banner near reset button)
   const [lastReset, setLastReset] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -793,6 +796,31 @@ export default function AdminDirigenteDetail() {
           </View>
         </View>
 
+        {/* 🆕 19/06/2026 — Tab Navigator: Da fare / Anagrafica / Compensi */}
+        <AdminPersonTabs activeTab={activeTab} onChange={setActiveTab} />
+
+        {/* 🗓️ TAB DA FARE OGGI (placeholder, in arrivo Step 3) */}
+        <TabSection tab="impegni" activeTab={activeTab}>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>📌 Da fare oggi</Text>
+            <Text style={{ color: '#666', fontSize: 13, lineHeight: 20, marginBottom: 12 }}>
+              Allenamenti, gare, scadenze e impegni di oggi.
+              {'\n'}
+              <Text style={{ fontWeight: '600', color: '#F57C00' }}>In arrivo: lista in tempo reale.</Text>
+            </Text>
+            <View style={{ height: 1, backgroundColor: '#E5E7EB', marginVertical: 8 }} />
+            <Text style={[styles.cardTitle, { marginTop: 6 }]}>🏆 Stagione</Text>
+            <Text style={{ color: '#666', fontSize: 13, lineHeight: 20 }}>
+              Cariche assegnate, ruolo nella stagione, obiettivi pianificati.
+              {'\n'}
+              <Text style={{ fontWeight: '600', color: '#F57C00' }}>In arrivo: riepilogo lavoro stagione.</Text>
+            </Text>
+          </View>
+        </TabSection>
+
+        {/* 📋 TAB ANAGRAFICA — parte 1 */}
+        <TabSection tab="anagrafica" activeTab={activeTab}>
+
         {/* Dati Personali */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>👤 Dati Personali</Text>
@@ -973,6 +1001,12 @@ export default function AdminDirigenteDetail() {
             )}
           </View>
         )}
+
+        </TabSection>
+        {/* End of TAB ANAGRAFICA parte 1 */}
+
+        {/* 💰 TAB COMPENSI */}
+        <TabSection tab="compensi" activeTab={activeTab}>
 
         {/* Compenso */}
         <View style={styles.card}>
@@ -1371,6 +1405,12 @@ export default function AdminDirigenteDetail() {
           </TouchableOpacity>
         </View>
 
+        </TabSection>
+        {/* End of TAB COMPENSI */}
+
+        {/* 📋 TAB ANAGRAFICA — parte 2 (Dati Bancari + Informazioni Account) */}
+        <TabSection tab="anagrafica" activeTab={activeTab}>
+
         {/* Dati Bancari - Solo visualizzazione per Admin */}
 
         {/* Documenti e IBAN - Solo per utenti approvati */}
@@ -1458,6 +1498,9 @@ export default function AdminDirigenteDetail() {
             </View>
           )}
         </View>
+
+        </TabSection>
+        {/* End of TAB ANAGRAFICA parte 2 */}
 
         <View style={{ height: 40 }} />
       </ScrollView>

@@ -18,6 +18,7 @@ import { Picker } from '@react-native-picker/picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
+import AdminPersonTabs, { TabSection, type AdminPersonTab } from '../../../src/components/admin/AdminPersonTabs';
 import { Ionicons } from '../../../src/components/Icon';
 import { SportIcon } from '../../../src/components/SportIcon';
 
@@ -84,6 +85,8 @@ export default function AdminCollaboratoreDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [collaboratore, setCollaboratore] = useState<Collaboratore | null>(null);
+  // 🆕 19/06/2026 — Tab attivo (Da fare / Anagrafica / Compensi)
+  const [activeTab, setActiveTab] = useState<AdminPersonTab>('anagrafica');
   // Last reset audit info (admin info banner near reset button)
   const [lastReset, setLastReset] = useState<any | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -633,6 +636,31 @@ export default function AdminCollaboratoreDetail() {
           </TouchableOpacity>
         </View>
 
+        {/* 🆕 19/06/2026 — Tab Navigator: Da fare / Anagrafica / Compensi */}
+        <AdminPersonTabs activeTab={activeTab} onChange={setActiveTab} />
+
+        {/* 🗓️ TAB DA FARE OGGI (placeholder) */}
+        <TabSection tab="impegni" activeTab={activeTab}>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>📌 Da fare oggi</Text>
+            <Text style={{ color: '#666', fontSize: 13, lineHeight: 20, marginBottom: 12 }}>
+              Allenamenti, gare, scadenze e impegni di oggi.
+              {'\n'}
+              <Text style={{ fontWeight: '600', color: '#F57C00' }}>In arrivo: lista in tempo reale.</Text>
+            </Text>
+            <View style={{ height: 1, backgroundColor: '#E5E7EB', marginVertical: 8 }} />
+            <Text style={[styles.cardTitle, { marginTop: 6 }]}>🏆 Stagione</Text>
+            <Text style={{ color: '#666', fontSize: 13, lineHeight: 20 }}>
+              Mansioni assegnate, ruolo nella stagione, obiettivi pianificati.
+              {'\n'}
+              <Text style={{ fontWeight: '600', color: '#F57C00' }}>In arrivo: riepilogo lavoro stagione.</Text>
+            </Text>
+          </View>
+        </TabSection>
+
+        {/* 📋 TAB ANAGRAFICA — parte 1 */}
+        <TabSection tab="anagrafica" activeTab={activeTab}>
+
         {/* Info Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>👤 Informazioni Personali</Text>
@@ -696,6 +724,12 @@ export default function AdminCollaboratoreDetail() {
             <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 8 }}>Reset Password</Text>
           </TouchableOpacity>
         </View>
+
+        </TabSection>
+        {/* End of TAB ANAGRAFICA parte 1 */}
+
+        {/* 💰 TAB COMPENSI */}
+        <TabSection tab="compensi" activeTab={activeTab}>
 
         {/* Compensation Card */}
         <View style={styles.card}>
@@ -1575,6 +1609,12 @@ export default function AdminCollaboratoreDetail() {
           </View>
         </Modal>
 
+        </TabSection>
+        {/* End of TAB COMPENSI */}
+
+        {/* 📋 TAB ANAGRAFICA — parte 2 (Dati Bancari) */}
+        <TabSection tab="anagrafica" activeTab={activeTab}>
+
         {/* Bank Info */}
         {collaboratore.iban && (
           <View style={styles.card}>
@@ -1595,6 +1635,9 @@ export default function AdminCollaboratoreDetail() {
             )}
           </View>
         )}
+
+        </TabSection>
+        {/* End of TAB ANAGRAFICA parte 2 */}
 
         <View style={{ height: 40 }} />
       </ScrollView>

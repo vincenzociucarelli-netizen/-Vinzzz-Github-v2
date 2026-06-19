@@ -15,6 +15,36 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 🆕 19/06/2026 — Tab Navigator Admin (Coach/Dirigente/Collaboratore) ✅ + Atleta (esistente)
+
+**Task**: organizzare le schede admin in 3 sezioni per evitare lo scroll infinito su file da 2-5k righe. Sezioni richieste dall'utente:
+- **A) Da fare** — impegni di oggi + lavoro stagionale
+- **B) Anagrafica** — dati personali, fiscali, indirizzo, banca, account
+- **C) Compensi** — compenso mensile, quietanze, soglie
+
+### Componente riusabile creato
+- **`/app/frontend/src/components/admin/AdminPersonTabs.tsx`** — TabBar a 3 pulsanti (Da fare arancio / Anagrafica blu / Compensi verde) + helper `<TabSection>` per renderizzare condizionalmente i figli.
+- Test-id univoci: `admin-tab-impegni`, `admin-tab-anagrafica`, `admin-tab-compensi`, `admin-tab-content-{key}`.
+- Supporto opzionale per badge numerici (compensiBadge, impegniBadge).
+
+### Applicato a 3 file admin
+- **`/app/admin/coach/[id].tsx`** ✅ — Anagrafica (Dati Personali, Indirizzo, Fiscali, Bancari, Account) + Compensi (Compenso card con RAS, Quietanze, DualRoleHubBanner) + Impegni placeholder. **Verificato visivamente** con screenshot su Alice LUPI.
+- **`/app/admin/dirigente/[id].tsx`** ✅ — Stessa struttura: Anagrafica + Compenso + Bancari/Account in 2 parti.
+- **`/app/admin/collaboratore/[id].tsx`** ✅ — Stessa struttura adattata.
+
+### Atleta admin — NON modificato
+- **`/app/admin/athlete/[id].tsx`** già ha il proprio sistema di tab interno (Dati / Pagamenti / Presenze) con `activeTab: 'dati' | 'pagamenti' | 'presenze'`. Non sovrascritto per non rompere flussi esistenti.
+- Da uniformare in un secondo step: il look dei tab atleta vs. il nuovo `AdminPersonTabs`.
+
+### Bundle finale
+- `entry-*.js` (6.55 MB) esportato senza errori.
+
+### Da fare nei prossimi step
+- **Step 2**: implementare "Da fare oggi" (oggi placeholder) — necessita endpoint `/api/admin/persons/{id}/upcoming-events` o riuso di endpoint esistenti per impegni/gare.
+- **Step 3**: Riepilogo pagamenti con SPIE colorate (verde sotto soglia / giallo in attesa / badge "+5K"/"+15K") nello stile "Gestione Quietanze" — il componente `CoachReceiptsSummary` già contiene la logica.
+- **Step 4**: Uniformare il sistema tab atleta usando `AdminPersonTabs`.
+
+
 ## 🆕 19/06/2026 — Pulizia profilo Coach: Compenso e Pregressi → spostati in /coach/compensation ✅
 
 **Task**: l'utente ha indicato (con segno rosso su screenshot) che dalla card "Dati Anagrafici" del coach vanno rimossi €300 Compenso Mensile, Compensi Pregressi e badge "Compenso Accettato" perché già presenti nella sezione "Compensi Sportivi". L'utente ha scelto Opzione A: **migrazione completa** delle funzioni nella pagina compensi (per non perdere editing pregressi e accettazione compenso).
