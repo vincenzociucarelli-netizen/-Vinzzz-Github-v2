@@ -15,6 +15,30 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 🆕 22/06/2026 (cont) — Dirigente lato user: stesso pattern del Collaboratore ✅
+
+**Task**: replicare la "finitura" (3 quick-link + Impegni inline) anche su `/dirigente/index.tsx` (lato user). Lato admin è già stato fatto nel turno precedente con AdminPersonTabs.
+
+### Modifiche applicate
+- **`/app/frontend/src/components/admin/AdminCoachCommitments.tsx`**: `userId` ora opzionale → se omesso, chiama `/api/coach/commitments` senza param (lato user, current_user). Resa il componente riusabile sia lato admin (con userId) sia lato user (senza).
+- **`/app/frontend/app/dirigente/index.tsx`**:
+  - Sostituite le 2 grandi card "Il Mio Profilo" e "Compensi Sportivi" con **3 quick-link compatti** (🗓️ Da fare arancio default | 👤 Anagrafica blu | 💰 Compensi verde)
+  - Aggiunta sezione **Impegni inline** sotto i quick-link (riusa `AdminCoachCommitments`)
+  - Squadre + Mappa Palestre mantenute invariate sotto
+
+### Verifica via curl
+- `/api/coach/commitments` senza user_id su token dirigente: ritorna correttamente 0/0/2/7 impegni → endpoint OK
+- Build OK senza errori
+
+### Coerenza UX raggiunta
+| Figura | Lato User dashboard | Stato |
+|--------|---------------------|-------|
+| Coach | impegni inline già esistenti | ✅ |
+| Dirigente | 3 quick-link + impegni inline + Squadre/Palestre | ✅ NUOVO |
+| Collaboratore | 3 quick-link + impegni inline | ✅ (turno precedente) |
+| Atleta | Da decidere (dipende dal lavoro Atleta-first dual-role) | ⏳ |
+
+
 ## 🆕 22/06/2026 — Dashboard Collaboratore lato user (Opzione A) ✅
 
 **Task**: il collaboratore lato user entrava direttamente in "Il Mio Profilo" (pagina monolitica 2544 righe), senza una sezione "Da fare oggi" visibile. L'admin invece vede gli impegni nel tab Da fare. L'utente ha chiesto di uniformare la vista user a quella admin.

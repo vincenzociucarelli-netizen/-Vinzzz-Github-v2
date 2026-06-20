@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import AdminCoachCommitments from '../../src/components/admin/AdminCoachCommitments';
 import {
   View,
   Text,
@@ -259,40 +260,33 @@ export default function DirigenteIndex() {
           </TouchableOpacity>
         )}
 
-        {/* Profile Card */}
-        <TouchableOpacity
-          style={styles.profileCard}
-          onPress={() => router.push('/dirigente/profile')}
-        >
-          <View style={styles.profileIcon}>
-            <Ionicons name="person" size={28} color="#8E44AD" />
+        {/* 🆕 22/06/2026 — 3 quick-link compatti (Da fare / Anagrafica / Compensi)
+            + Impegni inline — uniformati al pattern del Collaboratore lato user */}
+        <View style={{ flexDirection: 'row', gap: 8, marginHorizontal: 12, marginTop: 12, marginBottom: 8 }}>
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 10, backgroundColor: '#F57C00', gap: 6 }} data-testid="dirigente-quick-dafare">
+            <Ionicons name="today-outline" size={20} color="#fff" />
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>Da fare</Text>
           </View>
-          <View style={styles.profileInfo}>
-            <Text style={styles.profileTitle}>Il Mio Profilo</Text>
-            <Text style={styles.profileDescription}>
-              Gestisci dati personali e documento
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={24} color="#8E44AD" />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 10, backgroundColor: '#fff', gap: 6 }}
+            onPress={() => router.push('/dirigente/profile')}
+            data-testid="dirigente-quick-anagrafica"
+          >
+            <Ionicons name="person-outline" size={20} color="#1565C0" />
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#1565C0' }}>Anagrafica</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 10, backgroundColor: '#fff', gap: 6 }}
+            onPress={() => router.push('/dirigente/compensation')}
+            data-testid="dirigente-quick-compensi"
+          >
+            <Ionicons name="cash-outline" size={20} color="#2E7D32" />
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#2E7D32' }}>Compensi</Text>
+          </TouchableOpacity>
+        </View>
 
-        {/* Compensation Card */}
-        <TouchableOpacity
-          style={[styles.profileCard, { marginTop: 12, borderColor: '#27AE60', backgroundColor: '#F0FFF4' }]}
-          onPress={() => router.push('/dirigente/compensation')}
-          data-testid="compensation-card"
-        >
-          <View style={[styles.profileIcon, { backgroundColor: '#E8F8F0' }]}>
-            <Ionicons name="receipt" size={28} color="#27AE60" />
-          </View>
-          <View style={styles.profileInfo}>
-            <Text style={[styles.profileTitle, { color: '#27AE60' }]}>Compensi Sportivi</Text>
-            <Text style={styles.profileDescription}>
-              Firma quietanze mensili e gestisci soglie fiscali
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={24} color="#27AE60" />
-        </TouchableOpacity>
+        {/* Impegni del dirigente (riusa AdminCoachCommitments senza userId = current user) */}
+        <AdminCoachCommitments roleLabel="dirigente" />
 
         {/* Mappa Palestre */}
         <TouchableOpacity

@@ -32,7 +32,8 @@ interface Commitments {
 }
 
 interface Props {
-  userId: string;
+  /** Se non passato, l'endpoint restituisce gli impegni dell'utente corrente (lato user). */
+  userId?: string;
   /** Etichetta del ruolo, per personalizzare i messaggi vuoti (es. "coach", "collaboratore"). */
   roleLabel?: string;
 }
@@ -74,10 +75,11 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, roleLabel = 'co
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!userId) return;
     setLoading(true);
     setError(null);
-    api.get('/coach/commitments', { params: { user_id: userId } })
+    const params: any = {};
+    if (userId) params.user_id = userId;
+    api.get('/coach/commitments', { params })
       .then((res) => setData(res.data))
       .catch((err) => {
         console.error('Errore caricamento impegni admin:', err);
