@@ -16,6 +16,18 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 22/06/2026 (notte 3) — "Già Percepito" su Coach + semaforo rimosso + N° Tesserino editabile ✅
+
+Dopo il feedback utente con foto 2/3:
+
+1. **Coach Admin**: riattivato il pulsante **"💰 Già Percepito"** (totale signed + bottone per aprire la modal Gestione Quietanze identica a quella del Collaboratore). Verificato su FARO REMO → "€ 30.500,00 · 7 quietanze firmate - Tocca per vedere".
+2. **Semaforo mesi**: rimosso da entrambe le viste (Coach + Collaboratore) perché ridondante con la sezione "Già Percepito" + modal "Gestione Quietanze".
+3. **N° Tesserino Allenatore**: aggiunto edit inline lato Admin Coach (pencil ✏️ + TextInput + Salva), analogo al picker Livello/Grado già implementato.
+
+### File toccati
+- `/app/frontend/app/admin/coach/[id].tsx` (rimosso `AdminMonthsSemaforo`, riattivato "Già Percepito", aggiunto edit N° Tesserino con stato `editingLicenseNumber` e handler `handleSaveLicenseNumber`).
+- `/app/frontend/app/admin/collaboratore/[id].tsx` (rimosso `AdminMonthsSemaforo`).
+
 ## 🆕 22/06/2026 (notte 2) — Picker "Livello / Grado" su Admin Coach (parità con lato user) ✅
 
 L'utente ha segnalato che il multi-select picker per Livello/Grado (Smart Coach + Allievo Allenatore + 1°/2°/3° Grado) presente nel profilo coach lato utente NON era replicato nella vista admin (sola lettura).

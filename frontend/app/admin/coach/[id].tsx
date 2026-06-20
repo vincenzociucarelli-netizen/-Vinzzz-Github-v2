@@ -109,6 +109,11 @@ export default function AdminCoachDetail() {
   const [coachLicenseLevels, setCoachLicenseLevels] = useState<string[]>([]);
   const [editLevelValue, setEditLevelValue] = useState('');
   const [savingLevel, setSavingLevel] = useState(false);
+
+  // 🆕 22/06/2026 — Edit N° Tesserino lato admin
+  const [editingLicenseNumber, setEditingLicenseNumber] = useState(false);
+  const [editLicenseNumberValue, setEditLicenseNumberValue] = useState('');
+  const [savingLicenseNumber, setSavingLicenseNumber] = useState(false);
   
   // Image viewer modal
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
@@ -319,6 +324,19 @@ export default function AdminCoachDetail() {
       showAlert('Errore', error.response?.data?.detail || 'Impossibile salvare il livello/grado');
     } finally {
       setSavingLevel(false);
+    }
+  };
+
+  const handleSaveLicenseNumber = async () => {
+    setSavingLicenseNumber(true);
+    try {
+      await api.patch(`/users/${id}`, { coach_license_number: editLicenseNumberValue });
+      setCoach((prev: any) => prev ? { ...prev, coach_license_number: editLicenseNumberValue } : prev);
+      setEditingLicenseNumber(false);
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Impossibile salvare il numero tesserino');
+    } finally {
+      setSavingLicenseNumber(false);
     }
   };
 
@@ -1035,8 +1053,47 @@ export default function AdminCoachDetail() {
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.label}>N. Tesserino</Text>
-            <Text style={[styles.value, styles.valueCode]}>{coach.coach_license_number || '-'}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
+              {!editingLicenseNumber && (
+                <Text style={[styles.value, styles.valueCode, { marginRight: 8 }]}>{coach.coach_license_number || '-'}</Text>
+              )}
+              <TouchableOpacity
+                onPress={() => {
+                  if (editingLicenseNumber) {
+                    setEditingLicenseNumber(false);
+                  } else {
+                    setEditLicenseNumberValue(coach.coach_license_number || '');
+                    setEditingLicenseNumber(true);
+                  }
+                }}
+                data-testid="admin-coach-license-number-edit-btn"
+              >
+                <Ionicons name={editingLicenseNumber ? 'close' : 'create'} size={20} color="#007AFF" />
+              </TouchableOpacity>
+            </View>
           </View>
+          {editingLicenseNumber && (
+            <View style={{ marginTop: 4, marginBottom: 4 }}>
+              <TextInput
+                style={styles.input}
+                value={editLicenseNumberValue}
+                onChangeText={setEditLicenseNumberValue}
+                placeholder="Es. 887765"
+                placeholderTextColor="#999"
+                keyboardType="numeric"
+              />
+              <TouchableOpacity
+                style={[styles.saveTeamsBtn, savingLicenseNumber && styles.saveBtnDisabled, { marginTop: 8 }]}
+                onPress={handleSaveLicenseNumber}
+                disabled={savingLicenseNumber}
+                data-testid="admin-coach-license-number-save-btn"
+              >
+                <Text style={styles.saveTeamsBtnText}>
+                  {savingLicenseNumber ? 'Salvataggio...' : 'Salva N° Tesserino'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
           <View style={styles.infoRow}>
             <Text style={styles.label}>Livello / Grado</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
@@ -1590,41 +1647,7 @@ export default function AdminCoachDetail() {
                 );
               })()}
 
-              {/* 🆕 22/06/2026 — Semaforo mesi (Admin): replica visiva della griglia user */}
-              {(coach.contract_start_date || coach.contract_end_date) && (() => {
-                const monthly = parseFloat(monthlyCompensation.replace(',', '.')) || 0;
-                const prior = parseFloat(otherAnnualCompensation.replace(',', '.')) || 0;
-                const parseDate = (s?: string | null) => {
-                  if (!s) return null;
-                  const parts = s.split('-');
-                  if (parts.length !== 3) return null;
-                  return { y: parseInt(parts[0]), m: parseInt(parts[1]) };
-                };
-                const start = parseDate(coach.contract_start_date);
-                const end = parseDate(coach.contract_end_date);
-                const startYear = start?.y || (signedReceipts[0]?.year ?? new Date().getFullYear());
-                const endYear = end?.y || startYear;
-                const yearsList: number[] = [];
-                for (let y = startYear; y <= endYear; y++) yearsList.push(y);
-                return (
-                  <View style={{ marginTop: 4 }}>
-                    {yearsList.map((y) => (
-                      <AdminMonthsSemaforo
-                        key={`semaforo-${y}`}
-                        year={y}
-                        contractStartYear={start?.y || null}
-                        contractStartMonth={start?.m || null}
-                        contractEndYear={end?.y || null}
-                        contractEndMonth={end?.m || null}
-                        monthlyAmount={monthly}
-                        priorCompensation={y === (start?.y || startYear) ? prior : 0}
-                        signedReceipts={signedReceipts || []}
-                        externalDeclarations={externalDeclarations || []}
-                      />
-                    ))}
-                  </View>
-                );
-              })()}
+              {/* 🗑️ 22/06/2026 — Semaforo mesi rimosso (ridondante con "Già Percepito" / Gestione Quietanze) */}
             </>
           )}
 
@@ -1700,12 +1723,13 @@ export default function AdminCoachDetail() {
           )}
 
           
-          {/* Totale già percepito (quietanze firmate) — 🚫 14/06/2026: spostato in Hub Compensi */}
-          {false && signedReceipts.filter((r: any) => r.receipt_signed).length > 0 && (
+          {/* 🆕 22/06/2026 — "Già Percepito" riattivato (sostituisce il semaforo mesi) */}
+          {signedReceipts.filter((r: any) => r.receipt_signed).length > 0 && (
             <TouchableOpacity 
               style={{ marginTop: 12, padding: 12, backgroundColor: '#E3F2FD', borderRadius: 8, borderWidth: 1, borderColor: '#90CAF9' }}
               onPress={() => setReceiptsModalVisible(true)}
               activeOpacity={0.7}
+              data-testid="admin-coach-gia-percepito-btn"
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
