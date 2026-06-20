@@ -103,6 +103,12 @@ export default function AdminCoachDetail() {
   const [editingTeams, setEditingTeams] = useState(false);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [savingTeams, setSavingTeams] = useState(false);
+
+  // 🆕 22/06/2026 — Multi-select Livello/Grado coach (replica della logica user-side)
+  const [editingLevel, setEditingLevel] = useState(false);
+  const [coachLicenseLevels, setCoachLicenseLevels] = useState<string[]>([]);
+  const [editLevelValue, setEditLevelValue] = useState('');
+  const [savingLevel, setSavingLevel] = useState(false);
   
   // Image viewer modal
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
@@ -290,6 +296,29 @@ export default function AdminCoachDetail() {
       console.error('Error loading coach data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 🆕 22/06/2026 — Carica i livelli/gradi della società per il picker Livello/Grado
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get('/settings/society');
+        setCoachLicenseLevels(res.data?.coach_license_levels || []);
+      } catch {}
+    })();
+  }, []);
+
+  const handleSaveLevel = async () => {
+    setSavingLevel(true);
+    try {
+      await api.patch(`/users/${id}`, { coach_license_level: editLevelValue });
+      setCoach((prev: any) => prev ? { ...prev, coach_license_level: editLevelValue } : prev);
+      setEditingLevel(false);
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Impossibile salvare il livello/grado');
+    } finally {
+      setSavingLevel(false);
     }
   };
 
@@ -1010,8 +1039,95 @@ export default function AdminCoachDetail() {
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.label}>Livello / Grado</Text>
-            <Text style={styles.value}>{coach.coach_license_level || '-'}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
+              {!editingLevel && (
+                <Text style={[styles.value, { marginRight: 8 }]}>{coach.coach_license_level || '-'}</Text>
+              )}
+              <TouchableOpacity
+                onPress={() => {
+                  if (editingLevel) {
+                    setEditingLevel(false);
+                  } else {
+                    setEditLevelValue(coach.coach_license_level || '');
+                    setEditingLevel(true);
+                  }
+                }}
+                data-testid="admin-coach-level-edit-btn"
+              >
+                <Ionicons name={editingLevel ? 'close' : 'create'} size={20} color="#007AFF" />
+              </TouchableOpacity>
+            </View>
           </View>
+          {editingLevel && (
+            <View style={{ marginTop: 4, marginBottom: 4 }}>
+              {coachLicenseLevels.length > 0 ? (
+                (() => {
+                  const selectedLevels = (editLevelValue || '').split(',').map(s => s.trim()).filter(Boolean);
+                  const isSmartCoach = (lvl: string) => lvl.toLowerCase().includes('smart');
+                  const isAllievo = (lvl: string) => lvl.toLowerCase().includes('allievo');
+                  const toggleLevel = (lvl: string) => {
+                    const already = selectedLevels.includes(lvl);
+                    let next: string[];
+                    if (already) {
+                      next = selectedLevels.filter(x => x !== lvl);
+                    } else if (isSmartCoach(lvl)) {
+                      next = [...selectedLevels.filter(x => !isAllievo(x)), lvl];
+                    } else if (isAllievo(lvl)) {
+                      next = [lvl];
+                    } else {
+                      next = [...selectedLevels.filter(x => isSmartCoach(x)), lvl];
+                    }
+                    next.sort((a, b) => (isSmartCoach(a) ? -1 : isSmartCoach(b) ? 1 : 0));
+                    setEditLevelValue(next.join(', '));
+                  };
+                  return (
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingVertical: 4 }}>
+                      {coachLicenseLevels.map((lvl) => {
+                        const selected = selectedLevels.includes(lvl);
+                        return (
+                          <TouchableOpacity
+                            key={lvl}
+                            onPress={() => toggleLevel(lvl)}
+                            style={{
+                              paddingHorizontal: 12,
+                              paddingVertical: 8,
+                              borderRadius: 18,
+                              borderWidth: 1,
+                              borderColor: selected ? '#1E88E5' : '#CBD5E1',
+                              backgroundColor: selected ? '#1E88E5' : '#fff',
+                            }}
+                            data-testid={`admin-coach-level-pill-${lvl}`}
+                          >
+                            <Text style={{ color: selected ? '#fff' : '#1F2937', fontWeight: selected ? '700' : '500', fontSize: 13 }}>
+                              {lvl}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  );
+                })()
+              ) : (
+                <TextInput
+                  style={styles.input}
+                  value={editLevelValue}
+                  onChangeText={setEditLevelValue}
+                  placeholder="Es. 1° Grado"
+                  placeholderTextColor="#999"
+                />
+              )}
+              <TouchableOpacity
+                style={[styles.saveTeamsBtn, savingLevel && styles.saveBtnDisabled, { marginTop: 8 }]}
+                onPress={handleSaveLevel}
+                disabled={savingLevel}
+                data-testid="admin-coach-level-save-btn"
+              >
+                <Text style={styles.saveTeamsBtnText}>
+                  {savingLevel ? 'Salvataggio...' : 'Salva Livello/Grado'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         </TabSection>

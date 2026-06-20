@@ -5189,7 +5189,8 @@ async def update_user(user_id: str, data: dict, current_user = Depends(get_curre
             update_data["society_id"] = data["society_id"]
     
     # Allow admin to fix user names and profile data
-    for field in ["first_name", "last_name", "full_name", "phone", "fiscal_code", "email"]:
+    for field in ["first_name", "last_name", "full_name", "phone", "fiscal_code", "email",
+                  "coach_license_number", "coach_license_level"]:
         if field in data and data[field] is not None:
             update_data[field] = data[field]
     

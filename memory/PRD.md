@@ -16,6 +16,21 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 22/06/2026 (notte 2) — Picker "Livello / Grado" su Admin Coach (parità con lato user) ✅
+
+L'utente ha segnalato che il multi-select picker per Livello/Grado (Smart Coach + Allievo Allenatore + 1°/2°/3° Grado) presente nel profilo coach lato utente NON era replicato nella vista admin (sola lettura).
+
+### Modifiche
+- **`/app/frontend/app/admin/coach/[id].tsx`**: aggiunto stato `editingLevel`, `editLevelValue`, `coachLicenseLevels`, `savingLevel`. Caricamento `coach_license_levels` da `/api/settings/society` al mount. Nuovo handler `handleSaveLevel` che chiama `PATCH /api/users/{id}` con `coach_license_level`.
+- Riga "Livello / Grado" nella card Dati Fiscali ora ha pencil ✏️: aprendolo si mostra:
+  - se la società ha `coach_license_levels` configurato → griglia di pill toggleable con stessa logica del lato user (Smart Coach + grado abbinabili, Allievo Allenatore esclusivo);
+  - altrimenti → TextInput free-text fallback.
+- **`/app/backend/server.py`** (`PATCH /users/{user_id}`): estesi i campi accettati con `coach_license_number` e `coach_license_level`.
+
+### Verifica
+- ✅ Screenshot Admin Coach (RICA FEDE, Anagrafica tab): pill picker mostra tutte e 5 le opzioni (Smart Coach, Allievo Allenatore, 1°/2°/3° Grado) + bottone "Salva Livello/Grado".
+- Endpoint PATCH testato in fase di sviluppo (no errori lint).
+
 ## 🆕 22/06/2026 (notte) — 4 micro-fix dopo feedback utente ✅
 
 1. **Foto 1**: la placeholder card "🏆 Stagione" nel tab Da fare → sostituita con la card **"Squadre Assegnate"** completa di edit-mode (checkbox + Salva).
