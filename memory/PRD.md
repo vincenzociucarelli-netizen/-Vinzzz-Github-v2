@@ -15,6 +15,28 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 🆕 22/06/2026 — Dashboard Collaboratore lato user (Opzione A) ✅
+
+**Task**: il collaboratore lato user entrava direttamente in "Il Mio Profilo" (pagina monolitica 2544 righe), senza una sezione "Da fare oggi" visibile. L'admin invece vede gli impegni nel tab Da fare. L'utente ha chiesto di uniformare la vista user a quella admin.
+
+### Modifica applicata
+- **`/app/frontend/app/collaboratore/index.tsx`** trasformato da semplice `router.replace('/collaboratore/profile')` → **vera home page** con:
+  - Header blu "Il Mio Lavoro" con SocietyBranding + nome utente + bottoni profile/logout
+  - **3 quick-link buttons** in alto: 🗓️ Da fare (arancio, default) | 👤 Anagrafica | 💰 Compensi
+  - Cliccando "Anagrafica" → naviga a `/collaboratore/profile` (esistente, intatto)
+  - Cliccando "Compensi" → naviga a `/collaboratore/compensation` (esistente, intatto)
+  - **Sezione "Impegni"** sempre visibile inline: Oggi / Domani / Dopodomani / Prossimi giorni
+  - Riusa endpoint `/api/coach/commitments` (esteso il 22/06 per supportare anche COLLABORATORE)
+  - Pull-to-refresh, gestione loading + error states
+
+### Verifica visiva
+- ✅ Screenshot conferma: header brand OK, 3 bottoni quick-link OK, impegni reali popolati (6 allenamenti dopodomani su Paolo Paoli, 14 prossimi giorni con squadre + orari + palestre)
+
+### File invariati
+- `/app/frontend/app/collaboratore/profile.tsx` (2544 righe) — intatto, accessibile via quick-link "Anagrafica"
+- `/app/frontend/app/collaboratore/compensation.tsx` — intatto, accessibile via quick-link "Compensi"
+
+
 ## 🆕 22/06/2026 — Correzioni Admin Coach/Dirigente/Collaboratore ✅
 
 **6 fix puntuali** richiesti dall'utente dopo verifica produzione:
