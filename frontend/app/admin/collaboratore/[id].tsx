@@ -19,6 +19,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import AdminPersonTabs, { TabSection, type AdminPersonTab } from '../../../src/components/admin/AdminPersonTabs';
+import AdminCoachCommitments from '../../../src/components/admin/AdminCoachCommitments';
 import { Ionicons } from '../../../src/components/Icon';
 import { SportIcon } from '../../../src/components/SportIcon';
 
@@ -86,7 +87,8 @@ export default function AdminCollaboratoreDetail() {
   const { id } = useLocalSearchParams();
   const [collaboratore, setCollaboratore] = useState<Collaboratore | null>(null);
   // 🆕 19/06/2026 — Tab attivo (Da fare / Anagrafica / Compensi)
-  const [activeTab, setActiveTab] = useState<AdminPersonTab>('anagrafica');
+  // 🔧 22/06/2026 — Default: 'impegni' (Da fare)
+  const [activeTab, setActiveTab] = useState<AdminPersonTab>('impegni');
   // Last reset audit info (admin info banner near reset button)
   const [lastReset, setLastReset] = useState<any | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -639,17 +641,11 @@ export default function AdminCollaboratoreDetail() {
         {/* 🆕 19/06/2026 — Tab Navigator: Da fare / Anagrafica / Compensi */}
         <AdminPersonTabs activeTab={activeTab} onChange={setActiveTab} />
 
-        {/* 🗓️ TAB DA FARE OGGI (placeholder) */}
+        {/* 🗓️ TAB DA FARE OGGI — Impegni reali del collaboratore */}
         <TabSection tab="impegni" activeTab={activeTab}>
+          <AdminCoachCommitments userId={collaboratore.id} roleLabel="collaboratore" />
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>📌 Da fare oggi</Text>
-            <Text style={{ color: '#666', fontSize: 13, lineHeight: 20, marginBottom: 12 }}>
-              Allenamenti, gare, scadenze e impegni di oggi.
-              {'\n'}
-              <Text style={{ fontWeight: '600', color: '#F57C00' }}>In arrivo: lista in tempo reale.</Text>
-            </Text>
-            <View style={{ height: 1, backgroundColor: '#E5E7EB', marginVertical: 8 }} />
-            <Text style={[styles.cardTitle, { marginTop: 6 }]}>🏆 Stagione</Text>
+            <Text style={[styles.cardTitle, { marginTop: 0 }]}>🏆 Stagione</Text>
             <Text style={{ color: '#666', fontSize: 13, lineHeight: 20 }}>
               Mansioni assegnate, ruolo nella stagione, obiettivi pianificati.
               {'\n'}

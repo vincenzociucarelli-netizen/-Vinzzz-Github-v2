@@ -22,6 +22,7 @@ import { Ionicons } from '../../../src/components/Icon';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import DualRoleHubBanner from '../../../src/components/admin/DualRoleHubBanner';
 import AdminPersonTabs, { TabSection, type AdminPersonTab } from '../../../src/components/admin/AdminPersonTabs';
+import AdminCoachCommitments from '../../../src/components/admin/AdminCoachCommitments';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { SportIcon } from '../../../src/components/SportIcon';
@@ -88,8 +89,9 @@ export default function AdminCoachDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [coach, setCoach] = useState<Coach | null>(null);
-  // 🆕 19/06/2026 — Tab attivo (Impegni / Anagrafica / Compensi)
-  const [activeTab, setActiveTab] = useState<AdminPersonTab>('anagrafica');
+  // 🆕 19/06/2026 — Tab attivo (Da fare / Anagrafica / Compensi)
+  // 🔧 22/06/2026 — Default: 'impegni' (Da fare) come da richiesta utente.
+  const [activeTab, setActiveTab] = useState<AdminPersonTab>('impegni');
   // Last reset audit info (admin info banner near reset button)
   const [lastReset, setLastReset] = useState<any | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -777,64 +779,62 @@ export default function AdminCoachDetail() {
           </View>
         )}
 
-        {/* Onboarding Checklist Button - Always visible when approved */}
-        {coach.status === 'approved' && (() => {
-          const checklist = coach.onboarding_checklist || {};
-          const totalItems = 4; // contract, ras, fiscal_code, criminal_record
-          const completedItems = [
-            checklist.contract_signed,
-            checklist.ras_registered,
-            checklist.fiscal_code_acquired,
-            checklist.criminal_record
-          ].filter(Boolean).length;
-          
-          const isComplete = completedItems === totalItems;
-          
-          return (
-            <TouchableOpacity 
-              style={[
-                styles.checklistButton,
-                isComplete ? styles.checklistButtonComplete : styles.checklistButtonIncomplete
-              ]}
-              onPress={() => setEditingOnboarding(true)}
-            >
-              <Ionicons 
-                name={isComplete ? "checkmark-circle" : "alert-circle"} 
-                size={24} 
-                color="#fff" 
-              />
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.checklistButtonTitle}>
-                  Checklist Onboarding
-                </Text>
-                <Text style={styles.checklistButtonSubtitle}>
-                  {completedItems}/{totalItems} completati
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#fff" />
-            </TouchableOpacity>
-          );
-        })()}
+        {/* 🆕 22/06/2026 — Checklist Onboarding + Documenti Firmati su UNA SOLA RIGA (compatti) */}
+        <View style={{ flexDirection: 'row', gap: 8, marginHorizontal: 16, marginTop: 12 }}>
+          {/* Onboarding Checklist Button - Always visible when approved */}
+          {coach.status === 'approved' && (() => {
+            const checklist = coach.onboarding_checklist || {};
+            const totalItems = 4; // contract, ras, fiscal_code, criminal_record
+            const completedItems = [
+              checklist.contract_signed,
+              checklist.ras_registered,
+              checklist.fiscal_code_acquired,
+              checklist.criminal_record
+            ].filter(Boolean).length;
+            
+            const isComplete = completedItems === totalItems;
+            
+            return (
+              <TouchableOpacity 
+                style={[
+                  { flex: 1, flexDirection: 'row', alignItems: 'center', padding: 10, borderRadius: 10, marginHorizontal: 0, marginTop: 0 },
+                  isComplete ? styles.checklistButtonComplete : styles.checklistButtonIncomplete
+                ]}
+                onPress={() => setEditingOnboarding(true)}
+              >
+                <Ionicons 
+                  name={isComplete ? "checkmark-circle" : "alert-circle"} 
+                  size={20} 
+                  color="#fff" 
+                />
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#fff' }}>
+                    Checklist
+                  </Text>
+                  <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.85)', marginTop: 1 }}>
+                    {completedItems}/{totalItems} completati
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })()}
 
-        {/* Documenti Firmati Button */}
-        <TouchableOpacity 
-          style={[
-            styles.checklistButton,
-            { backgroundColor: '#3498DB' }
-          ]}
-          onPress={() => setDocumentsModalVisible(true)}
-        >
-          <Ionicons name="folder-open" size={24} color="#fff" />
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={styles.checklistButtonTitle}>
-              Documenti Firmati
-            </Text>
-            <Text style={styles.checklistButtonSubtitle}>
-              {userDocuments.length} documenti
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#fff" />
-        </TouchableOpacity>
+          {/* Documenti Firmati Button */}
+          <TouchableOpacity 
+            style={{ flex: 1, flexDirection: 'row', alignItems: 'center', padding: 10, borderRadius: 10, backgroundColor: '#3498DB' }}
+            onPress={() => setDocumentsModalVisible(true)}
+          >
+            <Ionicons name="folder-open" size={20} color="#fff" />
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#fff' }}>
+                Documenti
+              </Text>
+              <Text style={{ fontSize: 10, color: 'rgba(255,255,255,0.85)', marginTop: 1 }}>
+                {userDocuments.length} firmati
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </View>
 
         {/* Header con nome e contatti */}
         <View style={styles.photoSection}>
@@ -871,17 +871,11 @@ export default function AdminCoachDetail() {
         {/* 🆕 19/06/2026 — Tab Navigator: Impegni / Anagrafica / Compensi */}
         <AdminPersonTabs activeTab={activeTab} onChange={setActiveTab} />
 
-        {/* 🗓️ TAB DA FARE OGGI (placeholder, in arrivo Step 3) */}
+        {/* 🗓️ TAB DA FARE OGGI — Impegni reali del coach */}
         <TabSection tab="impegni" activeTab={activeTab}>
+          <AdminCoachCommitments userId={coach.id} roleLabel="coach" />
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>📌 Da fare oggi</Text>
-            <Text style={{ color: '#666', fontSize: 13, lineHeight: 20, marginBottom: 12 }}>
-              Allenamenti, gare, scadenze e impegni di oggi.
-              {'\n'}
-              <Text style={{ fontWeight: '600', color: '#F57C00' }}>In arrivo: lista in tempo reale.</Text>
-            </Text>
-            <View style={{ height: 1, backgroundColor: '#E5E7EB', marginVertical: 8 }} />
-            <Text style={[styles.cardTitle, { marginTop: 6 }]}>🏆 Stagione</Text>
+            <Text style={[styles.cardTitle, { marginTop: 0 }]}>🏆 Stagione</Text>
             <Text style={{ color: '#666', fontSize: 13, lineHeight: 20 }}>
               Squadre assegnate, ruolo nella stagione, obiettivi pianificati.
               {'\n'}
@@ -1368,9 +1362,43 @@ export default function AdminCoachDetail() {
                   <Text style={styles.acceptedText}>Accettato dal coach</Text>
                 </View>
               )}
+
+              {/* 🆕 22/06/2026 — Periodo contratto + Compensi pregressi visibili in VIEW mode */}
+              {(coach.contract_start_date || coach.contract_end_date || (coach.prior_compensation && coach.prior_compensation > 0)) && (
+                <View style={{ marginTop: 12, padding: 10, backgroundColor: '#F9FAFB', borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#1565C0' }}>
+                  {(coach.contract_start_date || coach.contract_end_date) && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: (coach.prior_compensation || 0) > 0 ? 8 : 0 }}>
+                      <Text style={{ fontSize: 13, color: '#1565C0', marginRight: 6 }}>📅</Text>
+                      <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Periodo contratto:</Text>
+                      <Text style={{ fontSize: 13, color: '#111827', marginLeft: 6, fontWeight: '700' }}>
+                        {coach.contract_start_date ? (() => {
+                          const parts = coach.contract_start_date.split('-');
+                          return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : coach.contract_start_date;
+                        })() : '—'}
+                        {' - '}
+                        {coach.contract_end_date ? (() => {
+                          const parts = coach.contract_end_date.split('-');
+                          return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : coach.contract_end_date;
+                        })() : '—'}
+                      </Text>
+                    </View>
+                  )}
+                  {(coach.prior_compensation || 0) > 0 && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={{ fontSize: 13, color: '#1565C0', marginRight: 6 }}>📋</Text>
+                      <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Compensi pregressi:</Text>
+                      <Text style={{ fontSize: 13, color: '#111827', marginLeft: 6, fontWeight: '700' }}>
+                        {formatCurrency(coach.prior_compensation || 0)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
               
-              {/* Calcolo per Anno Solare — 🚫 14/06/2026: nascosto, sostituito dal Riepilogo Compensi Doppio Ruolo */}
-              {false && (coach.contract_start_date || coach.contract_end_date) && (() => {
+              {/* 🔧 22/06/2026 — Calcolo per Anno Solare RIATTIVATO: l'utente ha bisogno del breakdown
+                  (RAS totale, dichiarazioni soglie €5k/€15k) anche per i coach single-role.
+                  Per i dual-role rimane il Compensi Doppio Ruolo in aggiunta. */}
+              {(coach.contract_start_date || coach.contract_end_date) && (() => {
                 const breakdown = getCompensationBreakdown();
                 const yearlyBreakdown = getYearlyBreakdown();
                 const years = Object.keys(yearlyBreakdown).map(Number).sort();

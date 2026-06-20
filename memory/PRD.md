@@ -15,6 +15,25 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 🆕 22/06/2026 — Correzioni Admin Coach/Dirigente/Collaboratore ✅
+
+**6 fix puntuali** richiesti dall'utente dopo verifica produzione:
+
+### Fix applicati
+1. **Date contratto + Compensi pregressi visibili in VIEW mode** (non solo edit) nella scheda admin coach Compensi tab — box grigio con bordo blu mostra `📅 Periodo contratto: 01/09/2025 - 31/05/2026` e `📋 Compensi pregressi: € 2500`.
+2. **Default tab admin = "Da fare"** (era "Anagrafica") su Coach + Dirigente + Collaboratore.
+3. **Bottoni Checklist Onboarding + Documenti Firmati su una riga** (compatti, padding 10, font 12/10). Side-by-side con flex:1.
+4. **Calcolo Anno Solare RIATTIVATO** nel tab Compensi admin Coach — rimosso `{false &&` che lo nascondeva dal 14/06. Ora visibile per single-role coaches.
+5. **"Da fare" admin popolato con impegni reali** (allenamenti, gare, scadenze) — non più placeholder. Riusa endpoint `/api/coach/commitments` esteso con admin override.
+6. Riepilogo settimanale: Oggi / Domani / Dopodomani / Prossimi giorni con badge cancellati, info venue, casa/trasferta.
+
+### Modifiche tecniche
+- **Backend**: `/api/coach/commitments` ora accetta query param opzionale `?user_id={coach_id}` quando il caller è admin. Society scoping mantenuto. Permessi estesi a `COACH | DIRIGENTE | COLLABORATORE` (oltre admin).
+- **Nuovo componente riusabile**: `/app/frontend/src/components/admin/AdminCoachCommitments.tsx` — fetch + render compatto impegni.
+- Applicato in tab "Da fare" di Coach + Dirigente + Collaboratore admin.
+- Verificato via curl con admin token: ritorna correttamente 0/0/5/13 impegni per coach con assigned_teams.
+
+
 ## 🆕 19/06/2026 — Tab Navigator Admin (Coach/Dirigente/Collaboratore) ✅ + Atleta (esistente)
 
 **Task**: organizzare le schede admin in 3 sezioni per evitare lo scroll infinito su file da 2-5k righe. Sezioni richieste dall'utente:

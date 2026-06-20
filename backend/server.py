@@ -12444,19 +12444,34 @@ async def get_coach_teams(current_user = Depends(get_current_user)):
     return [Team(**team) for team in teams]
 
 @api_router.get("/coach/commitments")
-async def get_coach_commitments(current_user = Depends(get_current_user)):
-    """Get commitments (trainings + matches) for coach's teams - 7 days"""
-    if current_user["role"] != UserRole.COACH:
-        raise HTTPException(status_code=403, detail="Solo coach può vedere gli impegni")
+async def get_coach_commitments(
+    user_id: Optional[str] = None,
+    current_user = Depends(get_current_user),
+):
+    """Get commitments (trainings + matches) for coach's teams - 7 days.
+    🔧 22/06/2026 — Admin può passare ?user_id={coach_id} per vedere gli impegni di un altro coach.
+    """
+    # 🆕 Admin override: se admin passa user_id, carica il target_user al posto del current_user
+    target_user = current_user
+    if user_id and current_user.get("role") == UserRole.ADMIN:
+        tu = await db.users.find_one({"id": user_id}, {"_id": 0})
+        if not tu:
+            raise HTTPException(status_code=404, detail="Utente non trovato")
+        # Optional society scoping (admin di una società non può vedere coach di altre società)
+        if current_user.get("society_id") and tu.get("society_id") and current_user["society_id"] != tu["society_id"]:
+            raise HTTPException(status_code=403, detail="Coach di altra società")
+        target_user = tu
+    elif current_user["role"] not in (UserRole.COACH, UserRole.DIRIGENTE, UserRole.COLLABORATORE):
+        raise HTTPException(status_code=403, detail="Solo coach/dirigente/collaboratore può vedere gli impegni")
     
     # Get coach's assigned teams
-    team_ids = current_user.get("assigned_teams", [])
+    team_ids = target_user.get("assigned_teams", [])
     
     if not team_ids:
         return {"today": [], "tomorrow": [], "day_after": [], "upcoming": []}
     
     # Get teams info (for training schedules) — scoped by society
-    _sid = current_user.get("society_id")
+    _sid = target_user.get("society_id")
     _q_teams = {"id": {"$in": team_ids}}
     if _sid:
         _q_teams["society_id"] = _sid
