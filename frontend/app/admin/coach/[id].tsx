@@ -875,13 +875,60 @@ export default function AdminCoachDetail() {
         {/* 🗓️ TAB DA FARE OGGI — Impegni reali del coach */}
         <TabSection tab="impegni" activeTab={activeTab}>
           <AdminCoachCommitments userId={coach.id} roleLabel="coach" />
+
+          {/* 🆕 22/06/2026 — Squadre Assegnate spostate qui dal tab Anagrafica */}
           <View style={styles.card}>
-            <Text style={[styles.cardTitle, { marginTop: 0 }]}>🏆 Stagione</Text>
-            <Text style={{ color: '#666', fontSize: 13, lineHeight: 20 }}>
-              Squadre assegnate, ruolo nella stagione, obiettivi pianificati.
-              {'\n'}
-              <Text style={{ fontWeight: '600', color: '#F57C00' }}>In arrivo: riepilogo lavoro stagione.</Text>
-            </Text>
+            <View style={styles.cardHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <SportIcon size={20} />
+                <Text style={[styles.cardTitle, { marginLeft: 6, marginTop: 0 }]}>Squadre Assegnate</Text>
+              </View>
+              <TouchableOpacity onPress={() => setEditingTeams(!editingTeams)}>
+                <Ionicons name={editingTeams ? "close" : "create"} size={22} color="#007AFF" />
+              </TouchableOpacity>
+            </View>
+
+            {editingTeams ? (
+              <>
+                <Text style={styles.hintText}>Seleziona le squadre da assegnare al coach:</Text>
+                {teams.map((team) => {
+                  const isAssigned = selectedTeams.includes(team.id);
+                  return (
+                    <TouchableOpacity
+                      key={team.id}
+                      style={[styles.teamCheckbox, isAssigned && styles.teamCheckboxSelected]}
+                      onPress={() => {
+                        if (isAssigned) {
+                          setSelectedTeams(selectedTeams.filter(t => t !== team.id));
+                        } else {
+                          setSelectedTeams([...selectedTeams, team.id]);
+                        }
+                      }}
+                    >
+                      <Ionicons
+                        name={isAssigned ? "checkbox" : "square-outline"}
+                        size={22}
+                        color={isAssigned ? "#007AFF" : "#999"}
+                      />
+                      <Text style={[styles.teamCheckboxText, isAssigned && styles.teamCheckboxTextSelected]}>
+                        {team.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+                <TouchableOpacity
+                  style={[styles.saveTeamsBtn, savingTeams && styles.saveBtnDisabled]}
+                  onPress={handleSaveTeams}
+                  disabled={savingTeams}
+                >
+                  <Text style={styles.saveTeamsBtnText}>
+                    {savingTeams ? 'Salvataggio...' : 'Salva Squadre'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <Text style={styles.teamsText}>{getTeamNames(coach.assigned_teams)}</Text>
+            )}
           </View>
         </TabSection>
 
@@ -965,61 +1012,6 @@ export default function AdminCoachDetail() {
             <Text style={styles.label}>Livello / Grado</Text>
             <Text style={styles.value}>{coach.coach_license_level || '-'}</Text>
           </View>
-        </View>
-
-        {/* Squadre Assegnate */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <SportIcon size={20} />
-              <Text style={[styles.cardTitle, { marginLeft: 6 }]}>Squadre Assegnate</Text>
-            </View>
-            <TouchableOpacity onPress={() => setEditingTeams(!editingTeams)}>
-              <Ionicons name={editingTeams ? "close" : "create"} size={22} color="#007AFF" />
-            </TouchableOpacity>
-          </View>
-          
-          {editingTeams ? (
-            <>
-              <Text style={styles.hintText}>Seleziona le squadre da assegnare al coach:</Text>
-              {teams.map((team) => {
-                const isAssigned = selectedTeams.includes(team.id);
-                return (
-                  <TouchableOpacity
-                    key={team.id}
-                    style={[styles.teamCheckbox, isAssigned && styles.teamCheckboxSelected]}
-                    onPress={() => {
-                      if (isAssigned) {
-                        setSelectedTeams(selectedTeams.filter(t => t !== team.id));
-                      } else {
-                        setSelectedTeams([...selectedTeams, team.id]);
-                      }
-                    }}
-                  >
-                    <Ionicons 
-                      name={isAssigned ? "checkbox" : "square-outline"} 
-                      size={22} 
-                      color={isAssigned ? "#007AFF" : "#999"} 
-                    />
-                    <Text style={[styles.teamCheckboxText, isAssigned && styles.teamCheckboxTextSelected]}>
-                      {team.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-              <TouchableOpacity
-                style={[styles.saveTeamsBtn, savingTeams && styles.saveBtnDisabled]}
-                onPress={handleSaveTeams}
-                disabled={savingTeams}
-              >
-                <Text style={styles.saveTeamsBtnText}>
-                  {savingTeams ? 'Salvataggio...' : 'Salva Squadre'}
-                </Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <Text style={styles.teamsText}>{getTeamNames(coach.assigned_teams)}</Text>
-          )}
         </View>
 
         </TabSection>

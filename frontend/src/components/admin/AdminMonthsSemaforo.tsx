@@ -136,7 +136,7 @@ export const AdminMonthsSemaforo: React.FC<Props> = ({
         <View style={styles.legend}>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#34C759' }]} />
-            <Text style={styles.legendText}>Firmato</Text>
+            <Text style={styles.legendText}>&lt;5K</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#F9A825' }]} />
@@ -151,8 +151,10 @@ export const AdminMonthsSemaforo: React.FC<Props> = ({
       <View style={styles.grid}>
         {monthsToRender.map((m) => {
           const status = getMonthStatus(m);
-          const isAfter5k = firstCross5k !== null && m >= firstCross5k && status !== 'out';
-          const isAfter15k = firstCross15k !== null && m >= firstCross15k && status !== 'out';
+          // 🆕 22/06/2026 — nascondi i mesi fuori dal periodo contrattuale
+          if (status === 'out') return null;
+          const isAfter5k = firstCross5k !== null && m >= firstCross5k;
+          const isAfter15k = firstCross15k !== null && m >= firstCross15k;
           const showBadge15k = isAfter15k;
           const showBadge5k = isAfter5k && !isAfter15k;
 

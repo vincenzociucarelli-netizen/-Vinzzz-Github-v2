@@ -16,6 +16,17 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 22/06/2026 (notte) — 4 micro-fix dopo feedback utente ✅
+
+1. **Foto 1**: la placeholder card "🏆 Stagione" nel tab Da fare → sostituita con la card **"Squadre Assegnate"** completa di edit-mode (checkbox + Salva).
+2. **Foto 2**: rimossa la card duplicata "Squadre Assegnate" dal tab **Anagrafica** (sotto Dati Fiscali). Ora la card vive solo nel tab Da fare.
+3. **Foto 3A**: legenda del Calendario quietanze → "Firmato" rinominato in **"<5K"** per chiarezza (verde = sotto soglia 5k, arancio = >5K, viola = >15K).
+4. **Foto 3B/C**: nascosti dalla griglia tutti i mesi **fuori dal periodo contrattuale** (per FARO REMO contratto Set 2025 – Giu 2026 ora si vede solo Set-Dic 2025 e Gen-Giu 2026, niente più mesi vuoti).
+
+### File toccati
+- `/app/frontend/app/admin/coach/[id].tsx` (riarrangiamento card)
+- `/app/frontend/src/components/admin/AdminMonthsSemaforo.tsx` (legenda + skip out)
+
 ## 🆕 22/06/2026 (sera) — Semaforo mesi Admin + Enforcement cronologico server-side ✅
 
 ### Modifiche applicate
