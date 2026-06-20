@@ -1000,6 +1000,7 @@ export default function AdminCollaboratoreDetail() {
                             </Text>
                             <View style={{ marginTop: 8 }}>
                               <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[0]].baseAmount || yearlyBreakdown[years[0]].total)}</Text></Text>
+                              <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({yearlyBreakdown[years[0]].months} mesi × {formatCurrency(parseFloat(monthlyCompensation) || 0)})</Text>
                               <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[0]].supplementary || 0)}</Text></Text>
                               {prior > 0 && (
                                 <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(prior)}</Text></Text>
@@ -1023,6 +1024,7 @@ export default function AdminCollaboratoreDetail() {
                             </Text>
                             <View style={{ marginTop: 8 }}>
                               <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].baseAmount || yearlyBreakdown[years[1]].total)}</Text></Text>
+                              <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({yearlyBreakdown[years[1]].months} mesi × {formatCurrency(parseFloat(monthlyCompensation) || 0)})</Text>
                               <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].supplementary || 0)}</Text></Text>
                               {yearlyBreakdown[years[1]].priorCompensation > 0 && (
                                 <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].priorCompensation)}</Text></Text>
