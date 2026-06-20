@@ -22,6 +22,7 @@ import { Ionicons } from '../../../src/components/Icon';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import DualRoleHubBanner from '../../../src/components/admin/DualRoleHubBanner';
 import AdminPersonTabs, { TabSection, type AdminPersonTab } from '../../../src/components/admin/AdminPersonTabs';
+import AdminMonthsSemaforo from '../../../src/components/admin/AdminMonthsSemaforo';
 import AdminCoachCommitments from '../../../src/components/admin/AdminCoachCommitments';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -1209,7 +1210,7 @@ export default function AdminCoachDetail() {
                             </Text>
                             {/* Linear layout like user view */}
                             <View style={{ marginTop: 8 }}>
-                              <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[0]].baseAmount || yearlyBreakdown[years[0]].total)}</Text></Text>
+                              <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[0]].baseAmount || yearlyBreakdown[years[0]].total)}</Text> <Text style={{ fontSize: 11, color: '#666' }}>({yearlyBreakdown[years[0]].months} mesi × {formatCurrency(coach?.monthly_compensation || 0)})</Text></Text>
                               <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[0]].supplementary || 0)}</Text></Text>
                               {prior > 0 && (
                                 <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(prior)}</Text></Text>
@@ -1232,7 +1233,7 @@ export default function AdminCoachDetail() {
                               {yearlyBreakdown[years[1]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[1]} (Gen-{yearlyBreakdown[years[1]].endMonth}: {yearlyBreakdown[years[1]].months} mesi)
                             </Text>
                             <View style={{ marginTop: 8 }}>
-                              <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].baseAmount || yearlyBreakdown[years[1]].total)}</Text></Text>
+                              <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].baseAmount || yearlyBreakdown[years[1]].total)}</Text> <Text style={{ fontSize: 11, color: '#666' }}>({yearlyBreakdown[years[1]].months} mesi × {formatCurrency(coach?.monthly_compensation || 0)})</Text></Text>
                               <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].supplementary || 0)}</Text></Text>
                               {yearlyBreakdown[years[1]].priorCompensation > 0 && (
                                 <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].priorCompensation)}</Text></Text>
@@ -1475,6 +1476,42 @@ export default function AdminCoachDetail() {
                         </View>
                       </View>
                     )}
+                  </View>
+                );
+              })()}
+
+              {/* 🆕 22/06/2026 — Semaforo mesi (Admin): replica visiva della griglia user */}
+              {(coach.contract_start_date || coach.contract_end_date) && (() => {
+                const monthly = parseFloat(monthlyCompensation.replace(',', '.')) || 0;
+                const prior = parseFloat(otherAnnualCompensation.replace(',', '.')) || 0;
+                const parseDate = (s?: string | null) => {
+                  if (!s) return null;
+                  const parts = s.split('-');
+                  if (parts.length !== 3) return null;
+                  return { y: parseInt(parts[0]), m: parseInt(parts[1]) };
+                };
+                const start = parseDate(coach.contract_start_date);
+                const end = parseDate(coach.contract_end_date);
+                const startYear = start?.y || (signedReceipts[0]?.year ?? new Date().getFullYear());
+                const endYear = end?.y || startYear;
+                const yearsList: number[] = [];
+                for (let y = startYear; y <= endYear; y++) yearsList.push(y);
+                return (
+                  <View style={{ marginTop: 4 }}>
+                    {yearsList.map((y) => (
+                      <AdminMonthsSemaforo
+                        key={`semaforo-${y}`}
+                        year={y}
+                        contractStartYear={start?.y || null}
+                        contractStartMonth={start?.m || null}
+                        contractEndYear={end?.y || null}
+                        contractEndMonth={end?.m || null}
+                        monthlyAmount={monthly}
+                        priorCompensation={y === (start?.y || startYear) ? prior : 0}
+                        signedReceipts={signedReceipts || []}
+                        externalDeclarations={externalDeclarations || []}
+                      />
+                    ))}
                   </View>
                 );
               })()}

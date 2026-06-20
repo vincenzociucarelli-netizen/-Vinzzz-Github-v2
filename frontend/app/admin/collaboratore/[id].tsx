@@ -20,6 +20,7 @@ import api from '../../../src/services/api';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import AdminPersonTabs, { TabSection, type AdminPersonTab } from '../../../src/components/admin/AdminPersonTabs';
 import AdminCoachCommitments from '../../../src/components/admin/AdminCoachCommitments';
+import AdminMonthsSemaforo from '../../../src/components/admin/AdminMonthsSemaforo';
 import { Ionicons } from '../../../src/components/Icon';
 import { SportIcon } from '../../../src/components/SportIcon';
 
@@ -1035,6 +1036,39 @@ export default function AdminCollaboratoreDetail() {
                   })()}
                 </View>
               )}
+
+              {/* 🆕 22/06/2026 — Semaforo mesi (Admin): replica visiva della griglia user */}
+              {contractStartDate && contractEndDate && (() => {
+                const monthly = parseFloat(monthlyCompensation) || 0;
+                const prior = parseFloat(otherAnnualCompensation) || 0;
+                const start = parseDate(contractStartDate);
+                const end = parseDate(contractEndDate);
+                if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime())) return null;
+                const startYear = start.getFullYear();
+                const endYear = end.getFullYear();
+                const startMonth = start.getMonth() + 1;
+                const endMonth = end.getMonth() + 1;
+                const yearsList: number[] = [];
+                for (let y = startYear; y <= endYear; y++) yearsList.push(y);
+                return (
+                  <View style={{ marginTop: 4 }}>
+                    {yearsList.map((y) => (
+                      <AdminMonthsSemaforo
+                        key={`semaforo-${y}`}
+                        year={y}
+                        contractStartYear={startYear}
+                        contractStartMonth={startMonth}
+                        contractEndYear={endYear}
+                        contractEndMonth={endMonth}
+                        monthlyAmount={monthly}
+                        priorCompensation={y === startYear ? prior : 0}
+                        signedReceipts={signedReceipts || []}
+                        externalDeclarations={[]}
+                      />
+                    ))}
+                  </View>
+                );
+              })()}
               
               {/* Threshold Warnings/Signed Banners (admin view) */}
               {(thresholdStatus || thresholdStatus2) && (

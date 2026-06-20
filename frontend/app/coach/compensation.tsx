@@ -1526,7 +1526,7 @@ export default function CoachCompensation() {
                   
                   {/* Linear layout like Admin view */}
                   <View style={{ marginTop: 8 }}>
-                    <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text></Text>
+                    <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text> <Text style={{ fontSize: 11, color: '#666' }}>({summary.monthCount} mesi × {formatCurrency(profile?.monthly_compensation || 0)})</Text></Text>
                     {(summary.specialMonths?.length > 0) && (
                       <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare ({summary.specialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(contractStartYear).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
                     )}
@@ -1561,7 +1561,7 @@ export default function CoachCompensation() {
                   
                   {/* Linear layout like Admin view */}
                   <View style={{ marginTop: 8 }}>
-                    <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text></Text>
+                    <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text> <Text style={{ fontSize: 11, color: '#666' }}>({summary.monthCount} mesi × {formatCurrency(profile?.monthly_compensation || 0)})</Text></Text>
                     {(summary.specialMonths?.length > 0) && (
                       <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare ({summary.specialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(contractEndYear).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
                     )}

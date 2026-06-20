@@ -34,6 +34,11 @@
 - Squadra: Serie C
 - Stato: email_verified=true, is_approved=true (inserito manualmente il 17/05/2026 perché viola@test.com era un placeholder fittizio per test)
 
+## Coach (FARO REMO)
+- Email: remo@coach.com
+- Password: FaroTest123 (resettata 22/06/2026 per test enforcement cronologico)
+- Note: compenso mensile 3000€, contratto 01/09/2025 - 30/06/2026, dual-role coach con quietanze firmate fino a Mar 2026.
+
 ## Coach (Sara)
 - Email: sara@test.com
 - Password: (verificare nel DB)

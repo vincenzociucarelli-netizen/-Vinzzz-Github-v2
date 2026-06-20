@@ -6,7 +6,7 @@
  * il 22/06/2026 in server.py).
  */
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
 
@@ -73,6 +73,8 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, roleLabel = 'co
   const [data, setData] = useState<Commitments | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // 🆕 22/06/2026 — "Prossimi giorni" collassabile (default chiuso)
+  const [upcomingOpen, setUpcomingOpen] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -119,8 +121,44 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, roleLabel = 'co
           <DayBlock title="Oggi" items={data.today || []} emoji="🔴" />
           <DayBlock title="Domani" items={data.tomorrow || []} emoji="🟠" />
           <DayBlock title="Dopodomani" items={data.day_after || []} emoji="🟡" />
-          {(data.upcoming || []).length > 0 && (
-            <DayBlock title={`Prossimi giorni (${data.upcoming.length})`} items={data.upcoming} emoji="📅" />
+          {(data?.upcoming || []).length > 0 && (
+            <View style={[styles.dayBlock, { borderBottomWidth: 0, paddingBottom: 0, marginBottom: 0 }]}>
+              <TouchableOpacity
+                onPress={() => setUpcomingOpen(!upcomingOpen)}
+                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 4 }}
+                data-testid="upcoming-toggle"
+                testID="upcoming-toggle"
+              >
+                <Ionicons name={upcomingOpen ? 'chevron-down' : 'chevron-forward'} size={18} color="#374151" />
+                <Text style={[styles.dayTitle, { marginLeft: 4, marginBottom: 0 }]}>
+                  📅 Prossimi giorni ({(data?.upcoming || []).length})
+                </Text>
+              </TouchableOpacity>
+              {upcomingOpen && (
+                <View style={{ marginTop: 6 }}>
+                  {(data?.upcoming || []).map((it, idx) => (
+                    <View key={idx} style={[styles.itemRow, it.cancelled && { opacity: 0.5 }]}>
+                      <Ionicons
+                        name={it.type === 'match' ? 'trophy' : 'fitness'}
+                        size={16}
+                        color={it.type === 'match' ? '#D4A017' : '#1565C0'}
+                        style={{ marginRight: 6 }}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.itemTitle}>
+                          {it.team_name || 'Squadra'} {it.type === 'match' ? `vs ${it.opponent || '?'}` : ''}
+                          {it.cancelled ? ' (ANNULLATO)' : ''}
+                        </Text>
+                        <Text style={styles.itemSubtitle}>
+                          {it.time_start || ''}{it.time_end ? `–${it.time_end}` : ''}
+                          {it.venue ? ` · ${it.venue}` : ''}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
           )}
         </>
       )}

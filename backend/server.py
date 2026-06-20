@@ -13885,6 +13885,77 @@ async def _get_signed_yearly_total_as_atleta_pro(athlete_id: str, year: int) -> 
         return 0.0
 
 
+def _parse_contract_year_month(value):
+    """Estrae (year, month) da una data contratto (str ISO/datetime). Ritorna (None, None) se non parsabile."""
+    if not value:
+        return None, None
+    if isinstance(value, str):
+        parts = value.split("T")[0].split("-")
+        if len(parts) >= 2:
+            try:
+                return int(parts[0]), int(parts[1])
+            except (ValueError, TypeError):
+                return None, None
+    if hasattr(value, "year") and hasattr(value, "month"):
+        return value.year, value.month
+    return None, None
+
+
+async def _check_chronological_receipts(
+    user_id: str,
+    target_year: int,
+    target_month: int,
+    contract_start_value,
+    contract_end_value,
+    collection_name: str = "coach_compensations",
+    user_id_field: str = "coach_id",
+):
+    """🆕 22/06/2026 — Enforcement cronologico server-side per le quietanze.
+
+    Verifica che TUTTI i mesi del periodo contrattuale precedenti a (target_year,
+    target_month) siano già firmati. Se ne trova uno scoperto, solleva HTTPException 400.
+
+    Args:
+        user_id: id dell'utente firmatario
+        target_year/target_month: mese che si sta firmando
+        contract_start_value/contract_end_value: date contratto (str ISO o datetime)
+        collection_name: collezione mongo da interrogare (default coach_compensations)
+        user_id_field: campo della collezione che contiene l'id utente
+    """
+    cs_year, cs_month = _parse_contract_year_month(contract_start_value)
+    ce_year, ce_month = _parse_contract_year_month(contract_end_value)
+    if not (cs_year and cs_month):
+        return  # nessun contratto noto -> nessun enforcement
+    end_y = ce_year if ce_year else target_year
+    end_m = ce_month if ce_month else 12
+
+    # Carichiamo solo i mesi firmati relativi al periodo del contratto, in modo
+    # da poter verificare velocemente quale mese precedente al target manca.
+    coll = getattr(db, collection_name)
+    cursor = coll.find(
+        {user_id_field: user_id, "receipt_signed": True},
+        {"_id": 0, "month": 1, "year": 1},
+    )
+    docs = await cursor.to_list(500)
+    signed_set = {(int(d["year"]), int(d["month"])) for d in docs if d.get("year") and d.get("month")}
+
+    ITA_MONTHS = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
+    for y in range(cs_year, end_y + 1):
+        m_start = cs_month if y == cs_year else 1
+        m_end = end_m if y == end_y else 12
+        for m in range(m_start, m_end + 1):
+            if (y, m) == (target_year, target_month):
+                return  # raggiunto il mese target, tutti i precedenti sono firmati
+            if (y, m) not in signed_set:
+                mname = ITA_MONTHS[m] if 1 <= m <= 12 else str(m)
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Ordine cronologico richiesto: firma prima la quietanza di {mname} {y}."
+                )
+    # Se siamo arrivati qui senza incontrare target, target è fuori contratto: lasciamo passare.
+
+
 def _detect_threshold_crossings_chronological(
     signed_by_month: dict,
     new_month: int,
@@ -15270,6 +15341,17 @@ async def sign_compensation_receipt(
         raise HTTPException(status_code=404, detail="Coach non trovato")
 
     _require_complete_anagrafica(coach)
+
+    # 🆕 22/06/2026 — Enforcement cronologico server-side (FIX C+D).
+    await _check_chronological_receipts(
+        user_id=coach_id,
+        target_year=request.year,
+        target_month=request.month,
+        contract_start_value=coach.get("contract_start_date"),
+        contract_end_value=coach.get("contract_end_date"),
+        collection_name="coach_compensations",
+        user_id_field="coach_id",
+    )
     
     # Get society data from settings and societies collection
     society_settings = await db.settings.find_one({"type": "society"})
@@ -20580,6 +20662,17 @@ async def sign_dirigente_compensation_receipt(
         raise HTTPException(status_code=404, detail="Dirigente non trovato")
 
     _require_complete_anagrafica(dirigente)
+
+    # 🆕 22/06/2026 — Enforcement cronologico server-side (FIX C+D).
+    await _check_chronological_receipts(
+        user_id=dirigente_id,
+        target_year=request.year,
+        target_month=request.month,
+        contract_start_value=dirigente.get("contract_start_date"),
+        contract_end_value=dirigente.get("contract_end_date"),
+        collection_name="dirigente_compensations",
+        user_id_field="dirigente_id",
+    )
     
     # Get society data from settings and societies collection
     society_settings = await db.settings.find_one({"type": "society"})
@@ -21327,6 +21420,17 @@ async def sign_collaboratore_compensation_receipt(
         raise HTTPException(status_code=404, detail="Collaboratore non trovato")
 
     _require_complete_anagrafica(collaboratore)
+
+    # 🆕 22/06/2026 — Enforcement cronologico server-side (FIX C+D).
+    await _check_chronological_receipts(
+        user_id=collaboratore_id,
+        target_year=request.year,
+        target_month=request.month,
+        contract_start_value=collaboratore.get("contract_start_date"),
+        contract_end_value=collaboratore.get("contract_end_date"),
+        collection_name="collaboratore_compensations",
+        user_id_field="collaboratore_id",
+    )
     
     # Check if already signed
     existing = await db.collaboratore_compensations.find_one({

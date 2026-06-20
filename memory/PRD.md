@@ -15,6 +15,27 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+
+## 🆕 22/06/2026 (sera) — Semaforo mesi Admin + Enforcement cronologico server-side ✅
+
+### Modifiche applicate
+1. **Semaforo mesi (Admin Coach + Collaboratore)** — replica visiva della griglia user nel tab "Compensi":
+   - Nuovo componente `/app/frontend/src/components/admin/AdminMonthsSemaforo.tsx`
+   - Mostra Gen-Dic per ogni anno del contratto, colorando ogni mese:
+     - 🟢 Verde = quietanza firmata
+     - 🟠 Arancio + badge `>5K` = mese sopra soglia €5.000
+     - 🟣 Viola + badge `>15K` = mese sopra soglia €15.000
+     - 🔘 Grigio = mese fuori dal periodo contrattuale o futuro
+   - Calcolo proiettato (signed + unsigned + pregressi + esterni) → l'admin vede a colpo d'occhio quando scatteranno le soglie.
+   - Integrato in `/app/frontend/app/admin/coach/[id].tsx` (riga 1483) e `/app/frontend/app/admin/collaboratore/[id].tsx`.
+2. **Enforcement cronologico server-side** (Fix C+D): nuovo helper `_check_chronological_receipts` in `server.py` (riga 13904). Bloccato il salvataggio di una quietanza se mesi precedenti del periodo contrattuale non sono firmati. Applicato a `POST /coach/{id}/compensation/receipt`, `POST /dirigente/{id}/compensation/receipt`, `POST /collaboratore/{id}/compensation/receipt`. Messaggio: *"Ordine cronologico richiesto: firma prima la quietanza di {Mese} {Anno}."*
+3. **"Prossimi giorni" collassabile** già implementato in `AdminCoachCommitments.tsx` (state `upcomingOpen`).
+
+### Verifica
+- ✅ Screenshot Admin Coach: la griglia "📅 Calendario quietanze 2025 + 2026" mostra colori, badge e stato firma corretti per FARO REMO.
+- ✅ Test API: tentativo di firmare Giugno 2026 saltando Maggio → HTTP 400 `"Ordine cronologico richiesto: firma prima la quietanza di Maggio 2026."` (per Alice LUPI, alice@test.com).
+- Backend ricompilato + bundle web rigenerato (`expo export --platform web`).
+
 ## 🆕 22/06/2026 (cont) — Dirigente lato user: stesso pattern del Collaboratore ✅
 
 **Task**: replicare la "finitura" (3 quick-link + Impegni inline) anche su `/dirigente/index.tsx` (lato user). Lato admin è già stato fatto nel turno precedente con AdminPersonTabs.
