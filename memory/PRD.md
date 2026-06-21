@@ -16,6 +16,31 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 23/06/2026 (mattina) — Atleta-first: tab bar uniforme admin + user ✅
+
+L'utente ha chiesto di ripartire dall'Atleta 18+ con compensi come base, prima di affrontare lo zaino Coach. Stato attuale:
+
+### A. Admin athlete view (`/admin/athlete/[id]`)
+- Tab riarrangiati: **Da fare** / **Anagrafica** / **Compensi** / **Presenze** (era `Dati / Compensi / Presenze`)
+- "Da fare" default + mostra impegni atleta (Oggi / Domani / Dopodomani / Prossimi giorni collassabili)
+- `Anagrafica` = ex "Dati" (Cronologia, Dati Tecnici, Squadra, Tesseramento)
+
+### B. User athlete view (`/athlete/*`)
+- Creato componente condiviso `/app/frontend/src/components/athlete/AthleteTabBar.tsx`
+- Aggiunto in cima a `/athlete/index`, `/athlete/profile`, `/athlete/compensation`, `/athlete/presenze`
+- Stessa label e stesso ordine dell'admin (uniformità UX)
+
+### C. Backend
+- `GET /api/coach/commitments?athlete_id={id}` esteso per supportare atleti (oltre coach/dirigente/collaboratore). Legge `team_id` dal record `athletes` (no `assigned_teams`).
+- `AdminCoachCommitments` accetta nuovo prop `athleteId`.
+
+### Account di test (preview)
+- Email: `mariorossi@test.com` / Pwd: `MarioTest123`
+- Atleta 18+ Pallavolo Perugia, compenso €500/mese, contratto 01/09/2025-30/06/2026, squadra Under 14.
+
+### Prossimi step
+- FASE 2: "Aggiungi anche come Coach" → mini-form (compenso coach + date contratto + squadra). Anagrafica unica, blocco Compenso Coach sotto Atleta nei Compensi, RAS cumulativo, soglie €5K/€15K ricalcolate sul totale.
+
 ## 🆕 23/06/2026 (mattina) — Collaboratore user-side: cleanup profilo + "Azioni Compenso" + Prossimi giorni collassabile ✅
 
 L'utente ha segnalato 3 fix sul lato user del collaboratore:

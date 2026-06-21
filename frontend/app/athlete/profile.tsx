@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import AthleteTabBar from '../../src/components/athlete/AthleteTabBar';
 import {
   View,
   Text,
@@ -814,6 +815,8 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           <Ionicons name="log-out-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
+
+      <AthleteTabBar />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}

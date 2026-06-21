@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import AthleteTabBar from '../../src/components/athlete/AthleteTabBar';
 import {
   View,
   Text,
@@ -129,6 +130,8 @@ export default function AthletePresenze() {
           </View>
         <View style={{ width: 40 }} />
       </View>
+
+      <AthleteTabBar />
 
       <ScrollView
         style={styles.content}

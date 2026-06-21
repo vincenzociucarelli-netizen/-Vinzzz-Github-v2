@@ -15,6 +15,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import AthleteTabBar from '../../src/components/athlete/AthleteTabBar';
 import SignaturePadInline from '../../src/components/SignaturePadInline';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
@@ -1281,6 +1282,8 @@ export default function AthleteCompensation() {
         </View>
         <View style={{ width: 40 }} />
       </View>
+
+      <AthleteTabBar />
 
       <ScrollView style={styles.content}>
         {/* Coach Name and Profile Link */}

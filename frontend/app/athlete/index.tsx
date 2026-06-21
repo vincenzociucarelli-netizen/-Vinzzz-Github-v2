@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import AthleteTabBar from '../../src/components/athlete/AthleteTabBar';
 import {
   View,
   Text,
@@ -1316,6 +1317,8 @@ export default function AthleteScreen() {
           <Ionicons name="log-out-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
+
+      <AthleteTabBar />
 
       {/* 🆕 Switch dual-role: Atleta PRO ↔ Coach (visibile solo se atleta promosso) */}
       <SwitchAccountButton />
