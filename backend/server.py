@@ -4915,8 +4915,8 @@ async def update_user_compensation(user_id: str, data: dict, current_user = Depe
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
     
-    if user["role"] not in [UserRole.COACH, UserRole.VIEWER, UserRole.ADMIN]:
-        raise HTTPException(status_code=400, detail="Compenso applicabile solo a coach e dirigenti")
+    if user["role"] not in [UserRole.COACH, UserRole.DIRIGENTE, UserRole.VIEWER, UserRole.COLLABORATORE]:
+        raise HTTPException(status_code=400, detail="Compenso applicabile solo a coach, dirigenti e collaboratori")
     
     update_data = {}
     if "monthly_compensation" in data:
