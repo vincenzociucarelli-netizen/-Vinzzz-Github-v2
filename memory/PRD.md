@@ -16,6 +16,14 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 22/06/2026 (notte 4) — Admin Collaboratore: sostituita la card placeholder "Stagione" con "Squadre Assegnate" ✅
+
+L'utente ha chiesto di rimuovere il placeholder "🏆 Stagione - Mansioni assegnate, ruolo nella stagione, ..." dalla vista admin del collaboratore. Implementata la stessa card "Squadre Assegnate" usata nella vista admin del coach: lista squadre in blu + pencil ✏️ → edit mode con checkbox + bottone Salva (PATCH /api/users/{id} con `assigned_teams`).
+
+### Verifica
+- ✅ Screenshot Admin Collaboratore PAOLI PAOLO tab "Da fare": card "⚽ Squadre Assegnate" mostra "Under 14, Under 16, MiniVolley, Starter Group, Under 18, Serie D".
+- File: `/app/frontend/app/admin/collaboratore/[id].tsx` (rimosso placeholder, aggiunto stato `editingTeamsInline`, riusato `selectedTeamIds`/`teams`/`originalTeamIds` esistenti).
+
 ## 🆕 22/06/2026 (notte 3) — "Già Percepito" su Coach + semaforo rimosso + N° Tesserino editabile ✅
 
 Dopo il feedback utente con foto 2/3:
