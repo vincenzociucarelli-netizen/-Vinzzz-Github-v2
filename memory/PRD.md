@@ -29,6 +29,7 @@ L'utente ha chiesto di ripartire dall'Atleta 18+ con compensi come base, prima d
 - Creato componente condiviso `/app/frontend/src/components/athlete/AthleteTabBar.tsx`
 - Aggiunto in cima a `/athlete/index`, `/athlete/profile`, `/athlete/compensation`, `/athlete/presenze`
 - Stessa label e stesso ordine dell'admin (uniformità UX)
+- 🎯 **Dinamico per athlete_type**: tab si chiama "🏆 Compensi" (oro) se atleta `compensated`, "💳 Pagamenti" (blu) se `quota`. Carica il tipo via `GET /auth/me`.
 
 ### C. Backend
 - `GET /api/coach/commitments?athlete_id={id}` esteso per supportare atleti (oltre coach/dirigente/collaboratore). Legge `team_id` dal record `athletes` (no `assigned_teams`).
