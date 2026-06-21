@@ -1597,6 +1597,21 @@ export default function CoachCompensation() {
         {/* Monthly Cards - Contract-based */}
         {contractStartYear && contractEndYear && (
           <>
+            {/* 🆕 21/02/2026 — Legenda colori soglie */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', paddingHorizontal: 16, marginTop: 10, marginBottom: 4, gap: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#28A745', marginRight: 5 }} />
+                <Text style={{ fontSize: 11, color: '#666' }}>sotto soglia</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#F9A825', marginRight: 5 }} />
+                <Text style={{ fontSize: 11, color: '#666' }}>&gt;€5k</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#8E44AD', marginRight: 5 }} />
+                <Text style={{ fontSize: 11, color: '#666' }}>&gt;€15k</Text>
+              </View>
+            </View>
             {/* First Year Months */}
             <Text style={styles.sectionTitle}>Quietanze {contractStartYear}</Text>
             <View style={styles.monthsGrid}>
