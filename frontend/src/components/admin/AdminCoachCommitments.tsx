@@ -34,6 +34,8 @@ interface Commitments {
 interface Props {
   /** Se non passato, l'endpoint restituisce gli impegni dell'utente corrente (lato user). */
   userId?: string;
+  /** 🆕 23/06/2026 — Se passato, fa la query come ?athlete_id={id} (admin view atleta). */
+  athleteId?: string;
   /** Etichetta del ruolo, per personalizzare i messaggi vuoti (es. "coach", "collaboratore"). */
   roleLabel?: string;
 }
@@ -69,7 +71,7 @@ const DayBlock: React.FC<{ title: string; items: CommitmentItem[]; emoji: string
   </View>
 );
 
-export const AdminCoachCommitments: React.FC<Props> = ({ userId, roleLabel = 'coach' }) => {
+export const AdminCoachCommitments: React.FC<Props> = ({ userId, athleteId, roleLabel = 'coach' }) => {
   const [data, setData] = useState<Commitments | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +82,8 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, roleLabel = 'co
     setLoading(true);
     setError(null);
     const params: any = {};
-    if (userId) params.user_id = userId;
+    if (athleteId) params.athlete_id = athleteId;
+    else if (userId) params.user_id = userId;
     api.get('/coach/commitments', { params })
       .then((res) => setData(res.data))
       .catch((err) => {
@@ -88,7 +91,7 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, roleLabel = 'co
         setError('Impossibile caricare gli impegni');
       })
       .finally(() => setLoading(false));
-  }, [userId]);
+  }, [userId, athleteId]);
 
   if (loading) {
     return (

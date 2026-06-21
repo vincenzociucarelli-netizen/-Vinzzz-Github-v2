@@ -30,6 +30,7 @@ import * as Sharing from 'expo-sharing';
 import { downloadFiscalReceipt, ReceiptData } from '../../../src/utils/fiscalReceipt';
 import CodiceFiscale from 'codice-fiscale-js';
 import { SportIcon } from '../../../src/components/SportIcon';
+import AdminCoachCommitments from '../../../src/components/admin/AdminCoachCommitments';
 import { Picker } from '@react-native-picker/picker';
 import { useAuthStore } from '../../../src/store/authStore';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../../src/constants/countries';
@@ -169,7 +170,7 @@ export default function AdminAthleteDetail() {
   const [stats, setStats] = useState<AthleteAttendanceStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dati' | 'pagamenti' | 'presenze'>('dati');
+  const [activeTab, setActiveTab] = useState<'dafare' | 'dati' | 'pagamenti' | 'presenze'>('dafare');
   
   // Edit mode
   const [editing, setEditing] = useState(false);
@@ -1808,11 +1809,20 @@ export default function AdminAthleteDetail() {
       {/* Tab Selector */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
+          style={[styles.tab, activeTab === 'dafare' && styles.tabActive]}
+          onPress={() => setActiveTab('dafare')}
+          data-testid="admin-athlete-tab-dafare"
+        >
+          <Ionicons name="checkbox-outline" size={18} color={activeTab === 'dafare' ? '#007AFF' : '#666'} />
+          <Text style={[styles.tabText, activeTab === 'dafare' && styles.tabTextActive]}>Da fare</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
           style={[styles.tab, activeTab === 'dati' && styles.tabActive]}
           onPress={() => setActiveTab('dati')}
+          data-testid="admin-athlete-tab-anagrafica"
         >
           <Ionicons name="person" size={18} color={activeTab === 'dati' ? '#007AFF' : '#666'} />
-          <Text style={[styles.tabText, activeTab === 'dati' && styles.tabTextActive]}>Dati</Text>
+          <Text style={[styles.tabText, activeTab === 'dati' && styles.tabTextActive]}>Anagrafica</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[
@@ -1866,6 +1876,11 @@ export default function AdminAthleteDetail() {
               <Text style={styles.reactivateButtonText}>Riattiva</Text>
             </TouchableOpacity>
           </View>
+        )}
+
+        {/* 🆕 23/06/2026 — DA FARE TAB (impegni atleta 7 giorni) */}
+        {activeTab === 'dafare' && athlete && (
+          <AdminCoachCommitments athleteId={athlete.id} roleLabel="atleta" />
         )}
 
         {/* DATI TAB */}

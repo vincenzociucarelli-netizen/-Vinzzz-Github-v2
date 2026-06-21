@@ -12447,14 +12447,29 @@ async def get_coach_teams(current_user = Depends(get_current_user)):
 @api_router.get("/coach/commitments")
 async def get_coach_commitments(
     user_id: Optional[str] = None,
+    athlete_id: Optional[str] = None,
     current_user = Depends(get_current_user),
 ):
     """Get commitments (trainings + matches) for coach's teams - 7 days.
     🔧 22/06/2026 — Admin può passare ?user_id={coach_id} per vedere gli impegni di un altro coach.
+    🆕 23/06/2026 — Admin può passare ?athlete_id={ath_id} per vedere gli impegni di un atleta.
     """
-    # 🆕 Admin override: se admin passa user_id, carica il target_user al posto del current_user
+    # 🆕 Admin override: se admin passa user_id o athlete_id
     target_user = current_user
-    if user_id and current_user.get("role") == UserRole.ADMIN:
+    is_athlete_view = False
+    athlete_team_id = None
+
+    if athlete_id and current_user.get("role") == UserRole.ADMIN:
+        ath = await db.athletes.find_one({"id": athlete_id}, {"_id": 0})
+        if not ath:
+            raise HTTPException(status_code=404, detail="Atleta non trovato")
+        if current_user.get("society_id") and ath.get("society_id") and current_user["society_id"] != ath["society_id"]:
+            raise HTTPException(status_code=403, detail="Atleta di altra società")
+        is_athlete_view = True
+        athlete_team_id = ath.get("team_id")
+        # Fake a target_user shape
+        target_user = {**current_user, "society_id": ath.get("society_id"), "fiscal_code": ath.get("fiscal_code")}
+    elif user_id and current_user.get("role") == UserRole.ADMIN:
         tu = await db.users.find_one({"id": user_id}, {"_id": 0})
         if not tu:
             raise HTTPException(status_code=404, detail="Utente non trovato")
@@ -12462,11 +12477,25 @@ async def get_coach_commitments(
         if current_user.get("society_id") and tu.get("society_id") and current_user["society_id"] != tu["society_id"]:
             raise HTTPException(status_code=403, detail="Coach di altra società")
         target_user = tu
+        if tu.get("role") == UserRole.ATHLETE:
+            is_athlete_view = True
+    elif current_user["role"] == UserRole.ATHLETE:
+        is_athlete_view = True
     elif current_user["role"] not in (UserRole.COACH, UserRole.DIRIGENTE, UserRole.COLLABORATORE):
-        raise HTTPException(status_code=403, detail="Solo coach/dirigente/collaboratore può vedere gli impegni")
-    
-    # Get coach's assigned teams
-    team_ids = target_user.get("assigned_teams", [])
+        raise HTTPException(status_code=403, detail="Ruolo non autorizzato a vedere gli impegni")
+
+    # 🆕 23/06/2026 — Atleti: cerchiamo il loro team_id nel record athletes (no assigned_teams)
+    if is_athlete_view:
+        if athlete_team_id is not None:
+            team_ids = [athlete_team_id] if athlete_team_id else []
+        else:
+            athlete_doc = await db.athletes.find_one(
+                {"fiscal_code": target_user.get("fiscal_code")},
+                {"_id": 0, "team_id": 1, "society_id": 1},
+            )
+            team_ids = [athlete_doc["team_id"]] if athlete_doc and athlete_doc.get("team_id") else []
+    else:
+        team_ids = target_user.get("assigned_teams", [])
     
     if not team_ids:
         return {"today": [], "tomorrow": [], "day_after": [], "upcoming": []}
