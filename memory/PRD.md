@@ -16,6 +16,28 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 21/02/2026 — "Già Percepito" calendario completo + standardizzazione 4 figure ✅
+
+L'utente ha chiesto di rendere la modal "Gestione Quietanze" un calendario completo dei mesi di contratto: tutti i mesi visibili da subito, in grigio quando non firmati, colorati per soglia (€5k/€15k) quando firmati. Plus: l'Atleta Admin era l'unico senza il widget "Già Percepito" inline + modal.
+
+### Modifiche applicate
+- **`/admin/collaboratore/[id]`**: modal Gestione Quietanze ora itera su tutti i mesi del contratto (`contract_start_date` → `contract_end_date`); mesi non firmati = grigio "Non firmata"; widget Già Percepito sempre visibile se contratto definito.
+- **`/admin/coach/[id]`**: stessa logica calendario contratto in modal; widget sempre visibile.
+- **`/admin/dirigente/[id]`**: stessa logica calendario contratto in modal; widget sempre visibile.
+- **`/admin/athlete/[id]`** (NUOVO): aggiunti `signedReceipts` state, caricamento via `GET /api/athletes/{id}/compensation/receipts`, widget inline "Già Percepito" cliccabile, modal "📋 Gestione Quietanze" completa con Totale Percepito + calendario mesi (grigi + colorati per soglia). La sotto-route `/admin/athlete/[id]/compensation` resta intatta come standard di gestione.
+
+### UX risultato
+- A colpo d'occhio l'admin vede inizio e fine contratto e i mesi mancanti
+- Quando l'atleta firma una quietanza, il mese passa da grigio → verde (≤€5k) → arancio (>€5k) → viola (>€15k)
+- I 4 admin view delle figure pagate (Atleta PRO / Coach / Collaboratore / Dirigente) ora sono allineate
+
+### Test
+- Lint ✅ pulito su tutti e 4 i file
+- Smoke test backend ✅ (`/api/settings/society` → 200)
+- Verifica utente: in attesa di feedback in produzione
+
+
+
 ## 🆕 23/06/2026 (mattina) — Atleta-first: tab bar uniforme admin + user ✅
 
 L'utente ha chiesto di ripartire dall'Atleta 18+ con compensi come base, prima di affrontare lo zaino Coach. Stato attuale:

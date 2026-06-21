@@ -1062,8 +1062,8 @@ export default function AdminCollaboratoreDetail() {
                 </Text>
               </View>
               
-              {/* Totale già percepito (quietanze firmate) - Cliccabile */}
-              {signedReceipts.length > 0 && (
+              {/* Totale già percepito (quietanze firmate) - Cliccabile - sempre visibile se contratto definito */}
+              {contractStartDate && contractEndDate && (
                 <TouchableOpacity 
                   onPress={() => setQuietanzeModalVisible(true)}
                   style={{ marginTop: 12, padding: 12, backgroundColor: '#E3F2FD', borderRadius: 8, borderWidth: 1, borderColor: '#90CAF9' }}
@@ -1081,7 +1081,7 @@ export default function AdminCollaboratoreDetail() {
                     </View>
                   </View>
                   <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-                    {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate • Tocca per dettagli
+                    {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate • Tocca per vedere tutti i mesi
                   </Text>
                 </TouchableOpacity>
               )}
@@ -1970,28 +1970,69 @@ export default function AdminCollaboratoreDetail() {
                   }
                 }
                 
-                // Now render sorted by most recent first
-                const sortedForDisplay = [...onlySignedReceipts].sort((a: any, b: any) => {
+                // 🆕 Genera TUTTI i mesi del contratto (firmati e non) per visualizzazione completa
+                const MONTH_NAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+                const allMonths: Array<{ year: number; month: number; receipt: any | null }> = [];
+                const cStart = collaboratore?.contract_start_date;
+                const cEnd = collaboratore?.contract_end_date;
+                if (cStart && cEnd) {
+                  const [sy, sm] = cStart.split('-').map(Number);
+                  const [ey, em] = cEnd.split('-').map(Number);
+                  let y = sy, m = sm;
+                  while (y < ey || (y === ey && m <= em)) {
+                    const r = onlySignedReceipts.find((x: any) => x.year === y && x.month === m) || null;
+                    allMonths.push({ year: y, month: m, receipt: r });
+                    m++;
+                    if (m > 12) { m = 1; y++; }
+                  }
+                }
+                // Most recent first
+                const sortedAllMonths = [...allMonths].sort((a, b) => {
                   if (a.year !== b.year) return b.year - a.year;
                   return b.month - a.month;
                 });
-                
-                return sortedForDisplay.map((receipt: any, index: number) => {
-                  const MONTH_NAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
-                  
-                  // Check if this month is at or after threshold
+
+                return sortedAllMonths.map(({ year, month, receipt }, index: number) => {
+                  // Mese NON firmato → riga grigia placeholder
+                  if (!receipt) {
+                    return (
+                      <View
+                        key={`empty-${year}-${month}`}
+                        style={{
+                          backgroundColor: '#F5F5F5',
+                          paddingVertical: 8,
+                          paddingHorizontal: 10,
+                          marginBottom: 6,
+                          borderLeftWidth: 3,
+                          borderLeftColor: '#BDBDBD',
+                          borderRadius: 6,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text style={{ fontSize: 14, fontWeight: '500', color: '#9E9E9E' }}>
+                            {MONTH_NAMES[month]} {year}
+                          </Text>
+                          <Text style={{ fontSize: 12, color: '#9E9E9E', fontStyle: 'italic' }}>
+                            Non firmata
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  }
+
+                  // Mese FIRMATO → riga colorata in base alle soglie
                   const yearThresholds = thresholdsByYear[receipt.year] || { first5k: null, first15k: null };
                   const isAfter5k = yearThresholds.first5k !== null && receipt.month >= yearThresholds.first5k;
                   const isAfter15k = yearThresholds.first15k !== null && receipt.month >= yearThresholds.first15k;
                   const isThreshold5kMonth = yearThresholds.first5k === receipt.month;
                   const isThreshold15kMonth = yearThresholds.first15k === receipt.month;
-                  
+
                   return (
-                    <View 
-                      key={index} 
-                      style={{ 
+                    <View
+                      key={`signed-${receipt.year}-${receipt.month}-${index}`}
+                      style={{
                         backgroundColor: isAfter15k ? '#F3E5F5' : isAfter5k ? '#FFF8E1' : '#E8F5E9',
-                        paddingVertical: 8, 
+                        paddingVertical: 8,
                         paddingHorizontal: 10,
                         marginBottom: 6,
                         borderLeftWidth: 3,

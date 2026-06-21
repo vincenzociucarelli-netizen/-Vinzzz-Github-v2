@@ -257,6 +257,9 @@ export default function AdminAthleteDetail() {
   // Compensation data (for compensated athletes)
   const [compensation, setCompensation] = useState<any>(null);
   const [compensationModalVisible, setCompensationModalVisible] = useState(false);
+  // 🆕 21/06/2026 — Quietanze firmate (per widget "Già Percepito" + modal Gestione Quietanze)
+  const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
+  const [receiptsModalVisible, setReceiptsModalVisible] = useState(false);
   // Trial status data
   const [trialStatus, setTrialStatus] = useState<any>(null);
   const [compensationAmount, setCompensationAmount] = useState('');
@@ -447,6 +450,14 @@ export default function AdminAthleteDetail() {
           setCompensation(compRes.data);
         } catch (e) {
           setCompensation(null);
+        }
+        // 🆕 21/06/2026 — Carica anche le quietanze firmate (per widget "Già Percepito")
+        try {
+          const recRes = await api.get(`/athletes/${id}/compensation/receipts`);
+          const list = Array.isArray(recRes.data) ? recRes.data : (recRes.data?.records || []);
+          setSignedReceipts(list);
+        } catch (e) {
+          setSignedReceipts([]);
         }
         // 🆕 FASE 2B — Check se l'atleta è anche Coach (dual-role)
         try {
@@ -3168,6 +3179,32 @@ export default function AdminAthleteDetail() {
                     </View>
                   )}
 
+                  {/* 🆕 21/06/2026 — Widget "Già Percepito" (apre modal Gestione Quietanze) — sempre visibile per atleti pagati */}
+                  {athlete?.contract_start_date && athlete?.contract_end_date && (
+                    <TouchableOpacity
+                      style={{ marginTop: 12, padding: 12, backgroundColor: '#E3F2FD', borderRadius: 8, borderWidth: 1, borderColor: '#90CAF9' }}
+                      onPress={() => setReceiptsModalVisible(true)}
+                      activeOpacity={0.7}
+                      data-testid="admin-athlete-gia-percepito-btn"
+                    >
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <Text style={{ color: '#1565C0', fontWeight: '500' }}>💰 Già Percepito:</Text>
+                          <Ionicons name="chevron-forward" size={16} color="#1565C0" style={{ marginLeft: 4 }} />
+                        </View>
+                        <Text style={{ fontWeight: 'bold', color: '#1565C0', fontSize: 16 }}>
+                          {formatCurrency(signedReceipts
+                            .filter((r: any) => r.receipt_signed)
+                            .reduce((sum: number, r: any) => sum + (r.amount_gross || r.amount || 0), 0)
+                          )}
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                        {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate - Tocca per vedere tutti i mesi
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
                   {/* Button to compensation page */}
                   <TouchableOpacity 
                     style={styles.compensationButton}
@@ -4174,6 +4211,172 @@ export default function AdminAthleteDetail() {
                 )}
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 🆕 21/06/2026 — Modal "Gestione Quietanze" (mesi contratto: grigi + colorati per soglia) */}
+      <Modal
+        visible={receiptsModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setReceiptsModalVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '85%' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#333' }}>📋 Gestione Quietanze</Text>
+              <TouchableOpacity onPress={() => setReceiptsModalVisible(false)} data-testid="close-quietanze-modal">
+                <Ionicons name="close-circle" size={28} color="#999" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ padding: 12 }}>
+              {/* Totale Percepito */}
+              <View style={{ backgroundColor: '#E8F5E9', padding: 12, borderRadius: 10, marginBottom: 12 }}>
+                <Text style={{ color: '#2E7D32', fontWeight: '600', fontSize: 13 }}>💰 Totale Percepito</Text>
+                <Text style={{ color: '#2E7D32', fontWeight: 'bold', fontSize: 24, marginTop: 2 }}>
+                  {formatCurrency(signedReceipts
+                    .filter((r: any) => r.receipt_signed)
+                    .reduce((sum: number, r: any) => sum + (r.amount_gross || r.amount || 0), 0)
+                  )}
+                </Text>
+                <Text style={{ color: '#666', fontSize: 11 }}>
+                  {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate
+                </Text>
+              </View>
+
+              {/* Lista TUTTI i mesi del contratto: grigi (non firmati) + colorati (firmati con soglia) */}
+              {(() => {
+                const MONTH_NAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+                const onlySigned = signedReceipts.filter((r: any) => r.receipt_signed);
+
+                // Calcola soglie cronologiche per anno
+                const sortedForCalc = [...onlySigned].sort((a: any, b: any) => {
+                  if (a.year !== b.year) return a.year - b.year;
+                  return a.month - b.month;
+                });
+                const thresholdsByYear: { [year: number]: { first5k: number | null; first15k: number | null } } = {};
+                const cumulativeByYear: { [year: number]: number } = {};
+                const priorComp = athlete?.other_annual_compensation || 0;
+                const contractYear = athlete?.contract_start_date ? parseInt(String(athlete.contract_start_date).split('-')[0]) : new Date().getFullYear();
+                if (priorComp > 0) cumulativeByYear[contractYear] = priorComp;
+                for (const r of sortedForCalc) {
+                  if (!thresholdsByYear[r.year]) thresholdsByYear[r.year] = { first5k: null, first15k: null };
+                  if (!cumulativeByYear[r.year]) cumulativeByYear[r.year] = r.year === contractYear ? (priorComp || 0) : 0;
+                  cumulativeByYear[r.year] += (r.amount_gross || r.amount || 0);
+                  if (cumulativeByYear[r.year] > 5000 && thresholdsByYear[r.year].first5k === null) {
+                    thresholdsByYear[r.year].first5k = r.month;
+                  }
+                  if (cumulativeByYear[r.year] > 15000 && thresholdsByYear[r.year].first15k === null) {
+                    thresholdsByYear[r.year].first15k = r.month;
+                  }
+                }
+
+                // Genera TUTTI i mesi del contratto
+                const allMonths: Array<{ year: number; month: number; receipt: any | null }> = [];
+                const cStart = athlete?.contract_start_date;
+                const cEnd = athlete?.contract_end_date;
+                if (cStart && cEnd) {
+                  const [sy, sm] = String(cStart).split('-').map(Number);
+                  const [ey, em] = String(cEnd).split('-').map(Number);
+                  let y = sy, m = sm;
+                  while (y < ey || (y === ey && m <= em)) {
+                    const r = onlySigned.find((x: any) => x.year === y && x.month === m) || null;
+                    allMonths.push({ year: y, month: m, receipt: r });
+                    m++;
+                    if (m > 12) { m = 1; y++; }
+                  }
+                }
+                // Most recent first
+                const sortedAllMonths = [...allMonths].sort((a, b) => {
+                  if (a.year !== b.year) return b.year - a.year;
+                  return b.month - a.month;
+                });
+
+                if (sortedAllMonths.length === 0) {
+                  return (
+                    <View style={{ padding: 20, alignItems: 'center' }}>
+                      <Text style={{ color: '#999', fontStyle: 'italic' }}>
+                        Nessun contratto attivo: imposta date contratto per vedere i mesi.
+                      </Text>
+                    </View>
+                  );
+                }
+
+                return sortedAllMonths.map(({ year, month, receipt }, index: number) => {
+                  if (!receipt) {
+                    return (
+                      <View
+                        key={`empty-${year}-${month}`}
+                        style={{
+                          backgroundColor: '#F5F5F5',
+                          paddingVertical: 8,
+                          paddingHorizontal: 10,
+                          marginBottom: 6,
+                          borderLeftWidth: 3,
+                          borderLeftColor: '#BDBDBD',
+                          borderRadius: 6,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text style={{ fontSize: 14, fontWeight: '500', color: '#9E9E9E' }}>
+                            {MONTH_NAMES[month]} {year}
+                          </Text>
+                          <Text style={{ fontSize: 12, color: '#9E9E9E', fontStyle: 'italic' }}>
+                            Non firmata
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  }
+
+                  const yearThresholds = thresholdsByYear[receipt.year] || { first5k: null, first15k: null };
+                  const isAfter5k = yearThresholds.first5k !== null && receipt.month >= yearThresholds.first5k;
+                  const isAfter15k = yearThresholds.first15k !== null && receipt.month >= yearThresholds.first15k;
+                  const isThreshold5kMonth = yearThresholds.first5k === receipt.month;
+                  const isThreshold15kMonth = yearThresholds.first15k === receipt.month;
+
+                  return (
+                    <View
+                      key={`signed-${receipt.year}-${receipt.month}-${index}`}
+                      style={{
+                        backgroundColor: isAfter15k ? '#F3E5F5' : isAfter5k ? '#FFF8E1' : '#E8F5E9',
+                        paddingVertical: 8,
+                        paddingHorizontal: 10,
+                        marginBottom: 6,
+                        borderLeftWidth: 3,
+                        borderLeftColor: isAfter15k ? '#8E44AD' : isAfter5k ? '#FF9800' : '#4CAF50',
+                        borderRadius: 6,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                          <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>
+                            {MONTH_NAMES[receipt.month]} {receipt.year}
+                          </Text>
+                          {isThreshold5kMonth && !isThreshold15kMonth && (
+                            <View style={{ backgroundColor: '#FF9800', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 6 }}>
+                              <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>&gt;5K</Text>
+                            </View>
+                          )}
+                          {isThreshold15kMonth && (
+                            <View style={{ backgroundColor: '#8E44AD', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 6 }}>
+                              <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>&gt;15K</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#2E7D32' }}>
+                          {formatCurrency((receipt.amount_gross || receipt.amount || 0))}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                });
+              })()}
+
+              <View style={{ height: 20 }} />
+            </ScrollView>
           </View>
         </View>
       </Modal>

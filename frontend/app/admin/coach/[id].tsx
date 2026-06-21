@@ -1724,8 +1724,8 @@ export default function AdminCoachDetail() {
           )}
 
           
-          {/* 🆕 22/06/2026 — "Già Percepito" riattivato (sostituisce il semaforo mesi) */}
-          {signedReceipts.filter((r: any) => r.receipt_signed).length > 0 && (
+          {/* 🆕 22/06/2026 — "Già Percepito" sempre visibile se contratto definito (apre modal con mesi grigi+colorati) */}
+          {coach?.contract_start_date && coach?.contract_end_date && (
             <TouchableOpacity 
               style={{ marginTop: 12, padding: 12, backgroundColor: '#E3F2FD', borderRadius: 8, borderWidth: 1, borderColor: '#90CAF9' }}
               onPress={() => setReceiptsModalVisible(true)}
@@ -2349,28 +2349,69 @@ export default function AdminCoachDetail() {
                   }
                 }
                 
-                // Now render sorted by most recent first
-                const sortedForDisplay = [...signedOnly].sort((a: any, b: any) => {
+                // 🆕 Genera TUTTI i mesi del contratto (firmati e non) per visualizzazione completa
+                const MONTH_NAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+                const allMonths: Array<{ year: number; month: number; receipt: any | null }> = [];
+                const cStart = coach?.contract_start_date;
+                const cEnd = coach?.contract_end_date;
+                if (cStart && cEnd) {
+                  const [sy, sm] = cStart.split('-').map(Number);
+                  const [ey, em] = cEnd.split('-').map(Number);
+                  let y = sy, m = sm;
+                  while (y < ey || (y === ey && m <= em)) {
+                    const r = signedOnly.find((x: any) => x.year === y && x.month === m) || null;
+                    allMonths.push({ year: y, month: m, receipt: r });
+                    m++;
+                    if (m > 12) { m = 1; y++; }
+                  }
+                }
+                // Most recent first
+                const sortedAllMonths = [...allMonths].sort((a, b) => {
                   if (a.year !== b.year) return b.year - a.year;
                   return b.month - a.month;
                 });
-                
-                return sortedForDisplay.map((receipt: any, index: number) => {
-                  const MONTH_NAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
-                  
-                  // Check if this month is at or after threshold
+
+                return sortedAllMonths.map(({ year, month, receipt }, index: number) => {
+                  // Mese NON firmato → riga grigia placeholder
+                  if (!receipt) {
+                    return (
+                      <View
+                        key={`empty-${year}-${month}`}
+                        style={{
+                          backgroundColor: '#F5F5F5',
+                          paddingVertical: 8,
+                          paddingHorizontal: 10,
+                          marginBottom: 6,
+                          borderLeftWidth: 3,
+                          borderLeftColor: '#BDBDBD',
+                          borderRadius: 6,
+                        }}
+                      >
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text style={{ fontSize: 14, fontWeight: '500', color: '#9E9E9E' }}>
+                            {MONTH_NAMES[month]} {year}
+                          </Text>
+                          <Text style={{ fontSize: 12, color: '#9E9E9E', fontStyle: 'italic' }}>
+                            Non firmata
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  }
+
+                  // Mese FIRMATO → riga colorata in base alle soglie
                   const yearThresholds = thresholdsByYear[receipt.year] || { first5k: null, first15k: null };
                   const isAfter5k = yearThresholds.first5k !== null && receipt.month >= yearThresholds.first5k;
                   const isAfter15k = yearThresholds.first15k !== null && receipt.month >= yearThresholds.first15k;
                   const isThreshold5kMonth = yearThresholds.first5k === receipt.month;
                   const isThreshold15kMonth = yearThresholds.first15k === receipt.month;
-                  
+
                   return (
-                    <View 
-                      key={index} 
-                      style={{ 
+                    <View
+                      key={`signed-${receipt.year}-${receipt.month}-${index}`}
+                      style={{
                         backgroundColor: isAfter15k ? '#F3E5F5' : isAfter5k ? '#FFF8E1' : '#E8F5E9',
-                        paddingVertical: 8, 
+                        paddingVertical: 8,
                         paddingHorizontal: 10,
                         marginBottom: 6,
                         borderLeftWidth: 3,
