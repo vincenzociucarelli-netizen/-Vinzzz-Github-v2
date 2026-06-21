@@ -1414,8 +1414,8 @@ export default function AdminCoachDetail() {
               )}
             </View>
 
-            {/* Threshold Warnings for Admin — 🚫 14/06/2026: nascosto, sostituito dal Riepilogo Compensi Doppio Ruolo */}
-            {false && (thresholdStatus || thresholdStatus2) && (
+            {/* 🆕 22/06/2026 — Threshold Warnings/Signed Banners riattivati per parità con vista Collaboratore */}
+            {(thresholdStatus || thresholdStatus2) && (
               <View style={{ marginTop: 8, gap: 10 }}>
                 {/* Warning: approaching €5.000 - YEAR 1 */}
                 {thresholdStatus?.thresholds?.['5000']?.needs_warning && !thresholdStatus?.thresholds?.['5000']?.declaration_signed && (
@@ -1652,7 +1652,8 @@ export default function AdminCoachDetail() {
           )}
 
           {/* Threshold Warnings — 🚫 14/06/2026: nascosto, sostituito dal Riepilogo Compensi Doppio Ruolo */}
-          {false && !editing && (thresholdStatus || thresholdStatus2) && (
+          {/* 🆕 22/06/2026 — Threshold Status section (view mode) riattivato per parità con vista Collaboratore */}
+          {!editing && (thresholdStatus || thresholdStatus2) && (
             <View style={{ marginTop: 12, gap: 10 }}>
               {/* Warning: approaching €5.000 - YEAR 1 */}
               {thresholdStatus?.thresholds?.['5000']?.needs_warning && !thresholdStatus?.thresholds?.['5000']?.declaration_signed && (

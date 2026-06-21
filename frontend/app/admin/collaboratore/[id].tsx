@@ -648,12 +648,12 @@ export default function AdminCollaboratoreDetail() {
         <TabSection tab="impegni" activeTab={activeTab}>
           <AdminCoachCommitments userId={collaboratore.id} roleLabel="collaboratore" />
 
-          {/* 🆕 22/06/2026 — Squadre Assegnate (stile identico alla vista Coach) */}
+          {/* 🆕 22/06/2026 — Squadre + Palestre Assegnate (stile identico alla vista Coach) */}
           <View style={styles.card}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <SportIcon size={20} />
-                <Text style={[styles.cardTitle, { marginLeft: 6, marginTop: 0 }]}>Squadre Assegnate</Text>
+                <Text style={[styles.cardTitle, { marginLeft: 6, marginTop: 0 }]}>Squadre & Palestre</Text>
               </View>
               <TouchableOpacity onPress={() => setEditingTeamsInline(!editingTeamsInline)} data-testid="admin-coll-teams-edit-btn">
                 <Ionicons name={editingTeamsInline ? 'close' : 'create'} size={22} color="#007AFF" />
@@ -662,9 +662,7 @@ export default function AdminCollaboratoreDetail() {
 
             {editingTeamsInline ? (
               <View style={{ marginTop: 8 }}>
-                <Text style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>
-                  Seleziona le squadre da assegnare al collaboratore:
-                </Text>
+                <Text style={{ fontSize: 13, color: '#666', marginBottom: 6, fontWeight: '600' }}>⚽ Squadre:</Text>
                 {teams.map((team) => {
                   const isAssigned = selectedTeamIds.includes(team.id);
                   return (
@@ -680,7 +678,7 @@ export default function AdminCollaboratoreDetail() {
                       style={{
                         flexDirection: 'row',
                         alignItems: 'center',
-                        paddingVertical: 8,
+                        paddingVertical: 6,
                         paddingHorizontal: 6,
                         borderRadius: 8,
                         backgroundColor: isAssigned ? '#E3F2FD' : '#fff',
@@ -698,21 +696,65 @@ export default function AdminCollaboratoreDetail() {
                     </TouchableOpacity>
                   );
                 })}
+
+                <Text style={{ fontSize: 13, color: '#666', marginTop: 10, marginBottom: 6, fontWeight: '600' }}>🏟️ Palestre:</Text>
+                {availableVenues.length === 0 ? (
+                  <Text style={{ fontSize: 12, color: '#999', fontStyle: 'italic' }}>Nessuna palestra configurata in Impostazioni.</Text>
+                ) : (
+                  availableVenues.map((venue) => {
+                    const isAssigned = selectedVenueNames.includes(venue.name);
+                    return (
+                      <TouchableOpacity
+                        key={venue.name}
+                        onPress={() => {
+                          if (isAssigned) {
+                            setSelectedVenueNames(selectedVenueNames.filter((v) => v !== venue.name));
+                          } else {
+                            setSelectedVenueNames([...selectedVenueNames, venue.name]);
+                          }
+                        }}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          paddingVertical: 6,
+                          paddingHorizontal: 6,
+                          borderRadius: 8,
+                          backgroundColor: isAssigned ? '#FFF3E0' : '#fff',
+                          marginBottom: 4,
+                        }}
+                      >
+                        <Ionicons
+                          name={isAssigned ? 'checkbox' : 'square-outline'}
+                          size={22}
+                          color={isAssigned ? '#FF9500' : '#999'}
+                        />
+                        <Text style={{ marginLeft: 10, fontSize: 14, color: isAssigned ? '#E65100' : '#333', fontWeight: isAssigned ? '600' : '400' }}>
+                          {venue.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
+
                 <TouchableOpacity
                   style={{ marginTop: 10, backgroundColor: '#9C27B0', borderRadius: 8, padding: 12, alignItems: 'center' }}
                   onPress={async () => {
                     try {
-                      await api.patch(`/users/${id}`, { assigned_teams: selectedTeamIds });
+                      await api.patch(`/users/${id}`, {
+                        assigned_teams: selectedTeamIds,
+                        assigned_venues: selectedVenueNames,
+                      });
                       setOriginalTeamIds([...selectedTeamIds]);
+                      setOriginalVenueNames([...selectedVenueNames]);
                       setEditingTeamsInline(false);
                       if (Platform.OS === 'web') {
                         const banner = document.createElement('div');
-                        banner.textContent = '✓ Squadre salvate';
+                        banner.textContent = '✓ Assegnazioni salvate';
                         banner.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#4CAF50;color:white;padding:12px 24px;border-radius:8px;z-index:9999;font-weight:600;';
                         document.body.appendChild(banner);
                         setTimeout(() => banner.remove(), 2000);
                       } else {
-                        Alert.alert('Successo', 'Squadre salvate');
+                        Alert.alert('Successo', 'Assegnazioni salvate');
                       }
                     } catch (e: any) {
                       showAlert('Errore', e.response?.data?.detail || 'Errore salvataggio');
@@ -720,15 +762,28 @@ export default function AdminCollaboratoreDetail() {
                   }}
                   data-testid="admin-coll-teams-save-btn"
                 >
-                  <Text style={{ color: '#fff', fontWeight: '700' }}>💾 Salva Squadre</Text>
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>💾 Salva Assegnazioni</Text>
                 </TouchableOpacity>
               </View>
             ) : (
-              <Text style={{ marginTop: 8, color: '#1565C0', fontSize: 14, fontWeight: '500' }}>
-                {selectedTeamIds.length === 0
-                  ? 'Nessuna squadra assegnata'
-                  : teams.filter((t) => selectedTeamIds.includes(t.id)).map((t) => t.name).join(', ')}
-              </Text>
+              <View style={{ marginTop: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 }}>
+                  <Text style={{ fontSize: 13, color: '#666', fontWeight: '600', marginRight: 6, minWidth: 70 }}>⚽ Squadre:</Text>
+                  <Text style={{ flex: 1, color: '#1565C0', fontSize: 14, fontWeight: '500' }}>
+                    {selectedTeamIds.length === 0
+                      ? 'Nessuna squadra assegnata'
+                      : teams.filter((t) => selectedTeamIds.includes(t.id)).map((t) => t.name).join(', ')}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                  <Text style={{ fontSize: 13, color: '#666', fontWeight: '600', marginRight: 6, minWidth: 70 }}>🏟️ Palestre:</Text>
+                  <Text style={{ flex: 1, color: '#E65100', fontSize: 14, fontWeight: '500' }}>
+                    {selectedVenueNames.length === 0
+                      ? 'Nessuna palestra assegnata'
+                      : selectedVenueNames.join(', ')}
+                  </Text>
+                </View>
+              </View>
             )}
           </View>
         </TabSection>

@@ -16,6 +16,30 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 22/06/2026 (notte 5) — Palestre Assegnate (Collaboratore) + Status Dichiarazioni Soglie (Coach) ✅
+
+### A. Admin Collaboratore — card "Da fare" estesa
+La card "Squadre Assegnate" è ora **"Squadre & Palestre"**:
+- ⚽ Squadre: lista in blu (Under 14, Under 16, MiniVolley…)
+- 🏟️ Palestre: lista in arancio (Palestra Liceo Alessi, Palestra Nuova Alessi, PalaPellini)
+- Pencil ✏️ → edit mode con checkbox per squadre + checkbox per palestre + bottone "Salva Assegnazioni"
+- PATCH `/users/{id}` con `assigned_teams` + `assigned_venues`
+
+### B. Admin Coach (tab Compensi) — Status Dichiarazioni Soglie
+Riattivata (rimosso `false &&`) la sezione **"Status Dichiarazioni €5.000 / €15.000"** già presente nel codice. Ora il Coach Admin vista mostra le stesse card del Collaboratore:
+- ✅ Anno X: Dichiarazione €5.000 firmata + mese di superamento (verde se anno start, blu se anno end)
+- ✅ Anno X: Dichiarazione €15.000 firmata + mese di superamento
+- ⚠️ Anno X: Soglia dei €5.000 (warning se in avvicinamento)
+- 🚨 Anno X: Soglia dei €15.000 (warning)
+
+### Verifica
+- ✅ Screenshot Admin Collaboratore PAOLI PAOLO: card "Squadre & Palestre" mostra entrambe le liste.
+- ✅ Screenshot Admin Coach FARO REMO (tab Compensi): le 4 dichiarazioni firmate (2025 5k/15k + 2026 5k/15k) compaiono tra i box Anno Solare e "Già Percepito".
+
+### File toccati
+- `/app/frontend/app/admin/collaboratore/[id].tsx` (estesa card Squadre con sezione Palestre)
+- `/app/frontend/app/admin/coach/[id].tsx` (rimosso `false &&` dal blocco threshold-status view-mode, riga 1655)
+
 ## 🆕 22/06/2026 (notte 4) — Admin Collaboratore: sostituita la card placeholder "Stagione" con "Squadre Assegnate" ✅
 
 L'utente ha chiesto di rimuovere il placeholder "🏆 Stagione - Mansioni assegnate, ruolo nella stagione, ..." dalla vista admin del collaboratore. Implementata la stessa card "Squadre Assegnate" usata nella vista admin del coach: lista squadre in blu + pencil ✏️ → edit mode con checkbox + bottone Salva (PATCH /api/users/{id} con `assigned_teams`).
