@@ -1831,7 +1831,8 @@ export default function AdminAthleteDetail() {
             athleteType === 'compensated' && styles.tabGold,
             athleteType === 'compensated' && activeTab === 'pagamenti' && styles.tabGoldActive
           ]}
-          onPress={() => setActiveTab('pagamenti')}
+          onPress={() => router.push(`/admin/athlete/${id}/compensation`)}
+          data-testid="admin-athlete-tab-compensi"
         >
           <Ionicons 
             name={athleteType === 'compensated' ? "trophy" : "card"} 
@@ -3147,19 +3148,7 @@ export default function AdminAthleteDetail() {
                     </View>
                   </View>
 
-                  {/* 🆕 Banner informativo: dati anagrafici modificabili solo dalla scheda atleta standard */}
-                  <View style={{
-                    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-                    backgroundColor: '#FFF8E1', borderLeftWidth: 3, borderLeftColor: '#F9A825',
-                    borderRadius: 8, padding: 10, marginTop: 12, marginBottom: 4,
-                  }}>
-                    <Ionicons name="information-circle" size={18} color="#B07900" style={{ marginTop: 1 }} />
-                    <Text style={{ flex: 1, fontSize: 12, color: '#5D4E00', lineHeight: 17 }}>
-                      <Text style={{ fontWeight: '700' }}>Nota: </Text>
-                      I dati anagrafici (nome, cognome, codice fiscale, residenza, telefono, certificato medico) si modificano dalla{' '}
-                      <Text style={{ fontWeight: '700' }}>scheda standard dell'atleta</Text>. Qui sotto trovi solo i dati relativi al rapporto di compenso (contratto, importo, quietanze).
-                    </Text>
-                  </View>
+                  {/* 🗑️ 23/06/2026 — Nota rimossa (era informativa, non più necessaria) */}
 
                   {/* Quick Stats */}
                   {athlete && (
