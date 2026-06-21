@@ -10,6 +10,7 @@ import {
   Platform,
   Modal,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
@@ -131,6 +132,11 @@ export default function CollaboratoreCompensation() {
   const [contractStartMonth, setContractStartMonth] = useState<number | null>(null);
   const [contractEndMonth, setContractEndMonth] = useState<number | null>(null);
   const [priorCompensation, setPriorCompensation] = useState(0);
+  // 🆕 23/06/2026 — Card "Azioni Compenso" (Pregressi + Accettazione) migrata da /collaboratore/profile
+  const [editingPrior, setEditingPrior] = useState(false);
+  const [priorDraft, setPriorDraft] = useState('0');
+  const [savingPrior, setSavingPrior] = useState(false);
+  const [acceptingComp, setAcceptingComp] = useState(false);
   
   // Threshold status per year
   const [thresholdStatus, setThresholdStatus] = useState<ThresholdStatus | null>(null);
@@ -192,6 +198,43 @@ export default function CollaboratoreCompensation() {
   useEffect(() => {
     loadData();
   }, [currentYear]);
+
+  // 🆕 23/06/2026 — Salvataggio compensi pregressi (migrato da /collaboratore/profile)
+  const handleSavePrior = async () => {
+    const parsed = parseFloat((priorDraft || '0').replace(',', '.'));
+    if (Number.isNaN(parsed) || parsed < 0) {
+      Alert.alert('Errore', 'Inserisci un importo valido (numero ≥ 0).');
+      return;
+    }
+    try {
+      setSavingPrior(true);
+      await api.patch('/auth/me', { other_annual_compensation: parsed });
+      setPriorCompensation(parsed);
+      setProfile((prev: any) => prev ? { ...prev, other_annual_compensation: parsed } : prev);
+      setEditingPrior(false);
+      Alert.alert('Salvato', 'Compensi pregressi aggiornati.');
+    } catch (err) {
+      console.error('Errore salvataggio pregressi:', err);
+      Alert.alert('Errore', 'Impossibile salvare. Riprova.');
+    } finally {
+      setSavingPrior(false);
+    }
+  };
+
+  // 🆕 23/06/2026 — Accettazione compenso (migrato da /collaboratore/profile)
+  const handleAcceptCompensation = async () => {
+    try {
+      setAcceptingComp(true);
+      await api.patch('/auth/me', { compensation_accepted: true });
+      setProfile((prev: any) => prev ? { ...prev, compensation_accepted: true } : prev);
+      Alert.alert('Compenso accettato', 'La tua accettazione è stata registrata.');
+    } catch (err) {
+      console.error('Errore accettazione compenso:', err);
+      Alert.alert('Errore', 'Impossibile accettare il compenso. Riprova.');
+    } finally {
+      setAcceptingComp(false);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -1280,6 +1323,96 @@ export default function CollaboratoreCompensation() {
           </TouchableOpacity>
         </View>
         
+        {/* 🆕 23/06/2026 — Card "Azioni Compenso" migrata da /collaboratore/profile (Pregressi + Accettazione) */}
+        {(profile?.monthly_compensation ?? 0) > 0 && (
+          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E5E7EB' }} data-testid="coll-compensation-actions">
+            <Text style={{ fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 12 }}>💼 Azioni Compenso</Text>
+
+            {/* Compensi Pregressi */}
+            <View style={{ marginBottom: 14 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#6B7280', letterSpacing: 0.5 }}>COMPENSI PREGRESSI (NELL'ANNO)</Text>
+              {editingPrior ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
+                  <Text style={{ fontSize: 18, marginRight: 6, color: '#1F2937' }}>€</Text>
+                  <TextInput
+                    style={{ flex: 1, minWidth: 100, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 16, color: '#1F2937', backgroundColor: '#fff' }}
+                    value={priorDraft}
+                    onChangeText={setPriorDraft}
+                    keyboardType="numeric"
+                    placeholder="0.00"
+                    placeholderTextColor="#999"
+                    data-testid="prior-comp-input"
+                    testID="prior-comp-input"
+                  />
+                  <TouchableOpacity
+                    style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: '#34C759', marginLeft: 8, flexDirection: 'row', alignItems: 'center' }}
+                    onPress={handleSavePrior}
+                    disabled={savingPrior}
+                    data-testid="prior-comp-save"
+                  >
+                    {savingPrior ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Salva</Text>}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: '#9CA3AF', marginLeft: 6 }}
+                    onPress={() => { setEditingPrior(false); setPriorDraft(String(priorCompensation)); }}
+                    disabled={savingPrior}
+                    data-testid="prior-comp-cancel"
+                  >
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Annulla</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                  <Text style={{ fontSize: 20, fontWeight: '700', color: '#1F2937' }}>{formatCurrency(priorCompensation)}</Text>
+                  <TouchableOpacity
+                    style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: '#1565C0', marginLeft: 12, flexDirection: 'row', alignItems: 'center' }}
+                    onPress={() => { setPriorDraft(String(priorCompensation)); setEditingPrior(true); }}
+                    data-testid="prior-comp-edit"
+                  >
+                    <Ionicons name="create-outline" size={16} color="#fff" />
+                    <Text style={{ color: '#fff', marginLeft: 4, fontWeight: '700', fontSize: 13 }}>Modifica</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              <Text style={{ fontSize: 11, color: '#6B7280', marginTop: 6, fontStyle: 'italic', lineHeight: 16 }}>
+                Importo totale di compensi sportivi già percepiti nell'anno corrente (per il calcolo delle soglie fiscali €5k/€15k).
+              </Text>
+            </View>
+
+            {/* Accettazione compenso */}
+            {!profile?.compensation_accepted ? (
+              <View>
+                <View style={{ backgroundColor: '#FFF3CD', padding: 12, borderRadius: 8, marginBottom: 10, borderLeftWidth: 4, borderLeftColor: '#FF9500', flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="warning" size={18} color="#856404" />
+                  <Text style={{ color: '#856404', fontSize: 13, fontWeight: '500', marginLeft: 8, flex: 1 }}>
+                    Il tuo compenso mensile richiede accettazione. Clicca il pulsante qui sotto per confermare.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#34C759', padding: 14, borderRadius: 10 }}
+                  onPress={handleAcceptCompensation}
+                  disabled={acceptingComp}
+                  data-testid="accept-compensation-btn"
+                >
+                  {acceptingComp ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15, marginLeft: 8 }}>Accetta Compenso {formatCurrency(profile?.monthly_compensation || 0)}</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#E8F5E9', padding: 12, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: '#34C759' }} data-testid="compensation-accepted-badge">
+                <Ionicons name="checkmark-circle" size={18} color="#34C759" />
+                <Text style={{ color: '#2E7D32', fontWeight: '700', marginLeft: 8 }}>Compenso Accettato</Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Year Summaries - Contract-based - ENHANCED STYLE */}
         {contractStartYear && contractEndYear && (
           <>

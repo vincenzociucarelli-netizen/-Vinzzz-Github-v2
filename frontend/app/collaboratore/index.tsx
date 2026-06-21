@@ -75,6 +75,8 @@ export default function CollaboratoreHome() {
   const { user, logout } = useAuthStore();
   const [data, setData] = useState<Commitments | null>(null);
   const [loading, setLoading] = useState(true);
+  // 🆕 23/06/2026 — Sezione "Prossimi giorni" collassabile (default chiusa per risparmiare spazio)
+  const [upcomingOpen, setUpcomingOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -177,7 +179,21 @@ export default function CollaboratoreHome() {
               <DayBlock title="Domani" items={data?.tomorrow || []} emoji="🟠" />
               <DayBlock title="Dopodomani" items={data?.day_after || []} emoji="🟡" />
               {(data?.upcoming || []).length > 0 && (
-                <DayBlock title={`Prossimi giorni (${data!.upcoming.length})`} items={data!.upcoming} emoji="📅" />
+                <View>
+                  <TouchableOpacity
+                    onPress={() => setUpcomingOpen(!upcomingOpen)}
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F3F4F6', padding: 10, borderRadius: 8, marginTop: 6 }}
+                    data-testid="coll-upcoming-toggle"
+                  >
+                    <Text style={{ fontWeight: '700', color: '#1F2937', fontSize: 14 }}>📅 Prossimi giorni ({data!.upcoming.length})</Text>
+                    <Ionicons name={upcomingOpen ? 'chevron-up' : 'chevron-down'} size={20} color="#1F2937" />
+                  </TouchableOpacity>
+                  {upcomingOpen && (
+                    <View style={{ marginTop: 6 }}>
+                      <DayBlock title="" items={data!.upcoming} emoji="📅" />
+                    </View>
+                  )}
+                </View>
               )}
             </>
           )}

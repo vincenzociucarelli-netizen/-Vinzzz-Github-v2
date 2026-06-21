@@ -34,7 +34,10 @@
 - Squadra: Serie C
 - Stato: email_verified=true, is_approved=true (inserito manualmente il 17/05/2026 perché viola@test.com era un placeholder fittizio per test)
 
-## Coach (FARO REMO)
+## Collaboratore (PAOLI PAOLO)
+- Email: paolo@coll.com
+- Password: PaoloTest123 (resettata 23/06/2026 per test)
+- ID: 69ac95a48e1e15f961f9c86d
 - Email: remo@coach.com
 - Password: FaroTest123 (resettata 22/06/2026 per test enforcement cronologico)
 - Note: compenso mensile 3000€, contratto 01/09/2025 - 30/06/2026, dual-role coach con quietanze firmate fino a Mar 2026.

@@ -1119,76 +1119,7 @@ Società sportiva: ${societyName}
           )}
         </View>
 
-        {/* Compensation Info */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>💰 Compenso Mensile</Text>
-          <View style={styles.fieldContainer}>
-            <Text style={styles.compensationAmount}>
-              {profileData.monthly_compensation > 0 
-                ? `€ ${profileData.monthly_compensation.toFixed(2)}`
-                : 'Non ancora impostato'}
-            </Text>
-          </View>
-          
-          {/* Prior Compensation Field */}
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>COMPENSI PREGRESSI (NELL'ANNO)</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-              <Text style={{ fontSize: 18, marginRight: 4 }}>€</Text>
-              <TextInput
-                style={[styles.input, { flex: 1, paddingVertical: 10, fontSize: 18 }]}
-                value={editData.other_annual_compensation?.toString() || '0'}
-                onChangeText={(text) => {
-                  const numValue = parseFloat(text.replace(',', '.')) || 0;
-                  setEditData({...editData, other_annual_compensation: numValue});
-                }}
-                keyboardType="numeric"
-                placeholder="0.00"
-                placeholderTextColor="#999"
-              />
-            </View>
-            <Text style={{ fontSize: 11, color: '#666', marginTop: 4, fontStyle: 'italic' }}>
-              Inserisci l'importo totale di compensi sportivi già percepiti nell'anno corrente (per il calcolo delle soglie fiscali)
-            </Text>
-          </View>
-          
-          {profileData.monthly_compensation > 0 && !profileData.compensation_accepted && (
-            <View style={{ marginBottom: 12 }}>
-              <View style={{ backgroundColor: '#FFF3CD', padding: 12, borderRadius: 8, marginBottom: 10, borderLeftWidth: 4, borderLeftColor: '#FF9500' }}>
-                <Text style={{ color: '#856404', fontSize: 13, fontWeight: '500' }}>
-                  ⚠️ Il tuo compenso mensile richiede accettazione. Clicca il pulsante qui sotto per confermare.
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.acceptButton}
-                onPress={handleAcceptCompensation}
-              >
-                <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                <Text style={styles.acceptButtonText}>Accetta Compenso {formatCurrency(profileData.monthly_compensation)}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {profileData.compensation_accepted && (
-            <View style={styles.acceptedBadge}>
-              <Ionicons name="checkmark-circle" size={18} color="#34C759" />
-              <Text style={styles.acceptedBadgeText}>Compenso Accettato</Text>
-            </View>
-          )}
-
-          {/* Link to Compensation Page with Receipts */}
-          {profileData.monthly_compensation > 0 && profileData.compensation_accepted && (
-            <TouchableOpacity
-              style={styles.compensationLinkButton}
-              onPress={() => router.push('/collaboratore/compensation')}
-              data-testid="compensation-receipts-btn"
-            >
-              <Ionicons name="document-text" size={22} color="#fff" />
-              <Text style={styles.compensationLinkText}>Quietanze Mensili</Text>
-              <Ionicons name="chevron-forward" size={22} color="#fff" />
-            </TouchableOpacity>
-          )}
-        </View>
+        {/* 🗑️ 23/06/2026 — Card "Compenso Mensile + Pregressi + Quietanze" rimossa (migrata in /collaboratore/compensation) */}
 
         {/* Assegnazioni - Squadre e Palestre */}
         {(profileData.assigned_teams.length > 0 || profileData.assigned_venues.length > 0) && (

@@ -16,6 +16,26 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 23/06/2026 (mattina) — Collaboratore user-side: cleanup profilo + "Azioni Compenso" + Prossimi giorni collassabile ✅
+
+L'utente ha segnalato 3 fix sul lato user del collaboratore:
+
+1. **Prossimi giorni → collassabile** (`/app/frontend/app/collaboratore/index.tsx`): la sezione "📅 Prossimi giorni (N)" è ora un toggle con `useState(false)` di default, chevron up/down e item visibili solo quando aperto. Risparmio spazio nella dashboard "Da fare".
+2. **Card "Compenso Mensile + Pregressi" → spostata da `/collaboratore/profile` a `/collaboratore/compensation`**: nuovo blocco "💼 Azioni Compenso" identico a `/coach/compensation`, con:
+   - "COMPENSI PREGRESSI (NELL'ANNO)" editabile (€, TextInput numerico, Modifica/Salva/Annulla) → PATCH `/auth/me { other_annual_compensation }`
+   - Accetta Compenso button (se non ancora accettato) + badge "✅ Compenso Accettato" → PATCH `/auth/me { compensation_accepted: true }`
+3. **Profile "Quietanze Mensili" link → rimosso**: la card duplicata "💰 Compenso Mensile" + bottone "Quietanze Mensili" è stata interamente cancellata da `/collaboratore/profile` (era già presente nella compensation page).
+
+### Verifica
+- ✅ Screenshot `/collaboratore` (dashboard): toggle "📅 Prossimi giorni (N)" presente (chiuso di default).
+- ✅ Screenshot `/collaboratore/compensation`: nuovo blocco "💼 Azioni Compenso" in cima con Compensi Pregressi (€4000) modificabili + "Compenso Accettato" badge.
+- ✅ Screenshot `/collaboratore/profile`: vecchia card "💰 Compenso Mensile" rimossa (`has_old=False`, `has_quietanze=False`).
+
+### File toccati
+- `/app/frontend/app/collaboratore/compensation.tsx` (aggiunto stato + handlers + UI card)
+- `/app/frontend/app/collaboratore/profile.tsx` (rimosso intero blocco)
+- `/app/frontend/app/collaboratore/index.tsx` (toggle collassabile)
+
 ## 🆕 22/06/2026 (notte 5) — Palestre Assegnate (Collaboratore) + Status Dichiarazioni Soglie (Coach) ✅
 
 ### A. Admin Collaboratore — card "Da fare" estesa
