@@ -1842,7 +1842,7 @@ export default function AdminAthleteDetail() {
             athleteType === 'compensated' && styles.tabGold,
             athleteType === 'compensated' && activeTab === 'pagamenti' && styles.tabGoldActive
           ]}
-          onPress={() => router.push(`/admin/athlete/${id}/compensation`)}
+          onPress={() => setActiveTab('pagamenti')}
           data-testid="admin-athlete-tab-compensi"
         >
           <Ionicons 
