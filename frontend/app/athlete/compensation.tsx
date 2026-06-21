@@ -1221,7 +1221,7 @@ export default function AthleteCompensation() {
         )}
         
         <View style={styles.monthHeader}>
-          <Text style={styles.monthName}>{MONTH_NAMES[month]}</Text>
+          <Text style={[styles.monthName, (showBadge5k || showBadge15k) && { fontWeight: '800' }]}>{MONTH_NAMES[month]}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             {status === 'signed' && (
               <Ionicons name="checkmark-circle" size={20} color="#34C759" />
@@ -2338,9 +2338,9 @@ const styles = StyleSheet.create({
   },
   // Banner "Dichiarazione firmata" (verde, stile bordato/centrato)
   thresholdSignedBox: {
-    backgroundColor: '#D4EDDA',
+    backgroundColor: '#ECEFF1',
     borderWidth: 2,
-    borderColor: '#28A745',
+    borderColor: '#455A64',
     borderRadius: 10,
     padding: 14,
     alignItems: 'center',
@@ -2348,13 +2348,13 @@ const styles = StyleSheet.create({
   thresholdSignedTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#155724',
+    color: '#37474F',
     textAlign: 'center',
     marginBottom: 6,
   },
   thresholdSignedBody: {
     fontSize: 13,
-    color: '#155724',
+    color: '#455A64',
     textAlign: 'center',
     fontStyle: 'italic',
   },
