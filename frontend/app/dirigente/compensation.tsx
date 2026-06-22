@@ -1048,7 +1048,48 @@ export default function DirigenteCompensation() {
               </Text>
             </View>
           )}
-          
+
+          {/* 🆕 22/02/2026 — Stato Compenso Accettato + bottone Accetta (spostato da Profile per centralizzare gestione compensi) */}
+          {(profile?.monthly_compensation || 0) > 0 && (
+            profile?.compensation_accepted ? (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#E8F5E9', padding: 12, borderRadius: 8, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: '#34C759' }}>
+                <Text style={{ fontSize: 14, color: '#1B5E20', fontWeight: '500' }}>Compenso Accettato:</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="checkmark-circle" size={18} color="#34C759" />
+                  <Text style={{ marginLeft: 6, color: '#1B5E20', fontWeight: '700' }}>✓ Sì</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={{ marginBottom: 12 }}>
+                <View style={{ backgroundColor: '#FFF3CD', padding: 12, borderRadius: 8, marginBottom: 8, borderLeftWidth: 3, borderLeftColor: '#FF9500' }}>
+                  <Text style={{ color: '#856404', fontSize: 13, fontWeight: '500' }}>
+                    ⏳ Il tuo compenso mensile richiede accettazione. Clicca qui sotto per confermare.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#34C759', padding: 12, borderRadius: 8 }}
+                  onPress={async () => {
+                    try {
+                      await api.patch('/auth/me', { compensation_accepted: true });
+                      Alert.alert('Successo', 'Compenso accettato correttamente.');
+                      // Ricarica dati
+                      const res = await api.get('/auth/me');
+                      setProfile(res.data);
+                    } catch (e: any) {
+                      Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile accettare il compenso.');
+                    }
+                  }}
+                  data-testid="accept-compensation-dirigente-btn"
+                >
+                  <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                  <Text style={{ color: '#fff', fontWeight: 'bold', marginLeft: 8 }}>
+                    Accetta Compenso {formatCurrency(profile?.monthly_compensation || 0)}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )
+          )}
+
           <TouchableOpacity 
             style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3E5F5', padding: 10, borderRadius: 8 }}
             onPress={() => router.push('/dirigente/profile')}

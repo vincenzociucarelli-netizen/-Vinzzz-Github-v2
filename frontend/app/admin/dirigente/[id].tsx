@@ -1274,10 +1274,16 @@ export default function AdminDirigenteDetail() {
             </>
           )}
 
-          {dirigente.compensation_accepted && (
-            <View style={styles.acceptedBadge}>
-              <Ionicons name="checkmark-circle" size={16} color="#34C759" />
-              <Text style={styles.acceptedText}>Accettato dal dirigente</Text>
+          {/* 🆕 22/02/2026 — Stato Compenso Accettato SEMPRE visibile (Sì/No) — prima si vedeva solo se accettato */}
+          {dirigente.monthly_compensation > 0 && (
+            <View style={{ marginTop: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 12, backgroundColor: dirigente.compensation_accepted ? '#E8F5E9' : '#FFF3CD', borderRadius: 8, borderLeftWidth: 3, borderLeftColor: dirigente.compensation_accepted ? '#34C759' : '#FF9500' }}>
+              <Text style={{ fontSize: 14, color: '#333', fontWeight: '500' }}>Compenso Accettato:</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name={dirigente.compensation_accepted ? 'checkmark-circle' : 'time-outline'} size={18} color={dirigente.compensation_accepted ? '#34C759' : '#FF9500'} />
+                <Text style={{ fontSize: 14, fontWeight: '700', marginLeft: 6, color: dirigente.compensation_accepted ? '#34C759' : '#FF9500' }}>
+                  {dirigente.compensation_accepted ? '✓ Sì' : '⏳ In attesa'}
+                </Text>
+              </View>
             </View>
           )}
           

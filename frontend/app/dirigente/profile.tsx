@@ -985,96 +985,23 @@ Società sportiva: ${societyName}
           )}
         </View>
 
-        {/* Compensation Info - Hidden during editing to prevent data loss */}
-        {!editing && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>💰 Compenso Mensile</Text>
-          <View style={styles.fieldContainer}>
-            <Text style={styles.compensationAmount}>
-              {profileData.monthly_compensation > 0 
-                ? `€ ${profileData.monthly_compensation.toFixed(2)}`
-                : 'Non ancora impostato'}
-            </Text>
-          </View>
-          
-          {/* Prior Compensation Field */}
-          <View style={styles.fieldContainer}>
-            <Text style={styles.fieldLabel}>COMPENSI PREGRESSI (NELL'ANNO)</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-              <Text style={{ fontSize: 18, marginRight: 4 }}>€</Text>
-              <TextInput
-                style={[styles.input, { flex: 1, paddingVertical: 10, fontSize: 18 }]}
-                value={editData.other_annual_compensation?.toString() || '0'}
-                onChangeText={(text) => {
-                  const numValue = parseFloat(text.replace(',', '.')) || 0;
-                  setEditData({...editData, other_annual_compensation: numValue});
-                }}
-                keyboardType="numeric"
-                placeholder="0.00"
-                placeholderTextColor="#999"
-              />
+        {/* 🆕 22/02/2026 — Card Compenso Mensile RIMOSSA da qui (spostata in /dirigente/compensation per centralizzare la gestione compensi).
+            Era duplicata con la vista Compensi Sportivi e creava confusione (Foto B reported). */}
+        {!editing && profileData.monthly_compensation > 0 && (
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3E5F5', padding: 14, borderRadius: 10, marginVertical: 8, borderLeftWidth: 4, borderLeftColor: '#8E44AD' }}
+            onPress={() => router.push('/dirigente/compensation')}
+            data-testid="link-to-compensi-from-profile"
+          >
+            <Text style={{ fontSize: 22, marginRight: 10 }}>💰</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#8E44AD' }}>Compensi Sportivi</Text>
+              <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
+                Compenso mensile, accettazione e firma quietanze
+              </Text>
             </View>
-            <Text style={{ fontSize: 11, color: '#666', marginTop: 4, fontStyle: 'italic' }}>
-              Inserisci l'importo totale di compensi sportivi già percepiti nell'anno corrente (per il calcolo delle soglie fiscali)
-            </Text>
-          </View>
-          
-          {profileData.monthly_compensation > 0 && !profileData.compensation_accepted && (
-            <View style={{ marginBottom: 12 }}>
-              <View style={{ backgroundColor: '#FFF3CD', padding: 12, borderRadius: 8, marginBottom: 10, borderLeftWidth: 4, borderLeftColor: '#FF9500' }}>
-                <Text style={{ color: '#856404', fontSize: 13, fontWeight: '500' }}>
-                  ⚠️ Il tuo compenso mensile richiede accettazione. Clicca il pulsante qui sotto per confermare.
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.acceptButton}
-                onPress={handleAcceptCompensation}
-              >
-                <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                <Text style={styles.acceptButtonText}>Accetta Compenso {formatCurrency(profileData.monthly_compensation)}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {profileData.compensation_accepted && (
-            <View style={styles.acceptedBadge}>
-              <Ionicons name="checkmark-circle" size={18} color="#34C759" />
-              <Text style={styles.acceptedBadgeText}>Compenso Accettato</Text>
-            </View>
-          )}
-          
-          {/* Link to Compensation Page with Digital Signatures */}
-          {profileData.monthly_compensation > 0 && profileData.compensation_accepted && (
-            <TouchableOpacity
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: '#8E44AD',
-                padding: 16,
-                borderRadius: 12,
-                marginTop: 12,
-                shadowColor: '#8E44AD',
-                shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.3,
-                shadowRadius: 5,
-                elevation: 5,
-              }}
-              onPress={() => router.push('/dirigente/compensation')}
-              data-testid="go-to-compensation-btn"
-            >
-              <Ionicons name="receipt-outline" size={24} color="#fff" />
-              <View style={{ marginLeft: 12, flex: 1 }}>
-                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#fff' }}>
-                  Firma Quietanze Mensili
-                </Text>
-                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>
-                  Genera e firma le quietanze dei compensi sportivi
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={22} color="#fff" />
-            </TouchableOpacity>
-          )}
-        </View>
+            <Ionicons name="chevron-forward" size={20} color="#8E44AD" />
+          </TouchableOpacity>
         )}
 
         {/* Incarichi Assegnati (solo Palestre — Squadre già visibili nella dashboard) */}
