@@ -1076,17 +1076,19 @@ Società sportiva: ${societyName}
                         });
                         const blob = new Blob([response.data], { type: 'application/pdf' });
                         const url = window.URL.createObjectURL(blob);
-                        // 🔒 13/06/2026 - GDPR Data Leak fix: filename univoco per documento
-                        const filename = `${doc.document_title || 'documento'}_${(doc.id || '').slice(-8)}.pdf`.replace(/[^\w.\-]+/g, '_');
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = filename;
-                        a.target = '_blank';
-                        a.rel = 'noopener noreferrer';
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        setTimeout(() => window.URL.revokeObjectURL(url), 1500);
+                        // 🆕 22/02/2026 — Apre il PDF in nuova scheda invece di forzare il download.
+                        const newWin = window.open(url, '_blank', 'noopener,noreferrer');
+                        if (!newWin) {
+                          const filename = `${doc.document_title || 'documento'}_${(doc.id || '').slice(-8)}.pdf`.replace(/[^\w.\-]+/g, '_');
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = filename;
+                          a.rel = 'noopener noreferrer';
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                        }
+                        setTimeout(() => window.URL.revokeObjectURL(url), 30000);
                       } catch (err: any) {
                         console.error('Download error:', err);
                         let msg = 'Impossibile aprire il documento';
@@ -1385,17 +1387,19 @@ Società sportiva: ${societyName}
                         });
                         const blob = new Blob([response.data], { type: 'application/pdf' });
                         const url = window.URL.createObjectURL(blob);
-                        // 🔒 13/06/2026 - GDPR Data Leak fix: filename univoco per documento
-                        const filename = `${doc.document_title || 'documento'}_${(doc.id || '').slice(-8)}.pdf`.replace(/[^\w.\-]+/g, '_');
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = filename;
-                        a.target = '_blank';
-                        a.rel = 'noopener noreferrer';
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        setTimeout(() => window.URL.revokeObjectURL(url), 1500);
+                        // 🆕 22/02/2026 — Apre il PDF in nuova scheda invece di forzare il download.
+                        const newWin = window.open(url, '_blank', 'noopener,noreferrer');
+                        if (!newWin) {
+                          const filename = `${doc.document_title || 'documento'}_${(doc.id || '').slice(-8)}.pdf`.replace(/[^\w.\-]+/g, '_');
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = filename;
+                          a.rel = 'noopener noreferrer';
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                        }
+                        setTimeout(() => window.URL.revokeObjectURL(url), 30000);
                       } catch (err: any) {
                         console.error('Download error:', err);
                         let msg = 'Impossibile aprire il documento';
