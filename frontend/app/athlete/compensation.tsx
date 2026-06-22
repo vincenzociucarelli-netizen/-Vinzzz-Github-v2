@@ -916,7 +916,7 @@ export default function AthleteCompensation() {
             ✅ Anno {contractStartYear}: Dichiarazione €5.000 firmata
           </Text>
           <Text style={styles.thresholdSignedBody}>
-            Soglia previdenziale comunicata{monthLabel1 ? ` (superata nel mese di ${monthLabel1})` : ''}
+            Soglia previdenziale comunicata{monthLabel1 ? <>{' (superata nel mese di '}<Text style={{ fontWeight: 'bold' }}>{monthLabel1}</Text>{')'}</> : null}
           </Text>
         </View>
       );
@@ -931,7 +931,7 @@ export default function AthleteCompensation() {
             ✅ Anno {contractStartYear}: Dichiarazione €15.000 firmata
           </Text>
           <Text style={styles.thresholdSignedBody}>
-            Soglia fiscale comunicata{monthLabel2 ? ` (superata nel mese di ${monthLabel2})` : ''}
+            Soglia fiscale comunicata{monthLabel2 ? <>{' (superata nel mese di '}<Text style={{ fontWeight: 'bold' }}>{monthLabel2}</Text>{')'}</> : null}
           </Text>
         </View>
       );
@@ -961,7 +961,7 @@ export default function AthleteCompensation() {
               ✅ Anno {year2026}: Dichiarazione €5.000 firmata
             </Text>
             <Text style={[styles.thresholdSignedBody, { color: '#1565C0' }]}>
-              Soglia previdenziale comunicata{monthLabel1y2 ? ` (superata nel mese di ${monthLabel1y2})` : ''}
+              Soglia previdenziale comunicata{monthLabel1y2 ? <>{' (superata nel mese di '}<Text style={{ fontWeight: 'bold' }}>{monthLabel1y2}</Text>{')'}</> : null}
             </Text>
           </View>
         );
@@ -976,7 +976,7 @@ export default function AthleteCompensation() {
               ✅ Anno {year2026}: Dichiarazione €15.000 firmata
             </Text>
             <Text style={[styles.thresholdSignedBody, { color: '#1565C0' }]}>
-              Soglia fiscale comunicata{monthLabel2y2 ? ` (superata nel mese di ${monthLabel2y2})` : ''}
+              Soglia fiscale comunicata{monthLabel2y2 ? <>{' (superata nel mese di '}<Text style={{ fontWeight: 'bold' }}>{monthLabel2y2}</Text>{')'}</> : null}
             </Text>
           </View>
         );
