@@ -12481,7 +12481,7 @@ async def get_coach_commitments(
             is_athlete_view = True
     elif current_user["role"] == UserRole.ATHLETE:
         is_athlete_view = True
-    elif current_user["role"] not in (UserRole.COACH, UserRole.DIRIGENTE, UserRole.COLLABORATORE):
+    elif current_user["role"] not in (UserRole.COACH, UserRole.DIRIGENTE, UserRole.COLLABORATORE, UserRole.VIEWER, UserRole.ADMIN):
         raise HTTPException(status_code=403, detail="Ruolo non autorizzato a vedere gli impegni")
 
     # 🆕 23/06/2026 — Atleti: cerchiamo il loro team_id nel record athletes (no assigned_teams)
