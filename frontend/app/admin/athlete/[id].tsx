@@ -1914,356 +1914,153 @@ export default function AdminAthleteDetail() {
 
             {/* Foto Atleta - RIMOSSA per privacy */}
 
-            {/* Dati Tecnici */}
-            <View style={styles.card}>
-              {/* Box Validazione Certificato */}
-              {/* Box "Forza verifica email" - solo per atleti pending_email */}
-              {athlete.status === 'pending_email' && (
-                <View style={{ marginBottom: 16 }}>
-                  <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', marginBottom: 4 }}>Email non verificata</Text>
-                    <Text style={{ fontSize: 13, color: '#666', marginBottom: 10 }}>
-                      L'atleta non ha cliccato il link di verifica nella mail. Puoi forzare la verifica come Admin se sai che l'email è valida (utile per test o per utenti che hanno problemi a ricevere la mail).
-                    </Text>
-                    <TouchableOpacity
-                      onPress={async () => {
-                        try {
-                          const resp = await api.post(`/admin/users/${athlete.id}/force-verify-email`);
-                          Alert.alert('Successo', resp.data?.message || 'Email verificata forzatamente');
-                          loadAthleteData();
-                        } catch (e: any) {
-                          Alert.alert('Errore', e?.response?.data?.detail || 'Operazione non riuscita');
-                        }
-                      }}
-                      style={{ backgroundColor: '#FF9800', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                      data-testid="admin-force-verify-email-btn"
-                    >
-                      <Ionicons name="checkmark-circle" size={18} color="#fff" />
-                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Forza verifica email</Text>
-                    </TouchableOpacity>
+            {/* 🆕 22/02/2026 — Status Alerts (Email non verificata / Validazione Cert) in card dedicata in cima */}
+            {(athlete.status === 'pending_email' || athlete.status === 'pending_certificate') && (
+              <View style={styles.card}>
+                {/* Box "Forza verifica email" - solo per atleti pending_email */}
+                {athlete.status === 'pending_email' && (
+                  <View style={{ marginBottom: athlete.status === 'pending_certificate' ? 12 : 0 }}>
+                    <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
+                      <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', marginBottom: 4 }}>Email non verificata</Text>
+                      <Text style={{ fontSize: 13, color: '#666', marginBottom: 10 }}>
+                        L'atleta non ha cliccato il link di verifica nella mail. Puoi forzare la verifica come Admin se sai che l'email è valida (utile per test o per utenti che hanno problemi a ricevere la mail).
+                      </Text>
+                      <TouchableOpacity
+                        onPress={async () => {
+                          try {
+                            const resp = await api.post(`/admin/users/${athlete.id}/force-verify-email`);
+                            Alert.alert('Successo', resp.data?.message || 'Email verificata forzatamente');
+                            loadAthleteData();
+                          } catch (e: any) {
+                            Alert.alert('Errore', e?.response?.data?.detail || 'Operazione non riuscita');
+                          }
+                        }}
+                        style={{ backgroundColor: '#FF9800', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                        data-testid="admin-force-verify-email-btn"
+                      >
+                        <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Forza verifica email</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
-              )}
+                )}
 
-              {athlete.status === 'pending_certificate' && (
-                <View style={{ marginBottom: 16 }}>
+                {athlete.status === 'pending_certificate' && (
                   <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
                     <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', marginBottom: 4 }}>Validazione Certificato</Text>
                     <Text style={{ fontSize: 13, color: '#666' }}>Privacy firmata. In attesa della validazione del certificato medico da parte dell'admin.</Text>
                   </View>
-                </View>
-              )}
-
-              {/* Box Periodo di Prova - solo per atleti trial */}
-              {athlete.status === 'trial' && (
-                <View style={{ marginBottom: 16 }}>
-                  <View style={{ backgroundColor: athlete.trial_start_date ? '#E3F2FD' : '#F3E5F5', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: athlete.trial_start_date ? '#1976D2' : '#9C27B0' }} data-testid="admin-trial-info-box">
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: athlete.trial_start_date ? '#1565C0' : '#7B1FA2', marginBottom: 8 }}>
-                      {athlete.trial_start_date ? 'Periodo di prova attivo' : 'In attesa di inizio prova'}
-                    </Text>
-                    {athlete.trial_start_date && (
-                      <>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                          <Ionicons name="calendar-outline" size={16} color="#1976D2" />
-                          <Text style={{ fontSize: 13, color: '#333' }}>
-                            Inizio: <Text style={{ fontWeight: '700' }}>{new Date(athlete.trial_start_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}</Text>
-                          </Text>
-                        </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                          <Ionicons name="calendar" size={16} color="#1976D2" />
-                          <Text style={{ fontSize: 13, color: '#333' }}>
-                            Scadenza: <Text style={{ fontWeight: '700' }}>{athlete.trial_end_date ? new Date(athlete.trial_end_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</Text>
-                          </Text>
-                        </View>
-                        {trialStatus && (
-                          <>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                              <Ionicons name="fitness" size={16} color="#1976D2" />
-                              <Text style={{ fontSize: 13, color: '#333' }}>
-                                <Text style={{ fontWeight: '700' }}>{trialStatus.sessions_remaining}</Text> allenamenti disponibili ({trialStatus.sessions_count}/{trialStatus.max_sessions})
-                              </Text>
-                            </View>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                              <Ionicons name="calendar" size={16} color="#1976D2" />
-                              <Text style={{ fontSize: 13, color: '#333' }}>
-                                <Text style={{ fontWeight: '700' }}>{trialStatus.days_remaining}</Text> giorni rimanenti
-                              </Text>
-                            </View>
-                          </>
-                        )}
-                      </>
-                    )}
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                      <Ionicons name={athlete.trial_document_generated ? "checkmark-circle" : "close-circle"} size={16} color={athlete.trial_document_generated ? '#4CAF50' : '#E53935'} />
-                      <Text style={{ fontSize: 13, color: athlete.trial_document_generated ? '#4CAF50' : '#E53935', fontWeight: '600' }}>
-                        {athlete.trial_document_generated ? 'Dichiarazione di prova firmata' : 'Dichiarazione non ancora firmata'}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              )}
-
-              <Text style={styles.cardTitle}>Dati Tecnici</Text>
-              {editing ? (
-                <>
-                  <Text style={styles.inputLabel}>Ruolo</Text>
-                  {availableRoles.length > 0 ? (
-                    <View style={styles.roleSelector}>
-                      {availableRoles.map((role) => (
-                        <TouchableOpacity
-                          key={role}
-                          style={[
-                            styles.roleOption,
-                            editData.athlete_role === role && styles.roleOptionSelected
-                          ]}
-                          onPress={() => setEditData({...editData, athlete_role: editData.athlete_role === role ? '' : role})}
-                        >
-                          <Text style={[
-                            styles.roleOptionText,
-                            editData.athlete_role === role && styles.roleOptionTextSelected
-                          ]}>{role}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  ) : (
-                    <TextInput
-                      style={styles.input}
-                      value={editData.athlete_role}
-                      onChangeText={(t) => setEditData({...editData, athlete_role: t})}
-                      placeholder="Es. Palleggiatore, Schiacciatore..."
-                      placeholderTextColor="#999"
-                    />
-                  )}
-                  <View style={styles.rowInputsThree}>
-                    <View style={styles.thirdInput}>
-                      <Text style={styles.inputLabel}>Altezza cm.</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={editData.athlete_height}
-                        onChangeText={(t) => setEditData({...editData, athlete_height: t.replace(/\D/g, '')})}
-                        placeholder="175"
-                        placeholderTextColor="#999"
-                        keyboardType="numeric"
-                        maxLength={3}
-                      />
-                    </View>
-                    <View style={styles.thirdInput}>
-                      <Text style={styles.inputLabel}>Peso kg.</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={editData.athlete_weight}
-                        onChangeText={(t) => setEditData({...editData, athlete_weight: t.replace(/\D/g, '')})}
-                        placeholder="65"
-                        placeholderTextColor="#999"
-                        keyboardType="numeric"
-                        maxLength={3}
-                      />
-                    </View>
-                    <View style={styles.thirdInput}>
-                      <Text style={styles.inputLabel}>Elevaz. cm.</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={editData.athlete_elevation}
-                        onChangeText={(t) => setEditData({...editData, athlete_elevation: t.replace(/\D/g, '')})}
-                        placeholder="45"
-                        placeholderTextColor="#999"
-                        keyboardType="numeric"
-                        maxLength={3}
-                      />
-                    </View>
-                  </View>
-                  <Text style={styles.inputLabel}>Note sull'atleta</Text>
-                  <TextInput
-                    style={[styles.input, styles.textArea]}
-                    value={editData.athlete_notes}
-                    onChangeText={(t) => setEditData({...editData, athlete_notes: t})}
-                    placeholder="Note, osservazioni, informazioni utili..."
-                    placeholderTextColor="#999"
-                    multiline
-                    numberOfLines={3}
-                  />
-                </>
-              ) : (
-                <>
-                  {/* Ruolo */}
-                  {athleteRole ? (
-                    <View style={styles.roleDisplay}>
-                      <Text style={styles.techDataLabel}>Ruolo</Text>
-                      <Text style={styles.roleValue}>{athleteRole}</Text>
-                    </View>
-                  ) : null}
-                  
-                  {/* Dati fisici in riga */}
-                  <View style={styles.physicalDataRow}>
-                    <View style={styles.physicalDataItem}>
-                      <Text style={styles.physicalDataLabel}>Altezza cm.</Text>
-                      <Text style={styles.physicalDataValue}>{athleteHeight || '-'}</Text>
-                    </View>
-                    <View style={styles.physicalDataItem}>
-                      <Text style={styles.physicalDataLabel}>Peso kg.</Text>
-                      <Text style={styles.physicalDataValue}>{athleteWeight || '-'}</Text>
-                    </View>
-                    <View style={styles.physicalDataItem}>
-                      <Text style={styles.physicalDataLabel}>Elevaz. cm.</Text>
-                      <Text style={styles.physicalDataValue}>{athleteElevation || '-'}</Text>
-                    </View>
-                  </View>
-                  
-                  {athleteNotes ? (
-                    <View style={styles.notesSection}>
-                      <Text style={styles.techDataLabel}>Note</Text>
-                      <Text style={styles.notesText}>{athleteNotes}</Text>
-                    </View>
-                  ) : null}
-                  {athleteCharacteristics.length > 0 && (
-                    <View style={styles.characteristicsSection}>
-                      <Text style={styles.techDataLabel}>Caratteristiche</Text>
-                      <View style={styles.characteristicsTags}>
-                        {athleteCharacteristics.map((char, idx) => (
-                          <View key={idx} style={styles.characteristicTag}>
-                            <Text style={styles.characteristicTagText}>{char}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  )}
-                </>
-              )}
-            </View>
-
-            {/* Squadra */}
-            <View style={styles.card}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <SportIcon size={20} />
-                <Text style={[styles.cardTitle, { marginLeft: 6 }]}>Squadra</Text>
+                )}
               </View>
-              {editing ? (
-                <>
-                  {/* Squadra Principale - collassabile */}
-                  <TouchableOpacity
-                    style={{
-                      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-                      backgroundColor: '#F0F7FF', borderRadius: 10, padding: 12, marginBottom: 8,
-                    }}
-                    onPress={() => setShowPrimaryTeam(!showPrimaryTeam)}
-                    data-testid="toggle-primary-team"
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#007AFF' }}>Squadra Principale</Text>
-                      {!showPrimaryTeam && editData.team_id && (
-                        <Text style={{ fontSize: 13, color: '#333', marginTop: 2 }}>
-                          {allTeams.find(t => t.id === editData.team_id)?.name || ''}
+            )}
+
+            {/* 🆕 22/02/2026 — Certificato Medico spostato in cima (ex-posizione di Dati Tecnici) */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Certificato Medico</Text>
+              {certificate ? (
+                <View>
+                  {(() => {
+                    const expiryDate = new Date(certificate.expiry_date);
+                    const today = new Date();
+                    const daysLeft = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                    const isExpired = daysLeft < 0;
+                    const isExpiringSoon = daysLeft >= 0 && daysLeft <= 30;
+                    const statusColor = isExpired ? '#FF3B30' : isExpiringSoon ? '#FF9500' : '#34C759';
+                    const statusBg = isExpired ? '#FFF0F0' : isExpiringSoon ? '#FFF8E1' : '#E8F5E9';
+                    const statusText = isExpired ? 'SCADUTO' : isExpiringSoon ? `Scade tra ${daysLeft} giorni` : 'In corso di validità';
+                    return (
+                      <View style={{ backgroundColor: statusBg, padding: 12, borderRadius: 10, borderLeftWidth: 4, borderLeftColor: statusColor }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Ionicons name={isExpired ? 'close-circle' : isExpiringSoon ? 'alert-circle' : 'checkmark-circle'} size={22} color={statusColor} />
+                          <Text style={{ fontSize: 16, fontWeight: '700', color: statusColor }}>
+                            Scadenza: {formatDate(certificate.expiry_date)}
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 12, color: statusColor, fontWeight: '600', marginTop: 4, paddingLeft: 30 }}>
+                          {statusText}
                         </Text>
-                      )}
-                    </View>
-                    <Ionicons name={showPrimaryTeam ? "chevron-up" : "chevron-down"} size={20} color="#007AFF" />
-                  </TouchableOpacity>
-                  {showPrimaryTeam && (
-                    <View style={styles.teamSelector}>
-                      {allTeams.map((t) => (
-                        <TouchableOpacity
-                          key={t.id}
-                          style={[
-                            styles.teamOption,
-                            editData.team_id === t.id && styles.teamOptionSelected
-                          ]}
-                          onPress={() => setEditData({...editData, team_id: t.id})}
-                        >
-                          <Ionicons 
-                            name={editData.team_id === t.id ? "radio-button-on" : "radio-button-off"} 
-                            size={20} 
-                            color={editData.team_id === t.id ? "#007AFF" : "#999"} 
-                          />
-                          <Text style={[
-                            styles.teamOptionText,
-                            editData.team_id === t.id && styles.teamOptionTextSelected
-                          ]}>{t.name}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                  
-                  {/* Squadra Secondaria - collassabile */}
-                  <TouchableOpacity
-                    style={{
-                      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-                      backgroundColor: '#F5F5F5', borderRadius: 10, padding: 12, marginTop: 8, marginBottom: 8,
-                    }}
-                    onPress={() => setShowSecondaryTeam(!showSecondaryTeam)}
-                    data-testid="toggle-secondary-team"
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#666' }}>Squadra Secondaria (opzionale)</Text>
-                      {!showSecondaryTeam && (
-                        <Text style={{ fontSize: 13, color: '#333', marginTop: 2 }}>
-                          {editData.team_id_2 ? (allTeams.find(t => t.id === editData.team_id_2)?.name || '') : 'Nessuna'}
-                        </Text>
-                      )}
-                    </View>
-                    <Ionicons name={showSecondaryTeam ? "chevron-up" : "chevron-down"} size={20} color="#666" />
-                  </TouchableOpacity>
-                  {showSecondaryTeam && (
-                    <View style={styles.teamSelector}>
-                      <TouchableOpacity
-                        style={[
-                          styles.teamOption,
-                          !editData.team_id_2 && styles.teamOptionSelected
-                        ]}
-                        onPress={() => setEditData({...editData, team_id_2: ''})}
-                      >
-                        <Ionicons 
-                          name={!editData.team_id_2 ? "radio-button-on" : "radio-button-off"} 
-                          size={20} 
-                          color={!editData.team_id_2 ? "#007AFF" : "#999"} 
-                        />
-                        <Text style={[
-                          styles.teamOptionText,
-                          !editData.team_id_2 && styles.teamOptionTextSelected
-                        ]}>Nessuna</Text>
-                      </TouchableOpacity>
-                      {allTeams.filter(t => t.id !== editData.team_id).map((t) => (
-                        <TouchableOpacity
-                          key={t.id}
-                          style={[
-                            styles.teamOption,
-                            editData.team_id_2 === t.id && styles.teamOptionSelected
-                          ]}
-                          onPress={() => setEditData({...editData, team_id_2: t.id})}
-                        >
-                          <Ionicons 
-                            name={editData.team_id_2 === t.id ? "radio-button-on" : "radio-button-off"} 
-                            size={20} 
-                            color={editData.team_id_2 === t.id ? "#007AFF" : "#999"} 
-                          />
-                          <Text style={[
-                            styles.teamOptionText,
-                            editData.team_id_2 === t.id && styles.teamOptionTextSelected
-                          ]}>{t.name}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                  
-                </>
-              ) : (
-                <>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.label}>Squadra Principale</Text>
-                    <Text style={[styles.value, { color: '#E53935', fontWeight: 'bold' }]}>
-                      {team?.name || '-'}
-                    </Text>
-                  </View>
-                  {athlete?.team_id_2 && (
-                    <View style={styles.infoRow}>
-                      <Text style={styles.label}>Squadra Secondaria</Text>
-                      <Text style={styles.value}>
-                        {allTeams.find(t => t.id === athlete?.team_id_2)?.name || '-'}
+                      </View>
+                    );
+                  })()}
+                  {athlete?.medical_certificate_date && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, paddingLeft: 4 }}>
+                      <Ionicons name="document-text-outline" size={18} color="#666" />
+                      <Text style={{ marginLeft: 8, fontSize: 13, color: '#333' }}>
+                        Data emissione: <Text style={{ fontWeight: '600' }}>{formatDate(athlete.medical_certificate_date)}</Text>
                       </Text>
                     </View>
                   )}
-                </>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingLeft: 4 }}>
+                    <Ionicons
+                      name={athlete?.medical_certificate_verified ? 'shield-checkmark' : 'shield-outline'}
+                      size={18}
+                      color={athlete?.medical_certificate_verified ? '#4CAF50' : '#FF9500'}
+                    />
+                    <Text style={{ marginLeft: 8, fontSize: 13, color: athlete?.medical_certificate_verified ? '#4CAF50' : '#FF9500', fontWeight: '600' }}>
+                      {athlete?.medical_certificate_verified ? 'Verificato dall\'admin' : 'Non ancora verificato dall\'admin'}
+                    </Text>
+                  </View>
+                  {/* Metadati tracciabilità */}
+                  {athlete?.medical_certificate_updated_by_name && (
+                    <View style={{ marginTop: 8, paddingLeft: 4 }}>
+                      <Text style={{ fontSize: 11, color: '#999' }}>
+                        Inserito da: {athlete.medical_certificate_inserted_by_name || athlete.medical_certificate_updated_by_name}
+                        {athlete.medical_certificate_inserted_at ? ` il ${formatDate(athlete.medical_certificate_inserted_at)}` : ''}
+                      </Text>
+                      {athlete.medical_certificate_verified_by_name && (
+                        <Text style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
+                          Verificato da: {athlete.medical_certificate_verified_by_name}
+                          {athlete.medical_certificate_verified_at ? ` il ${formatDate(athlete.medical_certificate_verified_at)}` : ''}
+                        </Text>
+                      )}
+                      {athlete.medical_certificate_updated_by_name !== athlete.medical_certificate_inserted_by_name && (
+                        <Text style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
+                          Ultimo aggiornamento: {athlete.medical_certificate_updated_by_name}
+                          {athlete.medical_certificate_updated_at ? ` il ${formatDate(athlete.medical_certificate_updated_at)}` : ''}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                </View>
+              ) : (
+                <View style={styles.warningBox}>
+                  <Ionicons name="warning" size={20} color="#FF9500" />
+                  <Text style={styles.warningText}>Nessun certificato</Text>
+                </View>
+              )}
+              {/* Admin: sempre visibile - Modifica date + Verifica */}
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#EDE7F6', borderRadius: 10, padding: 12, marginTop: 12,
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  borderWidth: 1, borderColor: '#CE93D8',
+                }}
+                onPress={() => setCertModalVisible(true)}
+              >
+                <Ionicons name={certificate ? "create-outline" : "calendar-outline"} size={18} color="#7B1FA2" />
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#7B1FA2' }}>
+                  {certificate ? 'Modifica date certificato' : 'Inserisci dati certificato'}
+                </Text>
+              </TouchableOpacity>
+              {certificate && (
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: athlete?.medical_certificate_verified ? '#E8F5E9' : '#FFF8E1',
+                    borderRadius: 10, padding: 12, marginTop: 8,
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    borderWidth: 1, borderColor: athlete?.medical_certificate_verified ? '#66BB6A' : '#FFB74D',
+                  }}
+                  onPress={handleVerifyCertificate}
+                >
+                  <Ionicons name={athlete?.medical_certificate_verified ? "shield-checkmark" : "shield-outline"} size={18} color={athlete?.medical_certificate_verified ? '#2E7D32' : '#E65100'} />
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: athlete?.medical_certificate_verified ? '#2E7D32' : '#E65100' }}>
+                    {athlete?.medical_certificate_verified ? 'Certificato verificato ✓' : 'Segna come verificato'}
+                  </Text>
+                </TouchableOpacity>
               )}
             </View>
+
+            {/* 🗑️ 22/02/2026 — Card Squadra spostata nel tab Presenze */}
 
             {/* Tesseramento */}
             <View style={styles.card}>
@@ -2715,108 +2512,133 @@ export default function AdminAthleteDetail() {
               )}
             </View>
 
+            {/* 🆕 22/02/2026 — Dati Tecnici spostato in fondo (ex-posizione di Certificato Medico) */}
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>Certificato Medico</Text>
-              {certificate ? (
-                <View>
-                  {(() => {
-                    const expiryDate = new Date(certificate.expiry_date);
-                    const today = new Date();
-                    const daysLeft = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                    const isExpired = daysLeft < 0;
-                    const isExpiringSoon = daysLeft >= 0 && daysLeft <= 30;
-                    const statusColor = isExpired ? '#FF3B30' : isExpiringSoon ? '#FF9500' : '#34C759';
-                    const statusBg = isExpired ? '#FFF0F0' : isExpiringSoon ? '#FFF8E1' : '#E8F5E9';
-                    const statusText = isExpired ? 'SCADUTO' : isExpiringSoon ? `Scade tra ${daysLeft} giorni` : 'In corso di validità';
-                    return (
-                      <View style={{ backgroundColor: statusBg, padding: 12, borderRadius: 10, borderLeftWidth: 4, borderLeftColor: statusColor }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <Ionicons name={isExpired ? 'close-circle' : isExpiringSoon ? 'alert-circle' : 'checkmark-circle'} size={22} color={statusColor} />
-                          <Text style={{ fontSize: 16, fontWeight: '700', color: statusColor }}>
-                            Scadenza: {formatDate(certificate.expiry_date)}
-                          </Text>
-                        </View>
-                        <Text style={{ fontSize: 12, color: statusColor, fontWeight: '600', marginTop: 4, paddingLeft: 30 }}>
-                          {statusText}
-                        </Text>
-                      </View>
-                    );
-                  })()}
-                  {athlete?.medical_certificate_date && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, paddingLeft: 4 }}>
-                      <Ionicons name="document-text-outline" size={18} color="#666" />
-                      <Text style={{ marginLeft: 8, fontSize: 13, color: '#333' }}>
-                        Data emissione: <Text style={{ fontWeight: '600' }}>{formatDate(athlete.medical_certificate_date)}</Text>
-                      </Text>
+              <Text style={styles.cardTitle}>Dati Tecnici</Text>
+              {editing ? (
+                <>
+                  <Text style={styles.inputLabel}>Ruolo</Text>
+                  {availableRoles.length > 0 ? (
+                    <View style={styles.roleSelector}>
+                      {availableRoles.map((role) => (
+                        <TouchableOpacity
+                          key={role}
+                          style={[
+                            styles.roleOption,
+                            editData.athlete_role === role && styles.roleOptionSelected
+                          ]}
+                          onPress={() => setEditData({...editData, athlete_role: editData.athlete_role === role ? '' : role})}
+                        >
+                          <Text style={[
+                            styles.roleOptionText,
+                            editData.athlete_role === role && styles.roleOptionTextSelected
+                          ]}>{role}</Text>
+                        </TouchableOpacity>
+                      ))}
                     </View>
-                  )}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingLeft: 4 }}>
-                    <Ionicons
-                      name={athlete?.medical_certificate_verified ? 'shield-checkmark' : 'shield-outline'}
-                      size={18}
-                      color={athlete?.medical_certificate_verified ? '#4CAF50' : '#FF9500'}
+                  ) : (
+                    <TextInput
+                      style={styles.input}
+                      value={editData.athlete_role}
+                      onChangeText={(t) => setEditData({...editData, athlete_role: t})}
+                      placeholder="Es. Palleggiatore, Schiacciatore..."
+                      placeholderTextColor="#999"
                     />
-                    <Text style={{ marginLeft: 8, fontSize: 13, color: athlete?.medical_certificate_verified ? '#4CAF50' : '#FF9500', fontWeight: '600' }}>
-                      {athlete?.medical_certificate_verified ? 'Verificato dall\'admin' : 'Non ancora verificato dall\'admin'}
-                    </Text>
+                  )}
+                  <View style={styles.rowInputsThree}>
+                    <View style={styles.thirdInput}>
+                      <Text style={styles.inputLabel}>Altezza cm.</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={editData.athlete_height}
+                        onChangeText={(t) => setEditData({...editData, athlete_height: t.replace(/\D/g, '')})}
+                        placeholder="175"
+                        placeholderTextColor="#999"
+                        keyboardType="numeric"
+                        maxLength={3}
+                      />
+                    </View>
+                    <View style={styles.thirdInput}>
+                      <Text style={styles.inputLabel}>Peso kg.</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={editData.athlete_weight}
+                        onChangeText={(t) => setEditData({...editData, athlete_weight: t.replace(/\D/g, '')})}
+                        placeholder="65"
+                        placeholderTextColor="#999"
+                        keyboardType="numeric"
+                        maxLength={3}
+                      />
+                    </View>
+                    <View style={styles.thirdInput}>
+                      <Text style={styles.inputLabel}>Elevaz. cm.</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={editData.athlete_elevation}
+                        onChangeText={(t) => setEditData({...editData, athlete_elevation: t.replace(/\D/g, '')})}
+                        placeholder="45"
+                        placeholderTextColor="#999"
+                        keyboardType="numeric"
+                        maxLength={3}
+                      />
+                    </View>
                   </View>
-                  {/* Metadati tracciabilità */}
-                  {athlete?.medical_certificate_updated_by_name && (
-                    <View style={{ marginTop: 8, paddingLeft: 4 }}>
-                      <Text style={{ fontSize: 11, color: '#999' }}>
-                        Inserito da: {athlete.medical_certificate_inserted_by_name || athlete.medical_certificate_updated_by_name}
-                        {athlete.medical_certificate_inserted_at ? ` il ${formatDate(athlete.medical_certificate_inserted_at)}` : ''}
-                      </Text>
-                      {athlete.medical_certificate_verified_by_name && (
-                        <Text style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
-                          Verificato da: {athlete.medical_certificate_verified_by_name}
-                          {athlete.medical_certificate_verified_at ? ` il ${formatDate(athlete.medical_certificate_verified_at)}` : ''}
-                        </Text>
-                      )}
-                      {athlete.medical_certificate_updated_by_name !== athlete.medical_certificate_inserted_by_name && (
-                        <Text style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
-                          Ultimo aggiornamento: {athlete.medical_certificate_updated_by_name}
-                          {athlete.medical_certificate_updated_at ? ` il ${formatDate(athlete.medical_certificate_updated_at)}` : ''}
-                        </Text>
-                      )}
+                  <Text style={styles.inputLabel}>Note sull'atleta</Text>
+                  <TextInput
+                    style={[styles.input, styles.textArea]}
+                    value={editData.athlete_notes}
+                    onChangeText={(t) => setEditData({...editData, athlete_notes: t})}
+                    placeholder="Note, osservazioni, informazioni utili..."
+                    placeholderTextColor="#999"
+                    multiline
+                    numberOfLines={3}
+                  />
+                </>
+              ) : (
+                <>
+                  {/* Ruolo */}
+                  {athleteRole ? (
+                    <View style={styles.roleDisplay}>
+                      <Text style={styles.techDataLabel}>Ruolo</Text>
+                      <Text style={styles.roleValue}>{athleteRole}</Text>
+                    </View>
+                  ) : null}
+
+                  {/* Dati fisici in riga */}
+                  <View style={styles.physicalDataRow}>
+                    <View style={styles.physicalDataItem}>
+                      <Text style={styles.physicalDataLabel}>Altezza cm.</Text>
+                      <Text style={styles.physicalDataValue}>{athleteHeight || '-'}</Text>
+                    </View>
+                    <View style={styles.physicalDataItem}>
+                      <Text style={styles.physicalDataLabel}>Peso kg.</Text>
+                      <Text style={styles.physicalDataValue}>{athleteWeight || '-'}</Text>
+                    </View>
+                    <View style={styles.physicalDataItem}>
+                      <Text style={styles.physicalDataLabel}>Elevaz. cm.</Text>
+                      <Text style={styles.physicalDataValue}>{athleteElevation || '-'}</Text>
+                    </View>
+                  </View>
+
+                  {athleteNotes ? (
+                    <View style={styles.notesSection}>
+                      <Text style={styles.techDataLabel}>Note</Text>
+                      <Text style={styles.notesText}>{athleteNotes}</Text>
+                    </View>
+                  ) : null}
+                  {athleteCharacteristics.length > 0 && (
+                    <View style={styles.characteristicsSection}>
+                      <Text style={styles.techDataLabel}>Caratteristiche</Text>
+                      <View style={styles.characteristicsTags}>
+                        {athleteCharacteristics.map((char, idx) => (
+                          <View key={idx} style={styles.characteristicTag}>
+                            <Text style={styles.characteristicTagText}>{char}</Text>
+                          </View>
+                        ))}
+                      </View>
                     </View>
                   )}
-                </View>
-              ) : (
-                <View style={styles.warningBox}>
-                  <Ionicons name="warning" size={20} color="#FF9500" />
-                  <Text style={styles.warningText}>Nessun certificato</Text>
-                </View>
-              )}
-              {/* Admin: sempre visibile - Modifica date + Verifica */}
-              <TouchableOpacity
-                style={{ 
-                  backgroundColor: '#EDE7F6', borderRadius: 10, padding: 12, marginTop: 12, 
-                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  borderWidth: 1, borderColor: '#CE93D8',
-                }}
-                onPress={() => setCertModalVisible(true)}
-              >
-                <Ionicons name={certificate ? "create-outline" : "calendar-outline"} size={18} color="#7B1FA2" />
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#7B1FA2' }}>
-                  {certificate ? 'Modifica date certificato' : 'Inserisci dati certificato'}
-                </Text>
-              </TouchableOpacity>
-              {certificate && (
-                <TouchableOpacity
-                  style={{ 
-                    backgroundColor: athlete?.medical_certificate_verified ? '#E8F5E9' : '#FFF8E1', 
-                    borderRadius: 10, padding: 12, marginTop: 8, 
-                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    borderWidth: 1, borderColor: athlete?.medical_certificate_verified ? '#66BB6A' : '#FFB74D',
-                  }}
-                  onPress={handleVerifyCertificate}
-                >
-                  <Ionicons name={athlete?.medical_certificate_verified ? "shield-checkmark" : "shield-outline"} size={18} color={athlete?.medical_certificate_verified ? '#2E7D32' : '#E65100'} />
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: athlete?.medical_certificate_verified ? '#2E7D32' : '#E65100' }}>
-                    {athlete?.medical_certificate_verified ? 'Certificato verificato ✓' : 'Segna come verificato'}
-                  </Text>
-                </TouchableOpacity>
+                </>
               )}
             </View>
 
@@ -3394,6 +3216,190 @@ export default function AdminAthleteDetail() {
 
         {/* PRESENZE TAB */}
         {activeTab === 'presenze' && (
+          <>
+          {/* 🆕 22/02/2026 — Card "Periodo di Prova" (solo atleti quota in trial) — spostata da Anagrafica */}
+          {athlete.status === 'trial' && athleteType === 'quota' && (
+            <View style={styles.card}>
+              <Text style={[styles.cardTitle, { marginTop: 0 }]}>🏁 Periodo di Prova</Text>
+              <View style={{ backgroundColor: athlete.trial_start_date ? '#E3F2FD' : '#F3E5F5', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: athlete.trial_start_date ? '#1976D2' : '#9C27B0', marginTop: 8 }} data-testid="admin-trial-info-box">
+                <Text style={{ fontSize: 15, fontWeight: '700', color: athlete.trial_start_date ? '#1565C0' : '#7B1FA2', marginBottom: 8 }}>
+                  {athlete.trial_start_date ? 'Periodo di prova attivo' : 'In attesa di inizio prova'}
+                </Text>
+                {athlete.trial_start_date && (
+                  <>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <Ionicons name="calendar-outline" size={16} color="#1976D2" />
+                      <Text style={{ fontSize: 13, color: '#333' }}>
+                        Inizio: <Text style={{ fontWeight: '700' }}>{new Date(athlete.trial_start_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })}</Text>
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                      <Ionicons name="calendar" size={16} color="#1976D2" />
+                      <Text style={{ fontSize: 13, color: '#333' }}>
+                        Scadenza: <Text style={{ fontWeight: '700' }}>{athlete.trial_end_date ? new Date(athlete.trial_end_date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}</Text>
+                      </Text>
+                    </View>
+                    {trialStatus && (
+                      <>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                          <Ionicons name="fitness" size={16} color="#1976D2" />
+                          <Text style={{ fontSize: 13, color: '#333' }}>
+                            <Text style={{ fontWeight: '700' }}>{trialStatus.sessions_remaining}</Text> allenamenti disponibili ({trialStatus.sessions_count}/{trialStatus.max_sessions})
+                          </Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                          <Ionicons name="calendar" size={16} color="#1976D2" />
+                          <Text style={{ fontSize: 13, color: '#333' }}>
+                            <Text style={{ fontWeight: '700' }}>{trialStatus.days_remaining}</Text> giorni rimanenti
+                          </Text>
+                        </View>
+                      </>
+                    )}
+                  </>
+                )}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                  <Ionicons name={athlete.trial_document_generated ? "checkmark-circle" : "close-circle"} size={16} color={athlete.trial_document_generated ? '#4CAF50' : '#E53935'} />
+                  <Text style={{ fontSize: 13, color: athlete.trial_document_generated ? '#4CAF50' : '#E53935', fontWeight: '600' }}>
+                    {athlete.trial_document_generated ? 'Dichiarazione di prova firmata' : 'Dichiarazione non ancora firmata'}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* 🆕 22/02/2026 — Card "Squadra" spostata qui da Anagrafica */}
+          <View style={styles.card}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <SportIcon size={20} />
+              <Text style={[styles.cardTitle, { marginLeft: 6, marginTop: 0 }]}>Squadra</Text>
+            </View>
+            {editing ? (
+              <>
+                {/* Squadra Principale - collassabile */}
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                    backgroundColor: '#F0F7FF', borderRadius: 10, padding: 12, marginBottom: 8,
+                  }}
+                  onPress={() => setShowPrimaryTeam(!showPrimaryTeam)}
+                  data-testid="toggle-primary-team"
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#007AFF' }}>Squadra Principale</Text>
+                    {!showPrimaryTeam && editData.team_id && (
+                      <Text style={{ fontSize: 13, color: '#333', marginTop: 2 }}>
+                        {allTeams.find(t => t.id === editData.team_id)?.name || ''}
+                      </Text>
+                    )}
+                  </View>
+                  <Ionicons name={showPrimaryTeam ? "chevron-up" : "chevron-down"} size={20} color="#007AFF" />
+                </TouchableOpacity>
+                {showPrimaryTeam && (
+                  <View style={styles.teamSelector}>
+                    {allTeams.map((t) => (
+                      <TouchableOpacity
+                        key={t.id}
+                        style={[
+                          styles.teamOption,
+                          editData.team_id === t.id && styles.teamOptionSelected
+                        ]}
+                        onPress={() => setEditData({...editData, team_id: t.id})}
+                      >
+                        <Ionicons
+                          name={editData.team_id === t.id ? "radio-button-on" : "radio-button-off"}
+                          size={20}
+                          color={editData.team_id === t.id ? "#007AFF" : "#999"}
+                        />
+                        <Text style={[
+                          styles.teamOptionText,
+                          editData.team_id === t.id && styles.teamOptionTextSelected
+                        ]}>{t.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {/* Squadra Secondaria - collassabile */}
+                <TouchableOpacity
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                    backgroundColor: '#F5F5F5', borderRadius: 10, padding: 12, marginTop: 8, marginBottom: 8,
+                  }}
+                  onPress={() => setShowSecondaryTeam(!showSecondaryTeam)}
+                  data-testid="toggle-secondary-team"
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#666' }}>Squadra Secondaria (opzionale)</Text>
+                    {!showSecondaryTeam && (
+                      <Text style={{ fontSize: 13, color: '#333', marginTop: 2 }}>
+                        {editData.team_id_2 ? (allTeams.find(t => t.id === editData.team_id_2)?.name || '') : 'Nessuna'}
+                      </Text>
+                    )}
+                  </View>
+                  <Ionicons name={showSecondaryTeam ? "chevron-up" : "chevron-down"} size={20} color="#666" />
+                </TouchableOpacity>
+                {showSecondaryTeam && (
+                  <View style={styles.teamSelector}>
+                    <TouchableOpacity
+                      style={[
+                        styles.teamOption,
+                        !editData.team_id_2 && styles.teamOptionSelected
+                      ]}
+                      onPress={() => setEditData({...editData, team_id_2: ''})}
+                    >
+                      <Ionicons
+                        name={!editData.team_id_2 ? "radio-button-on" : "radio-button-off"}
+                        size={20}
+                        color={!editData.team_id_2 ? "#007AFF" : "#999"}
+                      />
+                      <Text style={[
+                        styles.teamOptionText,
+                        !editData.team_id_2 && styles.teamOptionTextSelected
+                      ]}>Nessuna</Text>
+                    </TouchableOpacity>
+                    {allTeams.filter(t => t.id !== editData.team_id).map((t) => (
+                      <TouchableOpacity
+                        key={t.id}
+                        style={[
+                          styles.teamOption,
+                          editData.team_id_2 === t.id && styles.teamOptionSelected
+                        ]}
+                        onPress={() => setEditData({...editData, team_id_2: t.id})}
+                      >
+                        <Ionicons
+                          name={editData.team_id_2 === t.id ? "radio-button-on" : "radio-button-off"}
+                          size={20}
+                          color={editData.team_id_2 === t.id ? "#007AFF" : "#999"}
+                        />
+                        <Text style={[
+                          styles.teamOptionText,
+                          editData.team_id_2 === t.id && styles.teamOptionTextSelected
+                        ]}>{t.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </>
+            ) : (
+              <>
+                <View style={styles.infoRow}>
+                  <Text style={styles.label}>Squadra Principale</Text>
+                  <Text style={[styles.value, { color: '#E53935', fontWeight: 'bold' }]}>
+                    {team?.name || '-'}
+                  </Text>
+                </View>
+                {athlete?.team_id_2 && (
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Squadra Secondaria</Text>
+                    <Text style={styles.value}>
+                      {allTeams.find(t => t.id === athlete?.team_id_2)?.name || '-'}
+                    </Text>
+                  </View>
+                )}
+              </>
+            )}
+          </View>
+
           <View style={styles.card}>
             <Text style={styles.cardTitle}>📅 Statistiche Presenze</Text>
             {stats ? (
@@ -3448,6 +3454,7 @@ export default function AdminAthleteDetail() {
               </View>
             )}
           </View>
+          </>
         )}
 
         <View style={{ height: editing ? 100 : 40 }} />

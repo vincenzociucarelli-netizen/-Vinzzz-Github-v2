@@ -16,6 +16,25 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 22/02/2026 — Riordino Anagrafica Atleta Admin: Cert ⬆️ Dati Tecnici ⬇️ Squadra → Presenze ✅
+
+L'utente ha chiesto di riorganizzare le card del tab "Anagrafica" lato admin atleta (3 tipologie) per migliorare la fruibilità: Certificato Medico in cima, Dati Tecnici in fondo, Squadra spostata nel tab Presenze. Inoltre rimozione della firma di inizio prova per atleti PRO e card più ricca per atleti che pagano la quota nel tab Presenze.
+
+### Modifiche applicate (`/admin/athlete/[id].tsx`)
+- **Ordine card Anagrafica (nuovo)**: Cronologia → Status Alerts (pending_email / pending_certificate isolati in card dedicata) → **🩺 Certificato Medico** → Tesseramento → Anagrafica + Indirizzo → Privacy GDPR / Password Genitori / Withdraw / Reset → **📊 Dati Tecnici (in fondo)**.
+- **Squadra rimossa** da Anagrafica e spostata nel tab **📅 Presenze**.
+- **Trial box rimosso** da Dati Tecnici.
+- **Tab Presenze** ora include: card "🏁 Periodo di Prova" (solo se `status === 'trial' && athleteType === 'quota'`) → card "Squadra" → Statistiche Presenze esistenti.
+
+### Modifiche applicate (`/athlete/index.tsx`)
+- Banner "In attesa di inizio prova" (con bottone "Firma Dichiarazione di Prova") nascosto per atleti PRO (`athlete_type === 'compensated'`).
+
+### Vantaggi
+- Cert medico visibile a colpo d'occhio (priorità medico-legale).
+- Tab Presenze diventa il hub operativo (Squadra + Prova + Statistiche).
+- Atleti PRO non vedono più una richiesta di firma che non li riguarda.
+
+
 ## 🆕 22/02/2026 — "🏆 Stagione" Replica & Provincia obbligatoria universale ✅
 
 L'utente ha chiesto di replicare la logica della card "🏆 Stagione" implementata in Admin Dirigente verso Admin Coach, Admin Collaboratore e tutte le viste user-side (Dirigente/Coach/Collaboratore). Stesso obbligo `province_of_birth` su tutti i profili user.

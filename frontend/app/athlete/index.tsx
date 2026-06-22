@@ -517,7 +517,8 @@ export default function AthleteScreen() {
           )}
           
           {/* Pending Trial - Dichiarazione di prova (stile identico al minore - VIOLA) */}
-          {!isMinor && (profile?.status === 'pending_trial' || (profile?.status === 'trial' && !(profile as any)?.trial_document_generated)) && (
+          {/* 🆕 22/02/2026 — Nascosto per atleti PRO (compensated): non firmano prova, sono scelti dalla società */}
+          {!isMinor && profile?.athlete_type !== 'compensated' && (profile?.status === 'pending_trial' || (profile?.status === 'trial' && !(profile as any)?.trial_document_generated)) && (
             <View style={{ marginTop: 16 }}>
               <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 }}>
                 <Text style={{ fontSize: 16, fontWeight: '700', color: '#333', marginBottom: 12 }}>Stato</Text>
