@@ -3387,7 +3387,6 @@ export default function AdminAthleteDetail() {
                       <Ionicons name="add-circle" size={28} color="#F57F17" />
                     </TouchableOpacity>
                   )}
-                </View>
               </>
             )}
           </>
