@@ -15334,6 +15334,11 @@ def _require_complete_anagrafica(user: dict) -> None:
     if is_italian and not _has(["place_of_birth", "birth_place"]):
         missing_labels.append("Luogo di nascita (comune italiano)")
 
+    # 🆕 22/02/2026 — Conditionally required: Provincia di nascita SOLO se Stato = Italia
+    # (es. "PG", "RM"). Necessaria per quietanza compensi e modulo €5k/€15k.
+    if is_italian and not _has(["province_of_birth", "birth_province"]):
+        missing_labels.append("Provincia di nascita (sigla)")
+
     if missing_labels:
         raise HTTPException(
             status_code=400,
