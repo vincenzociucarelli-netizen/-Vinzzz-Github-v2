@@ -2660,6 +2660,56 @@ export default function AdminAthleteDetail() {
               )}
             </View>
 
+            {/* 🆕 22/02/2026 — Dati Genitore Detraente (visibile solo per atleti fiscalmente minori: età ≤ 18 nell'anno corrente) */}
+            {(() => {
+              if (!athlete.date_of_birth) return null;
+              try {
+                const birthYear = new Date(athlete.date_of_birth).getFullYear();
+                const currentYear = new Date().getFullYear();
+                const eligible = (currentYear - birthYear) <= 18;
+                if (!eligible) return null;
+              } catch {
+                return null;
+              }
+              const taxPayerLast = (athlete as any).tax_payer_last_name || '';
+              const taxPayerFirst = (athlete as any).tax_payer_first_name || '';
+              const taxPayerCF = (athlete as any).tax_payer_fiscal_code || '';
+              const isMissing = !taxPayerLast || !taxPayerFirst || !taxPayerCF;
+              return (
+                <View style={styles.card} data-testid="admin-tax-deductor-card">
+                  <Text style={styles.cardTitle}>🧾 Genitore Detraente Fiscale</Text>
+                  <Text style={{ fontSize: 12, color: '#666', marginBottom: 10, fontStyle: 'italic' }}>
+                    Dati del genitore che porta in detrazione la spesa sportiva (deducibilità fino al 18° anno di età ai sensi del DPR 917/86 art. 15). Modificabile solo dal genitore nella sua area.
+                  </Text>
+                  {isMissing ? (
+                    <View style={{ backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
+                      <Text style={{ fontSize: 13, color: '#E65100', fontWeight: '600' }}>
+                        ⚠️ Dati non ancora compilati dal genitore.
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                        Senza questi dati l'attestato di versamento non potrà essere usato ai fini fiscali.
+                      </Text>
+                    </View>
+                  ) : (
+                    <>
+                      <View style={styles.infoRow}>
+                        <Text style={styles.label}>Cognome</Text>
+                        <Text style={styles.value}>{taxPayerLast}</Text>
+                      </View>
+                      <View style={styles.infoRow}>
+                        <Text style={styles.label}>Nome</Text>
+                        <Text style={styles.value}>{taxPayerFirst}</Text>
+                      </View>
+                      <View style={styles.infoRow}>
+                        <Text style={styles.label}>Codice Fiscale</Text>
+                        <Text style={[styles.value, { fontFamily: 'monospace' }]}>{taxPayerCF}</Text>
+                      </View>
+                    </>
+                  )}
+                </View>
+              );
+            })()}
+
             {/* Password Dati Genitori (for minors) */}
             {athlete.is_minor && (
               <View style={styles.card}>

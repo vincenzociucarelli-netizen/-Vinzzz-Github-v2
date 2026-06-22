@@ -16,6 +16,37 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 22/02/2026 — Card "Genitore Detraente Fiscale" visibile lato admin ✅
+
+L'utente ha segnalato la mancanza, sull'anagrafica admin dell'atleta minorenne, dei dati del genitore che porta in detrazione la spesa sportiva (cognome, nome, CF). Necessario per la corretta compilazione dell'Attestato di Versamento ai fini delle detrazioni fiscali fino al 18° anno di età (DPR 917/86 art. 15).
+
+### Stato infrastruttura backend (già presente, non toccata)
+- Modello `Athlete` ha già i campi `tax_payer_last_name`, `tax_payer_first_name`, `tax_payer_fiscal_code`.
+- `AthleteUpdate` accetta i tre campi via `PATCH /athletes/{id}`.
+- L'endpoint `/payments/{athlete_id}/fiscal-receipt` li espone per il PDF.
+
+### Stato frontend lato genitore (già presente, non toccata)
+- `/parent/athlete/[id]` ha:
+  - Form di **editing** con 3 input dedicati (Cognome / Nome / CF Genitore detraente)
+  - Visualizzazione read-only mascherata
+  - Warning automatico se i dati mancano
+
+### Stato frontend PDF (già presente, non toccato)
+- `src/utils/fiscalReceipt.ts` `generateReceiptHTML()` legge `data.parent.first_name/last_name/fiscal_code` → questi vengono già popolati da `athlete.tax_payer_*` quando si scarica l'Attestato di Versamento (documento #1 per minorenni).
+
+### Modifica applicata in questa sessione
+- **`/app/frontend/app/admin/athlete/[id].tsx`**: aggiunta card "🧾 Genitore Detraente Fiscale" (read-only) nel tab Anagrafica, posizionata prima della card "Password Protezione Dati":
+  - Visibile **solo** se `currentYear - birthYear ≤ 18` (atleta fiscalmente eligibile alla detrazione)
+  - Mostra Cognome / Nome / CF del genitore detraente
+  - Banner di warning arancio se mancano dati ("⚠️ Dati non ancora compilati dal genitore. Senza questi dati l'attestato di versamento non potrà essere usato ai fini fiscali.")
+  - Testo informativo che cita DPR 917/86 art. 15
+  - Note esplicita "Modificabile solo dal genitore nella sua area" (admin non può editare)
+
+### Cosa NON è stato modificato
+- I PDF (#1 Attestato Versamento e #2 Ricevuta Pagamenti) sono già wired correttamente sui campi `tax_payer_*` e non richiedono modifiche.
+- Il form di editing genitore è già funzionante e completo.
+
+
 ## 🆕 22/02/2026 — Riordino Anagrafica Atleta Admin: Cert ⬆️ Dati Tecnici ⬇️ Squadra → Presenze ✅
 
 L'utente ha chiesto di riorganizzare le card del tab "Anagrafica" lato admin atleta (3 tipologie) per migliorare la fruibilità: Certificato Medico in cima, Dati Tecnici in fondo, Squadra spostata nel tab Presenze. Inoltre rimozione della firma di inizio prova per atleti PRO e card più ricca per atleti che pagano la quota nel tab Presenze.
