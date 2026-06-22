@@ -260,6 +260,9 @@ export default function AdminAthleteDetail() {
   // 🆕 21/06/2026 — Quietanze firmate (per widget "Già Percepito" + modal Gestione Quietanze)
   const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
   const [receiptsModalVisible, setReceiptsModalVisible] = useState(false);
+  // 🆕 22/02/2026 — Threshold status anno 1 + anno 2 (allineato a vista Collaboratore)
+  const [thresholdStatus, setThresholdStatus] = useState<any>(null);
+  const [thresholdStatus2, setThresholdStatus2] = useState<any>(null);
   // Trial status data
   const [trialStatus, setTrialStatus] = useState<any>(null);
   const [compensationAmount, setCompensationAmount] = useState('');
@@ -465,6 +468,26 @@ export default function AdminAthleteDetail() {
           setLinkedCoach(linkedRes.data?.linked ? linkedRes.data : null);
         } catch (e) {
           setLinkedCoach(null);
+        }
+        // 🆕 22/02/2026 — Carica threshold-status anno 1 + anno 2 (per blocchi "Comunicazione RAS" stile Collaboratore)
+        try {
+          const startYear = athleteData.contract_start_date
+            ? parseInt(String(athleteData.contract_start_date).split('-')[0])
+            : new Date().getFullYear();
+          const endYear = athleteData.contract_end_date
+            ? parseInt(String(athleteData.contract_end_date).split('-')[0])
+            : startYear;
+          const t1Res = await api.get(`/prime-squadre/athletes/${id}/threshold-status/${startYear}`);
+          setThresholdStatus(t1Res.data);
+          if (endYear > startYear) {
+            const t2Res = await api.get(`/prime-squadre/athletes/${id}/threshold-status/${endYear}`);
+            setThresholdStatus2(t2Res.data);
+          } else {
+            setThresholdStatus2(null);
+          }
+        } catch (e) {
+          setThresholdStatus(null);
+          setThresholdStatus2(null);
         }
       }
       
@@ -1783,12 +1806,101 @@ export default function AdminAthleteDetail() {
     }
   };
 
+  // 🆕 22/02/2026 — Helpers per blocchi "Comunicazione RAS" e "Calcolo per Anno Solare" (stile Pedretti)
+  const parseAthleteDate = (dateStr: any): Date | null => {
+    if (!dateStr) return null;
+    const s = String(dateStr);
+    if (s.includes('/')) {
+      const [dd, mm, yyyy] = s.split('/');
+      return new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd));
+    }
+    if (s.includes('-')) return new Date(s);
+    return null;
+  };
+  const getAthleteCompensationBreakdown = () => {
+    const monthly = Number((athlete as any)?.monthly_compensation || 0);
+    const prior = Number((athlete as any)?.other_annual_compensation || 0);
+    const monthNames = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+    let monthsInContract = 12;
+    let startMonthName = 'Gennaio';
+    let endMonthName = 'Dicembre';
+    let startYear = new Date().getFullYear();
+    let endYear = startYear;
+    const start = parseAthleteDate((athlete as any)?.contract_start_date);
+    const end = parseAthleteDate((athlete as any)?.contract_end_date);
+    if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
+      monthsInContract = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1;
+      if (monthsInContract < 1) monthsInContract = 1;
+      startMonthName = monthNames[start.getMonth()];
+      endMonthName = monthNames[end.getMonth()];
+      startYear = start.getFullYear();
+      endYear = end.getFullYear();
+    }
+    const thisClubTotal = monthly * monthsInContract;
+    let supplementaryTotal = 0;
+    if (start && end && signedReceipts && signedReceipts.length > 0) {
+      const cs = start.getMonth();
+      const ce = end.getMonth();
+      const sy = start.getFullYear();
+      const ey = end.getFullYear();
+      signedReceipts.forEach((r: any) => {
+        const amt = r.amount_gross || r.amount || 0;
+        const ry = r.year;
+        const rm = (r.month || 1) - 1;
+        let isIn = false;
+        if (sy === ey) isIn = ry === sy && rm >= cs && rm <= ce;
+        else if (ry === sy) isIn = rm >= cs;
+        else if (ry === ey) isIn = rm <= ce;
+        else if (ry > sy && ry < ey) isIn = true;
+        if (isIn && amt > monthly) supplementaryTotal += amt - monthly;
+      });
+    }
+    return { monthly, prior, monthsInContract, startMonthName, endMonthName, startYear, endYear, thisClubTotal, supplementaryTotal, grandTotal: thisClubTotal + supplementaryTotal };
+  };
+  const getAthleteYearlyBreakdown = () => {
+    const monthly = Number((athlete as any)?.monthly_compensation || 0);
+    const prior = Number((athlete as any)?.other_annual_compensation || 0);
+    const monthNames = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    const years: { [year: number]: any } = {};
+    const start = parseAthleteDate((athlete as any)?.contract_start_date);
+    const end = parseAthleteDate((athlete as any)?.contract_end_date);
+    if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
+      const sy = start.getFullYear();
+      const ey = end.getFullYear();
+      for (let y = sy; y <= ey; y++) {
+        const ysm = (y === sy) ? start.getMonth() : 0;
+        const yem = (y === ey) ? end.getMonth() : 11;
+        const monthsThisYear = yem - ysm + 1;
+        const yearReceipts = (signedReceipts || []).filter((r: any) => {
+          if (r.year !== y) return false;
+          const mi = (r.month || 1) - 1;
+          return mi >= ysm && mi <= yem;
+        });
+        const baseAmount = monthly * monthsThisYear;
+        let supplementary = 0;
+        yearReceipts.forEach((r: any) => {
+          const amt = r.amount_gross || r.amount || 0;
+          if (amt > monthly) supplementary += amt - monthly;
+        });
+        const total = baseAmount + supplementary;
+        const priorThis = (y === sy) ? prior : 0;
+        const grandTotal = priorThis + total;
+        years[y] = {
+          months: monthsThisYear,
+          startMonth: monthNames[ysm],
+          endMonth: monthNames[yem],
+          baseAmount, supplementary, total,
+          priorCompensation: priorThis,
+          grandTotal,
+          exceedsThreshold5k: grandTotal > 5000,
+          exceedsThreshold15k: grandTotal > 15000,
+        };
+      }
+    }
+    return years;
+  };
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))}>
-          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
-        </TouchableOpacity>
         <TouchableOpacity onPress={() => router.replace('/admin')} data-testid="header-home-btn" style={{ marginLeft: 8 }}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
         </TouchableOpacity>
@@ -3115,6 +3227,129 @@ export default function AdminAthleteDetail() {
                     <Ionicons name="chevron-forward" size={20} color="#fff" />
                   </TouchableOpacity>
                 </View>
+
+                  {/* 🆕 22/02/2026 — Blocco "Comunicazione RAS" + "Calcolo per Anno Solare" stile Pedretti Pedro */}
+                  {athlete?.contract_start_date && athlete?.contract_end_date && (() => {
+                    const breakdown = getAthleteCompensationBreakdown();
+                    const yearlyBreakdown = getAthleteYearlyBreakdown();
+                    const years = Object.keys(yearlyBreakdown).map(Number).sort();
+                    const monthly = Number(athlete?.monthly_compensation || 0);
+                    const prior = Number(athlete?.other_annual_compensation || 0);
+                    const fmtDate = (d: string) => {
+                      try {
+                        return new Date(d).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                      } catch { return d; }
+                    };
+                    return (
+                      <View style={{ marginTop: 12 }}>
+                        {/* Comunicazione RAS - Totale Contratto */}
+                        <View style={{ backgroundColor: '#E3F2FD', borderRadius: 10, padding: 14, marginBottom: 12 }}>
+                          <Text style={{ color: '#1565C0', fontWeight: 'bold', fontSize: 14 }}>📄 Comunicazione RAS - Totale Contratto</Text>
+                          <Text style={{ color: '#1565C0', fontSize: 12, marginTop: 4 }}>
+                            Dal {fmtDate(athlete.contract_start_date)} al {fmtDate(athlete.contract_end_date)} = {breakdown.monthsInContract} mesi
+                          </Text>
+                          <View style={{ marginTop: 8 }}>
+                            <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.thisClubTotal)}</Text></Text>
+                            <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({breakdown.monthsInContract} mesi × {formatCurrency(monthly)})</Text>
+                            <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.supplementaryTotal || 0)}</Text></Text>
+                            <Text style={{ fontSize: 15, color: '#1565C0', fontWeight: 'bold', marginTop: 4, borderTopWidth: 1, borderTopColor: '#90CAF9', paddingTop: 8 }}>• TOTALE RAS: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.grandTotal)}</Text></Text>
+                          </View>
+                        </View>
+
+                        {/* Header Calcolo per Anno */}
+                        <View style={{ backgroundColor: '#f5f5f5', borderRadius: 8, padding: 10, marginBottom: 12 }}>
+                          <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>📊 Calcolo per Anno Solare (soglie €5k/€15k)</Text>
+                        </View>
+
+                        {/* Box anni */}
+                        {years.map((y, idx) => {
+                          const yb = yearlyBreakdown[y];
+                          if (!yb) return null;
+                          const isStartYear = idx === 0;
+                          const dateRange = isStartYear ? `${yb.startMonth}-Dic` : `Gen-${yb.endMonth}`;
+                          return (
+                            <View key={y} style={{ backgroundColor: yb.exceedsThreshold5k ? '#FFF8E1' : '#E8F5E9', borderRadius: 10, padding: 14, marginBottom: 12 }}>
+                              <Text style={{ color: yb.exceedsThreshold5k ? '#F57F17' : '#2E7D32', fontWeight: 'bold', fontSize: 14 }}>
+                                {yb.exceedsThreshold5k ? '⚠️' : '✅'} Anno {y} ({dateRange}: {yb.months} mesi)
+                              </Text>
+                              <View style={{ marginTop: 8 }}>
+                                <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yb.baseAmount || yb.total)}</Text></Text>
+                                <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({yb.months} mesi × {formatCurrency(monthly)})</Text>
+                                <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yb.supplementary || 0)}</Text></Text>
+                                {yb.priorCompensation > 0 && (
+                                  <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yb.priorCompensation)}</Text></Text>
+                                )}
+                                <Text style={{ fontSize: 15, color: yb.exceedsThreshold15k ? '#8E44AD' : yb.exceedsThreshold5k ? '#F57F17' : '#2E7D32', fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yb.grandTotal)}</Text></Text>
+                              </View>
+                            </View>
+                          );
+                        })}
+
+                        {/* Threshold Warnings / Signed Banners */}
+                        {(thresholdStatus || thresholdStatus2) && (
+                          <View style={{ marginTop: 4, gap: 10 }}>
+                            {[{ ts: thresholdStatus, year: years[0] }, { ts: thresholdStatus2, year: years[1] }].filter(x => x.ts && x.year).map((entry, ei) => {
+                              const ts: any = entry.ts;
+                              const yr = entry.year;
+                              const mn = ['', 'Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+                              const blocks: any[] = [];
+                              const t5 = ts?.thresholds?.['5000'];
+                              const t15 = ts?.thresholds?.['15000'];
+                              // Warning 5k
+                              if (t5?.needs_warning && !t5?.declaration_signed) {
+                                blocks.push(
+                                  <View key={`w5-${yr}`} style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 10, padding: 14, alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', textAlign: 'center', marginBottom: 6 }}>⚠️ Anno {yr}: Soglia dei €5.000</Text>
+                                    <Text style={{ fontSize: 13, color: '#E65100', textAlign: 'center', lineHeight: 18 }}>
+                                      Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{mn[t5?.threshold_month || 0]}</Text> supererà la soglia previdenziale di €5.000.
+                                    </Text>
+                                    <Text style={{ fontSize: 12, color: '#E65100', textAlign: 'center', fontStyle: 'italic', marginTop: 4 }}>Contributi previdenziali INPS</Text>
+                                  </View>
+                                );
+                              }
+                              // Warning 15k
+                              if (t15?.needs_warning && !t15?.declaration_signed) {
+                                blocks.push(
+                                  <View key={`w15-${yr}`} style={{ backgroundColor: '#F3E5F5', borderWidth: 2, borderColor: '#9C27B0', borderRadius: 10, padding: 14, alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#6A1B9A', textAlign: 'center', marginBottom: 6 }}>🚨 Anno {yr}: Soglia dei €15.000</Text>
+                                    <Text style={{ fontSize: 13, color: '#6A1B9A', textAlign: 'center', lineHeight: 18 }}>
+                                      Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{mn[t15?.threshold_month || 0]}</Text> supererà la soglia fiscale di €15.000.
+                                    </Text>
+                                    <Text style={{ fontSize: 12, color: '#6A1B9A', textAlign: 'center', fontStyle: 'italic', marginTop: 4 }}>Tassazione IRPEF obbligatoria</Text>
+                                  </View>
+                                );
+                              }
+                              // Signed 5k
+                              if (t5?.declaration_signed) {
+                                const bg = ei === 0 ? '#D4EDDA' : '#E3F2FD';
+                                const bd = ei === 0 ? '#28A745' : '#2196F3';
+                                const tc = ei === 0 ? '#155724' : '#1565C0';
+                                blocks.push(
+                                  <View key={`s5-${yr}`} style={{ backgroundColor: bg, borderWidth: 2, borderColor: bd, borderRadius: 10, padding: 14, alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 15, fontWeight: '700', color: tc, textAlign: 'center', marginBottom: 6 }}>✅ Anno {yr}: Dichiarazione €5.000 firmata</Text>
+                                    <Text style={{ fontSize: 13, color: tc, textAlign: 'center', fontStyle: 'italic' }}>Soglia previdenziale comunicata{(t5?.threshold_month >= 1 && t5?.threshold_month <= 12) ? <>{' (superata nel mese di '}<Text style={{ fontWeight: 'bold' }}>{mn[t5.threshold_month]}</Text>{')'}</> : null}</Text>
+                                  </View>
+                                );
+                              }
+                              // Signed 15k
+                              if (t15?.declaration_signed) {
+                                const bg = ei === 0 ? '#D4EDDA' : '#E3F2FD';
+                                const bd = ei === 0 ? '#28A745' : '#2196F3';
+                                const tc = ei === 0 ? '#155724' : '#1565C0';
+                                blocks.push(
+                                  <View key={`s15-${yr}`} style={{ backgroundColor: bg, borderWidth: 2, borderColor: bd, borderRadius: 10, padding: 14, alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 15, fontWeight: '700', color: tc, textAlign: 'center', marginBottom: 6 }}>✅ Anno {yr}: Dichiarazione €15.000 firmata</Text>
+                                    <Text style={{ fontSize: 13, color: tc, textAlign: 'center', fontStyle: 'italic' }}>Soglia fiscale comunicata{(t15?.threshold_month >= 1 && t15?.threshold_month <= 12) ? <>{' (superata nel mese di '}<Text style={{ fontWeight: 'bold' }}>{mn[t15.threshold_month]}</Text>{')'}</> : null}</Text>
+                                  </View>
+                                );
+                              }
+                              return blocks.length > 0 ? <View key={`blk-${yr}`} style={{ gap: 10 }}>{blocks}</View> : null;
+                            })}
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })()}
 
                   {/* 🆕 13/06/2026 — Riepilogo Compensi Doppio Ruolo: RIMOSSO da qui
                       e spostato in /admin/persona/[id]/compensi (Step 2). */}

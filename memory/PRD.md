@@ -16,6 +16,27 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 22/02/2026 — Compensi Atleta PRO Admin uniformati a stile Pedretti Collaboratore ✅
+
+L'utente ha richiesto che la tab "Compensi" dell'atleta 18+ PRO (admin) replichi lo stesso layout già usato per il Collaboratore (Pedretti Pedro): "Già Percepito" già OK, ma servono in più i blocchi **Comunicazione RAS - Totale Contratto**, **Calcolo per Anno Solare (€5k/€15k)** e **Dichiarazioni soglia firmata**.
+
+### Backend (`/app/backend/server.py`)
+- Esteso l'endpoint `GET /api/prime-squadre/athletes/{athlete_id}/threshold-status/{year}` aggiungendo i campi `declaration_signed` e `needs_warning` per ciascuna soglia (5000/15000), allineando la response a quella già usata dal Collaboratore.
+- Le dichiarazioni vengono cercate in `threshold_declarations` (athlete_id / user_id / coach_id) e in `signed_documents` (document_type `threshold_5000_communication` / `threshold_15000_communication`).
+
+### Frontend (`/app/frontend/app/admin/athlete/[id].tsx`)
+- Nuovi state `thresholdStatus` / `thresholdStatus2` caricati post-fetch atleta (anno start contratto + anno end contratto).
+- Aggiunte helper inline `getAthleteCompensationBreakdown()` e `getAthleteYearlyBreakdown()` (calcoli mesi/base/supplementare/totali per RAS e per anno solare).
+- Dopo la card "💰 Compenso" + bottone "Gestisci Compensi e Quietanze", ora vengono renderizzati:
+  - 📄 **Comunicazione RAS - Totale Contratto** (compenso base + supplementare + totale)
+  - 📊 **Calcolo per Anno Solare (€5k/€15k)** con un box per ogni anno del contratto
+  - Banner di warning/firma per Dichiarazione €5.000 e €15.000 (verde per anno start, blu per anno end, arancio/viola per warning)
+
+### Vantaggi
+- Visualizzazione coerente tra ruoli compensati (atleta PRO / coach / collaboratore / dirigente).
+- Admin può vedere subito a colpo d'occhio lo stato fiscale/previdenziale anche dell'atleta PRO senza dover entrare nella pagina dedicata `/compensation`.
+
+
 ## 🆕 22/02/2026 — Card "Genitore Detraente Fiscale" visibile lato admin ✅
 
 L'utente ha segnalato la mancanza, sull'anagrafica admin dell'atleta minorenne, dei dati del genitore che porta in detrazione la spesa sportiva (cognome, nome, CF). Necessario per la corretta compilazione dell'Attestato di Versamento ai fini delle detrazioni fiscali fino al 18° anno di età (DPR 917/86 art. 15).

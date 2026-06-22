@@ -22845,6 +22845,39 @@ async def get_athlete_threshold_status(athlete_id: str, year: int, current_user 
     approaching_5000 = (yearly_total < 5000 and next_total > 4500)
     approaching_15000 = (yearly_total < 15000 and next_total > 14500)
     
+    # 🆕 22/02/2026 — Check declaration_signed (allineato a /collaboratore/threshold-status)
+    # Cerca in threshold_declarations (per atleta o user)
+    declarations = await db.threshold_declarations.find({
+        "$or": [
+            {"athlete_id": athlete_id, "year": year},
+            {"user_id": athlete_id, "year": year},
+            {"coach_id": athlete_id, "year": year},
+        ]
+    }).to_list(10)
+    declaration_5000 = next((d for d in declarations if d.get("threshold_type") == "5000" or d.get("threshold_type") == 5000), None)
+    declaration_15000 = next((d for d in declarations if d.get("threshold_type") == "15000" or d.get("threshold_type") == 15000), None)
+    # Cerca anche in signed_documents
+    signed_threshold_docs = await db.signed_documents.find({
+        "$or": [
+            {"athlete_id": athlete_id, "year": year, "document_type": {"$in": ["threshold_5000_communication", "threshold_15000_communication"]}},
+            {"signer_id": athlete_id, "year": year, "document_type": {"$in": ["threshold_5000_communication", "threshold_15000_communication"]}},
+            {"coach_id": athlete_id, "year": year, "document_type": {"$in": ["threshold_5000_communication", "threshold_15000_communication"]}},
+        ]
+    }).to_list(10)
+    if not declaration_5000:
+        d5 = next((d for d in signed_threshold_docs if d.get("document_type") == "threshold_5000_communication"), None)
+        if d5:
+            declaration_5000 = {**d5, "signed": True}
+    if not declaration_15000:
+        d15 = next((d for d in signed_threshold_docs if d.get("document_type") == "threshold_15000_communication"), None)
+        if d15:
+            declaration_15000 = {**d15, "signed": True}
+    declaration_5000_signed = bool(declaration_5000 and declaration_5000.get("signed", True))
+    declaration_15000_signed = bool(declaration_15000 and declaration_15000.get("signed", True))
+    # needs_warning: la prossima quietanza supera la soglia E non firmata ancora
+    needs_warning_5000 = (not declaration_5000_signed) and (yearly_total <= 5000) and (next_total > 5000)
+    needs_warning_15000 = (not declaration_15000_signed) and (yearly_total <= 15000) and (next_total > 15000)
+
     return {
         "athlete_id": athlete_id,
         "year": year,
@@ -22866,6 +22899,8 @@ async def get_athlete_threshold_status(athlete_id: str, year: int, current_user 
                 "exceeded_month": exceeded_5000_record.get("month") if exceeded_5000_record else None,
                 "approaching": approaching_5000,
                 "threshold_month": threshold_5k_month,
+                "declaration_signed": declaration_5000_signed,
+                "needs_warning": needs_warning_5000,
             },
             "15000": {
                 "threshold": 15000,
@@ -22873,6 +22908,8 @@ async def get_athlete_threshold_status(athlete_id: str, year: int, current_user 
                 "exceeded_month": exceeded_15000_record.get("month") if exceeded_15000_record else None,
                 "approaching": approaching_15000,
                 "threshold_month": threshold_15k_month,
+                "declaration_signed": declaration_15000_signed,
+                "needs_warning": needs_warning_15000,
             }
         }
     }
