@@ -468,6 +468,13 @@ Società sportiva: ${societyName}
       showAlert('Campo Obbligatorio', 'Inserisci il Codice Fiscale');
       return;
     }
+    // 🆕 22/02/2026 — Provincia di nascita obbligatoria se Italia (es. PG, RM)
+    const countryToCheck = (editData.country_of_birth || DEFAULT_COUNTRY || '').toUpperCase();
+    const isItalia = countryToCheck === 'ITALIA' || countryToCheck === 'ITALY' || countryToCheck === 'IT';
+    if (isItalia && !editData.province_of_birth?.trim()) {
+      showAlert('Campo Obbligatorio', 'Inserisci la Sigla Provincia di Nascita (es. PG, RM). È necessaria per firmare le quietanze e le comunicazioni soglia.');
+      return;
+    }
     
     // If privacy not yet accepted, save profile first then show privacy modal
     if (!privacyAccepted) {
@@ -910,7 +917,24 @@ Società sportiva: ${societyName}
               </View>
               
               {(editing ? editData.country_of_birth : profileData.country_of_birth || DEFAULT_COUNTRY) === DEFAULT_COUNTRY && renderField('Luogo di Nascita', profileData.place_of_birth, 'place_of_birth')}
-              {(editing ? editData.country_of_birth : profileData.country_of_birth || DEFAULT_COUNTRY) === DEFAULT_COUNTRY && renderField('Provincia di Nascita', profileData.province_of_birth || '', 'province_of_birth')}
+              {(editing ? editData.country_of_birth : profileData.country_of_birth || DEFAULT_COUNTRY) === DEFAULT_COUNTRY && (
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldLabel}>Provincia di Nascita (sigla, es. PG) <Text style={{ color: '#D32F2F' }}>*</Text></Text>
+                  {editing ? (
+                    <TextInput
+                      style={styles.input}
+                      value={editData.province_of_birth || ''}
+                      onChangeText={(text) => setEditData({ ...editData, province_of_birth: text.toUpperCase().slice(0, 2) })}
+                      placeholder="PG"
+                      placeholderTextColor="#999"
+                      autoCapitalize="characters"
+                      maxLength={2}
+                    />
+                  ) : (
+                    <Text style={styles.fieldValue}>{profileData.province_of_birth || '—'}</Text>
+                  )}
+                </View>
+              )}
               {renderField('Indirizzo', profileData.address, 'address')}
               {renderField('Città', profileData.city, 'city')}
               
@@ -1004,38 +1028,58 @@ Società sportiva: ${societyName}
           </TouchableOpacity>
         )}
 
-        {/* Incarichi Assegnati (solo Palestre — Squadre già visibili nella dashboard) */}
-        {assignedVenues.length > 0 && (
+        {/* 🆕 22/02/2026 — Card "🏆 Stagione" unificata (Squadre + Palestre) */}
+        {(assignedTeams.length > 0 || assignedVenues.length > 0) && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>📋 Incarichi Assegnati</Text>
-            
-            {/* 🚫 19/06/2026 — Sezione "Squadre" RIMOSSA: già visibile nella dashboard
-                dirigente sotto "Squadre ({teams.length})". Le Palestre restano qui come
-                unica fonte. */}
-            
-            <View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                <Ionicons name="location" size={18} color="#FF9500" />
-                <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600', color: '#333' }}>Palestre</Text>
+            <Text style={styles.cardTitle}>🏆 Stagione</Text>
+
+            {/* Squadre Assegnate */}
+            {assignedTeams.length > 0 && (
+              <View style={{ marginTop: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Ionicons name="people" size={18} color="#007AFF" />
+                  <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600', color: '#333' }}>Squadre Assegnate</Text>
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {assignedTeams.map((t) => (
+                    <View key={t.id} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#E3F2FD', borderWidth: 1, borderColor: '#007AFF' }}>
+                      <Text style={{ color: '#007AFF', fontWeight: '500', fontSize: 13 }}>{t.name}</Text>
+                    </View>
+                  ))}
+                </View>
               </View>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {assignedVenues.map((venue, idx) => (
-                  <View
-                    key={idx}
-                    style={{
-                      paddingHorizontal: 12,
-                      paddingVertical: 6,
-                      borderRadius: 16,
-                      backgroundColor: '#FFF3E0',
-                      borderWidth: 1,
-                      borderColor: '#FF9500',
-                    }}
-                  >
-                    <Text style={{ color: '#E65100', fontWeight: '500', fontSize: 13 }}>{venue}</Text>
-                  </View>
-                ))}
+            )}
+
+            {/* Palestre Assegnate */}
+            {assignedVenues.length > 0 && (
+              <View style={{ marginTop: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Ionicons name="location" size={18} color="#FF9500" />
+                  <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600', color: '#333' }}>Palestre</Text>
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {assignedVenues.map((venue, idx) => (
+                    <View
+                      key={idx}
+                      style={{
+                        paddingHorizontal: 12,
+                        paddingVertical: 6,
+                        borderRadius: 16,
+                        backgroundColor: '#FFF3E0',
+                        borderWidth: 1,
+                        borderColor: '#FF9500',
+                      }}
+                    >
+                      <Text style={{ color: '#E65100', fontWeight: '500', fontSize: 13 }}>{venue}</Text>
+                    </View>
+                  ))}
+                </View>
               </View>
-            </View>
+            )}
+
+            <Text style={{ color: '#666', fontSize: 12, lineHeight: 18, marginTop: 12, fontStyle: 'italic' }}>
+              <Text style={{ fontWeight: '600', color: '#F57C00' }}>In arrivo:</Text> riepilogo lavoro stagione (obiettivi, statistiche, ruolo).
+            </Text>
           </View>
         )}
 

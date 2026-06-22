@@ -648,13 +648,10 @@ export default function AdminCollaboratoreDetail() {
         <TabSection tab="impegni" activeTab={activeTab}>
           <AdminCoachCommitments userId={collaboratore.id} roleLabel="collaboratore" />
 
-          {/* 🆕 22/06/2026 — Squadre + Palestre Assegnate (stile identico alla vista Coach) */}
+          {/* 🆕 22/02/2026 — "🏆 Stagione" card (allineato a vista Admin Dirigente) */}
           <View style={styles.card}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <SportIcon size={20} />
-                <Text style={[styles.cardTitle, { marginLeft: 6, marginTop: 0 }]}>Squadre & Palestre</Text>
-              </View>
+              <Text style={[styles.cardTitle, { marginTop: 0 }]}>🏆 Stagione</Text>
               <TouchableOpacity onPress={() => setEditingTeamsInline(!editingTeamsInline)} data-testid="admin-coll-teams-edit-btn">
                 <Ionicons name={editingTeamsInline ? 'close' : 'create'} size={22} color="#007AFF" />
               </TouchableOpacity>
@@ -766,23 +763,48 @@ export default function AdminCollaboratoreDetail() {
                 </TouchableOpacity>
               </View>
             ) : (
-              <View style={{ marginTop: 8 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 }}>
-                  <Text style={{ fontSize: 13, color: '#666', fontWeight: '600', marginRight: 6, minWidth: 70 }}>⚽ Squadre:</Text>
-                  <Text style={{ flex: 1, color: '#1565C0', fontSize: 14, fontWeight: '500' }}>
-                    {selectedTeamIds.length === 0
-                      ? 'Nessuna squadra assegnata'
-                      : teams.filter((t) => selectedTeamIds.includes(t.id)).map((t) => t.name).join(', ')}
+              <View>
+                {/* Squadre */}
+                {selectedTeamIds.length > 0 ? (
+                  <View style={{ marginTop: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                      <Ionicons name="people" size={16} color="#007AFF" />
+                      <Text style={{ marginLeft: 6, fontSize: 13, fontWeight: '600', color: '#333' }}>Squadre Assegnate</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      {teams.filter((t) => selectedTeamIds.includes(t.id)).map((t) => (
+                        <View key={t.id} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, backgroundColor: '#E3F2FD', borderWidth: 1, borderColor: '#007AFF' }}>
+                          <Text style={{ color: '#007AFF', fontWeight: '500', fontSize: 12 }}>{t.name}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ) : (
+                  <Text style={{ marginTop: 8, color: '#999', fontSize: 12, fontStyle: 'italic' }}>
+                    Nessuna squadra assegnata in questa stagione.
                   </Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                  <Text style={{ fontSize: 13, color: '#666', fontWeight: '600', marginRight: 6, minWidth: 70 }}>🏟️ Palestre:</Text>
-                  <Text style={{ flex: 1, color: '#E65100', fontSize: 14, fontWeight: '500' }}>
-                    {selectedVenueNames.length === 0
-                      ? 'Nessuna palestra assegnata'
-                      : selectedVenueNames.join(', ')}
-                  </Text>
-                </View>
+                )}
+
+                {/* Palestre */}
+                {selectedVenueNames.length > 0 && (
+                  <View style={{ marginTop: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                      <Ionicons name="location" size={16} color="#FF9500" />
+                      <Text style={{ marginLeft: 6, fontSize: 13, fontWeight: '600', color: '#333' }}>Palestre</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      {selectedVenueNames.map((v, i) => (
+                        <View key={i} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, backgroundColor: '#FFF3E0', borderWidth: 1, borderColor: '#FF9500' }}>
+                          <Text style={{ color: '#E65100', fontWeight: '500', fontSize: 12 }}>{v}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                <Text style={{ color: '#666', fontSize: 12, lineHeight: 18, marginTop: 12, fontStyle: 'italic' }}>
+                  <Text style={{ fontWeight: '600', color: '#F57C00' }}>In arrivo:</Text> riepilogo lavoro stagione (obiettivi, statistiche, ruolo).
+                </Text>
               </View>
             )}
           </View>

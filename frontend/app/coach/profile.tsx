@@ -1011,6 +1011,35 @@ Società sportiva: ${societyName}
           </View>
         </View>
 
+        {/* 🆕 22/02/2026 — Card "🏆 Stagione" (allineata a vista Admin Dirigente) */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>🏆 Stagione</Text>
+
+          {teams.length > 0 ? (
+            <View style={{ marginTop: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                <Ionicons name="people" size={18} color="#007AFF" />
+                <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600', color: '#333' }}>Squadre Assegnate</Text>
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {teams.map((t) => (
+                  <View key={t.id} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#E3F2FD', borderWidth: 1, borderColor: '#007AFF' }}>
+                    <Text style={{ color: '#007AFF', fontWeight: '500', fontSize: 13 }}>{t.name}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : (
+            <Text style={{ marginTop: 8, color: '#999', fontSize: 13, fontStyle: 'italic' }}>
+              Nessuna squadra assegnata in questa stagione.
+            </Text>
+          )}
+
+          <Text style={{ color: '#666', fontSize: 12, lineHeight: 18, marginTop: 12, fontStyle: 'italic' }}>
+            <Text style={{ fontWeight: '600', color: '#F57C00' }}>In arrivo:</Text> riepilogo lavoro stagione (obiettivi, statistiche, ruolo).
+          </Text>
+        </View>
+
         {/* Personal Data - Collapsible */}
         <View style={styles.card}>
           <TouchableOpacity 

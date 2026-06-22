@@ -923,14 +923,11 @@ export default function AdminCoachDetail() {
         <TabSection tab="impegni" activeTab={activeTab}>
           <AdminCoachCommitments userId={coach.id} roleLabel="coach" />
 
-          {/* 🆕 22/06/2026 — Squadre Assegnate spostate qui dal tab Anagrafica */}
+          {/* 🆕 22/02/2026 — "🏆 Stagione" card (allineato a vista Admin Dirigente) */}
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <SportIcon size={20} />
-                <Text style={[styles.cardTitle, { marginLeft: 6, marginTop: 0 }]}>Squadre Assegnate</Text>
-              </View>
-              <TouchableOpacity onPress={() => setEditingTeams(!editingTeams)}>
+              <Text style={[styles.cardTitle, { marginTop: 0 }]}>🏆 Stagione</Text>
+              <TouchableOpacity onPress={() => setEditingTeams(!editingTeams)} data-testid="admin-coach-teams-edit-btn">
                 <Ionicons name={editingTeams ? "close" : "create"} size={22} color="#007AFF" />
               </TouchableOpacity>
             </View>
@@ -974,7 +971,30 @@ export default function AdminCoachDetail() {
                 </TouchableOpacity>
               </>
             ) : (
-              <Text style={styles.teamsText}>{getTeamNames(coach.assigned_teams)}</Text>
+              <>
+                {selectedTeams.length > 0 ? (
+                  <View style={{ marginTop: 8 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                      <Ionicons name="people" size={16} color="#007AFF" />
+                      <Text style={{ marginLeft: 6, fontSize: 13, fontWeight: '600', color: '#333' }}>Squadre Assegnate</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      {teams.filter(t => selectedTeams.includes(t.id)).map(t => (
+                        <View key={t.id} style={{ paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, backgroundColor: '#E3F2FD', borderWidth: 1, borderColor: '#007AFF' }}>
+                          <Text style={{ color: '#007AFF', fontWeight: '500', fontSize: 12 }}>{t.name}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ) : (
+                  <Text style={{ marginTop: 8, color: '#999', fontSize: 12, fontStyle: 'italic' }}>
+                    Nessuna squadra assegnata in questa stagione.
+                  </Text>
+                )}
+                <Text style={{ color: '#666', fontSize: 12, lineHeight: 18, marginTop: 12, fontStyle: 'italic' }}>
+                  <Text style={{ fontWeight: '600', color: '#F57C00' }}>In arrivo:</Text> riepilogo lavoro stagione (obiettivi, statistiche, ruolo).
+                </Text>
+              </>
             )}
           </View>
         </TabSection>

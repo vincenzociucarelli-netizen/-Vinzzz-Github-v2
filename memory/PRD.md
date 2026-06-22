@@ -16,6 +16,23 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 22/02/2026 — "🏆 Stagione" Replica & Provincia obbligatoria universale ✅
+
+L'utente ha chiesto di replicare la logica della card "🏆 Stagione" implementata in Admin Dirigente verso Admin Coach, Admin Collaboratore e tutte le viste user-side (Dirigente/Coach/Collaboratore). Stesso obbligo `province_of_birth` su tutti i profili user.
+
+### Modifiche applicate
+- **`/admin/coach/[id]`**: card "🏆 Stagione" con pill blu per squadre + frase "In arrivo: riepilogo lavoro stagione".
+- **`/admin/collaboratore/[id]`**: card "🏆 Stagione" con pill blu (Squadre) + pill arancio (Palestre) + tagline "In arrivo".
+- **`/dirigente/profile`**: card "🏆 Stagione" unificata (Squadre+Palestre), provincia di nascita obbligatoria con asterisco rosso e validazione in `handleSave`.
+- **`/coach/profile`**: nuova card "🏆 Stagione" dopo Account (provincia già obbligatoria dalla sessione precedente).
+- **`/collaboratore/profile`**: card "🏆 Stagione" con pill standard, validazione + asterisco provincia.
+- **`/athlete/profile`**: validazione provincia + asterisco rosso aggiunto.
+
+### Vantaggi
+- UI uniforme tra admin/user e tra ruoli.
+- Dato fiscale critico (provincia di nascita) raccolto per Riforma Sport / firma quietanze.
+
+
 ## 🆕 21/02/2026 — "Già Percepito" calendario completo + standardizzazione 4 figure ✅
 
 L'utente ha chiesto di rendere la modal "Gestione Quietanze" un calendario completo dei mesi di contratto: tutti i mesi visibili da subito, in grigio quando non firmati, colorati per soglia (€5k/€15k) quando firmati. Plus: l'Atleta Admin era l'unico senza il widget "Già Percepito" inline + modal.

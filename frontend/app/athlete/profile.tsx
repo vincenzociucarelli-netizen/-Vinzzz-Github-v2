@@ -472,6 +472,13 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
   };
 
   const handleSave = async () => {
+    // 🆕 22/02/2026 — Provincia di nascita obbligatoria se Italia (es. PG, RM)
+    const countryToCheck = (editData.country_of_birth || DEFAULT_COUNTRY || '').toUpperCase();
+    const isItalia = countryToCheck === 'ITALIA' || countryToCheck === 'ITALY' || countryToCheck === 'IT';
+    if (isItalia && !editData.province_of_birth?.trim()) {
+      showAlert('Campo Obbligatorio', 'Inserisci la Sigla Provincia di Nascita (es. PG, RM). È necessaria per firmare le quietanze e le comunicazioni soglia.');
+      return;
+    }
     setSaving(true);
     try {
       // Convert date to ISO format
@@ -1010,7 +1017,24 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
               </View>
               
               {(editing ? editData.country_of_birth : profileData.country_of_birth || DEFAULT_COUNTRY) === DEFAULT_COUNTRY && renderField('Luogo di Nascita', profileData.place_of_birth, 'place_of_birth')}
-              {(editing ? editData.country_of_birth : profileData.country_of_birth || DEFAULT_COUNTRY) === DEFAULT_COUNTRY && renderField('Provincia di Nascita', profileData.province_of_birth, 'province_of_birth')}
+              {(editing ? editData.country_of_birth : profileData.country_of_birth || DEFAULT_COUNTRY) === DEFAULT_COUNTRY && (
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldLabel}>Provincia di Nascita (sigla, es. PG) <Text style={{ color: '#D32F2F' }}>*</Text></Text>
+                  {editing ? (
+                    <TextInput
+                      style={styles.input}
+                      value={editData.province_of_birth || ''}
+                      onChangeText={(text) => setEditData({ ...editData, province_of_birth: text.toUpperCase().slice(0, 2) })}
+                      placeholder="PG"
+                      placeholderTextColor="#999"
+                      autoCapitalize="characters"
+                      maxLength={2}
+                    />
+                  ) : (
+                    <Text style={styles.fieldValue}>{profileData.province_of_birth || '—'}</Text>
+                  )}
+                </View>
+              )}
               {renderField('Indirizzo', profileData.address, 'address')}
               {renderField('Città', profileData.city, 'city')}
               
