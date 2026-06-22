@@ -504,8 +504,36 @@ export default function CoachCompensation() {
   };
 
   const handleSignDeclaration = async () => {
+    // 🆕 22/02/2026 — Remote logging come handleSign per debug produzione (bug ricorrente Anna/Andrea/Fede)
+    const logRemote = (msg: string, data: any = {}) => {
+      try { api.post('/debug/client-log', { message: `[CoachDecl] ${msg}`, data }); } catch {}
+    };
+    logRemote('handleSignDeclaration START', {
+      hasSig: !!declarationSignature,
+      sigLen: declarationSignature?.length || 0,
+      selectedMonth,
+      selectedYear,
+      declarationType,
+      hasProfile: !!profile,
+      hasUser: !!user?.id,
+      extDeclaration,
+    });
+
     if (!declarationSignature) {
+      logRemote('handleSignDeclaration EXIT: no signature');
       Alert.alert('Errore', 'Firma richiesta');
+      return;
+    }
+
+    // Safety guards
+    if (!user?.id) {
+      logRemote('handleSignDeclaration EXIT: no user.id');
+      Alert.alert('Errore', 'Sessione utente non valida. Effettua nuovamente il login.');
+      return;
+    }
+    if (!profile) {
+      logRemote('handleSignDeclaration EXIT: no profile');
+      Alert.alert('Errore', 'Profilo non caricato. Ricarica la pagina.');
       return;
     }
     
@@ -515,6 +543,15 @@ export default function CoachCompensation() {
       // Check if there's an existing record with a custom amount set by Admin
       const existingRecord = records.find(r => r.month === selectedMonth && r.year === selectedYear);
       const amountToSign = existingRecord?.amount_gross || existingRecord?.amount || profile?.monthly_compensation || 0;
+
+      // 🆕 Guardia: amount=0 produrrebbe un record fantasma. Blocca esplicitamente.
+      if (!amountToSign || amountToSign <= 0) {
+        logRemote('handleSignDeclaration EXIT: amount<=0', { amountToSign, existingRecord, monthlyComp: profile?.monthly_compensation });
+        Alert.alert('Errore', 'Importo compenso non valido. Contatta la società per verificare il tuo compenso mensile.');
+        return;
+      }
+
+      logRemote('handleSignDeclaration POST', { amountToSign, exceeded_5000: declarationType === '5000', exceeded_15000: declarationType === '15000' });
       
       // Use the compensation receipt endpoint which now generates the correct threshold document
       const response = await api.post(`/coach/${user?.id}/compensation/receipt`, {
@@ -527,13 +564,19 @@ export default function CoachCompensation() {
         external_compensation_amount: extDeclaration?.amount ?? 0,
         external_compensation_none: extDeclaration?.none ?? false,
       });
+
+      logRemote('handleSignDeclaration POST OK', { status: response?.status, dataKeys: Object.keys(response?.data || {}) });
       
       const thresholdAmount = declarationType === '5000' ? '5.000' : '15.000';
       const monthName = MONTH_NAMES[selectedMonth || 0];
+
+      // 🆕 Safe parsing della response per evitare crash su toFixed(undefined)
+      const respAmount = Number(response?.data?.amount_gross ?? amountToSign) || amountToSign;
+      const respYearly = Number(response?.data?.yearly_total ?? 0) || 0;
       
       Alert.alert(
         'Dichiarazione Firmata',
-        `Comunicazione di superamento soglia € ${thresholdAmount} per ${monthName} ${selectedYear} firmata con successo!\n\nCompreso lordo: € ${response.data.amount_gross.toFixed(2)}\nTotale annuo: € ${response.data.yearly_total.toFixed(2)}\n\nUna copia è stata inviata alla tua email e alla società.`
+        `Comunicazione di superamento soglia € ${thresholdAmount} per ${monthName} ${selectedYear} firmata con successo!\n\nCompreso lordo: € ${respAmount.toFixed(2)}\nTotale annuo: € ${respYearly.toFixed(2)}\n\nUna copia è stata inviata alla tua email e alla società.`
       );
       
       setShowDeclarationModal(false);
@@ -541,6 +584,7 @@ export default function CoachCompensation() {
       
     } catch (error: any) {
       console.error('[Coach handleSignDeclaration] ERROR', error?.response?.status, error?.response?.data, error?.message);
+      logRemote('handleSignDeclaration ERROR', { status: error?.response?.status, detail: error?.response?.data?.detail, msg: error?.message });
       if (handleAnagraficaError(error, '/coach/profile')) return;
       const detail = error?.response?.data?.detail;
       const msg = typeof detail === 'string'
