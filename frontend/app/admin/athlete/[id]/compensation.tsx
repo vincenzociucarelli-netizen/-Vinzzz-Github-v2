@@ -463,7 +463,7 @@ export default function AthleteCompensation() {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Compensi Atleta</Text>
+          <Text style={styles.headerTitle}>Dettaglio Atleta</Text>
           <Text style={styles.headerSubtitle}>{athlete.first_name} {athlete.last_name}</Text>
         </View>
         <View style={{ width: 40 }} />
@@ -628,38 +628,65 @@ export default function AthleteCompensation() {
             </View>
           ) : (
             <View>
-              {/* Display Mode */}
-              <View style={styles.compensationDisplay}>
-                <View style={styles.compensationRow}>
-                  <Text style={styles.compensationLabel}>Compenso Mensile</Text>
-                  <Text style={styles.compensationValue}>€{monthlyCompensation}</Text>
+              {/* 🆕 22/02/2026 — Display Mode Pedretti Pedro style (Compenso card pulito) */}
+              <View style={{ paddingTop: 4 }}>
+                {/* Compenso Mensile */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}>
+                  <Text style={{ fontSize: 14, color: '#666' }}>Compenso Mensile:</Text>
+                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#007AFF' }}>€{Number(monthlyCompensation || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
                 </View>
-                <View style={styles.compensationRow}>
-                  <Text style={styles.compensationLabel}>Durata Contratto</Text>
-                  <Text style={styles.compensationValue}>
-                    {contractStartDate && contractEndDate 
+
+                {/* Compensi Pregressi */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}>
+                  <Text style={{ fontSize: 14, color: '#666' }}>Compensi Pregressi:</Text>
+                  <Text style={{ fontSize: 14, color: '#333' }}>€{Number(otherAnnualCompensation || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                </View>
+
+                {/* Periodo Contratto */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}>
+                  <Text style={{ fontSize: 14, color: '#666' }}>Periodo Contratto:</Text>
+                  <Text style={{ fontSize: 14, color: '#333' }}>
+                    {contractStartDate && contractEndDate
                       ? `${formatDateDisplay(contractStartDate)} - ${formatDateDisplay(contractEndDate)}`
                       : 'Non impostata'}
                   </Text>
                 </View>
-                <View style={styles.compensationRow}>
-                  <Text style={styles.compensationLabel}>Mesi</Text>
-                  <Text style={styles.compensationValue}>{breakdown.monthsInContract}</Text>
+
+                {/* Mesi + Totale Contratto (compatto) */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}>
+                  <Text style={{ fontSize: 14, color: '#666' }}>Mesi / Totale Contratto:</Text>
+                  <Text style={{ fontSize: 14, color: '#333' }}>
+                    {breakdown.monthsInContract} mesi · <Text style={{ fontWeight: 'bold' }}>€{breakdown.thisClubTotal.toLocaleString('it-IT')}</Text>
+                  </Text>
                 </View>
-                <View style={[styles.compensationRow, styles.compensationTotal]}>
-                  <Text style={styles.compensationTotalLabel}>Totale Contratto</Text>
-                  <Text style={styles.compensationTotalValue}>€{breakdown.thisClubTotal.toLocaleString()}</Text>
+
+                {/* Compenso Accettato */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10 }}>
+                  <Text style={{ fontSize: 14, color: '#666' }}>Compenso Accettato:</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: athlete?.compensation_accepted ? '#34C759' : '#FF9500' }}>
+                    {athlete?.compensation_accepted ? '✓ Sì' : '✗ No'}
+                  </Text>
                 </View>
+
                 {parseFloat(otherAnnualCompensation) > 0 && (
-                  <View style={[styles.compensationRow, { marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#eee' }]}>
-                    <Text style={styles.compensationLabel}>📋 Compensi Pregressi</Text>
-                    <Text style={styles.compensationValue}>€{parseFloat(otherAnnualCompensation).toLocaleString()}</Text>
+                  <View style={{ marginTop: 10, padding: 10, backgroundColor: '#FFF8E1', borderRadius: 6 }}>
+                    <Text style={{ fontSize: 12, color: '#666' }}>📋 Totale Annuo Complessivo</Text>
+                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#8E44AD' }}>€{breakdown.grandTotal.toLocaleString('it-IT')}</Text>
                   </View>
                 )}
-                {parseFloat(otherAnnualCompensation) > 0 && (
-                  <View style={[styles.compensationRow, styles.compensationTotal]}>
-                    <Text style={styles.compensationTotalLabel}>Totale Annuo Complessivo</Text>
-                    <Text style={styles.compensationTotalValue}>€{breakdown.grandTotal.toLocaleString()}</Text>
+
+                {/* 💰 Già Percepito widget (apre dettaglio quietanze) */}
+                {contractStartDate && contractEndDate && signedReceipts.length > 0 && (
+                  <View style={{ marginTop: 12, padding: 12, backgroundColor: '#E3F2FD', borderRadius: 8, borderWidth: 1, borderColor: '#90CAF9' }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ color: '#1565C0', fontWeight: '500' }}>💰 Già Percepito:</Text>
+                      <Text style={{ fontWeight: 'bold', color: '#1565C0', fontSize: 16 }}>
+                        €{signedReceipts.filter((r: any) => r.signed).reduce((sum: number, r: any) => sum + (r.amount || 0), 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                      {signedReceipts.filter((r: any) => r.signed).length} quietanze firmate
+                    </Text>
                   </View>
                 )}
               </View>
