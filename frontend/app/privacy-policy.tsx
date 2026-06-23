@@ -53,7 +53,14 @@ export default function PrivacyPolicyPage() {
           <B>3.5 Dati amministrativi e fiscali</B>{'\n'}
           Quote associative, ricevute, compensi staff (coach/collaboratori/dirigenti) con soglie Riforma Sport (5k/15k €), codici FIGC/FIPAV/CONI.{'\n\n'}
           <B>3.6 Immagini e foto</B>{'\n'}
-          Foto degli atleti caricate per finalità associative (es. tesseramento). Possono essere richieste rimozioni via apposita funzione.
+          RegistraTEAM <B>non carica né archivia foto degli atleti</B>. Le immagini scattate durante allenamenti, partite, premiazioni o eventi sportivi possono però essere pubblicate dalla società sui propri canali ufficiali (social network, sito web, comunicati stampa, brochure, locandine) esclusivamente per finalità di documentazione dell'attività sportiva, promozione della società e cronaca degli eventi.{'\n\n'}
+          La pubblicazione avviene sulla base del legittimo interesse della società sportiva (art. 6.1.f GDPR) oppure, quando richiesto dalla normativa o opportuno (ad esempio per minori), previo consenso esplicito dell'atleta o di chi ne esercita la responsabilità genitoriale (art. 6.1.a GDPR e artt. 96–97 L. 633/1941 sul diritto d'autore e diritto all'immagine).{'\n\n'}
+          L'interessato (o il genitore per il minore) può in qualsiasi momento esercitare i seguenti diritti:{'\n'}
+          • <B>opporsi</B> alla pubblicazione di una specifica foto o di tutte le foto che lo ritraggono;{'\n'}
+          • <B>richiedere la rimozione</B> di immagini già pubblicate sui canali della società;{'\n'}
+          • <B>revocare il consenso</B> precedentemente prestato, senza pregiudizio per la liceità del trattamento svolto in precedenza;{'\n'}
+          • <B>accedere</B> a quali foto sono state pubblicate dalla società, dove e quando.{'\n\n'}
+          Le richieste vanno inoltrate al Titolare del trattamento (la società sportiva) ai recapiti indicati al punto 11. La società è tenuta a dare riscontro entro 30 giorni e a procedere alla rimozione dei contenuti dai canali sotto il proprio controllo nel più breve tempo tecnicamente possibile.
         </Sec>
 
         <Sec title="4. Base giuridica del trattamento (art. 6 GDPR)">

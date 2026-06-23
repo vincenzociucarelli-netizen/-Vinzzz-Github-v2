@@ -78,7 +78,7 @@ export default function TermsOfUsePage() {
           <Text style={styles.sectionTitle}>9. Condizioni economiche</Text>
           <Text style={styles.sectionText}>
             RegistraTEAM è disponibile gratuitamente e senza limiti di funzionalità:{'\n\n'}
-            {'\u2022'} fino al 30 settembre 2026 con un limite massimo di 150 utenti registrati (atleti, staff, genitori) per società;{'\n'}
+            {'\u2022'} fino al 31 dicembre 2026 con un limite massimo di 150 utenti registrati (atleti, staff, genitori) per società;{'\n'}
             {'\u2022'} successivamente con limite massimo di 30 utenti registrati per società nella versione gratuita.{'\n\n'}
             Superati i limiti indicati, sarà necessario sottoscrivere un piano a pagamento. Prezzi e condizioni saranno comunicati tramite l'app o il sito ufficiale.
           </Text>
