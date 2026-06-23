@@ -1954,7 +1954,15 @@ export default function AdminAthleteDetail() {
             athleteType === 'compensated' && styles.tabGold,
             athleteType === 'compensated' && activeTab === 'pagamenti' && styles.tabGoldActive
           ]}
-          onPress={() => setActiveTab('pagamenti')}
+          onPress={() => {
+            // 🆕 22/02/2026 — Atleta PRO (compensated): redirect diretto alla pagina dedicata
+            // /admin/athlete/[id]/compensation (stesso layout di Coach/Collaboratore/Dirigente)
+            if (athleteType === 'compensated') {
+              router.push(`/admin/athlete/${id}/compensation`);
+            } else {
+              setActiveTab('pagamenti');
+            }
+          }}
           data-testid="admin-athlete-tab-compensi"
         >
           <Ionicons 
