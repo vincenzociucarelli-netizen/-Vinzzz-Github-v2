@@ -1009,24 +1009,8 @@ Società sportiva: ${societyName}
           )}
         </View>
 
-        {/* 🆕 22/02/2026 — Card Compenso Mensile RIMOSSA da qui (spostata in /dirigente/compensation per centralizzare la gestione compensi).
-            Era duplicata con la vista Compensi Sportivi e creava confusione (Foto B reported). */}
-        {!editing && profileData.monthly_compensation > 0 && (
-          <TouchableOpacity
-            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3E5F5', padding: 14, borderRadius: 10, marginVertical: 8, borderLeftWidth: 4, borderLeftColor: '#8E44AD' }}
-            onPress={() => router.push('/dirigente/compensation')}
-            data-testid="link-to-compensi-from-profile"
-          >
-            <Text style={{ fontSize: 22, marginRight: 10 }}>💰</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: '#8E44AD' }}>Compensi Sportivi</Text>
-              <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>
-                Compenso mensile, accettazione e firma quietanze
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#8E44AD" />
-          </TouchableOpacity>
-        )}
+        {/* 🆕 23/02/2026 — Card "Compensi Sportivi" RIMOSSA: esiste già una sezione dedicata
+            /dirigente/compensation; tenerla qui duplicava UX e confondeva l'utente. */}
 
         {/* 🆕 22/02/2026 — Card "🏆 Stagione" unificata (Squadre + Palestre) */}
         {(assignedTeams.length > 0 || assignedVenues.length > 0) && (

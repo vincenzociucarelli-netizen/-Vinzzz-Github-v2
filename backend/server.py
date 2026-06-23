@@ -20601,10 +20601,10 @@ async def preview_gdpr_privacy_document(
 @api_router.get("/dirigente/{dirigente_id}/compensation")
 async def get_dirigente_compensation(dirigente_id: str, current_user = Depends(get_current_user)):
     """Get compensation records for a dirigente"""
-    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER, UserRole.DIRIGENTE]:
         raise HTTPException(status_code=403, detail="Accesso negato")
     
-    if current_user["role"] == UserRole.VIEWER and current_user["id"] != dirigente_id:
+    if current_user["role"] in [UserRole.VIEWER, UserRole.DIRIGENTE] and current_user["id"] != dirigente_id:
         raise HTTPException(status_code=403, detail="Puoi vedere solo i tuoi compensi")
     
     records = await db.dirigente_compensations.find({"dirigente_id": dirigente_id}).sort([("year", -1), ("month", -1)]).to_list(100)
@@ -20634,7 +20634,7 @@ async def accept_dirigente_compensation(dirigente_id: str, current_user = Depend
     # Allow both VIEWER (dirigente) and ADMIN to accept their own compensation
     if current_user["id"] != dirigente_id:
         raise HTTPException(status_code=403, detail="Solo il dirigente può accettare il proprio compenso")
-    if current_user["role"] not in [UserRole.VIEWER, UserRole.ADMIN]:
+    if current_user["role"] not in [UserRole.VIEWER, UserRole.ADMIN, UserRole.DIRIGENTE]:
         raise HTTPException(status_code=403, detail="Accesso negato")
     
     # Update dirigente record
@@ -20658,7 +20658,7 @@ async def accept_dirigente_compensation(dirigente_id: str, current_user = Depend
 @api_router.get("/dirigente/{dirigente_id}/compensation/annual/{year}")
 async def get_dirigente_annual_compensation_summary(dirigente_id: str, year: int, current_user = Depends(get_current_user)):
     """Get annual summary of compensations for dirigente"""
-    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER, UserRole.DIRIGENTE]:
         raise HTTPException(status_code=403, detail="Accesso negato")
     
     records = await db.dirigente_compensations.find({
@@ -20688,7 +20688,7 @@ async def sign_dirigente_compensation_receipt(
     # Allow both VIEWER (dirigente) and ADMIN to sign their own receipts
     if current_user["id"] != dirigente_id:
         raise HTTPException(status_code=403, detail="Solo il dirigente può firmare le proprie quietanze")
-    if current_user["role"] not in [UserRole.VIEWER, UserRole.ADMIN]:
+    if current_user["role"] not in [UserRole.VIEWER, UserRole.ADMIN, UserRole.DIRIGENTE]:
         raise HTTPException(status_code=403, detail="Accesso negato")
     
     # Get dirigente data
