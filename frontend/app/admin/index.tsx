@@ -1552,6 +1552,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'flex-end',
     justifyContent: 'flex-end',
+    paddingTop: 40,
   },
   headerTopRow: {
     flexDirection: 'row',
