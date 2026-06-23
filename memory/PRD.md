@@ -15,6 +15,28 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 🆕 24/02/2026 — Atleti Paganti (18+ e 18-) + Genitore uniformati a layout Admin ✅
+
+Estensione dell'uniformazione UI: ora **Atleta 18+ pagante** (lato user) e **Atleta 18- pagante** (gestito dal genitore) hanno la stessa struttura tab dell'admin (`Da fare | Anagrafica | Pagamenti | Presenze`).
+
+### Modifiche
+- **`AthleteTabBar.tsx`**: routing condizionale → tab "Pagamenti" porta a `/athlete/payments` per i paganti (era sempre `/athlete/compensation`, dedicata ai PRO).
+- **`/athlete/payments.tsx`**: aggiunta `AthleteTabBar` sticky + nuovo **Header "💰 Quota Stagionale"** (importo grande, status pill, progress bar, sconto).
+- **`/athlete/profile.tsx` (Anagrafica)**: aggiunti QR Code, Cronologia Atleta, Coach della Squadra, Documenti link, Mappa Palestre. Aggiunto state `profile` (raw) + `coachInfo` (l'anteprima certificato medico ora funziona davvero, prima referenziava `profile` undefined).
+- **`/athlete/index.tsx` (Da fare)**: rimossi QR, Cronologia, Pagamenti link, Coach, Orari, Presenze link, Dati Personali link, Documenti link, Mappa Palestre (tutti spostati nelle rispettive tab). Restano solo banner Trial, Certificato Medico (form modifica) e Privacy da firmare.
+- **`/athlete/presenze.tsx`**: aggiunto link "Orari Allenamenti" (calendario settimanale).
+- **`/parent/athlete/[id].tsx` (Genitore)**: trasformato in layout tabbed con stato `activeTab` + TabBar 4 bottoni. Wrappate sezioni esistenti in `{activeTab === 'X' && (<>...</>)}`:
+  - `Anagrafica`: Cronologia, QR, Dati Anagrafici+Fiscali (collassabile), Coach, Minor Access Control
+  - `Da fare`: Stato/Periodo Prova, Certificate Card form, Richiedi Cancellazione
+  - `Pagamenti`: Header "💰 Quota Stagionale" (NUOVO) + Payments Card
+  - `Presenze`: Team Schedule Card
+  - **Rimossa Athlete Photo Card** (richiesta utente: niente foto in Anagrafica).
+
+### Vincoli rispettati
+- Nessun nuovo campo aggiunto, solo riorganizzazione dei contenuti esistenti.
+- `minor/index.tsx` (atleta minorenne lite) intoccato.
+
+
 
 ## 🆕 22/02/2026 — Compensi Atleta PRO Admin: layout user-side replicato 1:1 ✅
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import AthleteTabBar from '../../src/components/athlete/AthleteTabBar';
 import {
   View,
   Text,
@@ -404,10 +405,55 @@ export default function AthletePayments() {
         <View style={{ width: 40 }} />
       </View>
 
+      <AthleteTabBar />
+
       <ScrollView
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {/* 🆕 24/02/2026 — Header "Quota Stagionale" (stile PRO ma per atleti paganti)
+            Importo grande + stato pagamento + scadenza prossima rata */}
+        {paymentInfo && (paymentInfo.total_amount || (paymentInfo.installments && paymentInfo.installments.length > 0)) && (() => {
+          const totalAmount = paymentInfo.total_amount || 0;
+          const discount = paymentInfo.discount_amount || 0;
+          const finalAmount = Math.max(0, totalAmount - discount);
+          const paidPercentage = finalAmount > 0 ? Math.min(100, Math.round((totalPaid / finalAmount) * 100)) : 0;
+          const isFullyPaid = totalPaid >= finalAmount && finalAmount > 0;
+          const statusColor = isFullyPaid ? '#2E7D32' : '#E65100';
+          const statusBg = isFullyPaid ? '#E8F5E9' : '#FFF3E0';
+          const statusLabel = isFullyPaid ? 'Quota pagata' : `Pagati ${formatCurrency(totalPaid, true, 0)} di ${formatCurrency(finalAmount, true, 0)}`;
+          return (
+            <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 }} data-testid="quota-stagionale-header">
+              <Text style={{ fontSize: 18, fontWeight: '700', color: '#333' }}>💰 Quota Stagionale</Text>
+              {/* Importo grande */}
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', marginVertical: 14, gap: 8 }}>
+                <Text style={{ fontSize: 38, fontWeight: '700', color: '#FF9500', letterSpacing: -0.5 }}>
+                  {formatCurrency(finalAmount, true, 0)}
+                </Text>
+                <Text style={{ fontSize: 14, color: '#999', fontWeight: '500' }}>/ stagione</Text>
+              </View>
+              {/* Stato pagamento */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 12, gap: 6, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: statusBg, borderRadius: 10 }}>
+                <Ionicons name={isFullyPaid ? 'checkmark-circle' : 'time-outline'} size={18} color={statusColor} />
+                <Text style={{ fontSize: 13, color: statusColor, fontWeight: '700' }}>{statusLabel}</Text>
+              </View>
+              {/* Progress bar */}
+              {finalAmount > 0 && (
+                <View style={{ height: 8, backgroundColor: '#F3F4F6', borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
+                  <View style={{ width: `${paidPercentage}%`, height: '100%', backgroundColor: isFullyPaid ? '#4CAF50' : '#FF9500' }} />
+                </View>
+              )}
+              {/* Sconto se presente */}
+              {discount > 0 && (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, padding: 8, backgroundColor: '#E8F5E9', borderRadius: 8 }}>
+                  <Text style={{ fontSize: 12, color: '#2E7D32', fontWeight: '600' }}>Sconto: {paymentInfo.discount_reason || 'applicato'}</Text>
+                  <Text style={{ fontSize: 13, color: '#2E7D32', fontWeight: '700' }}>- {formatCurrency(discount, true, 0)}</Text>
+                </View>
+              )}
+            </View>
+          );
+        })()}
+
         {/* Quote Section - Compact with expandable payment plan */}
         {paymentInfo && (paymentInfo.total_amount || (paymentInfo.installments && paymentInfo.installments.length > 0)) && (() => {
           // Calculate total paid from actual payments (those with paid_date)

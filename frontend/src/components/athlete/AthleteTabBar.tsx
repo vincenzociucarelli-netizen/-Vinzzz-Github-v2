@@ -26,7 +26,8 @@ const baseTabs = (athleteType: 'compensated' | 'quota' | string | null): TabSpec
     key: 'compensi',
     label: athleteType === 'compensated' ? 'Compensi' : 'Pagamenti',
     icon: athleteType === 'compensated' ? 'trophy' : 'card',
-    route: '/athlete/compensation',
+    // 🆕 24/02/2026 — Routing condizionale: paganti → /athlete/payments, PRO → /athlete/compensation
+    route: athleteType === 'compensated' ? '/athlete/compensation' : '/athlete/payments',
   },
   { key: 'presenze', label: 'Presenze', icon: 'calendar', route: '/athlete/presenze' },
 ];

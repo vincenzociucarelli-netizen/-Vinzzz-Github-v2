@@ -137,6 +137,20 @@ export default function AthletePresenze() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#007AFF']} />}
       >
+        {/* 🆕 24/02/2026 — Orari Allenamenti (link al calendario settimanale) */}
+        <TouchableOpacity
+          style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
+          onPress={() => router.push('/athlete/schedule?tab=orari')}
+          data-testid="schedule-menu-item"
+        >
+          <Ionicons name="calendar" size={22} color="#007AFF" />
+          <View style={{ marginLeft: 12, flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Orari Allenamenti</Text>
+            <Text style={{ fontSize: 12, color: '#888' }}>Calendario settimanale</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
+
         {/* Statistics Section */}
         <Text style={styles.sectionTitle}>Le Tue Statistiche</Text>
         

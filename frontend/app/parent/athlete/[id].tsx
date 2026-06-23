@@ -293,6 +293,9 @@ export default function AthleteDetail() {
     setSectionsExpanded(prev => ({...prev, [section]: !prev[section]}));
   };
   
+  // 🆕 24/02/2026 — Tab system uniformato all'admin (Da fare / Anagrafica / Pagamenti / Presenze)
+  const [activeTab, setActiveTab] = useState<'dafare' | 'anagrafica' | 'pagamenti' | 'presenze'>('dafare');
+  
   // QR Code ref for sharing
   const qrCodeRef = useRef<View>(null);
 
@@ -1589,6 +1592,32 @@ export default function AthleteDetail() {
           </View>
         </View>
 
+        {/* 🆕 24/02/2026 — TabBar uniformata all'admin */}
+        <View style={{ flexDirection: 'row', backgroundColor: '#fff', borderRadius: 12, marginBottom: 12, padding: 4, borderWidth: 1, borderColor: '#e0e0e0' }} data-testid="parent-athlete-tab-bar">
+          {([
+            { key: 'dafare', label: 'Da fare', icon: 'checkbox-outline' },
+            { key: 'anagrafica', label: 'Anagrafica', icon: 'person' },
+            { key: 'pagamenti', label: 'Pagamenti', icon: 'card' },
+            { key: 'presenze', label: 'Presenze', icon: 'calendar' },
+          ] as const).map(t => {
+            const active = activeTab === t.key;
+            return (
+              <TouchableOpacity
+                key={t.key}
+                onPress={() => setActiveTab(t.key)}
+                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 4, borderRadius: 8, backgroundColor: active ? '#E3F2FD' : 'transparent', gap: 6 }}
+                data-testid={`parent-athlete-tab-${t.key}`}
+              >
+                <Ionicons name={t.icon as any} size={18} color={active ? '#007AFF' : '#666'} />
+                <Text style={{ fontSize: 13, fontWeight: active ? '700' : '500', color: active ? '#007AFF' : '#666' }}>{t.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* === ANAGRAFICA TAB === */}
+        {activeTab === 'anagrafica' && (<>
+
         {/* Cronologia Atleta */}
         <TouchableOpacity
           style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
@@ -1617,94 +1646,7 @@ export default function AthleteDetail() {
           <Ionicons name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
 
-        {/* Athlete Photo Card - Only for adults */}
-        {!athlete.is_minor && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>📸 Foto Atleta</Text>
-          <View style={styles.photoContainer}>
-            {transformingPhoto ? (
-              <View style={styles.photoPlaceholder}>
-                <ActivityIndicator size="large" color="#007AFF" />
-                <Text style={styles.transformingText}>Creando ritratto artistico...</Text>
-              </View>
-            ) : athletePhotoArtistic ? (
-              <Image
-                source={{ uri: `data:image/jpeg;base64,${athletePhotoArtistic}` }}
-                style={styles.athletePhotoLarge}
-              />
-            ) : athletePhoto ? (
-              <Image
-                source={{ uri: `data:image/jpeg;base64,${athletePhoto}` }}
-                style={styles.athletePhotoLarge}
-              />
-            ) : (
-              <View style={styles.photoPlaceholder}>
-                <Ionicons name="person" size={64} color="#ccc" />
-                <Text style={styles.photoPlaceholderText}>Nessuna foto</Text>
-              </View>
-            )}
-            
-            <TouchableOpacity
-              style={[styles.uploadPhotoButton, transformingPhoto && styles.buttonDisabled]}
-              onPress={async () => {
-                try {
-                  const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-                  if (!permissionResult.granted) {
-                    Alert.alert('Permesso negato', 'È necessario concedere il permesso per accedere alla galleria');
-                    return;
-                  }
-
-                  const result = await ImagePicker.launchImageLibraryAsync({
-                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                    allowsEditing: true,
-                    aspect: [1, 1],
-                    quality: 0.7,
-                    base64: true,
-                  });
-
-                  if (!result.canceled && result.assets[0].base64) {
-                    const originalPhoto = result.assets[0].base64;
-                    setAthletePhoto(originalPhoto);
-                    setTransformingPhoto(true);
-                    
-                    try {
-                      const response = await api.post(`/athletes/${id}/transform-photo`, {
-                        image_base64: originalPhoto
-                      });
-                      
-                      if (response.data.success && response.data.artistic_photo) {
-                        setAthletePhotoArtistic(response.data.artistic_photo);
-                        Alert.alert('✅ Foto Trasformata', 'La foto è stata trasformata in stile pastello!');
-                      } else {
-                        setAthletePhotoArtistic(originalPhoto);
-                      }
-                    } catch (transformError: any) {
-                      console.error('Error transforming photo:', transformError);
-                      setAthletePhotoArtistic(originalPhoto);
-                      Alert.alert('Info', 'Foto caricata. La trasformazione artistica non è disponibile al momento.');
-                    } finally {
-                      setTransformingPhoto(false);
-                    }
-                  }
-                } catch (error) {
-                  console.error('Error selecting image:', error);
-                  Alert.alert('Errore', 'Impossibile selezionare l\'immagine');
-                }
-              }}
-              disabled={transformingPhoto}
-            >
-              <Ionicons name="camera" size={20} color="#fff" />
-              <Text style={styles.uploadPhotoButtonText}>
-                {athletePhotoArtistic ? 'Cambia Foto' : 'Carica Foto'}
-              </Text>
-            </TouchableOpacity>
-            
-            <Text style={styles.photoHint}>
-              🎨 La foto verrà trasformata in stile pastello artistico
-            </Text>
-          </View>
-        </View>
-        )}
+        {/* 🆕 24/02/2026 — Athlete Photo Card RIMOSSA (richiesta utente: niente foto in Anagrafica) */}
 
         {/* Dati Anagrafici + Fiscali - Collapsible Card (matching adult profile) */}
         <View style={styles.card}>
@@ -1881,6 +1823,11 @@ export default function AthleteDetail() {
           </View>
         )}
 
+        </>)}
+        {/* === FINE ANAGRAFICA TAB === */}
+
+        {/* === DA FARE TAB === */}
+        {activeTab === 'dafare' && (<>
         {/* Stato e Periodo di Prova - Card unificata */}
         {/* Banner profilo incompleto */}
         {profileCheck && !profileCheck.is_complete && (
@@ -2238,6 +2185,11 @@ export default function AthleteDetail() {
           <CertificateDateForm athleteId={athlete?.id} certificate={certificate} onSaved={loadData} />
         </View>
 
+        </>)}
+        {/* === FINE DA FARE TAB === */}
+
+        {/* === PRESENZE TAB === */}
+        {activeTab === 'presenze' && (<>
         {/* Team Schedule Card - Allenamenti e Gare Interne */}
         {teamSchedule && (
           <View style={styles.card}>
@@ -2302,6 +2254,48 @@ export default function AthleteDetail() {
             )}
           </View>
         )}
+
+        </>)}
+        {/* === FINE PRESENZE TAB === */}
+
+        {/* === PAGAMENTI TAB === */}
+        {activeTab === 'pagamenti' && (<>
+        {/* 🆕 24/02/2026 — Header "Quota Stagionale" (stile PRO) */}
+        {paymentSettings && (() => {
+          const totalAmount = paymentSettings.total_amount || ((paymentSettings.installment_1_amount || 0) + (paymentSettings.installment_2_amount || 0) + (paymentSettings.installment_3_amount || 0));
+          const discount = (athlete?.discount_amount && athlete.discount_amount > 0) ? athlete.discount_amount : 0;
+          const finalAmount = Math.max(0, totalAmount - discount);
+          const totalPaidAmount = (payments || []).filter((p: any) => p.paid_date || p.paid === true || p.status === 'paid').reduce((sum: number, p: any) => sum + (parseFloat(p.amount) || 0), 0);
+          const paidPct = finalAmount > 0 ? Math.min(100, Math.round((totalPaidAmount / finalAmount) * 100)) : 0;
+          const isFullyPaid = totalPaidAmount >= finalAmount && finalAmount > 0;
+          const statusColor = isFullyPaid ? '#2E7D32' : '#E65100';
+          const statusBg = isFullyPaid ? '#E8F5E9' : '#FFF3E0';
+          const statusLabel = isFullyPaid ? 'Quota pagata' : `Pagati ${formatCurrency(totalPaidAmount)} di ${formatCurrency(finalAmount)}`;
+          return (
+            <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 }} data-testid="quota-stagionale-header">
+              <Text style={{ fontSize: 18, fontWeight: '700', color: '#333' }}>💰 Quota Stagionale</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', marginVertical: 14, gap: 8 }}>
+                <Text style={{ fontSize: 38, fontWeight: '700', color: '#FF9500', letterSpacing: -0.5 }}>{formatCurrency(finalAmount)}</Text>
+                <Text style={{ fontSize: 14, color: '#999', fontWeight: '500' }}>/ stagione</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 12, gap: 6, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: statusBg, borderRadius: 10 }}>
+                <Ionicons name={isFullyPaid ? 'checkmark-circle' : 'time-outline'} size={18} color={statusColor} />
+                <Text style={{ fontSize: 13, color: statusColor, fontWeight: '700' }}>{statusLabel}</Text>
+              </View>
+              {finalAmount > 0 && (
+                <View style={{ height: 8, backgroundColor: '#F3F4F6', borderRadius: 4, overflow: 'hidden', marginBottom: 8 }}>
+                  <View style={{ width: `${paidPct}%`, height: '100%', backgroundColor: isFullyPaid ? '#4CAF50' : '#FF9500' }} />
+                </View>
+              )}
+              {discount > 0 && (
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4, padding: 8, backgroundColor: '#E8F5E9', borderRadius: 8 }}>
+                  <Text style={{ fontSize: 12, color: '#2E7D32', fontWeight: '600' }}>Sconto: {athlete?.discount_reason || 'applicato'}</Text>
+                  <Text style={{ fontSize: 13, color: '#2E7D32', fontWeight: '700' }}>- {formatCurrency(discount)}</Text>
+                </View>
+              )}
+            </View>
+          );
+        })()}
 
         {/* Payments Card - Dynamic Installments with Cumulative Logic */}
         <View style={styles.card} ref={paymentsRef}>
@@ -2544,7 +2538,11 @@ export default function AthleteDetail() {
           </View>
         )}
 
+        </>)}
+        {/* === FINE PAGAMENTI TAB === */}
 
+        {/* === ANAGRAFICA TAB (parte 2 - Accesso Lite) === */}
+        {activeTab === 'anagrafica' && (<>
         {/* Minor Access Control Section */}
         <View style={[styles.card, { marginTop: 12 }]} data-testid="minor-access-section">
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
@@ -2656,6 +2654,11 @@ export default function AthleteDetail() {
           )}
         </View>
 
+        </>)}
+        {/* === FINE ANAGRAFICA TAB (parte 2) === */}
+
+        {/* === DA FARE TAB (parte 2 - Richiedi Cancellazione) === */}
+        {activeTab === 'dafare' && (<>
         {/* Richiedi Cancellazione - visibile per atleti trial (dopo scelta) e attivi */}
         {!athlete.deletion_requested && (athlete.status === 'trial' || athlete.status === 'active') && (
           <View style={{ marginTop: 24, marginBottom: 40, paddingHorizontal: 4 }}>
@@ -2668,6 +2671,8 @@ export default function AthleteDetail() {
             </TouchableOpacity>
           </View>
         )}
+        </>)}
+        {/* === FINE DA FARE TAB (parte 2) === */}
       </ScrollView>
 
       {/* QR Code Modal */}

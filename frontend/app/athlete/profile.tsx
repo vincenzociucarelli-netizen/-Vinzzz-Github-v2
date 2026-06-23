@@ -136,6 +136,10 @@ export default function AthleteProfile() {
   const [profilePhotoArtistic, setProfilePhotoArtistic] = useState(null);
   const [transformingPhoto, setTransformingPhoto] = useState(false);
   
+  // 🆕 24/02/2026 — Raw profile + Coach info (per sezioni QR/Cronologia/Coach in Anagrafica)
+  const [profile, setProfile] = useState<any>(null);
+  const [coachInfo, setCoachInfo] = useState<any>(null);
+  
   // Note: Trial and privacy state is declared above
 
   const loadProfile = async () => {
@@ -221,6 +225,18 @@ export default function AthleteProfile() {
       
       // Check if athlete is quota type (pays fees) vs compensated (receives payment)
       setIsQuotaAthlete(data.athlete_type !== 'compensated');
+      
+      // 🆕 24/02/2026 — Salva profilo raw per QR/Cronologia/Coach in Anagrafica
+      setProfile(data);
+      // Carica info coach se l'atleta ha una squadra
+      if (data.team_id) {
+        try {
+          const coachRes = await api.get(`/teams/${data.team_id}/coach`);
+          if (coachRes.data) setCoachInfo(coachRes.data);
+        } catch {
+          // No coach info available
+        }
+      }
       
       // Load society name
       try {
@@ -873,6 +889,97 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             </View>
           )}
         </View>
+
+        {/* 🆕 24/02/2026 — Sezioni Anagrafica unificate (QR / Cronologia / Coach / Docs / Mappa) */}
+
+        {/* QR Code */}
+        {profile?.qr_code && (
+          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }} data-testid="qr-code-section">
+            <Image source={{ uri: profile.qr_code }} style={{ width: 50, height: 50, borderRadius: 4 }} resizeMode="contain" />
+            <View style={{ marginLeft: 12, flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Il Tuo QR Code</Text>
+              {profile?.athlete_code && (
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#007AFF', marginTop: 2, letterSpacing: 1 }}>{profile.athlete_code}</Text>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Cronologia Atleta */}
+        <TouchableOpacity
+          style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
+          onPress={() => router.push('/athlete/timeline')}
+          data-testid="timeline-menu-item"
+        >
+          <Ionicons name="time" size={36} color="#AF52DE" />
+          <View style={{ marginLeft: 12, flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Cronologia Atleta</Text>
+            <Text style={{ fontSize: 12, color: '#888' }}>Visualizza la storia completa</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
+
+        {/* Coach della Squadra */}
+        {coachInfo && (
+          <View style={{ backgroundColor: '#fff', borderRadius: 12, marginBottom: 12, padding: 14, borderWidth: 1, borderColor: '#e0e0e0' }} data-testid="coach-info-section">
+            <Text style={{ fontSize: 15, fontWeight: '600', color: '#333', marginBottom: 8 }}>Coach {profile?.team_name || 'della Squadra'}</Text>
+            {(coachInfo.all_coaches || [coachInfo]).map((coach: any, idx: number) => (
+              <View key={coach.id || idx} style={{ flexDirection: 'row', alignItems: 'center', marginTop: idx > 0 ? 8 : 0, paddingTop: idx > 0 ? 8 : 0, borderTopWidth: idx > 0 ? 1 : 0, borderTopColor: '#eee' }}>
+                {coach.profile_photo_artistic || coach.profile_photo ? (
+                  <Image source={{ uri: `data:image/jpeg;base64,${coach.profile_photo_artistic || coach.profile_photo}` }} style={{ width: 50, height: 50, borderRadius: 25 }} />
+                ) : (
+                  <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="person" size={20} color="#999" />
+                  </View>
+                )}
+                <View style={{ marginLeft: 12, flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>{coach.full_name}</Text>
+                  {coach.phone && (
+                    <TouchableOpacity
+                      style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}
+                      onPress={() => {
+                        const phoneNumber = coach.phone.replace(/\s+/g, '').replace(/^\+/, '');
+                        const whatsappUrl = `https://wa.me/${phoneNumber}`;
+                        if (Platform.OS === 'web') { window.open(whatsappUrl, '_blank'); }
+                      }}
+                    >
+                      <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
+                      <Text style={{ marginLeft: 4, fontSize: 12, color: '#25D366', fontWeight: '600' }}>Contatta su WhatsApp</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Documenti */}
+        <TouchableOpacity
+          style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
+          onPress={() => router.push('/athlete/documents')}
+          data-testid="documents-menu-item"
+        >
+          <Ionicons name="document-text" size={22} color="#007AFF" />
+          <View style={{ marginLeft: 12, flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Documenti</Text>
+            <Text style={{ fontSize: 12, color: '#888' }}>Privacy, certificati e altro</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
+
+        {/* Mappa Palestre */}
+        <TouchableOpacity
+          style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
+          onPress={() => router.push('/palestre')}
+          data-testid="athlete-palestre-btn"
+        >
+          <Ionicons name="map" size={22} color="#43A047" />
+          <View style={{ marginLeft: 12, flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>🏟️ Mappa Palestre</Text>
+            <Text style={{ fontSize: 12, color: '#888' }}>Palazzetti dei campionati</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
 
         {/* 🆕 23/02/2026 — Certificato Medico (anteprima sempre visibile in Anagrafica)
             La gestione completa resta in "Da fare" / admin. Qui solo READ-ONLY. */}
