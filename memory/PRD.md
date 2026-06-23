@@ -15,6 +15,51 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 🆕 24/02/2026 — CompensationSummaryCard riusabile + GDPR multi-tenancy fix
+
+### 🚨 Bug GDPR PDF Privacy (CRITICO)
+Le query di generazione PDF privacy in `server.py` cercavano `db.societies.find_one()` e `db.settings.find_one({"type": "society"})` **senza filtro** su `society_id` → restituivano sempre la PRIMA società creata (Pallavolo Perugia). Tutti i PDF firmati dagli utenti di altre società mostravano l'intestazione sbagliata.
+
+**Fix applicato** a 5 endpoint + 1 funzione interna (filtro su `current_user.society_id` o `document.society_id`):
+- `POST /documents/sign`
+- `GET /documents/signed/{id}/pdf`
+- `GET /documents/consent-pdf/{consent_type}`
+- `POST /documents/sign-gdpr-privacy`
+- `POST /documents/preview-gdpr-privacy`
+- `_regenerate_gdpr_privacy_pdf()`
+
+### Dashboard Admin header
+- Nome società spostato sopra il logo, allineato a sinistra
+- Font 42→24, lineHeight 28
+- Logo abbassato (marginTop 10→8, dimensioni 100→90)
+
+### Backend: nuovo endpoint statistiche Dirigente
+`GET /api/dirigente/dashboard-stats` ritorna conteggi/elenchi di:
+- `expiring_certificates`: certificati scaduti o in scadenza nei prossimi 30 gg
+- `unpaid_payments`: atleti con rate non saldate
+
+### Componenti riusabili creati
+- `DirigenteTabBar` (3 tab Da fare/Anagrafica/Compensi con auto-detect pathname)
+- `CollaboratoreTabBar` (idem)
+- `CoachTabBar` (idem)
+- `CompensationSummaryCard` (replica esatta header Compensi Dirigente: nome + Compenso Mensile box arancione + Compenso Accettato Sì/No + Periodo Contratto viola + Pregresso "Solo admin")
+
+### Tab applicate
+- Dirigente user (3 file): index.tsx, profile.tsx, compensation.tsx
+- Collaboratore user (3 file): index.tsx, profile.tsx, compensation.tsx
+- Coach user (2 file finora): profile.tsx, compensation.tsx (manca index.tsx)
+
+### CompensationSummaryCard applicato
+- ✅ Coach user `/coach/compensation.tsx`
+- ⏳ Da applicare a: Collaboratore user (versione manuale esistente, già funzionante), Atleta 18+ PRO user, Admin Dirigente/Collaboratore/Coach/Atleta 18+ PRO
+
+### Altri fix
+- Admin Documenti archivio: bottone "occhio" ora sempre visibile (rimossa condizione `doc.pdf_filename`)
+- Collaboratore user Squadre Assegnate: i pill mostrano ora i NOMI invece degli ID (carica `/api/teams` e mappa)
+- Dirigente: "In arrivo" sostituito con 2 statistiche cliccabili (certificati scadenza + rate non pagate)
+- Dirigente user Compensi: Compenso Mensile in box dedicato, Compenso Accettato spostato sotto, rimosso link "Il Mio Profilo"
+
+
 ## 🆕 24/02/2026 — Atleti Paganti (18+ e 18-) + Genitore uniformati a layout Admin ✅
 
 Estensione dell'uniformazione UI: ora **Atleta 18+ pagante** (lato user) e **Atleta 18- pagante** (gestito dal genitore) hanno la stessa struttura tab dell'admin (`Da fare | Anagrafica | Pagamenti | Presenze`).

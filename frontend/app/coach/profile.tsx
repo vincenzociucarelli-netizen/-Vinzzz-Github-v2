@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import CoachTabBar from '../../src/components/coach/CoachTabBar';
 import {
   View,
   Text,
@@ -886,6 +887,8 @@ Società sportiva: ${societyName}
         style={{ flex: 1 }}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
+        {/* 🆕 24/02/2026 — CoachTabBar (sticky sopra ScrollView) */}
+        <CoachTabBar active="anagrafica" />
         <ScrollView
           style={styles.content}
           contentContainerStyle={{ paddingBottom: editing ? 100 : 20 }}

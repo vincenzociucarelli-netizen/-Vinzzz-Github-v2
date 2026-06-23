@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import CoachTabBar from '../../src/components/coach/CoachTabBar';
+import CompensationSummaryCard from '../../src/components/compensation/CompensationSummaryCard';
 import {
   View,
   Text,
@@ -1344,29 +1346,25 @@ export default function CoachCompensation() {
         <View style={{ width: 40 }} />
       </View>
 
+      {/* 🆕 24/02/2026 — CoachTabBar (sticky sopra ScrollView) */}
+      <CoachTabBar active="compensi" />
+
       <ScrollView style={styles.content}>
-        {/* Coach Name and Profile Link */}
-        <View style={{ marginBottom: 16, backgroundColor: '#fff', borderRadius: 12, padding: 16 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-            <Ionicons name="person-circle" size={50} color="#007AFF" />
-            <View style={{ marginLeft: 12, flex: 1 }}>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#333' }}>{profile?.full_name || 'Coach'}</Text>
-              {/* 🚫 16/06/2026 — "Compenso mensile" inline RIMOSSO: ora c'è il banner dedicato qui sotto */}
-            </View>
-          </View>
+        {/* 🆕 24/02/2026 — CompensationSummaryCard riusabile (replica grafica Dirigente user) */}
+        <CompensationSummaryCard
+          fullName={profile?.full_name || 'Coach'}
+          monthlyCompensation={profile?.monthly_compensation || 0}
+          compensationAccepted={!!profile?.compensation_accepted}
+          contractStartDate={profile?.contract_start_date}
+          contractEndDate={profile?.contract_end_date}
+          priorCompensation={priorCompensation}
+          formatCurrency={formatCurrency}
+          onAcceptCompensation={handleAcceptCompensation}
+          acceptingComp={acceptingComp}
+        />
 
-          {/* 🚫 16/06/2026 — "Periodo Contratto" RIMOSSO: spostato dentro il banner Coach qui sotto */}
-
-          <TouchableOpacity 
-            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F8FF', padding: 10, borderRadius: 8 }}
-            onPress={() => router.push('/coach/profile')}
-          >
-            <Ionicons name="create-outline" size={18} color="#007AFF" />
-            <Text style={{ marginLeft: 8, color: '#007AFF', fontWeight: '500' }}>Il Mio Profilo</Text>
-            <Text style={{ flex: 1, textAlign: 'right', fontSize: 12, color: '#666' }}>Dati personali, documento e IBAN</Text>
-            <Ionicons name="chevron-forward" size={18} color="#007AFF" style={{ marginLeft: 8 }} />
-          </TouchableOpacity>
-        </View>
+        {/* 🆕 24/02/2026 — Card "Coach Name + Profile Link" RIMOSSA: sostituita da CompensationSummaryCard sopra
+            (sezione "Banner Coach" residua restituisce dualRoleInfo se presente) */}
 
         {/* 🆕 16/06/2026 — Banner Coach: Squadra + Compenso + Periodo Contratto */}
         {dualRoleInfo?.coach && (
