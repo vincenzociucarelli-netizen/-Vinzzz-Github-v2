@@ -998,27 +998,16 @@ Società sportiva: ${societyName}
           </View>
         </View>
 
-        {/* Personal Data - Collapsible */}
+        {/* 🆕 23/02/2026 — Personal Data — sempre espanso (no più collapsible chevron) */}
         <View style={styles.card}>
-          <TouchableOpacity 
-            style={styles.collapsibleHeader}
-            onPress={() => toggleSection('anagrafici')}
-          >
+          <View style={styles.collapsibleHeader}>
             <Text style={styles.cardTitle}>📋 Dati Anagrafici</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <TouchableOpacity onPress={() => { setSectionsExpanded(prev => ({...prev, anagrafici: true})); setEditing(true); }}>
-                <Ionicons name="create-outline" size={20} color="#007AFF" />
-              </TouchableOpacity>
-              <Ionicons 
-                name={sectionsExpanded.anagrafici ? "chevron-up" : "chevron-down"} 
-                size={24} 
-                color="#666" 
-              />
-            </View>
-          </TouchableOpacity>
-          
-          {sectionsExpanded.anagrafici && (
-            <View style={styles.collapsibleContent}>
+            <TouchableOpacity onPress={() => setEditing(!editing)} data-testid="collab-profile-edit-toggle">
+              <Ionicons name={editing ? "close" : "create-outline"} size={22} color="#007AFF" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.collapsibleContent}>
           {renderField('Nome', profileData.first_name, 'first_name')}
           {renderField('Cognome', profileData.last_name, 'last_name')}
           {renderField('Data di Nascita', profileData.date_of_birth, 'date_of_birth')}
@@ -1140,67 +1129,13 @@ Società sportiva: ${societyName}
             )}
           </View>
             </View>
-          )}
         </View>
 
         {/* 🗑️ 23/06/2026 — Card "Compenso Mensile + Pregressi + Quietanze" rimossa (migrata in /collaboratore/compensation) */}
 
-        {/* 🆕 22/02/2026 — Card "🏆 Stagione" unificata (Squadre + Palestre) */}
-        {(profileData.assigned_teams.length > 0 || profileData.assigned_venues.length > 0) && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>🏆 Stagione</Text>
-          
-          {profileData.assigned_teams.length > 0 && (
-            <View style={{ marginTop: 8 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                <Ionicons name="people" size={18} color="#007AFF" />
-                <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600', color: '#333' }}>Squadre Assegnate</Text>
-              </View>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {profileData.assigned_teams.map((team, idx) => (
-                  <View key={idx} style={{
-                    backgroundColor: '#E3F2FD',
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 16,
-                    borderWidth: 1,
-                    borderColor: '#007AFF',
-                  }}>
-                    <Text style={{ color: '#007AFF', fontWeight: '500', fontSize: 13 }}>{team}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-          
-          {profileData.assigned_venues.length > 0 && (
-            <View style={{ marginTop: 12 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                <Ionicons name="location" size={18} color="#FF9500" />
-                <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600', color: '#333' }}>Palestre</Text>
-              </View>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {profileData.assigned_venues.map((venue, idx) => (
-                  <View key={idx} style={{
-                    backgroundColor: '#FFF3E0',
-                    paddingHorizontal: 12,
-                    paddingVertical: 6,
-                    borderRadius: 16,
-                    borderWidth: 1,
-                    borderColor: '#FF9500',
-                  }}>
-                    <Text style={{ color: '#E65100', fontWeight: '500', fontSize: 13 }}>{venue}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-
-          <Text style={{ color: '#666', fontSize: 12, lineHeight: 18, marginTop: 12, fontStyle: 'italic' }}>
-            <Text style={{ fontWeight: '600', color: '#F57C00' }}>In arrivo:</Text> riepilogo lavoro stagione (obiettivi, statistiche, ruolo).
-          </Text>
-        </View>
-        )}
+        {/* 🚫 23/02/2026 — Card "🏆 Stagione" RIMOSSA dal profilo collaboratore:
+            Squadre + Palestre sono ora visibili nella pagina "Da fare" (collaboratore/index.tsx)
+            con lo stesso pattern del Coach (Le Mie Squadre nella dashboard). */}
 
         {/* I Miei Documenti */}
         <View style={styles.card}>

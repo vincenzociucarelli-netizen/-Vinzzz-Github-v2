@@ -79,12 +79,20 @@ export default function CollaboratoreHome() {
   const [upcomingOpen, setUpcomingOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // 🆕 23/02/2026 — Squadre + Palestre assegnate (per card "🏆 Stagione" come Coach)
+  const [assignedTeams, setAssignedTeams] = useState<string[]>([]);
+  const [assignedVenues, setAssignedVenues] = useState<string[]>([]);
 
   const loadCommitments = async () => {
     try {
       setError(null);
-      const res = await api.get('/coach/commitments');
+      const [res, resMe] = await Promise.all([
+        api.get('/coach/commitments'),
+        api.get('/auth/me').catch(() => ({ data: {} as any })),
+      ]);
       setData(res.data);
+      setAssignedTeams((resMe.data && (resMe.data.assigned_teams_names || resMe.data.assigned_teams)) || []);
+      setAssignedVenues((resMe.data && resMe.data.assigned_venues) || []);
     } catch (err: any) {
       console.error('Errore caricamento impegni:', err);
       setError('Impossibile caricare gli impegni');
@@ -200,6 +208,45 @@ export default function CollaboratoreHome() {
             </>
           )}
         </View>
+
+        {/* 🆕 23/02/2026 — Card "🏆 Stagione" spostata dal profilo (Squadre + Palestre) */}
+        {(assignedTeams.length > 0 || assignedVenues.length > 0) && (
+          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginTop: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 2 }} data-testid="collab-stagione-card">
+            <Text style={{ fontSize: 17, fontWeight: '700', color: '#1F2937', marginBottom: 8 }}>🏆 Stagione</Text>
+
+            {assignedTeams.length > 0 && (
+              <View style={{ marginTop: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Ionicons name="people" size={18} color="#007AFF" />
+                  <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600', color: '#333' }}>Squadre Assegnate</Text>
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {assignedTeams.map((team, idx) => (
+                    <View key={idx} style={{ backgroundColor: '#E3F2FD', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: '#007AFF' }}>
+                      <Text style={{ color: '#007AFF', fontWeight: '500', fontSize: 13 }}>{team}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {assignedVenues.length > 0 && (
+              <View style={{ marginTop: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Ionicons name="location" size={18} color="#FF9500" />
+                  <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600', color: '#333' }}>Palestre</Text>
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {assignedVenues.map((venue, idx) => (
+                    <View key={idx} style={{ backgroundColor: '#FFF3E0', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: '#FF9500' }}>
+                      <Text style={{ color: '#E65100', fontWeight: '500', fontSize: 13 }}>{venue}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
