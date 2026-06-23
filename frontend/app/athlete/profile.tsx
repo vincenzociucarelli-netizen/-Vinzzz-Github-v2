@@ -874,6 +874,43 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           )}
         </View>
 
+        {/* 🆕 23/02/2026 — Certificato Medico (anteprima sempre visibile in Anagrafica)
+            La gestione completa resta in "Da fare" / admin. Qui solo READ-ONLY. */}
+        {(profile as any)?.medical_certificate_expiry && (() => {
+          const expiryDate = new Date((profile as any).medical_certificate_expiry);
+          const today = new Date();
+          const daysLeft = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          const isExpired = daysLeft < 0;
+          const isExpiringSoon = daysLeft >= 0 && daysLeft <= 30;
+          const statusColor = isExpired ? '#FF3B30' : isExpiringSoon ? '#FF9500' : '#34C759';
+          const statusBg = isExpired ? '#FFF0F0' : isExpiringSoon ? '#FFF8E1' : '#E8F5E9';
+          const statusText = isExpired ? 'SCADUTO' : isExpiringSoon ? `Scade tra ${daysLeft} giorni` : 'In corso di validità';
+          const dd = String(expiryDate.getDate()).padStart(2, '0');
+          const mm = String(expiryDate.getMonth() + 1).padStart(2, '0');
+          const yy = expiryDate.getFullYear();
+          return (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>🩺 Certificato Medico</Text>
+              <View style={{ backgroundColor: statusBg, padding: 12, borderRadius: 10, borderLeftWidth: 4, borderLeftColor: statusColor, marginTop: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name={isExpired ? 'close-circle' : isExpiringSoon ? 'alert-circle' : 'checkmark-circle'} size={22} color={statusColor} />
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: statusColor }}>Scadenza: {dd}/{mm}/{yy}</Text>
+                </View>
+                <Text style={{ fontSize: 12, color: statusColor, fontWeight: '600', marginTop: 4, paddingLeft: 30 }}>{statusText}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingLeft: 4 }}>
+                <Ionicons name={(profile as any)?.medical_certificate_verified ? 'shield-checkmark' : 'shield-outline'} size={18} color={(profile as any)?.medical_certificate_verified ? '#4CAF50' : '#FF9500'} />
+                <Text style={{ marginLeft: 8, fontSize: 13, color: (profile as any)?.medical_certificate_verified ? '#4CAF50' : '#FF9500', fontWeight: '600' }}>
+                  {(profile as any)?.medical_certificate_verified ? "Verificato dall'admin" : "Non ancora verificato dall'admin"}
+                </Text>
+              </View>
+              <Text style={{ fontSize: 11, color: '#999', marginTop: 8, fontStyle: 'italic' }}>
+                Per modificare il certificato vai nella pagina "Da fare".
+              </Text>
+            </View>
+          );
+        })()}
+
         {/* Change Password Section - Now at top */}
         {showChangePassword && (
           <View style={styles.card}>

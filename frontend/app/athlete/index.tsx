@@ -1592,9 +1592,9 @@ export default function AthleteScreen() {
         )}
       </View>
 
-      {/* Dati Iscrizione Card */}
+      {/* Squadra Card (ex "Dati Iscrizione") */}
       <View style={styles.iscrizioneCard}>
-        <Text style={styles.iscrizioneCardTitle}>Dati Iscrizione</Text>
+        <Text style={styles.iscrizioneCardTitle}>Squadra</Text>
         
         <View style={styles.dataRow}>
           <Text style={styles.dataLabel}>Squadra</Text>
@@ -1648,18 +1648,8 @@ export default function AthleteScreen() {
         )}
       </View>
 
-      {/* Link to Profile */}
-      <TouchableOpacity 
-        style={styles.menuItem}
-        onPress={() => router.push('/athlete/profile')}
-      >
-        <Ionicons name="person" size={22} color="#B8860B" />
-        <View style={styles.menuItemContent}>
-          <Text style={styles.menuItemTitle}>Dati Personali</Text>
-          <Text style={styles.menuItemSubtitle}>Visualizza e modifica i tuoi dati</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color="#999" />
-      </TouchableOpacity>
+      {/* 🚫 23/02/2026 — Link "Dati Personali" RIMOSSO da fondo pagina:
+          esiste già la sezione apposita /athlete/profile raggiungibile dall'header. */}
 
       {/* 🚫 15/06/2026 — Yearly Breakdown + Riepilogo Quietanze RIMOSSI da qui:
           duplicavano le info già presenti nella pagina /athlete/compensation
