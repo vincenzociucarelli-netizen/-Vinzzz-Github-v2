@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import CollaboratoreTabBar from '../../src/components/collaboratore/CollaboratoreTabBar';
 import {
   View,
   Text,
@@ -1259,6 +1260,9 @@ export default function CollaboratoreCompensation() {
           </View>
         <View style={{ width: 40 }} />
       </View>
+
+      {/* 🆕 24/02/2026 — CollaboratoreTabBar (sticky sopra ScrollView) */}
+      <CollaboratoreTabBar active="compensi" />
 
       <ScrollView style={styles.content}>
         {/* Collaboratore Name and Profile Link */}

@@ -137,31 +137,8 @@ export default function CollaboratoreHome() {
         </View>
       </View>
 
-      {/* 🆕 23/02/2026 — Quick-link STICKY (Da fare / Anagrafica / Compensi) fuori dalla ScrollView */}
-      <View style={styles.quickLinksRow}>
-        <View style={[styles.quickLinkBtn, styles.quickLinkActive]} data-testid="collab-quick-dafare">
-          <Ionicons name="today-outline" size={20} color="#fff" />
-          <Text style={[styles.quickLinkText, { color: '#fff' }]}>Da fare</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.quickLinkBtn}
-          onPress={() => router.push('/collaboratore/profile')}
-          data-testid="collab-quick-anagrafica"
-          testID="collab-quick-anagrafica"
-        >
-          <Ionicons name="person-outline" size={20} color="#1565C0" />
-          <Text style={[styles.quickLinkText, { color: '#1565C0' }]}>Anagrafica</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.quickLinkBtn}
-          onPress={() => router.push('/collaboratore/compensation')}
-          data-testid="collab-quick-compensi"
-          testID="collab-quick-compensi"
-        >
-          <Ionicons name="cash-outline" size={20} color="#2E7D32" />
-          <Text style={[styles.quickLinkText, { color: '#2E7D32' }]}>Compensi</Text>
-        </TouchableOpacity>
-      </View>
+      {/* 🆕 24/02/2026 — CollaboratoreTabBar componente riusabile */}
+      <CollaboratoreTabBar active="dafare" />
 
       <ScrollView
         contentContainerStyle={{ paddingBottom: 40 }}

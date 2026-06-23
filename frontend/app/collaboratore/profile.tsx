@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import CollaboratoreTabBar from '../../src/components/collaboratore/CollaboratoreTabBar';
 import {
   View,
   Text,
@@ -873,6 +874,8 @@ Società sportiva: ${societyName}
         style={{ flex: 1 }}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
+        {/* 🆕 24/02/2026 — CollaboratoreTabBar (sticky sopra ScrollView) */}
+        <CollaboratoreTabBar active="anagrafica" />
         <ScrollView
           style={styles.content}
           contentContainerStyle={{ paddingBottom: editing ? 100 : 20 }}
