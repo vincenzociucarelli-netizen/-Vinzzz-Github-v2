@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import AdminCoachCommitments from '../../src/components/admin/AdminCoachCommitments';
+import DirigenteTabBar from '../../src/components/dirigente/DirigenteTabBar';
 import {
   View,
   Text,
@@ -239,29 +240,8 @@ export default function DirigenteIndex() {
         </View>
       </View>
 
-      {/* 🆕 23/02/2026 — Tab bar STICKY (Da fare / Anagrafica / Compensi) fuori dalla ScrollView */}
-      <View style={{ flexDirection: 'row', gap: 8, marginHorizontal: 12, marginTop: 12, marginBottom: 8 }}>
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 10, backgroundColor: '#F57C00', gap: 6 }} data-testid="dirigente-quick-dafare">
-          <Ionicons name="today-outline" size={20} color="#fff" />
-          <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>Da fare</Text>
-        </View>
-        <TouchableOpacity
-          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 10, backgroundColor: '#fff', gap: 6 }}
-          onPress={() => router.push('/dirigente/profile')}
-          data-testid="dirigente-quick-anagrafica"
-        >
-          <Ionicons name="person-outline" size={20} color="#1565C0" />
-          <Text style={{ fontSize: 13, fontWeight: '700', color: '#1565C0' }}>Anagrafica</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 10, backgroundColor: '#fff', gap: 6 }}
-          onPress={() => router.push('/dirigente/compensation')}
-          data-testid="dirigente-quick-compensi"
-        >
-          <Ionicons name="cash-outline" size={20} color="#2E7D32" />
-          <Text style={{ fontSize: 13, fontWeight: '700', color: '#2E7D32' }}>Compensi</Text>
-        </TouchableOpacity>
-      </View>
+      {/* 🆕 24/02/2026 — DirigenteTabBar componente riusabile */}
+      <DirigenteTabBar active="dafare" />
 
       <ScrollView
         style={styles.content}

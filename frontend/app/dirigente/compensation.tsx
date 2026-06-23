@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import DirigenteTabBar from '../../src/components/dirigente/DirigenteTabBar';
 import {
   View,
   Text,
@@ -1018,6 +1019,9 @@ export default function DirigenteCompensation() {
         <View style={{ width: 40 }} />
       </View>
 
+      {/* 🆕 24/02/2026 — DirigenteTabBar (sticky sopra ScrollView) */}
+      <DirigenteTabBar active="compensi" />
+
       <ScrollView style={styles.content}>
         {/* Dirigente Name and Profile Link */}
         <View style={{ marginBottom: 16, backgroundColor: '#fff', borderRadius: 12, padding: 16 }}>
@@ -1039,6 +1043,46 @@ export default function DirigenteCompensation() {
                 {formatCurrency(profile?.monthly_compensation || 0)}
               </Text>
             </View>
+          )}
+
+          {/* 🆕 24/02/2026 — Compenso Accettato SUBITO dopo Compenso Mensile (spostato da fondo card) */}
+          {(profile?.monthly_compensation || 0) > 0 && (
+            profile?.compensation_accepted ? (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#E8F5E9', padding: 12, borderRadius: 8, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: '#34C759' }}>
+                <Text style={{ fontSize: 14, color: '#1B5E20', fontWeight: '500' }}>Compenso Accettato:</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="checkmark-circle" size={18} color="#34C759" />
+                  <Text style={{ marginLeft: 6, color: '#1B5E20', fontWeight: '700' }}>✓ Sì</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={{ marginBottom: 12 }}>
+                <View style={{ backgroundColor: '#FFF3CD', padding: 12, borderRadius: 8, marginBottom: 8, borderLeftWidth: 3, borderLeftColor: '#FF9500' }}>
+                  <Text style={{ color: '#856404', fontSize: 13, fontWeight: '500' }}>
+                    ⏳ Il tuo compenso mensile richiede accettazione. Clicca qui sotto per confermare.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#34C759', padding: 12, borderRadius: 8 }}
+                  onPress={async () => {
+                    try {
+                      await api.patch('/auth/me', { compensation_accepted: true });
+                      Alert.alert('Successo', 'Compenso accettato correttamente.');
+                      const res = await api.get('/auth/me');
+                      setProfile(res.data);
+                    } catch (e: any) {
+                      Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile accettare il compenso.');
+                    }
+                  }}
+                  data-testid="accept-compensation-dirigente-btn"
+                >
+                  <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                  <Text style={{ color: '#fff', fontWeight: 'bold', marginLeft: 8 }}>
+                    Accetta Compenso {formatCurrency(profile?.monthly_compensation || 0)}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )
           )}
 
           {profile?.contract_start_date && profile?.contract_end_date && (
@@ -1082,46 +1126,7 @@ export default function DirigenteCompensation() {
             </View>
           </View>
 
-          {/* 🆕 22/02/2026 — Stato Compenso Accettato + bottone Accetta (spostato da Profile per centralizzare gestione compensi) */}
-          {(profile?.monthly_compensation || 0) > 0 && (
-            profile?.compensation_accepted ? (
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#E8F5E9', padding: 12, borderRadius: 8, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: '#34C759' }}>
-                <Text style={{ fontSize: 14, color: '#1B5E20', fontWeight: '500' }}>Compenso Accettato:</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="checkmark-circle" size={18} color="#34C759" />
-                  <Text style={{ marginLeft: 6, color: '#1B5E20', fontWeight: '700' }}>✓ Sì</Text>
-                </View>
-              </View>
-            ) : (
-              <View style={{ marginBottom: 12 }}>
-                <View style={{ backgroundColor: '#FFF3CD', padding: 12, borderRadius: 8, marginBottom: 8, borderLeftWidth: 3, borderLeftColor: '#FF9500' }}>
-                  <Text style={{ color: '#856404', fontSize: 13, fontWeight: '500' }}>
-                    ⏳ Il tuo compenso mensile richiede accettazione. Clicca qui sotto per confermare.
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#34C759', padding: 12, borderRadius: 8 }}
-                  onPress={async () => {
-                    try {
-                      await api.patch('/auth/me', { compensation_accepted: true });
-                      Alert.alert('Successo', 'Compenso accettato correttamente.');
-                      // Ricarica dati
-                      const res = await api.get('/auth/me');
-                      setProfile(res.data);
-                    } catch (e: any) {
-                      Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile accettare il compenso.');
-                    }
-                  }}
-                  data-testid="accept-compensation-dirigente-btn"
-                >
-                  <Ionicons name="checkmark-circle" size={18} color="#fff" />
-                  <Text style={{ color: '#fff', fontWeight: 'bold', marginLeft: 8 }}>
-                    Accetta Compenso {formatCurrency(profile?.monthly_compensation || 0)}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )
-          )}
+          {/* 🆕 24/02/2026 — "Compenso Accettato" SPOSTATO sopra (subito dopo Compenso Mensile) */}
 
           {/* 🆕 24/02/2026 — Link "Il Mio Profilo" RIMOSSO: già accessibile via tab Anagrafica */}
         </View>

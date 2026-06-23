@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import DirigenteTabBar from '../../src/components/dirigente/DirigenteTabBar';
 import {
   View,
   Text,
@@ -751,6 +752,9 @@ Società sportiva: ${societyName}
         </View>
       )}
 
+      {/* 🆕 24/02/2026 — DirigenteTabBar (sticky sopra ScrollView) */}
+      <DirigenteTabBar active="anagrafica" />
+
       <ScrollView
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -1012,60 +1016,7 @@ Società sportiva: ${societyName}
         {/* 🆕 23/02/2026 — Card "Compensi Sportivi" RIMOSSA: esiste già una sezione dedicata
             /dirigente/compensation; tenerla qui duplicava UX e confondeva l'utente. */}
 
-        {/* 🆕 22/02/2026 — Card "🏆 Stagione" unificata (Squadre + Palestre) */}
-        {(assignedTeams.length > 0 || assignedVenues.length > 0) && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>🏆 Stagione</Text>
-
-            {/* Squadre Assegnate */}
-            {assignedTeams.length > 0 && (
-              <View style={{ marginTop: 8 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                  <Ionicons name="people" size={18} color="#007AFF" />
-                  <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600', color: '#333' }}>Squadre Assegnate</Text>
-                </View>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {assignedTeams.map((t) => (
-                    <View key={t.id} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#E3F2FD', borderWidth: 1, borderColor: '#007AFF' }}>
-                      <Text style={{ color: '#007AFF', fontWeight: '500', fontSize: 13 }}>{t.name}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {/* Palestre Assegnate */}
-            {assignedVenues.length > 0 && (
-              <View style={{ marginTop: 12 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                  <Ionicons name="location" size={18} color="#FF9500" />
-                  <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600', color: '#333' }}>Palestre</Text>
-                </View>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {assignedVenues.map((venue, idx) => (
-                    <View
-                      key={idx}
-                      style={{
-                        paddingHorizontal: 12,
-                        paddingVertical: 6,
-                        borderRadius: 16,
-                        backgroundColor: '#FFF3E0',
-                        borderWidth: 1,
-                        borderColor: '#FF9500',
-                      }}
-                    >
-                      <Text style={{ color: '#E65100', fontWeight: '500', fontSize: 13 }}>{venue}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            <Text style={{ color: '#666', fontSize: 12, lineHeight: 18, marginTop: 12, fontStyle: 'italic' }}>
-              <Text style={{ fontWeight: '600', color: '#F57C00' }}>In arrivo:</Text> riepilogo lavoro stagione (obiettivi, statistiche, ruolo).
-            </Text>
-          </View>
-        )}
+        {/* 🆕 24/02/2026 — Card "🏆 Stagione" RIMOSSA: già visibile in tab "Da fare" */}
 
         {/* I Miei Documenti */}
         <View style={styles.card}>
