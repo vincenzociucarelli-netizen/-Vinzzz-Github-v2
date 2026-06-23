@@ -671,6 +671,9 @@ export default function AdminDirigenteDetail() {
         <View style={{ width: 24 }} />
       </View>
 
+      {/* 🆕 23/02/2026 — Tab Navigator STICKY fuori dalla ScrollView */}
+      <AdminPersonTabs activeTab={activeTab} onChange={setActiveTab} />
+
       <ScrollView
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -798,8 +801,7 @@ export default function AdminDirigenteDetail() {
           </View>
         </View>
 
-        {/* 🆕 19/06/2026 — Tab Navigator: Da fare / Anagrafica / Compensi */}
-        <AdminPersonTabs activeTab={activeTab} onChange={setActiveTab} />
+        {/* 🆕 19/06/2026 — Tab Navigator: Da fare / Anagrafica / Compensi (ora sticky FUORI ScrollView) */}
 
         {/* 🗓️ TAB DA FARE OGGI — Impegni reali del dirigente */}
         <TabSection tab="impegni" activeTab={activeTab}>

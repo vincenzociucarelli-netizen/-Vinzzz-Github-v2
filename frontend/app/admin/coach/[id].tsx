@@ -785,6 +785,9 @@ export default function AdminCoachDetail() {
         <View style={{ width: 28 }} />
       </View>
 
+      {/* 🆕 23/02/2026 — Tab Navigator STICKY fuori dalla ScrollView */}
+      <AdminPersonTabs activeTab={activeTab} onChange={setActiveTab} />
+
       <ScrollView
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -916,8 +919,7 @@ export default function AdminCoachDetail() {
           </View>
         </View>
 
-        {/* 🆕 19/06/2026 — Tab Navigator: Impegni / Anagrafica / Compensi */}
-        <AdminPersonTabs activeTab={activeTab} onChange={setActiveTab} />
+        {/* 🆕 19/06/2026 — Tab Navigator: Impegni / Anagrafica / Compensi (ora sticky FUORI ScrollView) */}
 
         {/* 🗓️ TAB DA FARE OGGI — Impegni reali del coach */}
         <TabSection tab="impegni" activeTab={activeTab}>

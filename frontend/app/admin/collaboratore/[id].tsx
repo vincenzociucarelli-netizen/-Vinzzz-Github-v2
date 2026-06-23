@@ -604,6 +604,9 @@ export default function AdminCollaboratoreDetail() {
         </TouchableOpacity>
       </View>
 
+      {/* 🆕 23/02/2026 — Tab Navigator STICKY fuori dalla ScrollView */}
+      <AdminPersonTabs activeTab={activeTab} onChange={setActiveTab} />
+
       <ScrollView
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} />}
@@ -641,8 +644,7 @@ export default function AdminCollaboratoreDetail() {
           </TouchableOpacity>
         </View>
 
-        {/* 🆕 19/06/2026 — Tab Navigator: Da fare / Anagrafica / Compensi */}
-        <AdminPersonTabs activeTab={activeTab} onChange={setActiveTab} />
+        {/* 🆕 19/06/2026 — Tab Navigator: Da fare / Anagrafica / Compensi (ora sticky FUORI ScrollView) */}
 
         {/* 🗓️ TAB DA FARE OGGI — Impegni reali del collaboratore */}
         <TabSection tab="impegni" activeTab={activeTab}>
