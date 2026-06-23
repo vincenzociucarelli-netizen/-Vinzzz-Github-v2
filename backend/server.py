@@ -10715,6 +10715,94 @@ async def get_solleciti(current_user = Depends(get_current_user)):
     result.sort(key=lambda x: x.get("cognome", "").upper())
     return result
 
+# 🆕 24/02/2026 — Dashboard stats per Dirigente (certificati scadenza + rate non pagate)
+@api_router.get("/dirigente/dashboard-stats")
+async def get_dirigente_dashboard_stats(current_user = Depends(get_current_user)):
+    """Conteggi atleti con certificati medici in scadenza/scaduti e rate non pagate,
+    filtrati per le squadre assegnate al dirigente corrente."""
+    if current_user.get("role") != UserRole.DIRIGENTE:
+        raise HTTPException(status_code=403, detail="Solo dirigenti")
+
+    assigned_teams = current_user.get("assigned_teams") or []
+    if not assigned_teams:
+        return {
+            "expiring_certificates": {"count": 0, "athletes": []},
+            "unpaid_payments": {"count": 0, "athletes": []},
+        }
+
+    society_id = current_user.get("society_id")
+    athletes_q = {"team_id": {"$in": assigned_teams}, "is_withdrawn": {"$ne": True}}
+    if society_id:
+        athletes_q["society_id"] = society_id
+    athletes = await db.athletes.find(athletes_q).to_list(10000)
+
+    teams_q = {"id": {"$in": assigned_teams}}
+    if society_id:
+        teams_q["society_id"] = society_id
+    teams = await db.teams.find(teams_q).to_list(200)
+    team_map = {t["id"]: t.get("name", "") for t in teams}
+    team_total_map = {t["id"]: t.get("total_amount", 0) or 0 for t in teams}
+
+    today = datetime.now(timezone.utc).date()
+    threshold = today + timedelta(days=30)
+
+    expiring = []
+    unpaid = []
+    for a in athletes:
+        athlete_info = {
+            "id": a.get("id"),
+            "full_name": f"{a.get('first_name','')} {a.get('last_name','')}".strip(),
+            "team_id": a.get("team_id"),
+            "team_name": team_map.get(a.get("team_id"), ""),
+        }
+
+        # Certificati medici
+        cert_expiry_raw = a.get("medical_certificate_expiry")
+        if cert_expiry_raw:
+            try:
+                if isinstance(cert_expiry_raw, str):
+                    exp_date = datetime.strptime(cert_expiry_raw[:10], "%Y-%m-%d").date()
+                elif isinstance(cert_expiry_raw, datetime):
+                    exp_date = cert_expiry_raw.date()
+                else:
+                    exp_date = cert_expiry_raw
+                if exp_date <= threshold:
+                    days_left = (exp_date - today).days
+                    expiring.append({
+                        **athlete_info,
+                        "expiry_date": exp_date.isoformat(),
+                        "days_left": days_left,
+                        "expired": days_left < 0,
+                    })
+            except Exception:
+                pass
+
+        # Rate non pagate
+        all_payments = await db.payments.find({"athlete_id": a["id"]}).to_list(100)
+        unpaid_p = [p for p in all_payments if not p.get("paid")]
+        if unpaid_p:
+            team_total = team_total_map.get(a.get("team_id"), 0)
+            discount = a.get("discount_amount", 0) or 0
+            total_due_quota = max(0, team_total - discount)
+            total_paid = sum(p.get("amount", 0) for p in all_payments if p.get("paid"))
+            if total_due_quota > 0 and total_paid >= total_due_quota:
+                continue
+            total_unpaid = sum(p.get("amount", 0) for p in unpaid_p)
+            unpaid.append({
+                **athlete_info,
+                "total_unpaid": total_unpaid,
+                "installments_count": len(unpaid_p),
+            })
+
+    # Sort: certificati scaduti/più imminenti prima
+    expiring.sort(key=lambda x: x.get("days_left", 0))
+    unpaid.sort(key=lambda x: x.get("full_name", "").upper())
+
+    return {
+        "expiring_certificates": {"count": len(expiring), "athletes": expiring},
+        "unpaid_payments": {"count": len(unpaid), "athletes": unpaid},
+    }
+
 @api_router.post("/payments/solleciti/notifica")
 async def send_solleciti_notification(data: dict, current_user = Depends(get_current_user)):
     """Send in-app notification and optionally email to parents of athletes with unpaid payments"""

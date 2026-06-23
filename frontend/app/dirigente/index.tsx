@@ -12,6 +12,7 @@ import {
   Alert,
   Platform,
   FlatList,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
@@ -52,6 +53,12 @@ export default function DirigenteIndex() {
   const [assignedVenues, setAssignedVenues] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // 🆕 24/02/2026 — Dashboard stats Dirigente (certificati scadenza + rate non pagate)
+  const [dashStats, setDashStats] = useState<{
+    expiring_certificates: { count: number; athletes: any[] };
+    unpaid_payments: { count: number; athletes: any[] };
+  } | null>(null);
+  const [showStatsModal, setShowStatsModal] = useState<null | 'certificates' | 'payments'>(null);
 
   const loadTeams = async () => {
     try {
@@ -66,6 +73,13 @@ export default function DirigenteIndex() {
         setTeams(response.data.filter((t: Team) => assignedTeamIds.includes(t.id)));
       } else {
         setTeams([]);
+      }
+      // 🆕 24/02/2026 — Carica dashboard stats (certificati scadenza + rate non pagate)
+      try {
+        const statsRes = await api.get('/dirigente/dashboard-stats');
+        setDashStats(statsRes.data);
+      } catch {
+        setDashStats(null);
       }
     } catch (error) {
       console.error('Error loading teams:', error);
@@ -334,9 +348,37 @@ export default function DirigenteIndex() {
               </View>
             )}
 
-            <Text style={{ color: '#666', fontSize: 12, lineHeight: 18, marginTop: 14, fontStyle: 'italic' }}>
-              <Text style={{ fontWeight: '600', color: '#F57C00' }}>In arrivo:</Text> riepilogo lavoro stagione (obiettivi, statistiche, ruolo).
+            <Text style={{ color: '#666', fontSize: 12, lineHeight: 18, marginTop: 14, marginBottom: 6, fontWeight: '600' }}>
+              Statistiche Stagione
             </Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              {/* Certificati medici */}
+              <TouchableOpacity
+                style={{ flex: 1, padding: 12, borderRadius: 10, backgroundColor: '#FFF4F4', borderWidth: 1, borderColor: '#E53935', alignItems: 'center' }}
+                onPress={() => setShowStatsModal('certificates')}
+                disabled={!dashStats || dashStats.expiring_certificates.count === 0}
+                data-testid="dirigente-stat-certificates"
+              >
+                <Ionicons name="medical" size={20} color="#E53935" />
+                <Text style={{ fontSize: 26, fontWeight: '800', color: '#E53935', marginTop: 2 }} data-testid="dirigente-stat-certificates-count">
+                  {dashStats?.expiring_certificates.count ?? '—'}
+                </Text>
+                <Text style={{ fontSize: 11, color: '#C62828', textAlign: 'center', marginTop: 2 }}>Certificati in scadenza</Text>
+              </TouchableOpacity>
+              {/* Rate non pagate */}
+              <TouchableOpacity
+                style={{ flex: 1, padding: 12, borderRadius: 10, backgroundColor: '#FFF8E1', borderWidth: 1, borderColor: '#FF8F00', alignItems: 'center' }}
+                onPress={() => setShowStatsModal('payments')}
+                disabled={!dashStats || dashStats.unpaid_payments.count === 0}
+                data-testid="dirigente-stat-payments"
+              >
+                <Ionicons name="card" size={20} color="#FF8F00" />
+                <Text style={{ fontSize: 26, fontWeight: '800', color: '#FF8F00', marginTop: 2 }} data-testid="dirigente-stat-payments-count">
+                  {dashStats?.unpaid_payments.count ?? '—'}
+                </Text>
+                <Text style={{ fontSize: 11, color: '#E65100', textAlign: 'center', marginTop: 2 }}>Rate non pagate</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 
@@ -349,6 +391,78 @@ export default function DirigenteIndex() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* 🆕 24/02/2026 — Modal elenco certificati/rate non pagate (per click su statistiche) */}
+      {showStatsModal && dashStats && (
+        <Modal visible animationType="slide" transparent onRequestClose={() => setShowStatsModal(null)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '80%', padding: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
+                <Text style={{ fontSize: 17, fontWeight: '700', color: '#333' }}>
+                  {showStatsModal === 'certificates'
+                    ? `🩺 Certificati in scadenza (${dashStats.expiring_certificates.count})`
+                    : `💳 Rate non pagate (${dashStats.unpaid_payments.count})`}
+                </Text>
+                <TouchableOpacity onPress={() => setShowStatsModal(null)} data-testid="dirigente-stats-modal-close">
+                  <Ionicons name="close" size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={{ maxHeight: 500 }}>
+                {showStatsModal === 'certificates' && dashStats.expiring_certificates.athletes.map((a: any) => (
+                  <TouchableOpacity
+                    key={a.id}
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}
+                    onPress={() => {
+                      setShowStatsModal(null);
+                      router.push({ pathname: '/dirigente/team/[id]', params: { id: a.team_id, name: a.team_name } });
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>{a.full_name}</Text>
+                      <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{a.team_name}</Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: a.expired ? '#C62828' : '#FF8F00' }}>
+                        {a.expired ? `Scaduto ${Math.abs(a.days_left)}g fa` : `Scade in ${a.days_left}g`}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#999', marginTop: 2 }}>
+                        {new Date(a.expiry_date).toLocaleDateString('it-IT')}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+                {showStatsModal === 'payments' && dashStats.unpaid_payments.athletes.map((a: any) => (
+                  <TouchableOpacity
+                    key={a.id}
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 8, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}
+                    onPress={() => {
+                      setShowStatsModal(null);
+                      router.push({ pathname: '/dirigente/team/[id]', params: { id: a.team_id, name: a.team_name } });
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>{a.full_name}</Text>
+                      <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{a.team_name}</Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#FF8F00' }}>
+                        € {(a.total_unpaid || 0).toLocaleString('it-IT', { minimumFractionDigits: 2 })}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#999', marginTop: 2 }}>{a.installments_count} rate</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+                {showStatsModal === 'certificates' && dashStats.expiring_certificates.count === 0 && (
+                  <Text style={{ textAlign: 'center', color: '#999', marginTop: 30 }}>Nessun certificato in scadenza ✅</Text>
+                )}
+                {showStatsModal === 'payments' && dashStats.unpaid_payments.count === 0 && (
+                  <Text style={{ textAlign: 'center', color: '#999', marginTop: 30 }}>Tutte le rate sono pagate ✅</Text>
+                )}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
