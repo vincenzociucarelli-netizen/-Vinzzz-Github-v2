@@ -18,6 +18,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
+import CompensationSummaryCard from '../../../src/components/compensation/CompensationSummaryCard';
 import { Ionicons } from '../../../src/components/Icon';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import DualRoleHubBanner from '../../../src/components/admin/DualRoleHubBanner';
@@ -1540,57 +1541,17 @@ export default function AdminCoachDetail() {
             </>
           ) : (
             <>
-              <View style={styles.compensationDisplay}>
-                <Text style={styles.compensationAmount}>{formatCurrency(coach.monthly_compensation || 0)}</Text>
-                <Text style={styles.compensationPeriod}> / mese</Text>
-              </View>
-              {coach.compensation_accepted && (
-                <View style={[styles.acceptedBadge, { marginTop: 8, marginBottom: 0 }]}>
-                  <Text style={{ fontSize: 14 }}>✅</Text>
-                  <Text style={styles.acceptedText}>Accettato dal coach</Text>
-                </View>
-              )}
-
-              {/* 🆕 22/06/2026 — Periodo contratto + Compensi pregressi visibili in VIEW mode */}
-              {(coach.contract_start_date || coach.contract_end_date || (coach.prior_compensation && coach.prior_compensation > 0)) && (
-                <View style={{ marginTop: 12, padding: 10, backgroundColor: '#F9FAFB', borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#1565C0' }}>
-                  {(coach.contract_start_date || coach.contract_end_date) && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: (coach.prior_compensation || 0) > 0 ? 8 : 0 }}>
-                      <Text style={{ fontSize: 13, color: '#1565C0', marginRight: 6 }}>📅</Text>
-                      <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Periodo contratto:</Text>
-                      <Text style={{ fontSize: 13, color: '#111827', marginLeft: 6, fontWeight: '700' }}>
-                        {coach.contract_start_date ? (() => {
-                          const parts = coach.contract_start_date.split('-');
-                          return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : coach.contract_start_date;
-                        })() : '—'}
-                        {' - '}
-                        {coach.contract_end_date ? (() => {
-                          const parts = coach.contract_end_date.split('-');
-                          return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : coach.contract_end_date;
-                        })() : '—'}
-                      </Text>
-                    </View>
-                  )}
-                  {(coach.prior_compensation || 0) > 0 && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={{ fontSize: 13, color: '#1565C0', marginRight: 6 }}>📋</Text>
-                      <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Pregresso dichiarato {coach.contract_start_date ? (() => {
-                        const parts = coach.contract_start_date.split('-');
-                        if (parts.length !== 3) return '';
-                        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                        d.setDate(d.getDate() - 1);
-                        const dd = String(d.getDate()).padStart(2, '0');
-                        const mm = String(d.getMonth() + 1).padStart(2, '0');
-                        const yy = d.getFullYear();
-                        return `al ${dd}/${mm}/${yy}`;
-                      })() : ''}:</Text>
-                      <Text style={{ fontSize: 13, color: '#111827', marginLeft: 6, fontWeight: '700' }}>
-                        {formatCurrency(coach.prior_compensation || 0)}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              )}
+              {/* 🆕 24/02/2026 — CompensationSummaryCard riusabile (replica grafica user Dirigente) */}
+              <CompensationSummaryCard
+                fullName={coach?.full_name || 'Coach'}
+                monthlyCompensation={coach?.monthly_compensation || 0}
+                compensationAccepted={!!coach?.compensation_accepted}
+                contractStartDate={coach?.contract_start_date}
+                contractEndDate={coach?.contract_end_date}
+                priorCompensation={Number(coach?.prior_compensation || 0)}
+                formatCurrency={formatCurrency}
+                readOnly
+              />
               
               {/* 🔧 22/06/2026 — Calcolo per Anno Solare RIATTIVATO: l'utente ha bisogno del breakdown
                   (RAS totale, dichiarazioni soglie €5k/€15k) anche per i coach single-role.

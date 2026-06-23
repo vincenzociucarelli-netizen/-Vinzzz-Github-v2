@@ -17,6 +17,7 @@ import {
 import { Picker } from '@react-native-picker/picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
+import CompensationSummaryCard from '../../../src/components/compensation/CompensationSummaryCard';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import AdminPersonTabs, { TabSection, type AdminPersonTab } from '../../../src/components/admin/AdminPersonTabs';
 import AdminCoachCommitments from '../../../src/components/admin/AdminCoachCommitments';
@@ -1077,52 +1078,17 @@ export default function AdminCollaboratoreDetail() {
             </>
           ) : (
             <>
-              {/* 🆕 23/02/2026 — Layout unificato come Coach: big amount + accettato + periodo + pregresso con data */}
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', marginVertical: 16, gap: 8 }}>
-                <Text style={{ fontSize: 38, fontWeight: '700', color: '#FF9500', letterSpacing: -0.5 }}>
-                  {formatCurrency(collaboratore.monthly_compensation || 0)}
-                </Text>
-                <Text style={{ fontSize: 16, color: '#999', fontWeight: '500' }}>/ mese</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 12, gap: 6 }}>
-                <Text style={{ fontSize: 14 }}>{collaboratore.compensation_accepted ? '✅' : '⏳'}</Text>
-                <Text style={{ fontSize: 13, color: collaboratore.compensation_accepted ? '#2E7D32' : '#E65100', fontWeight: '600' }}>
-                  {collaboratore.compensation_accepted ? 'Accettato dal collaboratore' : 'In attesa di accettazione'}
-                </Text>
-              </View>
-              {(contractStartDate || contractEndDate || (collaboratore.other_annual_compensation || 0) > 0) && (
-                <View style={{ marginTop: 4, padding: 10, backgroundColor: '#F5F9FF', borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#1565C0' }}>
-                  {(contractStartDate || contractEndDate) && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: (collaboratore.other_annual_compensation || 0) > 0 ? 8 : 0 }}>
-                      <Text style={{ fontSize: 13, color: '#1565C0', marginRight: 6 }}>📅</Text>
-                      <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Periodo contratto:</Text>
-                      <Text style={{ fontSize: 13, color: '#111827', marginLeft: 6, fontWeight: '700' }}>
-                        {contractStartDate ? formatDate(contractStartDate) : '—'} - {contractEndDate ? formatDate(contractEndDate) : '—'}
-                      </Text>
-                    </View>
-                  )}
-                  {(collaboratore.other_annual_compensation || 0) > 0 && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={{ fontSize: 13, color: '#1565C0', marginRight: 6 }}>📋</Text>
-                      <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Pregresso dichiarato {contractStartDate ? (() => {
-                        try {
-                          const parts = String(contractStartDate).split(/[-/]/);
-                          if (parts.length !== 3) return '';
-                          const yyyy = parts[0].length === 4 ? parseInt(parts[0]) : parseInt(parts[2]);
-                          const mm = parts[0].length === 4 ? parseInt(parts[1]) : parseInt(parts[1]);
-                          const dd = parts[0].length === 4 ? parseInt(parts[2]) : parseInt(parts[0]);
-                          const d = new Date(yyyy, mm - 1, dd);
-                          d.setDate(d.getDate() - 1);
-                          return `al ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-                        } catch { return ''; }
-                      })() : ''}:</Text>
-                      <Text style={{ fontSize: 13, color: '#111827', marginLeft: 6, fontWeight: '700' }}>
-                        {formatCurrency(collaboratore.other_annual_compensation || 0)}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              )}
+              {/* 🆕 24/02/2026 — CompensationSummaryCard riusabile (replica grafica user Dirigente) */}
+              <CompensationSummaryCard
+                fullName={collaboratore?.full_name || 'Collaboratore'}
+                monthlyCompensation={collaboratore?.monthly_compensation || 0}
+                compensationAccepted={!!collaboratore?.compensation_accepted}
+                contractStartDate={contractStartDate}
+                contractEndDate={contractEndDate}
+                priorCompensation={Number(collaboratore?.other_annual_compensation || 0)}
+                formatCurrency={formatCurrency}
+                readOnly
+              />
               
               {/* Totale già percepito (quietanze firmate) - Cliccabile - sempre visibile se contratto definito */}
               {contractStartDate && contractEndDate && (

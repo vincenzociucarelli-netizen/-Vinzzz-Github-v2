@@ -19,6 +19,7 @@ import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
+import CompensationSummaryCard from '../../../src/components/compensation/CompensationSummaryCard';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import AdminPersonTabs, { TabSection, type AdminPersonTab } from '../../../src/components/admin/AdminPersonTabs';
 import AdminCoachCommitments from '../../../src/components/admin/AdminCoachCommitments';
@@ -1232,40 +1233,17 @@ export default function AdminDirigenteDetail() {
             </>
           ) : (
             <>
-              <View style={styles.compensationDisplay}>
-                <Text style={styles.compensationAmount}>{formatCurrency(dirigente.monthly_compensation || 0)}</Text>
-                <Text style={styles.compensationPeriod}> / mese</Text>
-              </View>
-              {((dirigente as any).other_annual_compensation > 0 || contractStartDate || contractEndDate) && (
-                <View style={{ marginTop: 12, padding: 10, backgroundColor: '#F5F9FF', borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#1565C0' }}>
-                  {(contractStartDate || contractEndDate) && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: ((dirigente as any).other_annual_compensation || 0) > 0 ? 8 : 0 }}>
-                      <Text style={{ fontSize: 13, color: '#1565C0', marginRight: 6 }}>📅</Text>
-                      <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Periodo contratto:</Text>
-                      <Text style={{ fontSize: 13, color: '#111827', marginLeft: 6, fontWeight: '700' }}>
-                        {contractStartDate ? contractStartDate.split('-').reverse().join('/') : '—'} - {contractEndDate ? contractEndDate.split('-').reverse().join('/') : '—'}
-                      </Text>
-                    </View>
-                  )}
-                  {((dirigente as any).other_annual_compensation || 0) > 0 && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={{ fontSize: 13, color: '#1565C0', marginRight: 6 }}>📋</Text>
-                      <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Pregresso dichiarato {contractStartDate ? (() => {
-                        try {
-                          const parts = String(contractStartDate).split('-');
-                          if (parts.length !== 3) return '';
-                          const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                          d.setDate(d.getDate() - 1);
-                          return `al ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-                        } catch { return ''; }
-                      })() : ''}:</Text>
-                      <Text style={{ fontSize: 13, color: '#111827', marginLeft: 6, fontWeight: '700' }}>
-                        {formatCurrency((dirigente as any).other_annual_compensation || 0)}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              )}
+              {/* 🆕 24/02/2026 — CompensationSummaryCard riusabile (replica grafica user Dirigente) */}
+              <CompensationSummaryCard
+                fullName={dirigente?.full_name || 'Dirigente'}
+                monthlyCompensation={dirigente?.monthly_compensation || 0}
+                compensationAccepted={!!dirigente?.compensation_accepted}
+                contractStartDate={contractStartDate}
+                contractEndDate={contractEndDate}
+                priorCompensation={Number((dirigente as any)?.other_annual_compensation || 0)}
+                formatCurrency={formatCurrency}
+                readOnly
+              />
               
               {/* Calcolo per Anno Solare - Enhanced UI */}
               {contractStartDate && contractEndDate && (
