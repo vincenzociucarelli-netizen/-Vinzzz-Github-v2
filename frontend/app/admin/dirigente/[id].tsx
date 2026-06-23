@@ -2104,30 +2104,20 @@ export default function AdminDirigenteDetail() {
                       elevation: 2,
                     }}
                     onPress={async () => {
-                      // 🆕 24/02/2026 — Fix "pagina bianca": uso fetch+blob+window.open per visualizzare
-                      // il PDF in una nuova tab (anziché scaricare con <a download> che su mobile
-                      // genera about:blank). Aggiunto controllo blob vuoto.
+                      // 🆕 24/02/2026 — Fix "pagina bianca" / "about:blank" su mobile:
+                      // - Uso axios api.get (con auth+cache busting già configurati)
+                      // - Controllo blob vuoto
+                      // - Apro con window.open(blob, '_blank') invece di <a download> (su mobile <a download>
+                      //   apre about:blank, mentre window.open mostra il PDF inline nel browser).
                       try {
-                        const token = await AsyncStorage.getItem('token');
-                        if (!token) {
-                          showAlert('Sessione scaduta', 'Effettua nuovamente il login.');
-                          return;
-                        }
-                        const apiBase = (process.env.EXPO_PUBLIC_BACKEND_URL || process.env.REACT_APP_BACKEND_URL || '').replace(/\/$/, '');
-                        const response = await fetch(`${apiBase}/api/documents/download/${doc.id}`, {
-                          headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/pdf' },
-                        });
-                        if (!response.ok) {
-                          throw new Error(`HTTP ${response.status}`);
-                        }
-                        const blob = await response.blob();
-                        if (!blob || blob.size === 0) {
+                        const response = await api.get(`/documents/download/${doc.id}`, { responseType: 'blob' });
+                        const rawBlob: Blob = response.data;
+                        if (!rawBlob || rawBlob.size === 0) {
                           showAlert('Documento vuoto', 'Il PDF non è disponibile o è stato eliminato.');
                           return;
                         }
-                        const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+                        const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
                         const objectUrl = window.URL.createObjectURL(pdfBlob);
-                        // Visualizza in nuova tab (su mobile si apre il viewer; su desktop si vede o si scarica)
                         const newTab = window.open(objectUrl, '_blank');
                         if (!newTab) {
                           // Popup bloccato → fallback download
@@ -2141,7 +2131,7 @@ export default function AdminDirigenteDetail() {
                         setTimeout(() => window.URL.revokeObjectURL(objectUrl), 60_000);
                       } catch (err) {
                         console.error('Errore download documento:', err);
-                        showAlert('Errore', 'Impossibile aprire il documento. Riprova o contatta l\'admin.');
+                        showAlert('Errore', 'Impossibile aprire il documento.');
                       }
                     }}
                   >
