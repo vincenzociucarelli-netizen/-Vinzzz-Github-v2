@@ -1265,15 +1265,65 @@ export default function CollaboratoreCompensation() {
       <CollaboratoreTabBar active="compensi" />
 
       <ScrollView style={styles.content}>
-        {/* Collaboratore Name and Profile Link */}
+        {/* Collaboratore Name + Compenso + Periodo Contratto */}
         <View style={{ marginBottom: 16, backgroundColor: '#fff', borderRadius: 12, padding: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
             <Ionicons name="person-circle" size={50} color="#007AFF" />
             <View style={{ marginLeft: 12, flex: 1 }}>
               <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#333' }}>{profile?.full_name || 'Collaboratore'}</Text>
-              <Text style={{ fontSize: 13, color: '#666' }}>Compenso mensile: {formatCurrency((profile?.monthly_compensation || 0))}</Text>
             </View>
           </View>
+
+          {/* 🆕 24/02/2026 — Compenso mensile in box dedicato (stile coerente con Periodo Contratto) */}
+          {(profile?.monthly_compensation || 0) > 0 && (
+            <View style={{ backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: '#FF9500', borderStyle: 'dashed' }} data-testid="compenso-mensile-box-collab">
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 14, marginRight: 6 }}>💰</Text>
+                <Text style={{ fontSize: 14, color: '#333', fontWeight: '500' }}>Compenso Mensile</Text>
+              </View>
+              <Text style={{ fontSize: 22, color: '#E65100', fontWeight: 'bold', marginTop: 4, textAlign: 'center' }}>
+                {formatCurrency(profile?.monthly_compensation || 0)}
+              </Text>
+            </View>
+          )}
+
+          {/* 🆕 24/02/2026 — Compenso Accettato SUBITO dopo Compenso Mensile */}
+          {(profile?.monthly_compensation || 0) > 0 && (
+            profile?.compensation_accepted ? (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#E8F5E9', padding: 12, borderRadius: 8, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: '#34C759' }}>
+                <Text style={{ fontSize: 14, color: '#1B5E20', fontWeight: '500' }}>Compenso Accettato:</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="checkmark-circle" size={18} color="#34C759" />
+                  <Text style={{ marginLeft: 6, color: '#1B5E20', fontWeight: '700' }}>✓ Sì</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={{ marginBottom: 12 }}>
+                <View style={{ backgroundColor: '#FFF3CD', padding: 12, borderRadius: 8, marginBottom: 8, borderLeftWidth: 3, borderLeftColor: '#FF9500' }}>
+                  <Text style={{ color: '#856404', fontSize: 13, fontWeight: '500' }}>
+                    ⏳ Il tuo compenso mensile richiede accettazione. Clicca qui sotto per confermare.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#34C759', padding: 12, borderRadius: 8 }}
+                  onPress={handleAcceptCompensation}
+                  disabled={acceptingComp}
+                  data-testid="accept-compensation-collab-btn-top"
+                >
+                  {acceptingComp ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                      <Text style={{ color: '#fff', fontWeight: 'bold', marginLeft: 8 }}>
+                        Accetta Compenso {formatCurrency(profile?.monthly_compensation || 0)}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )
+          )}
           
           {/* Contract Period - Full dates */}
           {profile?.contract_start_date && profile?.contract_end_date && (
@@ -1314,17 +1364,7 @@ export default function CollaboratoreCompensation() {
             </View>
           )}
           
-          <TouchableOpacity 
-            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F8FF', padding: 12, borderRadius: 8 }}
-            onPress={() => router.push('/collaboratore/profile')}
-          >
-            <Ionicons name="create-outline" size={20} color="#007AFF" />
-            <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={{ color: '#007AFF', fontWeight: '600', fontSize: 15 }}>Il Mio Profilo</Text>
-              <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }}>Dati personali, documento e IBAN</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#007AFF" />
-          </TouchableOpacity>
+          {/* 🆕 24/02/2026 — Link "Il Mio Profilo" RIMOSSO: ora accessibile via tab Anagrafica */}
         </View>
         
         {/* 🆕 23/06/2026 — Card "Azioni Compenso" migrata da /collaboratore/profile (Pregressi + Accettazione) */}
@@ -1355,37 +1395,7 @@ export default function CollaboratoreCompensation() {
               </Text>
             </View>
 
-            {/* Accettazione compenso */}
-            {!profile?.compensation_accepted ? (
-              <View>
-                <View style={{ backgroundColor: '#FFF3CD', padding: 12, borderRadius: 8, marginBottom: 10, borderLeftWidth: 4, borderLeftColor: '#FF9500', flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="warning" size={18} color="#856404" />
-                  <Text style={{ color: '#856404', fontSize: 13, fontWeight: '500', marginLeft: 8, flex: 1 }}>
-                    Il tuo compenso mensile richiede accettazione. Clicca il pulsante qui sotto per confermare.
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#34C759', padding: 14, borderRadius: 10 }}
-                  onPress={handleAcceptCompensation}
-                  disabled={acceptingComp}
-                  data-testid="accept-compensation-btn"
-                >
-                  {acceptingComp ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <>
-                      <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15, marginLeft: 8 }}>Accetta Compenso {formatCurrency(profile?.monthly_compensation || 0)}</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#E8F5E9', padding: 12, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: '#34C759' }} data-testid="compensation-accepted-badge">
-                <Ionicons name="checkmark-circle" size={18} color="#34C759" />
-                <Text style={{ color: '#2E7D32', fontWeight: '700', marginLeft: 8 }}>Compenso Accettato</Text>
-              </View>
-            )}
+            {/* 🆕 24/02/2026 — Accettazione compenso SPOSTATA in cima (subito dopo Compenso Mensile) */}
           </View>
         )}
 

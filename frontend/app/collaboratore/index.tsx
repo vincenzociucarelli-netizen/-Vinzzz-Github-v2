@@ -86,12 +86,19 @@ export default function CollaboratoreHome() {
   const loadCommitments = async () => {
     try {
       setError(null);
-      const [res, resMe] = await Promise.all([
+      const [res, resMe, resTeams] = await Promise.all([
         api.get('/coach/commitments'),
         api.get('/auth/me').catch(() => ({ data: {} as any })),
+        api.get('/teams').catch(() => ({ data: [] as any })),
       ]);
       setData(res.data);
-      setAssignedTeams((resMe.data && (resMe.data.assigned_teams_names || resMe.data.assigned_teams)) || []);
+      // 🆕 24/02/2026 — Fix bug: i pill mostravano gli ID invece dei nomi.
+      // Mappo gli ID delle squadre assegnate al nome usando /api/teams.
+      const assignedIds: string[] = (resMe.data && resMe.data.assigned_teams) || [];
+      const teamsMap: Record<string, string> = {};
+      (resTeams.data || []).forEach((t: any) => { teamsMap[t.id] = t.name; });
+      const names = assignedIds.map(id => teamsMap[id] || id);
+      setAssignedTeams(names);
       setAssignedVenues((resMe.data && resMe.data.assigned_venues) || []);
     } catch (err: any) {
       console.error('Errore caricamento impegni:', err);

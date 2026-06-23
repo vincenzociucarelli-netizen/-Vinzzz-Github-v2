@@ -406,15 +406,15 @@ export default function DocumentsArchive() {
           <Text style={styles.figureTypeBadgeText}>{getFigureTypeLabel(doc.figure_type)}</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {doc.pdf_filename && (
-            <TouchableOpacity
-              style={styles.downloadButton}
-              onPress={() => handleDownload(doc)}
-              data-testid={`download-btn-${doc.id}`}
-            >
-              <Ionicons name="eye-outline" size={20} color="#fff" />
-            </TouchableOpacity>
-          )}
+          {/* 🆕 24/02/2026 — Bottone "occhio" sempre visibile (l'endpoint /documents/download/{id}
+              rigenera il PDF on-demand anche se pdf_filename è nullo) */}
+          <TouchableOpacity
+            style={styles.downloadButton}
+            onPress={() => handleDownload(doc)}
+            data-testid={`download-btn-${doc.id}`}
+          >
+            <Ionicons name="eye-outline" size={20} color="#fff" />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={() => handleDelete(doc)}
