@@ -3131,102 +3131,88 @@ export default function AdminAthleteDetail() {
             {/* Sezione per atleti che RICEVONO COMPENSO */}
             {athleteType === 'compensated' && (
               <>
-                {/* 🆕 21/02/2026 — Card Compenso stile Pedretti Pedro (sostituisce vecchia gold Compensi Premium) */}
-                <View style={{
-                  backgroundColor: '#fff',
-                  borderRadius: 12,
-                  padding: 16,
-                  marginBottom: 16,
-                  shadowColor: '#000',
-                  shadowOpacity: 0.08,
-                  shadowRadius: 6,
-                  shadowOffset: { width: 0, height: 2 },
-                  elevation: 2,
-                }}>
-                  {/* Header con titolo + pencil edit */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={{ fontSize: 20 }}>💰</Text>
-                      <Text style={{ fontSize: 18, fontWeight: '700', color: '#333', marginLeft: 8 }}>Compenso</Text>
-                    </View>
-                    <TouchableOpacity
-                      onPress={() => router.push(`/admin/athlete/${id}/compensation`)}
-                      data-testid="edit-compensation-btn"
-                      style={{ padding: 4 }}
-                    >
-                      <Text style={{ fontSize: 22 }}>✏️</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Compenso Mensile */}
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}>
-                    <Text style={{ fontSize: 14, color: '#666' }}>Compenso Mensile:</Text>
-                    <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#007AFF' }}>
-                      {formatCurrency(athlete?.monthly_compensation || 0)}
-                    </Text>
-                  </View>
-
-                  {/* Compensi Pregressi */}
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}>
-                    <Text style={{ fontSize: 14, color: '#666' }}>Compensi Pregressi:</Text>
-                    <Text style={{ fontSize: 14, color: '#333' }}>
-                      {formatCurrency(athlete?.other_annual_compensation || 0)}
-                    </Text>
-                  </View>
-
-                  {/* Periodo Contratto */}
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}>
-                    <Text style={{ fontSize: 14, color: '#666' }}>Periodo Contratto:</Text>
-                    <Text style={{ fontSize: 14, color: '#333' }}>
-                      {athlete?.contract_start_date && athlete?.contract_end_date
-                        ? `${new Date(athlete.contract_start_date).toLocaleDateString('it-IT')} - ${new Date(athlete.contract_end_date).toLocaleDateString('it-IT')}`
-                        : 'Non definito'}
-                    </Text>
-                  </View>
-
-                  {/* Compenso Accettato */}
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 }}>
-                    <Text style={{ fontSize: 14, color: '#666' }}>Compenso Accettato:</Text>
-                    <Text style={{ fontSize: 14, color: athlete?.compensation_accepted ? '#34C759' : '#FF9500', fontWeight: '600' }}>
-                      {athlete?.compensation_accepted ? '✓ Sì' : '✗ No'}
-                    </Text>
-                  </View>
-
-                  {/* 🆕 21/06/2026 — Widget "Già Percepito" (apre modal Gestione Quietanze) — sempre visibile se contratto definito */}
-                  {athlete?.contract_start_date && athlete?.contract_end_date && (
-                    <TouchableOpacity
-                      style={{ marginTop: 12, padding: 12, backgroundColor: '#E3F2FD', borderRadius: 8, borderWidth: 1, borderColor: '#90CAF9' }}
-                      onPress={() => setReceiptsModalVisible(true)}
-                      activeOpacity={0.7}
-                      data-testid="admin-athlete-gia-percepito-btn"
-                    >
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                {/* 🆕 22/02/2026 — Compenso card SEMPLIFICATA stile user-side athlete/compensation */}
+                {(() => {
+                  const monthly = Number(athlete?.monthly_compensation || 0);
+                  const breakdown = athlete?.contract_start_date && athlete?.contract_end_date ? getAthleteCompensationBreakdown() : null;
+                  const grand = breakdown?.grandTotal || 0;
+                  const showBadge15 = grand > 15000;
+                  const showBadge5 = !showBadge15 && grand > 5000;
+                  const fmt = (d: string) => {
+                    try { return new Date(d).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch { return d; }
+                  };
+                  return (
+                    <View style={{
+                      backgroundColor: '#fff',
+                      borderRadius: 12,
+                      padding: 16,
+                      marginBottom: 16,
+                      shadowColor: '#000',
+                      shadowOpacity: 0.08,
+                      shadowRadius: 6,
+                      shadowOffset: { width: 0, height: 2 },
+                      elevation: 2,
+                    }}>
+                      {/* Header con titolo + pill + pencil edit */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                          <Text style={{ color: '#1565C0', fontWeight: '500' }}>💰 Già Percepito:</Text>
-                          <Ionicons name="chevron-forward" size={16} color="#1565C0" style={{ marginLeft: 4 }} />
+                          <Text style={{ fontSize: 22 }}>💰</Text>
+                          <Text style={{ fontSize: 20, fontWeight: '700', color: '#333', marginLeft: 8 }}>Compensi</Text>
                         </View>
-                        <Text style={{ fontWeight: 'bold', color: '#1565C0', fontSize: 16 }}>
-                          {formatCurrency(signedReceipts
-                            .filter((r: any) => r.receipt_signed)
-                            .reduce((sum: number, r: any) => sum + (r.amount_gross || r.amount || 0), 0)
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          {(showBadge5 || showBadge15) && (
+                            <View style={{
+                              backgroundColor: showBadge15 ? '#F3E5F5' : '#FFF3E0',
+                              paddingHorizontal: 10,
+                              paddingVertical: 4,
+                              borderRadius: 12,
+                            }}>
+                              <Text style={{ color: showBadge15 ? '#8E44AD' : '#E65100', fontWeight: '700', fontSize: 12 }}>
+                                {showBadge15 ? '>15K' : '>5K'}
+                              </Text>
+                            </View>
                           )}
-                        </Text>
+                          <TouchableOpacity
+                            onPress={() => router.push(`/admin/athlete/${id}/compensation`)}
+                            data-testid="edit-compensation-btn"
+                            style={{ padding: 4 }}
+                          >
+                            <Text style={{ fontSize: 22 }}>✏️</Text>
+                          </TouchableOpacity>
+                        </View>
                       </View>
-                      <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-                        {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate - Tocca per vedere tutti i mesi
-                      </Text>
-                    </TouchableOpacity>
-                  )}
 
-                  {/* Button to compensation page (per gestione RAS, soglie, Genera Quietanza Personalizzata) */}
-                  <TouchableOpacity
-                    style={[styles.compensationButton, { marginTop: 14 }]}
-                    onPress={() => router.push(`/admin/athlete/${id}/compensation`)}
-                  >
-                    <Text style={styles.compensationButtonText}>Gestisci Compensi e Quietanze</Text>
-                    <Ionicons name="chevron-forward" size={20} color="#fff" />
-                  </TouchableOpacity>
-                </View>
+                      {/* Importo Mensile GRANDE */}
+                      <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', marginVertical: 16, gap: 8 }}>
+                        <Text style={{ fontSize: 38, fontWeight: '700', color: '#FF9500', letterSpacing: -0.5 }}>
+                          {formatCurrency(monthly)}
+                        </Text>
+                        <Text style={{ fontSize: 16, color: '#999', fontWeight: '500' }}>/ mese</Text>
+                      </View>
+
+                      {/* Periodo Contratto box */}
+                      {athlete?.contract_start_date && athlete?.contract_end_date && (
+                        <View style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: '#F5F9FF',
+                          padding: 12,
+                          borderRadius: 10,
+                          borderLeftWidth: 3,
+                          borderLeftColor: '#1565C0',
+                          marginTop: 4,
+                          gap: 10,
+                        }}>
+                          <Text style={{ fontSize: 22 }}>📅</Text>
+                          <Text style={{ fontSize: 14, color: '#333', fontWeight: '500', flex: 1 }}>Periodo contratto:</Text>
+                          <Text style={{ fontSize: 14, color: '#333', fontWeight: '700' }}>
+                            {fmt(athlete.contract_start_date)} - {fmt(athlete.contract_end_date)}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  );
+                })()}
 
                   {/* 🆕 22/02/2026 — Blocco "Comunicazione RAS" + "Calcolo per Anno Solare" stile Pedretti Pedro */}
                   {athlete?.contract_start_date && athlete?.contract_end_date && (() => {
@@ -3350,6 +3336,43 @@ export default function AdminAthleteDetail() {
                       </View>
                     );
                   })()}
+
+                  {/* 🆕 22/02/2026 — Già Percepito + Genera Quietanza (in fondo, dopo le warning soglie) */}
+                  {athlete?.contract_start_date && athlete?.contract_end_date && (
+                    <View style={{ marginTop: 12 }}>
+                      <TouchableOpacity
+                        style={{ padding: 12, backgroundColor: '#E3F2FD', borderRadius: 8, borderWidth: 1, borderColor: '#90CAF9', marginBottom: 12 }}
+                        onPress={() => setReceiptsModalVisible(true)}
+                        activeOpacity={0.7}
+                        data-testid="admin-athlete-gia-percepito-btn"
+                      >
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Text style={{ color: '#1565C0', fontWeight: '500' }}>💰 Già Percepito:</Text>
+                            <Ionicons name="chevron-forward" size={16} color="#1565C0" style={{ marginLeft: 4 }} />
+                          </View>
+                          <Text style={{ fontWeight: 'bold', color: '#1565C0', fontSize: 16 }}>
+                            {formatCurrency(signedReceipts
+                              .filter((r: any) => r.receipt_signed)
+                              .reduce((sum: number, r: any) => sum + (r.amount_gross || r.amount || 0), 0)
+                            )}
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                          {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate - Tocca per vedere
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={{ backgroundColor: '#34C759', borderRadius: 10, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                        onPress={() => router.push(`/admin/athlete/${id}/compensation`)}
+                        data-testid="admin-genera-quietanza-personalizzata-btn"
+                      >
+                        <Ionicons name="add-circle-outline" size={20} color="#fff" />
+                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Genera Quietanza Personalizzata</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
 
                   {/* 🆕 13/06/2026 — Riepilogo Compensi Doppio Ruolo: RIMOSSO da qui
                       e spostato in /admin/persona/[id]/compensi (Step 2). */}

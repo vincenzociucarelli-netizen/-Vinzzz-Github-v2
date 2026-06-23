@@ -16,6 +16,21 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 22/02/2026 — Compensi Atleta PRO Admin: layout user-side replicato 1:1 ✅
+
+L'utente ha richiesto la riscrittura completa della tab Compensi dell'atleta PRO admin per replicare esattamente il layout user-side (`/athlete/compensation`). Vecchio layout (lista key/value) sostituito.
+
+### Modifiche
+- **Card 💰 Compensi semplificata** (admin/athlete/[id].tsx):
+  - Header: titolo + pill **>5K/>15K** (calcolato su grandTotal del contratto) + matita ✏️ che apre `/admin/athlete/{id}/compensation`
+  - **Importo mensile GRANDE** centrato (es. "€ 3.500,00 / mese") in arancione
+  - Box compatto **📅 Periodo contratto: GG/MM/AAAA - GG/MM/AAAA** (azzurro chiaro con border-left blu)
+- **Già Percepito + Genera Quietanza Personalizzata** spostati in fondo (dopo le warning soglie), per matchare le screenshot:
+  - Banner azzurro cliccabile "💰 Già Percepito: € X — N quietanze firmate"
+  - Bottone verde "➕ Genera Quietanza Personalizzata" → naviga a `/admin/athlete/{id}/compensation`
+- Rimossi i vecchi campi inline (Compenso Mensile / Compensi Pregressi / Periodo Contratto / Compenso Accettato) dalla card per liberare spazio
+
+
 ## 🆕 22/02/2026 — Compensi Atleta PRO Admin uniformati a stile Pedretti Collaboratore ✅
 
 L'utente ha richiesto che la tab "Compensi" dell'atleta 18+ PRO (admin) replichi lo stesso layout già usato per il Collaboratore (Pedretti Pedro): "Già Percepito" già OK, ma servono in più i blocchi **Comunicazione RAS - Totale Contratto**, **Calcolo per Anno Solare (€5k/€15k)** e **Dichiarazioni soglia firmata**.
