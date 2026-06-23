@@ -886,7 +886,23 @@ export default function AdminCollaboratoreDetail() {
         {/* Compensation Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>💰 Compenso</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={styles.cardTitle}>💰 Compensi</Text>
+              {/* 🆕 23/02/2026 — Pill <5K / >5K / >15K unificata su tutti i ruoli paid */}
+              {(() => {
+                const total = getCompensationBreakdown().grandTotal || 0;
+                const pill = total > 15000
+                  ? { text: '>15K', color: '#8E44AD', bg: '#F3E5F5' }
+                  : total > 5000
+                    ? { text: '>5K', color: '#E65100', bg: '#FFF3E0' }
+                    : { text: '<5K', color: '#2E7D32', bg: '#E8F5E9' };
+                return (
+                  <View style={{ backgroundColor: pill.bg, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 }}>
+                    <Text style={{ color: pill.color, fontWeight: '700', fontSize: 12 }}>{pill.text}</Text>
+                  </View>
+                );
+              })()}
+            </View>
             <TouchableOpacity onPress={() => setEditing(!editing)}>
               <Ionicons name={editing ? "close" : "create"} size={22} color="#007AFF" />
             </TouchableOpacity>
@@ -1059,30 +1075,52 @@ export default function AdminCollaboratoreDetail() {
             </>
           ) : (
             <>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Compenso Mensile:</Text>
-                <Text style={[styles.infoValue, { fontWeight: 'bold', color: '#007AFF' }]}>
-                  {formatCurrency((collaboratore.monthly_compensation || 0))}
+              {/* 🆕 23/02/2026 — Layout unificato come Coach: big amount + accettato + periodo + pregresso con data */}
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', marginVertical: 16, gap: 8 }}>
+                <Text style={{ fontSize: 38, fontWeight: '700', color: '#FF9500', letterSpacing: -0.5 }}>
+                  {formatCurrency(collaboratore.monthly_compensation || 0)}
+                </Text>
+                <Text style={{ fontSize: 16, color: '#999', fontWeight: '500' }}>/ mese</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 12, gap: 6 }}>
+                <Text style={{ fontSize: 14 }}>{collaboratore.compensation_accepted ? '✅' : '⏳'}</Text>
+                <Text style={{ fontSize: 13, color: collaboratore.compensation_accepted ? '#2E7D32' : '#E65100', fontWeight: '600' }}>
+                  {collaboratore.compensation_accepted ? 'Accettato dal collaboratore' : 'In attesa di accettazione'}
                 </Text>
               </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Compensi Pregressi:</Text>
-                <Text style={styles.infoValue}>{formatCurrency((collaboratore.other_annual_compensation || 0))}</Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Periodo Contratto:</Text>
-                <Text style={styles.infoValue}>
-                  {contractStartDate && contractEndDate 
-                    ? `${formatDate(contractStartDate)} - ${formatDate(contractEndDate)}`
-                    : 'Non definito'}
-                </Text>
-              </View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Compenso Accettato:</Text>
-                <Text style={[styles.infoValue, { color: collaboratore.compensation_accepted ? '#34C759' : '#FF9500' }]}>
-                  {collaboratore.compensation_accepted ? '✓ Sì' : '✗ No'}
-                </Text>
-              </View>
+              {(contractStartDate || contractEndDate || (collaboratore.other_annual_compensation || 0) > 0) && (
+                <View style={{ marginTop: 4, padding: 10, backgroundColor: '#F5F9FF', borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#1565C0' }}>
+                  {(contractStartDate || contractEndDate) && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: (collaboratore.other_annual_compensation || 0) > 0 ? 8 : 0 }}>
+                      <Text style={{ fontSize: 13, color: '#1565C0', marginRight: 6 }}>📅</Text>
+                      <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Periodo contratto:</Text>
+                      <Text style={{ fontSize: 13, color: '#111827', marginLeft: 6, fontWeight: '700' }}>
+                        {contractStartDate ? formatDate(contractStartDate) : '—'} - {contractEndDate ? formatDate(contractEndDate) : '—'}
+                      </Text>
+                    </View>
+                  )}
+                  {(collaboratore.other_annual_compensation || 0) > 0 && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={{ fontSize: 13, color: '#1565C0', marginRight: 6 }}>📋</Text>
+                      <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Pregresso dichiarato {contractStartDate ? (() => {
+                        try {
+                          const parts = String(contractStartDate).split(/[-/]/);
+                          if (parts.length !== 3) return '';
+                          const yyyy = parts[0].length === 4 ? parseInt(parts[0]) : parseInt(parts[2]);
+                          const mm = parts[0].length === 4 ? parseInt(parts[1]) : parseInt(parts[1]);
+                          const dd = parts[0].length === 4 ? parseInt(parts[2]) : parseInt(parts[0]);
+                          const d = new Date(yyyy, mm - 1, dd);
+                          d.setDate(d.getDate() - 1);
+                          return `al ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                        } catch { return ''; }
+                      })() : ''}:</Text>
+                      <Text style={{ fontSize: 13, color: '#111827', marginLeft: 6, fontWeight: '700' }}>
+                        {formatCurrency(collaboratore.other_annual_compensation || 0)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
               
               {/* Totale già percepito (quietanze firmate) - Cliccabile - sempre visibile se contratto definito */}
               {contractStartDate && contractEndDate && (

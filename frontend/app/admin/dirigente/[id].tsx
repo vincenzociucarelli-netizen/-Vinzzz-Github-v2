@@ -1044,7 +1044,23 @@ export default function AdminDirigenteDetail() {
         {/* Compenso */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>💰 Compenso Mensile</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={styles.cardTitle}>💰 Compensi</Text>
+              {/* 🆕 23/02/2026 — Pill <5K / >5K / >15K unificata */}
+              {(() => {
+                const total = (getCompensationBreakdown && getCompensationBreakdown().grandTotal) || 0;
+                const pill = total > 15000
+                  ? { text: '>15K', color: '#8E44AD', bg: '#F3E5F5' }
+                  : total > 5000
+                    ? { text: '>5K', color: '#E65100', bg: '#FFF3E0' }
+                    : { text: '<5K', color: '#2E7D32', bg: '#E8F5E9' };
+                return (
+                  <View style={{ backgroundColor: pill.bg, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 }}>
+                    <Text style={{ color: pill.color, fontWeight: '700', fontSize: 12 }}>{pill.text}</Text>
+                  </View>
+                );
+              })()}
+            </View>
             <TouchableOpacity onPress={() => setEditing(!editing)}>
               <Ionicons name={editing ? "close" : "create"} size={22} color="#8E44AD" />
             </TouchableOpacity>
@@ -1217,11 +1233,34 @@ export default function AdminDirigenteDetail() {
                 <Text style={styles.compensationAmount}>{formatCurrency(dirigente.monthly_compensation || 0)}</Text>
                 <Text style={styles.compensationPeriod}> / mese</Text>
               </View>
-              {(dirigente as any).other_annual_compensation > 0 && (
-                <View style={{ marginTop: 8, padding: 10, backgroundColor: '#FFF8E1', borderRadius: 8, borderWidth: 1, borderColor: '#F9A825' }}>
-                  <Text style={{ fontSize: 12, color: '#F9A825', fontWeight: '600' }}>
-                    + {formatCurrency((dirigente as any).other_annual_compensation)} compensi pregressi da altre ASD/SSD
-                  </Text>
+              {((dirigente as any).other_annual_compensation > 0 || contractStartDate || contractEndDate) && (
+                <View style={{ marginTop: 12, padding: 10, backgroundColor: '#F5F9FF', borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#1565C0' }}>
+                  {(contractStartDate || contractEndDate) && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: ((dirigente as any).other_annual_compensation || 0) > 0 ? 8 : 0 }}>
+                      <Text style={{ fontSize: 13, color: '#1565C0', marginRight: 6 }}>📅</Text>
+                      <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Periodo contratto:</Text>
+                      <Text style={{ fontSize: 13, color: '#111827', marginLeft: 6, fontWeight: '700' }}>
+                        {contractStartDate ? contractStartDate.split('-').reverse().join('/') : '—'} - {contractEndDate ? contractEndDate.split('-').reverse().join('/') : '—'}
+                      </Text>
+                    </View>
+                  )}
+                  {((dirigente as any).other_annual_compensation || 0) > 0 && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={{ fontSize: 13, color: '#1565C0', marginRight: 6 }}>📋</Text>
+                      <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Pregresso dichiarato {contractStartDate ? (() => {
+                        try {
+                          const parts = String(contractStartDate).split('-');
+                          if (parts.length !== 3) return '';
+                          const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                          d.setDate(d.getDate() - 1);
+                          return `al ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                        } catch { return ''; }
+                      })() : ''}:</Text>
+                      <Text style={{ fontSize: 13, color: '#111827', marginLeft: 6, fontWeight: '700' }}>
+                        {formatCurrency((dirigente as any).other_annual_compensation || 0)}
+                      </Text>
+                    </View>
+                  )}
                 </View>
               )}
               

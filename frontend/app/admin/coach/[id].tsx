@@ -1572,7 +1572,16 @@ export default function AdminCoachDetail() {
                   {(coach.prior_compensation || 0) > 0 && (
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Text style={{ fontSize: 13, color: '#1565C0', marginRight: 6 }}>📋</Text>
-                      <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Compensi pregressi:</Text>
+                      <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Pregresso dichiarato {coach.contract_start_date ? (() => {
+                        const parts = coach.contract_start_date.split('-');
+                        if (parts.length !== 3) return '';
+                        const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                        d.setDate(d.getDate() - 1);
+                        const dd = String(d.getDate()).padStart(2, '0');
+                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                        const yy = d.getFullYear();
+                        return `al ${dd}/${mm}/${yy}`;
+                      })() : ''}:</Text>
                       <Text style={{ fontSize: 13, color: '#111827', marginLeft: 6, fontWeight: '700' }}>
                         {formatCurrency(coach.prior_compensation || 0)}
                       </Text>
