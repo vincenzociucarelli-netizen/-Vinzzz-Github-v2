@@ -1901,6 +1901,11 @@ export default function AdminAthleteDetail() {
   };
 
   return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))}>
+          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
+        </TouchableOpacity>
         <TouchableOpacity onPress={() => router.replace('/admin')} data-testid="header-home-btn" style={{ marginLeft: 8 }}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
         </TouchableOpacity>
@@ -1954,15 +1959,7 @@ export default function AdminAthleteDetail() {
             athleteType === 'compensated' && styles.tabGold,
             athleteType === 'compensated' && activeTab === 'pagamenti' && styles.tabGoldActive
           ]}
-          onPress={() => {
-            // 🆕 22/02/2026 — Atleta PRO (compensated): redirect diretto alla pagina dedicata
-            // /admin/athlete/[id]/compensation (stesso layout di Coach/Collaboratore/Dirigente)
-            if (athleteType === 'compensated') {
-              router.push(`/admin/athlete/${id}/compensation`);
-            } else {
-              setActiveTab('pagamenti');
-            }
-          }}
+          onPress={() => setActiveTab('pagamenti')}
           data-testid="admin-athlete-tab-compensi"
         >
           <Ionicons 
