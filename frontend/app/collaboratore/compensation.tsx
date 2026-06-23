@@ -1328,54 +1328,26 @@ export default function CollaboratoreCompensation() {
           <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E5E7EB' }} data-testid="coll-compensation-actions">
             <Text style={{ fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 12 }}>💼 Azioni Compenso</Text>
 
-            {/* Compensi Pregressi */}
+            {/* 🆕 23/02/2026 — Pregresso dichiarato (READ-ONLY: modificabile solo da admin) */}
             <View style={{ marginBottom: 14 }}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: '#6B7280', letterSpacing: 0.5 }}>COMPENSI PREGRESSI (NELL'ANNO)</Text>
-              {editingPrior ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, flexWrap: 'wrap' }}>
-                  <Text style={{ fontSize: 18, marginRight: 6, color: '#1F2937' }}>€</Text>
-                  <TextInput
-                    style={{ flex: 1, minWidth: 100, borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 16, color: '#1F2937', backgroundColor: '#fff' }}
-                    value={priorDraft}
-                    onChangeText={setPriorDraft}
-                    keyboardType="numeric"
-                    placeholder="0.00"
-                    placeholderTextColor="#999"
-                    data-testid="prior-comp-input"
-                    testID="prior-comp-input"
-                  />
-                  <TouchableOpacity
-                    style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: '#34C759', marginLeft: 8, flexDirection: 'row', alignItems: 'center' }}
-                    onPress={handleSavePrior}
-                    disabled={savingPrior}
-                    data-testid="prior-comp-save"
-                  >
-                    {savingPrior ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Salva</Text>}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: '#9CA3AF', marginLeft: 6 }}
-                    onPress={() => { setEditingPrior(false); setPriorDraft(String(priorCompensation)); }}
-                    disabled={savingPrior}
-                    data-testid="prior-comp-cancel"
-                  >
-                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Annulla</Text>
-                  </TouchableOpacity>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#6B7280', letterSpacing: 0.5 }}>PREGRESSO DICHIARATO {profile?.contract_start_date ? (() => {
+                try {
+                  const parts = String(profile.contract_start_date).split('-');
+                  if (parts.length !== 3) return '';
+                  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                  d.setDate(d.getDate() - 1);
+                  return `AL ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                } catch { return ''; }
+              })() : ''}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                <Text style={{ fontSize: 20, fontWeight: '700', color: '#1F2937' }}>{formatCurrency(priorCompensation)}</Text>
+                <View style={{ marginLeft: 12, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: '#F3F4F6', borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Ionicons name="lock-closed" size={14} color="#6B7280" />
+                  <Text style={{ fontSize: 12, color: '#6B7280', fontWeight: '500' }}>Solo admin</Text>
                 </View>
-              ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                  <Text style={{ fontSize: 20, fontWeight: '700', color: '#1F2937' }}>{formatCurrency(priorCompensation)}</Text>
-                  <TouchableOpacity
-                    style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: '#1565C0', marginLeft: 12, flexDirection: 'row', alignItems: 'center' }}
-                    onPress={() => { setPriorDraft(String(priorCompensation)); setEditingPrior(true); }}
-                    data-testid="prior-comp-edit"
-                  >
-                    <Ionicons name="create-outline" size={16} color="#fff" />
-                    <Text style={{ color: '#fff', marginLeft: 4, fontWeight: '700', fontSize: 13 }}>Modifica</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+              </View>
               <Text style={{ fontSize: 11, color: '#6B7280', marginTop: 6, fontStyle: 'italic', lineHeight: 16 }}>
-                Importo totale di compensi sportivi già percepiti nell'anno corrente (per il calcolo delle soglie fiscali €5k/€15k).
+                Compensi sportivi già percepiti prima dell'inizio del contratto attuale. Modificabile solo dall'admin della società.
               </Text>
             </View>
 

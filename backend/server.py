@@ -3952,8 +3952,13 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
             notif_type_5k = "user_exceeded_5000"
             notif_type_15k = "user_exceeded_15000"
     
-    # Handle other_annual_compensation (compensi pregressi da altre società)
-    if data.other_annual_compensation is not None:
+    # 🆕 23/02/2026 — Handle other_annual_compensation: bloccato per self-update (solo admin)
+    # Il pregresso dichiarato è sensibile (calcolo soglie €5k/€15k) e può essere modificato
+    # solo dall'admin via endpoint /admin/users/{id} per evitare manipolazioni dal lato user.
+    if data.other_annual_compensation is not None and current_user.get("role") != UserRole.ADMIN:
+        # silenziosamente ignorato: l'user-side mostra read-only ma per sicurezza blocchiamo qui
+        pass
+    elif data.other_annual_compensation is not None:
         update_dict["other_annual_compensation"] = float(data.other_annual_compensation) if data.other_annual_compensation else 0.0
     
     # Handle privacy acceptance for adult users

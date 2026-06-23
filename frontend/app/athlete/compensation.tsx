@@ -1350,6 +1350,28 @@ export default function AthleteCompensation() {
                 dal {formatContractDate(dualRoleInfo.athlete.contract_start_date || '')} al {formatContractDate(dualRoleInfo.athlete.contract_end_date || '')}
               </Text>
             )}
+            {/* 🆕 23/02/2026 — Pregresso dichiarato (READ-ONLY: solo admin) */}
+            {(profile?.other_annual_compensation || 0) > 0 && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.85)', padding: 10, borderRadius: 8, marginTop: 10 }}>
+                <Text style={{ fontSize: 14, marginRight: 6 }}>📋</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, color: '#374151', fontWeight: '500' }}>Pregresso dichiarato {dualRoleInfo.athlete.contract_start_date ? (() => {
+                    try {
+                      const parts = String(dualRoleInfo.athlete.contract_start_date).split('-');
+                      if (parts.length !== 3) return '';
+                      const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                      d.setDate(d.getDate() - 1);
+                      return `al ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                    } catch { return ''; }
+                  })() : ''}</Text>
+                  <Text style={{ fontSize: 15, color: '#1F2937', fontWeight: '700' }}>{formatCurrency(profile?.other_annual_compensation || 0)}</Text>
+                </View>
+                <View style={{ paddingHorizontal: 8, paddingVertical: 3, backgroundColor: '#F3F4F6', borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Ionicons name="lock-closed" size={11} color="#6B7280" />
+                  <Text style={{ fontSize: 10, color: '#6B7280', fontWeight: '500' }}>Solo admin</Text>
+                </View>
+              </View>
+            )}
           </View>
         )}
 

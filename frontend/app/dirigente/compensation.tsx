@@ -1049,6 +1049,27 @@ export default function DirigenteCompensation() {
             </View>
           )}
 
+          {/* 🆕 23/02/2026 — Pregresso dichiarato (READ-ONLY: solo admin) */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F9FF', padding: 12, borderRadius: 8, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: '#1565C0' }}>
+            <Text style={{ fontSize: 14, marginRight: 6 }}>📋</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Pregresso dichiarato {profile?.contract_start_date ? (() => {
+                try {
+                  const parts = String(profile.contract_start_date).split('-');
+                  if (parts.length !== 3) return '';
+                  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                  d.setDate(d.getDate() - 1);
+                  return `al ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                } catch { return ''; }
+              })() : ''}:</Text>
+              <Text style={{ fontSize: 17, color: '#1F2937', fontWeight: '700', marginTop: 2 }}>{formatCurrency(profile?.other_annual_compensation || 0)}</Text>
+            </View>
+            <View style={{ paddingHorizontal: 8, paddingVertical: 4, backgroundColor: '#F3F4F6', borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="lock-closed" size={12} color="#6B7280" />
+              <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500' }}>Solo admin</Text>
+            </View>
+          </View>
+
           {/* 🆕 22/02/2026 — Stato Compenso Accettato + bottone Accetta (spostato da Profile per centralizzare gestione compensi) */}
           {(profile?.monthly_compensation || 0) > 0 && (
             profile?.compensation_accepted ? (

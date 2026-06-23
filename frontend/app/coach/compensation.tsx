@@ -1394,57 +1394,26 @@ export default function CoachCompensation() {
           <View style={styles.compActionsCard} data-testid="coach-compensation-actions">
             <Text style={styles.compActionsTitle}>💼 Azioni Compenso</Text>
 
-            {/* Compensi Pregressi */}
+            {/* 🆕 23/02/2026 — Pregresso dichiarato (READ-ONLY: modificabile solo da admin) */}
             <View style={{ marginBottom: 14 }}>
-              <Text style={styles.compActionsLabel}>COMPENSI PREGRESSI (NELL'ANNO)</Text>
-              {editingPrior ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                  <Text style={{ fontSize: 18, marginRight: 6, color: '#1F2937' }}>€</Text>
-                  <TextInput
-                    style={styles.compActionsInput}
-                    value={priorDraft}
-                    onChangeText={setPriorDraft}
-                    keyboardType="numeric"
-                    placeholder="0.00"
-                    placeholderTextColor="#999"
-                    data-testid="prior-comp-input"
-                    testID="prior-comp-input"
-                  />
-                  <TouchableOpacity
-                    style={[styles.compActionsBtn, { backgroundColor: '#34C759', marginLeft: 8 }]}
-                    onPress={handleSavePrior}
-                    disabled={savingPrior}
-                    data-testid="prior-comp-save"
-                    testID="prior-comp-save"
-                  >
-                    {savingPrior ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.compActionsBtnText}>Salva</Text>}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.compActionsBtn, { backgroundColor: '#9CA3AF', marginLeft: 6 }]}
-                    onPress={() => { setEditingPrior(false); setPriorDraft(String(priorCompensation)); }}
-                    disabled={savingPrior}
-                    data-testid="prior-comp-cancel"
-                    testID="prior-comp-cancel"
-                  >
-                    <Text style={styles.compActionsBtnText}>Annulla</Text>
-                  </TouchableOpacity>
+              <Text style={styles.compActionsLabel}>PREGRESSO DICHIARATO {profile?.contract_start_date ? (() => {
+                try {
+                  const parts = String(profile.contract_start_date).split('-');
+                  if (parts.length !== 3) return '';
+                  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                  d.setDate(d.getDate() - 1);
+                  return `AL ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                } catch { return ''; }
+              })() : ''}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                <Text style={styles.compActionsValue}>{formatCurrency(priorCompensation)}</Text>
+                <View style={{ marginLeft: 12, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: '#F3F4F6', borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Ionicons name="lock-closed" size={14} color="#6B7280" />
+                  <Text style={{ fontSize: 12, color: '#6B7280', fontWeight: '500' }}>Solo admin</Text>
                 </View>
-              ) : (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                  <Text style={styles.compActionsValue}>{formatCurrency(priorCompensation)}</Text>
-                  <TouchableOpacity
-                    style={[styles.compActionsBtn, { backgroundColor: '#1565C0', marginLeft: 12 }]}
-                    onPress={() => { setPriorDraft(String(priorCompensation)); setEditingPrior(true); }}
-                    data-testid="prior-comp-edit"
-                    testID="prior-comp-edit"
-                  >
-                    <Ionicons name="create-outline" size={16} color="#fff" />
-                    <Text style={[styles.compActionsBtnText, { marginLeft: 4 }]}>Modifica</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+              </View>
               <Text style={styles.compActionsHelp}>
-                Importo totale di compensi sportivi già percepiti nell'anno corrente (per il calcolo delle soglie fiscali €5k/€15k).
+                Compensi sportivi già percepiti prima dell'inizio del contratto attuale (per il calcolo delle soglie fiscali €5k/€15k). Modificabile solo dall'admin della società.
               </Text>
             </View>
 
