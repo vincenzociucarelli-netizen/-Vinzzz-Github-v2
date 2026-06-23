@@ -397,8 +397,17 @@ export default function AdminDashboard() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        {/* 🆕 24/02/2026 — Nome società in cima a tutta larghezza, allineato a sinistra */}
+        <Text
+          style={styles.headerTitle}
+          numberOfLines={2}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+        >
+          {society.name}
+        </Text>
         <View style={styles.headerMainRow}>
-          {/* Society logo on the LEFT, no white circle, scaled to fit blue band */}
+          {/* Society logo on the LEFT, scaled to fit blue band (abbassato leggermente) */}
           {logoOk ? (
             <Image
               source={{ uri: logoUrl }}
@@ -410,16 +419,8 @@ export default function AdminDashboard() {
             <View style={styles.headerBigLogo} />
           )}
           
-          {/* Right column: title (top, right-aligned) + 4 action icons below */}
+          {/* Right column: 4 action icons */}
           <View style={styles.headerRightCol}>
-            <Text
-              style={styles.headerTitle}
-              numberOfLines={2}
-              adjustsFontSizeToFit
-              minimumFontScale={0.6}
-            >
-              {society.name}
-            </Text>
             <View style={styles.headerButtons}>
               {/* Notifications Bell */}
               <TouchableOpacity 
@@ -1543,15 +1544,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerBigLogo: {
-    width: 100,
-    height: 100,
-    marginTop: 10,
+    width: 90,
+    height: 90,
+    marginTop: 8,
   },
   headerRightCol: {
     flex: 1,
     alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    minHeight: 110,
+    justifyContent: 'flex-end',
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -1570,12 +1570,12 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   headerTitle: {
-    fontSize: 42,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#fff',
-    textAlign: 'right',
-    lineHeight: 44,
-    marginBottom: 0,
+    textAlign: 'left',
+    lineHeight: 28,
+    marginBottom: 4,
   },
   headerButtons: {
     flexDirection: 'row',

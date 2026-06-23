@@ -19197,9 +19197,11 @@ def generate_signed_pdf(
 async def sign_document(request: SignatureDocumentRequest, current_user = Depends(get_current_user)):
     """Create a signed document with digital signature and send via email"""
     
-    # Get society info
-    society = await db.societies.find_one()
-    society_settings = await db.settings.find_one({"type": "society"})
+    # 🔥 24/02/2026 — Multi-tenancy fix: filtra per society_id del firmatario
+    # (precedentemente db.societies.find_one() prendeva la PRIMA società, causando intestazioni sbagliate)
+    user_society_id = current_user.get("society_id")
+    society = await db.societies.find_one({"id": user_society_id}) if user_society_id else None
+    society_settings = await db.settings.find_one({"type": "society", "society_id": user_society_id}) if user_society_id else None
     # ALWAYS use ragione_sociale for official documents
     society_name = (society_settings.get("ragione_sociale") if society_settings else None) or (society.get("ragione_sociale") if society else None) or (society_settings.get("name") if society_settings else None) or (society.get("name") if society else None) or "ASD/SSD"
     
@@ -19249,7 +19251,8 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
                     pass
             
             # Get society details
-            society = await db.settings.find_one({"type": "society"})
+            # 🔥 24/02/2026 — Multi-tenancy fix: filtra per society_id del firmatario
+            society = await db.settings.find_one({"type": "society", "society_id": user_society_id}) if user_society_id else None
             society_address = society.get("address", "") if society else ""
             society_city = society.get("city", "") if society else ""
             society_province = society.get("province", "") if society else ""
@@ -19619,7 +19622,9 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
             athlete = await db.athletes.find_one({"id": document.get("related_entity_id")})
             society = await db.societies.find_one({"id": document.get("society_id")})
             # Get society settings (address, fiscal_code, email are stored here)
-            society_settings = await db.settings.find_one({"type": "society"})
+            # 🔥 24/02/2026 — Multi-tenancy fix: filtra per society_id del documento
+            doc_society_id = document.get("society_id")
+            society_settings = await db.settings.find_one({"type": "society", "society_id": doc_society_id}) if doc_society_id else None
             
             # Society data: prefer settings over societies collection
             soc_name = (society_settings.get("name") if society_settings else None) or (society.get("name", "") if society else "")
@@ -19835,7 +19840,9 @@ async def get_consent_pdf(consent_type: str, current_user = Depends(get_current_
         if not consent_data or not consent_data.get("value"):
             raise HTTPException(status_code=404, detail="Consenso non ancora espresso")
     
-    society_settings = await db.settings.find_one({"type": "society"})
+    # 🔥 24/02/2026 — Multi-tenancy fix: filtra per society_id dell'utente corrente
+    user_society_id = current_user.get("society_id")
+    society_settings = await db.settings.find_one({"type": "society", "society_id": user_society_id}) if user_society_id else None
     society_name = (society_settings.get("ragione_sociale") if society_settings else None) or "ASD/SSD"
     ragione_sociale = society_settings.get("ragione_sociale", "") if society_settings else ""
     society_address_raw = society_settings.get("address", "") if society_settings else ""
@@ -19963,8 +19970,10 @@ async def sign_gdpr_privacy_document(
         client_ip = forwarded_for.split(",")[0].strip()
     
     # Get society info from settings (has ragione_sociale)
-    society_settings = await db.settings.find_one({"type": "society"})
-    society = await db.societies.find_one()
+    # 🔥 24/02/2026 — Multi-tenancy fix: filtra per society_id dell'utente corrente
+    user_society_id = current_user.get("society_id")
+    society_settings = await db.settings.find_one({"type": "society", "society_id": user_society_id}) if user_society_id else None
+    society = await db.societies.find_one({"id": user_society_id}) if user_society_id else None
     if not society and not society_settings:
         raise HTTPException(status_code=404, detail="Nessuna società configurata")
     
@@ -20497,8 +20506,10 @@ async def preview_gdpr_privacy_document(
     import hashlib
     
     # Get society info from settings (has ragione_sociale)
-    society_settings = await db.settings.find_one({"type": "society"})
-    society = await db.societies.find_one()
+    # 🔥 24/02/2026 — Multi-tenancy fix: filtra per society_id dell'utente corrente
+    user_society_id = current_user.get("society_id")
+    society_settings = await db.settings.find_one({"type": "society", "society_id": user_society_id}) if user_society_id else None
+    society = await db.societies.find_one({"id": user_society_id}) if user_society_id else None
     if not society and not society_settings:
         raise HTTPException(status_code=404, detail="Nessuna società configurata")
     
@@ -25072,10 +25083,12 @@ async def _regenerate_gdpr_privacy_pdf(document: dict) -> Optional[bytes]:
             athlete = await db.athletes.find_one({"id": document.get("minor_id")})
 
         # Society lookup with settings fallback
+        # 🔥 24/02/2026 — Multi-tenancy fix: filtra per society_id del documento
         society = await db.societies.find_one({"id": document.get("society_id")}) if document.get("society_id") else None
         if not society:
             society = await db.societies.find_one({})
-        society_settings = await db.settings.find_one({"type": "society"})
+        doc_society_id = document.get("society_id")
+        society_settings = await db.settings.find_one({"type": "society", "society_id": doc_society_id}) if doc_society_id else None
 
         soc_name = (society_settings.get("name") if society_settings else None) or (society.get("name", "") if society else "")
         soc_ragione = (society_settings.get("ragione_sociale") if society_settings else None) or (society.get("ragione_sociale", "") if society else "")
