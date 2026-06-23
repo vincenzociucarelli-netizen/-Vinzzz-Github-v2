@@ -10,6 +10,32 @@ import CookieBanner from '../src/components/CookieBanner';
 // Keep splash screen visible while loading fonts
 SplashScreen.preventAutoHideAsync();
 
+// 🆕 23/02/2026 — Web SEO: title + meta description + apple-touch-icon
+// Google indicizzava "frontend" come titolo e mostrava "sito inattivo" perché la SPA
+// non aveva metadati. Settiamo i tag a runtime appena il bundle JS parte.
+if (Platform.OS === 'web' && typeof document !== 'undefined') {
+  try {
+    document.title = 'RegistraTEAM — Software gestionale società sportive';
+    const ensureMeta = (name: string, content: string, attr: 'name' | 'property' = 'name') => {
+      let el = document.querySelector(`meta[${attr}="${name}"]`) as HTMLMetaElement | null;
+      if (!el) {
+        el = document.createElement('meta');
+        el.setAttribute(attr, name);
+        document.head.appendChild(el);
+      }
+      el.setAttribute('content', content);
+    };
+    ensureMeta('description', 'RegistraTEAM — Software gestionale per società sportive: tesseramenti, presenze, compensi, GDPR, Riforma Sport. Pallavolo, calcio e altre discipline.');
+    ensureMeta('og:title', 'RegistraTEAM — Software gestionale società sportive', 'property');
+    ensureMeta('og:description', 'Gestionale all-in-one per società sportive: tesseramenti, presenze, compensi, Riforma Sport, GDPR.', 'property');
+    ensureMeta('og:type', 'website', 'property');
+    ensureMeta('og:image', '/favicon.ico', 'property');
+    ensureMeta('twitter:card', 'summary');
+    ensureMeta('twitter:title', 'RegistraTEAM');
+    ensureMeta('twitter:description', 'Gestionale all-in-one per società sportive.');
+  } catch { /* SSR safe */ }
+}
+
 // 🆕 22/02/2026 — Monkey-patch globale Alert.alert per il web.
 // CAUSA: react-native-web 0.21 ha `Alert.alert` come NO-OP totale → nessun feedback
 // si vede mai sul web (Anna Coach firma €5k bloccata, Sarnari Andrea, Fede, ecc.).

@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "RegistraTEAM",
+    "slug": "registrateam",
+    "description": "RegistraTEAM — Software gestionale per società sportive: tesseramenti, presenze, compensi, GDPR, Riforma Sport. Per società di pallavolo, calcio e altre discipline.",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
