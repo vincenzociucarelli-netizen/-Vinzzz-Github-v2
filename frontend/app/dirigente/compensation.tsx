@@ -1025,10 +1025,22 @@ export default function DirigenteCompensation() {
             <Ionicons name="person-circle" size={50} color="#8E44AD" />
             <View style={{ marginLeft: 12, flex: 1 }}>
               <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#333' }}>{profile?.full_name || 'Dirigente'}</Text>
-              <Text style={{ fontSize: 13, color: '#666' }}>Compenso mensile: {formatCurrency((profile?.monthly_compensation || 0))}</Text>
             </View>
           </View>
-          
+
+          {/* 🆕 24/02/2026 — Compenso mensile in box dedicato (stile coerente con Periodo Contratto) */}
+          {(profile?.monthly_compensation || 0) > 0 && (
+            <View style={{ backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: '#FF9500', borderStyle: 'dashed' }} data-testid="compenso-mensile-box">
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 14, marginRight: 6 }}>💰</Text>
+                <Text style={{ fontSize: 14, color: '#333', fontWeight: '500' }}>Compenso Mensile</Text>
+              </View>
+              <Text style={{ fontSize: 22, color: '#E65100', fontWeight: 'bold', marginTop: 4, textAlign: 'center' }}>
+                {formatCurrency(profile?.monthly_compensation || 0)}
+              </Text>
+            </View>
+          )}
+
           {profile?.contract_start_date && profile?.contract_end_date && (
             <View style={{ 
               backgroundColor: '#F3E5F5', 
@@ -1111,15 +1123,7 @@ export default function DirigenteCompensation() {
             )
           )}
 
-          <TouchableOpacity 
-            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3E5F5', padding: 10, borderRadius: 8 }}
-            onPress={() => router.push('/dirigente/profile')}
-          >
-            <Ionicons name="create-outline" size={18} color="#8E44AD" />
-            <Text style={{ marginLeft: 8, color: '#8E44AD', fontWeight: '500' }}>Il Mio Profilo</Text>
-            <Text style={{ flex: 1, textAlign: 'right', fontSize: 12, color: '#666' }}>Dati personali, documento e IBAN</Text>
-            <Ionicons name="chevron-forward" size={18} color="#8E44AD" style={{ marginLeft: 8 }} />
-          </TouchableOpacity>
+          {/* 🆕 24/02/2026 — Link "Il Mio Profilo" RIMOSSO: già accessibile via tab Anagrafica */}
         </View>
         
         {/* Year Summaries - Contract-based - ENHANCED STYLE */}

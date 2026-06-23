@@ -48,14 +48,16 @@ export default function DirigenteIndex() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [athletes, setAthletes] = useState<AthleteWithCert[]>([]);
+  const [assignedVenues, setAssignedVenues] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadTeams = async () => {
     try {
-      // Load user profile to get assigned teams
+      // Load user profile to get assigned teams + venues
       const meRes = await api.get('/auth/me');
       const assignedTeamIds = meRes.data.assigned_teams || [];
+      setAssignedVenues(meRes.data.assigned_venues || []);
       
       const response = await api.get('/teams');
       // Filter to only show assigned teams (if any are assigned)
@@ -307,53 +309,63 @@ export default function DirigenteIndex() {
           <Ionicons name="chevron-forward" size={24} color="#43A047" />
         </TouchableOpacity>
 
-        {/* Teams Section with inline Athletes */}
-        <View style={styles.section}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <SportIcon size={20} />
-            <Text style={[styles.sectionTitle, { marginLeft: 6 }]}>Squadre ({teams.length})</Text>
-          </View>
-          {teams.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Ionicons name="people-outline" size={48} color="#ccc" />
-              <Text style={styles.emptyText}>Nessuna squadra registrata</Text>
-            </View>
-          ) : (
-            teams.map((item) => (
-              <View key={item.id}>
-                <TouchableOpacity
-                  style={styles.teamCard}
-                  onPress={() => {
-                    router.push({
-                      pathname: '/dirigente/team/[id]',
-                      params: { id: item.id, name: item.name }
-                    });
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.teamIcon}>
-                    <Ionicons name="people" size={24} color="#8E44AD" />
-                  </View>
-                  <View style={styles.teamInfo}>
-                    <Text style={styles.teamName}>
-                      {item.name}
-                    </Text>
-                    {item.category && (
-                      <Text style={styles.teamCategory}>
-                        {item.category}
-                      </Text>
-                    )}
-                  </View>
-                  <Ionicons 
-                    name="chevron-forward"
-                    size={20} 
-                    color="#999" 
-                  />
-                </TouchableOpacity>
+        {/* 🆕 24/02/2026 — Card "🏆 Stagione" (replica Anagrafica ma con pill cliccabili → team detail) */}
+        {(teams.length > 0 || assignedVenues.length > 0) && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { marginBottom: 12 }]}>🏆 Stagione</Text>
+
+            {/* Squadre Assegnate - pill cliccabili */}
+            {teams.length > 0 && (
+              <View style={{ marginTop: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Ionicons name="people" size={18} color="#007AFF" />
+                  <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600', color: '#333' }}>Squadre Assegnate</Text>
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {teams.map((t) => (
+                    <TouchableOpacity
+                      key={t.id}
+                      onPress={() => router.push({ pathname: '/dirigente/team/[id]', params: { id: t.id, name: t.name } })}
+                      style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, backgroundColor: '#E3F2FD', borderWidth: 1, borderColor: '#007AFF', flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                      data-testid={`dirigente-team-pill-${t.id}`}
+                    >
+                      <Text style={{ color: '#007AFF', fontWeight: '600', fontSize: 13 }}>{t.name}</Text>
+                      <Ionicons name="chevron-forward" size={14} color="#007AFF" />
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
-            ))
-          )}
-        </View>
+            )}
+
+            {/* Palestre */}
+            {assignedVenues.length > 0 && (
+              <View style={{ marginTop: 14 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Ionicons name="location" size={18} color="#FF9500" />
+                  <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600', color: '#333' }}>Palestre</Text>
+                </View>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {assignedVenues.map((venue, idx) => (
+                    <View key={idx} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: '#FFF3E0', borderWidth: 1, borderColor: '#FF9500' }}>
+                      <Text style={{ color: '#E65100', fontWeight: '500', fontSize: 13 }}>{venue}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <Text style={{ color: '#666', fontSize: 12, lineHeight: 18, marginTop: 14, fontStyle: 'italic' }}>
+              <Text style={{ fontWeight: '600', color: '#F57C00' }}>In arrivo:</Text> riepilogo lavoro stagione (obiettivi, statistiche, ruolo).
+            </Text>
+          </View>
+        )}
+
+        {teams.length === 0 && assignedVenues.length === 0 && (
+          <View style={styles.emptyCard}>
+            <Ionicons name="people-outline" size={48} color="#ccc" />
+            <Text style={styles.emptyText}>Nessuna squadra assegnata</Text>
+          </View>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>

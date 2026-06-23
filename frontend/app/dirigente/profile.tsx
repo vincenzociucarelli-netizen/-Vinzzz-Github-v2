@@ -108,7 +108,7 @@ export default function DirigenteProfile() {
   
   // Collapsible sections state
   const [sectionsExpanded, setSectionsExpanded] = useState({
-    anagrafici: false,
+    anagrafici: true,
     fiscali: false,
     bancari: false,
   });
