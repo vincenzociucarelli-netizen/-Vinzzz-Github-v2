@@ -3929,6 +3929,18 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
         update_dict["compensation_accepted"] = data.compensation_accepted
         if data.compensation_accepted:
             update_dict["compensation_accepted_date"] = datetime.utcnow()
+        # 🔥 24/02/2026 — Bug fix: il flag compensation_accepted esiste sia su db.users
+        # che su db.athletes (per atleti PRO). Quando un atleta accetta dal suo profilo,
+        # propaghiamo l'update anche a db.athletes così l'admin (che legge da athletes)
+        # vede lo stato corretto. Senza questo, admin vedeva "✗ No" mentre user "✓ Sì".
+        if current_user.get("role") == UserRole.ATHLETE:
+            athlete_update: dict = {"compensation_accepted": data.compensation_accepted}
+            if data.compensation_accepted:
+                athlete_update["compensation_accepted_date"] = datetime.utcnow()
+            await db.athletes.update_one(
+                {"user_id": current_user["id"]},
+                {"$set": athlete_update}
+            )
     if data.compensation_history is not None:
         update_dict["compensation_history"] = data.compensation_history
     if data.over_5000_limit is not None:
@@ -31947,3 +31959,30 @@ async def run_data_migrations():
     )
     if result.modified_count > 0:
         logger.info("Migration: email giulia@test.com -> giulio@test.com applicata")
+
+    # 🔥 24/02/2026 — Sync retroattivo compensation_accepted da users → athletes
+    # (per atleti PRO che hanno accettato il compenso PRIMA del fix di propagazione)
+    try:
+        accepted_users = await db.users.find(
+            {"role": "athlete", "compensation_accepted": True},
+            {"id": 1, "compensation_accepted_date": 1},
+        ).to_list(10000)
+        synced = 0
+        for u in accepted_users:
+            res = await db.athletes.update_one(
+                {"user_id": u["id"], "$or": [
+                    {"compensation_accepted": {"$ne": True}},
+                    {"compensation_accepted": {"$exists": False}},
+                ]},
+                {"$set": {
+                    "compensation_accepted": True,
+                    "compensation_accepted_date": u.get("compensation_accepted_date"),
+                }},
+            )
+            if res.modified_count > 0:
+                synced += 1
+        if synced > 0:
+            logger.info(f"Migration: sincronizzati {synced} atleti con compensation_accepted da users → athletes")
+    except Exception as exc:
+        logger.warning(f"Migration compensation_accepted sync failed: {exc}")
+
