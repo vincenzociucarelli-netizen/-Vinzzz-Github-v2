@@ -3929,15 +3929,25 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
         update_dict["compensation_accepted"] = data.compensation_accepted
         if data.compensation_accepted:
             update_dict["compensation_accepted_date"] = datetime.utcnow()
+        else:
+            # 🔥 24/02/2026 — Reset esplicito della data quando si revoca l'accettazione
+            update_dict["compensation_accepted_date"] = None
         # 🔥 24/02/2026 — Bug fix: il flag compensation_accepted esiste sia su db.users
         # che su db.athletes (per atleti PRO). Quando un atleta accetta dal suo profilo,
         # propaghiamo l'update anche a db.athletes così l'admin (che legge da athletes)
         # vede lo stato corretto. Senza questo, admin vedeva "✗ No" mentre user "✓ Sì".
         if current_user.get("role") == UserRole.ATHLETE:
             athlete_doc_id = current_user.get("athlete_id") or current_user.get("id")
+            if not current_user.get("athlete_id"):
+                logger.warning(
+                    f"User {current_user.get('id')} role=athlete senza athlete_id: "
+                    f"fallback su user.id per update db.athletes (potrebbe non corrispondere)."
+                )
             athlete_update: dict = {"compensation_accepted": data.compensation_accepted}
             if data.compensation_accepted:
                 athlete_update["compensation_accepted_date"] = datetime.utcnow()
+            else:
+                athlete_update["compensation_accepted_date"] = None
             await db.athletes.update_one(
                 {"id": athlete_doc_id},
                 {"$set": athlete_update}

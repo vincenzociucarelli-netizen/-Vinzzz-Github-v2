@@ -15,6 +15,31 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 🆕 24/02/2026 — Bug fix `compensation_accepted` sync users ↔ athletes ✅
+
+### Sintomo
+Admin che apriva il profilo di un atleta PRO (es. "Zorzi Alice") vedeva "Compenso Accettato: ✗ No" anche se l'atleta aveva accettato dal proprio profilo (✓ Sì).
+
+### Causa
+Il flag `compensation_accepted` esiste su 2 collection MongoDB separate:
+- `db.users.compensation_accepted` ← scritto dal `PATCH /api/auth/me`
+- `db.athletes.compensation_accepted` ← letto da `GET /api/athletes/{id}` (usato dall'admin)
+Le 2 collection erano desincronizzate.
+
+### Fix (3 livelli)
+1. **PATCH `/api/auth/me`** (server.py ~L3927): se l'utente è atleta, propaga `compensation_accepted` (e `compensation_accepted_date`) anche su `db.athletes` via `current_user.get('athlete_id')`. Aggiunto log warning se `athlete_id` manca.
+2. **Reset esplicito data**: quando `compensation_accepted=False`, ora `compensation_accepted_date` viene esplicitamente azzerato a `None` su entrambe le collection (prima restava il valore precedente).
+3. **Migration startup** (server.py ~L31964 `run_data_migrations`): all'avvio del backend di produzione sincronizza retroattivamente gli atleti che avevano accettato pre-fix. Logga: `"Migration compensation_accepted sync: X/Y atleti aggiornati"`.
+
+### Test
+Testing agent ha verificato il fix con 6/6 test pytest PASSED (file: `/app/backend/tests/test_compensation_accepted_sync.py`). Tutti i flussi verificati: accept, revoke, ruolo non-athlete invariato, GET admin coerente con PATCH user, migration log.
+
+### Test credentials usate
+- Admin: `vincenzo.ciucarelli@gmail.com` / `Test1234`
+- Athlete PRO test: `testalice1780817007@test.com` / `Test1234`
+- Coach: `alice@test.com` / `Test1234`
+
+
 ## 🆕 24/02/2026 — Refactoring Fase R1 (low-cost setup)
 
 ### Setup struttura modulare
