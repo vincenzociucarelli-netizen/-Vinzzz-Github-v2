@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
+import CompensationSummaryCard from '../../../src/components/compensation/CompensationSummaryCard';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import DualRoleHubBanner from '../../../src/components/admin/DualRoleHubBanner';
 import { Ionicons } from '../../../src/components/Icon';
@@ -3187,59 +3188,17 @@ export default function AdminAthleteDetail() {
                         </View>
                       </View>
 
-                      {/* Importo Mensile GRANDE */}
-                      <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', marginVertical: 16, gap: 8 }}>
-                        <Text style={{ fontSize: 38, fontWeight: '700', color: '#FF9500', letterSpacing: -0.5 }}>
-                          {formatCurrency(monthly)}
-                        </Text>
-                        <Text style={{ fontSize: 16, color: '#999', fontWeight: '500' }}>/ mese</Text>
-                      </View>
-
-                      {/* Periodo Contratto box + Accettato + Pregresso dichiarato (allineato a Coach/Collaboratore/Dirigente) */}
-                      {athlete?.contract_start_date && athlete?.contract_end_date && (
-                        <>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 10, gap: 6 }}>
-                            <Text style={{ fontSize: 14 }}>{athlete?.compensation_accepted ? '✅' : '⏳'}</Text>
-                            <Text style={{ fontSize: 13, color: athlete?.compensation_accepted ? '#2E7D32' : '#E65100', fontWeight: '600' }}>
-                              {athlete?.compensation_accepted ? 'Accettato dal coach' : 'In attesa di accettazione'}
-                            </Text>
-                          </View>
-                          <View style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            backgroundColor: '#F5F9FF',
-                            padding: 12,
-                            borderRadius: 10,
-                            borderLeftWidth: 3,
-                            borderLeftColor: '#1565C0',
-                            marginTop: 4,
-                            gap: 10,
-                          }}>
-                            <Text style={{ fontSize: 22 }}>📅</Text>
-                            <Text style={{ fontSize: 14, color: '#333', fontWeight: '500', flex: 1 }}>Periodo contratto:</Text>
-                            <Text style={{ fontSize: 14, color: '#333', fontWeight: '700' }}>
-                              {fmt(athlete.contract_start_date)} - {fmt(athlete.contract_end_date)}
-                            </Text>
-                          </View>
-                          {Number((athlete as any)?.other_annual_compensation || 0) > 0 && (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, padding: 10, backgroundColor: '#F5F9FF', borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#1565C0' }}>
-                              <Text style={{ fontSize: 13, color: '#1565C0', marginRight: 6 }}>📋</Text>
-                              <Text style={{ fontSize: 13, color: '#374151', fontWeight: '500' }}>Pregresso dichiarato {(() => {
-                                try {
-                                  const parts = String(athlete.contract_start_date).split('-');
-                                  if (parts.length !== 3) return '';
-                                  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                                  d.setDate(d.getDate() - 1);
-                                  return `al ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-                                } catch { return ''; }
-                              })()}:</Text>
-                              <Text style={{ fontSize: 13, color: '#111827', marginLeft: 6, fontWeight: '700' }}>
-                                {formatCurrency((athlete as any).other_annual_compensation || 0)}
-                              </Text>
-                            </View>
-                          )}
-                        </>
-                      )}
+                      {/* 🆕 24/02/2026 — CompensationSummaryCard riusabile (replica grafica user Dirigente) */}
+                      <CompensationSummaryCard
+                        fullName={athlete?.full_name || 'Atleta'}
+                        monthlyCompensation={monthly}
+                        compensationAccepted={!!athlete?.compensation_accepted}
+                        contractStartDate={athlete?.contract_start_date}
+                        contractEndDate={athlete?.contract_end_date}
+                        priorCompensation={Number((athlete as any)?.other_annual_compensation || 0)}
+                        formatCurrency={formatCurrency}
+                        readOnly
+                      />
                     </View>
                   );
                 })()}

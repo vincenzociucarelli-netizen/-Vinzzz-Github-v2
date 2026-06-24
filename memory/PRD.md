@@ -15,6 +15,25 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 🆕 24/02/2026 — CompensationSummaryCard rollout COMPLETO ✅
+
+Componente `CompensationSummaryCard` ora applicato in **TUTTI** i 7 punti pianificati:
+
+**User-side (4):**
+1. ✅ `/dirigente/compensation` (template originale)
+2. ✅ `/coach/compensation` — bonus: rimosse 2 sezioni duplicate (Banner Coach + Azioni Compenso)
+3. ✅ `/collaboratore/compensation` (versione manuale, già allineata)
+4. ✅ `/athlete/compensation` (Atleta PRO) — `onAcceptCompensation` wired
+
+**Admin-side (4) — readOnly mode:**
+5. ✅ `/admin/dirigente/[id]`
+6. ✅ `/admin/collaboratore/[id]`
+7. ✅ `/admin/coach/[id]`
+8. ✅ `/admin/athlete/[id]` (Atleta PRO) — header con pill `>5K/>15K` + matita Edit preservato
+
+Tutti mostrano la stessa grafica: 👤 nome + 💰 Compenso Mensile (box arancione) + ✓ Accettato + 📅 Periodo Contratto (box viola) + 📋 Pregresso "Solo admin" (box azzurro).
+
+
 ## 🆕 24/02/2026 — CompensationSummaryCard riusabile + GDPR multi-tenancy fix
 
 ### 🚨 Bug GDPR PDF Privacy (CRITICO)

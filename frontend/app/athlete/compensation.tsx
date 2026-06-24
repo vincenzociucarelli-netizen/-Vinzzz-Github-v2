@@ -16,6 +16,7 @@ import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import AthleteTabBar from '../../src/components/athlete/AthleteTabBar';
+import CompensationSummaryCard from '../../src/components/compensation/CompensationSummaryCard';
 import SignaturePadInline from '../../src/components/SignaturePadInline';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
@@ -1286,59 +1287,36 @@ export default function AthleteCompensation() {
       <AthleteTabBar />
 
       <ScrollView style={styles.content}>
-        {/* 🆕 23/02/2026 — Card "💰 Compensi" unificata (Compenso pattuito + Date contratto + Pregresso)
-            Stesso layout di Coach/Collaboratore/Dirigente user-side. Visibile solo per atleti PRO con compenso > 0. */}
+        {/* 🆕 24/02/2026 — CompensationSummaryCard riusabile (replica grafica user Dirigente) */}
         {(profile?.monthly_compensation || 0) > 0 && (
-          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 }}>
-            <Text style={{ fontSize: 18, fontWeight: '700', color: '#333' }}>💰 Compensi</Text>
-            {/* Compenso pattuito */}
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', marginVertical: 14, gap: 8 }}>
-              <Text style={{ fontSize: 38, fontWeight: '700', color: '#FF9500', letterSpacing: -0.5 }}>
-                {formatCurrency(profile?.monthly_compensation || 0)}
-              </Text>
-              <Text style={{ fontSize: 16, color: '#999', fontWeight: '500' }}>/ mese</Text>
-            </View>
-            {/* Stato accettazione */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 12, gap: 6 }}>
-              <Text style={{ fontSize: 14 }}>{(profile as any)?.compensation_accepted ? '✅' : '⏳'}</Text>
-              <Text style={{ fontSize: 13, color: (profile as any)?.compensation_accepted ? '#2E7D32' : '#E65100', fontWeight: '600' }}>
-                {(profile as any)?.compensation_accepted ? 'Compenso accettato' : 'In attesa di accettazione'}
-              </Text>
-            </View>
-            {/* Periodo contratto */}
-            {profile?.contract_start_date && profile?.contract_end_date && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F9FF', padding: 12, borderRadius: 10, borderLeftWidth: 3, borderLeftColor: '#1565C0', marginTop: 4, gap: 10 }}>
-                <Text style={{ fontSize: 22 }}>📅</Text>
-                <Text style={{ fontSize: 14, color: '#333', fontWeight: '500', flex: 1 }}>Periodo contratto:</Text>
-                <Text style={{ fontSize: 14, color: '#333', fontWeight: '700' }}>
-                  {formatContractDate(profile.contract_start_date)} - {formatContractDate(profile.contract_end_date)}
-                </Text>
-              </View>
-            )}
-            {/* Pregresso dichiarato (READ-ONLY: solo admin può modificare) */}
-            {(profile?.other_annual_compensation || 0) > 0 && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, padding: 10, backgroundColor: '#F5F9FF', borderRadius: 8, borderLeftWidth: 3, borderLeftColor: '#1565C0' }}>
-                <Text style={{ fontSize: 14, marginRight: 6 }}>📋</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 12, color: '#374151', fontWeight: '500' }}>Pregresso dichiarato {profile?.contract_start_date ? (() => {
-                    try {
-                      const parts = String(profile.contract_start_date).split('-');
-                      if (parts.length !== 3) return '';
-                      const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                      d.setDate(d.getDate() - 1);
-                      return `al ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-                    } catch { return ''; }
-                  })() : ''}:</Text>
-                  <Text style={{ fontSize: 16, color: '#1F2937', fontWeight: '700', marginTop: 2 }}>{formatCurrency(profile?.other_annual_compensation || 0)}</Text>
-                </View>
-                <View style={{ paddingHorizontal: 8, paddingVertical: 4, backgroundColor: '#F3F4F6', borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Ionicons name="lock-closed" size={12} color="#6B7280" />
-                  <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500' }}>Solo admin</Text>
-                </View>
-              </View>
-            )}
-          </View>
+          <CompensationSummaryCard
+            fullName={profile?.full_name || 'Atleta'}
+            monthlyCompensation={profile?.monthly_compensation || 0}
+            compensationAccepted={!!(profile as any)?.compensation_accepted}
+            contractStartDate={profile?.contract_start_date}
+            contractEndDate={profile?.contract_end_date}
+            priorCompensation={Number(profile?.other_annual_compensation || 0)}
+            formatCurrency={formatCurrency}
+            onAcceptCompensation={(profile as any)?.compensation_accepted ? undefined : async () => {
+              try {
+                await api.patch('/auth/me', { compensation_accepted: true });
+                if (Platform.OS === 'web') {
+                  window.alert('Compenso accettato!');
+                } else {
+                  Alert.alert('Successo', 'Compenso accettato!');
+                }
+                const res = await api.get('/auth/me');
+                setProfile(res.data);
+              } catch (e: any) {
+                const msg = e?.response?.data?.detail || 'Impossibile accettare il compenso.';
+                if (Platform.OS === 'web') window.alert(msg);
+                else Alert.alert('Errore', msg);
+              }
+            }}
+          />
         )}
+
+        {/* 🆕 24/02/2026 — Card "💰 Compensi" RIMOSSA: sostituita da CompensationSummaryCard sopra */}
 
         {/* Coach Name and Profile Link */}
         <View style={{ marginBottom: 16, backgroundColor: '#fff', borderRadius: 12, padding: 16 }}>
