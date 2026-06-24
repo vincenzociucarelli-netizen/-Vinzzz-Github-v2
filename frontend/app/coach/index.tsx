@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import CoachTabBar from '../../src/components/coach/CoachTabBar';
 import {
   View,
   Text,
@@ -1268,6 +1269,9 @@ export default function CoachScreen() {
           <Ionicons name="log-out-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
+
+      {/* 🆕 24/02/2026 — CoachTabBar (sticky sopra ScrollView) */}
+      <CoachTabBar active="dafare" />
 
       {/* 🆕 Switch dual-role: Coach ↔ Atleta (visibile solo se collegato) */}
       <SwitchAccountButton />

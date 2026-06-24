@@ -1350,18 +1350,20 @@ export default function CoachCompensation() {
       <CoachTabBar active="compensi" />
 
       <ScrollView style={styles.content}>
-        {/* 🆕 24/02/2026 — CompensationSummaryCard riusabile (replica grafica Dirigente user) */}
-        <CompensationSummaryCard
-          fullName={profile?.full_name || 'Coach'}
-          monthlyCompensation={profile?.monthly_compensation || 0}
-          compensationAccepted={!!profile?.compensation_accepted}
-          contractStartDate={profile?.contract_start_date}
-          contractEndDate={profile?.contract_end_date}
-          priorCompensation={priorCompensation}
-          formatCurrency={formatCurrency}
-          onAcceptCompensation={handleAcceptCompensation}
-          acceptingComp={acceptingComp}
-        />
+        {/* 🆕 24/02/2026 — CompensationSummaryCard riusabile (solo se compenso > 0) */}
+        {(profile?.monthly_compensation || 0) > 0 && (
+          <CompensationSummaryCard
+            fullName={profile?.full_name || 'Coach'}
+            monthlyCompensation={profile?.monthly_compensation || 0}
+            compensationAccepted={!!profile?.compensation_accepted}
+            contractStartDate={profile?.contract_start_date}
+            contractEndDate={profile?.contract_end_date}
+            priorCompensation={priorCompensation}
+            formatCurrency={formatCurrency}
+            onAcceptCompensation={handleAcceptCompensation}
+            acceptingComp={acceptingComp}
+          />
+        )}
 
         {/* 🆕 24/02/2026 — Card "Coach Name + Profile Link" RIMOSSA: sostituita da CompensationSummaryCard sopra
             (sezione "Banner Coach" residua restituisce dualRoleInfo se presente) */}
