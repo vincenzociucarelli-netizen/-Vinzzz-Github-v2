@@ -15,6 +15,36 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 🆕 24/02/2026 — Refactoring Fase R1 (low-cost setup)
+
+### Setup struttura modulare
+Create cartelle vuote per il refactoring graduale di `server.py` (32k righe):
+- `backend/routers/` — pianificata per endpoint per dominio
+- `backend/services/` — pianificata per business logic riusabile
+- `backend/core/` — pianificata per infrastructure (config, db, auth, security)
+- `backend/REFACTORING.md` — roadmap dettagliata + convenzioni import
+
+### SECTION markers in `server.py`
+Aggiunti 11 commenti `# ═══ SECTION: ... ═══` per facilitare navigazione:
+1. 🏢 SOCIETIES (~1456) — multi-tenancy root
+2. 🔑 AUTH REGISTRATION (~1772)
+3. 👥 ATHLETES invitations (~2802)
+4. 🔐 AUTH LOGIN (~3331) — login, /me, password recovery
+5. 🏐 MATCHES (~5212)
+6. 🌐 FEDERATION FIPAV (~5639)
+7. 🩺 MEDICAL CERTIFICATES (~8876)
+8. 💳 PAYMENTS (~10525)
+9. ✅ ATTENDANCE (~11958)
+10. 🏋️ COACH (~12520)
+11. 📄 PDF GENERATION (~17045)
+
+### Bug pre-esistente risolto durante setup
+Trovato e fixato un syntax error a riga 31950 (stringa orfana `plicata")`) che impediva al backend di partire dopo i marker. Backend ora risponde 200 OK su tutti gli endpoint.
+
+### Strategia futura: estrazione opportunistica
+Ogni volta che si lavora su una sezione, può essere estratta nel router/service appropriato. Nessuna migrazione "big bang". Spesa stimata se mai completata: ~1500-2000 crediti distribuiti in 4 sessioni.
+
+
 ## 🆕 24/02/2026 — CompensationSummaryCard rollout COMPLETO ✅
 
 Componente `CompensationSummaryCard` ora applicato in **TUTTI** i 7 punti pianificati:

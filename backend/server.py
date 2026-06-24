@@ -1453,6 +1453,11 @@ async def check_athlete_status(athlete_id: str):
 
 # ==================== SOCIETY MANAGEMENT ENDPOINTS (Multi-tenancy) ====================
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🏢 SECTION: SOCIETIES (creazione, codice invito, terms)
+# Linee ~1456-1770 — gestione società sportive (multi-tenancy root).
+# Pianificato per estrazione → routers/societies.py
+# ═══════════════════════════════════════════════════════════════════════════════
 @api_router.post("/societies")
 async def create_society(society_data: SocietyCreate, current_user = Depends(get_current_user)):
     """Create a new society - only for admins without a society or super-admins"""
@@ -1769,6 +1774,11 @@ async def get_terms_status(current_user = Depends(get_current_user)):
 # ==================== AUTH ENDPOINTS ====================
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🔑 SECTION: AUTH REGISTRATION (invite, registrazione società/atleta)
+# Linee ~1772-2800 — validazione invito, register società/utente.
+# Pianificato per estrazione → routers/auth.py (parte registrazione)
+# ═══════════════════════════════════════════════════════════════════════════════
 @api_router.post("/auth/validate-invite-code")
 async def validate_invite_code(data: dict):
     """Validate a society invite code before proceeding with registration."""
@@ -2799,6 +2809,11 @@ class AthleteInviteRequest(BaseModel):
     team_id: Optional[str] = None
     role: Optional[str] = None
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 👥 SECTION: ATHLETES (invitations, registrazione, gestione)
+# Linee ~2802-3320 — flusso invito atleti + completamento profilo.
+# Pianificato per estrazione → routers/athletes.py
+# ═══════════════════════════════════════════════════════════════════════════════
 @api_router.post("/athletes/invite")
 async def invite_athlete(data: AthleteInviteRequest, current_user = Depends(get_current_user)):
     """Admin sends an email invitation to an athlete (or parent of a minor)"""
@@ -3328,6 +3343,11 @@ async def cancel_invitation(invitation_id: str, current_user = Depends(get_curre
     
     return {"message": "Invito annullato"}
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🔐 SECTION: AUTH LOGIN (login, /me, password recovery)
+# Linee ~3331-4500 — login, sessione utente, reset/cambio password.
+# Pianificato per estrazione → routers/auth.py
+# ═══════════════════════════════════════════════════════════════════════════════
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(request: Request, credentials: UserLogin):
     # Get client IP for rate limiting
@@ -5209,6 +5229,11 @@ async def update_user(user_id: str, data: dict, current_user = Depends(get_curre
 
 # ==================== MATCHES/GARE ENDPOINTS ====================
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🏐 SECTION: MATCHES (gare, calendario, sync FIPAV)
+# Linee ~5212-5630 — gestione partite/gare interne ed esterne.
+# Pianificato per estrazione → routers/matches.py
+# ═══════════════════════════════════════════════════════════════════════════════
 @api_router.get("/matches")
 async def get_matches(current_user = Depends(get_current_user)):
     """Get all matches for admin"""
@@ -5636,6 +5661,11 @@ class FederationSocietyConfig(BaseModel):
     last_import: Optional[datetime] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🌐 SECTION: FEDERATION (FIPAV import, championships, regions)
+# Linee ~5639-6300 — integrazione FIPAV per dati federali.
+# Pianificato per estrazione → routers/federation.py
+# ═══════════════════════════════════════════════════════════════════════════════
 @api_router.get("/federation/regions")
 async def get_federation_regions(federation: str = "fipav"):
     """Get available regions for a federation"""
@@ -10530,6 +10560,11 @@ async def get_payment_settings(current_user = Depends(get_current_user)):
     clean_mongo_doc(settings)
     return PaymentSettings(**settings)
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 💳 SECTION: PAYMENTS (quote atleti, rate, fiscal receipt)
+# Linee ~10525-11950 — endpoint per gestione pagamenti quote, rate, solleciti.
+# Pianificato per estrazione → routers/payments.py
+# ═══════════════════════════════════════════════════════════════════════════════
 @api_router.get("/payments/export-athletes-codes")
 async def export_athletes_with_codes(current_user = Depends(get_current_user)):
     """Export list of athletes with their codes for payment reference"""
@@ -11955,6 +11990,11 @@ def get_current_training_slot(team: dict) -> Optional[dict]:
     
     return None
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# ✅ SECTION: ATTENDANCE (presenze, check-in)
+# Linee ~11958-12500 — endpoint per registrazione presenze atleti.
+# Pianificato per estrazione → routers/attendance.py
+# ═══════════════════════════════════════════════════════════════════════════════
 @api_router.post("/attendance/check")
 async def check_attendance(attendance_data: AttendanceCreate, request: Request, current_user = Depends(get_current_user)):
     """
@@ -12517,6 +12557,11 @@ async def regenerate_all_qr_codes(current_user = Depends(get_current_user)):
 
 # ==================== COACH ENDPOINTS ====================
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🏋️ SECTION: COACH (squadre, commitments, compensi)
+# Linee ~12520-17000 — endpoint per coach (proprio profilo, squadre, atleti, compensi).
+# Pianificato per estrazione → routers/coach.py
+# ═══════════════════════════════════════════════════════════════════════════════
 @api_router.get("/coach/my-teams")
 async def get_coach_teams(current_user = Depends(get_current_user)):
     """Get teams assigned to the current coach"""
@@ -17042,6 +17087,11 @@ class GDPRPrivacySignRequest(BaseModel):
     consent_data: Optional[dict] = None
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 📄 SECTION: PDF GENERATION (GDPR, quietanze, soglie)
+# Linee ~17045-21000 — helper functions per generazione PDF firmati.
+# Pianificato per estrazione → services/pdf_service.py
+# ═══════════════════════════════════════════════════════════════════════════════
 def generate_monthly_receipt_pdf(
     society_name: str,
     collaborator_name: str,
