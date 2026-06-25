@@ -15,6 +15,30 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 🐛 25/02/2026 — Bug fix "Compenso applicabile solo a coach, dirigenti..." ✅
+
+### Sintomo
+Admin tenta di modificare date contratto di VERDI FABIO (1/9/2026→30/6/2027 ⇒ 1/9/2025→30/6/2026) sulla UI `/admin/dirigente/[id]` e riceve errore 400 "Compenso applicabile solo a coach, dirigenti e collaboratori".
+
+### Root cause
+L'utente VERDI FABIO ha `role='athlete'` in `db.users` (anche se la UI admin lo renderizzava sotto "dirigenti"). L'endpoint `PATCH /api/users/{id}/compensation` accettava solo `[COACH, DIRIGENTE, VIEWER, COLLABORATORE]`, escludendo ATHLETE → 400 Bad Request.
+
+### Fix (server.py L4966)
+1. Esteso allow-list a `[COACH, DIRIGENTE, VIEWER, COLLABORATORE, ATHLETE]` — consente di gestire atleti PRO compensati dall'UI dirigente
+2. Messaggio errore arricchito: ora include `(role attuale: {role})` per diagnostica futura
+
+### Test
+✅ Testing agent ha verificato il fix con **8/8 pytest PASSED (100%)**:
+- Tutti i 4 ruoli accettati (Dirigente, Coach, Collaboratore, **Athlete PRO** — caso bug principale) → 200 OK
+- Ruoli rifiutati (Admin, Parent) → 400 con role corrente nel messaggio errore
+- Conservazione `compensation_accepted` quando si cambiano solo date contratto (no reset)
+- Conservazione `compensation_accepted` quando importo invariato
+
+### Critical review (osservazioni non bloccanti del testing agent)
+- `bare except:` su parsing date contratto a L4992/L5002 inghiotte errori — date invalide producono 200 OK senza update. Da restringere a `ValueError/TypeError` con 400 esplicito.
+- Per atleti PRO, `monthly_compensation` vive su `db.athletes` (canonico) e `db.users` (questo endpoint). Sync già implementato (vedi iteration_74).
+
+
 ## 🚨 25/02/2026 — Hotfix: Collaboratore pagina bianca dopo login ✅
 
 ### Sintomo
