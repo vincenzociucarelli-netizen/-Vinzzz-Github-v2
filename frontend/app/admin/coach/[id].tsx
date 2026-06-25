@@ -1154,16 +1154,15 @@ export default function AdminCoachDetail() {
                 (() => {
                   const selectedLevels = (editLevelValue || '').split(',').map(s => s.trim()).filter(Boolean);
                   const isSmartCoach = (lvl: string) => lvl.toLowerCase().includes('smart');
-                  const isAllievo = (lvl: string) => lvl.toLowerCase().includes('allievo');
+                  // 🆕 27/02/2026 — Smart Coach abbinabile a TUTTI i gradi base
+                  // (Allievo / 1° / 2° / 3°). I gradi base restano mutuamente esclusivi tra loro.
                   const toggleLevel = (lvl: string) => {
                     const already = selectedLevels.includes(lvl);
                     let next: string[];
                     if (already) {
                       next = selectedLevels.filter(x => x !== lvl);
                     } else if (isSmartCoach(lvl)) {
-                      next = [...selectedLevels.filter(x => !isAllievo(x)), lvl];
-                    } else if (isAllievo(lvl)) {
-                      next = [lvl];
+                      next = [...selectedLevels, lvl];
                     } else {
                       next = [...selectedLevels.filter(x => isSmartCoach(x)), lvl];
                     }

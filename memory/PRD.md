@@ -15,6 +15,23 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 🎯 27/02/2026 — Smart Coach + Allievo Allenatore abbinabili ✅
+
+### Modifica logica Livello/Grado Coach
+**Comportamento richiesto**: Smart Coach deve poter essere abbinato a **QUALSIASI** grado base (Allievo Allenatore / 1° / 2° / 3° Grado). I gradi base restano mutuamente esclusivi tra loro.
+
+**Prima**: Smart Coach era incompatibile con Allievo Allenatore (escluso esplicitamente). Allievo era trattato come "esclusivo".
+
+**Ora**: Smart Coach è completamente libero, aggiungibile a qualsiasi grado base.
+
+### File modificati
+- `/app/frontend/app/coach/profile.tsx` (lato user)
+- `/app/frontend/app/admin/coach/[id].tsx` (lato admin)
+
+### TODO ancora aperto
+- 🔴 **Pagina bianca Anagrafica lato Atleta dual-role** — segnalata dall'utente, da investigare. Coach/Atleta (lato Coach con linked athlete) funziona, Atleta/Coach (lato Atleta con linked coach) mostra pagina bianca. Da richiedere screenshot console errori per diagnosi.
+
+
 ## 🎨 27/02/2026 — UI cleanup Atleta — IMPLEMENTATO ✅
 
 ### Modifiche applicate

@@ -1166,9 +1166,9 @@ Società sportiva: ${societyName}
 
               {renderField('N° Tesserino Allenatore', profileData.coach_license_number, 'coach_license_number')}
 
-              {/* Livello / Grado: select da impostazioni società. Smart Coach può essere
-                  selezionato da solo OPPURE abbinato a 1°/2°/3° Grado.
-                  Allievo Allenatore è esclusivo (no Smart Coach in abbinamento). */}
+              {/* Livello / Grado: select da impostazioni società. Smart Coach è
+                  abbinabile a QUALSIASI grado base (Allievo Allenatore / 1° / 2° / 3°).
+                  I gradi base sono mutuamente esclusivi tra loro. 🆕 27/02/2026 */}
               <View style={styles.fieldContainer}>
                 <Text style={styles.fieldLabel}>Livello / Grado</Text>
                 {editing ? (
@@ -1177,20 +1177,16 @@ Società sportiva: ${societyName}
                       const raw = (editData.coach_license_level ?? profileData.coach_license_level ?? '').toString();
                       const selectedLevels = raw.split(',').map(s => s.trim()).filter(Boolean);
                       const isSmartCoach = (lvl: string) => lvl.toLowerCase().includes('smart');
-                      const isAllievo = (lvl: string) => lvl.toLowerCase().includes('allievo');
                       const toggleLevel = (lvl: string) => {
                         const already = selectedLevels.includes(lvl);
                         let next: string[];
                         if (already) {
                           next = selectedLevels.filter(x => x !== lvl);
                         } else if (isSmartCoach(lvl)) {
-                          // Aggiunge Smart Coach: se c'è Allievo, lo rimuove (incompatibili)
-                          next = [...selectedLevels.filter(x => !isAllievo(x)), lvl];
-                        } else if (isAllievo(lvl)) {
-                          // Allievo: sostituisce tutto, esclusivo
-                          next = [lvl];
+                          // Smart Coach: abbinabile a tutto, aggiunge senza rimuovere
+                          next = [...selectedLevels, lvl];
                         } else {
-                          // 1°/2°/3° Grado: sostituisce eventuale altro grado, mantiene Smart Coach se presente
+                          // Grado base (Allievo/1°/2°/3°): mutuamente esclusivi, mantiene Smart Coach
                           next = [...selectedLevels.filter(x => isSmartCoach(x)), lvl];
                         }
                         // Smart Coach prima, poi gli altri
