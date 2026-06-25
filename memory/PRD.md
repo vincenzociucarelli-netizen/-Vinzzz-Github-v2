@@ -15,6 +15,28 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 🚨 25/02/2026 — Hotfix: Collaboratore pagina bianca dopo login ✅
+
+### Sintomo
+I collaboratori (es. PAOLI PAOLO) non riuscivano ad accedere ai loro account: dopo login → **schermata bianca** (body length = 0).
+
+### Root cause
+Import mancante di `CollaboratoreTabBar` in `/app/frontend/app/collaboratore/index.tsx`. Il componente era usato a riga 148 (`<CollaboratoreTabBar active="dafare" />`) ma mai importato → `ReferenceError: CollaboratoreTabBar is not defined` a runtime → crash di React → body vuoto.
+
+### Fix
+Aggiunta riga 20: `import CollaboratoreTabBar from '../../src/components/collaboratore/CollaboratoreTabBar';`
+
+### Verifica audit preventivo
+Eseguito grep di matching `<Component />` vs `import Component` su tutti i 4 TabBar (Dirigente/Coach/Collaboratore/Athlete) e CompensationSummaryCard (7 file admin+user): tutti coerenti, nessun altro import mancante.
+
+### Test
+Testing agent ha verificato il fix con **6/6 scenarios PASSED** (100% success rate):
+- Collaboratore login + render 3 tab (Da fare/Anagrafica/Compensi)
+- Navigazione tab funzionante (index → profile → compensation, tutti con body > 1000 chars)
+- Smoke test altri 3 ruoli (Coach/Atleta/Admin): nessun PAGE ERROR
+- 0 ReferenceError "is not defined" su tutte le pagine
+
+
 ## 🆕 24/02/2026 — Bug fix `compensation_accepted` sync users ↔ athletes ✅
 
 ### Sintomo
