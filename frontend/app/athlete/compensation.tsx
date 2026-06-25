@@ -752,9 +752,17 @@ export default function AthleteCompensation() {
       const receiptAmount = receipt?.amount_gross || receipt?.amount || monthlyComp;
       actualYearlyTotal += receiptAmount;
       
-      // Calculate supplementary (custom amount different from standard monthly)
-      if (receiptAmount !== monthlyComp && receipt) {
-        supplementaryTotal += (receiptAmount - monthlyComp);
+      // 🆕 27/02/2026 — "Somma Supplementare" SOLO quando la ricevuta è esplicitamente
+      // marcata come extra dall'admin (campo `is_supplementary` o `extra_amount > 0`).
+      // Prima si confrontava amount vs monthlyComp corrente, generando falsi positivi
+      // per ricevute storiche con monthly diverso (cambio contratto, ecc.).
+      const isSupplementary = !!(receipt && (
+        (receipt as any).is_supplementary === true ||
+        ((receipt as any).extra_amount && (receipt as any).extra_amount > 0)
+      ));
+      if (isSupplementary && receipt) {
+        const extra = (receipt as any).extra_amount || (receiptAmount - monthlyComp);
+        supplementaryTotal += extra;
         specialMonths.push({ month, amount: receiptAmount });
       }
     });
