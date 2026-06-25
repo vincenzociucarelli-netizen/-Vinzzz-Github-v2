@@ -950,7 +950,7 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
         <MedicalCertificateCard
           profile={profile}
           societyEmail={(profile as any)?.society_email}
-          isMinor={isMinor}
+          isMinor={!isAdult}
           onSaved={loadProfile}
         />
 
