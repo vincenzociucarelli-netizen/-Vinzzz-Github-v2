@@ -17,6 +17,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import CollaboratoreTabBar from '../../src/components/collaboratore/CollaboratoreTabBar';
 
 interface CommitmentItem {
   type?: string;
