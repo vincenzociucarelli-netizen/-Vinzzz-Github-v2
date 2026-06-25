@@ -4963,14 +4963,21 @@ async def update_user_compensation(user_id: str, data: dict, current_user = Depe
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
     
-    if user["role"] not in [UserRole.COACH, UserRole.DIRIGENTE, UserRole.VIEWER, UserRole.COLLABORATORE, UserRole.ATHLETE]:
-        # 🔥 25/02/2026 — Bug fix: messaggio errore ora include il role corrente per facilitare il debug.
-        # Permettiamo anche role=ATHLETE per gli atleti PRO (athlete_type='compensated') che hanno
-        # monthly_compensation gestito via /admin/dirigente UI quando un dirigente ha anche ruolo atleta.
+    # 🔥 25/02/2026 — Bug fix: normalizzo il role per case-insensitive matching.
+    # Alcuni utenti in produzione possono avere role salvato come "Dirigente" o "DIRIGENTE"
+    # invece del canonico "dirigente" → causava 400 spuri sui dirigenti legittimi (es. VERDI FABIO).
+    raw_role = user.get("role", "")
+    normalized_role = str(raw_role).strip().lower() if raw_role else ""
+    allowed = ["coach", "dirigente", "viewer", "collaboratore", "athlete"]
+    if normalized_role not in allowed:
         raise HTTPException(
             status_code=400,
-            detail=f"Compenso applicabile solo a coach, dirigenti, collaboratori e atleti PRO (role attuale: {user.get('role', 'sconosciuto')})"
+            detail=f"Compenso applicabile solo a coach, dirigenti, collaboratori e atleti PRO (role attuale: '{raw_role}')"
         )
+    # Se il role era memorizzato male, lo correggiamo
+    if normalized_role != raw_role:
+        await db.users.update_one({"id": user_id}, {"$set": {"role": normalized_role}})
+        logger.info(f"User {user_id}: role normalizzato da '{raw_role}' a '{normalized_role}'")
     
     update_data = {}
     if "monthly_compensation" in data:
