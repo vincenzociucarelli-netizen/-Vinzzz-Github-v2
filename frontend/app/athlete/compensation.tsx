@@ -752,18 +752,15 @@ export default function AthleteCompensation() {
       const receiptAmount = receipt?.amount_gross || receipt?.amount || monthlyComp;
       actualYearlyTotal += receiptAmount;
       
-      // 🆕 27/02/2026 — "Somma Supplementare" SOLO quando la ricevuta è esplicitamente
-      // marcata come extra dall'admin (campo `is_supplementary` o `extra_amount > 0`).
-      // Prima si confrontava amount vs monthlyComp corrente, generando falsi positivi
-      // per ricevute storiche con monthly diverso (cambio contratto, ecc.).
-      const isSupplementary = !!(receipt && (
-        (receipt as any).is_supplementary === true ||
-        ((receipt as any).extra_amount && (receipt as any).extra_amount > 0)
-      ));
+      // 🆕 27/02/2026 — "Somma Supplementare" SOLO se la ricevuta ha il flag esplicito
+      // `is_supplementary: true` impostato dall'admin emettendo un Compenso Extra dedicato.
+      const isSupplementary = !!(receipt && (receipt as any).is_supplementary === true);
       if (isSupplementary && receipt) {
         const extra = (receipt as any).extra_amount || (receiptAmount - monthlyComp);
-        supplementaryTotal += extra;
-        specialMonths.push({ month, amount: receiptAmount });
+        if (extra && extra > 0) {
+          supplementaryTotal += extra;
+          specialMonths.push({ month, amount: receiptAmount });
+        }
       }
     });
 
@@ -1556,7 +1553,7 @@ export default function AthleteCompensation() {
                         <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({coachMonths} mesi × {formatCurrency(dualRoleInfo!.coach!.monthly_compensation)})</Text>
                       </>
                     )}
-                    {allSpecialMonths.length > 0 && (
+                    {allSpecialMonths.length > 0 && totalSupplementary > 0 && (
                       <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare ({allSpecialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(s.year).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(totalSupplementary)}</Text></Text>
                     )}
                     <Text style={{ fontSize: 15, color: '#1565C0', fontWeight: 'bold', marginTop: 4, borderTopWidth: 1, borderTopColor: '#90CAF9', paddingTop: 8 }}>• TOTALE RAS: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(grandTotal)}</Text></Text>
@@ -1590,7 +1587,7 @@ export default function AthleteCompensation() {
                   {/* Linear layout like Admin view */}
                   <View style={{ marginTop: 8 }}>
                     <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text></Text>
-                    {(summary.specialMonths?.length > 0) && (
+                    {(summary.specialMonths?.length > 0 && (summary.supplementaryTotal || 0) > 0) && (
                       <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare ({summary.specialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(contractStartYear).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
                     )}
                     {(summary.coachYearlyTotal || 0) > 0 && (
@@ -1628,7 +1625,7 @@ export default function AthleteCompensation() {
                   {/* Linear layout like Admin view */}
                   <View style={{ marginTop: 8 }}>
                     <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text></Text>
-                    {(summary.specialMonths?.length > 0) && (
+                    {(summary.specialMonths?.length > 0 && (summary.supplementaryTotal || 0) > 0) && (
                       <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare ({summary.specialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(contractEndYear).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
                     )}
                     {(summary.coachYearlyTotal || 0) > 0 && (
