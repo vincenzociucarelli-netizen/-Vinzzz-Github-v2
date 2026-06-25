@@ -758,13 +758,39 @@ export default function AthleteCompensation() {
         specialMonths.push({ month, amount: receiptAmount });
       }
     });
+
+    // 🆕 26/02/2026 — Dual-role: aggiungo il compenso Coach per i mesi in cui il
+    // contratto coach è attivo nell'anno fiscale considerato. Serve a far scattare
+    // correttamente le soglie €5K/€15K cumulando Atleta + Coach (lo "zaino" coach).
+    let coachYearlyTotal = 0;
+    let coachMonthCount = 0;
+    if (dualRoleInfo?.coach && (dualRoleInfo.coach.monthly_compensation || 0) > 0) {
+      const cMonthly = dualRoleInfo.coach.monthly_compensation || 0;
+      const cStartStr = dualRoleInfo.coach.contract_start_date;
+      const cEndStr = dualRoleInfo.coach.contract_end_date;
+      if (cStartStr && cEndStr) {
+        const cs = new Date(cStartStr);
+        const ce = new Date(cEndStr);
+        if (!isNaN(cs.getTime()) && !isNaN(ce.getTime())) {
+          for (let m = 1; m <= 12; m++) {
+            const firstOfMonth = new Date(year, m - 1, 1);
+            const lastOfMonth = new Date(year, m, 0);
+            // Mese attivo se almeno un giorno del mese cade nel periodo contratto coach
+            if (lastOfMonth >= cs && firstOfMonth <= ce) {
+              coachYearlyTotal += cMonthly;
+              coachMonthCount += 1;
+            }
+          }
+        }
+      }
+    }
     
     // Add prior compensation only for the first year of contract
     const includePrior = year === contractStartYear;
     const prior = includePrior ? priorCompensation : 0;
     // External compensations declared for this year (altre ASD/SSD)
     const externalTotal = externalByYear[year] || 0;
-    const total = actualYearlyTotal + prior + externalTotal;  // Use actual amounts + external
+    const total = actualYearlyTotal + prior + externalTotal + coachYearlyTotal;  // Atleta + esterni + pregresso + zaino Coach
     
     // Calculate signed total for this year
     const signedTotal = records
@@ -781,8 +807,10 @@ export default function AthleteCompensation() {
       specialMonths,  // Months with custom amounts
       priorCompensation: prior,
       externalTotal,  // Compensi dichiarati da altre ASD/SSD
+      coachYearlyTotal,  // 🆕 26/02/2026 — Contributo Coach (zaino) nell'anno
+      coachMonthCount,
       totalProjected: total,
-      signedTotal: signedTotal + prior + externalTotal,
+      signedTotal: signedTotal + prior + externalTotal + coachYearlyTotal,
       months: monthsInYear,
     };
   };
@@ -805,10 +833,23 @@ export default function AthleteCompensation() {
     const findThresholdMonthFallback = (year: number, threshold: number) => {
       const yearRecords = records.filter(r => r.year === year).sort((a: any, b: any) => a.month - b.month);
       const prior = (year === contractStartYear) ? priorComp : 0;
+      // 🆕 26/02/2026 — Coach contribution (zaino) per cumulativo cronologico mensile
+      const coachMonthly = (dualRoleInfo?.coach?.monthly_compensation || 0);
+      const cStartStr = dualRoleInfo?.coach?.contract_start_date;
+      const cEndStr = dualRoleInfo?.coach?.contract_end_date;
+      const cs = cStartStr ? new Date(cStartStr) : null;
+      const ce = cEndStr ? new Date(cEndStr) : null;
+      const isCoachActiveInMonth = (m: number): boolean => {
+        if (!cs || !ce || coachMonthly <= 0) return false;
+        const firstOfMonth = new Date(year, m - 1, 1);
+        const lastOfMonth = new Date(year, m, 0);
+        return lastOfMonth >= cs && firstOfMonth <= ce;
+      };
       let cumulative = prior;
       for (const r of yearRecords) {
         const amt = r.amount_gross || r.amount || monthlyComp;
-        cumulative += amt;
+        const coachAmt = isCoachActiveInMonth(r.month) ? coachMonthly : 0;
+        cumulative += amt + coachAmt;
         if (cumulative > threshold) {
           return MONTH_NAMES[r.month] || '';
         }
@@ -1544,6 +1585,9 @@ export default function AthleteCompensation() {
                     {(summary.specialMonths?.length > 0) && (
                       <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare ({summary.specialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(contractStartYear).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
                     )}
+                    {(summary.coachYearlyTotal || 0) > 0 && (
+                      <Text style={{ fontSize: 13, color: '#7A5D00', marginBottom: 4 }}>• Compenso Coach 🎒 ({summary.coachMonthCount} mesi × {formatCurrency(dualRoleInfo?.coach?.monthly_compensation || 0)}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.coachYearlyTotal)}</Text></Text>
+                    )}
                     {summary.priorCompensation > 0 && (
                       <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.priorCompensation)}</Text></Text>
                     )}
@@ -1578,6 +1622,9 @@ export default function AthleteCompensation() {
                     <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text></Text>
                     {(summary.specialMonths?.length > 0) && (
                       <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare ({summary.specialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(contractEndYear).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
+                    )}
+                    {(summary.coachYearlyTotal || 0) > 0 && (
+                      <Text style={{ fontSize: 13, color: '#7A5D00', marginBottom: 4 }}>• Compenso Coach 🎒 ({summary.coachMonthCount} mesi × {formatCurrency(dualRoleInfo?.coach?.monthly_compensation || 0)}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.coachYearlyTotal)}</Text></Text>
                     )}
                     {(summary.externalTotal || 0) > 0 && (
                       <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Compensi esterni (altre ASD): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.externalTotal)}</Text></Text>

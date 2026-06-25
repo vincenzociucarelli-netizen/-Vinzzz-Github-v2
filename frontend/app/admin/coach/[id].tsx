@@ -91,6 +91,9 @@ export default function AdminCoachDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [coach, setCoach] = useState<Coach | null>(null);
+  // 🆕 26/02/2026 — Dual-role flag (Coach + Atleta PRO): se true, il pregresso viene
+  // mostrato sull'anagrafica Atleta per evitare doppio conteggio nelle soglie €5K/€15K.
+  const [isDualRole, setIsDualRole] = useState(false);
   // 🆕 19/06/2026 — Tab attivo (Da fare / Anagrafica / Compensi)
   // 🔧 22/06/2026 — Default: 'impegni' (Da fare) come da richiesta utente.
   const [activeTab, setActiveTab] = useState<AdminPersonTab>('impegni');
@@ -200,6 +203,13 @@ export default function AdminCoachDetail() {
       ]);
       setCoach(coachRes.data);
       setTeams(teamsRes.data);
+      // 🆕 26/02/2026 — Check dual-role (Coach + Atleta PRO collegato via stesso CF)
+      try {
+        const profRes = await api.get(`/admin/persons/${id}/profile`);
+        setIsDualRole(!!profRes.data?.is_dual_role);
+      } catch {
+        setIsDualRole(false);
+      }
       // Fetch last reset audit info (silent fail if user is not admin)
       try {
         const lr = await api.get(`/admin/audit/last-reset/${id}`);
@@ -1551,6 +1561,7 @@ export default function AdminCoachDetail() {
                 priorCompensation={Number(coach?.prior_compensation || 0)}
                 formatCurrency={formatCurrency}
                 readOnly
+                pregressoNotice={isDualRole ? "Conteggiato sull'anagrafica Atleta (evita doppio conteggio)" : undefined}
               />
               
               {/* 🔧 22/06/2026 — Calcolo per Anno Solare RIATTIVATO: l'utente ha bisogno del breakdown

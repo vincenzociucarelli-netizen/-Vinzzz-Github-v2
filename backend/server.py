@@ -7480,6 +7480,52 @@ async def sign_athlete_compensation_receipt_with_signature(
     yearly_total = yearly_total + external_year_total
     
     new_total = yearly_total + amount_gross
+
+    # 🆕 26/02/2026 — "ZAINO" Dual-role: se l'atleta è anche Coach con contratto attivo
+    # in questo mese, includo la quota Coach nel PDF e creerò un record coach parallelo.
+    # Una singola firma vale per entrambe le voci (Atleta + Coach) → bonifico unico.
+    linked_coach_user = None
+    coach_amount_this_month = 0.0
+    coach_contract_active_this_month = False
+    try:
+        linked_coach_user = await _find_linked_compensated_user_for_athlete(athlete)
+        if linked_coach_user and (linked_coach_user.get("monthly_compensation") or 0) > 0:
+            cs = _parse_contract_date(linked_coach_user.get("contract_start_date"))
+            ce = _parse_contract_date(linked_coach_user.get("contract_end_date"))
+            if cs and ce:
+                import calendar as _cal
+                from datetime import date as _d
+                first_of_month = _d(year, month, 1)
+                last_of_month = _d(year, month, _cal.monthrange(year, month)[1])
+                if last_of_month >= cs and first_of_month <= ce:
+                    coach_contract_active_this_month = True
+                    coach_amount_this_month = float(linked_coach_user.get("monthly_compensation") or 0)
+                    # Aggiungo le quote Coach degli ALTRI mesi attivi al cumulo cronologico
+                    # delle soglie €5K/€15K (atleta + coach + pregresso + esterni).
+                    c_monthly = coach_amount_this_month
+                    for _m in range(1, 13):
+                        if _m == month:
+                            continue
+                        _first = _d(year, _m, 1)
+                        _last = _d(year, _m, _cal.monthrange(year, _m)[1])
+                        if _last >= cs and _first <= ce:
+                            signed_by_month[_m] = signed_by_month.get(_m, 0.0) + c_monthly
+                    # Aggiorno anche yearly_total e new_total con la quota coach del mese
+                    yearly_total = yearly_total + sum(
+                        c_monthly for _m2 in range(1, 13)
+                        if _m2 != month
+                        and _d(year, _m2, _cal.monthrange(year, _m2)[1]) >= cs
+                        and _d(year, _m2, 1) <= ce
+                    )
+                    new_total = yearly_total + amount_gross + coach_amount_this_month
+    except Exception as e:
+        logging.warning(f"[ATHLETE-RECEIPT] dual-role coach detection failed: {e}")
+        coach_contract_active_this_month = False
+        coach_amount_this_month = 0.0
+
+    # Importo totale visualizzato nel PDF (combined) e nei messaggi
+    combined_amount = float(amount_gross) + (coach_amount_this_month if coach_contract_active_this_month else 0.0)
+    new_amount_for_threshold = combined_amount
     
     # Threshold checks — 🆕 FIX P1 applicato anche all'Atleta PRO: usa calcolo cronologico
     # cumulativo per gestire correttamente le firme retroattive fuori ordine.
@@ -7487,7 +7533,7 @@ async def sign_athlete_compensation_receipt_with_signature(
     month_5k, month_15k = _detect_threshold_crossings_chronological(
         signed_by_month=signed_by_month,
         new_month=month,
-        new_amount=amount_gross,
+        new_amount=new_amount_for_threshold,
         prior_compensation=prior_for_year,
         external_total=external_year_total,
     )
@@ -7538,11 +7584,14 @@ async def sign_athlete_compensation_receipt_with_signature(
                 collaborator_fiscal_code=athlete.get('fiscal_code', ''),
                 month_name=month_name,
                 year=year,
-                amount_gross=amount_gross,
+                amount_gross=combined_amount,  # 🆕 Totale (Atleta + Coach se dual-role attivo)
                 signature_base64=signature_base64,
                 signed_at=now,
                 document_id=receipt_id,
                 signer_id=athlete_id,
+                # 🆕 26/02/2026 — Split dual-role: se Coach attivo nel mese, mostra entrambe le voci
+                coach_amount=(coach_amount_this_month if coach_contract_active_this_month else None),
+                athlete_pro_amount=(float(amount_gross) if coach_contract_active_this_month else None),
             )
             pdf_filename_prefix = "quietanza_atleta"
             doc_type = "compensation_receipt"
@@ -7570,13 +7619,18 @@ async def sign_athlete_compensation_receipt_with_signature(
         "athlete_name": athlete.get('full_name', ''),
         "month": month,
         "year": year,
-        "amount_gross": amount_gross,
+        "amount_gross": combined_amount,  # 🆕 Totale (Atleta + Coach se dual-role)
         "pdf_path": pdf_path,
         "pdf_filename": pdf_filename,
         "pdf_base64": base64.b64encode(pdf_bytes).decode(),
         "signed_at": now,
         "exceeded_5000": first_time_exceeded_5000,
-        "exceeded_15000": first_time_exceeded_15000
+        "exceeded_15000": first_time_exceeded_15000,
+        # 🆕 26/02/2026 — Dual-role metadata (riferimento ricevuta unica)
+        "dual_role_combined": coach_contract_active_this_month,
+        "dual_role_athlete_portion": float(amount_gross) if coach_contract_active_this_month else None,
+        "dual_role_coach_portion": coach_amount_this_month if coach_contract_active_this_month else None,
+        "linked_coach_user_id": linked_coach_user.get("id") if (linked_coach_user and coach_contract_active_this_month) else None,
     }
     await db.signed_documents.insert_one(document_record)
     
@@ -7636,6 +7690,53 @@ async def sign_athlete_compensation_receipt_with_signature(
     # If no existing record was updated, insert new one
     if result.matched_count == 0:
         await db.athlete_compensation_receipts.insert_one(receipt_data)
+
+    # 🆕 26/02/2026 — ZAINO Dual-role: salva ANCHE record coach parallelo (1 firma = 2 quietanze)
+    if coach_contract_active_this_month and linked_coach_user and coach_amount_this_month > 0:
+        try:
+            coach_user_id = linked_coach_user["id"]
+            coach_existing = await db.coach_compensations.find_one({
+                "coach_id": coach_user_id,
+                "month": month,
+                "year": year,
+            })
+            coach_receipt = {
+                "coach_id": coach_user_id,
+                "society_id": linked_coach_user.get("society_id") or athlete.get("society_id"),
+                "month": month,
+                "year": year,
+                "amount_gross": coach_amount_this_month,
+                "amount_net": coach_amount_this_month,
+                "deductions": 0.0,
+                "received": True,
+                "received_date": now,
+                "receipt_signed": True,
+                "receipt_signature_base64": signature_base64,
+                "receipt_document_id": receipt_id,  # Stesso PDF dell'atleta
+                "receipt_signed_date": now,
+                "exceeded_5000": first_time_exceeded_5000,
+                "exceeded_5000_date": now if first_time_exceeded_5000 else None,
+                "exceeded_15000": first_time_exceeded_15000,
+                "exceeded_15000_date": now if first_time_exceeded_15000 else None,
+                # 🎒 Metadati dual-role
+                "dual_role_combined": True,
+                "linked_athlete_id": athlete_id,
+                "linked_athlete_receipt_id": receipt_id,
+                "updated_at": now,
+            }
+            if coach_existing:
+                await db.coach_compensations.update_one(
+                    {"id": coach_existing["id"]},
+                    {"$set": coach_receipt},
+                )
+                logging.info(f"[ATHLETE-RECEIPT] DUAL-ROLE: coach record UPDATED for coach_id={coach_user_id} month={month}/{year}")
+            else:
+                coach_receipt["id"] = str(uuid.uuid4())
+                await db.coach_compensations.insert_one(coach_receipt)
+                logging.info(f"[ATHLETE-RECEIPT] DUAL-ROLE: coach record CREATED for coach_id={coach_user_id} month={month}/{year} amt={coach_amount_this_month}")
+        except Exception as e:
+            # Non-blocking: la quietanza atleta è già salvata. Loghiamo e segnaliamo nella response.
+            logging.error(f"[ATHLETE-RECEIPT] DUAL-ROLE coach record save FAILED: {e}")
     
     # ✅ Quietanza salvata: ORA registra la dichiarazione esterna (evita orfani)
     try:
@@ -7684,14 +7785,18 @@ async def sign_athlete_compensation_receipt_with_signature(
     #     ... (email sending removed)
     
     return {
-        "message": "Quietanza firmata con successo", 
+        "message": "Quietanza firmata con successo" + (" (Atleta + Coach — bonifico unico)" if coach_contract_active_this_month else ""),
         "document_id": receipt_id, 
         "pdf_filename": pdf_filename, 
         "exceeded_5000": first_time_exceeded_5000, 
         "exceeded_15000": first_time_exceeded_15000,
-        "amount_gross": amount_gross,
-        "amount_net": amount_gross,  # For athletes, net = gross (no deductions calculated here)
-        "yearly_total": new_total
+        "amount_gross": combined_amount,
+        "amount_net": combined_amount,  # For athletes, net = gross (no deductions calculated here)
+        "yearly_total": new_total,
+        # 🎒 Dual-role info per UI feedback
+        "dual_role_combined": coach_contract_active_this_month,
+        "athlete_portion": float(amount_gross) if coach_contract_active_this_month else None,
+        "coach_portion": coach_amount_this_month if coach_contract_active_this_month else None,
     }
 
 

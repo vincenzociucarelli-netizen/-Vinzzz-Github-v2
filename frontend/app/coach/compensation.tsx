@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import CoachTabBar from '../../src/components/coach/CoachTabBar';
 import CompensationSummaryCard from '../../src/components/compensation/CompensationSummaryCard';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -111,6 +112,7 @@ interface ThresholdStatus {
 export default function CoachCompensation() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const setUser = useAuthStore((s) => s.setUser);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<CoachProfile | null>(null);
   const [records, setRecords] = useState<CompensationRecord[]>([]);
@@ -1362,6 +1364,7 @@ export default function CoachCompensation() {
             formatCurrency={formatCurrency}
             onAcceptCompensation={handleAcceptCompensation}
             acceptingComp={acceptingComp}
+            pregressoNotice={dualRoleInfo?.athlete ? "Conteggiato sull'anagrafica Atleta (evita doppio conteggio)" : undefined}
           />
         )}
 
@@ -1392,6 +1395,56 @@ export default function CoachCompensation() {
           </View>
         )}
         
+        {/* 🆕 26/02/2026 — Banner Dual-Role: rimanda al riepilogo cumulativo nella scheda Atleta */}
+        {dualRoleInfo?.athlete && (
+          <TouchableOpacity
+            data-testid="dual-role-go-athlete-banner"
+            onPress={async () => {
+              try {
+                const res = await api.get('/auth/linked-accounts');
+                const first = res.data?.linked_accounts?.[0];
+                if (!first) {
+                  Alert.alert('Info', 'Account Atleta non trovato.');
+                  return;
+                }
+                const swRes = await api.post('/auth/switch-account', { target_user_id: first.user_id });
+                const newToken = swRes.data?.token;
+                if (!newToken) throw new Error('Token mancante');
+                await AsyncStorage.setItem('token', newToken);
+                const meRes = await api.get('/auth/me');
+                await setUser(meRes.data, newToken);
+                router.replace('/athlete/compensation');
+              } catch (e: any) {
+                Alert.alert('Errore', e?.response?.data?.detail || 'Cambio modalità fallito');
+              }
+            }}
+            style={{
+              marginHorizontal: 14, marginTop: 8, marginBottom: 4,
+              padding: 14, borderRadius: 12,
+              backgroundColor: '#FFF8E1',
+              borderWidth: 1, borderColor: '#F9A825',
+              flexDirection: 'row', alignItems: 'center', gap: 10,
+            }}
+          >
+            <View style={{
+              width: 40, height: 40, borderRadius: 20, backgroundColor: '#fff',
+              justifyContent: 'center', alignItems: 'center',
+              borderWidth: 1, borderColor: '#F9A825',
+            }}>
+              <Text style={{ fontSize: 22 }}>🎒</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#7A5D00' }}>
+                Riepilogo cumulativo RAS
+              </Text>
+              <Text style={{ fontSize: 11, color: '#7A5D00', marginTop: 2, lineHeight: 15 }}>
+                Sei anche Atleta PRO: il calcolo Soglie €5K/€15K cumulativo (Atleta + Coach + pregresso) è sulla tua scheda Atleta.
+              </Text>
+            </View>
+            <Ionicons name="arrow-forward-circle" size={26} color="#F9A825" />
+          </TouchableOpacity>
+        )}
+
         {/* Year Summaries - Contract-based - ENHANCED STYLE */}
         {contractStartYear && contractEndYear && (
           <>

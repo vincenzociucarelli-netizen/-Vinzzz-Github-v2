@@ -28,6 +28,10 @@ interface Props {
   readOnly?: boolean;
   /** Override pregresso label suffix (defaults to "AL [contract_start-1]") */
   pregressoLabelSuffix?: string;
+  /** 🆕 26/02/2026 — Dual-role: sostituisce l'importo del pregresso con una nota
+   *  (es. "Conteggiato sull'anagrafica Atleta"). Usato sulla scheda Coach quando
+   *  l'utente è anche Atleta PRO, per evitare doppio conteggio del pregresso. */
+  pregressoNotice?: string;
 }
 
 const formatContractDate = (dateStr: string) => {
@@ -62,6 +66,7 @@ export default function CompensationSummaryCard({
   acceptingComp = false,
   readOnly = false,
   pregressoLabelSuffix,
+  pregressoNotice,
 }: Props) {
   const pregressoSuffix = pregressoLabelSuffix !== undefined
     ? pregressoLabelSuffix
@@ -160,9 +165,31 @@ export default function CompensationSummaryCard({
                 <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500' }}>Solo admin</Text>
               </View>
             </View>
-            <Text style={{ fontSize: 20, color: '#1F2937', fontWeight: 'bold', marginTop: 6 }}>
-              {formatCurrency(priorCompensation || 0)}
-            </Text>
+            {pregressoNotice ? (
+              <View
+                style={{
+                  marginTop: 8,
+                  backgroundColor: '#FFF8E1',
+                  borderRadius: 6,
+                  padding: 8,
+                  borderLeftWidth: 3,
+                  borderLeftColor: '#F9A825',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+                data-testid="pregresso-notice"
+              >
+                <Ionicons name="information-circle" size={16} color="#F9A825" />
+                <Text style={{ fontSize: 12, color: '#7A5D00', fontStyle: 'italic', flex: 1 }}>
+                  {pregressoNotice}
+                </Text>
+              </View>
+            ) : (
+              <Text style={{ fontSize: 20, color: '#1F2937', fontWeight: 'bold', marginTop: 6 }}>
+                {formatCurrency(priorCompensation || 0)}
+              </Text>
+            )}
           </View>
         </View>
       </View>

@@ -15,6 +15,55 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 🎒 26/02/2026 — Feature "Zaino Coach" Dual-Role (G1+G2+G3) ✅
+
+### Contesto
+Atleta 18+ PRO che, durante la stagione, "indossa lo zaino di Coach" e allena un gruppo giovanile (es. MiniVolley). Esempio: Alice Zorzi atleta B1 €1.750/mese + €3.850 pregresso, dal 01/10 anche coach MiniVolley €300/mese. Bonifico unico €2.050/mese.
+
+### Regole RAS confermate dall'utente
+- "Totale da comunicare al RAS" = SOLO importi pagati dalla nostra società (atleta + coach)
+- Pregresso → tracking soglie €5K/€15K (cumulativo legale), MA non sommato al totale RAS
+- Pregresso visibile UNA volta sola sull'anagrafica Atleta (evita doppio conteggio)
+
+### Modifiche implementate
+**G3 — Lock pregresso su Coach dual-role**
+- `/app/frontend/src/components/compensation/CompensationSummaryCard.tsx`: nuovo prop `pregressoNotice` che sostituisce l'importo con messaggio info quando dual-role
+- `/app/frontend/app/coach/compensation.tsx`: passa `pregressoNotice="Conteggiato sull'anagrafica Atleta..."` quando `dualRoleInfo.athlete` presente
+- `/app/frontend/app/admin/coach/[id].tsx`: nuovo state `isDualRole` (fetch `/admin/persons/{id}/profile`) → stessa logica
+
+**G2 — Banner-link sul user Coach → switch a modalità Atleta**
+- `/app/frontend/app/coach/compensation.tsx`: banner 🎒 "Riepilogo cumulativo RAS sulla scheda Atleta →" che chiama `/auth/switch-account` e naviga a `/athlete/compensation`
+
+**G1 — Compenso Coach mese-per-mese nel year-summary Atleta**
+- `getYearSummary()`: aggiunto `coachYearlyTotal` e `coachMonthCount` calcolati per i mesi in cui il contratto Coach è attivo nell'anno fiscale
+- Year boxes mostrano nuova riga "• Compenso Coach 🎒 (N mesi × €/mese): €tot"
+- `findThresholdMonthFallback()`: il cumulativo cronologico per soglie €5K/€15K ora include il compenso Coach nei mesi attivi → soglie scattano correttamente con Atleta+Coach
+
+### Cosa esisteva già (NON modificato)
+- `POST /admin/athletes/{id}/promote-to-coach` (modal "Aggiungi anche come Coach" su scheda atleta)
+- `GET /admin/persons/{id}/compensation-summary` (endpoint admin con RAS + breach months dual-role)
+- `PersonCompensationSummary` admin component (`/admin/persona/{id}/compensi`)
+- `SwitchAccountButton` (switch token JWT atleta↔coach)
+- TOTALE RAS già includeva Coach base nel banner unificato
+
+### Gap residuo (G4 — IMPLEMENTATO 26/02/2026)
+- ✅ **G4 — Ricevuta mensile unica dual-role**: endpoint `POST /athletes/{id}/compensation/receipt-sign` esteso per:
+  - Rileva linked coach via `_find_linked_compensated_user_for_athlete` (CF/email/società)
+  - Se contratto Coach attivo nel mese richiesto: PDF unico con 2 voci ("Compenso da Coach €X" + "Compenso da Atleta €Y" + "Totale lordo €X+Y")
+  - Soglie €5K/€15K calcolate sul cumulo (Atleta + Coach per ogni mese attivo + pregresso + esterni)
+  - **Una sola firma** = salva sia `athlete_compensation_receipts` (porzione atleta) sia `coach_compensations` (porzione coach) con stesso `document_id` → bonifico unico, doppia tracciabilità per soglie per-ruolo
+  - Document record `signed_documents` arricchito con `dual_role_combined`, `dual_role_athlete_portion`, `dual_role_coach_portion`, `linked_coach_user_id`
+  - Response API include `dual_role_combined`, `athlete_portion`, `coach_portion` per feedback UI
+  - PDF function `generate_monthly_receipt_pdf` già supportava i parametri `coach_amount`/`athlete_pro_amount` (preesistenti) — solo il chiamante è stato esteso
+
+### Test
+- Lint: nessun nuovo errore introdotto (warnings pre-esistenti)
+- Smoke screenshot: login screen carica correttamente
+- ⚠️ Verifica funzionale dual-role sul flusso reale (Alice o utente equivalente) **da fare lato utente** — credit sensitive, no testing agent
+
+---
+
+
 ## 🐛 25/02/2026 — Bug fix "Compenso applicabile solo a coach, dirigenti..." ✅
 
 ### Sintomo
