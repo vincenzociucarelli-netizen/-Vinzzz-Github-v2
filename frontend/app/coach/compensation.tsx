@@ -1365,6 +1365,7 @@ export default function CoachCompensation() {
             onAcceptCompensation={handleAcceptCompensation}
             acceptingComp={acceptingComp}
             pregressoNotice={dualRoleInfo?.athlete ? "Conteggiato sull'anagrafica Atleta (evita doppio conteggio)" : undefined}
+            compensationLabel={dualRoleInfo?.athlete ? 'Compenso Mensile COACH' : 'Compenso Mensile'}
           />
         )}
 
@@ -1374,26 +1375,7 @@ export default function CoachCompensation() {
         {/* 🆕 24/02/2026 — Banner Coach + Card "Azioni Compenso" RIMOSSI: informazioni duplicate
             (Compenso, Periodo Contratto, Pregresso, Accettazione sono già nel CompensationSummaryCard sopra) */}
 
-        {/* 🆕 16/06/2026 — Banner Atleta: visibile solo se utente è dual-role */}
-        {dualRoleInfo?.athlete && (
-          <View style={[styles.roleBanner, styles.roleBannerAtleta]} data-testid="banner-atleta">
-            <View style={styles.roleBannerHeader}>
-              <Text style={styles.roleBannerEmoji}>🏐</Text>
-              <Text style={styles.roleBannerTitle}>Compenso Atleta</Text>
-              {dualRoleInfo.athlete.team_name ? (
-                <Text style={styles.roleBannerTeam}>{dualRoleInfo.athlete.team_name}</Text>
-              ) : null}
-            </View>
-            <Text style={styles.roleBannerAmount}>
-              {formatCurrency(dualRoleInfo.athlete.monthly_compensation || 0)} / mese
-            </Text>
-            {(dualRoleInfo.athlete.contract_start_date || dualRoleInfo.athlete.contract_end_date) && (
-              <Text style={styles.roleBannerDates}>
-                dal {formatContractDate(dualRoleInfo.athlete.contract_start_date || '')} al {formatContractDate(dualRoleInfo.athlete.contract_end_date || '')}
-              </Text>
-            )}
-          </View>
-        )}
+        {/* 🆕 27/02/2026 — Banner "Compenso Atleta" RIMOSSO da lato Coach: ridondante con banner-link cumulativo sotto */}
         
         {/* 🆕 26/02/2026 — Banner Dual-Role: rimanda al riepilogo cumulativo nella scheda Atleta */}
         {dualRoleInfo?.athlete && (
@@ -1445,6 +1427,10 @@ export default function CoachCompensation() {
           </TouchableOpacity>
         )}
 
+        {/* 🆕 27/02/2026 — Sezione completa (RAS Totale Contratto + Calcolo Anno Solare + Quietanze)
+            VISIBILE SOLO PER COACH SINGLE-ROLE. Quando dual-role (Coach+Atleta) tutto il calcolo
+            cumulativo e le quietanze sono gestiti sulla scheda Atleta (vedi banner-link sopra). */}
+        {!dualRoleInfo?.athlete && (<>
         {/* Year Summaries - Contract-based - ENHANCED STYLE */}
         {contractStartYear && contractEndYear && (
           <>
@@ -1630,6 +1616,7 @@ export default function CoachCompensation() {
             </View>
           </>
         )}
+        </>)}
 
         {/* Info Section */}
         <View style={styles.infoSection}>

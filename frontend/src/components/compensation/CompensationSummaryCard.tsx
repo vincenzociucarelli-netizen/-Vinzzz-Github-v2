@@ -28,6 +28,9 @@ interface Props {
   readOnly?: boolean;
   /** Override pregresso label suffix (defaults to "AL [contract_start-1]") */
   pregressoLabelSuffix?: string;
+  /** 🆕 27/02/2026 — Label compenso (default "Compenso Mensile").
+   *  Es. "Compenso Mensile COACH" per dual-role lato Coach. */
+  compensationLabel?: string;
   /** 🆕 26/02/2026 — Dual-role: sostituisce l'importo del pregresso con una nota
    *  (es. "Conteggiato sull'anagrafica Atleta"). Usato sulla scheda Coach quando
    *  l'utente è anche Atleta PRO, per evitare doppio conteggio del pregresso. */
@@ -67,6 +70,7 @@ export default function CompensationSummaryCard({
   readOnly = false,
   pregressoLabelSuffix,
   pregressoNotice,
+  compensationLabel,
 }: Props) {
   const pregressoSuffix = pregressoLabelSuffix !== undefined
     ? pregressoLabelSuffix
@@ -87,7 +91,7 @@ export default function CompensationSummaryCard({
         <View style={{ backgroundColor: '#FFF3E0', padding: 12, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: '#FF9500', borderStyle: 'dashed' }} data-testid="compenso-mensile-box">
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={{ fontSize: 14, marginRight: 6 }}>💰</Text>
-            <Text style={{ fontSize: 14, color: '#333', fontWeight: '500' }}>Compenso Mensile</Text>
+            <Text style={{ fontSize: 14, color: '#333', fontWeight: '500' }}>{compensationLabel || 'Compenso Mensile'}</Text>
           </View>
           <Text style={{ fontSize: 22, color: '#E65100', fontWeight: 'bold', marginTop: 4, textAlign: 'center' }}>
             {formatCurrency(monthlyCompensation)}
