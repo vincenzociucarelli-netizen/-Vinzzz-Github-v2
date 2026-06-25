@@ -4966,13 +4966,15 @@ async def update_user_compensation(user_id: str, data: dict, current_user = Depe
     # 🔥 25/02/2026 — Bug fix: normalizzo il role per case-insensitive matching.
     # Alcuni utenti in produzione possono avere role salvato come "Dirigente" o "DIRIGENTE"
     # invece del canonico "dirigente" → causava 400 spuri sui dirigenti legittimi (es. VERDI FABIO).
+    # 🔥 25/02/2026 — Aggiunto ADMIN all'allow-list: nelle società piccole l'admin spesso lavora
+    # anche come dirigente/coach e percepisce un compenso (es. VERDI FABIO admin di "La Tua Società").
     raw_role = user.get("role", "")
     normalized_role = str(raw_role).strip().lower() if raw_role else ""
-    allowed = ["coach", "dirigente", "viewer", "collaboratore", "athlete"]
+    allowed = ["coach", "dirigente", "viewer", "collaboratore", "athlete", "admin"]
     if normalized_role not in allowed:
         raise HTTPException(
             status_code=400,
-            detail=f"Compenso applicabile solo a coach, dirigenti, collaboratori e atleti PRO (role attuale: '{raw_role}')"
+            detail=f"Compenso applicabile solo a coach, dirigenti, collaboratori, atleti PRO e admin (role attuale: '{raw_role}')"
         )
     # Se il role era memorizzato male, lo correggiamo
     if normalized_role != raw_role:
