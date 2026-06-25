@@ -15,6 +15,85 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 📋 26/02/2026 — Piano implementativo: Sgancio Genitori in-season (P0)
+
+### Casistiche (concordate con utente)
+
+**Caso 1 — Atleta già maggiorenne all'iscrizione**
+- Si iscrive direttamente come atleta 18+ (no parent_id obbligatorio)
+- Self-registration: durante il flusso atleta, **campo OPZIONALE** "Aggiungi un genitore di contatto" con suggerimento gentile *"Ti consigliamo di aggiungere un genitore visualizzatore per emergenze"*
+- Il genitore creato in questo modo ha ruolo `parent` con flag aggiuntivo `view_only=true` (read-only completo, no firme/edit)
+
+**Caso 2 — Atleta minorenne all'iscrizione che compie 18 anni in-season**
+- Banner permanente sulla dashboard genitore dal giorno del compleanno fino a fine stagione:
+  > ⚠️ [Nome] ha raggiunto la maggiore età il GG/MM/AAAA. Da questa data, tutte le pratiche fiscali, burocratiche e di privacy (firme GDPR, quietanze compensi, modifiche anagrafiche, certificato medico, dati bancari) devono essere sottoscritte direttamente da [Nome]. Resti collegato come **visualizzatore** fino al termine della stagione. Al rinnovo, [Nome] gestirà l'iscrizione autonomamente.
+- Backend guard: blocca azioni dispositive del genitore quando l'atleta è 18+
+- Sgancio automatico al rinnovo stagione N+1
+
+### Cosa BLOCCARE al genitore dopo i 18 (Caso 2)
+
+| # | Azione | Endpoint backend | UI |
+|---|--------|------------------|---|
+| 1 | Firma GDPR/Privacy | `POST /documents/sign` (filtrare se signer=parent e athlete>=18) | bottone disabilitato + tooltip |
+| 2 | Firma quietanze compensi | `POST /athletes/{id}/compensation/receipt-sign` (già limita a athlete role) | sezione compensi read-only |
+| 3 | Firma autocertificazioni soglie | endpoint specifico | bottone disabilitato |
+| 4 | Modifica anagrafica fiscale | `PATCH /athletes/{id}` (campi: fiscal_code, birth_*, address) | input disabilitati |
+| 5 | Modifica IBAN/dati bancari | `PATCH /athletes/{id}` (iban, account_holder, bank_name) | input disabilitati |
+| 6 | Upload data emissione cert. medico | `POST /certificates/{id}` | bottone disabilitato |
+| 7 | Modifica email/telefono primari atleta | `PATCH /athletes/{id}` | input disabilitati |
+| 8 | Accettazione compenso mensile | `PATCH /auth/me` con `compensation_accepted` (atleta-only già) | non rilevante |
+
+### Cosa PERMETTERE al genitore (anche dopo i 18)
+
+| Azione | Note |
+|---|---|
+| Vedere calendario/gare/allenamenti | Read-only |
+| Vedere presenze | Read-only |
+| Vedere stato pagamenti | Read-only |
+| **Pagare quote** | Permesso (molti genitori continuano a pagare) |
+| Ricevere notifiche WhatsApp/email | Solo se opt-in |
+| Vedere documenti firmati dal figlio | Read-only |
+| **Vedere quietanze compensi** | Read-only (decisione utente Q2: Visibili) |
+| Vedere data scadenza cert. medico (no PDF) | Architettura attuale |
+
+### Architettura tecnica proposta
+
+**Backend** (`/app/backend/server.py`):
+1. Nuovo helper `_athlete_age_ge_18(athlete: dict) -> bool` (calcolo da `birth_date`)
+2. Nuovo helper `_parent_can_modify_athlete(current_user, athlete) -> bool`:
+   - True se `current_user.role != 'parent'`
+   - True se atleta < 18
+   - False se atleta >= 18 (sgancio in-season)
+3. Decorator/check in tutti gli endpoint `PATCH /athletes/{id}*` e `POST /athletes/{id}/*`:
+   ```python
+   if current_user["role"] == "parent" and not _parent_can_modify_athlete(current_user, athlete):
+       raise HTTPException(403, "Atleta maggiorenne: azione riservata all'atleta")
+   ```
+4. Nuovo endpoint `GET /parent/athletes/{id}/age-transition` che ritorna `{is_adult, birthday_iso, days_since_18, view_only_active}` per il banner
+
+**Frontend** (`/app/frontend/app/parent/`):
+1. Componente `<AdultAthleteBanner athlete={...} />` (banner giallo permanente sulla dashboard)
+2. Hook `useAthleteAgeStatus(athleteId)` che chiama `/parent/athletes/{id}/age-transition`
+3. In `parent/athlete/[id].tsx`: tutti i pulsanti/input dispositivi → `disabled={ageStatus.is_adult}` con tooltip
+4. In `parent/index.tsx`: card atleta con badge "🎂 Maggiorenne — riservato all'atleta" se applicabile
+
+**Rinnovo automatico** (Scheduler / endpoint admin):
+- All'apertura tesseramento nuova stagione, se `athlete.age >= 18 AND athlete.first_signup_was_minor`:
+  - NON ripropone il parent_id alla nuova iscrizione
+  - Il legame parent storico resta in archivio audit ma non è più "attivo"
+  - L'atleta procede come 18+ standalone
+
+**Self-registration scenario 1** (atleta già maggiorenne):
+- Aggiungere step opzionale "Genitore di contatto" nel flow `/register-athlete` con flag `view_only=true`
+- Il genitore creato ha ruolo `parent` ma con campo `view_only_parent: true` → vede tutto ma NON può modificare/firmare nulla (default da subito)
+
+### Effort stimato
+- Backend: ~2-3 ore (helper + ~10 endpoint da proteggere + 1 endpoint nuovo)
+- Frontend: ~3-4 ore (banner + disable logic + scheda atleta + register-athlete update)
+- Testing: ~1 ora (testing agent dual-role + parent scenarios)
+- **Totale ~6-8 ore di lavoro effettivo** → meritava una sessione dedicata con context fresco
+
+
 ## 🎒 26/02/2026 — Feature "Zaino Coach" Dual-Role (G1+G2+G3) ✅
 
 ### Contesto
