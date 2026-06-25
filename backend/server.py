@@ -29455,6 +29455,165 @@ async def submit_authenticated_preseason_response(campaign_id: str, data: Presea
     return {"message": "Grazie! La tua risposta e stata registrata.", "id": response_doc["id"]}
 
 
+# ╭──────────────────────────────────────────────────────────────╮
+# │  🆕 26/02/2026 — Withdraw (cancellazione) + Convert-to-Trial │
+# ╰──────────────────────────────────────────────────────────────╯
+class PreseasonWithdrawRequest(BaseModel):
+    keep_contact: bool  # True = soft delete con retention 12 mesi, False = hard delete
+
+
+@api_router.post("/preseason/public/{response_id}/withdraw")
+async def withdraw_preseason_response(response_id: str, data: PreseasonWithdrawRequest):
+    """Pre-iscritto annulla la propria pre-iscrizione (link pubblico univoco via email).
+
+    keep_contact=True  → status='withdrawn_keep_contact' + withdrawn_at + retention_until=+12 mesi
+    keep_contact=False → hard delete del record
+    """
+    response = await db.preseason_responses.find_one({"id": response_id})
+    if not response:
+        raise HTTPException(status_code=404, detail="Pre-iscrizione non trovata o già cancellata")
+
+    # Già cancellata? Idempotente
+    if response.get("status") in ("withdrawn_keep_contact", "withdrawn_full_delete"):
+        return {"message": "Pre-iscrizione già annullata", "status": response.get("status")}
+
+    if data.keep_contact:
+        now = datetime.now(timezone.utc)
+        retention_until = now + timedelta(days=365)  # 12 mesi GDPR-friendly
+        await db.preseason_responses.update_one(
+            {"id": response_id},
+            {"$set": {
+                "status": "withdrawn_keep_contact",
+                "withdrawn_at": now,
+                "retention_until": retention_until,
+                "withdrawn_keep_contact": True,
+            }},
+        )
+        # Decrementa il contatore della campagna (la response non è più "attiva")
+        try:
+            await db.preseason_campaigns.update_one(
+                {"id": response.get("campaign_id")},
+                {"$inc": {"response_count": -1}},
+            )
+        except Exception:
+            pass
+        return {
+            "message": "Pre-iscrizione annullata. Manterremo i tuoi contatti per 12 mesi per future iniziative.",
+            "status": "withdrawn_keep_contact",
+            "retention_until": retention_until.isoformat(),
+        }
+    else:
+        # Hard delete: rimuoviamo completamente il record
+        await db.preseason_responses.delete_one({"id": response_id})
+        try:
+            await db.preseason_campaigns.update_one(
+                {"id": response.get("campaign_id")},
+                {"$inc": {"response_count": -1}},
+            )
+        except Exception:
+            pass
+        return {"message": "Pre-iscrizione e dati eliminati. Arrivederci!", "status": "deleted"}
+
+
+@api_router.post("/preseason/responses/{response_id}/convert-to-trial")
+async def convert_preseason_to_trial(response_id: str, current_user = Depends(get_current_user)):
+    """Admin (o pre-iscritto loggato) converte una pre-iscrizione in atleta trial.
+
+    Usa il periodo di prova configurato in Impostazioni Società (`trial_max_days`,
+    `trial_max_sessions`, default 7gg/3 sessioni). Crea un record `athletes` con
+    `status='trial'` precompilato dai dati della pre-iscrizione e marca la response
+    come `status='converted'` con `converted_athlete_id`.
+    """
+    response = await db.preseason_responses.find_one({"id": response_id})
+    if not response:
+        raise HTTPException(status_code=404, detail="Pre-iscrizione non trovata")
+
+    if response.get("status") == "converted":
+        raise HTTPException(status_code=400, detail="Pre-iscrizione già convertita in iscrizione")
+
+    if response.get("status") in ("withdrawn_keep_contact", "withdrawn_full_delete"):
+        raise HTTPException(status_code=400, detail="Pre-iscrizione annullata, impossibile convertire")
+
+    # Solo admin o utente proprietario della pre-iscrizione
+    is_admin = current_user.get("role") == UserRole.ADMIN
+    is_owner = current_user.get("id") == response.get("user_id")
+    if not is_admin and not is_owner:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+
+    society_id = response.get("society_id") or current_user.get("society_id", "")
+
+    # Carica trial settings dalla società
+    society_settings = await db.settings.find_one({"society_id": society_id, "type": "society"})
+    trial_max_days = (society_settings.get("trial_max_days", 7) if society_settings else 7)
+    trial_max_sessions = (society_settings.get("trial_max_sessions", 3) if society_settings else 3)
+
+    now = datetime.now(timezone.utc)
+    trial_start = now
+    trial_end = trial_start + timedelta(days=trial_max_days)
+
+    # Crea athlete trial precompilato
+    athlete_id = str(uuid.uuid4())
+    athlete_doc = {
+        "id": athlete_id,
+        "society_id": society_id,
+        "first_name": (response.get("first_name") or "").strip().upper(),
+        "last_name": (response.get("last_name") or "").strip().upper(),
+        "full_name": f"{(response.get('last_name') or '').strip().upper()} {(response.get('first_name') or '').strip().upper()}".strip(),
+        "birth_date": response.get("birth_date"),
+        "phone": response.get("phone_athlete") or response.get("phone_parent") or "",
+        "phone_parent": response.get("phone_parent") or "",
+        "status": "trial",
+        "trial_start_date": trial_start.isoformat(),
+        "trial_end_date": trial_end.isoformat(),
+        "trial_max_sessions": trial_max_sessions,
+        "trial_max_days": trial_max_days,
+        "from_preseason_response_id": response_id,
+        "from_preseason_campaign_id": response.get("campaign_id"),
+        "previous_club": response.get("previous_club") or "",
+        "role_played": response.get("role_played") or "",
+        "notes": response.get("notes") or "",
+        "athlete_type": "quota",  # Default: atleta a quota (può essere cambiato in pro)
+        "created_at": now,
+        "created_via": "preseason_conversion",
+    }
+    await db.athletes.insert_one(athlete_doc)
+
+    # Marca la response come convertita
+    await db.preseason_responses.update_one(
+        {"id": response_id},
+        {"$set": {
+            "status": "converted",
+            "converted_at": now,
+            "converted_athlete_id": athlete_id,
+            "converted_by_user_id": current_user["id"],
+        }},
+    )
+
+    logger.info(f"[PRESEASON-CONVERT] response={response_id} → athlete={athlete_id} (trial {trial_max_days}gg/{trial_max_sessions}sess)")
+
+    return {
+        "message": f"Pre-iscrizione convertita in atleta trial ({trial_max_days} giorni / {trial_max_sessions} sessioni)",
+        "athlete_id": athlete_id,
+        "status": "converted",
+        "trial_start_date": trial_start.isoformat(),
+        "trial_end_date": trial_end.isoformat(),
+    }
+
+
+async def _cleanup_expired_preseason_withdrawals():
+    """Scheduler: cancella i record withdrawn_keep_contact scaduti (retention 12 mesi)."""
+    try:
+        now = datetime.now(timezone.utc)
+        result = await db.preseason_responses.delete_many({
+            "status": "withdrawn_keep_contact",
+            "retention_until": {"$lte": now},
+        })
+        if result.deleted_count > 0:
+            logger.info(f"[PRESEASON-CLEANUP] Eliminati {result.deleted_count} pre-iscritti scaduti (12 mesi)")
+    except Exception as e:
+        logger.warning(f"[PRESEASON-CLEANUP] failed: {e}")
+
+
 # Get active campaign for parent banner
 @api_router.get("/preseason/active")
 async def get_active_preseason_campaign(current_user = Depends(get_current_user)):

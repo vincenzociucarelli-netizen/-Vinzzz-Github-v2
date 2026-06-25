@@ -15,6 +15,60 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 📨 26/02/2026 — Pre-iscrizioni: Withdraw + Convert-to-Trial (Backend implementato)
+
+### Contesto
+Il modulo "Pre-iscrizioni" esisteva già (`/api/preseason/*`, frontend `/admin/preseason.tsx`) ma era un semplice **sondaggio di intenzione**: il pre-iscritto poteva solo rispondere, NON cancellarsi e NON convertire in iscrizione.
+
+### Decisioni utente confermate
+- **Q1 retention dopo cancellazione**: 12 mesi (GDPR-friendly)
+- **Q2 trial period**: usa `trial_max_days`/`trial_max_sessions` dalle impostazioni società (default 7gg/3 sessioni)
+
+### Backend implementato (`/app/backend/server.py`)
+**1. `POST /api/preseason/public/{response_id}/withdraw`** (pubblico, no auth)
+- Body: `{ keep_contact: bool }`
+- Se `keep_contact=true` → soft cancel: `status='withdrawn_keep_contact'`, `withdrawn_at`, `retention_until=+12 mesi`
+- Se `keep_contact=false` → **hard delete** del record
+- Idempotente (se già cancellata, non rifa nulla)
+- Decrementa `response_count` della campagna
+
+**2. `POST /api/preseason/responses/{response_id}/convert-to-trial`** (admin OR proprietario)
+- Carica `trial_max_days`/`trial_max_sessions` da `settings.society`
+- Crea record `athletes` con `status='trial'`, `trial_start_date=now`, `trial_end_date=+N giorni`
+- Precompila: nome, cognome, data nascita, telefono atleta/genitore, club precedente, ruolo, note
+- Marca response: `status='converted'`, `converted_athlete_id`, `converted_at`
+- Tracciabilità: `athlete.from_preseason_response_id` + `from_preseason_campaign_id`
+
+**3. `_cleanup_expired_preseason_withdrawals()`** (scheduler helper, NON ancora schedulato)
+- Da chiamare da uno scheduler già esistente (`certificate_expiry_scheduler` o simile)
+- Elimina record con `status='withdrawn_keep_contact'` e `retention_until <= now`
+
+### TODO frontend (prossima sessione)
+**Lato pre-iscritto (pubblico, link via email)**:
+1. Pagina `/preseason/respond/[response_id]` con 2 bottoni:
+   - "✅ Conferma iscrizione (periodo di prova)" → chiama `convert-to-trial` + redirect a flow iscrizione
+   - "❌ Annulla pre-iscrizione" → modale 2 opzioni (mantieni contatti SI/NO) → chiama `withdraw`
+2. Pagina di conferma post-withdraw/convert
+
+**Lato admin (`/admin/preseason.tsx`)**:
+1. Tabella risposte: aggiungere colonna "Stato" con badge:
+   - 🟢 attiva
+   - 🟡 cancellata (con contatto) — mostra `retention_until`
+   - 🔵 convertita in trial — link alla scheda atleta
+2. Nuovo tab "Cancellati con contatto" filtrabile
+3. Bottone "Converti in trial" su ogni response attiva
+
+**Scheduler**:
+- Agganciare `_cleanup_expired_preseason_withdrawals` a uno scheduler giornaliero (es. `daily_maintenance_scheduler` se esiste, o aggiungere nuovo)
+
+### Effort residuo
+- Frontend admin: ~1.5 ore
+- Frontend pubblico (landing pre-iscritto): ~1.5 ore
+- Scheduler cleanup: ~10 minuti (agganciare la funzione esistente)
+- Test E2E: ~1 ora
+- **Totale ~4 ore** per chiudere la feature
+
+
 ## 📋 26/02/2026 — Piano implementativo: Sgancio Genitori in-season (P0)
 
 ### Casistiche (concordate con utente)
