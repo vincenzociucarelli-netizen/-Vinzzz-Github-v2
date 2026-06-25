@@ -13590,7 +13590,15 @@ async def admin_create_coach_receipt(
     coach = await db.users.find_one({"id": coach_id})
     if not coach:
         raise HTTPException(status_code=404, detail="Coach non trovato")
-    
+
+    # 🆕 27/02/2026 — Marcatura "Quietanza Supplementare": se l'admin emette un
+    # importo diverso dal compenso mensile contrattuale, il record viene marcato
+    # come supplementare con l'extra_amount calcolato (premio/lavoro extra).
+    coach_monthly = float(coach.get("monthly_compensation") or 0)
+    delta_extra = float(request.amount_gross) - coach_monthly
+    is_supp = abs(delta_extra) > 0.009  # tolleranza decimali
+    extra_amt = round(delta_extra, 2) if is_supp else 0.0
+
     # Check if receipt already exists
     existing = await db.coach_compensations.find_one({
         "coach_id": coach_id,
@@ -13606,11 +13614,13 @@ async def admin_create_coach_receipt(
                 "amount_gross": request.amount_gross,
                 "amount": request.amount_gross,
                 "amount_net": request.amount_gross,
+                "is_supplementary": is_supp,
+                "extra_amount": extra_amt,
                 "updated_at": datetime.now(timezone.utc).isoformat(),
                 "updated_by": current_user["id"]
             }}
         )
-        return {"message": f"Quietanza aggiornata: {request.month}/{request.year} - €{request.amount_gross}", "updated": True}
+        return {"message": f"Quietanza aggiornata: {request.month}/{request.year} - €{request.amount_gross}", "updated": True, "is_supplementary": is_supp, "extra_amount": extra_amt}
     else:
         # Create new receipt
         receipt_id = str(uuid.uuid4())[:8]
@@ -13622,13 +13632,15 @@ async def admin_create_coach_receipt(
             "amount_gross": request.amount_gross,
             "amount": request.amount_gross,
             "amount_net": request.amount_gross,
+            "is_supplementary": is_supp,
+            "extra_amount": extra_amt,
             "received": True,
             "receipt_signed": False,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "created_by": current_user["id"]
         }
         await db.coach_compensations.insert_one(new_receipt)
-        return {"message": f"Quietanza creata: {request.month}/{request.year} - €{request.amount_gross}", "created": True, "id": receipt_id}
+        return {"message": f"Quietanza creata: {request.month}/{request.year} - €{request.amount_gross}", "created": True, "id": receipt_id, "is_supplementary": is_supp, "extra_amount": extra_amt}
 
 @api_router.post("/admin/collaboratore/{collaboratore_id}/compensation/create-receipt")
 async def admin_create_collaboratore_receipt(
