@@ -1205,7 +1205,61 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             (sezione Compensi con intestatario + IBAN + nome banca).
             Logica: i dati bancari riguardano i compensi, non il profilo personale. */}
 
-        {/* 🚫 27/02/2026 — Sezione "Versione Lite" RIMOSSA per scelta utente. */}
+        {/* Versione Lite Section — RIPRISTINATA 27/02/2026 (utente vuole mantenerla) */}
+        <View style={styles.card} data-testid="lite-access-section">
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <Ionicons name="phone-portrait" size={24} color="#007AFF" />
+            <Text style={[styles.cardTitle, { marginBottom: 0, marginLeft: 8 }]}>Versione Lite</Text>
+          </View>
+          
+          <Text style={{ fontSize: 13, color: '#666', marginBottom: 14, lineHeight: 18 }}>
+            Accedi a una versione semplificata con QR code, presenze e orari. Dalla schermata di login, seleziona "Accesso Atleta" e inserisci il Nome Lite e il PIN.
+          </Text>
+
+          {/* Nome Lite */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, backgroundColor: '#f8f9fa', padding: 12, borderRadius: 10 }}>
+            <View>
+              <Text style={{ fontSize: 13, color: '#555' }}>Nome Lite:</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#1a1a2e', marginTop: 2 }}>{nomeLite || 'Non impostato'}</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => { setNomeLiteInput(nomeLite); setShowNomeLiteModal(true); }}
+              style={{ backgroundColor: '#007AFF', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 }}
+              data-testid="set-nome-lite-btn"
+            >
+              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>
+                {nomeLite ? 'Modifica' : 'Imposta'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* PIN */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f8f9fa', padding: 12, borderRadius: 10 }}>
+            <View>
+              <Text style={{ fontSize: 13, color: '#555' }}>PIN di accesso:</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: liteEnabled ? '#34C759' : '#FF9500', marginTop: 2 }}>
+                {liteEnabled ? 'Attivo' : 'Non impostato'}
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => { setPinInput(''); setShowPinModal(true); }}
+              style={{ backgroundColor: liteEnabled ? '#34C759' : '#FF9500', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 }}
+              data-testid="set-pin-btn"
+            >
+              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>
+                {liteEnabled ? 'Cambia PIN' : 'Imposta PIN'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {liteEnabled && nomeLite ? (
+            <View style={{ backgroundColor: '#E8F5E9', padding: 10, borderRadius: 8, marginTop: 10 }}>
+              <Text style={{ fontSize: 12, color: '#2E7D32', textAlign: 'center' }}>
+                Accesso Lite attivo! Usa "{nomeLite}" + PIN per accedere.
+              </Text>
+            </View>
+          ) : null}
+        </View>
 
         {/* 🆕 27/02/2026 — Cronologia Atleta + Documenti spostati a fondo pagina (richiesta utente) */}
         <TouchableOpacity
