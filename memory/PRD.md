@@ -15,6 +15,75 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 🎨 27/02/2026 — UI cleanup Atleta — IMPLEMENTATO ✅
+
+### Modifiche applicate
+
+**Lato Atleta — `/athlete/index.tsx` (tab "Da fare")**
+- ❌ Rimossa card "Certificato Medico" completa (era ~160 righe con form inline)
+- ➕ Aggiunta card "🏟️ Mappa Palestre" (link a `/palestre`)
+
+**Lato Atleta — `/athlete/profile.tsx` (tab "Anagrafica")**
+- 🔀 "Cronologia Atleta" e "Documenti" spostate **a fondo pagina** (subito prima dei Consensi Privacy)
+- ❌ "Mappa Palestre" rimossa (ora in tab Da fare)
+- 🔀 Card "Certificato Medico" (anteprima parziale) sostituita con nuovo **componente riusabile** `<MedicalCertificateCard>` versione completa con form inline di modifica data
+- ✅ Sezione "Dati Anagrafici" ora **aperta di default** (`sectionsExpanded.anagrafici: true`)
+- ❌ Sezione "Versione Lite" completamente eliminata (Nome Lite + PIN)
+
+### Nuovo componente
+- `/app/frontend/src/components/athlete/MedicalCertificateCard.tsx` — card completa con:
+  - Anteprima scadenza con colori semaforo (verde/arancione/rosso)
+  - Stato verifica admin
+  - Form inline per inserire/modificare data emissione + validità mesi (con calcolo automatico scadenza)
+  - Endpoint `POST /certificates/simple`
+  - Disabilitato per minorenni (solo adulti gestiscono il certificato)
+
+### TODO: Replica su Coach (prossima sessione)
+Stesse modifiche da applicare su `/coach/index.tsx` e `/coach/profile.tsx`:
+- Card Certificato Medico → spostare dalla tab Da fare ad Anagrafica
+- Mappa Palestre → spostare in Da fare
+- Cronologia/Documenti → fondo pagina
+- Versione Lite → eliminare
+- Sezione Dati Anagrafici → aperta di default
+
+### Test
+- Lint: zero nuovi errori, componente nuovo lint-clean
+- Smoke screenshot login: ✅ OK
+- ⚠️ Verifica funzionale lato user atleta: da fare manualmente
+
+
+## 🎨 26/02/2026 — UI cleanup Atleta/Coach (DA FARE — prossima sessione)
+
+### Richieste utente (3 screenshot annotati a mano)
+
+**Lato Atleta — `/athlete/index.tsx` (tab "Da fare")**
+- ❌ Rimuovere card "Certificato Medico" completa (scadenza/verificato/modifica data)
+- ➕ Aggiungere card "Mappa Palestre" (oggi è su Anagrafica)
+
+**Lato Atleta — `/athlete/profile.tsx` (tab "Anagrafica")**
+- ➕ Aggiungere la card "Certificato Medico" completa al posto della versione parziale esistente
+- ❌ Rimuovere card "Mappa Palestre"
+- 🔀 Spostare "Cronologia Atleta" e "Documenti" a fondo pagina
+- ✅ Sezione "Dati Anagrafici" aperta di default (expanded=true on mount)
+- ❌ Eliminare completamente la sezione "Versione Lite" (Nome Lite + PIN di accesso)
+
+**Replica su Coach**:
+- Verificare se `/coach/index.tsx` e `/coach/profile.tsx` (o equivalenti) hanno strutture simili
+- Applicare le stesse modifiche di layout
+
+### Effort stimato
+- Atleta: ~1 ora (2 file, modifiche di layout)
+- Coach (verifica + replica): ~30 minuti
+- Smoke test + screenshot: ~15 minuti
+- **Totale ~2 ore** per chiudere il refresh UI
+
+### File da toccare
+- `/app/frontend/app/athlete/index.tsx`
+- `/app/frontend/app/athlete/profile.tsx`
+- `/app/frontend/app/coach/index.tsx` (replica)
+- `/app/frontend/app/coach/profile.tsx` (replica)
+
+
 ## 📨 26/02/2026 — Pre-iscrizioni: Withdraw + Convert-to-Trial (Backend implementato)
 
 ### Contesto

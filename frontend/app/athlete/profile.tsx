@@ -26,6 +26,7 @@ import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
 import { TrialEndModal } from '../../src/components/TrialEndModal';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 import { ConsentManager } from '../../src/components/ConsentManager';
+import MedicalCertificateCard from '../../src/components/athlete/MedicalCertificateCard';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 const DOC_TYPES = ['Carta Identità', 'Passaporto', 'Patente Auto'];
@@ -100,8 +101,9 @@ export default function AthleteProfile() {
   const [savingBank, setSavingBank] = useState(false);
   
   // Collapsible sections state
+  // 🆕 27/02/2026 — Dati Anagrafici aperti di default (richiesta utente)
   const [sectionsExpanded, setSectionsExpanded] = useState({
-    anagrafici: false,
+    anagrafici: true,
     fiscali: false,
     bancari: false,
   });
@@ -905,19 +907,8 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           </View>
         )}
 
-        {/* Cronologia Atleta */}
-        <TouchableOpacity
-          style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
-          onPress={() => router.push('/athlete/timeline')}
-          data-testid="timeline-menu-item"
-        >
-          <Ionicons name="time" size={36} color="#AF52DE" />
-          <View style={{ marginLeft: 12, flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Cronologia Atleta</Text>
-            <Text style={{ fontSize: 12, color: '#888' }}>Visualizza la storia completa</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
-        </TouchableOpacity>
+        {/* 🆕 27/02/2026 — Cronologia Atleta / Documenti SPOSTATI a fondo pagina (richiesta utente)
+            🆕 27/02/2026 — Mappa Palestre SPOSTATA in tab "Da fare" (richiesta utente) */}
 
         {/* Coach della Squadra */}
         {coachInfo && (
@@ -953,70 +944,15 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
           </View>
         )}
 
-        {/* Documenti */}
-        <TouchableOpacity
-          style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
-          onPress={() => router.push('/athlete/documents')}
-          data-testid="documents-menu-item"
-        >
-          <Ionicons name="document-text" size={22} color="#007AFF" />
-          <View style={{ marginLeft: 12, flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Documenti</Text>
-            <Text style={{ fontSize: 12, color: '#888' }}>Privacy, certificati e altro</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
-        </TouchableOpacity>
+        {/* Documenti / Mappa Palestre rimossi qui — Documenti spostato a fondo pagina, Mappa in "Da fare" */}
 
-        {/* Mappa Palestre */}
-        <TouchableOpacity
-          style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
-          onPress={() => router.push('/palestre')}
-          data-testid="athlete-palestre-btn"
-        >
-          <Ionicons name="map" size={22} color="#43A047" />
-          <View style={{ marginLeft: 12, flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>🏟️ Mappa Palestre</Text>
-            <Text style={{ fontSize: 12, color: '#888' }}>Palazzetti dei campionati</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
-        </TouchableOpacity>
-
-        {/* 🆕 23/02/2026 — Certificato Medico (anteprima sempre visibile in Anagrafica)
-            La gestione completa resta in "Da fare" / admin. Qui solo READ-ONLY. */}
-        {(profile as any)?.medical_certificate_expiry && (() => {
-          const expiryDate = new Date((profile as any).medical_certificate_expiry);
-          const today = new Date();
-          const daysLeft = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-          const isExpired = daysLeft < 0;
-          const isExpiringSoon = daysLeft >= 0 && daysLeft <= 30;
-          const statusColor = isExpired ? '#FF3B30' : isExpiringSoon ? '#FF9500' : '#34C759';
-          const statusBg = isExpired ? '#FFF0F0' : isExpiringSoon ? '#FFF8E1' : '#E8F5E9';
-          const statusText = isExpired ? 'SCADUTO' : isExpiringSoon ? `Scade tra ${daysLeft} giorni` : 'In corso di validità';
-          const dd = String(expiryDate.getDate()).padStart(2, '0');
-          const mm = String(expiryDate.getMonth() + 1).padStart(2, '0');
-          const yy = expiryDate.getFullYear();
-          return (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>🩺 Certificato Medico</Text>
-              <View style={{ backgroundColor: statusBg, padding: 12, borderRadius: 10, borderLeftWidth: 4, borderLeftColor: statusColor, marginTop: 8 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name={isExpired ? 'close-circle' : isExpiringSoon ? 'alert-circle' : 'checkmark-circle'} size={22} color={statusColor} />
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: statusColor }}>Scadenza: {dd}/{mm}/{yy}</Text>
-                </View>
-                <Text style={{ fontSize: 12, color: statusColor, fontWeight: '600', marginTop: 4, paddingLeft: 30 }}>{statusText}</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingLeft: 4 }}>
-                <Ionicons name={(profile as any)?.medical_certificate_verified ? 'shield-checkmark' : 'shield-outline'} size={18} color={(profile as any)?.medical_certificate_verified ? '#4CAF50' : '#FF9500'} />
-                <Text style={{ marginLeft: 8, fontSize: 13, color: (profile as any)?.medical_certificate_verified ? '#4CAF50' : '#FF9500', fontWeight: '600' }}>
-                  {(profile as any)?.medical_certificate_verified ? "Verificato dall'admin" : "Non ancora verificato dall'admin"}
-                </Text>
-              </View>
-              <Text style={{ fontSize: 11, color: '#999', marginTop: 8, fontStyle: 'italic' }}>
-                Per modificare il certificato vai nella pagina "Da fare".
-              </Text>
-            </View>
-          );
-        })()}
+        {/* 🆕 27/02/2026 — Certificato Medico (versione COMPLETA con form integrato, sostituisce la precedente anteprima parziale) */}
+        <MedicalCertificateCard
+          profile={profile}
+          societyEmail={(profile as any)?.society_email}
+          isMinor={isMinor}
+          onSaved={loadProfile}
+        />
 
         {/* Change Password Section - Now at top */}
         {showChangePassword && (
@@ -1269,61 +1205,34 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
             (sezione Compensi con intestatario + IBAN + nome banca).
             Logica: i dati bancari riguardano i compensi, non il profilo personale. */}
 
-        {/* Versione Lite Section */}
-        <View style={styles.card} data-testid="lite-access-section">
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-            <Ionicons name="phone-portrait" size={24} color="#007AFF" />
-            <Text style={[styles.cardTitle, { marginBottom: 0, marginLeft: 8 }]}>Versione Lite</Text>
-          </View>
-          
-          <Text style={{ fontSize: 13, color: '#666', marginBottom: 14, lineHeight: 18 }}>
-            Accedi a una versione semplificata con QR code, presenze e orari. Dalla schermata di login, seleziona "Accesso Atleta" e inserisci il Nome Lite e il PIN.
-          </Text>
+        {/* 🚫 27/02/2026 — Sezione "Versione Lite" RIMOSSA per scelta utente. */}
 
-          {/* Nome Lite */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, backgroundColor: '#f8f9fa', padding: 12, borderRadius: 10 }}>
-            <View>
-              <Text style={{ fontSize: 13, color: '#555' }}>Nome Lite:</Text>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: '#1a1a2e', marginTop: 2 }}>{nomeLite || 'Non impostato'}</Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => { setNomeLiteInput(nomeLite); setShowNomeLiteModal(true); }}
-              style={{ backgroundColor: '#007AFF', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 }}
-              data-testid="set-nome-lite-btn"
-            >
-              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>
-                {nomeLite ? 'Modifica' : 'Imposta'}
-              </Text>
-            </TouchableOpacity>
+        {/* 🆕 27/02/2026 — Cronologia Atleta + Documenti spostati a fondo pagina (richiesta utente) */}
+        <TouchableOpacity
+          style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginTop: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
+          onPress={() => router.push('/athlete/timeline')}
+          data-testid="timeline-menu-item"
+        >
+          <Ionicons name="time" size={36} color="#AF52DE" />
+          <View style={{ marginLeft: 12, flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Cronologia Atleta</Text>
+            <Text style={{ fontSize: 12, color: '#888' }}>Visualizza la storia completa</Text>
           </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
 
-          {/* PIN */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f8f9fa', padding: 12, borderRadius: 10 }}>
-            <View>
-              <Text style={{ fontSize: 13, color: '#555' }}>PIN di accesso:</Text>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: liteEnabled ? '#34C759' : '#FF9500', marginTop: 2 }}>
-                {liteEnabled ? 'Attivo' : 'Non impostato'}
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => { setPinInput(''); setShowPinModal(true); }}
-              style={{ backgroundColor: liteEnabled ? '#34C759' : '#FF9500', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 }}
-              data-testid="set-pin-btn"
-            >
-              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>
-                {liteEnabled ? 'Cambia PIN' : 'Imposta PIN'}
-              </Text>
-            </TouchableOpacity>
+        <TouchableOpacity
+          style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
+          onPress={() => router.push('/athlete/documents')}
+          data-testid="documents-menu-item"
+        >
+          <Ionicons name="document-text" size={22} color="#007AFF" />
+          <View style={{ marginLeft: 12, flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Documenti</Text>
+            <Text style={{ fontSize: 12, color: '#888' }}>Privacy, certificati e altro</Text>
           </View>
-
-          {liteEnabled && nomeLite ? (
-            <View style={{ backgroundColor: '#E8F5E9', padding: 10, borderRadius: 8, marginTop: 10 }}>
-              <Text style={{ fontSize: 12, color: '#2E7D32', textAlign: 'center' }}>
-                Accesso Lite attivo! Usa "{nomeLite}" + PIN per accedere.
-              </Text>
-            </View>
-          ) : null}
-        </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
 
           {/* Privacy Consent Management - collassabile */}
           <View style={{ marginHorizontal: 16, marginTop: 16, marginBottom: 8 }}>
