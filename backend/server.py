@@ -4963,8 +4963,14 @@ async def update_user_compensation(user_id: str, data: dict, current_user = Depe
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
     
-    if user["role"] not in [UserRole.COACH, UserRole.DIRIGENTE, UserRole.VIEWER, UserRole.COLLABORATORE]:
-        raise HTTPException(status_code=400, detail="Compenso applicabile solo a coach, dirigenti e collaboratori")
+    if user["role"] not in [UserRole.COACH, UserRole.DIRIGENTE, UserRole.VIEWER, UserRole.COLLABORATORE, UserRole.ATHLETE]:
+        # 🔥 25/02/2026 — Bug fix: messaggio errore ora include il role corrente per facilitare il debug.
+        # Permettiamo anche role=ATHLETE per gli atleti PRO (athlete_type='compensated') che hanno
+        # monthly_compensation gestito via /admin/dirigente UI quando un dirigente ha anche ruolo atleta.
+        raise HTTPException(
+            status_code=400,
+            detail=f"Compenso applicabile solo a coach, dirigenti, collaboratori e atleti PRO (role attuale: {user.get('role', 'sconosciuto')})"
+        )
     
     update_data = {}
     if "monthly_compensation" in data:
