@@ -12,6 +12,7 @@ interface Campaign {
   title: string;
   season: string;
   description: string;
+  event_info?: string;  // 🆕 27/02/2026 — Info aggiuntive admin (es. indicazioni Open Day, contatti, orari)
   is_active: boolean;
   open_date?: string;
   close_date?: string;
@@ -111,6 +112,7 @@ export default function PreseasonAdmin() {
   const [newTitle, setNewTitle] = useState('');
   const [newSeason, setNewSeason] = useState('');
   const [newDesc, setNewDesc] = useState('');
+  const [newEventInfo, setNewEventInfo] = useState('');  // 🆕 27/02/2026
   const [newOpenDate, setNewOpenDate] = useState('');
   const [newCloseDate, setNewCloseDate] = useState('');
   const [creating, setCreating] = useState(false);
@@ -149,6 +151,7 @@ export default function PreseasonAdmin() {
         title: newTitle.trim(),
         season: newSeason.trim(),
         description: newDesc.trim(),
+        event_info: newEventInfo.trim() || null,
         open_date: null,
         close_date: closeIso,
       };
@@ -159,7 +162,7 @@ export default function PreseasonAdmin() {
       }
       setShowCreate(false);
       setEditingId(null);
-      setNewTitle(''); setNewSeason(''); setNewDesc(''); setNewOpenDate(''); setNewCloseDate('');
+      setNewTitle(''); setNewSeason(''); setNewDesc(''); setNewEventInfo(''); setNewOpenDate(''); setNewCloseDate('');
       loadCampaigns();
       showAlert('Successo', editingId ? 'Campagna aggiornata!' : 'Campagna creata!');
     } catch (err: any) {
@@ -175,6 +178,7 @@ export default function PreseasonAdmin() {
     setNewTitle(campaign.title || '');
     setNewSeason(campaign.season || '');
     setNewDesc(campaign.description || '');
+    setNewEventInfo(campaign.event_info || '');
     setNewOpenDate(isoToItalianDate(campaign.open_date));
     setNewCloseDate(isoToItalianDate(campaign.close_date));
     setShowCreate(true);
@@ -368,6 +372,19 @@ export default function PreseasonAdmin() {
               <View style={{ marginTop: 10, backgroundColor: '#F8F9FB', borderLeftWidth: 3, borderLeftColor: '#1565C0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 }}>
                 <Text style={{ fontSize: 14, color: '#333', lineHeight: 20 }} data-testid={`campaign-description-${c.id}`}>
                   {c.description}
+                </Text>
+              </View>
+            ) : null}
+
+            {/* 🆕 27/02/2026 — Info evento (Open Day, indicazioni) */}
+            {(c as any).event_info ? (
+              <View style={{ marginTop: 8, backgroundColor: '#FFF8E1', borderLeftWidth: 3, borderLeftColor: '#F9A825', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <Ionicons name="information-circle" size={14} color="#F9A825" />
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#7A5D00' }}>Info evento</Text>
+                </View>
+                <Text style={{ fontSize: 13, color: '#5D4400', lineHeight: 18 }} data-testid={`campaign-event-info-${c.id}`}>
+                  {(c as any).event_info}
                 </Text>
               </View>
             ) : null}
@@ -790,6 +807,22 @@ export default function PreseasonAdmin() {
                 multiline
                 numberOfLines={6}
                 data-testid="new-campaign-desc"
+              />
+
+              {/* 🆕 27/02/2026 — Campo Info Evento (es. Open Day, indicazioni stradali, contatti) */}
+              <Text style={lbl}>📌 Info evento (opzionale)</Text>
+              <Text style={{ fontSize: 12, color: '#777', marginTop: -2, marginBottom: 6, lineHeight: 16 }}>
+                Informazioni aggiuntive per i partecipanti (es. indicazioni Open Day, contatti, orari, materiale da portare). Visibile a chi si iscrive in un riquadro evidenziato.
+              </Text>
+              <TextInput
+                style={[inp, { minHeight: 100, height: 100, textAlignVertical: 'top', paddingTop: 10, paddingBottom: 10 }]}
+                value={newEventInfo}
+                onChangeText={setNewEventInfo}
+                placeholder="Es. OPEN DAY 7 LUGLIO ore 17:30 presso il Palazzetto Comunale (Via Roma 12). Portare scarpe da ginnastica e bottiglia d'acqua. Info: 333-1234567"
+                placeholderTextColor="#AAA"
+                multiline
+                numberOfLines={5}
+                data-testid="new-campaign-event-info"
               />
 
               <View>

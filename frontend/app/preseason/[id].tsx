@@ -171,6 +171,19 @@ export default function PublicPreseasonForm() {
               {campaign.description}
             </Text>
           ) : null}
+
+          {/* 🆕 27/02/2026 — Info evento (Open Day, indicazioni, contatti) — riquadro evidenziato */}
+          {(campaign as any)?.event_info ? (
+            <View style={{ backgroundColor: '#FFF8E1', borderLeftWidth: 4, borderLeftColor: '#F9A825', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14, maxWidth: 500, alignSelf: 'center' }} data-testid="campaign-event-info-public">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <Ionicons name="information-circle" size={18} color="#F9A825" />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#7A5D00' }}>Informazioni importanti</Text>
+              </View>
+              <Text style={{ fontSize: 14, color: '#5D4400', lineHeight: 20 }}>
+                {(campaign as any).event_info}
+              </Text>
+            </View>
+          ) : null}
           <View style={{ backgroundColor: '#E8F5E9', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, marginTop: 12 }}>
             <Text style={{ fontSize: 11, color: '#2E7D32', fontWeight: '600' }}>Compilazione non vincolante</Text>
           </View>

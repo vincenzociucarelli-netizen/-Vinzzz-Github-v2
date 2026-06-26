@@ -29083,6 +29083,7 @@ class PreseasonCampaignCreate(BaseModel):
     open_date: Optional[str] = None
     close_date: Optional[str] = None
     description: Optional[str] = None
+    event_info: Optional[str] = None  # 🆕 27/02/2026 — Info aggiuntive admin (es. Open Day, indicazioni, contatti)
 
 class PreseasonCampaignUpdate(BaseModel):
     title: Optional[str] = None
@@ -29091,6 +29092,7 @@ class PreseasonCampaignUpdate(BaseModel):
     close_date: Optional[str] = None
     is_active: Optional[bool] = None
     description: Optional[str] = None
+    event_info: Optional[str] = None  # 🆕 27/02/2026
     auto_reminders_enabled: Optional[bool] = None
     reminder_frequency_days: Optional[int] = None
 
