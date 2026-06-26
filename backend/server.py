@@ -29136,6 +29136,7 @@ async def create_preseason_campaign(data: PreseasonCampaignCreate, current_user 
         "title": data.title,
         "season": data.season,
         "description": data.description or "",
+        "event_info": data.event_info or "",
         "open_date": data.open_date,
         "close_date": data.close_date,
         "is_active": True,
@@ -29202,7 +29203,17 @@ async def update_preseason_campaign(campaign_id: str, data: PreseasonCampaignUpd
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin")
     
-    update = {k: v for k, v in data.dict().items() if v is not None}
+    # Use exclude_unset so that fields explicitly set to None (e.g. clearing
+    # event_info) are persisted as empty, not silently dropped.
+    raw = data.dict(exclude_unset=True)
+    update = {}
+    for k, v in raw.items():
+        if v is None:
+            # Allow explicit clearing only for text fields
+            if k in ("description", "event_info", "open_date", "close_date"):
+                update[k] = ""
+        else:
+            update[k] = v
     if not update:
         raise HTTPException(status_code=400, detail="Nessun campo da aggiornare")
     
