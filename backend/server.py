@@ -7297,6 +7297,63 @@ async def get_athlete_compensation_receipts(athlete_id: str, current_user = Depe
     clean_mongo_docs(receipts)
     return receipts
 
+
+# 🆕 27/02/2026 — Reset Quietanze: cancella TUTTE le quietanze di un atleta (e Coach linked se dual-role)
+# Utile per dati di test o per ricominciare da zero quando admin/user vedono dati incoerenti.
+@api_router.delete("/admin/athletes/{athlete_id}/compensation/reset-all")
+async def admin_reset_athlete_compensations(athlete_id: str, current_user = Depends(get_current_user)):
+    """ADMIN ONLY — Cancella TUTTE le quietanze, ricevute firmate, compensi coach linked,
+    compensi esterni e autocertificazioni soglie di un atleta. NON ELIMINA l'anagrafica.
+    Da usare con cautela: operazione irreversibile."""
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+
+    # Multi-tenancy: stesso society_id
+    if athlete.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Atleta di altra società")
+
+    result = {"athlete_name": athlete.get("full_name", ""), "athlete_id": athlete_id, "deleted": {}}
+
+    r1 = await db.athlete_compensation_receipts.delete_many({"athlete_id": athlete_id})
+    result["deleted"]["athlete_compensation_receipts"] = r1.deleted_count
+
+    # Coach linked via CF / email
+    coach_user = None
+    try:
+        coach_user = await _find_linked_compensated_user_for_athlete(athlete)
+    except Exception:
+        coach_user = None
+
+    coach_count = 0
+    if coach_user:
+        rc = await db.coach_compensations.delete_many({"coach_id": coach_user["id"]})
+        coach_count += rc.deleted_count
+    rcb = await db.coach_compensations.delete_many({"linked_athlete_id": athlete_id})
+    coach_count += rcb.deleted_count
+    result["deleted"]["coach_compensations"] = coach_count
+
+    r3 = await db.signed_documents.delete_many({
+        "athlete_id": athlete_id,
+        "document_type": {"$in": ["compensation_receipt", "compensation_receipt_split"]},
+    })
+    result["deleted"]["signed_documents"] = r3.deleted_count
+
+    r4 = await db.external_compensations.delete_many({"athlete_id": athlete_id})
+    result["deleted"]["external_compensations"] = r4.deleted_count
+
+    try:
+        r5 = await db.threshold_declarations.delete_many({"athlete_id": athlete_id})
+        result["deleted"]["threshold_declarations"] = r5.deleted_count
+    except Exception:
+        result["deleted"]["threshold_declarations"] = 0
+
+    logger.warning(f"[ADMIN-RESET] Quietanze atleta {athlete_id} ({athlete.get('full_name')}) cancellate da admin {current_user.get('id')}. Result: {result['deleted']}")
+    return {"message": "Tutte le quietanze sono state cancellate", **result}
+
 @api_router.post("/athletes/{athlete_id}/compensation/receipt")
 async def sign_athlete_compensation_receipt(athlete_id: str, data: dict, current_user = Depends(get_current_user)):
     """Sign or unsign a monthly receipt for an athlete"""
