@@ -4559,6 +4559,9 @@ async def get_coaches(current_user = Depends(get_current_user)):
             "fees_waived": c.get("fees_waived", False),
             "profile_photo": c.get("profile_photo"),
             "profile_photo_artistic": c.get("profile_photo_artistic"),
+            # 🆕 26/06/2026 — Esposto per la lista admin: se valorizzato, l'admin viene
+            # reindirizzato alla scheda Atleta (sorgente unica per i dual-role).
+            "linked_athlete_id": c.get("linked_athlete_id"),
         })
     
     return result
@@ -5177,6 +5180,8 @@ async def get_user_detail(user_id: str, current_user = Depends(get_current_user)
         "prior_compensation": user.get("prior_compensation"),
         "onboarding_completed": user.get("onboarding_completed"),
         "onboarding_date": user.get("onboarding_date"),
+        # 🆕 26/06/2026 — Dual-role link (per scheda admin coach unificata)
+        "linked_athlete_id": user.get("linked_athlete_id"),
     }
 
 @api_router.patch("/users/{user_id}/bank-details")

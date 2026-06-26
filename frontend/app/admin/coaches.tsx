@@ -43,6 +43,9 @@ interface Coach {
   // Photo
   profile_photo?: string;
   profile_photo_artistic?: string;
+  // 🆕 26/06/2026 — Dual-role: se valorizzato, è un coach promosso da un atleta esistente.
+  // L'admin viene reindirizzato alla scheda Atleta (sorgente unica).
+  linked_athlete_id?: string;
 }
 
 export default function CoachesScreen() {
@@ -335,11 +338,15 @@ export default function CoachesScreen() {
 
   const renderCoachItem = ({ item }: { item: Coach }) => {
     const compBadge = getCompensationBadge(item.monthly_compensation, (item as any).other_annual_compensation);
+    // 🆕 26/06/2026 — Se è un coach dual-role (promosso da atleta), navighiamo alla scheda Atleta
+    const targetRoute = item.linked_athlete_id
+      ? `/admin/athlete/${item.linked_athlete_id}`
+      : `/admin/coach/${item.id}`;
     
     return (
       <TouchableOpacity 
         style={styles.userCard} 
-        onPress={() => router.push(`/admin/coach/${item.id}`)}
+        onPress={() => router.push(targetRoute as any)}
         onLongPress={() => openActionModal(item)}
       >
         <View style={styles.userAvatar}>
@@ -348,6 +355,12 @@ export default function CoachesScreen() {
         <View style={styles.userInfo}>
           <View style={styles.nameRow}>
             <Text style={styles.userName}>{item.full_name}</Text>
+            {item.linked_athlete_id && (
+              <View style={{ backgroundColor: '#E3F2FD', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                <Text style={{ fontSize: 11 }}>🏐</Text>
+                <Text style={{ fontSize: 10, color: '#0D47A1', fontWeight: '700' }}>ANCHE ATLETA</Text>
+              </View>
+            )}
             {compBadge && (
               <View style={[styles.compBadge, { backgroundColor: compBadge.bg }]}>
                 <Text style={[styles.compBadgeText, { color: compBadge.color }]}>{compBadge.text}</Text>
