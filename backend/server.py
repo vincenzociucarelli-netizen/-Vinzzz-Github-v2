@@ -3613,6 +3613,15 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
     # Remove sensitive fields
     user.pop("password_hash", None)
     user.pop("hashed_password", None)
+
+    # 🆕 26/06/2026 — Step C "Display unificato email dual-role":
+    # Se l'account è un alias secondario creato a partire da un atleta
+    # (es. "alice@test.com#coach"), mostriamo l'email originale dell'utente
+    # senza il suffisso `#ruolo`. L'utente vede sempre l'email con cui si è
+    # registrato la PRIMA volta, qualunque sia il ruolo corrente.
+    _email = user.get("email") or ""
+    if isinstance(_email, str) and "#" in _email:
+        user["email"] = _email.split("#", 1)[0]
     
     # 🛡️ RESILIENCE: any failure in the post-processing below should NOT bubble
     # up as a 500 — return the baseline user record so the frontend dashboard can
@@ -15108,29 +15117,18 @@ async def promote_athlete_to_coach(
     if not athlete_email:
         raise HTTPException(status_code=400, detail="Atleta senza email — impossibile creare account coach collegato")
 
-    # 🆕 Default: il coach NON ha credenziali proprie. Userà SEMPRE quelle dell'atleta
-    # e farà lo switch dalla dashboard. L'email coach è un alias interno (#coach)
-    # che non interferisce con il login.
-    coach_email = (request.coach_email or "").strip().lower() or f"{athlete_email}#coach"
-    # Validation: solo se l'admin ha esplicitamente passato un'email "vera" (no alias #)
-    # la consideriamo come account separato (compat legacy).
-    is_alias = coach_email.endswith("#coach") or "#" in coach_email
-    if not is_alias:
-        if "@" not in coach_email:
-            raise HTTPException(status_code=400, detail="Email coach non valida")
-        if coach_email == athlete_email:
-            raise HTTPException(
-                status_code=400,
-                detail="Se vuoi usare l'email dell'atleta lascia il campo vuoto: il coach userà l'email atleta tramite lo switch.",
-            )
-        existing_user = await db.users.find_one({"email": coach_email})
-        if existing_user:
-            raise HTTPException(status_code=400, detail="Esiste già un utente con questa email")
-    else:
-        # Per gli alias verifica solo che non ci sia già un coach collegato a questo atleta
-        existing_alias = await db.users.find_one({"linked_athlete_id": athlete_id, "role": "coach"})
-        if existing_alias:
-            raise HTTPException(status_code=400, detail="Atleta già promosso a Coach")
+    # 🆕 26/06/2026 — Step A "Email di login unica":
+    # Il dual-role DEVE sempre usare l'email dell'atleta come unico login.
+    # L'admin NON può più assegnare un'email diversa al coach: ignoriamo
+    # silenziosamente request.coach_email per evitare disallineamenti
+    # ("L'utenza è sempre quella originale, in più ha solo lo zaino di Coach").
+    # L'email del record coach è un alias interno con suffisso #coach (non usato per login).
+    coach_email = f"{athlete_email}#coach"
+    is_alias = True
+    # Verifica che non ci sia già un coach collegato a questo atleta
+    existing_alias = await db.users.find_one({"linked_athlete_id": athlete_id, "role": "coach"})
+    if existing_alias:
+        raise HTTPException(status_code=400, detail="Atleta già promosso a Coach")
     
     # Password: solo se l'admin ha fornito una password "vera" (account separato).
     # Altrimenti generiamo una random — non sarà mai usata per il login.
