@@ -787,7 +787,7 @@ export default function PreseasonAdmin() {
                 <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
-            <ScrollView style={{ flexGrow: 0 }} contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={true}>
+            <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={true}>
               <Text style={lbl}>Titolo *</Text>
               <TextInput style={inp} value={newTitle} onChangeText={setNewTitle} placeholder="Es: Pre-iscrizione 2026/2027" data-testid="new-campaign-title" />
 
@@ -885,7 +885,7 @@ export default function PreseasonAdmin() {
         elevation: 8,
         zIndex: 100,
       }}
-      onPress={() => { setEditingId(null); setNewTitle(''); setNewSeason(''); setNewDesc(''); setNewOpenDate(''); setNewCloseDate(''); setShowCreate(true); }}
+      onPress={() => { setEditingId(null); setNewTitle(''); setNewSeason(''); setNewDesc(''); setNewEventInfo(''); setNewOpenDate(''); setNewCloseDate(''); setShowCreate(true); }}
       data-testid="create-campaign-btn"
     >
       <Ionicons name="add-circle" size={22} color="#fff" />
