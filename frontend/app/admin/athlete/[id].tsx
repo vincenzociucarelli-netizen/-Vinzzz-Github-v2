@@ -3215,21 +3215,45 @@ export default function AdminAthleteDetail() {
                         return new Date(d).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
                       } catch { return d; }
                     };
+                    // 🆕 26/06/2026 — Dual-role: aggiungo compenso Coach al TOTALE RAS lato admin
+                    // (replica della logica già presente nel CompensationSummaryCard lato user).
+                    const coachMonthly = Number(linkedCoach?.monthly_compensation || 0);
+                    const coachStart = linkedCoach?.contract_start_date || '';
+                    const coachEnd = linkedCoach?.contract_end_date || '';
+                    let coachMonths = 0;
+                    if (coachStart && coachEnd) {
+                      try {
+                        const s = new Date(coachStart);
+                        const e = new Date(coachEnd);
+                        coachMonths = (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth()) + 1;
+                        if (coachMonths < 0) coachMonths = 0;
+                      } catch {}
+                    }
+                    const coachBaseTotal = coachMonths * coachMonthly;
+                    const grandTotalWithCoach = (breakdown.grandTotal || 0) + coachBaseTotal;
                     return (
                       <View style={{ marginTop: 12 }}>
                         {/* Comunicazione RAS - Totale Contratto */}
                         <View style={{ backgroundColor: '#E3F2FD', borderRadius: 10, padding: 14, marginBottom: 12 }}>
                           <Text style={{ color: '#1565C0', fontWeight: 'bold', fontSize: 14 }}>📄 Comunicazione RAS - Totale Contratto</Text>
-                          <Text style={{ color: '#1565C0', fontSize: 12, marginTop: 4 }}>
-                            Dal {fmtDate(athlete.contract_start_date)} al {fmtDate(athlete.contract_end_date)} = {breakdown.monthsInContract} mesi
-                          </Text>
                           <View style={{ marginTop: 8 }}>
-                            <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.thisClubTotal)}</Text></Text>
-                            <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({breakdown.monthsInContract} mesi × {formatCurrency(monthly)})</Text>
+                            {/* Compenso Atleta: cifra → periodo → (mesi × tariffa) */}
+                            <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 2 }}>• Compenso Atleta: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.thisClubTotal)}</Text></Text>
+                            <Text style={{ fontSize: 12, color: '#1565C0', marginLeft: 10 }}>Dal {fmtDate(athlete.contract_start_date)} al {fmtDate(athlete.contract_end_date)} = {breakdown.monthsInContract} mesi</Text>
+                            <Text style={{ fontSize: 11, color: '#1565C0', marginLeft: 10, marginBottom: 6 }}>({breakdown.monthsInContract} mesi × {formatCurrency(monthly)})</Text>
+                            {coachBaseTotal > 0 && (
+                              <>
+                                <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 2 }}>• Compenso Coach: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(coachBaseTotal)}</Text></Text>
+                                {(coachStart && coachEnd) && (
+                                  <Text style={{ fontSize: 12, color: '#1565C0', marginLeft: 10 }}>Dal {fmtDate(coachStart)} al {fmtDate(coachEnd)} = {coachMonths} mesi</Text>
+                                )}
+                                <Text style={{ fontSize: 11, color: '#1565C0', marginLeft: 10, marginBottom: 6 }}>({coachMonths} mesi × {formatCurrency(coachMonthly)})</Text>
+                              </>
+                            )}
                             {(breakdown.supplementaryTotal || 0) > 0 && (
                               <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.supplementaryTotal || 0)}</Text></Text>
                             )}
-                            <Text style={{ fontSize: 15, color: '#1565C0', fontWeight: 'bold', marginTop: 4, borderTopWidth: 1, borderTopColor: '#90CAF9', paddingTop: 8 }}>• TOTALE RAS: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.grandTotal)}</Text></Text>
+                            <Text style={{ fontSize: 15, color: '#1565C0', fontWeight: 'bold', marginTop: 4, borderTopWidth: 1, borderTopColor: '#90CAF9', paddingTop: 8 }}>• TOTALE RAS: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(grandTotalWithCoach)}</Text></Text>
                           </View>
                         </View>
 
@@ -3244,21 +3268,42 @@ export default function AdminAthleteDetail() {
                           if (!yb) return null;
                           const isStartYear = idx === 0;
                           const dateRange = isStartYear ? `${yb.startMonth}-Dic` : `Gen-${yb.endMonth}`;
+                          // 🆕 26/06/2026 — Mesi di contratto Coach in questo anno solare
+                          let coachMonthsThisYear = 0;
+                          if (coachMonthly > 0 && coachStart && coachEnd) {
+                            try {
+                              const cs = new Date(coachStart);
+                              const ce = new Date(coachEnd);
+                              const csIdx = cs.getFullYear() * 12 + cs.getMonth();
+                              const ceIdx = ce.getFullYear() * 12 + ce.getMonth();
+                              for (let m = 0; m < 12; m++) {
+                                const mIdx = y * 12 + m;
+                                if (mIdx >= csIdx && mIdx <= ceIdx) coachMonthsThisYear += 1;
+                              }
+                            } catch {}
+                          }
+                          const coachYearAmount = coachMonthsThisYear * coachMonthly;
                           return (
                             <View key={y} style={{ backgroundColor: yb.exceedsThreshold5k ? '#FFF8E1' : '#E8F5E9', borderRadius: 10, padding: 14, marginBottom: 12 }}>
                               <Text style={{ color: yb.exceedsThreshold5k ? '#F57F17' : '#2E7D32', fontWeight: 'bold', fontSize: 14 }}>
                                 {yb.exceedsThreshold5k ? '⚠️' : '✅'} Anno {y} ({dateRange}: {yb.months} mesi)
                               </Text>
                               <View style={{ marginTop: 8 }}>
-                                <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yb.baseAmount || yb.total)}</Text></Text>
-                                <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({yb.months} mesi × {formatCurrency(monthly)})</Text>
+                                {yb.priorCompensation > 0 && (
+                                  <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Compenso pregresso: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yb.priorCompensation)}</Text></Text>
+                                )}
+                                <Text style={{ fontSize: 13, color: '#333', marginBottom: 2 }}>• Compenso Atleta: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yb.baseAmount || yb.total)}</Text></Text>
+                                <Text style={{ fontSize: 11, color: '#1565C0', marginLeft: 10, marginBottom: 6 }}>({yb.months} mesi × {formatCurrency(monthly)})</Text>
+                                {coachYearAmount > 0 && (
+                                  <>
+                                    <Text style={{ fontSize: 13, color: '#333', marginBottom: 2 }}>• Compenso Coach: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(coachYearAmount)}</Text></Text>
+                                    <Text style={{ fontSize: 11, color: '#1565C0', marginLeft: 10, marginBottom: 6 }}>🎒 ({coachMonthsThisYear} mesi × {formatCurrency(coachMonthly)})</Text>
+                                  </>
+                                )}
                                 {(yb.supplementary || 0) > 0 && (
                                   <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yb.supplementary || 0)}</Text></Text>
                                 )}
-                                {yb.priorCompensation > 0 && (
-                                  <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yb.priorCompensation)}</Text></Text>
-                                )}
-                                <Text style={{ fontSize: 15, color: yb.exceedsThreshold15k ? '#8E44AD' : yb.exceedsThreshold5k ? '#F57F17' : '#2E7D32', fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yb.grandTotal)}</Text></Text>
+                                <Text style={{ fontSize: 15, color: yb.exceedsThreshold15k ? '#8E44AD' : yb.exceedsThreshold5k ? '#F57F17' : '#2E7D32', fontWeight: 'bold', marginTop: 4 }}>• Totale Anno: <Text style={{ fontWeight: 'bold' }}>{formatCurrency((yb.grandTotal || 0) + coachYearAmount)}</Text></Text>
                               </View>
                             </View>
                           );

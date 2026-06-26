@@ -15344,14 +15344,21 @@ async def get_athlete_linked_coach(athlete_id: str, current_user = Depends(get_c
     if coach.get("assigned_teams"):
         teams = await db.teams.find({"id": {"$in": coach["assigned_teams"]}}, {"_id": 0, "id": 1, "name": 1}).to_list(20)
         team_names = [t.get("name", "") for t in teams]
+    # Sanitize email: rimuovi alias #ruolo per coerenza con Step C
+    coach_email_clean = coach.get("email", "")
+    if isinstance(coach_email_clean, str) and "#" in coach_email_clean:
+        coach_email_clean = coach_email_clean.split("#", 1)[0]
     return {
         "linked": True,
         "coach_user_id": coach["id"],
-        "coach_email": coach.get("email", ""),
+        "coach_email": coach_email_clean,
         "coach_name": coach.get("full_name", ""),
         "monthly_compensation": coach.get("monthly_compensation", 0),
         "assigned_teams": team_names,
         "coach_level": coach.get("coach_level", ""),
+        # 🆕 26/06/2026 — Date contratto coach (per replicare il blocco "Comunicazione RAS" lato admin)
+        "contract_start_date": coach.get("contract_start_date", ""),
+        "contract_end_date": coach.get("contract_end_date", ""),
     }
 
 
