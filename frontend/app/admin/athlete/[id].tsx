@@ -3226,7 +3226,9 @@ export default function AdminAthleteDetail() {
                           <View style={{ marginTop: 8 }}>
                             <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.thisClubTotal)}</Text></Text>
                             <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({breakdown.monthsInContract} mesi × {formatCurrency(monthly)})</Text>
-                            <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.supplementaryTotal || 0)}</Text></Text>
+                            {(breakdown.supplementaryTotal || 0) > 0 && (
+                              <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.supplementaryTotal || 0)}</Text></Text>
+                            )}
                             <Text style={{ fontSize: 15, color: '#1565C0', fontWeight: 'bold', marginTop: 4, borderTopWidth: 1, borderTopColor: '#90CAF9', paddingTop: 8 }}>• TOTALE RAS: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(breakdown.grandTotal)}</Text></Text>
                           </View>
                         </View>
@@ -3250,7 +3252,9 @@ export default function AdminAthleteDetail() {
                               <View style={{ marginTop: 8 }}>
                                 <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yb.baseAmount || yb.total)}</Text></Text>
                                 <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({yb.months} mesi × {formatCurrency(monthly)})</Text>
-                                <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yb.supplementary || 0)}</Text></Text>
+                                {(yb.supplementary || 0) > 0 && (
+                                  <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yb.supplementary || 0)}</Text></Text>
+                                )}
                                 {yb.priorCompensation > 0 && (
                                   <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yb.priorCompensation)}</Text></Text>
                                 )}
