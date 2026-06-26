@@ -1554,12 +1554,12 @@ export default function AthleteCompensation() {
                   
                   {/* Linear layout like Admin view */}
                   <View style={{ marginTop: 8 }}>
-                    <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text></Text>
+                    <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso Atleta: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text> <Text style={{ fontSize: 11, color: '#1565C0' }}>({summary.monthCount} mesi × {formatCurrency(profile?.monthly_compensation || 0)})</Text></Text>
                     {(summary.specialMonths?.length > 0 && (summary.supplementaryTotal || 0) > 0) && (
                       <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare ({summary.specialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(contractStartYear).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
                     )}
                     {(summary.coachYearlyTotal || 0) > 0 && (
-                      <Text style={{ fontSize: 13, color: '#7A5D00', marginBottom: 4 }}>• Compenso Coach 🎒 ({summary.coachMonthCount} mesi × {formatCurrency(dualRoleInfo?.coach?.monthly_compensation || 0)}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.coachYearlyTotal)}</Text></Text>
+                      <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso Coach 🎒 ({summary.coachMonthCount} mesi × {formatCurrency(dualRoleInfo?.coach?.monthly_compensation || 0)}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.coachYearlyTotal)}</Text></Text>
                     )}
                     {summary.priorCompensation > 0 && (
                       <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.priorCompensation)}</Text></Text>
@@ -1592,12 +1592,12 @@ export default function AthleteCompensation() {
                   
                   {/* Linear layout like Admin view */}
                   <View style={{ marginTop: 8 }}>
-                    <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text></Text>
+                    <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso Atleta: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text> <Text style={{ fontSize: 11, color: '#1565C0' }}>({summary.monthCount} mesi × {formatCurrency(profile?.monthly_compensation || 0)})</Text></Text>
                     {(summary.specialMonths?.length > 0 && (summary.supplementaryTotal || 0) > 0) && (
                       <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare ({summary.specialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(contractEndYear).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
                     )}
                     {(summary.coachYearlyTotal || 0) > 0 && (
-                      <Text style={{ fontSize: 13, color: '#7A5D00', marginBottom: 4 }}>• Compenso Coach 🎒 ({summary.coachMonthCount} mesi × {formatCurrency(dualRoleInfo?.coach?.monthly_compensation || 0)}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.coachYearlyTotal)}</Text></Text>
+                      <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso Coach 🎒 ({summary.coachMonthCount} mesi × {formatCurrency(dualRoleInfo?.coach?.monthly_compensation || 0)}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.coachYearlyTotal)}</Text></Text>
                     )}
                     {(summary.externalTotal || 0) > 0 && (
                       <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Compensi esterni (altre ASD): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.externalTotal)}</Text></Text>
