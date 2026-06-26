@@ -4440,9 +4440,9 @@ class CoachAssignTeams(BaseModel):
 
 @api_router.get("/users/dirigenti")
 async def get_dirigenti(current_user = Depends(get_current_user)):
-    """Get all dirigenti (admin, viewer, dirigente roles) - accessible by admin, coach and collaboratore"""
-    if current_user["role"] not in [UserRole.ADMIN, UserRole.COACH, UserRole.COLLABORATORE]:
-        raise HTTPException(status_code=403, detail="Solo admin, coach e collaboratori possono vedere i dirigenti")
+    """Get all dirigenti (admin, viewer, dirigente roles) - accessible by admin, coach, collaboratore e atleti"""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.COACH, UserRole.COLLABORATORE, UserRole.ATHLETE]:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     
     society_id = current_user.get("society_id")
     
@@ -4556,8 +4556,8 @@ async def get_coaches(current_user = Depends(get_current_user)):
 
 @api_router.get("/users/fellow-coaches")
 async def get_fellow_coaches(current_user = Depends(get_current_user)):
-    """Get all coaches in the same society - accessible by coaches."""
-    if current_user["role"] not in [UserRole.ADMIN, UserRole.COACH, "viewer"]:
+    """Get all coaches in the same society - accessible by coaches, collaboratori e atleti."""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.COACH, UserRole.COLLABORATORE, UserRole.ATHLETE, "viewer"]:
         raise HTTPException(status_code=403, detail="Non autorizzato")
     
     society_id = current_user.get("society_id")
@@ -4575,6 +4575,7 @@ async def get_fellow_coaches(current_user = Depends(get_current_user)):
             "email": c.get("email", ""),
             "phone": c.get("phone"),
             "qualification": c.get("qualification"),
+            "assigned_teams": c.get("assigned_teams", []),
         })
     return result
 
@@ -4582,7 +4583,7 @@ async def get_fellow_coaches(current_user = Depends(get_current_user)):
 
 @api_router.get("/users/collaboratorees")
 async def get_collaboratorees(current_user = Depends(get_current_user)):
-    """Get all collaboratori"""
+    """Get all collaboratori - accessible by admin and viewer (admin payload)"""
     if current_user["role"] not in [UserRole.ADMIN, "viewer"]:
         raise HTTPException(status_code=403, detail="Solo admin può vedere i collaboratori")
     
@@ -4623,6 +4624,33 @@ async def get_collaboratorees(current_user = Depends(get_current_user)):
             "phone": c.get("phone", ""),
         })
     
+    return result
+
+
+# 🆕 26/06/2026 — Endpoint "light" per la lista collaboratori, accessibile a Coach e Atleti
+# (per i widget "Staff" lato dashboard). Payload minimo per WhatsApp/contatti.
+@api_router.get("/users/staff-collaboratori")
+async def get_staff_collaboratori(current_user = Depends(get_current_user)):
+    """Get all collaboratori in the same society - accessible by coach, collaboratori e atleti."""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.COACH, UserRole.COLLABORATORE, UserRole.ATHLETE, "viewer"]:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+
+    society_id = current_user.get("society_id")
+    collaboratori = await db.users.find({
+        "role": UserRole.COLLABORATORE,
+        "society_id": society_id,
+    }).to_list(500)
+
+    result = []
+    for c in collaboratori:
+        result.append({
+            "id": c["id"],
+            "full_name": c.get("full_name", ""),
+            "email": c.get("email", ""),
+            "phone": c.get("phone", ""),
+            "activity_type": c.get("activity_type"),
+            "assigned_teams": c.get("assigned_teams", []),
+        })
     return result
 
 @api_router.get("/users/parents")

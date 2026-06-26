@@ -57,6 +57,8 @@ export default function CoachScreen() {
   const [loading, setLoading] = useState(true);
   const [dirigenti, setDirigenti] = useState<Dirigente[]>([]);
   const [fellowCoaches, setFellowCoaches] = useState<Dirigente[]>([]);
+  // 🆕 26/06/2026 — Collaboratori assegnati alle squadre del coach
+  const [collaboratori, setCollaboratori] = useState<any[]>([]);
   const [waCount, setWaCount] = useState<number>(0);
   const [commitments, setCommitments] = useState<{
     today: any[];
@@ -175,12 +177,23 @@ export default function CoachScreen() {
     }
   };
 
+  // 🆕 26/06/2026 — Carica i collaboratori della società (filtrati lato UI sulle squadre del coach)
+  const loadCollaboratori = async () => {
+    try {
+      const response = await api.get('/users/staff-collaboratori');
+      setCollaboratori(response.data || []);
+    } catch (error) {
+      console.error('Error loading collaboratori:', error);
+    }
+  };
+
   useEffect(() => {
     loadTeams();
     loadPendingDeletions();
     loadCommitments();
     loadDirigenti();
     loadFellowCoaches();
+    loadCollaboratori();
     // WhatsApp pending counter
     api.get('/admin/whatsapp/pending-count')
       .then((r: any) => setWaCount(r?.data?.count || 0))
@@ -1473,6 +1486,65 @@ export default function CoachScreen() {
               })
             )}
           </View>
+
+          {/* 🆕 26/06/2026 — Collaboratori assegnati alle squadre del coach */}
+          {(() => {
+            const myTeamIds = new Set(teams.map((t: any) => t.id));
+            const myCollabs = (collaboratori || []).filter((c: any) => {
+              const assigned: string[] = c.assigned_teams || [];
+              return assigned.some((tid: string) => myTeamIds.has(tid));
+            });
+            if (myCollabs.length === 0) return null;
+            return (
+              <View style={[styles.societySection, { marginTop: 16 }]}>
+                <Text style={styles.sectionTitle}>Collaboratori delle tue squadre</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Assegnati alle squadre che alleni
+                </Text>
+                {myCollabs.map((col: any) => {
+                  const fullName = col.full_name || '';
+                  const initials = fullName ? fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : '?';
+                  const colorList = ['#00838F', '#2E7D32', '#6A1B9A', '#D84315', '#4527A0', '#AD1457'];
+                  const colorIndex = fullName ? fullName.charCodeAt(0) % colorList.length : 0;
+                  const bgColor = colorList[colorIndex];
+                  return (
+                    <View key={col.id} style={styles.dirigenteCard} data-testid={`collab-card-${col.id}`}>
+                      <View style={styles.dirigenteInfo}>
+                        <View style={[styles.dirigentePhotoPlaceholder, { backgroundColor: bgColor }]}>
+                          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>{initials}</Text>
+                        </View>
+                        <View style={styles.dirigenteDetails}>
+                          <Text style={styles.dirigenteName}>{fullName}</Text>
+                          {col.activity_type ? (
+                            <Text style={styles.dirigenteRole}>{col.activity_type}</Text>
+                          ) : null}
+                          <Text style={styles.dirigenteEmail}>{col.email}</Text>
+                          {col.phone ? (
+                            <View style={styles.phoneRow}>
+                              <TouchableOpacity onPress={() => Linking.openURL(`tel:${col.phone}`)}>
+                                <Text style={styles.dirigentePhone}>{col.phone}</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={[styles.whatsappBtnSmall, { backgroundColor: '#25D366' }]}
+                                onPress={() => {
+                                  const phone = col.phone.replace(/\D/g, '');
+                                  const phoneWithCountry = phone.startsWith('39') ? phone : `39${phone}`;
+                                  Linking.openURL(`https://wa.me/${phoneWithCountry}`);
+                                }}
+                              >
+                                <Ionicons name="logo-whatsapp" size={14} color="#fff" />
+                                <Text style={styles.whatsappBtnTextSmall}>WhatsApp</Text>
+                              </TouchableOpacity>
+                            </View>
+                          ) : null}
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            );
+          })()}
 
           <View style={{ height: 40 }} />
         </ScrollView>

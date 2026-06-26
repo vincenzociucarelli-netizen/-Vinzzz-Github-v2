@@ -95,6 +95,13 @@ export default function AthleteScreen() {
   
   // Certificate and Coach state
   const [coachInfo, setCoachInfo] = useState<any>(null);
+  // 🆕 26/06/2026 — Staff della società (per widget "Da Fare")
+  const [dirigenti, setDirigenti] = useState<any[]>([]);
+  const [societyCoaches, setSocietyCoaches] = useState<any[]>([]);
+  const [collaboratori, setCollaboratori] = useState<any[]>([]);
+  // Dual-role detection (atleta + coach): se vero, mostro TUTTO lo staff della società
+  // (senza filtro per squadra), come fa il coach standard nella tab "Società".
+  const [isDualRoleCoach, setIsDualRoleCoach] = useState<boolean>(false);
   const [certIssueDateAthlete, setCertIssueDateAthlete] = useState('');
   const [certValidityMonthsAthlete, setCertValidityMonthsAthlete] = useState('12');
   const [savingCertAthlete, setSavingCertAthlete] = useState(false);
@@ -329,6 +336,33 @@ export default function AthleteScreen() {
 
   useEffect(() => {
     loadData();
+  }, []);
+
+  // 🆕 26/06/2026 — Carica lo staff della società (per widget "Da Fare"):
+  // dirigenti + coach + collaboratori, e flag dual-role per decidere se filtrare per squadra.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [dRes, cRes, kRes, drRes] = await Promise.allSettled([
+          api.get('/users/dirigenti'),
+          api.get('/users/fellow-coaches'),
+          api.get('/users/staff-collaboratori'),
+          api.get('/auth/me/dual-role-info'),
+        ]);
+        if (cancelled) return;
+        if (dRes.status === 'fulfilled') setDirigenti(dRes.value.data || []);
+        if (cRes.status === 'fulfilled') setSocietyCoaches(cRes.value.data || []);
+        if (kRes.status === 'fulfilled') setCollaboratori(kRes.value.data || []);
+        if (drRes.status === 'fulfilled') {
+          const data = drRes.value.data || {};
+          setIsDualRoleCoach(!!(data.is_dual_role && data.coach));
+        }
+      } catch (e) {
+        // ignore: widget è opzionale
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const onRefresh = () => {
@@ -1181,6 +1215,96 @@ export default function AthleteScreen() {
         )}
       </View>
 
+      {/* 🆕 26/06/2026 — Staff della Squadra (Dirigenti + Coach + Collaboratori)
+          Se l'atleta è DUAL-ROLE coach, mostra TUTTO lo staff della società senza filtro;
+          altrimenti filtra per il team_id dell'atleta (gli assegnati alla squadra). */}
+      {(() => {
+        const myTeamId = profile?.team_id;
+        const showAll = isDualRoleCoach;
+        const filterAssigned = (list: any[]) => {
+          if (showAll) return list;
+          if (!myTeamId) return [];
+          return list.filter((u: any) => Array.isArray(u.assigned_teams) && u.assigned_teams.includes(myTeamId));
+        };
+        const dirFiltered = filterAssigned(dirigenti || []);
+        const coachFiltered = filterAssigned(societyCoaches || []);
+        const colFiltered = filterAssigned(collaboratori || []);
+        const hasAny = dirFiltered.length + coachFiltered.length + colFiltered.length > 0;
+        if (!hasAny) return null;
+
+        const renderContact = (u: any, palette: string[], roleLabel?: string) => {
+          const fullName = u.full_name || '';
+          const initials = fullName ? fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : '?';
+          const colorIndex = fullName ? fullName.charCodeAt(0) % palette.length : 0;
+          const bgColor = palette[colorIndex];
+          return (
+            <View key={u.id} style={athleteStaffStyles.card} data-testid={`staff-contact-${u.id}`}>
+              <View style={[athleteStaffStyles.avatar, { backgroundColor: bgColor }]}>
+                <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>{initials}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={athleteStaffStyles.name}>{fullName}</Text>
+                {(u.qualification || u.activity_type || roleLabel) ? (
+                  <Text style={athleteStaffStyles.role}>{u.qualification || u.activity_type || roleLabel}</Text>
+                ) : null}
+                {u.email ? <Text style={athleteStaffStyles.email}>{u.email}</Text> : null}
+                {u.phone ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                    <TouchableOpacity onPress={() => Platform.OS === 'web' ? window.open(`tel:${u.phone}`) : null}>
+                      <Text style={athleteStaffStyles.phone}>{u.phone}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={athleteStaffStyles.waBtn}
+                      onPress={() => {
+                        const phone = u.phone.replace(/\D/g, '');
+                        const phoneWithCountry = phone.startsWith('39') ? phone : `39${phone}`;
+                        const url = `https://wa.me/${phoneWithCountry}`;
+                        if (Platform.OS === 'web') window.open(url, '_blank');
+                      }}
+                    >
+                      <Ionicons name="logo-whatsapp" size={12} color="#fff" />
+                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>WhatsApp</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+              </View>
+            </View>
+          );
+        };
+
+        return (
+          <View style={{ marginHorizontal: 16, marginTop: 12 }}>
+            <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, borderLeftWidth: 4, borderLeftColor: '#1565C0' }}>
+              <Text style={athleteStaffStyles.title}>
+                {showAll ? '🏢 Staff della Società' : '🏐 Staff della tua Squadra'}
+              </Text>
+              <Text style={athleteStaffStyles.subtitle}>
+                {showAll ? 'Tutto lo staff (dual-role)' : 'Allenatori, dirigenti e collaboratori assegnati alla tua squadra'}
+              </Text>
+
+              {coachFiltered.length > 0 && (
+                <View style={{ marginTop: 10 }}>
+                  <Text style={athleteStaffStyles.sectionLabel}>Allenatori</Text>
+                  {coachFiltered.map((c: any) => renderContact(c, ['#E65100', '#1565C0', '#2E7D32', '#6A1B9A', '#00838F'], 'Allenatore'))}
+                </View>
+              )}
+              {dirFiltered.length > 0 && (
+                <View style={{ marginTop: 10 }}>
+                  <Text style={athleteStaffStyles.sectionLabel}>Dirigenti</Text>
+                  {dirFiltered.map((d: any) => renderContact(d, ['#1565C0', '#6A1B9A', '#00838F', '#2E7D32', '#D84315'], 'Dirigente'))}
+                </View>
+              )}
+              {colFiltered.length > 0 && (
+                <View style={{ marginTop: 10 }}>
+                  <Text style={athleteStaffStyles.sectionLabel}>Collaboratori</Text>
+                  {colFiltered.map((c: any) => renderContact(c, ['#00838F', '#2E7D32', '#6A1B9A', '#D84315', '#4527A0'], 'Collaboratore'))}
+                </View>
+              )}
+            </View>
+          </View>
+        );
+      })()}
+
       {/* 🚫 23/02/2026 — Link "Dati Personali" RIMOSSO da fondo pagina:
           esiste già la sezione apposita /athlete/profile raggiungibile dall'header. */}
 
@@ -1199,6 +1323,21 @@ export default function AthleteScreen() {
     </View>
   );
 }
+
+// 🆕 26/06/2026 — Stili widget "Staff" su Da Fare atleta
+const athleteStaffStyles = StyleSheet.create({
+  title: { fontSize: 16, fontWeight: '800', color: '#0D47A1' },
+  subtitle: { fontSize: 12, color: '#666', marginTop: 2 },
+  sectionLabel: { fontSize: 13, fontWeight: '700', color: '#37474F', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 },
+  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F8FA', borderRadius: 10, padding: 10, marginBottom: 8, gap: 12 },
+  avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  name: { fontSize: 14, fontWeight: '700', color: '#111' },
+  role: { fontSize: 12, color: '#6A1B9A', fontWeight: '600' },
+  email: { fontSize: 11, color: '#555' },
+  phone: { fontSize: 12, color: '#1565C0', fontWeight: '700' },
+  waBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#25D366', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+});
+
 
 const styles = StyleSheet.create({
   container: {
