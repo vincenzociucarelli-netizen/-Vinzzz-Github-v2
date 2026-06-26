@@ -72,19 +72,27 @@ export const DualRoleHubBanner: React.FC<Props> = ({ personId, currentRole }) =>
 
   return (
     <View style={styles.container} testID="dual-role-switcher">
-      {/* Riga 1: nome + CF (anagrafica essenziale unica) */}
-      <View style={styles.headerRow}>
+      {/* Riga 1: nome + CF (anagrafica essenziale unica) — nome CLICCABILE per saltare all'altro ruolo */}
+      <TouchableOpacity
+        style={styles.headerRow}
+        onPress={() => { currentRole === 'coach' ? goAtleta() : goCoach(); }}
+        testID="dual-role-name-link"
+        activeOpacity={0.7}
+      >
         <View style={styles.iconCircle}>
-          <Ionicons name="people" size={18} color="#fff" />
+          <Ionicons name="swap-horizontal" size={18} color="#fff" />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.titleLabel}>Persona con Doppio Ruolo</Text>
+          <Text style={styles.titleLabel}>
+            {currentRole === 'coach' ? `Anche Atleta · clicca per la scheda →` : `Anche ${coachLabel} · clicca per la scheda →`}
+          </Text>
           {fullName ? <Text style={styles.nameLabel}>{fullName.toUpperCase()}</Text> : null}
           {data.profile.fiscal_code ? (
             <Text style={styles.cfLabel}>{data.profile.fiscal_code}</Text>
           ) : null}
         </View>
-      </View>
+        <Ionicons name="arrow-forward-circle" size={28} color="#3F51B5" />
+      </TouchableOpacity>
 
       {/* Riga 2: 3 tab — Atleta / Coach / Hub Anagrafica */}
       <View style={styles.tabsRow}>
