@@ -1561,15 +1561,8 @@ export default function CoachScreen() {
           </Text>
         </View>
 
-        {/* Profile Link - Moved up, highlighted */}
-        <TouchableOpacity
-          style={styles.profileLink}
-          onPress={() => router.push('/coach/profile')}
-        >
-          <Ionicons name="person-circle" size={28} color="#1565C0" />
-          <Text style={styles.profileLinkText}>Il Mio Profilo</Text>
-          <Ionicons name="chevron-forward" size={22} color="#1565C0" />
-        </TouchableOpacity>
+        {/* 🚫 26/06/2026 — Banner "Il Mio Profilo" RIMOSSO: duplicava il bottone
+            "Anagrafica" già presente in alto nella tab navigation. */}
 
         {/* IMPEGNI Section */}
         <View style={styles.commitmentsSection}>
