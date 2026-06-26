@@ -3203,6 +3203,75 @@ export default function AdminAthleteDetail() {
                   );
                 })()}
 
+                  {/* 🆕 26/06/2026 — Card "Compenso Atleta" + "Compenso Coach" (replica della vista USER foto 2U) */}
+                  {athlete?.contract_start_date && athlete?.contract_end_date && (() => {
+                    const fmtDate2 = (d: string) => {
+                      try { return new Date(d).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
+                      catch { return d; }
+                    };
+                    const monthlyA = Number(athlete?.monthly_compensation || 0);
+                    const monthlyC = Number(linkedCoach?.monthly_compensation || 0);
+                    const teamLabel = athlete?.team_name || '';
+                    const coachTeamLabel = (linkedCoach?.assigned_teams || []).join(', ');
+                    const priorAmount = Number(athlete?.other_annual_compensation || 0);
+                    return (
+                      <View style={{ marginTop: 8 }}>
+                        {/* Card Compenso Atleta — bordo arancione */}
+                        <View style={{ backgroundColor: '#FFF8E1', borderRadius: 10, padding: 14, marginBottom: 10, borderLeftWidth: 4, borderLeftColor: '#FB8C00' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <Text style={{ fontSize: 20 }}>🏐</Text>
+                            <Text style={{ fontSize: 15, fontWeight: '700', color: '#111' }}>Compenso Atleta</Text>
+                            {teamLabel ? (
+                              <Text style={{ fontSize: 12, color: '#555' }}>{teamLabel}</Text>
+                            ) : null}
+                          </View>
+                          <Text style={{ fontSize: 22, fontWeight: '700', color: '#1565C0' }}>
+                            {formatCurrency(monthlyA)} <Text style={{ fontSize: 14, color: '#777', fontWeight: '500' }}>/ mese</Text>
+                          </Text>
+                          <Text style={{ fontSize: 12, color: '#777', fontStyle: 'italic', marginTop: 2 }}>
+                            dal {fmtDate2(athlete.contract_start_date)} al {fmtDate2(athlete.contract_end_date)}
+                          </Text>
+                          {priorAmount > 0 && (
+                            <View style={{ marginTop: 10, backgroundColor: '#fff', borderRadius: 8, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                              <Text style={{ fontSize: 18 }}>📋</Text>
+                              <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: 12, color: '#555' }}>Pregresso dichiarato al {fmtDate2(athlete.contract_start_date.replace(/(\d{4})-(\d{2})-(\d{2})/, (m: string, y: string, mo: string) => {
+                                  const d = new Date(`${y}-${mo}-01`); d.setDate(d.getDate() - 1);
+                                  return d.toISOString().split('T')[0];
+                                }))}</Text>
+                                <Text style={{ fontSize: 15, fontWeight: '700', color: '#111', marginTop: 2 }}>{formatCurrency(priorAmount)}</Text>
+                              </View>
+                              <View style={{ backgroundColor: '#FFF3E0', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                <Ionicons name="lock-closed" size={11} color="#FB8C00" />
+                                <Text style={{ fontSize: 10, color: '#FB8C00', fontWeight: '600' }}>Solo admin</Text>
+                              </View>
+                            </View>
+                          )}
+                        </View>
+                        {/* Card Compenso Coach — bordo viola (solo se dual-role) */}
+                        {monthlyC > 0 && (
+                          <View style={{ backgroundColor: '#F3E5F5', borderRadius: 10, padding: 14, marginBottom: 10, borderLeftWidth: 4, borderLeftColor: '#8E44AD' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                              <Text style={{ fontSize: 20 }}>🏋️‍♂️</Text>
+                              <Text style={{ fontSize: 15, fontWeight: '700', color: '#111' }}>Compenso Coach</Text>
+                              {coachTeamLabel ? (
+                                <Text style={{ fontSize: 12, color: '#555' }}>{coachTeamLabel}</Text>
+                              ) : null}
+                            </View>
+                            <Text style={{ fontSize: 22, fontWeight: '700', color: '#6A1B9A' }}>
+                              {formatCurrency(monthlyC)} <Text style={{ fontSize: 14, color: '#777', fontWeight: '500' }}>/ mese</Text>
+                            </Text>
+                            {(linkedCoach?.contract_start_date && linkedCoach?.contract_end_date) && (
+                              <Text style={{ fontSize: 12, color: '#777', fontStyle: 'italic', marginTop: 2 }}>
+                                dal {fmtDate2(linkedCoach.contract_start_date)} al {fmtDate2(linkedCoach.contract_end_date)}
+                              </Text>
+                            )}
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })()}
+
                   {/* 🆕 22/02/2026 — Blocco "Comunicazione RAS" + "Calcolo per Anno Solare" stile Pedretti Pedro */}
                   {athlete?.contract_start_date && athlete?.contract_end_date && (() => {
                     const breakdown = getAthleteCompensationBreakdown();
@@ -4667,6 +4736,25 @@ export default function AdminAthleteDetail() {
               {(() => {
                 const MONTH_NAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
                 const onlySigned = signedReceipts.filter((r: any) => r.receipt_signed);
+                // 🆕 26/06/2026 — Importo previsto per mese (Atleta + Coach se dual-role attivo nel mese)
+                const atletaMonthly = Number(athlete?.monthly_compensation || 0);
+                const coachMonthly = Number(linkedCoach?.monthly_compensation || 0);
+                const coachStart = linkedCoach?.contract_start_date || '';
+                const coachEnd = linkedCoach?.contract_end_date || '';
+                const computeMonthExpected = (y: number, m: number): number => {
+                  let coachExtra = 0;
+                  if (coachMonthly > 0 && coachStart && coachEnd) {
+                    try {
+                      const cs = new Date(coachStart);
+                      const ce = new Date(coachEnd);
+                      const csIdx = cs.getFullYear() * 12 + cs.getMonth();
+                      const ceIdx = ce.getFullYear() * 12 + ce.getMonth();
+                      const mIdx = y * 12 + (m - 1);
+                      if (mIdx >= csIdx && mIdx <= ceIdx) coachExtra = coachMonthly;
+                    } catch {}
+                  }
+                  return atletaMonthly + coachExtra;
+                };
 
                 // Calcola soglie cronologiche per anno
                 const sortedForCalc = [...onlySigned].sort((a: any, b: any) => {
@@ -4723,6 +4811,7 @@ export default function AdminAthleteDetail() {
 
                 return sortedAllMonths.map(({ year, month, receipt }, index: number) => {
                   if (!receipt) {
+                    const expected = computeMonthExpected(year, month);
                     return (
                       <View
                         key={`empty-${year}-${month}`}
@@ -4737,12 +4826,17 @@ export default function AdminAthleteDetail() {
                         }}
                       >
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Text style={{ fontSize: 14, fontWeight: '500', color: '#9E9E9E' }}>
-                            {MONTH_NAMES[month]} {year}
-                          </Text>
-                          <Text style={{ fontSize: 12, color: '#9E9E9E', fontStyle: 'italic' }}>
-                            Non firmata
-                          </Text>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 14, fontWeight: '500', color: '#616161' }}>
+                              {MONTH_NAMES[month]} {year}
+                            </Text>
+                            <Text style={{ fontSize: 11, color: '#9E9E9E', fontStyle: 'italic' }}>Non firmata</Text>
+                          </View>
+                          {expected > 0 && (
+                            <Text style={{ fontSize: 14, fontWeight: '700', color: '#1565C0' }}>
+                              {formatCurrency(expected)}
+                            </Text>
+                          )}
                         </View>
                       </View>
                     );
