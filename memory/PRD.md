@@ -15,6 +15,19 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+## 🎯 26/06/2026 — WhatsApp OpenGraph dinamico per pre-iscrizioni ✅
+
+**Problema**: Il link di pre-iscrizione condiviso su WhatsApp mostrava "RegistraTEAM" come titolo (statico in `index.html` Expo Web SPA), confondendo le famiglie che non conoscono il nome del software.
+
+**Soluzione**: Endpoint backend `GET /api/preseason/share/{campaign_id}` che serve HTML con meta tag OpenGraph dinamici (nome società come titolo, logo società come immagine, descrizione campagna). Per gli utenti reali è incluso un redirect immediato (`<meta http-equiv="refresh">` + `window.location.replace()`) verso la route SPA `/preseason/{id}`. I crawler (WhatsApp/Facebook/Telegram/Twitter) non eseguono JS, quindi vedono solo le meta tag corrette.
+
+**File modificati**:
+- `/app/backend/server.py` — nuovo endpoint `/preseason/share/{campaign_id}` + helper `_html_escape`
+- `/app/frontend/app/admin/preseason.tsx` — `getPublicLink()` ora ritorna l'URL `/api/preseason/share/...` invece di `/preseason/...`
+
+**Verifica curl WhatsApp UA**: `<title>` e `og:title` = "Pallavolo Perugia SSD a RL", `og:image` = logo PNG (200 OK, 339KB).
+
+
 ## 🎯 27/02/2026 — Smart Coach + Allievo Allenatore abbinabili ✅
 
 ### Modifica logica Livello/Grado Coach

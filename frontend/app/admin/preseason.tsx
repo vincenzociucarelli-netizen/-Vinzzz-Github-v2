@@ -294,8 +294,11 @@ export default function PreseasonAdmin() {
   };
 
   const getPublicLink = (campaignId: string) => {
+    // Use the backend /api/preseason/share/{id} endpoint so WhatsApp/social crawlers
+    // get the dynamic OpenGraph preview with the society name & logo. Regular users
+    // are auto-redirected to the SPA route /preseason/{id}.
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    return `${baseUrl}/preseason/${campaignId}`;
+    return `${baseUrl}/api/preseason/share/${campaignId}`;
   };
 
   const copyLink = (campaignId: string) => {

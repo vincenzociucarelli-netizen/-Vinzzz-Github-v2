@@ -29416,6 +29416,133 @@ def _convert_date_to_italian(date_str: str) -> str:
     return date_str
 
 
+def _html_escape(s: str) -> str:
+    """Minimal HTML escaping for meta tag content."""
+    if not s:
+        return ""
+    return (
+        str(s)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&#39;")
+    )
+
+
+@api_router.api_route("/preseason/share/{campaign_id}", methods=["GET", "HEAD"])
+async def get_preseason_share_page(campaign_id: str, request: Request):
+    """Public HTML page with dynamic OpenGraph meta tags for WhatsApp/social crawlers.
+
+    - Crawlers (WhatsApp/Facebook/Twitter/Telegram) read the OG tags and display
+      the society name + logo instead of the generic "RegistraTEAM" branding.
+    - Regular browsers are redirected (meta refresh + JS) to the SPA route
+      `/preseason/{campaign_id}` for the real landing page.
+    """
+    campaign = await db.preseason_campaigns.find_one({"id": campaign_id}, {"_id": 0})
+
+    # Fallback HTML if campaign missing / inactive — keep generic but still redirect
+    if not campaign:
+        redirect_url = f"/preseason/{campaign_id}"
+        return HTMLResponse(
+            content=(
+                f"<!DOCTYPE html><html><head><meta charset='utf-8'>"
+                f"<meta http-equiv='refresh' content='0; url={redirect_url}'>"
+                f"<title>Pre-iscrizione</title></head>"
+                f"<body><script>window.location.replace('{redirect_url}');</script>"
+                f"<p>Reindirizzamento in corso...</p></body></html>"
+            ),
+            status_code=200,
+        )
+
+    # Resolve society for branding
+    society = None
+    if campaign.get("society_id"):
+        society = await db.settings.find_one({"society_id": campaign["society_id"], "type": "society"})
+    if not society:
+        society = await db.settings.find_one({"type": "society"})
+
+    society_name = campaign.get("society_name") or (society.get("name") if society else "") or "Società Sportiva"
+    has_logo = bool(society and society.get("logo"))
+    society_id = (society or {}).get("society_id") or campaign.get("society_id") or ""
+
+    # Construct absolute logo URL (required by WhatsApp/OG crawlers)
+    scheme = request.headers.get("x-forwarded-proto") or request.url.scheme or "https"
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
+    base_url = f"{scheme}://{host}" if host else ""
+    logo_url = ""
+    if has_logo and base_url:
+        if society_id:
+            logo_url = f"{base_url}/api/settings/society/logo.png?society_id={society_id}"
+        else:
+            logo_url = f"{base_url}/api/settings/society/logo.png"
+
+    # Description: prefer campaign title + season, fall back to description / event_info
+    title_parts = []
+    if campaign.get("title"):
+        title_parts.append(campaign["title"])
+    if campaign.get("season"):
+        title_parts.append(campaign["season"])
+    page_title = society_name
+    og_description = " — ".join(title_parts) if title_parts else "Pre-iscrizione aperta. Clicca per maggiori informazioni."
+    if campaign.get("description"):
+        og_description = campaign["description"]
+
+    redirect_url = f"/preseason/{campaign_id}"
+    share_url = f"{base_url}{redirect_url}" if base_url else redirect_url
+
+    # Escape all dynamic strings
+    e_title = _html_escape(page_title)
+    e_society = _html_escape(society_name)
+    e_desc = _html_escape(og_description)
+    e_logo = _html_escape(logo_url)
+    e_share = _html_escape(share_url)
+    e_redirect = _html_escape(redirect_url)
+
+    og_image_block = (
+        f'<meta property="og:image" content="{e_logo}" />\n'
+        f'    <meta property="og:image:secure_url" content="{e_logo}" />\n'
+        f'    <meta property="og:image:type" content="image/png" />\n'
+        f'    <meta property="og:image:width" content="512" />\n'
+        f'    <meta property="og:image:height" content="512" />\n'
+        f'    <meta name="twitter:image" content="{e_logo}" />\n'
+        if logo_url else ""
+    )
+
+    html = f"""<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{e_title}</title>
+    <meta name="description" content="{e_desc}" />
+
+    <!-- OpenGraph (WhatsApp / Facebook / Telegram) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="{e_society}" />
+    <meta property="og:title" content="{e_title}" />
+    <meta property="og:description" content="{e_desc}" />
+    <meta property="og:url" content="{e_share}" />
+    <meta property="og:locale" content="it_IT" />
+    {og_image_block}
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{e_title}" />
+    <meta name="twitter:description" content="{e_desc}" />
+
+    <!-- Redirect human visitors to the SPA landing page -->
+    <meta http-equiv="refresh" content="0; url={e_redirect}" />
+    <link rel="canonical" href="{e_share}" />
+</head>
+<body>
+    <script>window.location.replace({e_redirect!r});</script>
+    <noscript><p>Apri <a href="{e_redirect}">{e_society}</a></p></noscript>
+</body>
+</html>"""
+
+    return HTMLResponse(content=html, status_code=200, headers={"Cache-Control": "public, max-age=120"})
+
+
 
 @api_router.post("/preseason/public/{campaign_id}/respond")
 async def submit_public_preseason_response(campaign_id: str, data: PreseasonResponse):
