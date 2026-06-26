@@ -29396,6 +29396,7 @@ async def get_public_campaign_info(campaign_id: str):
         "title": campaign.get("title", ""),
         "season": campaign.get("season", ""),
         "description": campaign.get("description", ""),
+        "event_info": campaign.get("event_info", ""),
         "society_name": society_name,
         "society_logo": logo,
         "sport_name": sport_name,

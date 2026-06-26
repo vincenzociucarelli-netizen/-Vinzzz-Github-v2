@@ -167,19 +167,19 @@ export default function PublicPreseasonForm() {
             {campaign?.title}
           </Text>
           {campaign?.description ? (
-            <Text style={{ fontSize: 15, color: '#333', marginTop: 12, textAlign: 'center', lineHeight: 22, maxWidth: 500, paddingHorizontal: 8 }} data-testid="campaign-description-public">
+            <Text style={{ fontSize: 15, color: '#333', marginTop: 12, textAlign: 'left', lineHeight: 22, maxWidth: 500, paddingHorizontal: 8, alignSelf: 'stretch' }} data-testid="campaign-description-public">
               {campaign.description}
             </Text>
           ) : null}
 
-          {/* 🆕 27/02/2026 — Info evento (Open Day, indicazioni, contatti) — riquadro evidenziato */}
+          {/* 🆕 27/02/2026 — Info evento (Open Day, indicazioni, contatti) — riquadro evidenziato, allineato a sinistra */}
           {(campaign as any)?.event_info ? (
-            <View style={{ backgroundColor: '#FFF8E1', borderLeftWidth: 4, borderLeftColor: '#F9A825', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14, maxWidth: 500, alignSelf: 'center' }} data-testid="campaign-event-info-public">
+            <View style={{ backgroundColor: '#FFF8E1', borderLeftWidth: 4, borderLeftColor: '#F9A825', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, marginTop: 14, maxWidth: 500, alignSelf: 'stretch' }} data-testid="campaign-event-info-public">
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                 <Ionicons name="information-circle" size={18} color="#F9A825" />
                 <Text style={{ fontSize: 13, fontWeight: '700', color: '#7A5D00' }}>Informazioni importanti</Text>
               </View>
-              <Text style={{ fontSize: 14, color: '#5D4400', lineHeight: 20 }}>
+              <Text style={{ fontSize: 14, color: '#5D4400', lineHeight: 20, textAlign: 'left' }}>
                 {(campaign as any).event_info}
               </Text>
             </View>
