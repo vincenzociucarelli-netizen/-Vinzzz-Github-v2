@@ -1364,50 +1364,12 @@ export default function AthleteCompensation() {
 
         {/* 🆕 24/02/2026 — Card "💰 Compensi" RIMOSSA: sostituita da CompensationSummaryCard sopra */}
 
-        {/* Coach Name and Profile Link */}
-        <View style={{ marginBottom: 16, backgroundColor: '#fff', borderRadius: 12, padding: 16 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-            <Ionicons name="person-circle" size={50} color="#007AFF" />
-            <View style={{ marginLeft: 12, flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
-                <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#333' }}>{profile?.full_name || 'Coach'}</Text>
-                {profile?.identity_verified && (
-                  <View
-                    data-testid="identity-verified-badge"
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      marginLeft: 8,
-                      paddingHorizontal: 8,
-                      paddingVertical: 3,
-                      backgroundColor: '#E8F5E9',
-                      borderColor: '#2E7D32',
-                      borderWidth: 1,
-                      borderRadius: 12,
-                    }}
-                  >
-                    <Ionicons name="shield-checkmark" size={14} color="#2E7D32" />
-                    <Text style={{ marginLeft: 4, fontSize: 11, color: '#2E7D32', fontWeight: '700' }}>
-                      Identità verificata
-                    </Text>
-                  </View>
-                )}
-              </View>
-              {/* 🚫 16/06/2026 — "Compenso mensile" inline RIMOSSO: ora c'è il banner dedicato qui sotto */}
-            </View>
-          </View>
-
-          {/* 🚫 16/06/2026 — "Periodo Contratto" RIMOSSO: spostato dentro il banner Atleta qui sotto */}
-
-          <TouchableOpacity 
-            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0F8FF', padding: 10, borderRadius: 8 }}
-            onPress={() => router.push('/athlete/profile')}
-          >
-            <Ionicons name="create-outline" size={18} color="#007AFF" />
-            <Text style={{ marginLeft: 8, color: '#007AFF', fontWeight: '500' }}>Il Mio Profilo</Text>
-            <Text style={{ flex: 1, textAlign: 'right', fontSize: 12, color: '#666' }}>Dati personali, documento e IBAN</Text>
-            <Ionicons name="chevron-forward" size={18} color="#007AFF" style={{ marginLeft: 8 }} />
-          </TouchableOpacity>
+        {/* 🆕 27/02/2026 — Header "Riepilogo Compensi" (sostituisce nome/cognome + bottone "Il Mio Profilo" che è già in tab Anagrafica) */}
+        <View style={{ marginBottom: 16, backgroundColor: '#fff', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }} data-testid="riepilogo-compensi-header">
+          <Ionicons name="document-text" size={26} color="#1565C0" />
+          <Text style={{ marginLeft: 10, fontSize: 17, fontWeight: '700', color: '#1565C0' }}>
+            Riepilogo Compensi
+          </Text>
         </View>
 
         {/* 🆕 17/06/2026 — Banner Atleta: Squadra + Compenso + Periodo Contratto */}
@@ -1549,7 +1511,13 @@ export default function AthleteCompensation() {
                     <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({totalMonths} mesi × {formatCurrency(profile?.monthly_compensation || 0)})</Text>
                     {coachBase > 0 && (
                       <>
-                        <Text style={{ fontSize: 13, color: '#1565C0', marginTop: 6, marginBottom: 4 }}>• Compenso Coach: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(coachBase)}</Text></Text>
+                        {/* 🆕 27/02/2026 — Date contratto Coach (separate da quelle Atleta) */}
+                        {(dualRoleInfo?.coach?.contract_start_date && dualRoleInfo?.coach?.contract_end_date) && (
+                          <Text style={{ fontSize: 12, color: '#7A5D00', marginTop: 8, fontStyle: 'italic' }}>
+                            Dal {formatContractDate(dualRoleInfo.coach.contract_start_date)} al {formatContractDate(dualRoleInfo.coach.contract_end_date)} = {coachMonths} mesi (Coach)
+                          </Text>
+                        )}
+                        <Text style={{ fontSize: 13, color: '#1565C0', marginTop: 4, marginBottom: 4 }}>• Compenso Coach: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(coachBase)}</Text></Text>
                         <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({coachMonths} mesi × {formatCurrency(dualRoleInfo!.coach!.monthly_compensation)})</Text>
                       </>
                     )}
