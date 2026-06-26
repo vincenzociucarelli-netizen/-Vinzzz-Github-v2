@@ -29443,13 +29443,14 @@ async def get_preseason_share_page(campaign_id: str, request: Request):
 
     # Fallback HTML if campaign missing / inactive — keep generic but still redirect
     if not campaign:
-        redirect_url = f"/preseason/{campaign_id}"
+        frontend_base = (os.environ.get("FRONTEND_URL") or "").rstrip("/")
+        redirect_url = f"{frontend_base}/preseason/{campaign_id}" if frontend_base else f"/preseason/{campaign_id}"
         return HTMLResponse(
             content=(
                 f"<!DOCTYPE html><html><head><meta charset='utf-8'>"
                 f"<meta http-equiv='refresh' content='0; url={redirect_url}'>"
                 f"<title>Pre-iscrizione</title></head>"
-                f"<body><script>window.location.replace('{redirect_url}');</script>"
+                f"<body><script>window.location.replace({redirect_url!r});</script>"
                 f"<p>Reindirizzamento in corso...</p></body></html>"
             ),
             status_code=200,
@@ -29466,16 +29467,21 @@ async def get_preseason_share_page(campaign_id: str, request: Request):
     has_logo = bool(society and society.get("logo"))
     society_id = (society or {}).get("society_id") or campaign.get("society_id") or ""
 
-    # Construct absolute logo URL (required by WhatsApp/OG crawlers)
+    # Construct absolute logo URL (required by WhatsApp/OG crawlers).
+    # The logo is served by THIS backend host, so use request host for og:image.
     scheme = request.headers.get("x-forwarded-proto") or request.url.scheme or "https"
     host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
-    base_url = f"{scheme}://{host}" if host else ""
+    backend_url = f"{scheme}://{host}" if host else ""
     logo_url = ""
-    if has_logo and base_url:
+    if has_logo and backend_url:
         if society_id:
-            logo_url = f"{base_url}/api/settings/society/logo.png?society_id={society_id}"
+            logo_url = f"{backend_url}/api/settings/society/logo.png?society_id={society_id}"
         else:
-            logo_url = f"{base_url}/api/settings/society/logo.png"
+            logo_url = f"{backend_url}/api/settings/society/logo.png"
+
+    # Frontend (SPA) base URL — used for the human redirect target and og:url.
+    # Falls back to backend host only if FRONTEND_URL is not configured.
+    frontend_url = (os.environ.get("FRONTEND_URL") or "").rstrip("/") or backend_url
 
     # Description: prefer campaign title + season, fall back to description / event_info
     title_parts = []
@@ -29488,8 +29494,8 @@ async def get_preseason_share_page(campaign_id: str, request: Request):
     if campaign.get("description"):
         og_description = campaign["description"]
 
-    redirect_url = f"/preseason/{campaign_id}"
-    share_url = f"{base_url}{redirect_url}" if base_url else redirect_url
+    redirect_url = f"{frontend_url}/preseason/{campaign_id}" if frontend_url else f"/preseason/{campaign_id}"
+    share_url = redirect_url
 
     # Escape all dynamic strings
     e_title = _html_escape(page_title)

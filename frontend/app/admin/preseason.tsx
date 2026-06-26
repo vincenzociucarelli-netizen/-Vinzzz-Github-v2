@@ -297,7 +297,11 @@ export default function PreseasonAdmin() {
     // Use the backend /api/preseason/share/{id} endpoint so WhatsApp/social crawlers
     // get the dynamic OpenGraph preview with the society name & logo. Regular users
     // are auto-redirected to the SPA route /preseason/{id}.
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    // IMPORTANT: in production Vercel rewrites ALL paths to index.html, so /api/* on
+    // the frontend domain returns "Unmatched Route". We MUST point to the backend
+    // (Render) URL directly via EXPO_PUBLIC_BACKEND_URL.
+    const backend = (process.env.EXPO_PUBLIC_BACKEND_URL || '').replace(/\/+$/, '');
+    const baseUrl = backend || (typeof window !== 'undefined' ? window.location.origin : '');
     return `${baseUrl}/api/preseason/share/${campaignId}`;
   };
 
