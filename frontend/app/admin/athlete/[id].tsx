@@ -3364,6 +3364,41 @@ export default function AdminAthleteDetail() {
                         <Ionicons name="add-circle-outline" size={20} color="#fff" />
                         <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Genera Quietanza Personalizzata</Text>
                       </TouchableOpacity>
+
+                      {/* 🆕 26/06/2026 — Zona di servizio: reset quietanze (azione distruttiva, doppia conferma) */}
+                      <View style={{ marginTop: 16, backgroundColor: '#FFEBEE', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#EF9A9A' }}>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: '#B71C1C', marginBottom: 2 }}>🛠️ Zona di servizio (azioni distruttive)</Text>
+                        <Text style={{ fontSize: 11, color: '#7F0000', marginBottom: 10, lineHeight: 16 }}>
+                          Cancella TUTTE le quietanze e le firme di questo atleta. Usalo solo per ripristinare account di test. Azione irreversibile.
+                        </Text>
+                        <TouchableOpacity
+                          data-testid="admin-reset-all-receipts-btn"
+                          onPress={async () => {
+                            const athleteName = athlete ? `${athlete.first_name} ${athlete.last_name}` : 'questo atleta';
+                            const c1 = typeof window !== 'undefined' && window.confirm(
+                              `⚠️ ATTENZIONE\n\nStai per CANCELLARE TUTTE le quietanze e le firme di ${athleteName}.\n\nL'azione è IRREVERSIBILE.\n\nVuoi continuare?`
+                            );
+                            if (!c1) return;
+                            const c2 = typeof window !== 'undefined' && window.prompt('Per confermare digita esattamente: RESET');
+                            if (c2 !== 'RESET') {
+                              showAlert('Annullato', 'Reset non confermato.');
+                              return;
+                            }
+                            try {
+                              const res = await api.delete(`/admin/athletes/${id}/compensation/reset-all`);
+                              const deleted = (res.data as any)?.deleted_receipts ?? (res.data as any)?.deleted ?? '?';
+                              showAlert('✅ Fatto', `Quietanze cancellate: ${deleted}. Ricarico i dati.`);
+                              loadData();
+                            } catch (err: any) {
+                              showAlert('Errore', err?.response?.data?.detail || 'Errore durante il reset');
+                            }
+                          }}
+                          style={{ backgroundColor: '#C62828', borderRadius: 8, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                        >
+                          <Ionicons name="trash" size={16} color="#fff" />
+                          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Resetta tutte le quietanze</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   )}
 

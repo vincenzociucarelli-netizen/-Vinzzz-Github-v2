@@ -242,51 +242,6 @@ export default function AthleteCompensation() {
     }
   };
 
-  // 🆕 26/06/2026 — Reset completo quietanze/firme atleta (azione amministrativa di test).
-  // Doppia conferma per evitare disastri: prompt() richiede di digitare "RESET" per confermare.
-  const [resetting, setResetting] = useState(false);
-  const handleResetAllReceipts = async () => {
-    const athleteName = athlete ? `${athlete.first_name} ${athlete.last_name}` : 'questo atleta';
-    if (Platform.OS === 'web') {
-      const c1 = window.confirm(
-        `⚠️ ATTENZIONE\n\nStai per CANCELLARE TUTTE le quietanze e le firme di ${athleteName}.\n\nL'azione è IRREVERSIBILE.\n\nVuoi continuare?`
-      );
-      if (!c1) return;
-      const c2 = window.prompt(
-        `Per confermare, digita esattamente: RESET\n\n(maiuscolo, senza spazi)`
-      );
-      if (c2 !== 'RESET') {
-        showAlert('Annullato', 'Reset non confermato.');
-        return;
-      }
-    } else {
-      // Mobile: doppio Alert
-      const confirmed = await new Promise<boolean>((resolve) => {
-        Alert.alert(
-          '⚠️ Reset quietanze',
-          `Cancellare TUTTE le quietanze e firme di ${athleteName}? Azione IRREVERSIBILE.`,
-          [
-            { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
-            { text: 'Conferma', style: 'destructive', onPress: () => resolve(true) },
-          ]
-        );
-      });
-      if (!confirmed) return;
-    }
-
-    setResetting(true);
-    try {
-      const res = await api.delete(`/admin/athletes/${id}/compensation/reset-all`);
-      const deleted = res.data?.deleted_receipts ?? res.data?.deleted ?? '?';
-      showAlert('✅ Fatto', `Quietanze cancellate: ${deleted}. La pagina verrà ricaricata.`);
-      await loadData();
-    } catch (error: any) {
-      showAlert('Errore', error.response?.data?.detail || 'Errore durante il reset');
-    } finally {
-      setResetting(false);
-    }
-  };
-
   const formatDateDisplay = (dateStr: string) => {
     if (!dateStr) return '';
     // Handle ISO datetime format (e.g., 2024-09-01T00:00:00)
@@ -947,40 +902,6 @@ export default function AthleteCompensation() {
             </View>
           </View>
         )}
-
-        {/* 🆕 26/06/2026 — Azioni amministrative avanzate (zona pericolosa) */}
-        <View style={{ backgroundColor: '#FFEBEE', borderRadius: 12, padding: 16, marginTop: 16, borderWidth: 1, borderColor: '#EF9A9A' }}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: '#B71C1C', marginBottom: 4 }}>
-            🛠️ Zona di servizio (azioni distruttive)
-          </Text>
-          <Text style={{ fontSize: 12, color: '#7F0000', marginBottom: 12, lineHeight: 18 }}>
-            Cancella TUTTE le quietanze e firme di questo atleta. Usalo solo per ripristinare un account di test. L'azione è irreversibile.
-          </Text>
-          <TouchableOpacity
-            onPress={handleResetAllReceipts}
-            disabled={resetting}
-            data-testid="admin-reset-all-receipts-btn"
-            style={{
-              backgroundColor: resetting ? '#EF9A9A' : '#C62828',
-              paddingVertical: 12,
-              paddingHorizontal: 16,
-              borderRadius: 8,
-              alignItems: 'center',
-              flexDirection: 'row',
-              justifyContent: 'center',
-              gap: 8,
-            }}
-          >
-            {resetting ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Ionicons name="trash" size={18} color="#fff" />
-            )}
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
-              {resetting ? 'Reset in corso...' : 'Resetta tutte le quietanze'}
-            </Text>
-          </TouchableOpacity>
-        </View>
 
         {/* Info Section - Same as Coach/Dirigente */}
         <View style={styles.infoSection}>
