@@ -3213,12 +3213,11 @@ export default function AdminAthleteDetail() {
                     const monthlyC = Number(linkedCoach?.monthly_compensation || 0);
                     const teamLabel = athlete?.team_name || '';
                     const coachTeamLabel = (linkedCoach?.assigned_teams || []).join(', ');
-                    const priorAmount = Number(athlete?.other_annual_compensation || 0);
                     return (
                       <View style={{ marginTop: 8 }}>
                         {/* Card Compenso Atleta — bordo arancione */}
                         <View style={{ backgroundColor: '#FFF8E1', borderRadius: 10, padding: 14, marginBottom: 10, borderLeftWidth: 4, borderLeftColor: '#FB8C00' }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
                             <Text style={{ fontSize: 20 }}>🏐</Text>
                             <Text style={{ fontSize: 15, fontWeight: '700', color: '#111' }}>Compenso Atleta</Text>
                             {teamLabel ? (
@@ -3228,30 +3227,20 @@ export default function AdminAthleteDetail() {
                           <Text style={{ fontSize: 22, fontWeight: '700', color: '#1565C0' }}>
                             {formatCurrency(monthlyA)} <Text style={{ fontSize: 14, color: '#777', fontWeight: '500' }}>/ mese</Text>
                           </Text>
-                          <Text style={{ fontSize: 12, color: '#777', fontStyle: 'italic', marginTop: 2 }}>
-                            dal {fmtDate2(athlete.contract_start_date)} al {fmtDate2(athlete.contract_end_date)}
-                          </Text>
-                          {priorAmount > 0 && (
-                            <View style={{ marginTop: 10, backgroundColor: '#fff', borderRadius: 8, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                              <Text style={{ fontSize: 18 }}>📋</Text>
-                              <View style={{ flex: 1 }}>
-                                <Text style={{ fontSize: 12, color: '#555' }}>Pregresso dichiarato al {fmtDate2(athlete.contract_start_date.replace(/(\d{4})-(\d{2})-(\d{2})/, (m: string, y: string, mo: string) => {
-                                  const d = new Date(`${y}-${mo}-01`); d.setDate(d.getDate() - 1);
-                                  return d.toISOString().split('T')[0];
-                                }))}</Text>
-                                <Text style={{ fontSize: 15, fontWeight: '700', color: '#111', marginTop: 2 }}>{formatCurrency(priorAmount)}</Text>
-                              </View>
-                              <View style={{ backgroundColor: '#FFF3E0', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                <Ionicons name="lock-closed" size={11} color="#FB8C00" />
-                                <Text style={{ fontSize: 10, color: '#FB8C00', fontWeight: '600' }}>Solo admin</Text>
-                              </View>
-                            </View>
-                          )}
+                          {/* 🆕 26/06/2026 — Periodo come badge evidenziato (uniforme con card header) */}
+                          <View style={{ marginTop: 8, alignSelf: 'flex-start', backgroundColor: '#FFE0B2', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Text style={{ fontSize: 14 }}>📅</Text>
+                            <Text style={{ fontSize: 13, color: '#E65100', fontWeight: '700' }}>
+                              {fmtDate2(athlete.contract_start_date)} → {fmtDate2(athlete.contract_end_date)}
+                            </Text>
+                          </View>
+                          {/* 🚫 26/06/2026 — Box "Pregresso dichiarato" RIMOSSO dalla card Compenso Atleta:
+                              era duplicato (già presente nella card header in cima). */}
                         </View>
                         {/* Card Compenso Coach — bordo viola (solo se dual-role) */}
                         {monthlyC > 0 && (
                           <View style={{ backgroundColor: '#F3E5F5', borderRadius: 10, padding: 14, marginBottom: 10, borderLeftWidth: 4, borderLeftColor: '#8E44AD' }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
                               <Text style={{ fontSize: 20 }}>🏋️‍♂️</Text>
                               <Text style={{ fontSize: 15, fontWeight: '700', color: '#111' }}>Compenso Coach</Text>
                               {coachTeamLabel ? (
@@ -3262,9 +3251,12 @@ export default function AdminAthleteDetail() {
                               {formatCurrency(monthlyC)} <Text style={{ fontSize: 14, color: '#777', fontWeight: '500' }}>/ mese</Text>
                             </Text>
                             {(linkedCoach?.contract_start_date && linkedCoach?.contract_end_date) && (
-                              <Text style={{ fontSize: 12, color: '#777', fontStyle: 'italic', marginTop: 2 }}>
-                                dal {fmtDate2(linkedCoach.contract_start_date)} al {fmtDate2(linkedCoach.contract_end_date)}
-                              </Text>
+                              <View style={{ marginTop: 8, alignSelf: 'flex-start', backgroundColor: '#E1BEE7', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <Text style={{ fontSize: 14 }}>📅</Text>
+                                <Text style={{ fontSize: 13, color: '#6A1B9A', fontWeight: '700' }}>
+                                  {fmtDate2(linkedCoach.contract_start_date)} → {fmtDate2(linkedCoach.contract_end_date)}
+                                </Text>
+                              </View>
                             )}
                           </View>
                         )}
@@ -3479,40 +3471,8 @@ export default function AdminAthleteDetail() {
                         <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Genera Quietanza Personalizzata</Text>
                       </TouchableOpacity>
 
-                      {/* 🆕 26/06/2026 — Zona di servizio: reset quietanze (azione distruttiva, doppia conferma) */}
-                      <View style={{ marginTop: 16, backgroundColor: '#FFEBEE', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#EF9A9A' }}>
-                        <Text style={{ fontSize: 13, fontWeight: '700', color: '#B71C1C', marginBottom: 2 }}>🛠️ Zona di servizio (azioni distruttive)</Text>
-                        <Text style={{ fontSize: 11, color: '#7F0000', marginBottom: 10, lineHeight: 16 }}>
-                          Cancella TUTTE le quietanze e le firme di questo atleta. Usalo solo per ripristinare account di test. Azione irreversibile.
-                        </Text>
-                        <TouchableOpacity
-                          data-testid="admin-reset-all-receipts-btn"
-                          onPress={async () => {
-                            const athleteName = athlete ? `${athlete.first_name} ${athlete.last_name}` : 'questo atleta';
-                            const c1 = typeof window !== 'undefined' && window.confirm(
-                              `⚠️ ATTENZIONE\n\nStai per CANCELLARE TUTTE le quietanze e le firme di ${athleteName}.\n\nL'azione è IRREVERSIBILE.\n\nVuoi continuare?`
-                            );
-                            if (!c1) return;
-                            const c2 = typeof window !== 'undefined' && window.prompt('Per confermare digita esattamente: RESET');
-                            if (c2 !== 'RESET') {
-                              showAlert('Annullato', 'Reset non confermato.');
-                              return;
-                            }
-                            try {
-                              const res = await api.delete(`/admin/athletes/${id}/compensation/reset-all`);
-                              const deleted = (res.data as any)?.deleted_receipts ?? (res.data as any)?.deleted ?? '?';
-                              showAlert('✅ Fatto', `Quietanze cancellate: ${deleted}. Ricarico i dati.`);
-                              loadData();
-                            } catch (err: any) {
-                              showAlert('Errore', err?.response?.data?.detail || 'Errore durante il reset');
-                            }
-                          }}
-                          style={{ backgroundColor: '#C62828', borderRadius: 8, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                        >
-                          <Ionicons name="trash" size={16} color="#fff" />
-                          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Resetta tutte le quietanze</Text>
-                        </TouchableOpacity>
-                      </View>
+                      {/* 🚫 26/06/2026 — "Zona di servizio (reset quietanze)" RIMOSSA su richiesta utente.
+                          Era stata aggiunta per resettare account di test, ma non serve in produzione. */}
                     </View>
                   )}
 
