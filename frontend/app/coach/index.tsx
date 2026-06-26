@@ -1276,24 +1276,8 @@ export default function CoachScreen() {
       {/* 🆕 Switch dual-role: Coach ↔ Atleta (visibile solo se collegato) */}
       <SwitchAccountButton />
 
-      {/* 🆕 17/06/2026 — Accesso diretto alla pagina "Compensi Sportivi"
-          (richiesto da utente: link spostato dal profilo alla dashboard per UX migliore). */}
-      <TouchableOpacity
-        style={styles.compensationQuickLink}
-        onPress={() => router.push('/coach/compensation')}
-        data-testid="coach-compensation-quick-link"
-        testID="coach-compensation-quick-link"
-        activeOpacity={0.85}
-      >
-        <View style={styles.compensationQuickLinkIconBox}>
-          <Ionicons name="cash" size={22} color="#fff" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.compensationQuickLinkTitle}>Vai a Compensi Sportivi</Text>
-          <Text style={styles.compensationQuickLinkSubtitle}>Quietanze, soglie e calendario pagamenti</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={22} color="#fff" />
-      </TouchableOpacity>
+      {/* 🚫 26/06/2026 — Banner "Vai a Compensi Sportivi" RIMOSSO: duplicava il bottone
+          "Compensi" già presente in alto nella tab navigation. */}
 
       {/* Banner richieste cancellazione in attesa */}
       {pendingDeletions.length > 0 && (

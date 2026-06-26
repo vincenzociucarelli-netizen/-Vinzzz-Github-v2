@@ -1193,8 +1193,27 @@ export default function AthleteCompensation() {
     const status = getMonthStatus(month, displayYear);
     // Use matchesMonth for legacy support
     const record = records.find(r => matchesMonth(r.month, month) && r.year === displayYear);
-    // Use record amount if exists, otherwise use profile's monthly compensation
-    const monthlyAmount = record?.amount_gross || record?.amount || profile?.monthly_compensation || 0;
+    // 🆕 26/06/2026 — Dual-role: se l'utente è anche Coach e il mese ricade nel
+    // contratto Coach, l'importo mensile dell'Atleta DEVE includere anche il
+    // compenso Coach (es. Atleta €1750 + Coach €300 = €2050). Per le quietanze
+    // già firmate uso il valore salvato nel DB (record.amount); per i mesi
+    // ancora da firmare calcolo dinamicamente la somma.
+    let coachExtra = 0;
+    if (dualRoleInfo?.coach && (dualRoleInfo.coach.monthly_compensation || 0) > 0) {
+      const cStartStr = dualRoleInfo.coach.contract_start_date;
+      const cEndStr = dualRoleInfo.coach.contract_end_date;
+      if (cStartStr && cEndStr) {
+        const cStart = new Date(cStartStr);
+        const cEnd = new Date(cEndStr);
+        const cStartIdx = cStart.getFullYear() * 12 + cStart.getMonth();
+        const cEndIdx = cEnd.getFullYear() * 12 + cEnd.getMonth();
+        const monthIdx = displayYear * 12 + (month - 1);
+        if (monthIdx >= cStartIdx && monthIdx <= cEndIdx) {
+          coachExtra = dualRoleInfo.coach.monthly_compensation || 0;
+        }
+      }
+    }
+    const monthlyAmount = (record?.amount_gross || record?.amount) ?? ((profile?.monthly_compensation || 0) + coachExtra);
     
     // Check if this month is after threshold was crossed IN THE SAME YEAR (for highlighting)
     // Uses PROJECTED cumulative (signed + unsigned) so the user can see in advance
@@ -1436,31 +1455,9 @@ export default function AthleteCompensation() {
           </View>
         )}
 
-        {/* 🆕 17/06/2026 — Card "Dati Bancari" (spostata dal profilo). 
-            Logica: i dati bancari sono pertinenti ai compensi, non al profilo personale. */}
-        {(profile?.iban || profile?.account_holder || profile?.bank_name) && (
-          <View style={styles.bankCard} data-testid="bank-card-compensation">
-            <Text style={styles.bankCardTitle}>🏦 Dati Bancari</Text>
-            {profile?.account_holder ? (
-              <View style={styles.bankRow}>
-                <Text style={styles.bankLabel}>Intestatario</Text>
-                <Text style={styles.bankValue}>{profile.account_holder}</Text>
-              </View>
-            ) : null}
-            {profile?.iban ? (
-              <View style={styles.bankRow}>
-                <Text style={styles.bankLabel}>IBAN</Text>
-                <Text style={styles.bankValue}>{profile.iban}</Text>
-              </View>
-            ) : null}
-            {profile?.bank_name ? (
-              <View style={styles.bankRow}>
-                <Text style={styles.bankLabel}>Banca</Text>
-                <Text style={styles.bankValue}>{profile.bank_name}</Text>
-              </View>
-            ) : null}
-          </View>
-        )}
+        {/* 🚫 26/06/2026 — Card "Dati Bancari" RIMOSSA da qui: spostata definitivamente
+            in /athlete/profile (Anagrafica). Per il dual-role Coach, in /coach/profile
+            mostriamo un link che porta alla pagina Anagrafica Atleta. */}
 
         {/* Year Summaries - Contract-based - ENHANCED STYLE */}
         {contractStartYear && contractEndYear && (

@@ -1201,9 +1201,130 @@ al trattamento dei propri dati personali per le finalità connesse alla propria 
 
         {/* 🚫 16/06/2026 — Periodo Contratto NON va qui (è in /athlete/compensation come banner). */}
 
-        {/* 🚫 16/06/2026 (sera) — Card "Dati Bancari" SPOSTATA in /athlete/compensation
-            (sezione Compensi con intestatario + IBAN + nome banca).
-            Logica: i dati bancari riguardano i compensi, non il profilo personale. */}
+        {/* 🆕 26/06/2026 — Card "Dati Bancari" ripristinata in Anagrafica Atleta
+            (per il dual-role Atleta+Coach, la pagina /coach/profile mostra un link
+            che porta qui, evitando duplicazione). */}
+        <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.collapsibleHeader}
+            onPress={() => toggleSection('bancari')}
+          >
+            <Text style={styles.cardTitle}>🏦 Dati Bancari</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              {!sectionsExpanded.bancari && (
+                <TouchableOpacity onPress={() => { toggleSection('bancari'); setEditingBank(true); }}>
+                  <Ionicons name="create" size={20} color="#007AFF" />
+                </TouchableOpacity>
+              )}
+              <Ionicons
+                name={sectionsExpanded.bancari ? 'chevron-up' : 'chevron-down'}
+                size={24}
+                color="#666"
+              />
+            </View>
+          </TouchableOpacity>
+
+          {sectionsExpanded.bancari && (
+            <View style={styles.collapsibleContent}>
+              {editingBank ? (
+                <>
+                  <Text style={styles.inputLabel}>IBAN</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editData.iban}
+                    onChangeText={(v) => setEditData({ ...editData, iban: v.toUpperCase() })}
+                    placeholder="es. IT60X0542811101000000123456"
+                    placeholderTextColor="#999"
+                    autoCapitalize="characters"
+                    data-testid="athlete-profile-iban-input"
+                  />
+
+                  <Text style={styles.inputLabel}>Intestatario Conto</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editData.account_holder}
+                    onChangeText={(v) => setEditData({ ...editData, account_holder: v.toUpperCase() })}
+                    placeholder="es. MARIO ROSSI"
+                    placeholderTextColor="#ccc"
+                    autoCapitalize="characters"
+                    data-testid="athlete-profile-account-holder-input"
+                  />
+
+                  <Text style={styles.inputLabel}>Nome Banca</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editData.bank_name}
+                    onChangeText={(v) => setEditData({ ...editData, bank_name: v.toUpperCase() })}
+                    placeholder="es. INTESA SANPAOLO"
+                    placeholderTextColor="#ccc"
+                    autoCapitalize="characters"
+                    data-testid="athlete-profile-bank-name-input"
+                  />
+
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                    <TouchableOpacity
+                      style={{ flex: 1, padding: 12, backgroundColor: '#f0f0f0', borderRadius: 8, alignItems: 'center' }}
+                      onPress={() => setEditingBank(false)}
+                    >
+                      <Text style={{ color: '#666' }}>Annulla</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[{ flex: 2, padding: 12, backgroundColor: '#34C759', borderRadius: 8, alignItems: 'center' }, savingBank && { opacity: 0.6 }]}
+                      data-testid="athlete-profile-save-bank-btn"
+                      onPress={async () => {
+                        setSavingBank(true);
+                        try {
+                          await api.patch('/users/me/bank-details', {
+                            iban: editData.iban,
+                            account_holder: editData.account_holder,
+                            bank_name: editData.bank_name,
+                          });
+                          setProfileData({
+                            ...profileData,
+                            iban: editData.iban,
+                            account_holder: editData.account_holder,
+                            bank_name: editData.bank_name,
+                          });
+                          setEditingBank(false);
+                          showAlert('Salvato', 'Dati bancari aggiornati');
+                        } catch (error: any) {
+                          showAlert('Errore', error.response?.data?.detail || 'Errore nel salvataggio');
+                        } finally {
+                          setSavingBank(false);
+                        }
+                      }}
+                      disabled={savingBank}
+                    >
+                      <Text style={{ color: '#fff', fontWeight: '600' }}>
+                        {savingBank ? 'Salvataggio...' : '💾 Salva'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.fieldLabel}>IBAN</Text>
+                      <Text style={styles.fieldValue}>{profileData.iban || '-'}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => setEditingBank(true)} data-testid="athlete-profile-edit-bank-btn">
+                      <Ionicons name="create" size={20} color="#007AFF" />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Intestatario</Text>
+                    <Text style={styles.fieldValue}>{profileData.account_holder || '-'}</Text>
+                  </View>
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Banca</Text>
+                    <Text style={styles.fieldValue}>{profileData.bank_name || '-'}</Text>
+                  </View>
+                </>
+              )}
+            </View>
+          )}
+        </View>
 
         {/* Versione Lite Section — RIPRISTINATA 27/02/2026 (utente vuole mantenerla) */}
         <View style={styles.card} data-testid="lite-access-section">

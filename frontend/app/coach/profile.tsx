@@ -105,6 +105,18 @@ export default function CoachProfile() {
   const [hasExceeded15000, setHasExceeded15000] = useState(false);
   const [editingBank, setEditingBank] = useState(false);
   const [savingBank, setSavingBank] = useState(false);
+
+  // 🆕 26/06/2026 — Se l'utente è dual-role (anche atleta), TUTTA l'anagrafica
+  // diventa un link verso /athlete/profile, per evitare duplicazioni e disallineamenti.
+  const [isDualRoleAthlete, setIsDualRoleAthlete] = useState<boolean | null>(null);
+  useEffect(() => {
+    api.get('/auth/me/dual-role-info')
+      .then((res) => {
+        const data = res.data || {};
+        setIsDualRoleAthlete(!!(data.is_dual_role && data.athlete));
+      })
+      .catch(() => setIsDualRoleAthlete(false));
+  }, []);
   
   // Change Password state
   const [showChangePassword, setShowChangePassword] = useState(false);
@@ -895,6 +907,35 @@ Società sportiva: ${societyName}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           keyboardShouldPersistTaps="handled"
         >
+          {/* 🆕 26/06/2026 — Dual-role (Coach+Atleta): nascondo TUTTA l'anagrafica
+              e mostro solo un banner-link che porta all'anagrafica Atleta (sorgente unica). */}
+          {isDualRoleAthlete ? (
+            <View style={{ padding: 16 }}>
+              <View style={{ backgroundColor: '#E3F2FD', borderRadius: 12, padding: 18, borderLeftWidth: 4, borderLeftColor: '#1565C0' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <Ionicons name="information-circle" size={22} color="#1565C0" />
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#0D47A1', flex: 1 }}>
+                    Anagrafica unificata
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 13, color: '#1565C0', lineHeight: 19, marginBottom: 14 }}>
+                  Sei sia <Text style={{ fontWeight: '700' }}>Atleta</Text> che <Text style={{ fontWeight: '700' }}>Coach</Text> in questa società. I tuoi dati personali, fiscali e bancari sono gestiti in un'unica anagrafica: quella della scheda Atleta.
+                </Text>
+                <TouchableOpacity
+                  onPress={() => router.push('/athlete/profile')}
+                  data-testid="coach-go-to-athlete-profile-btn"
+                  style={{ backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}
+                >
+                  <Ionicons name="person" size={20} color="#fff" />
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>
+                    Apri Anagrafica Atleta
+                  </Text>
+                  <Ionicons name="chevron-forward" size={18} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+          <>
           {/* Edit/Save Buttons */}
           <View style={styles.actionButtons}>
             {editing ? (
@@ -1503,6 +1544,8 @@ Società sportiva: ${societyName}
           )}
 
         <View style={{ height: 40 }} />
+        </>
+        )}
       </ScrollView>
       </KeyboardAvoidingView>
 
