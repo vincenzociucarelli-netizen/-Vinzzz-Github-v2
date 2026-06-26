@@ -778,7 +778,7 @@ export default function PreseasonAdmin() {
       {/* Create Campaign Modal */}
       <Modal visible={showCreate} animationType="fade" transparent onRequestClose={() => { setShowCreate(false); setEditingId(null); }}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 440, overflow: 'hidden' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 440, maxHeight: '90%', overflow: 'hidden' }}>
             <View style={{ backgroundColor: '#0D47A1', paddingVertical: 14, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>
                 {editingId ? 'Modifica Campagna Pre-iscrizione' : 'Nuova Campagna Pre-iscrizione'}
@@ -787,7 +787,7 @@ export default function PreseasonAdmin() {
                 <Ionicons name="close" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
-            <View style={{ padding: 20 }}>
+            <ScrollView style={{ flexGrow: 0 }} contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={true}>
               <Text style={lbl}>Titolo *</Text>
               <TextInput style={inp} value={newTitle} onChangeText={setNewTitle} placeholder="Es: Pre-iscrizione 2026/2027" data-testid="new-campaign-title" />
 
@@ -859,7 +859,7 @@ export default function PreseasonAdmin() {
                   {creating ? (editingId ? 'Salvataggio...' : 'Creazione...') : (editingId ? 'Salva Modifiche' : 'Crea Campagna')}
                 </Text>
               </TouchableOpacity>
-            </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
