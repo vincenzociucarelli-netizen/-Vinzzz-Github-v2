@@ -1471,13 +1471,6 @@ export default function AthleteCompensation() {
               <Text style={styles.unifiedBannerPeriod}>
                 📄 Comunicazione RAS - Totale Contratto
               </Text>
-              <Text style={{ color: '#1565C0', fontSize: 12, marginTop: 4 }}>
-                Dal {formatContractDate(profile?.contract_start_date || '')} al {formatContractDate(profile?.contract_end_date || '')} = {(() => {
-                  const months1 = getContractMonthsForYear(contractStartYear).length;
-                  const months2 = contractEndYear > contractStartYear ? getContractMonthsForYear(contractEndYear).length : 0;
-                  return months1 + months2;
-                })()} mesi
-              </Text>
               
               {/* Linear layout like Admin view */}
               {(() => {
@@ -1507,18 +1500,18 @@ export default function AthleteCompensation() {
 
                 return (
                   <View style={{ marginTop: 8 }}>
-                    <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso Atleta: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(totalBase)}</Text></Text>
-                    <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({totalMonths} mesi × {formatCurrency(profile?.monthly_compensation || 0)})</Text>
+                    {/* Compenso Atleta: cifra → periodo → (mesi × tariffa) */}
+                    <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 2 }}>• Compenso Atleta: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(totalBase)}</Text></Text>
+                    <Text style={{ fontSize: 12, color: '#1565C0', marginLeft: 10 }}>Dal {formatContractDate(profile?.contract_start_date || '')} al {formatContractDate(profile?.contract_end_date || '')} = {totalMonths} mesi</Text>
+                    <Text style={{ fontSize: 11, color: '#1565C0', marginLeft: 10, marginBottom: 6 }}>({totalMonths} mesi × {formatCurrency(profile?.monthly_compensation || 0)})</Text>
                     {coachBase > 0 && (
                       <>
-                        {/* 🆕 27/02/2026 — Date contratto Coach (separate da quelle Atleta) */}
+                        {/* Compenso Coach: cifra → periodo → (mesi × tariffa) */}
+                        <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 2 }}>• Compenso Coach: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(coachBase)}</Text></Text>
                         {(dualRoleInfo?.coach?.contract_start_date && dualRoleInfo?.coach?.contract_end_date) && (
-                          <Text style={{ fontSize: 12, color: '#7A5D00', marginTop: 8, fontStyle: 'italic' }}>
-                            Dal {formatContractDate(dualRoleInfo.coach.contract_start_date)} al {formatContractDate(dualRoleInfo.coach.contract_end_date)} = {coachMonths} mesi (Coach)
-                          </Text>
+                          <Text style={{ fontSize: 12, color: '#1565C0', marginLeft: 10 }}>Dal {formatContractDate(dualRoleInfo.coach.contract_start_date)} al {formatContractDate(dualRoleInfo.coach.contract_end_date)} = {coachMonths} mesi</Text>
                         )}
-                        <Text style={{ fontSize: 13, color: '#1565C0', marginTop: 4, marginBottom: 4 }}>• Compenso Coach: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(coachBase)}</Text></Text>
-                        <Text style={{ fontSize: 11, color: '#1565C0', marginBottom: 4 }}>  ({coachMonths} mesi × {formatCurrency(dualRoleInfo!.coach!.monthly_compensation)})</Text>
+                        <Text style={{ fontSize: 11, color: '#1565C0', marginLeft: 10, marginBottom: 6 }}>({coachMonths} mesi × {formatCurrency(dualRoleInfo!.coach!.monthly_compensation)})</Text>
                       </>
                     )}
                     {allSpecialMonths.length > 0 && totalSupplementary > 0 && (
@@ -1554,15 +1547,19 @@ export default function AthleteCompensation() {
                   
                   {/* Linear layout like Admin view */}
                   <View style={{ marginTop: 8 }}>
-                    <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso Atleta: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text> <Text style={{ fontSize: 11, color: '#1565C0' }}>({summary.monthCount} mesi × {formatCurrency(profile?.monthly_compensation || 0)})</Text></Text>
+                    {summary.priorCompensation > 0 && (
+                      <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Compenso pregresso: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.priorCompensation)}</Text></Text>
+                    )}
+                    <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 2 }}>• Compenso Atleta: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text></Text>
+                    <Text style={{ fontSize: 11, color: '#1565C0', marginLeft: 10, marginBottom: 6 }}>({summary.monthCount} mesi × {formatCurrency(profile?.monthly_compensation || 0)})</Text>
+                    {(summary.coachYearlyTotal || 0) > 0 && (
+                      <>
+                        <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 2 }}>• Compenso Coach: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.coachYearlyTotal)}</Text></Text>
+                        <Text style={{ fontSize: 11, color: '#1565C0', marginLeft: 10, marginBottom: 6 }}>🎒 ({summary.coachMonthCount} mesi × {formatCurrency(dualRoleInfo?.coach?.monthly_compensation || 0)})</Text>
+                      </>
+                    )}
                     {(summary.specialMonths?.length > 0 && (summary.supplementaryTotal || 0) > 0) && (
                       <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare ({summary.specialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(contractStartYear).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
-                    )}
-                    {(summary.coachYearlyTotal || 0) > 0 && (
-                      <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso Coach 🎒 ({summary.coachMonthCount} mesi × {formatCurrency(dualRoleInfo?.coach?.monthly_compensation || 0)}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.coachYearlyTotal)}</Text></Text>
-                    )}
-                    {summary.priorCompensation > 0 && (
-                      <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Pregressi: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.priorCompensation)}</Text></Text>
                     )}
                     {(summary.externalTotal || 0) > 0 && (
                       <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Compensi esterni (altre ASD): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.externalTotal)}</Text></Text>
@@ -1592,12 +1589,16 @@ export default function AthleteCompensation() {
                   
                   {/* Linear layout like Admin view */}
                   <View style={{ marginTop: 8 }}>
-                    <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso Atleta: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text> <Text style={{ fontSize: 11, color: '#1565C0' }}>({summary.monthCount} mesi × {formatCurrency(profile?.monthly_compensation || 0)})</Text></Text>
+                    <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 2 }}>• Compenso Atleta: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.yearlyFromContractBase || 0)}</Text></Text>
+                    <Text style={{ fontSize: 11, color: '#1565C0', marginLeft: 10, marginBottom: 6 }}>({summary.monthCount} mesi × {formatCurrency(profile?.monthly_compensation || 0)})</Text>
+                    {(summary.coachYearlyTotal || 0) > 0 && (
+                      <>
+                        <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 2 }}>• Compenso Coach: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.coachYearlyTotal)}</Text></Text>
+                        <Text style={{ fontSize: 11, color: '#1565C0', marginLeft: 10, marginBottom: 6 }}>🎒 ({summary.coachMonthCount} mesi × {formatCurrency(dualRoleInfo?.coach?.monthly_compensation || 0)})</Text>
+                      </>
+                    )}
                     {(summary.specialMonths?.length > 0 && (summary.supplementaryTotal || 0) > 0) && (
                       <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Somma supplementare ({summary.specialMonths.map((s: any) => `${MONTH_NAMES[s.month]?.substring(0,3)} '${String(contractEndYear).slice(2)}`).join(', ')}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.supplementaryTotal || 0)}</Text></Text>
-                    )}
-                    {(summary.coachYearlyTotal || 0) > 0 && (
-                      <Text style={{ fontSize: 13, color: '#1565C0', marginBottom: 4 }}>• Compenso Coach 🎒 ({summary.coachMonthCount} mesi × {formatCurrency(dualRoleInfo?.coach?.monthly_compensation || 0)}): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.coachYearlyTotal)}</Text></Text>
                     )}
                     {(summary.externalTotal || 0) > 0 && (
                       <Text style={{ fontSize: 13, color: '#E65100', marginBottom: 4 }}>• Compensi esterni (altre ASD): <Text style={{ fontWeight: 'bold' }}>{formatCurrency(summary.externalTotal)}</Text></Text>
