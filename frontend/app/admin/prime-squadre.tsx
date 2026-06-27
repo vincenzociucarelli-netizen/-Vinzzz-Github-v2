@@ -205,17 +205,22 @@ export default function PrimeSquadrePage() {
   };
 
   const handleAddAthlete = async (athlete: Athlete) => {
-    // Instead of immediately adding, show config modal
-    setAthleteToAdd(athlete);
+    // 🆕 27/06/2026 — Sostituita la modal popup "Configura Atleta Atleti Pro" con
+    // un flusso lineare: abilita subito come Pro + redirect alla scheda Atleta
+    // principale (form full-page stile coach con card colorate, badge soglie €5k/€15k,
+    // riepilogo annuale, ecc.). Più pulito e meno errori di azzeramento.
     setShowAddModal(false);
-    setConfigForm({
-      monthly_compensation: '',
-      other_annual_compensation: '',
-      contract_start_date: '',
-      contract_end_date: '',
-      fees_waived: false,
-    });
-    setShowConfigModal(true);
+    try {
+      await api.post(`/prime-squadre/athletes/${athlete.id}/enable`);
+      showAlert(
+        '✅ Aggiunto a Atleti Pro',
+        `${athlete.first_name} ${athlete.last_name} è ora un Atleta Pro. Ti porto alla sua scheda per impostare compenso, contratto ed eventuali pregressi.`,
+      );
+      // Redirect alla scheda atleta — l'admin completa i compensi lì (form stile coach)
+      router.push(`/admin/athlete/${athlete.id}` as any);
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Impossibile aggiungere atleta');
+    }
   };
 
   const handleConfirmAddAthlete = async () => {
