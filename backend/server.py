@@ -7273,9 +7273,24 @@ async def update_athlete_compensation_settings(athlete_id: str, data: dict, curr
     
     update_data = {}
     
-    # Monthly compensation
+    # 🛡️ 27/06/2026 — Protezione anti-azzeramento accidentale:
+    # Se il client invia esplicitamente monthly_compensation=0 (es. salvataggio
+    # con campo vuoto dalla modal "Modifica Configurazione" di prime-squadre),
+    # rifiutiamo l'update per evitare di azzerare un compenso esistente per sbaglio.
+    # L'admin può azzerare solo passando "force_zero": true.
     if "monthly_compensation" in data:
-        update_data["monthly_compensation"] = data["monthly_compensation"]
+        new_val = data.get("monthly_compensation")
+        try:
+            new_val_num = float(new_val) if new_val is not None and new_val != "" else 0
+        except (ValueError, TypeError):
+            new_val_num = 0
+        current_val = float(athlete.get("monthly_compensation") or 0)
+        if new_val_num <= 0 and current_val > 0 and not data.get("force_zero"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Impossibile salvare con Compenso Mensile vuoto/zero: il valore attuale è €{current_val:.2f}. Inserisci un importo valido oppure usa l'opzione 'Rimuovi compenso' se vuoi davvero azzerare.",
+            )
+        update_data["monthly_compensation"] = new_val_num
     
     # Other annual compensation (prior)
     if "other_annual_compensation" in data:

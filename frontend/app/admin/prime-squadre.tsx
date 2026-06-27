@@ -270,14 +270,29 @@ export default function PrimeSquadrePage() {
 
   const handleSetCompensation = async () => {
     if (!selectedAthlete) return;
-    
+
+    // 🛡️ 27/06/2026 — Protezione anti-azzeramento: blocca il salvataggio se il
+    // campo "Compenso Mensile" è vuoto/zero ma l'atleta ha già un compenso impostato.
+    const newMonthly = parseFloat(configForm.monthly_compensation) || 0;
+    const currentMonthly = Number(selectedAthlete.monthly_compensation || 0);
+    if (newMonthly <= 0 && currentMonthly > 0) {
+      const proceed = typeof window !== 'undefined' && window.confirm(
+        `⚠️ ATTENZIONE\n\nIl Compenso Mensile è vuoto/zero, ma l'atleta ha attualmente €${currentMonthly.toFixed(2)}.\n\nSalvando lo AZZERERAI.\n\nVuoi davvero continuare?`
+      );
+      if (!proceed) {
+        return;
+      }
+    }
+
     try {
       await api.patch(`/prime-squadre/athletes/${selectedAthlete.id}`, {
-        monthly_compensation: parseFloat(configForm.monthly_compensation) || 0,
+        monthly_compensation: newMonthly,
         other_annual_compensation: parseFloat(configForm.other_annual_compensation) || 0,
         contract_start_date: italianToIso(configForm.contract_start_date),
         contract_end_date: italianToIso(configForm.contract_end_date),
         fees_waived: configForm.fees_waived,
+        // Se l'admin ha confermato in alert, manda anche il flag al backend
+        ...(newMonthly <= 0 && currentMonthly > 0 ? { force_zero: true } : {}),
       });
       showAlert('Successo', 'Configurazione aggiornata');
       setSelectedAthlete(null);
