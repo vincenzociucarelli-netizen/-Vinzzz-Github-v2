@@ -372,8 +372,9 @@ export default function PrimeSquadrePage() {
             <TouchableOpacity 
               key={athlete.id} 
               style={styles.athleteCard}
-              onPress={() => router.push(`/admin/athlete/${athlete.id}/compensation`)}
+              onPress={() => router.push(`/admin/athlete/${athlete.id}`)}
               activeOpacity={0.7}
+              data-testid={`atleti-pro-card-${athlete.id}`}
             >
               <View style={styles.athleteInfo}>
                 <Text style={styles.athleteName}>
@@ -407,22 +408,14 @@ export default function PrimeSquadrePage() {
                   )}
                 </View>
               </View>
+              {/* 🆕 27/06/2026 — Rimossi bottoni "⚙️ Modifica Configurazione" e "📋 Dettaglio Compensi":
+                  duplicavano l'anagrafica unificata. Click sulla card → /admin/athlete/{id}.
+                  Resta SOLO la X rossa per escludere l'atleta da "Atleti Pro". */}
               <View style={styles.athleteActions}>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={(e) => { e.stopPropagation(); openEditConfig(athlete); }}
-                >
-                  <Text style={styles.actionButtonText}>⚙️</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={(e) => { e.stopPropagation(); router.push(`/admin/athlete/${athlete.id}/compensation`); }}
-                >
-                  <Text style={styles.actionButtonText}>📋</Text>
-                </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.actionButton, { backgroundColor: '#FFEBEE' }]}
                   onPress={(e) => { e.stopPropagation(); handleRemoveAthlete(athlete); }}
+                  data-testid={`atleti-pro-remove-${athlete.id}`}
                 >
                   <Text style={styles.actionButtonText}>❌</Text>
                 </TouchableOpacity>
