@@ -185,173 +185,66 @@ export default function AthleteCompensationDetailPage() {
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Compensi Atleta</Text>
+        <Text style={styles.headerTitle}>Dettaglio Atleta</Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView
-        style={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        {/* Athlete Info Card */}
-        <View style={styles.athleteCard}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            {sportImage && (
-              <Image 
-                source={{ uri: `data:image/jpeg;base64,${sportImage}` }}
-                style={{ width: 50, height: 50, borderRadius: 8, marginRight: 12 }}
-                resizeMode="contain"
-              />
-            )}
-            <View style={{ flex: 1 }}>
-              <Text style={styles.athleteName}>{athlete.last_name} {athlete.first_name}</Text>
-              {athlete.team_name && <Text style={styles.athleteTeam}>{athlete.team_name}</Text>}
-              {athlete.fiscal_code && <Text style={styles.fiscalCode}>CF: {athlete.fiscal_code}</Text>}
-            </View>
+      {/* 🆕 27/06/2026 — Pagina dettaglio "Atleti Pro" sostituita da banner-link
+          verso la scheda Atleta unificata. La sezione "Atleti Pro" resta come
+          lista filtrata per il modulo premium, ma il dettaglio è UNA SOLA fonte. */}
+      <ScrollView style={styles.content}>
+        <View style={{ margin: 16, backgroundColor: '#E3F2FD', borderRadius: 14, padding: 18, borderLeftWidth: 4, borderLeftColor: '#1565C0' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <Text style={{ fontSize: 22 }}>👤</Text>
+            <Text style={{ fontSize: 17, fontWeight: '800', color: '#0D47A1', flex: 1 }}>
+              Scheda Atleta unificata
+            </Text>
           </View>
-          <View style={styles.compensationBadge}>
-            <Text style={styles.compensationBadgeText}>€{athlete.monthly_compensation || 0}/mese</Text>
-          </View>
-        </View>
-
-        {/* Year Selector */}
-        <View style={styles.yearSelector}>
-          <TouchableOpacity
-            style={styles.yearButton}
-            onPress={() => setSelectedYear(selectedYear - 1)}
-          >
-            <Text style={styles.yearButtonText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.yearText}>{selectedYear}</Text>
-          <TouchableOpacity
-            style={styles.yearButton}
-            onPress={() => setSelectedYear(selectedYear + 1)}
-          >
-            <Text style={styles.yearButtonText}>→</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Threshold Status */}
-        {thresholdStatus && (
-          <View style={styles.thresholdCard}>
-            <Text style={styles.thresholdTitle}>Soglie Fiscali {selectedYear}</Text>
-            <View style={styles.thresholdRow}>
-              <Text style={styles.thresholdLabel}>Totale Anno:</Text>
-              <Text style={styles.thresholdValue}>€{thresholdStatus.yearly_total.toLocaleString()}</Text>
-            </View>
-            <View style={styles.thresholdRow}>
-              <Text style={styles.thresholdLabel}>Soglia €5.000:</Text>
-              <Text style={[styles.thresholdStatus, { 
-                color: thresholdStatus.thresholds['5000'].exceeded ? '#f44336' : 
-                       thresholdStatus.thresholds['5000'].approaching ? '#FF9800' : '#4CAF50'
-              }]}>
-                {thresholdStatus.thresholds['5000'].exceeded ? '⚠️ Superata' :
-                 thresholdStatus.thresholds['5000'].approaching ? '⚡ In avvicinamento' : '✓ OK'}
-              </Text>
-            </View>
-            <View style={styles.thresholdRow}>
-              <Text style={styles.thresholdLabel}>Soglia €15.000:</Text>
-              <Text style={[styles.thresholdStatus, { 
-                color: thresholdStatus.thresholds['15000'].exceeded ? '#f44336' : 
-                       thresholdStatus.thresholds['15000'].approaching ? '#FF9800' : '#4CAF50'
-              }]}>
-                {thresholdStatus.thresholds['15000'].exceeded ? '⚠️ Superata' :
-                 thresholdStatus.thresholds['15000'].approaching ? '⚡ In avvicinamento' : '✓ OK'}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Monthly Grid */}
-        <Text style={styles.sectionTitle}>Quietanze Mensili</Text>
-        <View style={styles.monthsGrid}>
-          {Array.from({ length: 12 }, (_, i) => i + 1).map(month => {
-            const status = getMonthStatus(month);
-            const record = yearRecords.find(r => r.month === month);
-            
-            return (
-              <TouchableOpacity
-                key={month}
-                style={[styles.monthCard, { borderColor: getMonthColor(status) }]}
-                onPress={() => {
-                  if (status === 'available' || status === 'approaching_5k') {
-                    setSelectedMonth(month);
-                    setShowSignModal(true);
-                  }
-                }}
-                disabled={status === 'future' || status === 'signed' || status === 'exceeded_5k' || status === 'exceeded_15k'}
-              >
-                <Text style={styles.monthName}>{MONTHS[month].substring(0, 3)}</Text>
-                {record?.receipt_signed ? (
-                  <>
-                    <Text style={[styles.monthAmount, { color: getMonthColor(status) }]}>
-                      €{record.amount_gross}
-                    </Text>
-                    <Text style={styles.signedLabel}>✓ Firmata</Text>
-                  </>
-                ) : status === 'future' ? (
-                  <Text style={styles.futureLabel}>🕐</Text>
-                ) : (
-                  <Text style={styles.signLabel}>Firma</Text>
-                )}
-                {status === 'exceeded_5k' && <Text style={styles.thresholdBadge}>{'>5K'}</Text>}
-                {status === 'exceeded_15k' && <Text style={styles.thresholdBadge}>{'>15K'}</Text>}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Summary */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Riepilogo {selectedYear}</Text>
-          <Text style={styles.summaryText}>
-            Quietanze firmate: {yearRecords.filter(r => r.receipt_signed).length}/12
+          <Text style={{ fontSize: 14, fontWeight: '700', color: '#0D47A1', marginBottom: 6 }}>
+            {athlete.last_name} {athlete.first_name}
           </Text>
-          <Text style={styles.summaryAmount}>
-            Totale erogato: €{totalSigned.toLocaleString()}
+          {athlete.team_name ? (
+            <Text style={{ fontSize: 12, color: '#1565C0', marginBottom: 10 }}>
+              🏐 {athlete.team_name}
+            </Text>
+          ) : null}
+          <Text style={{ fontSize: 13, color: '#1565C0', lineHeight: 19, marginBottom: 14 }}>
+            Per evitare duplicazioni, tutta la gestione di compensi, quietanze, soglie €5k/€15k, anagrafica, presenze e dati bancari di questo atleta è centralizzata nella <Text style={{ fontWeight: '700' }}>scheda Atleta principale</Text>. Apri lì per modificare i dati.
+          </Text>
+          <TouchableOpacity
+            onPress={() => router.replace(`/admin/athlete/${athlete.id}` as any)}
+            data-testid="admin-pro-go-to-athlete-btn"
+            style={{ backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}
+          >
+            <Text style={{ fontSize: 18 }}>🏐</Text>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>
+              Apri Scheda Atleta completa
+            </Text>
+            <Text style={{ color: '#fff', fontSize: 16 }}>→</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ marginHorizontal: 16, padding: 12, backgroundColor: '#FFF3E0', borderRadius: 10, borderLeftWidth: 3, borderLeftColor: '#FB8C00' }}>
+          <Text style={{ fontSize: 12, color: '#E65100', lineHeight: 17 }}>
+            💡 La sezione <Text style={{ fontWeight: '700' }}>Atleti Pro</Text> resta come elenco filtrato (utile anche come modulo premium acquistabile), ma il <Text style={{ fontWeight: '700' }}>dettaglio</Text> è uno solo per non disallineare i dati.
           </Text>
         </View>
       </ScrollView>
-
-      {/* Sign Modal */}
-      <Modal visible={showSignModal} animationType="fade" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Firma Quietanza</Text>
-            <Text style={styles.modalSubtitle}>
-              {MONTHS[selectedMonth || 0]} {selectedYear}
-            </Text>
-            <Text style={styles.modalAmount}>
-              Importo: €{athlete.monthly_compensation || 0}
-            </Text>
-            
-            <Text style={styles.modalNote}>
-              Cliccando "Firma" confermi di aver ricevuto il compenso mensile indicato.
-            </Text>
-            
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={() => {
-                  setShowSignModal(false);
-                  setSelectedMonth(null);
-                }}
-              >
-                <Text style={styles.cancelButtonText}>Annulla</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
-                onPress={() => selectedMonth && handleSignReceipt(selectedMonth)}
-              >
-                <Text style={styles.confirmButtonText}>Firma</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
+
+// Rendering legacy del dettaglio Atleti Pro disabilitato — vedi banner-link sopra.
+// La logica viene mantenuta nel commento per riferimento futuro nel caso si volesse
+// ripristinare una vista light specifica per il modulo Pro.
+function _LegacyAthleteCompensationDetailPage_DEPRECATED() {
+  return (
+    <View>
+      {/* legacy content removed 27/06/2026 */}
+    </View>
+  );
+}
+
 
 const styles = StyleSheet.create({
   container: {
