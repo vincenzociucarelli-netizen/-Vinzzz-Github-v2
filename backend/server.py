@@ -22830,9 +22830,11 @@ async def enable_athlete_compensation(athlete_id: str, current_user = Depends(ge
         raise HTTPException(status_code=400, detail="Raggiunto il limite massimo di 50 membri Prime Squadre")
     
     # Try to update athlete first
+    # 🆕 27/06/2026 — Settiamo ANCHE athlete_type='compensated' così la scheda admin
+    # mostra correttamente il tab "Compensi" (icona trofeo) al posto di "Pagamenti" (carta).
     result = await db.athletes.update_one(
         {"id": athlete_id},
-        {"$set": {"is_compensated": True}}
+        {"$set": {"is_compensated": True, "athlete_type": "compensated"}}
     )
     
     if result.modified_count > 0:
@@ -22945,9 +22947,11 @@ async def disable_athlete_compensation(athlete_id: str, current_user = Depends(g
         raise HTTPException(status_code=403, detail="Solo admin può gestire Prime Squadre")
     
     # Try athletes first
+    # 🆕 27/06/2026 — Ripristiniamo athlete_type='quota' così la scheda admin torna
+    # a mostrare il tab "Pagamenti" (carta) al posto di "Compensi" (trofeo).
     result = await db.athletes.update_one(
         {"id": athlete_id},
-        {"$set": {"is_compensated": False, "monthly_compensation": 0}}
+        {"$set": {"is_compensated": False, "monthly_compensation": 0, "athlete_type": "quota"}}
     )
     
     if result.modified_count > 0:
