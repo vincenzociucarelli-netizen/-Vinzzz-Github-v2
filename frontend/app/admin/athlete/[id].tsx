@@ -258,6 +258,12 @@ export default function AdminAthleteDetail() {
   // Compensation data (for compensated athletes)
   const [compensation, setCompensation] = useState<any>(null);
   const [compensationModalVisible, setCompensationModalVisible] = useState(false);
+  // 🆕 28/06/2026 — Modale "Genera Quietanza Personalizzata" (replica del flusso coach)
+  const [createReceiptModalVisible, setCreateReceiptModalVisible] = useState(false);
+  const [newReceiptMonth, setNewReceiptMonth] = useState<number>(new Date().getMonth() + 1);
+  const [newReceiptYear, setNewReceiptYear] = useState<number>(new Date().getFullYear());
+  const [newReceiptAmount, setNewReceiptAmount] = useState<string>('');
+  const [creatingReceipt, setCreatingReceipt] = useState(false);
   // 🆕 21/06/2026 — Quietanze firmate (per widget "Già Percepito" + modal Gestione Quietanze)
   const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
   const [receiptsModalVisible, setReceiptsModalVisible] = useState(false);
@@ -3472,7 +3478,13 @@ export default function AdminAthleteDetail() {
 
                       <TouchableOpacity
                         style={{ backgroundColor: '#34C759', borderRadius: 8, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                        onPress={() => router.push(`/admin/athlete/${id}/compensation`)}
+                        onPress={() => {
+                          // 🆕 28/06/2026 — Apre modale "Genera Quietanza Personalizzata" (replica flusso coach)
+                          setNewReceiptAmount(String(athlete?.monthly_compensation ?? 0));
+                          setNewReceiptMonth(new Date().getMonth() + 1);
+                          setNewReceiptYear(new Date().getFullYear());
+                          setCreateReceiptModalVisible(true);
+                        }}
                         data-testid="admin-genera-quietanza-personalizzata-btn"
                       >
                         <Ionicons name="add-circle-outline" size={18} color="#fff" />
@@ -4689,6 +4701,108 @@ export default function AdminAthleteDetail() {
                 ) : (
                   <Text style={styles.modalConfirmBtnTextPassword}>Sgancia</Text>
                 )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 🆕 28/06/2026 — Modal "Genera Quietanza Personalizzata" (replica flusso coach) */}
+      <Modal
+        visible={createReceiptModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setCreateReceiptModalVisible(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 20, width: '90%', maxWidth: 400 }}>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#333', marginBottom: 16 }}>
+              📝 Genera Quietanza Personalizzata
+            </Text>
+            <Text style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
+              Crea una quietanza con importo personalizzato per questo mese. L&apos;atleta dovrà poi firmarla.
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Mese</Text>
+                <View style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8 }}>
+                  <Picker
+                    selectedValue={newReceiptMonth}
+                    onValueChange={(value) => setNewReceiptMonth(value)}
+                    style={{ height: 50 }}
+                  >
+                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
+                      <Picker.Item key={m} label={['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][m-1]} value={m} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Anno</Text>
+                <View style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8 }}>
+                  <Picker
+                    selectedValue={newReceiptYear}
+                    onValueChange={(value) => setNewReceiptYear(value)}
+                    style={{ height: 50 }}
+                  >
+                    {[2024,2025,2026,2027].map(y => (
+                      <Picker.Item key={y} label={y.toString()} value={y} />
+                    ))}
+                  </Picker>
+                </View>
+              </View>
+            </View>
+            <View style={{ marginBottom: 16 }}>
+              <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Importo Lordo (€)</Text>
+              <TextInput
+                style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}
+                value={newReceiptAmount}
+                onChangeText={setNewReceiptAmount}
+                keyboardType="numeric"
+                placeholder="0.00"
+                data-testid="admin-athlete-new-receipt-amount"
+              />
+              <Text style={{ fontSize: 11, color: '#999', marginTop: 4, textAlign: 'center' }}>
+                Compenso base: {formatCurrency(athlete?.monthly_compensation || 0)}
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                style={{ flex: 1, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 8, alignItems: 'center' }}
+                onPress={() => setCreateReceiptModalVisible(false)}
+                data-testid="admin-athlete-cancel-create-receipt"
+              >
+                <Text style={{ color: '#666' }}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1, padding: 12, backgroundColor: creatingReceipt ? '#ccc' : '#4CAF50', borderRadius: 8, alignItems: 'center' }}
+                disabled={creatingReceipt}
+                onPress={async () => {
+                  if (!newReceiptAmount || parseFloat(String(newReceiptAmount).replace(',', '.')) <= 0) {
+                    showAlert('Errore', 'Inserisci un importo valido');
+                    return;
+                  }
+                  setCreatingReceipt(true);
+                  try {
+                    const response = await api.post(`/admin/athletes/${id}/compensation/create-receipt`, {
+                      month: newReceiptMonth,
+                      year: newReceiptYear,
+                      amount_gross: parseFloat(String(newReceiptAmount).replace(',', '.')),
+                    });
+                    showAlert('Successo', response.data.message);
+                    setCreateReceiptModalVisible(false);
+                    await loadData();
+                  } catch (error: any) {
+                    showAlert('Errore', error.response?.data?.detail || 'Errore nella creazione');
+                  } finally {
+                    setCreatingReceipt(false);
+                  }
+                }}
+                data-testid="admin-athlete-confirm-create-receipt"
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>
+                  {creatingReceipt ? 'Creazione...' : 'Genera'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>

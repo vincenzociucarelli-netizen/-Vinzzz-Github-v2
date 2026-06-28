@@ -13690,6 +13690,71 @@ class AdminCreateReceiptRequest(BaseModel):
     year: int
     amount_gross: float  # Admin can specify custom amount
 
+@api_router.post("/admin/athletes/{athlete_id}/compensation/create-receipt")
+async def admin_create_athlete_receipt(
+    athlete_id: str,
+    request: AdminCreateReceiptRequest,
+    current_user = Depends(get_current_user)
+):
+    """Admin crea una quietanza per un atleta con importo personalizzato (da firmare poi dall'atleta).
+    🆕 28/06/2026 — Replica del flusso /admin/coach/{coach_id}/compensation/create-receipt.
+    Marca la quietanza come supplementare se l'importo è diverso dal compenso mensile contrattuale."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo l'admin può creare quietanze")
+
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+
+    # Compenso base mensile (per identificare quietanze "supplementari")
+    athlete_monthly = float(athlete.get("monthly_compensation") or 0)
+    delta_extra = float(request.amount_gross) - athlete_monthly
+    is_supp = abs(delta_extra) > 0.009
+    extra_amt = round(delta_extra, 2) if is_supp else 0.0
+
+    # Check existing receipt for this month/year
+    existing = await db.athlete_compensation_receipts.find_one({
+        "athlete_id": athlete_id,
+        "year": request.year,
+        "month": request.month,
+    })
+
+    if existing:
+        await db.athlete_compensation_receipts.update_one(
+            {"athlete_id": athlete_id, "year": request.year, "month": request.month},
+            {"$set": {
+                "amount_gross": request.amount_gross,
+                "amount": request.amount_gross,
+                "amount_net": request.amount_gross,
+                "is_supplementary": is_supp,
+                "extra_amount": extra_amt,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_by": current_user["id"],
+            }}
+        )
+        return {"message": f"Quietanza aggiornata: {request.month}/{request.year} - €{request.amount_gross}", "updated": True, "is_supplementary": is_supp, "extra_amount": extra_amt}
+
+    receipt_id = str(uuid.uuid4())[:8]
+    new_receipt = {
+        "id": receipt_id,
+        "athlete_id": athlete_id,
+        "society_id": athlete.get("society_id"),
+        "year": request.year,
+        "month": request.month,
+        "amount_gross": request.amount_gross,
+        "amount": request.amount_gross,
+        "amount_net": request.amount_gross,
+        "is_supplementary": is_supp,
+        "extra_amount": extra_amt,
+        "received": True,
+        "receipt_signed": False,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_by": current_user["id"],
+    }
+    await db.athlete_compensation_receipts.insert_one(new_receipt)
+    return {"message": f"Quietanza creata: {request.month}/{request.year} - €{request.amount_gross}", "created": True, "id": receipt_id, "is_supplementary": is_supp, "extra_amount": extra_amt}
+
+
 @api_router.post("/admin/coach/{coach_id}/compensation/create-receipt")
 async def admin_create_coach_receipt(
     coach_id: str,
