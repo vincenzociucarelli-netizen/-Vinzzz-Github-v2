@@ -15610,8 +15610,14 @@ async def list_my_external_compensations(
     year: Optional[int] = None,
     current_user = Depends(get_current_user),
 ):
-    """Lista delle dichiarazioni di compensi esterni dell'utente."""
-    q: dict = {"user_id": current_user["id"]}
+    """Lista delle dichiarazioni di compensi esterni dell'utente.
+    🆕 28/06/2026 — Le dichiarazioni atleta sono salvate con user_id=athlete_id.
+    Per atleti dual-role o utenti generici, le dichiarazioni potrebbero essere
+    salvate sia con user_id che con athlete_id. Cerchiamo entrambi gli ID."""
+    user_id = current_user["id"]
+    athlete_id = current_user.get("athlete_id")
+    candidate_ids = list({uid for uid in [user_id, athlete_id] if uid})
+    q: dict = {"user_id": {"$in": candidate_ids}} if len(candidate_ids) > 1 else {"user_id": user_id}
     if year is not None:
         q["year"] = int(year)
     items: List[dict] = []
