@@ -23298,8 +23298,9 @@ async def get_athlete_threshold_status(athlete_id: str, year: int, current_user 
     
     # Get records based on member type
     if member_type == "athlete":
-        yearly_records = await db.atleta_pro_compensations.find({
-            "atleta_id": athlete_id,
+        # 🆕 28/06/2026 — Fix nome collezione (era "atleta_pro_compensations" inesistente)
+        yearly_records = await db.athlete_compensation_receipts.find({
+            "athlete_id": athlete_id,
             "year": year,
             "receipt_signed": True
         }).to_list(12)
@@ -23314,14 +23315,20 @@ async def get_athlete_threshold_status(athlete_id: str, year: int, current_user 
     yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
     
     # 🆕 FASE 2 — Compensi esterni dichiarati (per user_id corretto)
-    # Per atleti: user_id è quello dell'utente collegato (linked_user_id / user_id)
-    if member_type == "athlete":
-        ext_user_id = member.get("linked_user_id") or member.get("user_id")
-    else:
-        ext_user_id = athlete_id
+    # 🆕 28/06/2026 — Le dichiarazioni esterne dell'atleta sono salvate con user_id=athlete_id.
+    # Provo sia athlete_id che linked_user_id (per dual-role) e prendo il massimo.
     external_year_total = 0.0
-    if ext_user_id:
-        external_year_total = await _get_year_external_compensations_total(ext_user_id, year)
+    if member_type == "athlete":
+        # Athlete external (saved by athlete_id)
+        ext_athlete = await _get_year_external_compensations_total(athlete_id, year)
+        # Linked user (coach) external — solo se diverso
+        linked_uid_for_ext = member.get("linked_user_id") or member.get("user_id")
+        ext_linked = 0.0
+        if linked_uid_for_ext and linked_uid_for_ext != athlete_id:
+            ext_linked = await _get_year_external_compensations_total(linked_uid_for_ext, year)
+        external_year_total = ext_athlete + ext_linked
+    else:
+        external_year_total = await _get_year_external_compensations_total(athlete_id, year)
     
     # 🆕 FASE 2 — Se l'Atleta PRO è ANCHE Coach/Dirigente nella stessa società,
     # somma i compensi firmati come Coach (coach_compensations).
@@ -23380,8 +23387,9 @@ async def get_athlete_threshold_status(athlete_id: str, year: int, current_user 
     
     # Tutti i record di entrambe le posizioni per la proiezione mensile
     if member_type == "athlete":
-        all_athlete_pro_records = await db.atleta_pro_compensations.find({
-            "atleta_id": athlete_id, "year": year
+        # 🆕 28/06/2026 — Fix nome collezione (era "atleta_pro_compensations" inesistente)
+        all_athlete_pro_records = await db.athlete_compensation_receipts.find({
+            "athlete_id": athlete_id, "year": year
         }).to_list(12)
     else:
         all_athlete_pro_records = []
