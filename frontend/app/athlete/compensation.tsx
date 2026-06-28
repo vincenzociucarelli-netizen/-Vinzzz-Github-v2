@@ -1383,7 +1383,11 @@ export default function AthleteCompensation() {
 
         {/* 🆕 24/02/2026 — Card "💰 Compensi" RIMOSSA: sostituita da CompensationSummaryCard sopra */}
 
-        {/* 🆕 27/02/2026 — Header "Riepilogo Compensi" (sostituisce nome/cognome + bottone "Il Mio Profilo" che è già in tab Anagrafica) */}
+        {/* 🆕 27/02/2026 — Header "Riepilogo Compensi" (sostituisce nome/cognome + bottone "Il Mio Profilo" che è già in tab Anagrafica)
+            🚫 28/06/2026 — Visibile SOLO per dual-role (zaino Atleta + Coach).
+            Per single-role atleta queste card sono ridondanti con la CompensationSummaryCard sopra. */}
+        {dualRoleInfo?.athlete && dualRoleInfo?.coach && (
+          <>
         <View style={{ marginBottom: 16, backgroundColor: '#fff', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }} data-testid="riepilogo-compensi-header">
           <Ionicons name="document-text" size={26} color="#1565C0" />
           <Text style={{ marginLeft: 10, fontSize: 17, fontWeight: '700', color: '#1565C0' }}>
@@ -1453,6 +1457,8 @@ export default function AthleteCompensation() {
               </Text>
             )}
           </View>
+        )}
+          </>
         )}
 
         {/* 🚫 26/06/2026 — Card "Dati Bancari" RIMOSSA da qui: spostata definitivamente
