@@ -464,7 +464,20 @@ export default function AdminAthleteDetail() {
         // 🆕 21/06/2026 — Carica anche le quietanze firmate (per widget "Già Percepito")
         try {
           const recRes = await api.get(`/athletes/${id}/compensation/receipts`);
-          const list = Array.isArray(recRes.data) ? recRes.data : (recRes.data?.records || []);
+          const rawList = Array.isArray(recRes.data) ? recRes.data : (recRes.data?.records || []);
+          // 🆕 28/06/2026 — BUG FIX sincronizzazione admin/user:
+          // il backend salva la firma con il campo `signed` (booleano legacy) +
+          // `signed_date` + `amount`, ma il frontend admin filtra per
+          // `receipt_signed` / `receipt_signed_date` / `amount_gross`.
+          // Senza questa normalizzazione l'admin vedeva tutte le quietanze come
+          // "Non firmata" anche dopo che l'atleta le aveva firmate.
+          const list = rawList.map((r: any) => ({
+            ...r,
+            receipt_signed: r.receipt_signed !== undefined ? r.receipt_signed : !!r.signed,
+            receipt_signed_date: r.receipt_signed_date || r.signed_date,
+            amount_gross: r.amount_gross !== undefined ? r.amount_gross : r.amount,
+            amount: r.amount !== undefined ? r.amount : r.amount_gross,
+          }));
           setSignedReceipts(list);
         } catch (e) {
           setSignedReceipts([]);
