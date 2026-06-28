@@ -19991,6 +19991,14 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
     is_related = document.get("related_entity_id") == current_user.get("athlete_id")
     is_email_match = document.get("signer_email") == current_user.get("email")
     is_admin = current_user["role"] == UserRole.ADMIN
+    # 🆕 28/06/2026 — Le quietanze atleta (compensation_receipt) NON usano signer_id né
+    # related_entity_id; usano athlete_id. Senza questo check Giulia riceveva 403
+    # quando provava a scaricare la sua quietanza ("Impossibile scaricare il documento").
+    doc_athlete_id = document.get("athlete_id")
+    is_athlete_owner = bool(doc_athlete_id) and (
+        doc_athlete_id == current_user.get("id")
+        or doc_athlete_id == current_user.get("athlete_id")
+    )
     
     # For parents: allow access to documents of their children
     is_parent_of_minor = False
@@ -20005,7 +20013,7 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
                 minor.get("second_parent_id") == current_user["id"]
             )
     
-    if not (is_signer or is_related or is_email_match or is_admin or is_parent_of_minor):
+    if not (is_signer or is_related or is_email_match or is_admin or is_parent_of_minor or is_athlete_owner):
         raise HTTPException(status_code=403, detail="Non autorizzato a visualizzare questo documento")
     
     # Check if PDF exists
@@ -24158,11 +24166,18 @@ async def get_documents_archive(
     
     query = {}
     
-    # Multi-tenant: scope to society via signer_id of users in this society
+    # Multi-tenant: scope to society via signer_id of users + athlete_id of atleti
+    # 🆕 28/06/2026 — Le quietanze atleta usano athlete_id (non signer_id), quindi
+    # serve un OR sui due campi.
     _sid = current_user.get("society_id")
     if _sid:
         society_user_ids = [u["id"] async for u in db.users.find({"society_id": _sid}, {"_id": 0, "id": 1})]
-        query["signer_id"] = {"$in": society_user_ids}
+        society_athlete_ids = [a["id"] async for a in db.athletes.find({"society_id": _sid}, {"_id": 0, "id": 1})]
+        query["$or"] = [
+            {"signer_id": {"$in": society_user_ids}},
+            {"athlete_id": {"$in": society_athlete_ids}},
+            {"related_entity_id": {"$in": society_athlete_ids}},
+        ]
     
     # Filter by season (e.g., "2024-2025" -> years 2024 and 2025)
     if season:
