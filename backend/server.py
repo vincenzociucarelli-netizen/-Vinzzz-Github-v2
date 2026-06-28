@@ -15702,7 +15702,8 @@ async def admin_external_compensations_summary(
         ("coach_compensations", "coach_id", "coach"),
         ("dirigente_compensations", "dirigente_id", "dirigente"),
         ("collaboratore_compensations", "collaboratore_id", "collaboratore"),
-        ("atleta_pro_compensations", "atleta_id", "atleta_pro"),
+        # 🆕 28/06/2026 — Fix nome collezione (era "atleta_pro_compensations" inesistente)
+        ("athlete_compensation_receipts", "athlete_id", "atleta_pro"),
     ]
     for coll_name, key, role_label in collections:
         if role and role != role_label:
@@ -15722,11 +15723,29 @@ async def admin_external_compensations_summary(
 
     rows: List[dict] = []
     for uid in all_user_ids:
+        # 🆕 28/06/2026 — Gli atleti compensati PRO stanno in db.athletes, NON in db.users.
+        # Cerco prima in users, fallback a athletes (con role label "atleta_pro").
         user = await db.users.find_one(
             {"id": uid},
             {"_id": 0, "id": 1, "email": 1, "full_name": 1, "role": 1,
              "society_id": 1, "contract_start_date": 1, "other_annual_compensation": 1},
         )
+        if not user:
+            ath = await db.athletes.find_one(
+                {"id": uid},
+                {"_id": 0, "id": 1, "email": 1, "full_name": 1,
+                 "society_id": 1, "contract_start_date": 1, "other_annual_compensation": 1},
+            )
+            if ath:
+                user = {
+                    "id": ath.get("id"),
+                    "email": ath.get("email"),
+                    "full_name": ath.get("full_name"),
+                    "role": "atleta_pro",
+                    "society_id": ath.get("society_id"),
+                    "contract_start_date": ath.get("contract_start_date"),
+                    "other_annual_compensation": ath.get("other_annual_compensation"),
+                }
         if not user:
             continue
         # Multi-tenant safety
