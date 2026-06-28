@@ -15,6 +15,7 @@ const getRoleLabel = (role: string) => {
     case 'coach': return '🏐 Coach';
     case 'dirigente': return '🏅 Dirigente';
     case 'collaboratore': return '👤 Collaboratore';
+    case 'athlete': return '🏆 Atleta Pro';
     default: return role;
   }
 };
@@ -24,6 +25,7 @@ const getRoleColor = (role: string) => {
     case 'coach': return '#2196F3';
     case 'dirigente': return '#8E44AD';
     case 'collaboratore': return '#FF9800';
+    case 'athlete': return '#C9A227';
     default: return '#666';
   }
 };
@@ -126,7 +128,9 @@ export default function QuietanzePage() {
   };
 
   const handleDelete = async (receipt: any) => {
-    const endpoint = `/admin/${receipt.user_role}/${receipt.user_id}/compensation/${receipt.year}/${receipt.month}`;
+    // 🆕 28/06/2026 — route mapping role → endpoint path (athlete usa "athletes" plurale)
+    const rolePath = receipt.user_role === 'athlete' ? 'athletes' : receipt.user_role;
+    const endpoint = `/admin/${rolePath}/${receipt.user_id}/compensation/${receipt.year}/${receipt.month}`;
     const msg = `Eliminare la quietanza di ${receipt.user_name} per ${MONTH_NAMES[receipt.month]} ${receipt.year}?`;
     
     if (Platform.OS === 'web') {
@@ -175,8 +179,10 @@ export default function QuietanzePage() {
     
     try {
       setSaving(true);
+      // 🆕 28/06/2026 — route mapping role → endpoint path (athlete usa "athletes" plurale)
+      const rolePath = selectedReceipt.user_role === 'athlete' ? 'athletes' : selectedReceipt.user_role;
       // Use the create-receipt endpoint which updates if exists
-      await api.post(`/admin/${selectedReceipt.user_role}/${selectedReceipt.user_id}/compensation/create-receipt`, {
+      await api.post(`/admin/${rolePath}/${selectedReceipt.user_id}/compensation/create-receipt`, {
         month: selectedReceipt.month,
         year: selectedReceipt.year,
         amount_gross: amount
@@ -294,6 +300,14 @@ export default function QuietanzePage() {
                     onPress={() => setFilterRole(filterRole === 'collaboratore' ? null : 'collaboratore')}
                   >
                     <Text style={[styles.filterChipText, filterRole === 'collaboratore' && styles.filterChipTextActive]}>👤 Collaboratori</Text>
+                  </TouchableOpacity>
+                  {/* 🆕 28/06/2026 — Filtro Atleta Pro (compensated) */}
+                  <TouchableOpacity
+                    style={[styles.filterChip, filterRole === 'athlete' && styles.filterChipActive]}
+                    onPress={() => setFilterRole(filterRole === 'athlete' ? null : 'athlete')}
+                    data-testid="filter-chip-athlete"
+                  >
+                    <Text style={[styles.filterChipText, filterRole === 'athlete' && styles.filterChipTextActive]}>🏆 Atleti Pro</Text>
                   </TouchableOpacity>
                 </ScrollView>
               </View>

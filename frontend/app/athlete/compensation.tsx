@@ -836,7 +836,14 @@ export default function AthleteCompensation() {
     };
     
     const findThresholdMonthFallback = (year: number, threshold: number) => {
-      const yearRecords = records.filter(r => r.year === year).sort((a: any, b: any) => a.month - b.month);
+      // 🆕 28/06/2026 — BUG FIX: iteravamo solo i record esistenti, perdendo i mesi
+      // contrattuali futuri senza quietanza (es. Dicembre fa scattare 15K ma non
+      // esiste ancora un record DB → la soglia non veniva rilevata e il banner non
+      // appariva). Ora iteriamo TUTTI i mesi contrattuali dell'anno, usando il
+      // monthly_compensation come fallback per i mesi senza quietanza.
+      const monthsInYear = getContractMonthsForYear(year);
+      const yearRecordsByMonth = new Map<number, any>();
+      records.filter(r => r.year === year).forEach(r => yearRecordsByMonth.set(r.month, r));
       const prior = (year === contractStartYear) ? priorComp : 0;
       // 🆕 26/02/2026 — Coach contribution (zaino) per cumulativo cronologico mensile
       const coachMonthly = (dualRoleInfo?.coach?.monthly_compensation || 0);
@@ -850,13 +857,17 @@ export default function AthleteCompensation() {
         const lastOfMonth = new Date(year, m, 0);
         return lastOfMonth >= cs && firstOfMonth <= ce;
       };
-      let cumulative = prior;
-      for (const r of yearRecords) {
-        const amt = r.amount_gross || r.amount || monthlyComp;
-        const coachAmt = isCoachActiveInMonth(r.month) ? coachMonthly : 0;
+      // External compensations cumulative for this year (added at start)
+      let cumulative = prior + (externalByYear[year] || 0);
+      if (cumulative > threshold) return ''; // already exceeded before any month
+      const sortedMonths = [...monthsInYear].sort((a, b) => a - b);
+      for (const m of sortedMonths) {
+        const r = yearRecordsByMonth.get(m);
+        const amt = (r?.amount_gross || r?.amount || monthlyComp) || 0;
+        const coachAmt = isCoachActiveInMonth(m) ? coachMonthly : 0;
         cumulative += amt + coachAmt;
         if (cumulative > threshold) {
-          return MONTH_NAMES[r.month] || '';
+          return MONTH_NAMES[m] || '';
         }
       }
       return '';

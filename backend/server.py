@@ -13898,6 +13898,8 @@ async def _full_delete_user_receipt(
         "collaboratore": ("collaboratore_compensations", "collaboratore_id"),
         "coach": ("coach_compensations", "coach_id"),
         "dirigente": ("dirigente_compensations", "dirigente_id"),
+        # 🆕 28/06/2026 — atleti compensated PRO 18+
+        "athlete": ("athlete_compensation_receipts", "athlete_id"),
     }
     collection_name, key = role_to_collection.get(role, (None, None))
     if collection_name is None:
@@ -14032,6 +14034,20 @@ async def admin_delete_coach_receipt(
     return await _full_delete_user_receipt(coach_id, "coach", year, month)
 
 
+# 🆕 28/06/2026 — DELETE quietanza atleta (gestione pagina /admin/quietanze)
+@api_router.delete("/admin/athletes/{athlete_id}/compensation/{year}/{month}")
+async def admin_delete_athlete_receipt(
+    athlete_id: str,
+    year: int,
+    month: int,
+    current_user = Depends(get_current_user)
+):
+    """Cancellazione COMPLETA di una quietanza (anche firmata) per un atleta."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin può eliminare quietanze")
+    return await _full_delete_user_receipt(athlete_id, "athlete", year, month)
+
+
 
 # Endpoint to get all custom receipts for admin management
 @api_router.get("/admin/quietanze/all")
@@ -14157,7 +14173,42 @@ async def admin_get_all_custom_receipts(
                 "updated_by_name": updated_by_name,
                 "updated_at": r.get("updated_at"),
             })
-    
+
+    # 🆕 28/06/2026 — Get athlete receipts (atleti compensated 18+ PRO)
+    athlete_receipts = await db.athlete_compensation_receipts.find({}).to_list(1000)
+    for r in athlete_receipts:
+        # Multi-tenant filter: athletes belong to a society via athletes.society_id
+        athlete = await db.athletes.find_one({"id": r.get("athlete_id")})
+        if not athlete:
+            continue
+        if _sid and athlete.get("society_id") != _sid:
+            continue
+        created_by_name = await get_admin_name(r.get("created_by"))
+        updated_by_name = await get_admin_name(r.get("updated_by"))
+        amt = r.get("amount_gross", r.get("amount", 0))
+        std = athlete.get("monthly_compensation", 0)
+        all_receipts.append({
+            "id": str(r.get("_id")),
+            "user_id": r.get("athlete_id"),
+            "user_name": athlete.get("full_name", "N/A"),
+            "user_role": "athlete",
+            "month": r.get("month"),
+            "year": r.get("year"),
+            "amount_gross": amt,
+            "standard_amount": std,
+            "is_custom": amt != std,
+            "receipt_signed": r.get("receipt_signed", False),
+            "receipt_signed_date": r.get("receipt_signed_date"),
+            "exceeded_5000": r.get("exceeded_5000", False),
+            "exceeded_15000": r.get("exceeded_15000", False),
+            "created_by": r.get("created_by"),
+            "created_by_name": created_by_name,
+            "created_at": r.get("created_at"),
+            "updated_by": r.get("updated_by"),
+            "updated_by_name": updated_by_name,
+            "updated_at": r.get("updated_at"),
+        })
+
     # Sort by year desc, month desc
     all_receipts.sort(key=lambda x: (x["year"], x["month"]), reverse=True)
     
