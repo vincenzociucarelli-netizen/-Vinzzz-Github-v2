@@ -3204,7 +3204,10 @@ export default function AdminAthleteDetail() {
                 })()}
 
                   {/* 🆕 26/06/2026 — Card "Compenso Atleta" + "Compenso Coach" (replica della vista USER foto 2U) */}
-                  {athlete?.contract_start_date && athlete?.contract_end_date && (() => {
+                  {/* 🚫 28/06/2026 — Mostra il riepilogo doppio ruolo SOLO se l'atleta è anche Coach
+                      (linkedCoach con compenso > 0). Per atleti single-role evitiamo la
+                      ripetizione del compenso (già presente nella CompensationSummaryCard sopra). */}
+                  {athlete?.contract_start_date && athlete?.contract_end_date && linkedCoach && Number(linkedCoach?.monthly_compensation || 0) > 0 && (() => {
                     const fmtDate2 = (d: string) => {
                       try { return new Date(d).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }); }
                       catch { return d; }

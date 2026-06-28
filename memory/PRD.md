@@ -16,6 +16,25 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🎯 28/06/2026 — Compensi Admin Atleta Pro: Pagina solo editor + rimozione duplicato compenso ✅
+
+**Richiesta utente**: Quando si entra dalla sezione Atleti Pro → Compensi:
+1. La pagina principale `/admin/athlete/[id]` mostrava il "Compenso Atleta" 2 volte (CompensationSummaryCard + card "Compenso Atleta" arancione). La seconda card deve apparire SOLO in caso di doppio ruolo Coach (riepilogo Atleta+Coach).
+2. La pagina `/admin/athlete/[id]/compensation.tsx` apriva in modalità READ-ONLY con Calcoli Annuali + Quietanze Mensili. L'utente vuole che apra DIRETTAMENTE in modalità modifica (come fa il Coach), e che vengano cancellate Calcoli Annuali e Quietanze Mensili (già visibili nella pagina principale).
+
+**Modifiche**:
+- `/app/frontend/app/admin/athlete/[id].tsx` — Le card "Compenso Atleta" arancione + "Compenso Coach" viola ora compaiono SOLO se `linkedCoach && linkedCoach.monthly_compensation > 0` (vera doppia ruolo)
+- `/app/frontend/app/admin/athlete/[id]/compensation.tsx`:
+  - `editing` state default = `true` (la pagina è sempre in edit mode)
+  - Toggle ✏️/✕ nell'header rimosso (per uscire si usa la freccia indietro)
+  - Card "📊 Calcoli Annuali" nascosta con `{false && ...}`
+  - Card "📋 Quietanze Mensili" nascosta con `{false && ...}`
+  - `setEditing(false)` post-save rimosso (non più necessario)
+
+**Risultato**: l'admin che apre i compensi di un atleta Pro vede direttamente l'editor (date contratto + compenso mensile + pregressi + salva), senza più card duplicate o sezioni di riepilogo (che restano nella pagina principale).
+
+
+
 ## 🎯 28/06/2026 — Editor Compensi Admin Atleta allineato al Coach ✅
 
 **Problema**: La pagina `/admin/athlete/[id]/compensation.tsx` aveva un editor sovraccarico con Dati Bancari, Preview Riepilogo Contratto, e formattazione amount non coerente con quella del coach. Richiesta utente: "stessa grafica e richieste come fosse un coach", "lascia solo importo, pregresso e date contratto".

@@ -73,7 +73,8 @@ export default function AthleteCompensation() {
   const [team, setTeam] = useState<any>(null);
   
   // Compensation settings
-  const [editing, setEditing] = useState(false);
+  // 🆕 28/06/2026 — editing default TRUE: la pagina è solo editor (no display mode)
+  const [editing, setEditing] = useState(true);
   const [monthlyCompensation, setMonthlyCompensation] = useState('0');
   const [otherAnnualCompensation, setOtherAnnualCompensation] = useState('0');
   const [priorCompensation, setPriorCompensation] = useState('0');
@@ -214,7 +215,7 @@ export default function AthleteCompensation() {
       });
       
       showAlert('Successo', 'Compensi aggiornati con successo');
-      setEditing(false);
+      // 🆕 28/06/2026 — pagina è solo editor: ricarico i dati ma resto in edit mode
       await loadData();
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
@@ -491,9 +492,8 @@ export default function AthleteCompensation() {
                   <Text style={[styles.badgeText, { color: badge.color }]}>{badge.text}</Text>
                 </View>
               )}
-              <TouchableOpacity onPress={() => setEditing(!editing)}>
-                <Text style={{ fontSize: 22 }}>{editing ? '✕' : '✏️'}</Text>
-              </TouchableOpacity>
+              {/* 🚫 28/06/2026 — Toggle ✏️/✕ rimosso: pagina sempre in edit mode.
+                  Per uscire usare la freccia indietro nell'header. */}
             </View>
           </View>
 
@@ -716,7 +716,9 @@ export default function AthleteCompensation() {
         })()}
 
         {/* Yearly Breakdown - Detailed Calculations */}
-        {contractMonths.length > 0 && !editing && (
+        {/* 🚫 28/06/2026 — "Calcoli Annuali" RIMOSSO da questa pagina (cancellazione "Foto 3/a"):
+            le info di riepilogo annuale restano visibili nella scheda principale /admin/athlete/[id]. */}
+        {false && contractMonths.length > 0 && !editing && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>📊 Calcoli Annuali</Text>
             {(() => {
@@ -814,7 +816,9 @@ export default function AthleteCompensation() {
         )}
 
         {/* Monthly Receipts - READ ONLY for Admin */}
-        {contractMonths.length > 0 && (
+        {/* 🚫 28/06/2026 — "Quietanze Mensili" RIMOSSO da questa pagina (cancellazione "Foto 2"):
+            le info sulle quietanze restano visibili nella scheda principale /admin/athlete/[id]. */}
+        {false && contractMonths.length > 0 && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>📋 Quietanze Mensili</Text>
             <Text style={styles.cardSubtitle}>
