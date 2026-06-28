@@ -192,6 +192,58 @@ export default function DocumentsArchive() {
     }
   };
 
+  // 🆕 28/06/2026 — Cleanup documenti privacy duplicati (legacy "Consenso Privacy Atleta"
+  // creati prima del fix del 28/06/2026, in coppia con "Informativa Privacy GDPR - Staff").
+  const handleCleanupDuplicatePrivacy = async () => {
+    const confirmMsg = "Cleanup duplicati Privacy?\n\nQuesto pulsante esegue prima una scansione (DRY RUN) per identificare tutte le coppie di documenti privacy duplicati creati prima del fix del 28/06/2026:\n• 'Consenso Privacy Atleta' (legacy)\n• 'Informativa Privacy GDPR - Staff' (nuovo)\nfirmati dallo STESSO atleta nello STESSO giorno.\n\nDopo la scansione potrai confermare l'eliminazione delle copie legacy.";
+    const ok = Platform.OS === 'web' ? window.confirm(confirmMsg) : await new Promise<boolean>((resolve) => {
+      Alert.alert('Cleanup Privacy', confirmMsg, [
+        { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Scansiona', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try {
+      const token = await AsyncStorage.getItem('token');
+      // STEP 1: dry run
+      const dryRes = await fetch(`${API_URL}/api/admin/documents/cleanup-duplicate-privacy?dry_run=true`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const dryData = await dryRes.json();
+      if (!dryRes.ok) throw new Error(dryData.detail || 'Errore scansione');
+
+      if ((dryData.duplicates_found || 0) === 0) {
+        const msg = `Nessun duplicato trovato.\n\nScansionati: ${dryData.scanned_gdpr_adult} documenti GDPR Adult.`;
+        if (Platform.OS === 'web') window.alert(msg); else Alert.alert('OK', msg);
+        return;
+      }
+
+      const detailList = (dryData.details || []).slice(0, 20).map((d: any) => `• [${d.day}] ${d.athlete_name} (id: ${d.athlete_id.slice(0, 8)})`).join('\n');
+      const confirmDel = `Trovati ${dryData.duplicates_found} duplicati Privacy legacy.\n\nProcedere con l'eliminazione delle copie "Consenso Privacy Atleta" (manterremo le "Informativa Privacy GDPR - Staff")?\n\nDettaglio (max 20):\n${detailList}`;
+      const ok2 = Platform.OS === 'web' ? window.confirm(confirmDel) : await new Promise<boolean>((resolve) => {
+        Alert.alert('Conferma eliminazione', confirmDel, [
+          { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Elimina', style: 'destructive', onPress: () => resolve(true) },
+        ]);
+      });
+      if (!ok2) return;
+
+      // STEP 2: real cleanup
+      const realRes = await fetch(`${API_URL}/api/admin/documents/cleanup-duplicate-privacy?dry_run=false`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const realData = await realRes.json();
+      if (!realRes.ok) throw new Error(realData.detail || 'Errore eliminazione');
+      const msg = `${realData.message}\n\nStats:\n• Scansionati: ${realData.scanned_gdpr_adult}\n• Duplicati trovati: ${realData.duplicates_found}\n• Eliminati: ${realData.deleted}`;
+      if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Completato', msg);
+      loadDocuments(1, true);
+    } catch (e: any) {
+      if (Platform.OS === 'web') window.alert(`Errore: ${e?.message || 'failed'}`); else Alert.alert('Errore', e?.message || 'failed');
+    }
+  };
+
   const handleRegenerateReceipts = async () => {
     const confirmMsg = "Rigenera TUTTE le quietanze della società?\n\nQuesto pulsante invalida la cache di tutti i PDF delle quietanze esistenti. Al prossimo apertura/download, ogni quietanza verrà ricostruita con:\n• data di firma originale (e non la data di stampa)\n• firma immagine recuperata dalla riga compenso\n• metadati di autentica GDPR (ID documento, ID firmatario, IP, timestamp)\n\n✅ Da usare una tantum dopo gli ultimi fix. Operazione sicura, non cancella i documenti.";
     const ok = Platform.OS === 'web' ? window.confirm(confirmMsg) : await new Promise<boolean>((resolve) => {
@@ -466,6 +518,13 @@ export default function DocumentsArchive() {
           data-testid="repair-orphaned-btn"
         >
           <Ionicons name="build" size={18} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleCleanupDuplicatePrivacy}
+          style={{ backgroundColor: '#E91E63', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, marginRight: 8 }}
+          data-testid="cleanup-duplicate-privacy-btn"
+        >
+          <Ionicons name="copy-outline" size={18} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity
           onPress={handleRegenerateReceipts}

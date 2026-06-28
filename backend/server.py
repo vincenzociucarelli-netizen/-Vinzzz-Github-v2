@@ -24990,6 +24990,91 @@ async def admin_diagnose_coach_compensations(coach_name: str, current_user = Dep
     return {"matches": len(users), "users": users, "compensations_detail": result}
 
 
+@api_router.post("/admin/documents/cleanup-duplicate-privacy")
+async def admin_cleanup_duplicate_privacy(
+    dry_run: bool = True,
+    current_user = Depends(get_current_user)
+):
+    """🆕 28/06/2026 — Admin tool: identifica documenti privacy "duplicati" creati
+    prima del fix del 28/06/2026. Per ogni atleta che ha sia un documento legacy
+    "privacy_consent" (titolo 'Consenso Privacy Atleta') sia un documento nuovo
+    "gdpr_adult" (titolo 'Informativa Privacy GDPR - Staff') firmati lo STESSO giorno,
+    elimina la copia legacy.
+
+    Args:
+        dry_run: se True (default), restituisce solo l'elenco senza cancellare.
+                 Passare ?dry_run=false per eseguire la cancellazione.
+    """
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    society_id = current_user.get("society_id")
+
+    duplicates_found: list = []
+    deleted_count = 0
+    scanned_count = 0
+
+    # Query all gdpr_adult docs (the new flow)
+    query: dict = {"document_type": "gdpr_adult"}
+    if society_id:
+        query["society_id"] = society_id
+
+    async for new_doc in db.signed_documents.find(query, {"_id": 0}):
+        scanned_count += 1
+        related_id = new_doc.get("related_entity_id") or new_doc.get("athlete_id")
+        signed_at = new_doc.get("signed_at") or new_doc.get("created_at")
+        if not related_id or not signed_at:
+            continue
+
+        # Same calendar day check
+        try:
+            from datetime import datetime as _dt
+            new_dt = _dt.fromisoformat(str(signed_at).replace("Z", "+00:00")) if isinstance(signed_at, str) else signed_at
+            day_start = new_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end = new_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+        except Exception:
+            continue
+
+        # Find legacy "privacy_consent" doc for the same athlete on the same day
+        legacy_query = {
+            "document_type": "privacy_consent",
+            "related_entity_id": related_id,
+        }
+        legacy_docs = await db.signed_documents.find(legacy_query, {"_id": 0}).to_list(50)
+        for legacy in legacy_docs:
+            legacy_signed_at = legacy.get("signed_at") or legacy.get("created_at")
+            if not legacy_signed_at:
+                continue
+            try:
+                from datetime import datetime as _dt2
+                legacy_dt = _dt2.fromisoformat(str(legacy_signed_at).replace("Z", "+00:00")) if isinstance(legacy_signed_at, str) else legacy_signed_at
+            except Exception:
+                continue
+            if day_start <= legacy_dt <= day_end:
+                duplicates_found.append({
+                    "athlete_id": related_id,
+                    "athlete_name": legacy.get("signer_name", "N/A"),
+                    "day": day_start.strftime("%Y-%m-%d"),
+                    "legacy_doc_id": legacy.get("id"),
+                    "legacy_title": legacy.get("document_title"),
+                    "new_doc_id": new_doc.get("id"),
+                    "new_title": new_doc.get("document_title"),
+                })
+                if not dry_run:
+                    del_res = await db.signed_documents.delete_one({"id": legacy.get("id")})
+                    if del_res.deleted_count > 0:
+                        deleted_count += 1
+
+    return {
+        "message": ("Dry run: nessuna cancellazione effettuata." if dry_run else f"Eliminati {deleted_count} documenti privacy legacy duplicati."),
+        "dry_run": dry_run,
+        "scanned_gdpr_adult": scanned_count,
+        "duplicates_found": len(duplicates_found),
+        "deleted": deleted_count,
+        "details": duplicates_found[:50],  # Cap a 50 per non saturare la response
+    }
+
+
 @api_router.post("/admin/compensations/repair-orphaned-receipts")
 async def admin_repair_orphaned_compensation_receipts(current_user = Depends(get_current_user)):
     """Admin tool: scans ALL compensation collections (coach/dirigente/
