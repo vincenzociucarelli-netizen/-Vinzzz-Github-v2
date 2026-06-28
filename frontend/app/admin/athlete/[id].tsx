@@ -3823,7 +3823,7 @@ export default function AdminAthleteDetail() {
                   alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8,
                   opacity: saving ? 0.6 : 1,
                 }}
-                onPress={handleSaveEditData}
+                onPress={handleSaveData}
                 disabled={saving}
                 data-testid="save-team-presenze"
               >
