@@ -3676,9 +3676,19 @@ export default function AdminAthleteDetail() {
 
           {/* 🆕 22/02/2026 — Card "Squadra" spostata qui da Anagrafica */}
           <View style={styles.card}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <SportIcon size={20} />
-              <Text style={[styles.cardTitle, { marginLeft: 6, marginTop: 0 }]}>Squadra</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <SportIcon size={20} />
+                <Text style={[styles.cardTitle, { marginLeft: 6, marginTop: 0 }]}>Squadra</Text>
+              </View>
+              {/* 🆕 28/06/2026 — Toggle ✏️/✕ inline per modificare la squadra direttamente dal tab Presenze */}
+              <TouchableOpacity
+                onPress={() => setEditing(!editing)}
+                data-testid="toggle-edit-team-presenze"
+                style={{ padding: 6 }}
+              >
+                <Text style={{ fontSize: 18 }}>{editing ? '✕' : '✏️'}</Text>
+              </TouchableOpacity>
             </View>
             {editing ? (
               <>
@@ -3804,6 +3814,28 @@ export default function AdminAthleteDetail() {
                   </View>
                 )}
               </>
+            )}
+            {/* 🆕 28/06/2026 — Save button in-line per salvare la modifica squadra dal tab Presenze */}
+            {editing && (
+              <TouchableOpacity
+                style={{
+                  marginTop: 16, backgroundColor: '#007AFF', borderRadius: 10, padding: 14,
+                  alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8,
+                  opacity: saving ? 0.6 : 1,
+                }}
+                onPress={handleSaveEditData}
+                disabled={saving}
+                data-testid="save-team-presenze"
+              >
+                {saving ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>💾 SALVA SQUADRA</Text>
+                  </>
+                )}
+              </TouchableOpacity>
             )}
           </View>
 
