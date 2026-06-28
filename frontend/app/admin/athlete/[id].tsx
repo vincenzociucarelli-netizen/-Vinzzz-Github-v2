@@ -3326,7 +3326,8 @@ export default function AdminAthleteDetail() {
                           <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>📊 Calcolo per Anno Solare (soglie €5k/€15k)</Text>
                         </View>
 
-                        {/* Box anni */}
+                        {/* Box anni — 🆕 28/06/2026: grafica allineata al Coach (Foto B/C):
+                            primo anno verde, secondo anno blu, border-left 4px colorato. */}
                         {years.map((y, idx) => {
                           const yb = yearlyBreakdown[y];
                           if (!yb) return null;
@@ -3347,10 +3348,14 @@ export default function AdminAthleteDetail() {
                             } catch {}
                           }
                           const coachYearAmount = coachMonthsThisYear * coachMonthly;
+                          // 🆕 Color scheme replica Coach user view: primo anno verde, secondo anno blu
+                          const bgColor = isStartYear ? '#E8F5E9' : '#E3F2FD';
+                          const borderColor = isStartYear ? '#4CAF50' : '#2196F3';
+                          const headerColor = isStartYear ? '#2E7D32' : '#1565C0';
                           return (
-                            <View key={y} style={{ backgroundColor: yb.exceedsThreshold5k ? '#FFF8E1' : '#E8F5E9', borderRadius: 10, padding: 14, marginBottom: 12 }}>
-                              <Text style={{ color: yb.exceedsThreshold5k ? '#F57F17' : '#2E7D32', fontWeight: 'bold', fontSize: 14 }}>
-                                {yb.exceedsThreshold5k ? '⚠️' : '✅'} Anno {y} ({dateRange}: {yb.months} mesi)
+                            <View key={y} style={{ backgroundColor: bgColor, borderRadius: 12, padding: 16, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: borderColor }}>
+                              <Text style={{ color: headerColor, fontWeight: 'bold', fontSize: 16, marginBottom: 8 }}>
+                                {yb.exceedsThreshold15k ? '🚨' : yb.exceedsThreshold5k ? '⚠️' : '✅'} Anno {y} ({dateRange}: {yb.months} mesi)
                               </Text>
                               <View style={{ marginTop: 8 }}>
                                 {yb.priorCompensation > 0 && (
