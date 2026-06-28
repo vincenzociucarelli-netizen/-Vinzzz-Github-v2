@@ -1068,6 +1068,38 @@ export default function AthleteScreen() {
             "Dati Personali" (/athlete/profile) per non avere info sensibili in bella vista. */}
       </View>
 
+      {/* 🆕 28/06/2026 — Banner Privacy per atleti PRO/COMPENSATED
+          (bug fix: prima compariva solo per atleti QUOTA, gli atleti PRO non venivano
+          mai sollecitati a firmare la privacy dopo aver completato l'anagrafica). */}
+      {!profile?.privacy_accepted && (
+        <TouchableOpacity
+          style={{
+            backgroundColor: '#FFF3E0',
+            marginHorizontal: 16,
+            marginBottom: 16,
+            padding: 14,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: '#FF9800',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+          }}
+          onPress={handleStayAndSignPrivacy}
+          data-testid="pro-privacy-banner"
+        >
+          <Ionicons name="alert-circle" size={24} color="#FF9800" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#E65100', fontWeight: '700', fontSize: 14 }}>
+              Firma la Privacy GDPR
+            </Text>
+            <Text style={{ color: '#E65100', fontSize: 12, marginTop: 2 }}>
+              Devi firmare l'informativa privacy per attivare il tuo account
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#FF9800" />
+        </TouchableOpacity>
+      )}
 
       {/* Prossimi Impegni — Trainings + Matches con supporto annullamento/modifica */}
       {(commitments.today.length + commitments.tomorrow.length + commitments.day_after.length + commitments.upcoming.length > 0) && (
@@ -1319,6 +1351,36 @@ export default function AthleteScreen() {
     </ScrollView>
 
     {/* Trial document signing is now on /athlete/sign-trial page */}
+
+    {/* 🆕 28/06/2026 — Privacy Modal anche per atleti PRO/COMPENSATED
+        (bug fix: prima questa modale era disponibile solo nel ramo QUOTA). */}
+    <GDPRPrivacyModal
+      visible={showPrivacyModal}
+      onClose={() => setShowPrivacyModal(false)}
+      onSign={async (success: boolean, documentId?: string) => {
+        if (!success) return;
+        try {
+          if (profile?.status === 'trial') {
+            await api.post('/athletes/withdraw-trial-stay');
+          }
+          await api.patch(`/athletes/${profile?.id}`, {
+            status: 'active',
+            privacy_accepted: true,
+            privacy_accepted_date: new Date().toISOString(),
+            privacy_pdf_url: documentId ? `/api/documents/signed/${documentId}/pdf` : null,
+          });
+          try {
+            await api.post('/auth/accept-privacy');
+          } catch (e) {
+            console.log('accept-privacy backend call failed (non-blocking)', e);
+          }
+          setShowPrivacyModal(false);
+          await loadData();
+        } catch (e: any) {
+          console.error('Error saving privacy acceptance:', e);
+        }
+      }}
+    />
 
     </View>
   );
