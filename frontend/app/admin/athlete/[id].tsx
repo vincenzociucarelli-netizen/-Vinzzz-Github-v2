@@ -3386,24 +3386,24 @@ export default function AdminAthleteDetail() {
                               // Warning 5k
                               if (t5?.needs_warning && !t5?.declaration_signed) {
                                 blocks.push(
-                                  <View key={`w5-${yr}`} style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', textAlign: 'center', marginBottom: 6 }}>⚠️ Anno {yr}: Soglia dei €5.000</Text>
-                                    <Text style={{ fontSize: 13, color: '#E65100', textAlign: 'center', lineHeight: 18 }}>
+                                  <View key={`w5-${yr}`} style={{ backgroundColor: '#FFF3E0', borderWidth: 2, borderColor: '#FF9800', borderRadius: 12, padding: 18, alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 17, fontWeight: '700', color: '#E65100', textAlign: 'center', marginBottom: 8 }}>⚠️ Anno {yr}: Soglia dei €5.000</Text>
+                                    <Text style={{ fontSize: 15, color: '#E65100', textAlign: 'center', lineHeight: 22 }}>
                                       Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{mn[t5?.threshold_month || 0]}</Text> supererà la soglia previdenziale di €5.000.
                                     </Text>
-                                    <Text style={{ fontSize: 12, color: '#E65100', textAlign: 'center', fontStyle: 'italic', marginTop: 4 }}>Contributi previdenziali INPS</Text>
+                                    <Text style={{ fontSize: 13, color: '#E65100', textAlign: 'center', fontStyle: 'italic', marginTop: 6 }}>Contributi previdenziali INPS</Text>
                                   </View>
                                 );
                               }
                               // Warning 15k
                               if (t15?.needs_warning && !t15?.declaration_signed) {
                                 blocks.push(
-                                  <View key={`w15-${yr}`} style={{ backgroundColor: '#F3E5F5', borderWidth: 2, borderColor: '#9C27B0', borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#6A1B9A', textAlign: 'center', marginBottom: 6 }}>🚨 Anno {yr}: Soglia dei €15.000</Text>
-                                    <Text style={{ fontSize: 13, color: '#6A1B9A', textAlign: 'center', lineHeight: 18 }}>
+                                  <View key={`w15-${yr}`} style={{ backgroundColor: '#F3E5F5', borderWidth: 2, borderColor: '#9C27B0', borderRadius: 12, padding: 18, alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 17, fontWeight: '700', color: '#6A1B9A', textAlign: 'center', marginBottom: 8 }}>🚨 Anno {yr}: Soglia dei €15.000</Text>
+                                    <Text style={{ fontSize: 15, color: '#6A1B9A', textAlign: 'center', lineHeight: 22 }}>
                                       Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{mn[t15?.threshold_month || 0]}</Text> supererà la soglia fiscale di €15.000.
                                     </Text>
-                                    <Text style={{ fontSize: 12, color: '#6A1B9A', textAlign: 'center', fontStyle: 'italic', marginTop: 4 }}>Tassazione IRPEF obbligatoria</Text>
+                                    <Text style={{ fontSize: 13, color: '#6A1B9A', textAlign: 'center', fontStyle: 'italic', marginTop: 6 }}>Tassazione IRPEF obbligatoria</Text>
                                   </View>
                                 );
                               }
@@ -3413,9 +3413,9 @@ export default function AdminAthleteDetail() {
                                 const bd = ei === 0 ? '#28A745' : '#2196F3';
                                 const tc = ei === 0 ? '#155724' : '#1565C0';
                                 blocks.push(
-                                  <View key={`s5-${yr}`} style={{ backgroundColor: bg, borderWidth: 2, borderColor: bd, borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                                    <Text style={{ fontSize: 15, fontWeight: '700', color: tc, textAlign: 'center', marginBottom: 6 }}>✅ Anno {yr}: Dichiarazione €5.000 firmata</Text>
-                                    <Text style={{ fontSize: 13, color: tc, textAlign: 'center', fontStyle: 'italic' }}>Soglia previdenziale comunicata{(t5?.threshold_month >= 1 && t5?.threshold_month <= 12) ? <>{' (superata nel mese di '}<Text style={{ fontWeight: 'bold' }}>{mn[t5.threshold_month]}</Text>{')'}</> : null}</Text>
+                                  <View key={`s5-${yr}`} style={{ backgroundColor: bg, borderWidth: 2, borderColor: bd, borderRadius: 12, padding: 18, alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 17, fontWeight: '700', color: tc, textAlign: 'center', marginBottom: 8 }}>✅ Anno {yr}: Dichiarazione €5.000 firmata</Text>
+                                    <Text style={{ fontSize: 15, color: tc, textAlign: 'center', fontStyle: 'italic' }}>Soglia previdenziale comunicata{(t5?.threshold_month >= 1 && t5?.threshold_month <= 12) ? <>{' (superata nel mese di '}<Text style={{ fontWeight: 'bold' }}>{mn[t5.threshold_month]}</Text>{')'}</> : null}</Text>
                                   </View>
                                 );
                               }
@@ -3425,9 +3425,9 @@ export default function AdminAthleteDetail() {
                                 const bd = ei === 0 ? '#28A745' : '#2196F3';
                                 const tc = ei === 0 ? '#155724' : '#1565C0';
                                 blocks.push(
-                                  <View key={`s15-${yr}`} style={{ backgroundColor: bg, borderWidth: 2, borderColor: bd, borderRadius: 10, padding: 14, alignItems: 'center' }}>
-                                    <Text style={{ fontSize: 15, fontWeight: '700', color: tc, textAlign: 'center', marginBottom: 6 }}>✅ Anno {yr}: Dichiarazione €15.000 firmata</Text>
-                                    <Text style={{ fontSize: 13, color: tc, textAlign: 'center', fontStyle: 'italic' }}>Soglia fiscale comunicata{(t15?.threshold_month >= 1 && t15?.threshold_month <= 12) ? <>{' (superata nel mese di '}<Text style={{ fontWeight: 'bold' }}>{mn[t15.threshold_month]}</Text>{')'}</> : null}</Text>
+                                  <View key={`s15-${yr}`} style={{ backgroundColor: bg, borderWidth: 2, borderColor: bd, borderRadius: 12, padding: 18, alignItems: 'center' }}>
+                                    <Text style={{ fontSize: 17, fontWeight: '700', color: tc, textAlign: 'center', marginBottom: 8 }}>✅ Anno {yr}: Dichiarazione €15.000 firmata</Text>
+                                    <Text style={{ fontSize: 15, color: tc, textAlign: 'center', fontStyle: 'italic' }}>Soglia fiscale comunicata{(t15?.threshold_month >= 1 && t15?.threshold_month <= 12) ? <>{' (superata nel mese di '}<Text style={{ fontWeight: 'bold' }}>{mn[t15.threshold_month]}</Text>{')'}</> : null}</Text>
                                   </View>
                                 );
                               }
