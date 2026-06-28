@@ -1380,6 +1380,17 @@ export default function AthleteScreen() {
           console.error('Error saving privacy acceptance:', e);
         }
       }}
+      documentType="gdpr_adult"
+      signerInfo={{
+        name: profile?.full_name?.split(' ').slice(1).join(' ') || '',
+        surname: profile?.full_name?.split(' ')[0] || '',
+        fiscal_code: profile?.fiscal_code || '',
+        birth_date: profile?.birth_date || '',
+        birth_place: profile?.birth_place || '',
+        address: profile?.address || '',
+        city: profile?.city || '',
+        province: profile?.province || '',
+      }}
     />
 
     </View>
