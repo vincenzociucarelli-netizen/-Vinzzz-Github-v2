@@ -202,9 +202,9 @@ export default function AthleteCompensation() {
       }
       
       await api.patch(`/athletes/${id}/compensation/settings`, {
-        monthly_compensation: parseFloat(monthlyCompensation) || 0,
-        other_annual_compensation: parseFloat(otherAnnualCompensation) || 0,
-        prior_compensation: parseFloat(priorCompensation) || 0,
+        monthly_compensation: parseFloat(String(monthlyCompensation).replace(',', '.')) || 0,
+        other_annual_compensation: parseFloat(String(otherAnnualCompensation).replace(',', '.')) || 0,
+        prior_compensation: parseFloat(String(priorCompensation).replace(',', '.')) || 0,
         contract_start_date: startDate || null,
         contract_end_date: endDate || null,
         iban: iban || null,
@@ -521,83 +521,49 @@ export default function AthleteCompensation() {
               <TextInput
                 style={styles.input}
                 value={monthlyCompensation}
-                onChangeText={setMonthlyCompensation}
+                onChangeText={(text) => {
+                  // Allow numbers and comma for decimals (Italian format)
+                  const cleaned = text.replace(/[^0-9,]/g, '');
+                  const parts = cleaned.split(',');
+                  const formatted = parts.length > 2 ? parts[0] + ',' + parts.slice(1).join('') : cleaned;
+                  setMonthlyCompensation(formatted);
+                }}
+                onFocus={() => { if (monthlyCompensation === '0' || monthlyCompensation === '') setMonthlyCompensation(''); }}
                 keyboardType="decimal-pad"
-                placeholder="Inserisci importo"
-                placeholderTextColor="#C0C0C0"
+                placeholder="€ 0,00"
+                placeholderTextColor="#999"
+                selectTextOnFocus={true}
               />
 
-              <Text style={[styles.inputLabel, { marginTop: 16 }]}>📋 Compensi Pregressi (€)</Text>
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>📋 Compensi Pregressi Dichiarati (€)</Text>
               <TextInput
                 style={styles.input}
                 value={otherAnnualCompensation}
-                onChangeText={setOtherAnnualCompensation}
+                onChangeText={(text) => {
+                  // Allow numbers and comma for decimals (Italian format)
+                  const cleaned = text.replace(/[^0-9,]/g, '');
+                  const parts = cleaned.split(',');
+                  const formatted = parts.length > 2 ? parts[0] + ',' + parts.slice(1).join('') : cleaned;
+                  setOtherAnnualCompensation(formatted);
+                }}
+                onFocus={() => { if (otherAnnualCompensation === '0' || otherAnnualCompensation === '') setOtherAnnualCompensation(''); }}
                 keyboardType="decimal-pad"
-                placeholder="Inserisci importo"
-                placeholderTextColor="#C0C0C0"
+                placeholder="€ 0,00"
+                placeholderTextColor="#999"
+                selectTextOnFocus={true}
               />
               <Text style={styles.inputHint}>
-                Importo percepito dall'atleta prima di questo contratto
+                Importo dichiarato dall'atleta percepito prima dell'assunzione (Gen-Ago se assunto a Set)
               </Text>
 
-              {/* Bank Info */}
-              {/* Dati Bancari - Improved Design */}
-              <View style={styles.bankSection}>
-                <View style={styles.bankSectionHeader}>
-                  <View style={styles.bankIconContainer}>
-                    <Text style={{ fontSize: 20 }}>🏦</Text>
-                  </View>
-                  <Text style={styles.bankSectionTitle}>Dati Bancari</Text>
-                </View>
-                
-                <View style={styles.bankInputGroup}>
-                  <Text style={styles.bankInputLabel}>IBAN</Text>
-                  <TextInput
-                    style={styles.bankInput}
-                    value={iban}
-                    onChangeText={(t) => setIban(t.toUpperCase())}
-                    placeholder="IT00X0000000000000000000000"
-                    placeholderTextColor="#999"
-                    autoCapitalize="characters"
-                  />
-                </View>
+              {/* 🚫 28/06/2026 — "Dati Bancari" RIMOSSO dall'EDIT mode (semplificazione editor).
+                  L'IBAN viene gestito dall'atleta dal proprio profilo user.
+                  Gli stati iban/bankName/ibanHolder* restano caricati al mount e inviati al save
+                  per non sovrascrivere i valori esistenti nel DB. */}
 
-                <View style={styles.bankInputGroup}>
-                  <Text style={styles.bankInputLabel}>Intestatario Conto</Text>
-                  <View style={styles.bankInputColumn}>
-                    <TextInput
-                      style={styles.bankInput}
-                      value={ibanHolderLastName}
-                      onChangeText={(t) => setIbanHolderLastName(t.toUpperCase())}
-                      placeholder="Cognome"
-                      placeholderTextColor="#999"
-                      autoCapitalize="characters"
-                    />
-                    <TextInput
-                      style={styles.bankInput}
-                      value={ibanHolderFirstName}
-                      onChangeText={(t) => setIbanHolderFirstName(t.toUpperCase())}
-                      placeholder="Nome"
-                      placeholderTextColor="#999"
-                      autoCapitalize="characters"
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.bankInputGroup}>
-                  <Text style={styles.bankInputLabel}>Banca</Text>
-                  <TextInput
-                    style={styles.bankInput}
-                    value={bankName}
-                    onChangeText={setBankName}
-                    placeholder="Nome della banca"
-                    placeholderTextColor="#999"
-                  />
-                </View>
-              </View>
-
-              {/* Preview */}
-              {contractStartDate && contractEndDate && (
+              {/* 🚫 28/06/2026 — Preview "Riepilogo Contratto" nascosta in edit mode
+                  (replica grafica coach: il riepilogo è già visibile in display mode). */}
+              {false && contractStartDate && contractEndDate && (
                 <View style={styles.previewBox}>
                   <Text style={styles.previewTitle}>📄 Riepilogo Contratto</Text>
                   <Text style={styles.previewText}>
@@ -610,7 +576,7 @@ export default function AthleteCompensation() {
                 </View>
               )}
 
-              {/* Save Button */}
+              {/* Save Button — replica stile coach */}
               <TouchableOpacity 
                 style={styles.saveButton}
                 onPress={handleSaveCompensation}
@@ -619,10 +585,7 @@ export default function AthleteCompensation() {
                 {saving ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <>
-                    <Ionicons name="checkmark" size={20} color="#fff" />
-                    <Text style={styles.saveButtonText}>Salva Compensi</Text>
-                  </>
+                  <Text style={styles.saveButtonText}>💾 SALVA COMPENSI</Text>
                 )}
               </TouchableOpacity>
             </View>

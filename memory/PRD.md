@@ -15,6 +15,21 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
+
+## 🎯 28/06/2026 — Editor Compensi Admin Atleta allineato al Coach ✅
+
+**Problema**: La pagina `/admin/athlete/[id]/compensation.tsx` aveva un editor sovraccarico con Dati Bancari, Preview Riepilogo Contratto, e formattazione amount non coerente con quella del coach. Richiesta utente: "stessa grafica e richieste come fosse un coach", "lascia solo importo, pregresso e date contratto".
+
+**Modifiche** (file: `/app/frontend/app/admin/athlete/[id]/compensation.tsx`):
+- ❌ Rimossi dall'edit mode: card "Dati Bancari" (IBAN, Intestatario, Banca), box "Preview Riepilogo Contratto"
+- ✅ Edit mode ora contiene solo: Data Inizio Contratto, Data Fine Contratto, Compenso Mensile, Compensi Pregressi Dichiarati (allineati a coach)
+- ✅ Input importi con formato italiano (virgola decimale), placeholder `€ 0,00`, onFocus reset, selectTextOnFocus
+- ✅ Hint testo allineato a coach: "Importo dichiarato dall'atleta percepito prima dell'assunzione (Gen-Ago se assunto a Set)"
+- ✅ Save handler ora applica `.replace(',', '.')` su monthly/other/prior compensation prima del parseFloat
+- ✅ Bottone salva: "💾 SALVA COMPENSI" (parità coach)
+- 🛡️ Stati iban/bankName/ibanHolder* restano caricati dal mount e re-inviati al save per non sovrascrivere i valori esistenti nel DB (l'IBAN viene gestito dall'atleta dal proprio profilo user)
+
+
 ## 🎯 26/06/2026 — WhatsApp OpenGraph dinamico per pre-iscrizioni ✅
 
 **Problema**: Il link di pre-iscrizione condiviso su WhatsApp mostrava "RegistraTEAM" come titolo (statico in `index.html` Expo Web SPA), confondendo le famiglie che non conoscono il nome del software.
