@@ -691,25 +691,22 @@ export default function AthleteCompensation() {
                 )}
               </View>
 
-              {/* Bank Info Display */}
-              {iban && (
+              {/* 🚫 28/06/2026 — "Dati Bancari" RIMOSSO da questa pagina (semplificazione editor):
+                  restano visibili nella scheda principale /admin/athlete/[id] tab Compensi. */}
+              {false && iban && (
                 <View style={styles.bankInfoBox}>
                   <Text style={styles.bankInfoTitle}>🏦 Dati Bancari</Text>
                   <Text style={styles.bankInfoText}>IBAN: {iban}</Text>
-                  {(ibanHolderFirstName || ibanHolderLastName) && (
-                    <Text style={styles.bankInfoText}>
-                      Intestatario: {ibanHolderLastName} {ibanHolderFirstName}
-                    </Text>
-                  )}
-                  {bankName && <Text style={styles.bankInfoText}>Banca: {bankName}</Text>}
                 </View>
               )}
             </View>
           )}
         </View>
 
-        {/* Banner predittivi superamento soglie (stessi del coach) */}
-        {contractMonths.length > 0 && !editing && (() => {
+        {/* 🚫 28/06/2026 — "Previsione superamento soglie" + "Calcoli Annuali" + "Quietanze Mensili"
+            RIMOSSI da questa pagina: questa è l'EDITOR semplificato (solo importo + date contratto).
+            Tutte le info di riepilogo restano visibili nella scheda principale /admin/athlete/[id]. */}
+        {false && contractMonths.length > 0 && !editing && (() => {
           const projections = getProjectedThresholdMonths();
           const years = Object.keys(projections).map(Number).sort((a, b) => a - b);
           const banners: any[] = [];

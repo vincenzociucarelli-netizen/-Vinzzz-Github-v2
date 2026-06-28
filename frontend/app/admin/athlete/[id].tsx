@@ -3602,21 +3602,15 @@ export default function AdminAthleteDetail() {
                       data-testid="promote-to-coach-btn"
                       onPress={openPromoteToCoachModal}
                       style={{
-                        marginTop: 12, padding: 14, backgroundColor: '#FFF8E1',
+                        marginTop: 12, paddingVertical: 10, paddingHorizontal: 12, backgroundColor: '#FFF8E1',
                         borderRadius: 8, borderWidth: 1, borderColor: '#F9A825',
-                        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8,
                       }}
                     >
-                      <View style={{ flex: 1, paddingRight: 8 }}>
-                        <Text style={{ fontWeight: '700', color: '#F57F17', fontSize: 14 }}>
-                          🎓 Aggiungi anche come Coach
-                        </Text>
-                        <Text style={{ fontSize: 11, color: '#666', marginTop: 2 }}>
-                          Per atleti che allenano una squadra. Le soglie €5K/€15K verranno calcolate
-                          cumulativamente (atleta + coach).
-                        </Text>
-                      </View>
-                      <Ionicons name="add-circle" size={28} color="#F57F17" />
+                      <Text style={{ fontWeight: '700', color: '#F57F17', fontSize: 13, flex: 1 }}>
+                        🎓 Aggiungi anche come Coach
+                      </Text>
+                      <Ionicons name="add-circle" size={22} color="#F57F17" />
                     </TouchableOpacity>
                   )}
               </>
