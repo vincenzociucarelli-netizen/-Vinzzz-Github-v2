@@ -20351,17 +20351,27 @@ async def list_signed_documents(
     
     if current_user["role"] != UserRole.ADMIN:
         # Non-admin users can only see their own documents
-        query["$or"] = [
+        # 🆕 28/06/2026 — Aggiunto filtro su "athlete_id" (le quietanze atleta usano
+        # questo campo invece di related_entity_id / signer_id).
+        user_athlete_id = current_user.get("athlete_id", "")
+        # Per atleti che sono loggati direttamente: il loro user.id può essere l'athlete_id
+        possible_athlete_ids = [aid for aid in [user_athlete_id, current_user.get("id", "")] if aid]
+        or_conditions = [
             {"signer_id": current_user["id"]},
-            {"related_entity_id": current_user.get("athlete_id", "")},
-            {"signer_email": current_user.get("email", "")}
+            {"signer_email": current_user.get("email", "")},
         ]
+        for aid in possible_athlete_ids:
+            or_conditions.append({"related_entity_id": aid})
+            or_conditions.append({"athlete_id": aid})
+        query["$or"] = or_conditions
     
     # Allow filtering by related_entity_id or signer_id (for admin viewing specific user's docs)
     if related_entity_id or signer_id:
         filter_conditions = []
         if related_entity_id:
+            # 🆕 28/06/2026 — supporta anche le quietanze atleta (athlete_id field)
             filter_conditions.append({"related_entity_id": related_entity_id})
+            filter_conditions.append({"athlete_id": related_entity_id})
         if signer_id:
             filter_conditions.append({"signer_id": signer_id})
         
@@ -20377,10 +20387,20 @@ async def list_signed_documents(
         _sid = current_user.get("society_id")
         if _sid:
             society_user_ids = [u["id"] async for u in db.users.find({"society_id": _sid}, {"_id": 0, "id": 1})]
+            # 🆕 28/06/2026 — Includi anche gli atleti (db.athletes) della società
+            # Le quietanze atleta hanno il campo athlete_id ma NON signer_id, quindi serve
+            # un OR esplicito su athlete_id ∈ society_athletes oltre a signer_id ∈ society_users.
+            society_athlete_ids = [a["id"] async for a in db.athletes.find({"society_id": _sid}, {"_id": 0, "id": 1})]
+            society_scope = {"$or": [
+                {"signer_id": {"$in": society_user_ids}},
+                {"athlete_id": {"$in": society_athlete_ids}},
+                {"related_entity_id": {"$in": society_athlete_ids}},
+            ]}
             # If a filter on signer_id already present (filter_conditions used $or above), restrict that
-            # else add signer_id $in scope
+            # else add society_scope
             if "$or" not in query and "$and" not in query:
-                query["signer_id"] = {"$in": society_user_ids}
+                # No existing OR — apply society_scope as $and
+                query["$and"] = [society_scope]
             else:
                 # Wrap with $and to enforce both existing OR and society scope
                 existing = []
@@ -20388,7 +20408,7 @@ async def list_signed_documents(
                     existing.append({"$or": query.pop("$or")})
                 if "$and" in query:
                     existing.extend(query.pop("$and"))
-                existing.append({"signer_id": {"$in": society_user_ids}})
+                existing.append(society_scope)
                 query["$and"] = existing
 
     documents = await db.signed_documents.find(query, {"pdf_base64": 0}).sort([("signed_at", -1), ("created_at", -1)]).to_list(100)
