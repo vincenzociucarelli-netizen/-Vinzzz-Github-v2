@@ -302,38 +302,13 @@ export default function AthleteProfile() {
   };
 
   // Handle privacy signature for adult athletes
+  // 🆕 28/06/2026 — Fix duplicato Privacy: il GDPRPrivacyModal crea già il documento firmato
+  // tramite /documents/sign-gdpr-privacy ("Informativa Privacy GDPR - Staff").
+  // Qui ci limitiamo ad aggiornare il flag privacy_accepted sull'utente, senza creare
+  // un secondo documento legacy "Consenso Privacy Atleta".
   const handlePrivacySign = async (signatureBase64: string) => {
     try {
-      // Generate privacy document with signature using /documents/sign endpoint
-      const privacyText = `
-INFORMATIVA SULLA PRIVACY E CONSENSO AL TRATTAMENTO DEI DATI PERSONALI
-
-Il/La sottoscritto/a ${profileData.full_name || `${profileData.last_name} ${profileData.first_name}`}, nato/a a ${profileData.place_of_birth || ''} il ${profileData.date_of_birth || ''}, residente in ${profileData.address || ''}, ${profileData.city || ''} (${profileData.province || ''}), C.F. ${profileData.fiscal_code || ''},
-
-DICHIARA
-
-di aver letto e compreso l'informativa ai sensi dell'art. 13 del Regolamento UE 2016/679 (GDPR) relativa al trattamento dei propri dati personali da parte di ${societyName} e
-
-ACCONSENTE
-
-al trattamento dei propri dati personali per le finalità connesse alla propria attività di Atleta presso la società sportiva, inclusa la comunicazione a terzi per finalità strettamente connesse all'attività sportiva.
-      `.trim();
-
-      await api.post('/documents/sign', {
-        document_type: 'privacy_consent',
-        document_title: 'Consenso Privacy Atleta',
-        document_text: privacyText,
-        signer_name: profileData.full_name || `${profileData.last_name} ${profileData.first_name}`,
-        signer_email: user?.email || profileData.email || '',
-        signature_base64: signatureBase64,
-        related_entity_id: athleteId,
-        additional_data: {
-          role: 'athlete',
-          fiscal_code: profileData.fiscal_code
-        }
-      });
-      
-      // Also update privacy_accepted flag in athlete profile
+      // Update privacy_accepted flag in user/athlete profile
       await api.patch('/auth/me', {
         privacy_accepted: true,
       });

@@ -140,6 +140,26 @@ export default function AthleteDocumentsScreen() {
             console.log('Could not fetch trial document:', e);
           }
         }
+
+        // 🆕 28/06/2026 — Quietanze compenso firmate (Atleta PRO)
+        try {
+          const receiptsRes = await api.get('/documents/signed', {
+            params: { page: 1, limit: 100, related_entity_id: athleteId }
+          });
+          const allDocs2 = receiptsRes.data?.documents || receiptsRes.data || [];
+          const receiptDocs = allDocs2.filter((d: any) => d.document_type === 'compensation_receipt' || d.document_type === 'threshold_5000' || d.document_type === 'threshold_15000');
+          receiptDocs.forEach((rd: any) => {
+            docs.push({
+              id: rd.id,
+              type: 'receipt',
+              name: rd.document_title || `Quietanza ${rd.month}/${rd.year}`,
+              date: rd.signed_at || '',
+              url: `/api/documents/signed/${rd.id}/pdf`,
+            });
+          });
+        } catch (e) {
+          console.log('Could not fetch receipts:', e);
+        }
         
         setDocuments(docs);
       }
