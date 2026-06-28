@@ -192,6 +192,52 @@ export default function DocumentsArchive() {
     }
   };
 
+  // 🆕 28/06/2026 — Migration: normalizza i campi legacy delle quietanze atleta
+  // (`signed`/`amount` → `receipt_signed`/`amount_gross`).
+  const handleNormalizeReceipts = async () => {
+    const confirmMsg = "Normalizza campi quietanze atleta?\n\nQuesto migra i record vecchi che usavano i campi legacy:\n• signed → receipt_signed\n• signed_date → receipt_signed_date\n• amount → amount_gross\n\nI campi legacy NON vengono cancellati (per backward-compat), ma i nuovi nomi vengono garantiti su tutti i record.\n\nEseguiamo prima una SCANSIONE (dry run), poi confermerai l'esecuzione.";
+    const ok = Platform.OS === 'web' ? window.confirm(confirmMsg) : await new Promise<boolean>((resolve) => {
+      Alert.alert('Normalizza quietanze', confirmMsg, [
+        { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Scansiona', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const dryRes = await fetch(`${API_URL}/api/admin/migrations/normalize-athlete-receipts?dry_run=true`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const dryData = await dryRes.json();
+      if (!dryRes.ok) throw new Error(dryData.detail || 'Errore scansione');
+      if ((dryData.needs_update || 0) === 0) {
+        const msg = `Nessun record da normalizzare.\n\nScansionati: ${dryData.scanned} record.`;
+        if (Platform.OS === 'web') window.alert(msg); else Alert.alert('OK', msg);
+        return;
+      }
+      const samples = (dryData.samples || []).map((s: any) => `• ${s.year}-${String(s.month).padStart(2,'0')} (id: ${(s.athlete_id || '').slice(0, 8)}) → ${Object.keys(s.applying).join(', ')}`).join('\n');
+      const confirmRun = `Trovati ${dryData.needs_update} record da normalizzare (su ${dryData.scanned} scansionati).\n\nEsempi:\n${samples}\n\nProcedere?`;
+      const ok2 = Platform.OS === 'web' ? window.confirm(confirmRun) : await new Promise<boolean>((resolve) => {
+        Alert.alert('Conferma migrazione', confirmRun, [
+          { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Esegui', onPress: () => resolve(true) },
+        ]);
+      });
+      if (!ok2) return;
+      const realRes = await fetch(`${API_URL}/api/admin/migrations/normalize-athlete-receipts?dry_run=false`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const realData = await realRes.json();
+      if (!realRes.ok) throw new Error(realData.detail || 'Errore esecuzione');
+      const msg = `${realData.message}\n\nStats:\n• Scansionati: ${realData.scanned}\n• Da aggiornare: ${realData.needs_update}\n• Aggiornati: ${realData.updated}`;
+      if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Completato', msg);
+    } catch (e: any) {
+      if (Platform.OS === 'web') window.alert(`Errore: ${e?.message || 'failed'}`); else Alert.alert('Errore', e?.message || 'failed');
+    }
+  };
+
   // 🆕 28/06/2026 — Cleanup documenti privacy duplicati (legacy "Consenso Privacy Atleta"
   // creati prima del fix del 28/06/2026, in coppia con "Informativa Privacy GDPR - Staff").
   const handleCleanupDuplicatePrivacy = async () => {
@@ -525,6 +571,13 @@ export default function DocumentsArchive() {
           data-testid="cleanup-duplicate-privacy-btn"
         >
           <Ionicons name="copy-outline" size={18} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={handleNormalizeReceipts}
+          style={{ backgroundColor: '#3F51B5', borderRadius: 8, paddingVertical: 6, paddingHorizontal: 10, marginRight: 8 }}
+          data-testid="normalize-receipts-btn"
+        >
+          <Ionicons name="swap-horizontal" size={18} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity
           onPress={handleRegenerateReceipts}

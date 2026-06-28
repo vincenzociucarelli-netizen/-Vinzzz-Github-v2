@@ -7774,15 +7774,23 @@ async def sign_athlete_compensation_receipt_with_signature(
         )
     
     # Update receipt record - also handle legacy records by matching both formats
+    # 🆕 28/06/2026 — Scriviamo entrambi i nomi campo (legacy `signed`/`amount` + nuovi
+    # `receipt_signed`/`amount_gross`) così non serve più normalizzare lato frontend.
+    # I campi legacy restano per backward-compatibility con codice già esistente.
     receipt_data = {
         "athlete_id": athlete_id,
         "society_id": athlete.get("society_id"),
         "month": month,  # Store as integer (1-12) for consistent filtering
         "month_name": month_name,  # Keep month name for display
         "year": year,
+        # Legacy fields (mantenuti per non rompere codice esistente)
         "signed": True,
         "signed_date": now,
         "amount": amount_gross,
+        # 🆕 New canonical fields (allineati a coach/dirigente/collaboratore)
+        "receipt_signed": True,
+        "receipt_signed_date": now,
+        "amount_gross": amount_gross,
         "signature_base64": signature_base64,
         "document_id": receipt_id,
         "pdf_filename": pdf_filename,
@@ -25024,7 +25032,77 @@ async def admin_diagnose_coach_compensations(coach_name: str, current_user = Dep
     return {"matches": len(users), "users": users, "compensations_detail": result}
 
 
-@api_router.post("/admin/documents/cleanup-duplicate-privacy")
+@api_router.post("/admin/migrations/normalize-athlete-receipts")
+async def admin_normalize_athlete_receipts(
+    dry_run: bool = True,
+    current_user = Depends(get_current_user)
+):
+    """🆕 28/06/2026 — Migration: normalizza i campi legacy di `athlete_compensation_receipts`.
+
+    Da: `signed`, `signed_date`, `amount`
+    A:  `receipt_signed`, `receipt_signed_date`, `amount_gross`
+
+    I campi legacy NON vengono cancellati (per backward-compat con codice non
+    ancora migrato), ma i nuovi nomi vengono garantiti su TUTTI i record.
+
+    Args:
+        dry_run: se True (default), conta cosa farebbe senza scrivere.
+                 Passare ?dry_run=false per eseguire davvero.
+    """
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    society_id = current_user.get("society_id")
+
+    scanned = 0
+    needs_update = 0
+    updated = 0
+    samples: list = []
+
+    query: dict = {}
+    if society_id:
+        # Multi-tenant: include solo atleti della società
+        athlete_ids = [a["id"] async for a in db.athletes.find({"society_id": society_id}, {"_id": 0, "id": 1})]
+        query["athlete_id"] = {"$in": athlete_ids}
+
+    async for r in db.athlete_compensation_receipts.find(query, {"_id": 0}):
+        scanned += 1
+        set_ops: dict = {}
+        if r.get("receipt_signed") is None and "signed" in r:
+            set_ops["receipt_signed"] = bool(r.get("signed"))
+        if r.get("receipt_signed_date") is None and r.get("signed_date") is not None:
+            set_ops["receipt_signed_date"] = r.get("signed_date")
+        if r.get("amount_gross") is None and r.get("amount") is not None:
+            set_ops["amount_gross"] = r.get("amount")
+        if set_ops:
+            needs_update += 1
+            if len(samples) < 5:
+                samples.append({
+                    "athlete_id": r.get("athlete_id"),
+                    "year": r.get("year"),
+                    "month": r.get("month"),
+                    "applying": set_ops,
+                })
+            if not dry_run:
+                res = await db.athlete_compensation_receipts.update_one(
+                    {"id": r.get("id"), "athlete_id": r.get("athlete_id"),
+                     "year": r.get("year"), "month": r.get("month")},
+                    {"$set": set_ops}
+                )
+                if res.modified_count > 0:
+                    updated += 1
+
+    return {
+        "message": ("Dry run completato — nessuna scrittura." if dry_run else f"Migration eseguita: {updated} record aggiornati."),
+        "dry_run": dry_run,
+        "scanned": scanned,
+        "needs_update": needs_update,
+        "updated": updated,
+        "samples": samples,
+    }
+
+
+
 async def admin_cleanup_duplicate_privacy(
     dry_run: bool = True,
     current_user = Depends(get_current_user)
