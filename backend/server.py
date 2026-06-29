@@ -13707,6 +13707,35 @@ class AdminCreateReceiptRequest(BaseModel):
     year: int
     amount_gross: float  # Admin can specify custom amount
 
+@api_router.get("/admin/athletes/{athlete_id}/external-compensations")
+async def admin_get_athlete_externals(
+    athlete_id: str,
+    current_user = Depends(get_current_user)
+):
+    """🆕 29/06/2026 — Admin: ritorna i compensi esterni dichiarati da un atleta
+    raggruppati per anno (utilizzato dal modal "Gestione Quietanze" per calcolare
+    correttamente le soglie cronologiche in modo identico al lato user)."""
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    athlete = await db.athletes.find_one({"id": athlete_id}, {"_id": 0, "id": 1, "society_id": 1, "linked_user_id": 1, "user_id": 1})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    if current_user.get("society_id") and athlete.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Atleta di altra società")
+    candidate_ids = list({uid for uid in [athlete_id, athlete.get("linked_user_id"), athlete.get("user_id")] if uid})
+    q: dict = {"user_id": {"$in": candidate_ids}} if len(candidate_ids) > 1 else {"user_id": athlete_id}
+    by_year: dict = {}
+    items: list = []
+    async for d in db.external_compensations.find(q, {"_id": 0}):
+        y = int(d.get("year") or 0)
+        if not y:
+            continue
+        amt = float(d.get("amount") or 0)
+        by_year[y] = by_year.get(y, 0) + amt
+        items.append(d)
+    return {"by_year": by_year, "items": items}
+
+
 @api_router.post("/admin/athletes/{athlete_id}/compensation/create-receipt")
 async def admin_create_athlete_receipt(
     athlete_id: str,

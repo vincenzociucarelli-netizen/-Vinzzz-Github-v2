@@ -266,6 +266,8 @@ export default function AdminAthleteDetail() {
   const [creatingReceipt, setCreatingReceipt] = useState(false);
   // 🆕 21/06/2026 — Quietanze firmate (per widget "Già Percepito" + modal Gestione Quietanze)
   const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
+  // 🆕 29/06/2026 — Compensi esterni dichiarati dall'atleta (per calcolo soglie corretto)
+  const [externalCompByYear, setExternalCompByYear] = useState<{ [year: number]: number }>({});
   const [receiptsModalVisible, setReceiptsModalVisible] = useState(false);
   // 🆕 22/02/2026 — Threshold status anno 1 + anno 2 (allineato a vista Collaboratore)
   const [thresholdStatus, setThresholdStatus] = useState<any>(null);
@@ -481,6 +483,13 @@ export default function AdminAthleteDetail() {
           setSignedReceipts(list);
         } catch (e) {
           setSignedReceipts([]);
+        }
+        // 🆕 29/06/2026 — Carica compensi esterni per calcolo soglie (admin)
+        try {
+          const extRes = await api.get(`/admin/athletes/${id}/external-compensations`);
+          setExternalCompByYear(extRes.data?.by_year || {});
+        } catch (e) {
+          setExternalCompByYear({});
         }
         // 🆕 FASE 2B — Check se l'atleta è anche Coach (dual-role)
         try {
@@ -4877,30 +4886,19 @@ export default function AdminAthleteDetail() {
                   return atletaMonthly + coachExtra;
                 };
 
-                // Calcola soglie cronologiche per anno
-                const sortedForCalc = [...onlySigned].sort((a: any, b: any) => {
-                  if (a.year !== b.year) return a.year - b.year;
-                  return a.month - b.month;
-                });
-                const thresholdsByYear: { [year: number]: { first5k: number | null; first15k: number | null } } = {};
-                const cumulativeByYear: { [year: number]: number } = {};
-                const priorComp = athlete?.other_annual_compensation || 0;
+                // 🆕 29/06/2026 — Calcolo soglie cronologiche proiettato su TUTTI i mesi
+                // contrattuali (signed + monthlyComp fallback) + compensi esterni dichiarati.
+                // Replica esatta del flusso lato user (athlete/compensation.tsx) così le card
+                // mostrano gli stessi badge >5K / >15K nello stesso mese.
+                const priorComp = Number(athlete?.other_annual_compensation || 0);
                 const contractYear = athlete?.contract_start_date ? parseInt(String(athlete.contract_start_date).split('-')[0]) : new Date().getFullYear();
-                if (priorComp > 0) cumulativeByYear[contractYear] = priorComp;
-                for (const r of sortedForCalc) {
-                  if (!thresholdsByYear[r.year]) thresholdsByYear[r.year] = { first5k: null, first15k: null };
-                  if (!cumulativeByYear[r.year]) cumulativeByYear[r.year] = r.year === contractYear ? (priorComp || 0) : 0;
-                  cumulativeByYear[r.year] += (r.amount_gross || r.amount || 0);
-                  if (cumulativeByYear[r.year] > 5000 && thresholdsByYear[r.year].first5k === null) {
-                    thresholdsByYear[r.year].first5k = r.month;
-                  }
-                  if (cumulativeByYear[r.year] > 15000 && thresholdsByYear[r.year].first15k === null) {
-                    thresholdsByYear[r.year].first15k = r.month;
-                  }
-                }
-
-                // Genera TUTTI i mesi del contratto
-                const allMonths: Array<{ year: number; month: number; receipt: any | null }> = [];
+                const monthlyComp = Number(athlete?.monthly_compensation || 0);
+                // Aggrega compensi esterni dichiarati per anno
+                // 🆕 29/06/2026 — Fonte: endpoint /admin/athletes/{id}/external-compensations
+                // (replica esatta dei dati visualizzati lato user)
+                const externalByYearAdmin: { [year: number]: number } = { ...externalCompByYear };
+                // Genera tutti i mesi contrattuali ordinati cronologicamente
+                const allContractMonths: Array<{ year: number; month: number }> = [];
                 const cStart = athlete?.contract_start_date;
                 const cEnd = athlete?.contract_end_date;
                 if (cStart && cEnd) {
@@ -4908,12 +4906,36 @@ export default function AdminAthleteDetail() {
                   const [ey, em] = String(cEnd).split('-').map(Number);
                   let y = sy, m = sm;
                   while (y < ey || (y === ey && m <= em)) {
-                    const r = onlySigned.find((x: any) => x.year === y && x.month === m) || null;
-                    allMonths.push({ year: y, month: m, receipt: r });
+                    allContractMonths.push({ year: y, month: m });
                     m++;
                     if (m > 12) { m = 1; y++; }
                   }
                 }
+                const thresholdsByYear: { [year: number]: { first5k: number | null; first15k: number | null } } = {};
+                const cumulativeByYear: { [year: number]: number } = {};
+                for (const { year, month } of allContractMonths) {
+                  if (!thresholdsByYear[year]) thresholdsByYear[year] = { first5k: null, first15k: null };
+                  if (cumulativeByYear[year] === undefined) {
+                    // Inizio anno: includi pregresso (solo nell'anno di inizio contratto) + esterni di quest'anno
+                    cumulativeByYear[year] = (year === contractYear ? priorComp : 0) + (externalByYearAdmin[year] || 0);
+                  }
+                  // Importo del mese: signed > custom > fallback monthlyComp
+                  const r = signedReceipts.find((x: any) => x.year === year && x.month === month);
+                  const amt = Number((r?.amount_gross ?? r?.amount ?? monthlyComp) || 0);
+                  cumulativeByYear[year] += amt;
+                  if (cumulativeByYear[year] > 5000 && thresholdsByYear[year].first5k === null) {
+                    thresholdsByYear[year].first5k = month;
+                  }
+                  if (cumulativeByYear[year] > 15000 && thresholdsByYear[year].first15k === null) {
+                    thresholdsByYear[year].first15k = month;
+                  }
+                }
+
+                // Genera TUTTI i mesi del contratto
+                const allMonths: Array<{ year: number; month: number; receipt: any | null }> = allContractMonths.map(({ year, month }) => {
+                  const r = onlySigned.find((x: any) => x.year === year && x.month === month) || null;
+                  return { year, month, receipt: r };
+                });
                 // Most recent first
                 const sortedAllMonths = [...allMonths].sort((a, b) => {
                   if (a.year !== b.year) return b.year - a.year;
@@ -4931,27 +4953,44 @@ export default function AdminAthleteDetail() {
                 }
 
                 return sortedAllMonths.map(({ year, month, receipt }, index: number) => {
+                  // 🆕 29/06/2026 — Calcola lo stato soglia anche per i mesi NON firmati
+                  // (replica grafica user: i mesi futuri che supereranno >5K/>15K devono
+                  // comunque essere colorati arancione/viola).
+                  const yt = thresholdsByYear[year] || { first5k: null, first15k: null };
+                  const monthIsAfter5k = yt.first5k !== null && month >= yt.first5k;
+                  const monthIsAfter15k = yt.first15k !== null && month >= yt.first15k;
                   if (!receipt) {
                     const expected = computeMonthExpected(year, month);
+                    const bg = monthIsAfter15k ? '#F3E5F5' : monthIsAfter5k ? '#FFF8E1' : '#F5F5F5';
+                    const border = monthIsAfter15k ? '#9C27B0' : monthIsAfter5k ? '#FF9800' : '#BDBDBD';
                     return (
                       <View
                         key={`empty-${year}-${month}`}
                         style={{
-                          backgroundColor: '#F5F5F5',
+                          backgroundColor: bg,
                           paddingVertical: 8,
                           paddingHorizontal: 10,
                           marginBottom: 6,
                           borderLeftWidth: 3,
-                          borderLeftColor: '#BDBDBD',
+                          borderLeftColor: border,
                           borderRadius: 6,
                         }}
                       >
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <View style={{ flex: 1 }}>
+                          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                             <Text style={{ fontSize: 14, fontWeight: '500', color: '#616161' }}>
                               {MONTH_NAMES[month]} {year}
                             </Text>
-                            <Text style={{ fontSize: 11, color: '#9E9E9E', fontStyle: 'italic' }}>Non firmata</Text>
+                            {monthIsAfter15k && (
+                              <View style={{ backgroundColor: '#9C27B0', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>&gt;15K</Text>
+                              </View>
+                            )}
+                            {!monthIsAfter15k && monthIsAfter5k && (
+                              <View style={{ backgroundColor: '#FF9800', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>&gt;5K</Text>
+                              </View>
+                            )}
                           </View>
                           {expected > 0 && (
                             <Text style={{ fontSize: 14, fontWeight: '700', color: '#1565C0' }}>
@@ -4959,6 +4998,7 @@ export default function AdminAthleteDetail() {
                             </Text>
                           )}
                         </View>
+                        <Text style={{ fontSize: 11, color: '#9E9E9E', fontStyle: 'italic', marginTop: 2 }}>Non firmata</Text>
                       </View>
                     );
                   }
