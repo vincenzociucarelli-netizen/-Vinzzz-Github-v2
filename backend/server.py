@@ -25485,15 +25485,33 @@ async def _regenerate_threshold_communication_pdf(document: dict) -> Optional[by
         # ⚠️ Check 15000 FIRST because "5000" is a substring of "15000"!
         threshold_type = "15000" if "15000" in doc_type else "5000"
 
-        # Signer can be referenced as signer_id, coach_id, dirigente_id, collaboratore_id, atleta_id
+        # Signer can be referenced as signer_id, coach_id, dirigente_id, collaboratore_id, athlete_id
+        # 🆕 29/06/2026 — Fix: campo athlete_id (non atleta_id) e ricerca in db.athletes per atleti PRO
         signer_id = (
             document.get("signer_id")
             or document.get("coach_id")
             or document.get("dirigente_id")
             or document.get("collaboratore_id")
+            or document.get("athlete_id")
             or document.get("atleta_id")
         )
         signer = await db.users.find_one({"id": signer_id}, {"_id": 0}) if signer_id else None
+        # Fallback: atleti compensati PRO non sono in users, ma in athletes
+        if signer_id and not signer:
+            ath = await db.athletes.find_one({"id": signer_id}, {"_id": 0})
+            if ath:
+                full_name = (
+                    ath.get("full_name")
+                    or f"{ath.get('last_name', '').upper()} {ath.get('first_name', '').upper()}".strip()
+                    or "Atleta"
+                )
+                signer = {
+                    "id": ath.get("id"),
+                    "full_name": full_name,
+                    "fiscal_code": ath.get("fiscal_code", ""),
+                    "society_id": ath.get("society_id"),
+                    "_is_athlete": True,
+                }
 
         # Society: from doc or via signer
         society_id = document.get("society_id") or (signer.get("society_id") if signer else None)
@@ -25507,14 +25525,16 @@ async def _regenerate_threshold_communication_pdf(document: dict) -> Optional[by
         year = document.get("year") or (int(str(document.get("signed_at", ""))[:4]) if document.get("signed_at") else None)
 
         # Lookup compensation record for signature
+        # 🆕 29/06/2026 — Fix nome collezione: athlete_compensation_receipts (era atleta_pro_compensations inesistente)
         comp = None
         if signer_id and year and month:
-            for coll in ("coach_compensations", "dirigente_compensations", "collaboratore_compensations", "atleta_pro_compensations"):
+            for coll in ("coach_compensations", "dirigente_compensations", "collaboratore_compensations", "athlete_compensation_receipts"):
                 comp = await db[coll].find_one({
                     "$or": [
                         {"coach_id": signer_id},
                         {"dirigente_id": signer_id},
                         {"collaboratore_id": signer_id},
+                        {"athlete_id": signer_id},
                         {"atleta_id": signer_id},
                     ],
                     "month": month, "year": year,
@@ -25555,14 +25575,19 @@ async def _regenerate_threshold_communication_pdf(document: dict) -> Optional[by
         )
 
         # Collaborator info
+        # 🆕 29/06/2026 — Aggiunti athlete_name + athlete signer (cercato in db.athletes
+        # nella sezione superiore). Fallback "Atleta" se il documento è di un atleta.
+        is_athlete_doc = bool(document.get("athlete_id") or document.get("atleta_id") or (signer and signer.get("_is_athlete")))
         collaborator_name = (
             document.get("signer_name")
+            or document.get("athlete_name")
             or document.get("coach_name")
             or (signer.get("full_name") if signer else None)
-            or "Collaboratore"
+            or ("Atleta" if is_athlete_doc else "Collaboratore")
         )
         fiscal_code = (
-            (signer.get("fiscal_code") if signer else None)
+            document.get("fiscal_code")
+            or (signer.get("fiscal_code") if signer else None)
             or add.get("fiscal_code")
             or ""
         )
