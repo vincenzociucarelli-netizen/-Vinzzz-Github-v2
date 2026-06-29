@@ -4961,8 +4961,10 @@ export default function AdminAthleteDetail() {
                   const monthIsAfter15k = yt.first15k !== null && month >= yt.first15k;
                   if (!receipt) {
                     const expected = computeMonthExpected(year, month);
-                    const bg = monthIsAfter15k ? '#F3E5F5' : monthIsAfter5k ? '#FFF8E1' : '#F5F5F5';
-                    const border = monthIsAfter15k ? '#9C27B0' : monthIsAfter5k ? '#FF9800' : '#BDBDBD';
+                    // 🆕 29/06/2026 — Mesi NON firmati: SEMPRE grigi (nessun bg colorato).
+                    // Solo il badge ">5K"/">15K" indica il mese di superamento soglia.
+                    const bg = '#F5F5F5';
+                    const border = '#BDBDBD';
                     return (
                       <View
                         key={`empty-${year}-${month}`}
