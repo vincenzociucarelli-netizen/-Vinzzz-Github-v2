@@ -5043,6 +5043,35 @@ export default function AdminAthleteDetail() {
                         <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#2E7D32' }}>
                           {formatCurrency((receipt.amount_gross || receipt.amount || 0))}
                         </Text>
+                        {/* 🆕 29/06/2026 — Cestino per cancellare quietanza atleta firmata
+                            (parità con Coach/Collaboratore). Conferma + DELETE backend. */}
+                        <TouchableOpacity
+                          onPress={async () => {
+                            const ok = Platform.OS === 'web'
+                              ? window.confirm(`Cancellare la quietanza di ${MONTH_NAMES[receipt.month]} ${receipt.year} (€${(receipt.amount_gross || receipt.amount || 0).toFixed(2)})?\n\nL'atleta dovrà ri-firmare il mese.`)
+                              : await new Promise<boolean>((resolve) => {
+                                  Alert.alert('Cancellare quietanza?',
+                                    `${MONTH_NAMES[receipt.month]} ${receipt.year} - €${(receipt.amount_gross || receipt.amount || 0).toFixed(2)}\nL'atleta dovrà ri-firmare il mese.`,
+                                    [
+                                      { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                                      { text: 'Cancella', style: 'destructive', onPress: () => resolve(true) },
+                                    ]);
+                                });
+                            if (!ok) return;
+                            try {
+                              await api.delete(`/admin/athletes/${id}/compensation/${receipt.year}/${receipt.month}`);
+                              await loadData();
+                            } catch (e: any) {
+                              const msg = e?.response?.data?.detail || 'Errore cancellazione';
+                              if (Platform.OS === 'web') window.alert(`Errore: ${msg}`); else Alert.alert('Errore', msg);
+                            }
+                          }}
+                          style={{ marginLeft: 8, padding: 4 }}
+                          testID={`delete-receipt-${receipt.month}-${receipt.year}`}
+                          accessibilityLabel="Cancella quietanza"
+                        >
+                          <Ionicons name="trash-outline" size={18} color="#C62828" />
+                        </TouchableOpacity>
                       </View>
                     </View>
                   );
