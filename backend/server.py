@@ -7663,11 +7663,18 @@ async def sign_athlete_compensation_receipt_with_signature(
     try:
         # Pre-generate the document id so we can embed it as QR code in the PDF
         receipt_id = str(uuid.uuid4())
+        # 🆕 29/06/2026 — Costruisci nome atleta robusto (full_name oppure ricomposto)
+        athlete_display_name = (
+            athlete.get('full_name')
+            or f"{athlete.get('last_name', '').upper()} {athlete.get('first_name', '').upper()}".strip()
+            or 'Atleta'
+        )
+        athlete_fiscal = athlete.get('fiscal_code') or ''
         if first_time_exceeded_15000:
             pdf_bytes = generate_threshold_15k_pdf(
                 society_name=society_name,
-                collaborator_name=athlete.get('full_name', 'Atleta'),
-                collaborator_fiscal_code=athlete.get('fiscal_code', ''),
+                collaborator_name=athlete_display_name,
+                collaborator_fiscal_code=athlete_fiscal,
                 year=year,
                 signature_base64=signature_base64,
                 society_city=society_city,
@@ -7680,8 +7687,8 @@ async def sign_athlete_compensation_receipt_with_signature(
         elif first_time_exceeded_5000:
             pdf_bytes = generate_threshold_5k_pdf(
                 society_name=society_name,
-                collaborator_name=athlete.get('full_name', 'Atleta'),
-                collaborator_fiscal_code=athlete.get('fiscal_code', ''),
+                collaborator_name=athlete_display_name,
+                collaborator_fiscal_code=athlete_fiscal,
                 year=year,
                 signature_base64=signature_base64,
                 society_city=society_city,
@@ -7694,8 +7701,8 @@ async def sign_athlete_compensation_receipt_with_signature(
         else:
             pdf_bytes = generate_monthly_receipt_pdf(
                 society_name=society_name,
-                collaborator_name=athlete.get('full_name', 'Atleta'),
-                collaborator_fiscal_code=athlete.get('fiscal_code', ''),
+                collaborator_name=athlete_display_name,
+                collaborator_fiscal_code=athlete_fiscal,
                 month_name=month_name,
                 year=year,
                 amount_gross=combined_amount,  # 🆕 Totale (Atleta + Coach se dual-role attivo)
@@ -7706,6 +7713,8 @@ async def sign_athlete_compensation_receipt_with_signature(
                 # 🆕 26/02/2026 — Split dual-role: se Coach attivo nel mese, mostra entrambe le voci
                 coach_amount=(coach_amount_this_month if coach_contract_active_this_month else None),
                 athlete_pro_amount=(float(amount_gross) if coach_contract_active_this_month else None),
+                # 🆕 29/06/2026 — Label "Atleta:" invece di "Collaboratore:"
+                role_label="Atleta",
             )
             pdf_filename_prefix = "quietanza_atleta"
             doc_type = "compensation_receipt"
@@ -17521,6 +17530,7 @@ def generate_monthly_receipt_pdf(
     document_hash: Optional[str] = None,
     coach_amount: Optional[float] = None,
     athlete_pro_amount: Optional[float] = None,
+    role_label: str = "Collaboratore",  # 🆕 29/06/2026 — label personalizzabile: "Atleta"/"Coach"/"Dirigente"
 ) -> bytes:
     """Generate monthly compensation receipt PDF with proper formatting.
 
@@ -17566,7 +17576,7 @@ def generate_monthly_receipt_pdf(
     
     # Collaborator info
     y -= 1*cm
-    c.drawString(2*cm, y, f"Collaboratore: {collaborator_name}")
+    c.drawString(2*cm, y, f"{role_label}: {collaborator_name}")
     
     y -= 0.6*cm
     c.drawString(2*cm, y, f"Codice Fiscale: {collaborator_fiscal_code or '________________________'}")

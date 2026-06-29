@@ -147,12 +147,28 @@ export default function AthleteDocumentsScreen() {
             params: { page: 1, limit: 100, related_entity_id: athleteId }
           });
           const allDocs2 = receiptsRes.data?.documents || receiptsRes.data || [];
-          const receiptDocs = allDocs2.filter((d: any) => d.document_type === 'compensation_receipt' || d.document_type === 'threshold_5000' || d.document_type === 'threshold_15000');
+          // 🆕 29/06/2026 — Document types actually used by backend:
+          // compensation_receipt, threshold_5000_communication, threshold_15000_communication
+          const receiptDocs = allDocs2.filter((d: any) =>
+            d.document_type === 'compensation_receipt' ||
+            d.document_type === 'threshold_5000_communication' ||
+            d.document_type === 'threshold_15000_communication' ||
+            d.document_type === 'threshold_5000' ||
+            d.document_type === 'threshold_15000'
+          );
           receiptDocs.forEach((rd: any) => {
+            const isThreshold5K = rd.document_type?.includes('5000');
+            const isThreshold15K = rd.document_type?.includes('15000');
+            const monthName = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][((rd.month||1)-1)] || '';
+            const baseName = isThreshold15K
+              ? `Comunicazione Superamento €15.000 - ${rd.year || ''}`
+              : isThreshold5K
+              ? `Comunicazione Superamento €5.000 - ${rd.year || ''}`
+              : `Quietanza ${monthName} ${rd.year || ''}`;
             docs.push({
               id: rd.id,
               type: 'receipt',
-              name: rd.document_title || `Quietanza ${rd.month}/${rd.year}`,
+              name: rd.document_title || baseName,
               date: rd.signed_at || '',
               url: `/api/documents/signed/${rd.id}/pdf`,
             });
