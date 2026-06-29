@@ -3416,25 +3416,63 @@ export default function AdminAthleteDetail() {
                               const blocks: any[] = [];
                               const t5 = ts?.thresholds?.['5000'];
                               const t15 = ts?.thresholds?.['15000'];
+                              // 🆕 29/06/2026 — Fallback locale: il backend threshold-status
+                              // somma solo le quietanze FIRMATE. Se l'admin ha già creato una
+                              // quietanza custom non firmata (es. Nov €6001), il backend non
+                              // la conta → il banner non si attiva. Qui forziamo il warning
+                              // se la breakdown locale (che include i custom) supera la soglia.
+                              const localYb = yearlyBreakdown?.[yr];
+                              const local15kNeedsWarning = !!(localYb?.exceedsThreshold15k && !t15?.declaration_signed);
+                              const local5kNeedsWarning = !!(localYb?.exceedsThreshold5k && !t5?.declaration_signed);
+                              // Calcola mese soglia locale iterando i mesi contrattuali con custom
+                              const computeLocalThresholdMonth = (limit: number): number => {
+                                const priorY = Number(athlete?.other_annual_compensation || 0);
+                                const monthlyY = Number(athlete?.monthly_compensation || 0);
+                                const contractStartYr = athlete?.contract_start_date ? parseInt(String(athlete.contract_start_date).split('-')[0]) : new Date().getFullYear();
+                                // Build months in this year that fall in contract
+                                const cStart = athlete?.contract_start_date;
+                                const cEnd = athlete?.contract_end_date;
+                                if (!cStart || !cEnd) return 0;
+                                const [sy, sm] = String(cStart).split('-').map(Number);
+                                const [ey, em] = String(cEnd).split('-').map(Number);
+                                const months: number[] = [];
+                                for (let m = 1; m <= 12; m++) {
+                                  // include month m of year yr if within contract
+                                  if (yr < sy || yr > ey) continue;
+                                  if (yr === sy && m < sm) continue;
+                                  if (yr === ey && m > em) continue;
+                                  months.push(m);
+                                }
+                                let cum = (yr === contractStartYr ? priorY : 0) + (externalCompByYear[yr] || 0);
+                                for (const month of months) {
+                                  const r = signedReceipts.find((x: any) => x.year === yr && x.month === month);
+                                  const amt = Number((r?.amount_gross ?? r?.amount ?? monthlyY) || 0);
+                                  cum += amt;
+                                  if (cum > limit) return month;
+                                }
+                                return 0;
+                              };
+                              const t15ThresholdMonth = t15?.threshold_month || (local15kNeedsWarning ? computeLocalThresholdMonth(15000) : 0);
+                              const t5ThresholdMonth = t5?.threshold_month || (local5kNeedsWarning ? computeLocalThresholdMonth(5000) : 0);
                               // Warning 5k
-                              if (t5?.needs_warning && !t5?.declaration_signed) {
+                              if ((t5?.needs_warning || local5kNeedsWarning) && !t5?.declaration_signed) {
                                 blocks.push(
                                   <View key={`w5-${yr}`} style={{ backgroundColor: '#FFF3E0', borderWidth: 1, borderColor: '#FF9800', borderRadius: 8, padding: 12, alignItems: 'center' }}>
                                     <Text style={{ fontSize: 14, fontWeight: '700', color: '#E65100', textAlign: 'center', marginBottom: 4 }}>⚠️ Anno {yr}: Soglia dei €5.000</Text>
                                     <Text style={{ fontSize: 13, color: '#E65100', textAlign: 'center', lineHeight: 18 }}>
-                                      Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{mn[t5?.threshold_month || 0]}</Text> supererà la soglia previdenziale di €5.000.
+                                      Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{mn[t5ThresholdMonth || 0]}</Text> supererà la soglia previdenziale di €5.000.
                                     </Text>
                                     <Text style={{ fontSize: 11, color: '#E65100', textAlign: 'center', fontStyle: 'italic', marginTop: 4 }}>Contributi previdenziali INPS</Text>
                                   </View>
                                 );
                               }
                               // Warning 15k
-                              if (t15?.needs_warning && !t15?.declaration_signed) {
+                              if ((t15?.needs_warning || local15kNeedsWarning) && !t15?.declaration_signed) {
                                 blocks.push(
                                   <View key={`w15-${yr}`} style={{ backgroundColor: '#F3E5F5', borderWidth: 1, borderColor: '#9C27B0', borderRadius: 8, padding: 12, alignItems: 'center' }}>
                                     <Text style={{ fontSize: 14, fontWeight: '700', color: '#6A1B9A', textAlign: 'center', marginBottom: 4 }}>🚨 Anno {yr}: Soglia dei €15.000</Text>
                                     <Text style={{ fontSize: 13, color: '#6A1B9A', textAlign: 'center', lineHeight: 18 }}>
-                                      Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{mn[t15?.threshold_month || 0]}</Text> supererà la soglia fiscale di €15.000.
+                                      Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{mn[t15ThresholdMonth || 0]}</Text> supererà la soglia fiscale di €15.000.
                                     </Text>
                                     <Text style={{ fontSize: 11, color: '#6A1B9A', textAlign: 'center', fontStyle: 'italic', marginTop: 4 }}>Tassazione IRPEF obbligatoria</Text>
                                   </View>
@@ -4872,6 +4910,14 @@ export default function AdminAthleteDetail() {
                 const coachStart = linkedCoach?.contract_start_date || '';
                 const coachEnd = linkedCoach?.contract_end_date || '';
                 const computeMonthExpected = (y: number, m: number): number => {
+                  // 🆕 29/06/2026 — Se esiste già un record (anche non firmato, es. custom),
+                  // restituiamo il suo amount. Solo se non c'è alcun record fallback al
+                  // calcolo standard (atletaMonthly + eventuale coach).
+                  const existing = signedReceipts.find((r: any) => r.year === y && r.month === m);
+                  if (existing) {
+                    const amt = Number(existing.amount_gross ?? existing.amount ?? 0);
+                    if (amt > 0) return amt;
+                  }
                   let coachExtra = 0;
                   if (coachMonthly > 0 && coachStart && coachEnd) {
                     try {
