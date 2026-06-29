@@ -25709,11 +25709,18 @@ async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes
     """Regenerate a compensation receipt PDF from the source-of-truth row.
 
     Used to repair stale cached PDFs that lack signature/original signing date/
-    authentication metadata. Searches across coach / collaboratore / dirigente
-    compensation collections for the original signature and signed date.
+    authentication metadata. Searches across coach / collaboratore / dirigente /
+    athlete compensation collections for the original signature and signed date.
+    🆕 29/06/2026 — Esteso per atleti compensati PRO (athlete_id + db.athletes
+    + athlete_compensation_receipts + role_label="Atleta").
     """
     try:
-        signer_id = document.get("coach_id") or document.get("signer_id")
+        signer_id = (
+            document.get("coach_id")
+            or document.get("signer_id")
+            or document.get("athlete_id")
+            or document.get("atleta_id")
+        )
         # Read month/year/amount from BOTH top-level (current schema) and
         # additional_data (legacy/alternative schema)
         ad = document.get("additional_data") or {}
@@ -25726,8 +25733,23 @@ async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes
             or ad.get("amount")
         )
 
-        # Find signer profile
+        # Find signer profile (users for staff, athletes for atleti compensati)
         signer = await db.users.find_one({"id": signer_id}) if signer_id else None
+        is_athlete_doc = bool(document.get("athlete_id") or document.get("atleta_id"))
+        if signer_id and not signer:
+            ath = await db.athletes.find_one({"id": signer_id})
+            if ath:
+                signer = {
+                    "id": ath.get("id"),
+                    "full_name": (
+                        ath.get("full_name")
+                        or f"{ath.get('last_name', '').upper()} {ath.get('first_name', '').upper()}".strip()
+                        or "Atleta"
+                    ),
+                    "fiscal_code": ath.get("fiscal_code", ""),
+                    "society_id": ath.get("society_id"),
+                }
+                is_athlete_doc = True
 
         # Find society
         society_id = document.get("society_id") or (signer or {}).get("society_id")
@@ -25739,11 +25761,17 @@ async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes
         society_name = society_settings.get("ragione_sociale") or society_settings.get("society_name") or ""
 
         signer_name = (
-            document.get("coach_name")
+            document.get("athlete_name")
+            or document.get("coach_name")
             or document.get("signer_name")
             or (signer or {}).get("full_name", "")
         )
-        fiscal = (signer or {}).get("fiscal_code") or (document.get("additional_data") or {}).get("fiscal_code") or ""
+        fiscal = (
+            document.get("fiscal_code")
+            or (signer or {}).get("fiscal_code")
+            or (document.get("additional_data") or {}).get("fiscal_code")
+            or ""
+        )
 
         # Recover signature + signed_date from source-of-truth compensation row
         signature_b64 = document.get("signature_base64") or ""
@@ -25757,11 +25785,13 @@ async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes
                     ("collaboratore_compensations", "collaboratore_id"),
                     ("dirigente_compensations", "dirigente_id"),
                     ("compensations", "coach_id"),
+                    # 🆕 29/06/2026 — Atleti compensati PRO
+                    ("athlete_compensation_receipts", "athlete_id"),
                 ]:
                     comp = await db[coll].find_one({key: signer_id, "month": m_int, "year": y_int})
                     if comp:
                         if not signature_b64:
-                            signature_b64 = comp.get("receipt_signature_base64") or ""
+                            signature_b64 = comp.get("receipt_signature_base64") or comp.get("signature_base64") or ""
                         if not source_signed_at:
                             source_signed_at = comp.get("receipt_signed_date") or comp.get("signed_date")
                         if signature_b64 and source_signed_at:
@@ -25786,6 +25816,8 @@ async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes
             signer_id=signer_id,
             ip_address=document.get("ip_address"),
             document_hash=document.get("document_hash") or document.get("hash"),
+            # 🆕 29/06/2026 — Label "Atleta:" per quietanze atleti compensati
+            role_label=("Atleta" if is_athlete_doc else "Collaboratore"),
         )
         return pdf_bytes
     except Exception as e:
