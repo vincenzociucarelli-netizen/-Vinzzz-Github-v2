@@ -16,6 +16,32 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🎯 29/06/2026 — Request Delete quietanze Atleta 18+ PRO + Mappa Palestre nel "Da Fare" PRO ✅
+
+**Richiesta utente**: 
+1. "Quando admin cancella una quietanza deve essere accettata dall'user, non cancellazione diretta" — parità Coach/Collaboratore/Dirigente.
+2. "Aggiungi a fondo pagina DA FARE degli atleti 18+ la mappa RegistraTEAM che trovi già nei coach o in admin".
+
+**Modifiche backend**:
+- `/app/backend/server.py` — `admin_request_delete_signed_document`: aggiunto fallback per identificare il firmatario atleta tramite `db.users.find_one({"athlete_id": doc["athlete_id"]})` (senza, signer_id era None e la cancellazione veniva eseguita immediatamente).
+- `_execute_document_deletion`: 
+  - `owner_id` ora include anche `doc.get("athlete_id")` (oltre a `atleta_id`).
+  - Aggiunto blocco specifico per `compensation_receipt` / `compensation_receipt_split`: cancella la riga in `athlete_compensation_receipts` (match `athlete_id` + mese int/stringa legacy + anno) così l'atleta vede di nuovo il mese come NON firmato.
+  - Aggiunto sblocco del record Coach gemello dual-role tramite `doc.get("linked_coach_user_id")`.
+
+**Modifiche frontend**:
+- `/app/frontend/app/admin/athlete/[id].tsx` — il tasto cestino sulla quietanza atleta firmata ora invia una **richiesta** (`DELETE /api/documents/{document_id}`) invece di cancellare direttamente. La cancellazione effettiva avviene solo dopo l'autorizzazione dell'atleta. `testID="request-delete-receipt-{month}-{year}"`.
+- `/app/frontend/app/athlete/index.tsx` — aggiunti:
+  - `pendingDeletions` state + `loadPendingDeletions()` + `handleDeletionResponse()` (chiamate `GET/POST /api/deletion-requests/...`).
+  - Banner arancione "Richieste di cancellazione documenti" con bottoni Autorizza/Rifiuta per ogni richiesta pendente (parità Coach).
+  - Bottone "🏟️ Mappa Palestre" a fondo pagina del Da Fare PRO (`/palestre`).
+
+**Risultato**:
+- L'admin non può più cancellare unilateralmente le quietanze atleta firmate; serve consenso dell'atleta (GDPR/integrità contabile).
+- Atleti 18+ PRO ora hanno il bottone "Mappa Palestre" in fondo alla loro pagina principale, come gli altri ruoli.
+
+
+
 ## 🎯 28/06/2026 — Compensi Admin Atleta Pro: Pagina solo editor + rimozione duplicato compenso ✅
 
 **Richiesta utente**: Quando si entra dalla sezione Atleti Pro → Compensi:

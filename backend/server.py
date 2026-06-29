@@ -24843,6 +24843,15 @@ async def admin_request_delete_signed_document(document_id: str, current_user = 
         raise HTTPException(status_code=403, detail="Il documento appartiene a un'altra società")
 
     signer_id = doc.get("signer_id") or doc.get("coach_id")
+    # 🆕 29/06/2026 — Quietanze Atleta 18+ PRO: il signed_documents salva
+    # athlete_id (db.athletes.id), il firmatario in db.users si ricava da
+    # users.athlete_id == athlete_id. Senza questo fallback la cancellazione
+    # diretta veniva eseguita immediatamente (signer_id=None), bypassando il
+    # consenso dell'atleta.
+    if not signer_id and doc.get("athlete_id"):
+        user_doc = await db.users.find_one({"athlete_id": doc["athlete_id"]})
+        if user_doc:
+            signer_id = user_doc["id"]
     signer_user = await db.users.find_one({"id": signer_id}) if signer_id else None
 
     # If signer IS the same admin → delete immediately
@@ -24923,7 +24932,7 @@ async def _execute_document_deletion(doc: dict, deleted_by: dict):
         comp_id = (doc.get("additional_data") or {}).get("compensation_id") or doc.get("related_entity_id")
         owner_id = (doc.get("coach_id") or doc.get("signer_id") or
                     doc.get("collaboratore_id") or doc.get("dirigente_id") or
-                    doc.get("atleta_id"))
+                    doc.get("atleta_id") or doc.get("athlete_id"))
         month_v = doc.get("month") or (doc.get("additional_data") or {}).get("month")
         year_v = doc.get("year") or (doc.get("additional_data") or {}).get("year")
         unlock_patch = {
@@ -24937,6 +24946,54 @@ async def _execute_document_deletion(doc: dict, deleted_by: dict):
                 "exceeded_15000": False,
             }
         }
+        # 🆕 29/06/2026 — Quietanza Atleta 18+ PRO: la riga vive in
+        # `athlete_compensation_receipts` e non in `atleta_pro_compensations`.
+        # Cancelliamo la riga direttamente (così l'atleta vede di nuovo il mese
+        # come NON firmato e può ri-firmare).
+        athlete_doc_types = ("compensation_receipt", "compensation_receipt_split")
+        if doc.get("document_type") in athlete_doc_types and (doc.get("athlete_id") or doc.get("atleta_id")):
+            aid = doc.get("athlete_id") or doc.get("atleta_id")
+            try:
+                m_int_a = int(month_v) if month_v is not None else None
+            except Exception:
+                m_int_a = None
+            if aid and m_int_a is not None and year_v is not None:
+                month_or = [{"month": m_int_a}]
+                if 1 <= m_int_a <= 12:
+                    month_or.append({"month": _MONTH_NAMES_IT[m_int_a]})
+                try:
+                    res_a = await db.athlete_compensation_receipts.delete_many({
+                        "athlete_id": aid,
+                        "$or": month_or,
+                        "year": int(year_v),
+                    })
+                    if res_a.deleted_count:
+                        logger.info(
+                            f"Deleted {res_a.deleted_count} athlete_compensation_receipts row(s) "
+                            f"for athlete_id={aid} {m_int_a}/{year_v}"
+                        )
+                except Exception as e:
+                    logger.warning(f"Unable to delete athlete_compensation_receipts: {e}")
+
+            # 🆕 29/06/2026 — Dual-role: se la quietanza atleta ha generato una
+            # quietanza coach gemella (linked_coach_user_id), sblocchiamola pure.
+            linked_coach_uid = doc.get("linked_coach_user_id")
+            if linked_coach_uid and m_int_a is not None and year_v is not None:
+                try:
+                    month_or_c = [{"month": m_int_a}]
+                    if 1 <= m_int_a <= 12:
+                        month_or_c.append({"month": _MONTH_NAMES_IT[m_int_a]})
+                    res_c = await db.coach_compensations.update_many(
+                        {"coach_id": linked_coach_uid, "$or": month_or_c, "year": int(year_v)},
+                        unlock_patch,
+                    )
+                    if res_c.modified_count:
+                        logger.info(
+                            f"Unlocked {res_c.modified_count} linked coach_compensations "
+                            f"row(s) for coach_id={linked_coach_uid} {m_int_a}/{year_v}"
+                        )
+                except Exception as e:
+                    logger.warning(f"Unable to unlock linked coach_compensations: {e}")
         # Try every compensation collection: by id first, then by owner+month+year.
         # Match month sia come int sia come stringa italiana legacy.
         collections_with_owner = [

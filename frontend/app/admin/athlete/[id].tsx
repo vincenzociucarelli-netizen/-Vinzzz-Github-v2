@@ -5089,32 +5089,44 @@ export default function AdminAthleteDetail() {
                         <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#2E7D32' }}>
                           {formatCurrency((receipt.amount_gross || receipt.amount || 0))}
                         </Text>
-                        {/* 🆕 29/06/2026 — Cestino per cancellare quietanza atleta firmata
-                            (parità con Coach/Collaboratore). Conferma + DELETE backend. */}
+                        {/* 🆕 29/06/2026 — REQUEST DELETE (parità Coach/Collaboratore):
+                            l'admin NON cancella più direttamente la quietanza atleta.
+                            Invia una richiesta che l'atleta deve approvare dal suo dashboard. */}
                         <TouchableOpacity
                           onPress={async () => {
+                            const docId = receipt.document_id;
+                            if (!docId) {
+                              const msg = 'Documento firmato non trovato per questa quietanza';
+                              if (Platform.OS === 'web') window.alert(`Errore\n\n${msg}`);
+                              else Alert.alert('Errore', msg);
+                              return;
+                            }
+                            const fullName = athlete?.full_name || `${athlete?.first_name || ''} ${athlete?.last_name || ''}`.trim();
+                            const msg = `Inviare a ${fullName} la richiesta di cancellazione della quietanza ${MONTH_NAMES[receipt.month]} ${receipt.year}?\n\n⚠️ La cancellazione effettiva avverrà solo dopo l'autorizzazione dell'atleta.`;
                             const ok = Platform.OS === 'web'
-                              ? window.confirm(`Cancellare la quietanza di ${MONTH_NAMES[receipt.month]} ${receipt.year} (€${(receipt.amount_gross || receipt.amount || 0).toFixed(2)})?\n\nL'atleta dovrà ri-firmare il mese.`)
+                              ? window.confirm(msg)
                               : await new Promise<boolean>((resolve) => {
-                                  Alert.alert('Cancellare quietanza?',
-                                    `${MONTH_NAMES[receipt.month]} ${receipt.year} - €${(receipt.amount_gross || receipt.amount || 0).toFixed(2)}\nL'atleta dovrà ri-firmare il mese.`,
-                                    [
-                                      { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
-                                      { text: 'Cancella', style: 'destructive', onPress: () => resolve(true) },
-                                    ]);
+                                  Alert.alert('Richiedi cancellazione quietanza', msg, [
+                                    { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+                                    { text: 'Invia richiesta', style: 'destructive', onPress: () => resolve(true) },
+                                  ]);
                                 });
                             if (!ok) return;
                             try {
-                              await api.delete(`/admin/athletes/${id}/compensation/${receipt.year}/${receipt.month}`);
+                              const resp = await api.delete(`/documents/${docId}`);
+                              const m = resp.data?.message || 'Richiesta inviata';
+                              if (Platform.OS === 'web') window.alert(`✅ Richiesta inviata\n\n${m}`);
+                              else Alert.alert('✅ Richiesta inviata', m);
                               await loadData();
                             } catch (e: any) {
-                              const msg = e?.response?.data?.detail || 'Errore cancellazione';
-                              if (Platform.OS === 'web') window.alert(`Errore: ${msg}`); else Alert.alert('Errore', msg);
+                              const detail = e?.response?.data?.detail || 'Operazione non riuscita';
+                              if (Platform.OS === 'web') window.alert(`Errore: ${detail}`);
+                              else Alert.alert('Errore', String(detail));
                             }
                           }}
                           style={{ marginLeft: 8, padding: 4 }}
-                          testID={`delete-receipt-${receipt.month}-${receipt.year}`}
-                          accessibilityLabel="Cancella quietanza"
+                          testID={`request-delete-receipt-${receipt.month}-${receipt.year}`}
+                          accessibilityLabel="Richiedi cancellazione quietanza"
                         >
                           <Ionicons name="trash-outline" size={18} color="#C62828" />
                         </TouchableOpacity>
