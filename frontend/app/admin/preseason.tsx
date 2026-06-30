@@ -1,11 +1,57 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator,
-  Modal, Alert, Platform,
+  Modal, Alert, Platform, Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
+
+// 🆕 30/06/2026 — Renderer mini-markdown per la lista admin: trasforma
+// [label](url) e URL grezzi (http/https/mailto/tel) in <Text onPress>
+// cliccabili (Linking.openURL). Stesso comportamento di /preseason/[id].
+function renderRichText(input?: string, linkStyle?: any) {
+  if (!input) return null;
+  const out: React.ReactNode[] = [];
+  const combined = /(\[([^\]]+)\]\((https?:\/\/[^\s)]+|mailto:[^\s)]+|tel:[^\s)]+)\))|(https?:\/\/[^\s)]+)/gi;
+  let lastIdx = 0;
+  let m: RegExpExecArray | null;
+  let key = 0;
+  while ((m = combined.exec(input)) !== null) {
+    if (m.index > lastIdx) {
+      out.push(<React.Fragment key={`t${key++}`}>{input.substring(lastIdx, m.index)}</React.Fragment>);
+    }
+    if (m[1]) {
+      const label = m[2];
+      const url = m[3];
+      out.push(
+        <Text
+          key={`l${key++}`}
+          style={linkStyle || { color: '#1565C0', textDecorationLine: 'underline', fontWeight: '700' }}
+          onPress={() => Linking.openURL(url)}
+        >
+          {label}
+        </Text>
+      );
+    } else if (m[4]) {
+      const url = m[4];
+      out.push(
+        <Text
+          key={`u${key++}`}
+          style={linkStyle || { color: '#1565C0', textDecorationLine: 'underline', fontWeight: '700' }}
+          onPress={() => Linking.openURL(url)}
+        >
+          {url}
+        </Text>
+      );
+    }
+    lastIdx = m.index + m[0].length;
+  }
+  if (lastIdx < input.length) {
+    out.push(<React.Fragment key={`t${key++}`}>{input.substring(lastIdx)}</React.Fragment>);
+  }
+  return out;
+}
 
 interface Campaign {
   id: string;
@@ -114,50 +160,74 @@ export default function PreseasonAdmin() {
   const [newDesc, setNewDesc] = useState('');
   const [newEventInfo, setNewEventInfo] = useState('');  // 🆕 27/02/2026
 
-  // 🆕 29/06/2026 — Ref e helper per inserire link (markdown [testo](url))
-  // dentro newEventInfo. Su Web sfrutta il textarea HTML nativo per
-  // posizionare l'inserimento alla selezione corrente / cursore.
+  // 🆕 29/06/2026 — Ref per textarea (necessari per leggere selectionStart su Web)
   const eventInfoRef = useRef<TextInput | null>(null);
+  const descRef = useRef<TextInput | null>(null);
 
-  const insertEventInfoLink = () => {
-    let selectionStart = newEventInfo.length;
-    let selectionEnd = newEventInfo.length;
-    let selectedText = '';
-    if (Platform.OS === 'web') {
-      const node = eventInfoRef.current as any;
-      if (node && typeof node.selectionStart === 'number') {
-        selectionStart = node.selectionStart ?? newEventInfo.length;
-        selectionEnd = node.selectionEnd ?? selectionStart;
-        selectedText = newEventInfo.substring(selectionStart, selectionEnd);
-      }
-    }
-    const defaultText = selectedText || 'qui';
-    let testo = '';
-    let url = '';
-    if (Platform.OS === 'web') {
-      const t = window.prompt('Testo da mostrare (es. "clicca qui")', defaultText);
-      if (t === null) return;
-      testo = (t || '').trim();
-      const u = window.prompt('URL (es. https://...)', 'https://');
-      if (u === null) return;
-      url = (u || '').trim();
-    } else {
-      // Native: prompt-fallback semplice (la pagina è web-first).
-      testo = defaultText;
-      url = 'https://';
-    }
-    if (!testo || !url) {
-      if (Platform.OS === 'web') window.alert('Testo e URL sono entrambi obbligatori.');
+  // 🆕 30/06/2026 — Helper UNICO per inserire link in Info evento O Descrizione.
+  // Migliorato: prompt esplicativi, validazione URL e default svuotati per non
+  // generare per sbaglio link `[qui](https://)` rotti.
+  const insertLinkInto = (
+    fieldKey: 'description' | 'event_info',
+    currentValue: string,
+    setValue: (v: string) => void,
+    nodeRef: React.MutableRefObject<TextInput | null>,
+  ) => {
+    if (Platform.OS !== 'web') {
+      window.alert?.('Il pulsante link è disponibile solo da browser desktop/web.');
       return;
     }
-    // Normalizza URL: se manca protocollo aggiungi https://
+    let selectionStart = currentValue.length;
+    let selectionEnd = currentValue.length;
+    let selectedText = '';
+    const node = nodeRef.current as any;
+    if (node && typeof node.selectionStart === 'number') {
+      selectionStart = node.selectionStart ?? currentValue.length;
+      selectionEnd = node.selectionEnd ?? selectionStart;
+      selectedText = currentValue.substring(selectionStart, selectionEnd);
+    }
+    // 1) Testo del link — DEFAULT = testo selezionato dall'utente (se c'è)
+    //    oppure stringa VUOTA (così l'utente non rischia di confermare "qui").
+    const t = window.prompt('1/2 — Scrivi il testo che vuoi rendere cliccabile (es. clicca qui per la mappa):', selectedText);
+    if (t === null) return; // annullato
+    const testo = (t || '').trim();
+    if (!testo) {
+      window.alert('Il testo non può essere vuoto. Operazione annullata.');
+      return;
+    }
+    // 2) URL — DEFAULT VUOTO (l'utente DEVE incollare l'URL completo).
+    const u = window.prompt(`2/2 — Incolla qui l'URL completo del link (deve iniziare con https://, http://, mailto: o tel:):`, '');
+    if (u === null) return;
+    let url = (u || '').trim();
+    if (!url) {
+      window.alert('URL non valido. Operazione annullata.');
+      return;
+    }
+    // Auto-prefix https:// se l'utente ha incollato solo "goo.gl/maps/abc"
     if (!/^https?:\/\//i.test(url) && !/^mailto:/i.test(url) && !/^tel:/i.test(url)) {
       url = 'https://' + url.replace(/^\/+/, '');
     }
+    // Validazione minima: deve contenere almeno un punto (dominio) E avere
+    // qualcosa dopo il protocollo (no "https://" da solo).
+    const afterProto = url.replace(/^https?:\/\/|^mailto:|^tel:/i, '');
+    if (afterProto.length < 3 || (!url.startsWith('mailto:') && !url.startsWith('tel:') && !/\./.test(afterProto))) {
+      window.alert(`URL "${url}" non valido. Inserisci un indirizzo completo (es. https://goo.gl/maps/...). Operazione annullata.`);
+      return;
+    }
     const insert = `[${testo}](${url})`;
-    const next = newEventInfo.substring(0, selectionStart) + insert + newEventInfo.substring(selectionEnd);
-    setNewEventInfo(next);
+    const next = currentValue.substring(0, selectionStart) + insert + currentValue.substring(selectionEnd);
+    setValue(next);
+    // Riposiziona il cursore subito DOPO il link inserito
+    setTimeout(() => {
+      if (node && typeof node.setSelectionRange === 'function') {
+        const pos = selectionStart + insert.length;
+        try { node.focus(); node.setSelectionRange(pos, pos); } catch {}
+      }
+    }, 0);
   };
+
+  const insertEventInfoLink = () => insertLinkInto('event_info', newEventInfo, setNewEventInfo, eventInfoRef);
+  const insertDescriptionLink = () => insertLinkInto('description', newDesc, setNewDesc, descRef);
   const [newOpenDate, setNewOpenDate] = useState('');
   const [newCloseDate, setNewCloseDate] = useState('');
   const [creating, setCreating] = useState(false);
@@ -423,7 +493,8 @@ export default function PreseasonAdmin() {
             {c.description ? (
               <View style={{ marginTop: 10, backgroundColor: '#F8F9FB', borderLeftWidth: 3, borderLeftColor: '#1565C0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 }}>
                 <Text style={{ fontSize: 14, color: '#333', lineHeight: 20 }} data-testid={`campaign-description-${c.id}`}>
-                  {c.description}
+                  {/* 🆕 30/06/2026 — Link cliccabili nella descrizione */}
+                  {renderRichText(c.description)}
                 </Text>
               </View>
             ) : null}
@@ -436,7 +507,8 @@ export default function PreseasonAdmin() {
                   <Text style={{ fontSize: 12, fontWeight: '700', color: '#7A5D00' }}>Info evento</Text>
                 </View>
                 <Text style={{ fontSize: 13, color: '#5D4400', lineHeight: 18 }} data-testid={`campaign-event-info-${c.id}`}>
-                  {(c as any).event_info}
+                  {/* 🆕 30/06/2026 — Link cliccabili anche su info evento */}
+                  {renderRichText((c as any).event_info, { color: '#1565C0', textDecorationLine: 'underline', fontWeight: '700' })}
                 </Text>
               </View>
             ) : null}
@@ -850,7 +922,23 @@ export default function PreseasonAdmin() {
               <Text style={{ fontSize: 12, color: '#777', marginTop: -2, marginBottom: 6, lineHeight: 16 }}>
                 Questo testo viene mostrato a chi si iscrive: scrivi qualcosa di accogliente e chiaro.
               </Text>
+              {/* 🆕 30/06/2026 — Toolbar inserimento link anche su Descrizione
+                  (richiesto perché spesso l'URL della mappa va in descrizione). */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 6 }}>
+                <TouchableOpacity
+                  onPress={insertDescriptionLink}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#E3F2FD', borderColor: '#1976D2', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}
+                  data-testid="description-add-link-btn"
+                >
+                  <Ionicons name="link" size={14} color="#1976D2" />
+                  <Text style={{ color: '#1976D2', fontWeight: '700', fontSize: 12 }}>Aggiungi link</Text>
+                </TouchableOpacity>
+                <Text style={{ fontSize: 11, color: '#999', flex: 1 }}>
+                  Seleziona una parola e premi “Aggiungi link”
+                </Text>
+              </View>
               <TextInput
+                ref={descRef}
                 style={[inp, { minHeight: 130, height: 130, textAlignVertical: 'top', paddingTop: 10, paddingBottom: 10 }]}
                 value={newDesc}
                 onChangeText={setNewDesc}

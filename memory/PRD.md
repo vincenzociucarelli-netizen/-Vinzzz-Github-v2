@@ -16,6 +16,30 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🎯 30/06/2026 — Fix UX pulsante "Aggiungi link" su EVENTI PI ✅
+
+**Problemi riportati**:
+1. Il pulsante "Aggiungi link" inseriva `[qui](https://)` rotto perché i prompt avevano default `qui` e `https://` che l'utente confermava per sbaglio.
+2. Il pulsante esisteva SOLO sul campo Info evento, ma l'utente voleva mettere il link nella Descrizione.
+3. La lista admin (`/admin/preseason`) mostrava il markdown grezzo `[qui](https://)` invece di un link cliccabile.
+
+**Modifiche frontend** (`/app/frontend/app/admin/preseason.tsx`):
+- Helper `insertLinkInto(field, value, setter, ref)` unico per Descrizione + Info evento.
+- Prompt migliorati: 
+  - Step 1/2: default = testo selezionato dall'utente (o vuoto, NON più `qui`).
+  - Step 2/2: default vuoto (l'utente DEVE incollare l'URL completo).
+  - Validazione: testo non vuoto, URL con dominio plausibile (deve contenere `.`), normalizzazione automatica `https://` se manca.
+  - Alert chiaro quando l'URL non passa la validazione, con il valore digitato visibile.
+- Pulsante "🔗 Aggiungi link" ora presente ANCHE sopra il campo Descrizione (oltre a Info evento).
+- Renderer `renderRichText()` locale: parsa `[label](url)` + URL grezzi (https/mailto/tel) e li rende cliccabili (`Linking.openURL`) anche nell'elenco admin delle campagne.
+- Idem su pagina pubblica `/preseason/[id]`: ora la Descrizione (oltre a Info evento) supporta link cliccabili.
+
+**Risultato per l'utente**:
+- Anche solo digitando `https://goo.gl/maps/...` nella Descrizione (senza usare il pulsante) il link diventa **automaticamente cliccabile** sia in admin sia nella pagina pubblica.
+- Se vuole un testo personalizzato cliccabile (es. "vedi mappa"), seleziona "vedi mappa" → "Aggiungi link" → incolla URL.
+
+
+
 ## 🎯 30/06/2026 — Metadati di verifica su quietanze soglia Atleta + Badge 5K/15K in "I Miei Documenti" ✅
 
 **Problemi riportati**:

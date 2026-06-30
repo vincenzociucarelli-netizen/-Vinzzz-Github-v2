@@ -217,7 +217,7 @@ export default function PublicPreseasonForm() {
           </Text>
           {campaign?.description ? (
             <Text style={{ fontSize: 15, color: '#333', marginTop: 12, textAlign: 'left', lineHeight: 22, maxWidth: 500, paddingHorizontal: 8, alignSelf: 'stretch' }} data-testid="campaign-description-public">
-              {campaign.description}
+              {renderRichText(campaign.description)}
             </Text>
           ) : null}
 
