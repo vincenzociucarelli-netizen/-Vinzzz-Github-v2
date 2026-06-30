@@ -247,6 +247,12 @@ export default function AdminAthleteDetail() {
   const [promoteCoachAvailableTeams, setPromoteCoachAvailableTeams] = useState<Team[]>([]);
   const [promoteCoachLevels, setPromoteCoachLevels] = useState<string[]>([]);
   const [promoteCoachSubmitting, setPromoteCoachSubmitting] = useState(false);
+  // 🆕 30/06/2026 — Date contratto coach nel form di promozione (richiesto
+  // per Giulia: 01/10/25 - 15/05/26). Default = stagione sportiva corrente
+  // (1° ottobre dell'anno corrente → 30 giugno dell'anno successivo) invece
+  // dell'ultimo mese che era il vecchio default.
+  const [promoteCoachContractStart, setPromoteCoachContractStart] = useState('');
+  const [promoteCoachContractEnd, setPromoteCoachContractEnd] = useState('');
   const [linkedCoach, setLinkedCoach] = useState<any>(null);
   const [availableCharacteristics, setAvailableCharacteristics] = useState<string[]>([]);
   const [photoModalVisible, setPhotoModalVisible] = useState(false);
@@ -384,6 +390,14 @@ export default function AdminAthleteDetail() {
       setPromoteCoachTeamId('');
       setPromoteCoachCompensation('');
       setPromoteCoachLevel('');
+      // 🆕 30/06/2026 — Default stagione sportiva: 1° ottobre anno corrente
+      // → 30 giugno anno successivo. L'admin può comunque modificarle.
+      {
+        const today = new Date();
+        const seasonStartYear = today.getMonth() >= 6 ? today.getFullYear() : today.getFullYear() - 1;
+        setPromoteCoachContractStart(`01/10/${seasonStartYear}`);
+        setPromoteCoachContractEnd(`30/06/${seasonStartYear + 1}`);
+      }
       setPromoteCoachModalVisible(true);
     } catch (e) {
       Alert.alert('Errore', 'Impossibile caricare le squadre');
@@ -397,12 +411,32 @@ export default function AdminAthleteDetail() {
     }
     setPromoteCoachSubmitting(true);
     try {
+      // 🆕 30/06/2026 — Converti date italiane gg/mm/aaaa → ISO yyyy-mm-dd
+      // (formato accettato dal backend `PromoteAthleteToCoachRequest`).
+      const toIso = (it: string): string | null => {
+        const m = (it || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        return m ? `${m[3]}-${m[2]}-${m[1]}` : null;
+      };
+      const csIso = toIso(promoteCoachContractStart);
+      const ceIso = toIso(promoteCoachContractEnd);
+      if (promoteCoachContractStart && !csIso) {
+        Alert.alert('Data non valida', 'Data inizio: formato gg/mm/aaaa.');
+        setPromoteCoachSubmitting(false);
+        return;
+      }
+      if (promoteCoachContractEnd && !ceIso) {
+        Alert.alert('Data non valida', 'Data fine: formato gg/mm/aaaa.');
+        setPromoteCoachSubmitting(false);
+        return;
+      }
       const res = await api.post(`/admin/athletes/${id}/promote-to-coach`, {
         // 🆕 Niente email/password: l'atleta userà SEMPRE le sue credenziali atleta
         // e farà lo switch dalla dashboard
         team_id: promoteCoachTeamId,
         monthly_compensation: parseFloat(promoteCoachCompensation || '0') || 0,
         coach_level: promoteCoachLevel || null,
+        contract_start_date: csIso,
+        contract_end_date: ceIso,
       });
       setPromoteCoachModalVisible(false);
       Alert.alert(
@@ -4238,6 +4272,37 @@ export default function AdminAthleteDetail() {
                 keyboardType="decimal-pad"
                 style={styles.input}
               />
+
+              {/* 🆕 30/06/2026 — Periodo contratto coach (Giulia: 01/10/25 - 15/05/26).
+                  Default: 01/10 → 30/06 della stagione sportiva corrente. */}
+              <Text style={{ fontWeight: '600', marginBottom: 4, marginTop: 12 }}>Periodo contratto coach</Text>
+              <Text style={{ fontSize: 11, color: '#666', marginBottom: 6, fontStyle: 'italic' }}>
+                Default stagione sportiva (1° ottobre → 30 giugno). Modificabile.
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, color: '#666', marginBottom: 2 }}>Dal</Text>
+                  <TextInput
+                    data-testid="promote-coach-contract-start-input"
+                    value={promoteCoachContractStart}
+                    onChangeText={(v) => setPromoteCoachContractStart(formatDateInputAuto(v))}
+                    placeholder="gg/mm/aaaa"
+                    keyboardType="numeric"
+                    style={styles.input}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, color: '#666', marginBottom: 2 }}>Al</Text>
+                  <TextInput
+                    data-testid="promote-coach-contract-end-input"
+                    value={promoteCoachContractEnd}
+                    onChangeText={(v) => setPromoteCoachContractEnd(formatDateInputAuto(v))}
+                    placeholder="gg/mm/aaaa"
+                    keyboardType="numeric"
+                    style={styles.input}
+                  />
+                </View>
+              </View>
             </ScrollView>
             <View style={{ flexDirection: 'row', marginTop: 16, gap: 8 }}>
               <TouchableOpacity
