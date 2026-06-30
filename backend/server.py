@@ -17663,7 +17663,10 @@ def generate_monthly_receipt_pdf(
     # Declaration text
     y -= 1.5*cm
     c.setFont("Helvetica", 10)
-    declaration = "Il collaboratore dichiara che, alla data odierna, non sono intervenute variazioni rispetto all'autocertificazione dei compensi sportivi dilettantistici precedentemente resa."
+    # 🆕 30/06/2026 — Dichiarazione e firma usano role_label (Atleta/Coach/
+    # Collaboratore/Dirigente) invece di "collaboratore" fisso.
+    role_low = (role_label or "collaboratore").lower()
+    declaration = f"{role_label or 'Il collaboratore'} dichiara che, alla data odierna, non sono intervenute variazioni rispetto all'autocertificazione dei compensi sportivi dilettantistici precedentemente resa."
     
     # Word wrap declaration
     words = declaration.split(' ')
@@ -17688,7 +17691,9 @@ def generate_monthly_receipt_pdf(
     y -= 1.5*cm
     c.setFont("Helvetica", 10)
     c.drawString(2*cm, y, f"Data: {timestamp}")
-    c.drawString(width - 8*cm, y, "Firma collaboratore:")
+    # 🆕 30/06/2026 — Etichetta firma dinamica
+    sign_label_low = role_low if role_low not in ("collaboratore",) else "collaboratore"
+    c.drawString(width - 8*cm, y, f"Firma {sign_label_low}:")
     
     # Add signature image
     if signature_base64 and HAS_PIL:
@@ -25871,8 +25876,26 @@ async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes
         )
 
         # Find signer profile (users for staff, athletes for atleti compensati)
-        signer = await db.users.find_one({"id": signer_id}) if signer_id else None
+        # 🆕 30/06/2026 — Per doc atleti compensati, vai DIRETTAMENTE su db.athletes:
+        # cercare prima in db.users potrebbe restituire un user diverso che capita di
+        # avere stesso id (rare collisioni), producendo nome/CF errati o vuoti sulla PDF.
         is_athlete_doc = bool(document.get("athlete_id") or document.get("atleta_id"))
+        signer = None
+        if is_athlete_doc and signer_id:
+            ath = await db.athletes.find_one({"id": signer_id})
+            if ath:
+                signer = {
+                    "id": ath.get("id"),
+                    "full_name": (
+                        ath.get("full_name")
+                        or f"{ath.get('last_name', '').upper()} {ath.get('first_name', '').upper()}".strip()
+                        or "Atleta"
+                    ),
+                    "fiscal_code": ath.get("fiscal_code", ""),
+                    "society_id": ath.get("society_id"),
+                }
+        if not signer and signer_id:
+            signer = await db.users.find_one({"id": signer_id})
         if signer_id and not signer:
             ath = await db.athletes.find_one({"id": signer_id})
             if ath:
