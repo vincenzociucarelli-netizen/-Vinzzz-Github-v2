@@ -24871,6 +24871,12 @@ async def admin_request_delete_signed_document(document_id: str, current_user = 
         "document_title": doc.get("document_title"),
         "document_type": doc.get("document_type"),
         "society_id": doc.get("society_id"),
+        # 🆕 29/06/2026 — Persist owner IDs so admin UI can show a per-athlete/coach
+        # pending badge senza dover risalire al signed_document ad ogni fetch.
+        "athlete_id": doc.get("athlete_id") or doc.get("atleta_id"),
+        "coach_id": doc.get("coach_id"),
+        "collaboratore_id": doc.get("collaboratore_id"),
+        "dirigente_id": doc.get("dirigente_id"),
         "requested_by_id": current_user["id"],
         "requested_by_name": current_user.get("full_name") or current_user.get("email"),
         "requested_by_email": current_user.get("email"),
@@ -25485,6 +25491,41 @@ async def list_my_pending_deletion_requests(current_user = Depends(get_current_u
         {"_id": 0}
     ).sort("created_at", -1)
     return await cursor.to_list(100)
+
+
+@api_router.get("/admin/deletion-requests/pending-summary")
+async def admin_pending_deletion_summary(current_user = Depends(get_current_user)):
+    """🆕 29/06/2026 — Admin: lista compatta delle richieste pendenti per badge UI.
+    Ritorna mappature {athlete_id: count} e {coach_id: count} così la lista atleti
+    e la lista coach possono mostrare un badge senza N chiamate separate."""
+    if current_user.get("role") not in ("admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Solo admin")
+    society_id = current_user.get("society_id")
+    query = {"status": "pending"}
+    if society_id:
+        query["society_id"] = society_id
+    cursor = db.deletion_requests.find(query, {"_id": 0, "athlete_id": 1, "coach_id": 1, "collaboratore_id": 1, "dirigente_id": 1})
+    rows = await cursor.to_list(2000)
+    by_athlete: dict = {}
+    by_coach: dict = {}
+    by_collab: dict = {}
+    by_dirig: dict = {}
+    for r in rows:
+        if r.get("athlete_id"):
+            by_athlete[r["athlete_id"]] = by_athlete.get(r["athlete_id"], 0) + 1
+        if r.get("coach_id"):
+            by_coach[r["coach_id"]] = by_coach.get(r["coach_id"], 0) + 1
+        if r.get("collaboratore_id"):
+            by_collab[r["collaboratore_id"]] = by_collab.get(r["collaboratore_id"], 0) + 1
+        if r.get("dirigente_id"):
+            by_dirig[r["dirigente_id"]] = by_dirig.get(r["dirigente_id"], 0) + 1
+    return {
+        "total": len(rows),
+        "by_athlete": by_athlete,
+        "by_coach": by_coach,
+        "by_collaboratore": by_collab,
+        "by_dirigente": by_dirig,
+    }
 
 
 @api_router.post("/deletion-requests/{request_id}/approve")

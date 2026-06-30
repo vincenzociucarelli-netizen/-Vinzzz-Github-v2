@@ -1154,7 +1154,7 @@ export default function AdminDashboard() {
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
-          {/* Pre-iscrizioni Stagione */}
+          {/* EVENTI PI (ex Pre-iscrizioni) */}
           <TouchableOpacity
             style={styles.menuCard}
             onPress={() => router.push('/admin/preseason')}
@@ -1164,8 +1164,8 @@ export default function AdminDashboard() {
               <Ionicons name="megaphone-outline" size={26} color="#2E7D32" />
             </View>
             <View style={styles.menuCardContent}>
-              <Text style={styles.menuCardTitle}>Pre-iscrizioni</Text>
-              <Text style={styles.menuCardSubtitle}>Sondaggio interesse prossima stagione</Text>
+              <Text style={styles.menuCardTitle}>EVENTI PI</Text>
+              <Text style={styles.menuCardSubtitle}>Pre-iscrizioni, Open Day, eventi e tryout</Text>
             </View>
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>

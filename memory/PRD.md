@@ -16,6 +16,36 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🎯 30/06/2026 — Badge "richieste cancellazione pendenti" + Rename "EVENTI PI" + Hyperlink button su Info evento ✅
+
+**Richieste utente**:
+1. Badge contatore sulle card atleta admin per richieste cancellazione documenti pendenti.
+2. Rename "Pre-iscrizioni" → "EVENTI PI" nel menu admin.
+3. Pulsante "Aggiungi link" sopra il campo "Info evento" che trasforma il testo selezionato in link cliccabile sulla pagina pubblica.
+
+**Modifiche backend** (`/app/backend/server.py`):
+- `admin_request_delete_signed_document`: ora `deletion_requests` salva anche `athlete_id`, `coach_id`, `collaboratore_id`, `dirigente_id` (presi dal signed_document) → consente badge per-utente senza N lookup.
+- Nuovo endpoint `GET /api/admin/deletion-requests/pending-summary` (solo admin): ritorna `{total, by_athlete, by_coach, by_collaboratore, by_dirigente}` come mappe `{user_id: count}`.
+
+**Modifiche frontend**:
+- `/app/frontend/app/admin/index.tsx`: card menu rinominata in "EVENTI PI" + sottotitolo "Pre-iscrizioni, Open Day, eventi e tryout".
+- `/app/frontend/app/admin/preseason.tsx`:
+  - Titolo header pagina "EVENTI PI".
+  - Nuovo bottone "🔗 Aggiungi link" sopra il TextInput Info evento: su Web rileva selezione corrente del textarea, chiede testo + URL, normalizza protocollo (auto-`https://`), inserisce markdown `[testo](url)` alla posizione del cursore o sulla selezione.
+- `/app/frontend/app/preseason/[id].tsx`:
+  - Nuovo helper `renderRichText(input, linkStyle)` che parsa `[label](url)` e URL grezzi (`https?://`, `mailto:`, `tel:`) e li rende come `<Text onPress={() => Linking.openURL(url)}>` blu sottolineato.
+  - "Info evento" sul form pubblico ora usa `renderRichText` → i link inseriti dall'admin diventano cliccabili.
+- `/app/frontend/app/admin/athletes.tsx`:
+  - Carica `/api/admin/deletion-requests/pending-summary` su mount, mappa `by_athlete` in state `pendingDeletionsByAthlete`.
+  - Card atleta mostra badge arancione "⏱ N canc." accanto al nome quando ci sono richieste cancellazione pendenti per quell'atleta. `testID="athlete-pending-deletion-badge-{id}"`.
+
+**Risultato**:
+- L'admin vede subito quali atleti hanno richieste cancellazione pendenti senza dover entrare nel dettaglio.
+- "EVENTI PI" rispecchia la naturale evoluzione del modulo (non solo pre-iscrizioni, ma anche tryout, open day, eventi).
+- L'admin può rendere cliccabile qualsiasi parola/frase nell'Info evento (es. mappa Google Maps, link al sito comunale, mail).
+
+
+
 ## 🎯 29/06/2026 — Request Delete quietanze Atleta 18+ PRO + Mappa Palestre nel "Da Fare" PRO ✅
 
 **Richiesta utente**: 

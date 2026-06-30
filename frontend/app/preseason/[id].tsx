@@ -1,13 +1,62 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator,
-  KeyboardAvoidingView, Platform, Image,
+  KeyboardAvoidingView, Platform, Image, Linking,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+
+// 🆕 29/06/2026 — Renderer "mini-markdown" che riconosce link tipo
+// [testo](https://url) E URL grezzi (https://...). Tutto il resto rimane testo
+// normale. Ritorna array di <Text>/<Text onPress> da inserire dentro un <Text>
+// padre con lo stile del paragrafo.
+function renderRichText(input: string, linkStyle?: any) {
+  if (!input) return null;
+  const out: React.ReactNode[] = [];
+  // Regex: [label](url)  oppure  URL grezzo
+  const combined = /(\[([^\]]+)\]\((https?:\/\/[^\s)]+|mailto:[^\s)]+|tel:[^\s)]+)\))|(https?:\/\/[^\s)]+)/gi;
+  let lastIdx = 0;
+  let m: RegExpExecArray | null;
+  let key = 0;
+  while ((m = combined.exec(input)) !== null) {
+    if (m.index > lastIdx) {
+      out.push(<Text key={`t${key++}`}>{input.substring(lastIdx, m.index)}</Text>);
+    }
+    if (m[1]) {
+      // [label](url)
+      const label = m[2];
+      const url = m[3];
+      out.push(
+        <Text
+          key={`l${key++}`}
+          style={linkStyle || { color: '#1565C0', textDecorationLine: 'underline' }}
+          onPress={() => Linking.openURL(url)}
+        >
+          {label}
+        </Text>
+      );
+    } else if (m[4]) {
+      const url = m[4];
+      out.push(
+        <Text
+          key={`u${key++}`}
+          style={linkStyle || { color: '#1565C0', textDecorationLine: 'underline' }}
+          onPress={() => Linking.openURL(url)}
+        >
+          {url}
+        </Text>
+      );
+    }
+    lastIdx = m.index + m[0].length;
+  }
+  if (lastIdx < input.length) {
+    out.push(<Text key={`t${key++}`}>{input.substring(lastIdx)}</Text>);
+  }
+  return out;
+}
 
 interface CampaignInfo {
   id: string;
@@ -180,7 +229,7 @@ export default function PublicPreseasonForm() {
                 <Text style={{ fontSize: 13, fontWeight: '700', color: '#7A5D00' }}>Informazioni importanti</Text>
               </View>
               <Text style={{ fontSize: 14, color: '#5D4400', lineHeight: 20, textAlign: 'left' }}>
-                {(campaign as any).event_info}
+                {renderRichText((campaign as any).event_info, { color: '#1565C0', textDecorationLine: 'underline', fontWeight: '700' })}
               </Text>
             </View>
           ) : null}

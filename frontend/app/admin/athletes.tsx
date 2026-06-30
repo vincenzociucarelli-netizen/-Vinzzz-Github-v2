@@ -34,6 +34,10 @@ export default function AdminAthletes() {
   const { logout } = useAuthStore();
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [teams, setTeams] = useState<{[key: string]: Team}>({});
+  // 🆕 29/06/2026 — Mappa athlete_id → numero di richieste cancellazione documenti
+  // ancora da approvare/rifiutare. Mostriamo un badge sulla card per ricordare
+  // all'admin che l'atleta deve ancora autorizzare.
+  const [pendingDeletionsByAthlete, setPendingDeletionsByAthlete] = useState<{ [k: string]: number }>({});
   const [refreshing, setRefreshing] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -333,15 +337,17 @@ export default function AdminAthletes() {
 
   const loadData = async () => {
     try {
-      const [athletesRes, teamsRes, codeRes] = await Promise.all([
+      const [athletesRes, teamsRes, codeRes, delRes] = await Promise.all([
         api.get('/athletes'),
         api.get('/teams'),
         api.get('/societies/invite-code').catch(() => ({ data: { invite_code: '', society_name: '' } })),
+        api.get('/admin/deletion-requests/pending-summary').catch(() => ({ data: { by_athlete: {} } })),
       ]);
 
       setAthletes(athletesRes.data);
       setInviteCode(codeRes.data.invite_code || '');
       setSocietyName(codeRes.data.society_name || '');
+      setPendingDeletionsByAthlete(delRes.data?.by_athlete || {});
       
       const teamsMap: {[key: string]: Team} = {};
       teamsRes.data.forEach((team: Team) => {
@@ -541,6 +547,19 @@ export default function AdminAthletes() {
           {(item as any).has_overpayment && (
             <View style={styles.overpaymentBadge}>
               <Text style={styles.overpaymentBadgeText}>⚠️ {formatCurrency(Math.abs((item as any).payment_residual))}</Text>
+            </View>
+          )}
+          {/* 🆕 29/06/2026 — Badge richieste cancellazione documenti pendenti.
+              L'admin sa subito che l'atleta deve ancora autorizzare. */}
+          {pendingDeletionsByAthlete[item.id] > 0 && (
+            <View
+              style={{ marginLeft: 6, backgroundColor: '#FFF3E0', borderColor: '#FB8C00', borderWidth: 1, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, flexDirection: 'row', alignItems: 'center', gap: 3 }}
+              data-testid={`athlete-pending-deletion-badge-${item.id}`}
+            >
+              <Ionicons name="time-outline" size={11} color="#E65100" />
+              <Text style={{ fontSize: 10, color: '#E65100', fontWeight: '700' }}>
+                {pendingDeletionsByAthlete[item.id]} canc.
+              </Text>
             </View>
           )}
         </View>

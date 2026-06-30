@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator,
   Modal, Alert, Platform,
@@ -113,6 +113,51 @@ export default function PreseasonAdmin() {
   const [newSeason, setNewSeason] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newEventInfo, setNewEventInfo] = useState('');  // 🆕 27/02/2026
+
+  // 🆕 29/06/2026 — Ref e helper per inserire link (markdown [testo](url))
+  // dentro newEventInfo. Su Web sfrutta il textarea HTML nativo per
+  // posizionare l'inserimento alla selezione corrente / cursore.
+  const eventInfoRef = useRef<TextInput | null>(null);
+
+  const insertEventInfoLink = () => {
+    let selectionStart = newEventInfo.length;
+    let selectionEnd = newEventInfo.length;
+    let selectedText = '';
+    if (Platform.OS === 'web') {
+      const node = eventInfoRef.current as any;
+      if (node && typeof node.selectionStart === 'number') {
+        selectionStart = node.selectionStart ?? newEventInfo.length;
+        selectionEnd = node.selectionEnd ?? selectionStart;
+        selectedText = newEventInfo.substring(selectionStart, selectionEnd);
+      }
+    }
+    const defaultText = selectedText || 'qui';
+    let testo = '';
+    let url = '';
+    if (Platform.OS === 'web') {
+      const t = window.prompt('Testo da mostrare (es. "clicca qui")', defaultText);
+      if (t === null) return;
+      testo = (t || '').trim();
+      const u = window.prompt('URL (es. https://...)', 'https://');
+      if (u === null) return;
+      url = (u || '').trim();
+    } else {
+      // Native: prompt-fallback semplice (la pagina è web-first).
+      testo = defaultText;
+      url = 'https://';
+    }
+    if (!testo || !url) {
+      if (Platform.OS === 'web') window.alert('Testo e URL sono entrambi obbligatori.');
+      return;
+    }
+    // Normalizza URL: se manca protocollo aggiungi https://
+    if (!/^https?:\/\//i.test(url) && !/^mailto:/i.test(url) && !/^tel:/i.test(url)) {
+      url = 'https://' + url.replace(/^\/+/, '');
+    }
+    const insert = `[${testo}](${url})`;
+    const next = newEventInfo.substring(0, selectionStart) + insert + newEventInfo.substring(selectionEnd);
+    setNewEventInfo(next);
+  };
   const [newOpenDate, setNewOpenDate] = useState('');
   const [newCloseDate, setNewCloseDate] = useState('');
   const [creating, setCreating] = useState(false);
@@ -342,7 +387,7 @@ export default function PreseasonAdmin() {
         <TouchableOpacity onPress={() => router.replace('/admin')} data-testid="header-home-btn" style={{ marginLeft: 8 }}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
         </TouchableOpacity>
-          <Text style={{ fontSize: 20, fontWeight: '700', color: '#0D47A1' }}>Pre-iscrizioni</Text>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: '#0D47A1' }}>EVENTI PI</Text>
         </View>
       </View>
 
@@ -821,7 +866,25 @@ export default function PreseasonAdmin() {
               <Text style={{ fontSize: 12, color: '#777', marginTop: -2, marginBottom: 6, lineHeight: 16 }}>
                 Informazioni aggiuntive per i partecipanti (es. indicazioni Open Day, contatti, orari, materiale da portare). Visibile a chi si iscrive in un riquadro evidenziato.
               </Text>
+              {/* 🆕 29/06/2026 — Toolbar inserimento link.
+                  Su Web: prompt testo+URL e inserisce [testo](url) markdown
+                  alla posizione corrente / sulla selezione. Sul pubblico il
+                  segnaposto viene reso come link cliccabile (vedi /preseason/[id]). */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 6 }}>
+                <TouchableOpacity
+                  onPress={insertEventInfoLink}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#E3F2FD', borderColor: '#1976D2', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 }}
+                  data-testid="event-info-add-link-btn"
+                >
+                  <Ionicons name="link" size={14} color="#1976D2" />
+                  <Text style={{ color: '#1976D2', fontWeight: '700', fontSize: 12 }}>Aggiungi link</Text>
+                </TouchableOpacity>
+                <Text style={{ fontSize: 11, color: '#999', flex: 1 }}>
+                  Seleziona prima il testo, poi premi “Aggiungi link”
+                </Text>
+              </View>
               <TextInput
+                ref={eventInfoRef}
                 style={[inp, { minHeight: 100, height: 100, textAlignVertical: 'top', paddingTop: 10, paddingBottom: 10 }]}
                 value={newEventInfo}
                 onChangeText={setNewEventInfo}
