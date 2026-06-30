@@ -20810,6 +20810,11 @@ async def sign_gdpr_privacy_document(
         "related_entity_id": related_entity_id,
         "society_id": society_id,
         "society_name": society_name,
+        # 🆕 30/06/2026 — Hash della FIRMA (SHA-256 del base64 PNG) usato dalla
+        # pagina pubblica /verify/{id} per il blocco "Hash firma" sull'autenticità.
+        # Prima era stato dimenticato sui documenti GDPR (solo threshold lo
+        # avevano), così la pagina mostrava "..." vuoto.
+        "signature_hash": hashlib.sha256(request.signature_base64.encode()).hexdigest() if getattr(request, 'signature_base64', None) else None,
         # GDPR metadata for legal validity
         "gdpr_metadata": {
             "document_version": document_version,
@@ -32149,7 +32154,7 @@ async def public_document_verify(document_id: str, format: str = "html"):
         {"id": document_id},
         {"_id": 0, "id": 1, "document_type": 1, "signer_name": 1, "coach_name": 1,
          "signed_at": 1, "month": 1, "year": 1, "amount_gross": 1, "threshold_metadata": 1,
-         "society_id": 1},
+         "society_id": 1, "signature_hash": 1, "gdpr_metadata": 1},
     )
     if not doc:
         if format == "json":
@@ -32206,7 +32211,17 @@ async def public_document_verify(document_id: str, format: str = "html"):
     month_ref = f"{MONTH_NAMES.get(m_int, '')} {y_int}".strip() if m_int else "—"
 
     tm = doc.get("threshold_metadata") or {}
-    sig_hash = (tm.get("signature_hash") or "")[:16] or "—"
+    gm = doc.get("gdpr_metadata") or {}
+    # 🆕 30/06/2026 — Hash firma: priorità threshold_metadata (quietanze
+    # soglia) → top-level signature_hash (privacy GDPR / quietanze semplici)
+    # → fallback gdpr_metadata.document_hash (hash del contenuto documento).
+    sig_hash_full = (
+        tm.get("signature_hash")
+        or doc.get("signature_hash")
+        or gm.get("document_hash")
+        or ""
+    )
+    sig_hash = sig_hash_full[:16] or "—"
 
     threshold_block = ""
     if dtype.startswith("threshold_"):
@@ -32245,7 +32260,7 @@ async def public_document_verify(document_id: str, format: str = "html"):
             "signed_at_rome": signed_str,
             "month_ref": month_ref,
             "amount_str": (f"€ {float(amt):.2f}" if amt is not None else None),
-            "signature_hash_prefix": (tm.get("signature_hash") or "")[:16] or None,
+            "signature_hash_prefix": (sig_hash_full[:16] or None),
         }
 
     html = f"""<!doctype html><html lang="it"><head>
