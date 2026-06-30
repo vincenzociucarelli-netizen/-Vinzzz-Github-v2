@@ -4,9 +4,14 @@ Season archive routes (admin only).
 - /seasons/current (current season summary)
 - /seasons/archive (archive current season)
 - /seasons/{season_name} (specific season)
+- /seasons/athletes/{id}/renew-toggle (mark athlete renewed for next season)
+- /seasons/athletes/bulk-renew (bulk renew)
+- /seasons/import-renewed (import renewed athletes into current season)
 """
 from datetime import datetime
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 
 from database import db
 from auth_utils import get_current_user
@@ -15,6 +20,15 @@ from models.season_models import SeasonArchive
 from utils import clean_mongo_doc, clean_mongo_docs, get_current_season, get_current_season_for_society
 
 router = APIRouter()
+
+
+class BulkRenewBody(BaseModel):
+    athlete_ids: List[str]
+    value: bool = True
+
+
+class RenewToggleBody(BaseModel):
+    value: Optional[bool] = None  # se None, toggla; se True/False, force-set
 
 
 def _society_filter(current_user) -> dict:
@@ -159,3 +173,140 @@ async def get_season_archive(season_name: str, current_user = Depends(get_curren
         raise HTTPException(status_code=404, detail="Stagione non trovata")
     clean_mongo_doc(archive)
     return archive
+
+
+# ==================== RICONFERMA STAGIONE (01/07/2026) ====================
+
+@router.post("/seasons/athletes/{athlete_id}/renew-toggle")
+async def renew_athlete_toggle(
+    athlete_id: str,
+    body: Optional[RenewToggleBody] = None,
+    current_user = Depends(get_current_user),
+):
+    """🆕 01/07/2026 — Riconferma di un singolo atleta per la PROSSIMA stagione.
+    Se l'atleta è già stato importato in una stagione (`imported_to_season`
+    corrisponde alla stagione corrente), restituiamo 409: l'admin non deve poter
+    cambiare lo stato (il flag in UI è grigio "Già importato"). Per "ri-riconfermare"
+    per la STAGIONE SUCCESSIVA, occorre attendere il prossimo cambio stagione."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    ath = await db.athletes.find_one({
+        "id": athlete_id,
+        **_society_filter(current_user),
+    })
+    if not ath:
+        raise HTTPException(status_code=404, detail="Atleta non trovato in questa società")
+    current_season = await get_current_season_for_society(db, current_user.get("society_id"))
+    if ath.get("imported_to_season") == current_season:
+        raise HTTPException(status_code=409, detail="Già importato nella stagione corrente — non modificabile.")
+    new_value = (not bool(ath.get("renewed_for_next_season"))) if (body is None or body.value is None) else bool(body.value)
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {
+            "renewed_for_next_season": new_value,
+            "renewed_at": datetime.utcnow().isoformat() if new_value else None,
+            "renewed_by": current_user["id"] if new_value else None,
+        }}
+    )
+    return {"athlete_id": athlete_id, "renewed_for_next_season": new_value}
+
+
+@router.post("/seasons/athletes/bulk-renew")
+async def renew_athletes_bulk(body: BulkRenewBody, current_user = Depends(get_current_user)):
+    """🆕 01/07/2026 — Riconferma multipla. Salta gli atleti già importati."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    current_season = await get_current_season_for_society(db, current_user.get("society_id"))
+    soc_q = _society_filter(current_user)
+    set_doc = {
+        "renewed_for_next_season": bool(body.value),
+        "renewed_at": datetime.utcnow().isoformat() if body.value else None,
+        "renewed_by": current_user["id"] if body.value else None,
+    }
+    res = await db.athletes.update_many(
+        {
+            "id": {"$in": body.athlete_ids},
+            **soc_q,
+            "imported_to_season": {"$ne": current_season},  # salta già importati
+        },
+        {"$set": set_doc},
+    )
+    return {"matched": res.matched_count, "modified": res.modified_count, "value": body.value}
+
+
+@router.get("/seasons/import-renewed/preview")
+async def preview_import_renewed(current_user = Depends(get_current_user)):
+    """🆕 01/07/2026 — Anteprima: quanti riconfermati e quanti non-riconfermati
+    verrebbero processati se lanciassimo l'import ORA."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    current_season = await get_current_season_for_society(db, current_user.get("society_id"))
+    soc_q = _society_filter(current_user)
+    # Riconfermati pronti per l'import (non ancora importati in questa stagione)
+    to_import = await db.athletes.count_documents({
+        **soc_q,
+        "renewed_for_next_season": True,
+        "imported_to_season": {"$ne": current_season},
+        "is_withdrawn": {"$ne": True},
+    })
+    # Non riconfermati ancora attivi che diventerebbero inactive
+    to_inactivate = await db.athletes.count_documents({
+        **soc_q,
+        "$or": [
+            {"renewed_for_next_season": {"$exists": False}},
+            {"renewed_for_next_season": False},
+            {"renewed_for_next_season": None},
+        ],
+        "imported_to_season": {"$ne": current_season},
+        "status": {"$nin": ["inactive", "withdrawn"]},
+        "is_withdrawn": {"$ne": True},
+    })
+    return {"season": current_season, "to_import": to_import, "to_inactivate": to_inactivate}
+
+
+@router.post("/seasons/import-renewed")
+async def import_renewed_athletes(current_user = Depends(get_current_user)):
+    """🆕 01/07/2026 — Esegue l'import nella stagione corrente:
+    - Atleti `renewed_for_next_season=True` → segnati come `imported_to_season=<stagione_corrente>`,
+      mantengono lo status, e `renewed_for_next_season` viene azzerato (verranno mostrati grigi nell'UI).
+    - Atleti non riconfermati → `status='inactive'` (recuperabili al volo). NON marcati withdrawn.
+    Idempotente: gli atleti già `imported_to_season=<corrente>` vengono saltati."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    current_season = await get_current_season_for_society(db, current_user.get("society_id"))
+    soc_q = _society_filter(current_user)
+    now_iso = datetime.utcnow().isoformat()
+    # Import dei riconfermati
+    imp_res = await db.athletes.update_many(
+        {
+            **soc_q,
+            "renewed_for_next_season": True,
+            "imported_to_season": {"$ne": current_season},
+        },
+        {"$set": {
+            "imported_to_season": current_season,
+            "imported_at": now_iso,
+            "imported_by": current_user["id"],
+            "renewed_for_next_season": False,  # azzera per ciclo successivo
+        }},
+    )
+    # Mark non-renewed as inactive
+    inact_res = await db.athletes.update_many(
+        {
+            **soc_q,
+            "$or": [
+                {"renewed_for_next_season": {"$exists": False}},
+                {"renewed_for_next_season": False},
+                {"renewed_for_next_season": None},
+            ],
+            "imported_to_season": {"$ne": current_season},
+            "status": {"$nin": ["inactive", "withdrawn"]},
+            "is_withdrawn": {"$ne": True},
+        },
+        {"$set": {"status": "inactive", "inactivated_at": now_iso, "inactivated_reason": f"Non riconfermato per stagione {current_season}"}},
+    )
+    return {
+        "season": current_season,
+        "imported": imp_res.modified_count,
+        "inactivated": inact_res.modified_count,
+    }

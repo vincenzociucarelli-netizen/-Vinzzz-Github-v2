@@ -118,6 +118,42 @@ export default function SeasonsArchive() {
     }
   };
 
+  // 🆕 01/07/2026 — Riconferma & import nella nuova stagione
+  const [importPreview, setImportPreview] = useState<{to_import: number; to_inactivate: number; season: string} | null>(null);
+  const [importing, setImporting] = useState(false);
+  const loadImportPreview = async () => {
+    try {
+      const r = await api.get('/seasons/import-renewed/preview');
+      setImportPreview(r.data);
+    } catch {
+      setImportPreview(null);
+    }
+  };
+  useEffect(() => { loadImportPreview(); }, [currentSeason?.season]);
+
+  const handleImportRenewed = async () => {
+    if (!importPreview) return;
+    const msg = `Importerai ${importPreview.to_import} atleti riconfermati nella stagione ${importPreview.season}.\n${importPreview.to_inactivate} atleti NON riconfermati verranno marcati 'inactive' (recuperabili manualmente).\n\nProcedere?`;
+    const ok = Platform.OS === 'web' ? window.confirm(msg) : await new Promise<boolean>((resolve) => {
+      Alert.alert('Conferma import', msg, [
+        { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Importa', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    setImporting(true);
+    try {
+      const r = await api.post('/seasons/import-renewed');
+      showAlert('Import completato', `${r.data.imported} importati. ${r.data.inactivated} resi inactive.`);
+      await loadImportPreview();
+      await loadData();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Import non riuscito');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const openTeamDetail = (team: TeamArchive) => {
     setSelectedTeam(team);
     setTeamModalVisible(true);
@@ -249,8 +285,35 @@ export default function SeasonsArchive() {
             </TouchableOpacity>
 
             <Text style={styles.archiveNote}>
-              💡 L'archiviazione salva uno snapshot della stagione corrente. Può essere eseguita più volte.
+              💡 L&apos;archiviazione salva uno snapshot della stagione corrente. Può essere eseguita più volte.
             </Text>
+
+            {/* 🆕 01/07/2026 — Import riconfermati nella stagione corrente */}
+            {importPreview && (importPreview.to_import > 0 || importPreview.to_inactivate > 0) && (
+              <View style={{ marginTop: 12, padding: 12, backgroundColor: '#E8F5E9', borderRadius: 10, borderLeftWidth: 4, borderLeftColor: '#2E7D32' }}>
+                <Text style={{ fontWeight: '700', color: '#1B5E20', marginBottom: 6 }}>
+                  🔄 Importa riconfermati ({importPreview.season})
+                </Text>
+                <Text style={{ fontSize: 13, color: '#2E7D32', marginBottom: 10 }}>
+                  Pronti per l&apos;import: <Text style={{ fontWeight: '700' }}>{importPreview.to_import}</Text> atleti riconfermati.{'\n'}
+                  Verranno marcati &quot;inactive&quot;: <Text style={{ fontWeight: '700' }}>{importPreview.to_inactivate}</Text> atleti non riconfermati.
+                </Text>
+                <TouchableOpacity
+                  onPress={handleImportRenewed}
+                  disabled={importing || importPreview.to_import === 0}
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#2E7D32', paddingVertical: 12, borderRadius: 8, gap: 8, opacity: importing || importPreview.to_import === 0 ? 0.6 : 1 }}
+                  data-testid="import-renewed-btn"
+                >
+                  <Ionicons name="download" size={18} color="#fff" />
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>
+                    {importing ? 'Importazione...' : `Importa ${importPreview.to_import} riconfermati`}
+                  </Text>
+                </TouchableOpacity>
+                <Text style={{ fontSize: 11, color: '#558B2F', marginTop: 6, fontStyle: 'italic' }}>
+                  💡 Per riconfermare gli atleti, vai su Atleti e clicca il flag &quot;Riconferma&quot; su ognuno.
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
