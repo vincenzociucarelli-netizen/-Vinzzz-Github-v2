@@ -7670,6 +7670,20 @@ async def sign_athlete_compensation_receipt_with_signature(
             or 'Atleta'
         )
         athlete_fiscal = athlete.get('fiscal_code') or ''
+        # 🆕 30/06/2026 — Metadati di verifica per le comunicazioni di soglia 5k/15k.
+        # Senza questi, il PDF non mostra il blocco "METADATI DI VERIFICA" a piè
+        # di pagina (timestamp, totali prima/dopo, hash firma). Stessa struttura
+        # usata per Coach/Dirigente/Collaboratore (parità).
+        threshold_meta_athlete = {
+            "yearly_total_before": yearly_total,
+            "yearly_total_after": new_total,
+            "prior_compensation_declared": prior_compensation,
+            "threshold_crossed": "15000" if first_time_exceeded_15000 else ("5000" if first_time_exceeded_5000 else None),
+            "signature_timestamp_utc": now.isoformat(),
+            "signature_timestamp_rome": format_rome_timestamp(now),
+            "signature_hash": hashlib.sha256(signature_base64.encode()).hexdigest() if signature_base64 else None,
+            "monthly_compensation_rate": float(athlete.get('monthly_compensation', 0) or 0),
+        }
         if first_time_exceeded_15000:
             pdf_bytes = generate_threshold_15k_pdf(
                 society_name=society_name,
@@ -7678,6 +7692,7 @@ async def sign_athlete_compensation_receipt_with_signature(
                 year=year,
                 signature_base64=signature_base64,
                 society_city=society_city,
+                threshold_metadata=threshold_meta_athlete,
                 signed_at=now,
                 threshold_month=month,
                 document_id=receipt_id,
@@ -7692,6 +7707,7 @@ async def sign_athlete_compensation_receipt_with_signature(
                 year=year,
                 signature_base64=signature_base64,
                 society_city=society_city,
+                threshold_metadata=threshold_meta_athlete,
                 signed_at=now,
                 threshold_month=month,
                 document_id=receipt_id,
@@ -7733,11 +7749,21 @@ async def sign_athlete_compensation_receipt_with_signature(
         logging.error(f"Error saving athlete PDF: {e}")
         raise HTTPException(status_code=500, detail="Errore nel salvataggio del documento")
     
+    # 🆕 30/06/2026 — Titolo specifico per quietanze di superamento soglia
+    # (prima erano salvate tutte come "Quietanza Compenso Atleta", confondendo
+    # gli utenti nell'elenco "I Miei Documenti").
+    if first_time_exceeded_15000:
+        doc_title_str = f"Comunicazione Superamento €15.000 - {month_name} {year}"
+    elif first_time_exceeded_5000:
+        doc_title_str = f"Comunicazione Superamento €5.000 - {month_name} {year}"
+    else:
+        doc_title_str = f"Quietanza Compenso Atleta - {month_name} {year}"
+
     # Store document record
     document_record = {
         "id": receipt_id,
         "document_type": doc_type,
-        "document_title": f"Quietanza Compenso Atleta - {month_name} {year}",
+        "document_title": doc_title_str,
         "athlete_id": athlete_id,
         "athlete_name": athlete.get('full_name', ''),
         "month": month,
@@ -7749,6 +7775,9 @@ async def sign_athlete_compensation_receipt_with_signature(
         "signed_at": now,
         "exceeded_5000": first_time_exceeded_5000,
         "exceeded_15000": first_time_exceeded_15000,
+        # 🆕 30/06/2026 — Persistiamo i threshold metadata anche su doc Atleta,
+        # così _regenerate_threshold_communication_pdf li ritrova al re-render.
+        "threshold_metadata": threshold_meta_athlete if (first_time_exceeded_5000 or first_time_exceeded_15000) else None,
         # 🆕 26/02/2026 — Dual-role metadata (riferimento ricevuta unica)
         "dual_role_combined": coach_contract_active_this_month,
         "dual_role_athlete_portion": float(amount_gross) if coach_contract_active_this_month else None,
@@ -25709,11 +25738,21 @@ async def _regenerate_threshold_communication_pdf(document: dict) -> Optional[by
                     ("collaboratore_compensations", "collaboratore_id"),
                     ("dirigente_compensations", "dirigente_id"),
                     ("atleta_pro_compensations", "atleta_id"),
+                    # 🆕 30/06/2026 — Fix: la collezione reale degli atleti PRO è
+                    # `athlete_compensation_receipts` (i vecchi `atleta_pro_compensations`
+                    # non esistono in DB). Senza questa riga, la rigenerazione PDF
+                    # per le quietanze atleta mostrava sempre €0.
+                    ("athlete_compensation_receipts", "athlete_id"),
                 ]:
                     rows = await db[coll].find(
-                        {key: signer_id, "year": y_int, "receipt_signed": True}
+                        {key: signer_id, "year": y_int}
                     ).to_list(50)
                     for r in rows:
+                        # athlete_compensation_receipts usa `signed` (legacy) o
+                        # `receipt_signed`. Coach/Dir/Collab usano `receipt_signed`.
+                        is_signed = bool(r.get("receipt_signed") or r.get("signed"))
+                        if not is_signed:
+                            continue
                         rm = int(r.get("month") or 0)
                         amt = float(r.get("amount_gross") or r.get("amount") or 0)
                         if rm <= m_int:

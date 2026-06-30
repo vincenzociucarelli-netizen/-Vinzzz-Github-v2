@@ -16,6 +16,33 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🎯 30/06/2026 — Metadati di verifica su quietanze soglia Atleta + Badge 5K/15K in "I Miei Documenti" ✅
+
+**Problemi riportati**:
+1. Le PDF "Comunicazione Superamento €5.000" e "€15.000" di Giulia (Atleta 18+ PRO) non mostravano il blocco "METADATI DI VERIFICA" a piè di pagina che invece appare per Coach/Dirigente/Collaboratore.
+2. Nell'elenco "I Miei Documenti" lato atleta non si distingueva visivamente la quietanza che supera la soglia 5K/15K — apparivano tutte come "Quietanza Compenso Atleta - {mese}".
+
+**Root cause**:
+- `sign_athlete_compensation_receipt` chiamava `generate_threshold_5k_pdf`/`15k_pdf` SENZA passare `threshold_metadata` → blocco condizionale non renderizzato.
+- `document_record.document_title` era sempre "Quietanza Compenso Atleta..." anche per documenti di tipo `threshold_5000_communication` / `threshold_15000_communication`.
+- `_regenerate_threshold_communication_pdf` ricostruiva il cumulo annuale interrogando la collezione inesistente `atleta_pro_compensations` invece di `athlete_compensation_receipts` → metadati con totali a €0 anche dopo rigenerazione.
+
+**Modifiche backend** (`/app/backend/server.py`):
+- `sign_athlete_compensation_receipt`:
+  - Costruisce `threshold_meta_athlete` (yearly_total_before/after, prior_compensation_declared, signature_timestamp_utc/rome, signature_hash, monthly_compensation_rate) e lo passa a `generate_threshold_5k_pdf`/`15k_pdf`.
+  - Persiste `threshold_metadata` nel record `signed_documents` (così la futura rigenerazione lo ritrova senza ricalcolare).
+  - `document_title` ora è `"Comunicazione Superamento €5.000 - {month} {year}"` o `"€15.000"` per i doc di superamento (prima erano titolati come quietanze normali).
+- `_regenerate_threshold_communication_pdf`: ricostruzione cumulativa ora interroga anche `athlete_compensation_receipts` (con field `athlete_id`) e accetta entrambi i flag `signed` (legacy) e `receipt_signed`. Senza questa modifica le PDF rigenerate mostravano €0 di cumulo.
+
+**Modifiche frontend** (`/app/frontend/app/athlete/documents.tsx`):
+- Per quietanze di soglia preferisce sempre il titolo descrittivo "Comunicazione Superamento €5.000/€15.000" anche se il record DB ha il vecchio `document_title`.
+- Nuovo badge colorato accanto al titolo: "⚠ 5K" (giallo) o "⚠ 15K" (rosso) per identificare a colpo d'occhio le quietanze di superamento. `testID="receipt-threshold-badge-{5K|15K}"`.
+
+**Per Giulia (e atleti con quietanze soglia firmate prima di questa fix)**:
+L'admin può cliccare "Rigenera" sulle quietanze di soglia esistenti — la rigenerazione ora ricostruisce correttamente i metadati interrogando `athlete_compensation_receipts`. Le NUOVE firme avranno automaticamente i metadati persistiti.
+
+
+
 ## 🎯 30/06/2026 — Badge "richieste cancellazione pendenti" + Rename "EVENTI PI" + Hyperlink button su Info evento ✅
 
 **Richieste utente**:

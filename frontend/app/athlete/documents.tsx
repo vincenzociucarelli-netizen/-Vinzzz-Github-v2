@@ -165,13 +165,23 @@ export default function AthleteDocumentsScreen() {
               : isThreshold5K
               ? `Comunicazione Superamento €5.000 - ${rd.year || ''}`
               : `Quietanza ${monthName} ${rd.year || ''}`;
+            // 🆕 30/06/2026 — Per le quietanze di superamento soglia preferiamo
+            // SEMPRE il titolo descrittivo (baseName), perché vecchi record sul DB
+            // hanno document_title = "Quietanza Compenso Atleta" anche per gli
+            // exceeded 5k/15k, confondendo l'utente nell'elenco documenti.
+            const displayName = (isThreshold5K || isThreshold15K)
+              ? baseName
+              : (rd.document_title || baseName);
             docs.push({
               id: rd.id,
               type: 'receipt',
-              name: rd.document_title || baseName,
+              name: displayName,
               date: rd.signed_at || '',
               url: `/api/documents/signed/${rd.id}/pdf`,
-            });
+              // 🆕 30/06/2026 — Flag per rendering del badge "5K" / "15K"
+              // accanto al titolo nell'elenco "I Miei Documenti".
+              thresholdBadge: isThreshold15K ? '15K' : (isThreshold5K ? '5K' : null),
+            } as any);
           });
         } catch (e) {
           console.log('Could not fetch receipts:', e);
@@ -422,7 +432,28 @@ export default function AthleteDocumentsScreen() {
                 <Ionicons name={getDocIcon(doc.type) as any} size={24} color={getDocColor(doc.type)} />
               </View>
               <View style={styles.docInfo}>
-                <Text style={styles.docName}>{doc.name}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  {/* 🆕 30/06/2026 — Badge "5K" / "15K" per riconoscere a colpo
+                      d'occhio le quietanze di superamento soglia nell'elenco. */}
+                  {(doc as any).thresholdBadge && (
+                    <View
+                      style={{
+                        backgroundColor: (doc as any).thresholdBadge === '15K' ? '#FFEBEE' : '#FFF8E1',
+                        borderColor: (doc as any).thresholdBadge === '15K' ? '#C62828' : '#F9A825',
+                        borderWidth: 1,
+                        paddingHorizontal: 6,
+                        paddingVertical: 2,
+                        borderRadius: 6,
+                      }}
+                      data-testid={`receipt-threshold-badge-${(doc as any).thresholdBadge}`}
+                    >
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: (doc as any).thresholdBadge === '15K' ? '#C62828' : '#7A5D00' }}>
+                        ⚠ {(doc as any).thresholdBadge}
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={styles.docName}>{doc.name}</Text>
+                </View>
                 {doc.date && (
                   <Text style={styles.docDate}>
                     {doc.type === 'medical' ? 'Scadenza: ' : 'Firmata: '}
