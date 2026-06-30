@@ -65,6 +65,40 @@ def get_current_season() -> str:
     return f"{now.year - 1}-{now.year}"
 
 
+async def get_current_season_for_society(db, society_id: str) -> str:
+    """🆕 30/06/2026 — Stagione corrente leggendo `season_start_month`/`season_start_day`
+    dalle impostazioni della società. Cade su luglio/1 se non configurato.
+    Es. società con stagione 01/07 → 30/06: oggi (1° luglio) inizia subito la
+    nuova stagione 2026-2027, NON si aspetta settembre."""
+    now = datetime.utcnow()
+    settings = None
+    if society_id:
+        try:
+            settings = await db.settings.find_one({"type": "society", "society_id": society_id})
+        except Exception:
+            settings = None
+        # Fallback to legacy single-tenant settings if no society-scoped doc
+        if not settings:
+            try:
+                settings = await db.settings.find_one({"type": "society"})
+            except Exception:
+                settings = None
+    season_start_month = (settings or {}).get("season_start_month", 7)
+    season_start_day = (settings or {}).get("season_start_day", 1)
+    try:
+        season_start_month = int(season_start_month or 7)
+        season_start_day = int(season_start_day or 1)
+    except Exception:
+        season_start_month, season_start_day = 7, 1
+    try:
+        season_start_this_year = datetime(now.year, season_start_month, season_start_day)
+    except Exception:
+        season_start_this_year = datetime(now.year, 7, 1)
+    if now >= season_start_this_year:
+        return f"{now.year}-{now.year + 1}"
+    return f"{now.year - 1}-{now.year}"
+
+
 __all__ = [
     "MONTH_NAMES",
     "to_rome_time",
@@ -72,4 +106,5 @@ __all__ = [
     "clean_mongo_doc",
     "clean_mongo_docs",
     "get_current_season",
+    "get_current_season_for_society",
 ]

@@ -12,7 +12,7 @@ from database import db
 from auth_utils import get_current_user
 from models.enums import UserRole, UserStatus
 from models.season_models import SeasonArchive
-from utils import clean_mongo_doc, clean_mongo_docs, get_current_season
+from utils import clean_mongo_doc, clean_mongo_docs, get_current_season, get_current_season_for_society
 
 router = APIRouter()
 
@@ -44,7 +44,7 @@ async def get_current_season_data(current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere i dati stagione")
     
-    season_name = get_current_season()
+    season_name = await get_current_season_for_society(db, current_user.get("society_id"))
     soc_q = _society_filter(current_user)
 
     teams = await db.teams.find(soc_q).to_list(100)
@@ -96,13 +96,25 @@ async def archive_season(current_user = Depends(get_current_user)):
     current_data = await get_current_season_data(current_user)
     
     now = datetime.utcnow()
-    season_name = get_current_season()
+    season_name = await get_current_season_for_society(db, current_user.get("society_id"))
     sid = current_user.get("society_id")
     
     year_parts = season_name.split("-")
     start_year = int(year_parts[0])
-    start_date = datetime(start_year, 7, 1)
-    end_date = datetime(start_year + 1, 6, 30)
+    # 🆕 30/06/2026 — Date inizio/fine dalla configurazione società
+    settings_doc = await db.settings.find_one({"type": "society", "society_id": sid}) if sid else None
+    if not settings_doc:
+        settings_doc = await db.settings.find_one({"type": "society"})
+    start_month = int((settings_doc or {}).get("season_start_month", 7) or 7)
+    start_day = int((settings_doc or {}).get("season_start_day", 1) or 1)
+    try:
+        start_date = datetime(start_year, start_month, start_day)
+        # Fine = giorno PRIMA dell'inizio della stagione successiva
+        next_start = datetime(start_year + 1, start_month, start_day)
+        end_date = datetime.fromtimestamp(next_start.timestamp() - 86400)
+    except Exception:
+        start_date = datetime(start_year, 7, 1)
+        end_date = datetime(start_year + 1, 6, 30)
     
     archive = SeasonArchive(
         season_name=season_name,
