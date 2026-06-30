@@ -58,8 +58,10 @@ def clean_mongo_docs(docs):
 
 
 def get_current_season() -> str:
-    """Get current season name based on date (July to June)."""
-    now = datetime.utcnow()
+    """Get current season name based on Rome local date (July to June)."""
+    # 🆕 01/07/2026 — Usa ora di Roma (CET/CEST) invece di UTC: alle 01:27 ora
+    # italiana del 1° luglio siamo già nella nuova stagione (in UTC era 23:27 del 30/06).
+    now = to_rome_time(datetime.utcnow())
     if now.month >= 7:
         return f"{now.year}-{now.year + 1}"
     return f"{now.year - 1}-{now.year}"
@@ -68,9 +70,9 @@ def get_current_season() -> str:
 async def get_current_season_for_society(db, society_id: str) -> str:
     """🆕 30/06/2026 — Stagione corrente leggendo `season_start_month`/`season_start_day`
     dalle impostazioni della società. Cade su luglio/1 se non configurato.
-    Es. società con stagione 01/07 → 30/06: oggi (1° luglio) inizia subito la
-    nuova stagione 2026-2027, NON si aspetta settembre."""
-    now = datetime.utcnow()
+    🆕 01/07/2026 — Usa ora di Roma (Europe/Rome, CET/CEST) per la data odierna,
+    NON UTC. Così alle 01:00 del 1° luglio (ora italiana) la stagione è già la nuova."""
+    now = to_rome_time(datetime.utcnow())
     settings = None
     if society_id:
         try:
@@ -94,7 +96,9 @@ async def get_current_season_for_society(db, society_id: str) -> str:
         season_start_this_year = datetime(now.year, season_start_month, season_start_day)
     except Exception:
         season_start_this_year = datetime(now.year, 7, 1)
-    if now >= season_start_this_year:
+    # Confronto in ora Rome naive (entrambi senza tzinfo)
+    now_naive = now.replace(tzinfo=None)
+    if now_naive >= season_start_this_year:
         return f"{now.year}-{now.year + 1}"
     return f"{now.year - 1}-{now.year}"
 
