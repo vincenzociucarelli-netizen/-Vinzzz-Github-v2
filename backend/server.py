@@ -23056,11 +23056,38 @@ async def get_prime_squadre_athletes(current_user = Depends(get_current_user)):
     # Combine and return
     return athletes + coaches + dirigenti
 
+class EnablePrimeSquadreBody(BaseModel):
+    """🆕 30/06/2026 — Body opzionale per la promozione Atleta 18+ → PRO.
+    L'admin può scegliere se la promozione include un compenso o se l'atleta
+    continua a pagare la quota (sta in Prima Squadra ma non riceve compenso)."""
+    compensation_mode: Optional[str] = "compensated"  # "compensated" | "quota"
+    monthly_compensation: Optional[float] = None
+    contract_start_date: Optional[str] = None  # YYYY-MM-DD
+    contract_end_date: Optional[str] = None    # YYYY-MM-DD
+
+
 @api_router.post("/prime-squadre/athletes/{athlete_id}/enable")
-async def enable_athlete_compensation(athlete_id: str, current_user = Depends(get_current_user)):
-    """Enable compensation for an athlete, coach or dirigente (add to Prime Squadre)"""
+async def enable_athlete_compensation(
+    athlete_id: str,
+    body: Optional[EnablePrimeSquadreBody] = None,
+    current_user = Depends(get_current_user),
+):
+    """Enable an athlete/coach/dirigente in Prime Squadre (Atleti PRO roster).
+
+    🆕 30/06/2026 — accetta `compensation_mode`:
+      • "compensated" (default): atleta retribuita (Giulia-style). Attiva
+        is_compensated=True + athlete_type='compensated'. Se forniti
+        `monthly_compensation` e `contract_start_date` li imposta subito.
+      • "quota": atleta in Prima Squadra ma continua a pagare la quota
+        (athlete_type='quota', pro_without_compensation=True). Compensi/
+        soglie 5K-15K disattivati.
+    """
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può gestire Atleti Pro")
+
+    mode = (body.compensation_mode if body else "compensated") or "compensated"
+    if mode not in ("compensated", "quota"):
+        raise HTTPException(status_code=400, detail="compensation_mode deve essere 'compensated' o 'quota'")
     
     # Modulo "Atleti Pro" sbloccato per tutte le società (rimosso check pro_enabled)
     _sid = current_user.get("society_id")
@@ -23082,13 +23109,37 @@ async def enable_athlete_compensation(athlete_id: str, current_user = Depends(ge
     # Try to update athlete first
     # 🆕 27/06/2026 — Settiamo ANCHE athlete_type='compensated' così la scheda admin
     # mostra correttamente il tab "Compensi" (icona trofeo) al posto di "Pagamenti" (carta).
+    # 🆕 30/06/2026 — Se mode='quota' la promozione AGGIUNGE l'atleta a Prima
+    # Squadra MA mantiene athlete_type='quota' (paga ancora la quota) e setta
+    # `pro_without_compensation=True` per disattivare il tab Compensi/soglie.
+    if mode == "quota":
+        athlete_set = {
+            "is_compensated": True,
+            "athlete_type": "quota",
+            "pro_without_compensation": True,
+            "monthly_compensation": 0,
+        }
+    else:
+        athlete_set = {
+            "is_compensated": True,
+            "athlete_type": "compensated",
+            "pro_without_compensation": False,
+        }
+        if body and body.monthly_compensation is not None:
+            athlete_set["monthly_compensation"] = float(body.monthly_compensation)
+        if body and body.contract_start_date:
+            athlete_set["contract_start_date"] = body.contract_start_date
+        if body and body.contract_end_date:
+            athlete_set["contract_end_date"] = body.contract_end_date
+
     result = await db.athletes.update_one(
         {"id": athlete_id},
-        {"$set": {"is_compensated": True, "athlete_type": "compensated"}}
+        {"$set": athlete_set}
     )
-    
+
     if result.modified_count > 0:
-        return {"message": "Atleta aggiunto a Prime Squadre", "athlete_id": athlete_id}
+        msg = "Atleta aggiunto a Atleti PRO (continua a pagare la quota)" if mode == "quota" else "Atleta aggiunto a Atleti PRO (con compenso)"
+        return {"message": msg, "athlete_id": athlete_id, "mode": mode}
     
     # If not found in athletes, try coaches (users collection)
     result = await db.users.update_one(
@@ -31163,6 +31214,13 @@ async def admin_reset_coach_compensations_for_year(payload: dict, current_user=D
                 or f"Quietanza/Comunicazione {d.get('month','?')}/{d.get('year', year)}",
             "document_type": d.get("document_type"),
             "society_id": d.get("society_id") or sid,
+            # 🆕 30/06/2026 — Persist owner IDs (parità con
+            # admin_request_delete_signed_document) così il badge admin
+            # pending-summary li trova subito.
+            "athlete_id": d.get("athlete_id") or d.get("atleta_id"),
+            "coach_id": d.get("coach_id"),
+            "collaboratore_id": d.get("collaboratore_id"),
+            "dirigente_id": d.get("dirigente_id"),
             "requested_by_id": current_user["id"],
             "requested_by_name": current_user.get("full_name") or current_user.get("email"),
             "requested_by_email": current_user.get("email"),

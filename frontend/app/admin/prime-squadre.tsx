@@ -106,6 +106,15 @@ export default function PrimeSquadrePage() {
   const [selectedAthlete, setSelectedAthlete] = useState<Athlete | null>(null);
   const [athleteToAdd, setAthleteToAdd] = useState<Athlete | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  // 🆕 30/06/2026 — Dialog "Promuovi a PRO" (Federica flow):
+  // Dopo aver selezionato un'atleta dalla modale "+ Aggiungi" chiediamo se
+  // diventerà retribuita o continuerà a pagare la quota.
+  const [showPromoteDialog, setShowPromoteDialog] = useState(false);
+  const [athleteToPromote, setAthleteToPromote] = useState<Athlete | null>(null);
+  const [promoteMode, setPromoteMode] = useState<'compensated' | 'quota'>('compensated');
+  const [promoteMonthly, setPromoteMonthly] = useState('');
+  const [promoteStartDate, setPromoteStartDate] = useState(''); // dd/mm/yyyy
+  const [promoteBusy, setPromoteBusy] = useState(false);
   const [configForm, setConfigForm] = useState<ConfigFormData>({
     monthly_compensation: '',
     other_annual_compensation: '',
@@ -205,21 +214,76 @@ export default function PrimeSquadrePage() {
   };
 
   const handleAddAthlete = async (athlete: Athlete) => {
-    // 🆕 27/06/2026 — Sostituita la modal popup "Configura Atleta Atleti Pro" con
-    // un flusso lineare: abilita subito come Pro + redirect alla scheda Atleta
-    // principale (form full-page stile coach con card colorate, badge soglie €5k/€15k,
-    // riepilogo annuale, ecc.). Più pulito e meno errori di azzeramento.
+    // 🆕 30/06/2026 — Federica flow: prima di promuovere a PRO chiediamo
+    // se l'atleta riceverà un compenso o continuerà a pagare la quota.
+    // (Per i coach mantieniamo il vecchio flusso diretto: il dialog quota/
+    // compenso non si applica al ruolo Coach.)
+    if (athlete.type === 'coach') {
+      setShowAddModal(false);
+      try {
+        await api.post(`/prime-squadre/athletes/${athlete.id}/enable`);
+        showAlert('✅ Aggiunto a Atleti Pro', `${athlete.first_name} ${athlete.last_name} è ora un membro Atleti Pro. Ti porto alla sua scheda.`);
+        router.push(`/admin/coach/${athlete.id}` as any);
+      } catch (error: any) {
+        showAlert('Errore', error.response?.data?.detail || 'Impossibile aggiungere');
+      }
+      return;
+    }
+    // Atleta: apri dialog Compenso vs Quota
     setShowAddModal(false);
+    setAthleteToPromote(athlete);
+    setPromoteMode('compensated');
+    setPromoteMonthly('');
+    // Default: primo del mese corrente
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    setPromoteStartDate(`${dd}/${mm}/${today.getFullYear()}`);
+    setShowPromoteDialog(true);
+  };
+
+  // 🆕 30/06/2026 — Conferma promozione: chiamata API con compensation_mode
+  const handleConfirmPromote = async () => {
+    if (!athleteToPromote || promoteBusy) return;
+    setPromoteBusy(true);
     try {
-      await api.post(`/prime-squadre/athletes/${athlete.id}/enable`);
-      showAlert(
-        '✅ Aggiunto a Atleti Pro',
-        `${athlete.first_name} ${athlete.last_name} è ora un Atleta Pro. Ti porto alla sua scheda per impostare compenso, contratto ed eventuali pregressi.`,
-      );
-      // Redirect alla scheda atleta — l'admin completa i compensi lì (form stile coach)
-      router.push(`/admin/athlete/${athlete.id}` as any);
+      const payload: any = { compensation_mode: promoteMode };
+      if (promoteMode === 'compensated') {
+        const amt = parseFloat((promoteMonthly || '0').replace(',', '.'));
+        if (!amt || amt <= 0) {
+          showAlert('Importo richiesto', 'Inserisci il compenso mensile lordo in euro (es. 1500).');
+          setPromoteBusy(false);
+          return;
+        }
+        payload.monthly_compensation = amt;
+        if (promoteStartDate && promoteStartDate.length >= 10) {
+          payload.contract_start_date = italianToIso(promoteStartDate);
+        }
+      }
+      await api.post(`/prime-squadre/athletes/${athleteToPromote.id}/enable`, payload);
+      const aName = `${athleteToPromote.first_name} ${athleteToPromote.last_name}`;
+      if (promoteMode === 'quota') {
+        showAlert(
+          '✅ Promossa (continua a pagare la quota)',
+          `${aName} è ora in Atleti Pro ma continuerà a pagare la quota. Nessun compenso/tracciamento soglie attivato.`,
+        );
+        setShowPromoteDialog(false);
+        setAthleteToPromote(null);
+        await loadData();
+      } else {
+        showAlert(
+          '✅ Promossa (con compenso)',
+          `${aName} è ora Atleta Pro retribuita. Ti porto alla sua scheda per completare contratto/IBAN/firma.`,
+        );
+        setShowPromoteDialog(false);
+        const aid = athleteToPromote.id;
+        setAthleteToPromote(null);
+        router.push(`/admin/athlete/${aid}` as any);
+      }
     } catch (error: any) {
-      showAlert('Errore', error.response?.data?.detail || 'Impossibile aggiungere atleta');
+      showAlert('Errore', error.response?.data?.detail || 'Impossibile promuovere atleta');
+    } finally {
+      setPromoteBusy(false);
     }
   };
 
@@ -627,6 +691,113 @@ export default function PrimeSquadrePage() {
               </View>
             </View>
           </ScrollView>
+        </View>
+      </Modal>
+
+      {/* 🆕 30/06/2026 — Dialog "Promuovi a PRO" (Federica flow) */}
+      <Modal visible={showPromoteDialog} animationType="fade" transparent>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ width: '100%', maxWidth: 480, backgroundColor: '#fff', borderRadius: 14, padding: 18, gap: 10 }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: '#1a1a2e' }}>
+              🎓 Promuovi a Atleta Pro
+            </Text>
+            {athleteToPromote && (
+              <Text style={{ fontSize: 14, color: '#444' }}>
+                {athleteToPromote.first_name} {athleteToPromote.last_name}
+              </Text>
+            )}
+            <Text style={{ fontSize: 13, color: '#666', marginTop: 4 }}>
+              Come va trattata questa atleta in Prima Squadra?
+            </Text>
+
+            {/* Opzione: Con compenso */}
+            <TouchableOpacity
+              onPress={() => setPromoteMode('compensated')}
+              style={{
+                borderWidth: 2,
+                borderColor: promoteMode === 'compensated' ? '#B8860B' : '#E0E0E0',
+                backgroundColor: promoteMode === 'compensated' ? '#FFF8E1' : '#fff',
+                borderRadius: 10, padding: 12, marginTop: 4,
+              }}
+              data-testid="promote-mode-compensated"
+            >
+              <Text style={{ fontSize: 14, fontWeight: '700', color: promoteMode === 'compensated' ? '#B8860B' : '#333' }}>
+                {promoteMode === 'compensated' ? '◉' : '○'}  Riceverà un compenso mensile
+              </Text>
+              <Text style={{ fontSize: 11, color: '#666', marginTop: 3, marginLeft: 22 }}>
+                Attiva contratto, tracciamento soglie 5K/15K, firma quietanze e Riforma Sport. NON paga la quota.
+              </Text>
+            </TouchableOpacity>
+
+            {/* Opzione: Quota */}
+            <TouchableOpacity
+              onPress={() => setPromoteMode('quota')}
+              style={{
+                borderWidth: 2,
+                borderColor: promoteMode === 'quota' ? '#1565C0' : '#E0E0E0',
+                backgroundColor: promoteMode === 'quota' ? '#E3F2FD' : '#fff',
+                borderRadius: 10, padding: 12,
+              }}
+              data-testid="promote-mode-quota"
+            >
+              <Text style={{ fontSize: 14, fontWeight: '700', color: promoteMode === 'quota' ? '#1565C0' : '#333' }}>
+                {promoteMode === 'quota' ? '◉' : '○'}  Continua a pagare la quota
+              </Text>
+              <Text style={{ fontSize: 11, color: '#666', marginTop: 3, marginLeft: 22 }}>
+                È in Prima Squadra ma resta atleta “quota”: nessun compenso/soglia. Reversibile in qualsiasi momento.
+              </Text>
+            </TouchableOpacity>
+
+            {/* Form dettagli compenso (solo se mode=compensated) */}
+            {promoteMode === 'compensated' && (
+              <View style={{ marginTop: 8, gap: 8 }}>
+                <View>
+                  <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Compenso mensile lordo (€) *</Text>
+                  <TextInput
+                    value={promoteMonthly}
+                    onChangeText={setPromoteMonthly}
+                    keyboardType="decimal-pad"
+                    placeholder="es. 1500"
+                    style={{ borderWidth: 1, borderColor: '#DDD', borderRadius: 8, padding: 10, fontSize: 14 }}
+                    data-testid="promote-monthly-input"
+                  />
+                </View>
+                <View>
+                  <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Data inizio contratto</Text>
+                  <TextInput
+                    value={promoteStartDate}
+                    onChangeText={(v) => setPromoteStartDate(formatDateWithSlashes(v))}
+                    placeholder="gg/mm/aaaa"
+                    keyboardType="numeric"
+                    style={{ borderWidth: 1, borderColor: '#DDD', borderRadius: 8, padding: 10, fontSize: 14 }}
+                    data-testid="promote-start-date-input"
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* Buttons */}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+              <TouchableOpacity
+                onPress={() => { setShowPromoteDialog(false); setAthleteToPromote(null); }}
+                style={{ flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: '#EEE', alignItems: 'center' }}
+                disabled={promoteBusy}
+                data-testid="promote-cancel-btn"
+              >
+                <Text style={{ color: '#333', fontWeight: '600' }}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleConfirmPromote}
+                disabled={promoteBusy}
+                style={{ flex: 1.4, paddingVertical: 12, borderRadius: 8, backgroundColor: promoteMode === 'compensated' ? '#B8860B' : '#1565C0', alignItems: 'center', opacity: promoteBusy ? 0.6 : 1 }}
+                data-testid="promote-confirm-btn"
+              >
+                <Text style={{ color: '#fff', fontWeight: '700' }}>
+                  {promoteBusy ? 'Attendere...' : (promoteMode === 'compensated' ? '✅ Conferma con compenso' : '✅ Conferma (paga quota)')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </Modal>
     </View>

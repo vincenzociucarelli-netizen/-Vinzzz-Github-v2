@@ -16,6 +16,36 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🎯 30/06/2026 — Fase 1: Test E2E Atleta 18+ PRO + Fase 2: Promozione "Federica flow" ✅
+
+### Fase 1 — Test E2E (testing_agent_v3_fork iter79)
+- **Backend**: 5/6 endpoint OK. Bug minor risolto: `admin_reset_year_signed_documents` (L31159) ora popola `athlete_id/coach_id/collaboratore_id/dirigente_id` sulle `deletion_requests` create dal batch reset_year (parità con `admin_request_delete_signed_document`). 3 richieste pendenti orfane già esistenti backfillate via script Python (collaboratore_id derivato dal signed_document corrispondente).
+- **Frontend**: i nuovi testID non erano nel DOM perché `/app/frontend/dist` era datato 25/06. Rigenerato con `npx expo export --platform web --output-dir dist` (~2 min) + `supervisorctl restart expo`. Bundle ora aggiornato (entry-ef41e99d...).
+
+### Fase 2 — Promozione "Atleta 18+ → PRO" con scelta quota/compenso
+**Richiesta utente**: Quando l'admin promuove un'atleta 18+ a "Atleti PRO" (Federica come test), dialog che chiede:
+- 🅰️ "Riceverà un compenso mensile" → full setup Giulia-style (contratto, soglie, quietanze)
+- 🅱️ "Continua a pagare la quota" → in Prima Squadra ma resta `quota`, nessun compenso/soglia
++ reversibile (esiste già `POST /prime-squadre/athletes/{id}/disable`)
++ data inizio contratto selezionabile (gg/mm/aaaa)
+
+**Modifiche backend** (`/app/backend/server.py`):
+- `POST /api/prime-squadre/athletes/{athlete_id}/enable` ora accetta body opzionale `{compensation_mode, monthly_compensation, contract_start_date, contract_end_date}`.
+- `mode="compensated"` (default, retrocompatibile): `is_compensated=True, athlete_type='compensated', pro_without_compensation=False` + opzionali `monthly_compensation` e `contract_start_date`.
+- `mode="quota"`: `is_compensated=True, athlete_type='quota', pro_without_compensation=True, monthly_compensation=0` → l'atleta entra in Atleti PRO ma resta sul flusso quota (nessun tab Compensi/soglie).
+- Validazione: ritorna 400 se mode ≠ 'compensated'/'quota'. Test curl 5/5 OK.
+
+**Modifiche frontend** (`/app/frontend/app/admin/prime-squadre.tsx`):
+- Nuovo `Modal` "Promuovi a Atleta Pro" che si apre DOPO la selezione dell'atleta (per i coach mantieniamo il flusso diretto: il dialog è solo per atleti).
+- Due card di scelta `promote-mode-compensated` / `promote-mode-quota` (raggio colorato + descrizione).
+- Se "compensated": form con input compenso mensile (`promote-monthly-input`) + data inizio contratto in formato gg/mm/aaaa (`promote-start-date-input`, default = oggi).
+- Bottoni: `promote-cancel-btn`, `promote-confirm-btn`.
+- Dopo conferma: mostra alert specifico (compenso → redirect a `/admin/athlete/{id}`; quota → resta in lista, refresh).
+
+**Reversibilità**: l'esistente `POST /prime-squadre/athletes/{id}/disable` continua a funzionare per togliere l'atleta dagli Atleti PRO (resetta `is_compensated=False, pro_without_compensation=False`). Per cambiare modalità (es. quota → compensated): disable + re-enable con il nuovo mode.
+
+
+
 ## 🎯 30/06/2026 — Fix UX pulsante "Aggiungi link" su EVENTI PI ✅
 
 **Problemi riportati**:
