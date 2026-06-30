@@ -1388,7 +1388,65 @@ export default function AdminCoachDetail() {
                 selectTextOnFocus={true}
               />
               <Text style={styles.inputHint}>
-                Importo dichiarato dal coach percepito prima dell'assunzione (Gen-Ago se assunto a Set)
+                Importo dichiarato dal coach percepito prima dell&apos;assunzione (Gen-Ago se assunto a Set)
+              </Text>
+
+              {/* 🆕 30/06/2026 — Periodo contratto coach (modificabile direttamente
+                  dalla scheda, prima si poteva impostare solo dal modal di
+                  promozione). Formato visualizzazione gg/mm/aaaa, storage ISO yyyy-mm-dd. */}
+              <Text style={[styles.inputLabel, { marginTop: 16 }]}>📅 Periodo contratto coach</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, color: '#666', marginBottom: 2 }}>Dal</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={(() => {
+                      const m = (contractStartDate || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                      return m ? `${m[3]}/${m[2]}/${m[1]}` : (contractStartDate || '');
+                    })()}
+                    onChangeText={(text) => {
+                      // Auto-format gg/mm/aaaa
+                      const nums = text.replace(/\D/g, '').slice(0, 8);
+                      let out = '';
+                      if (nums.length > 0) out = nums.substring(0, 2);
+                      if (nums.length > 2) out += '/' + nums.substring(2, 4);
+                      if (nums.length > 4) out += '/' + nums.substring(4, 8);
+                      const m = out.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                      // Memorizza ISO solo se data completa, altrimenti tieni il raw
+                      setContractStartDate(m ? `${m[3]}-${m[2]}-${m[1]}` : out);
+                    }}
+                    placeholder="gg/mm/aaaa"
+                    placeholderTextColor="#999"
+                    keyboardType="numeric"
+                    data-testid="coach-contract-start-input"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, color: '#666', marginBottom: 2 }}>Al</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={(() => {
+                      const m = (contractEndDate || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                      return m ? `${m[3]}/${m[2]}/${m[1]}` : (contractEndDate || '');
+                    })()}
+                    onChangeText={(text) => {
+                      const nums = text.replace(/\D/g, '').slice(0, 8);
+                      let out = '';
+                      if (nums.length > 0) out = nums.substring(0, 2);
+                      if (nums.length > 2) out += '/' + nums.substring(2, 4);
+                      if (nums.length > 4) out += '/' + nums.substring(4, 8);
+                      const m = out.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+                      setContractEndDate(m ? `${m[3]}-${m[2]}-${m[1]}` : out);
+                    }}
+                    placeholder="gg/mm/aaaa"
+                    placeholderTextColor="#999"
+                    keyboardType="numeric"
+                    data-testid="coach-contract-end-input"
+                  />
+                </View>
+              </View>
+              <Text style={styles.inputHint}>
+                Default stagione sportiva (1° ottobre → 30 giugno). Modifica liberamente — verrà salvato col bottone &quot;Salva&quot; in fondo.
               </Text>
               
               {/* Preview calcoli — 🚫 14/06/2026: nascosto, sostituito dal Riepilogo Compensi Doppio Ruolo */}
