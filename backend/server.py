@@ -20136,6 +20136,51 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
             logger.warning(f"compensation_receipt regen failed for {document_id}: {ex}")
             pdf_bytes = None
 
+    # 🆕 30/06/2026 — Cache stale ATLETI PRO: i PDF firmati prima del fix
+    # role_label hanno l'etichetta "Collaboratore:" invece di "Atleta:",
+    # nome firmatario vuoto e/o firma assente. Forziamo la rigenerazione anche
+    # se il PDF è >3500 byte. Per le comunicazioni di soglia 5K/15K atleti,
+    # forziamo SEMPRE la rigenerazione (era un comportamento difficile da
+    # rilevare via marker: ReportLab embed signature come PNG → niente marker
+    # testuale, e i totali nel metadati potevano essere già corretti).
+    if pdf_bytes and document.get("document_type") in (
+        "compensation_receipt", "threshold_5000_communication", "threshold_15000_communication"
+    ) and (document.get("athlete_id") or document.get("atleta_id")):
+        try:
+            is_stale = False
+            dtp = document.get("document_type")
+            if dtp == "compensation_receipt" and b"Collaboratore:" in pdf_bytes:
+                is_stale = True  # label sbagliata
+            if b"PDF originale non" in pdf_bytes or b"Riepilogo firma" in pdf_bytes:
+                is_stale = True  # fallback summary PDF
+            # Per atleti, forziamo regen su tutte le quietanze/comunicazioni
+            # con cache antecedente al 30/06/2026 14:00 (post-fix signature_base64).
+            stale_cutoff = "2026-06-30T14:00:00"
+            cached_at = document.get("pdf_cached_at") or ""
+            if (not cached_at) or cached_at < stale_cutoff:
+                is_stale = True
+            if is_stale:
+                logger.info(f"Discarding stale athlete PDF for {document_id} (type={dtp}, cached_at={cached_at})")
+                if dtp == "compensation_receipt":
+                    fixed = await _regenerate_compensation_receipt_pdf(document)
+                else:
+                    fixed = await _regenerate_threshold_communication_pdf(document)
+                if fixed and len(fixed) > 1500:
+                    pdf_bytes = fixed
+                    try:
+                        await db.signed_documents.update_one(
+                            {"id": document_id},
+                            {"$set": {
+                                "pdf_base64": base64.b64encode(fixed).decode(),
+                                "pdf_cached_at": datetime.now(timezone.utc).isoformat(),
+                            }}
+                        )
+                    except Exception:
+                        pass
+                    logger.info(f"Auto-fixed athlete PDF {document_id} ({len(pdf_bytes)} bytes)")
+        except Exception as ex:
+            logger.warning(f"athlete stale-cache check failed for {document_id}: {ex}")
+
     # Same logic for threshold communications: cached PDF too small (summary
     # fallback ~1-2KB instead of full ~5-7KB) → regenerate.
     if pdf_bytes and document.get("document_type") in (
@@ -24753,9 +24798,20 @@ async def download_document(
             # For compensation receipts, rebuild the ORIGINAL full PDF (same
             # layout as Foto 2) using stored coach_id, month, year, amount, etc.
             if dtype in ("compensation_receipt", "coach_compensation_receipt", "collaboratore_compensation_receipt"):
+                # 🆕 30/06/2026 — ATLETI PRO: il signed_document non ha signer_id/coach_id
+                # bensì athlete_id. Senza questo fallback la rigenerazione caricava
+                # firma/nome/CF vuoti per Giulia & co.
+                is_athlete_doc = bool(doc.get("athlete_id") or doc.get("atleta_id"))
+                ath_record = None
+                if is_athlete_doc:
+                    ath_id_local = doc.get("athlete_id") or doc.get("atleta_id")
+                    ath_record = await db.athletes.find_one({"id": ath_id_local}) if ath_id_local else None
                 # Find the coach/collaborator user record for fiscal code
                 coach_user = None
                 coach_id = doc.get("coach_id") or doc.get("signer_id")
+                # Per atleti: coach_id va impostato su athlete_id come "owner id"
+                if not coach_id and is_athlete_doc:
+                    coach_id = doc.get("athlete_id") or doc.get("atleta_id")
                 if coach_id:
                     coach_user = await db.users.find_one({"id": coach_id})
                     if not coach_user:
@@ -24767,6 +24823,8 @@ async def download_document(
                 soc_id = doc.get("society_id")
                 if not soc_id and coach_user:
                     soc_id = coach_user.get("society_id")
+                if not soc_id and ath_record:
+                    soc_id = ath_record.get("society_id")
                 if soc_id and not society:
                     society = await db.societies.find_one({"id": soc_id})
                 # If still no society, take the only society in the system (single-tenant fallback)
@@ -24783,12 +24841,27 @@ async def download_document(
                 except Exception:
                     month_name = str(month_val) if month_val else ""
                 soc_name = (society.get("ragione_sociale") or society.get("name") or "") if society else ""
+                # 🆕 30/06/2026 — Per atleti, ricostruiamo il nome dal record
+                # athlete (full_name oppure last+first uppercased) prima del
+                # fallback su coach_user.
+                ath_full_name = None
+                if ath_record:
+                    ath_full_name = (
+                        ath_record.get("full_name")
+                        or f"{ath_record.get('last_name', '').upper()} {ath_record.get('first_name', '').upper()}".strip()
+                        or None
+                    )
                 signer_name = (
+                    doc.get("athlete_name") if is_athlete_doc else None
+                ) or ath_full_name or (
                     doc.get("coach_name")
                     or doc.get("signer_name")
                     or ((coach_user or {}).get("full_name") or "")
                 )
-                fiscal = (coach_user or {}).get("fiscal_code") or (doc.get("additional_data") or {}).get("fiscal_code") or ""
+                fiscal = (
+                    (ath_record or {}).get("fiscal_code")
+                    if is_athlete_doc else None
+                ) or (coach_user or {}).get("fiscal_code") or (doc.get("additional_data") or {}).get("fiscal_code") or ""
                 # Try to fetch the actual hand-written signature from the
                 # source-of-truth compensation row. Search across ALL three
                 # collections (coach / collaboratore / dirigente) — receipts
@@ -24805,16 +24878,26 @@ async def download_document(
                             ("collaboratore_compensations", "collaboratore_id"),
                             ("dirigente_compensations", "dirigente_id"),
                             ("compensations", "coach_id"),  # legacy
+                            # 🆕 30/06/2026 — Quietanze ATLETI PRO. Senza, la
+                            # rigenerazione per Giulia non trovava la firma e
+                            # restituiva PDF senza firma.
+                            ("athlete_compensation_receipts", "athlete_id"),
                         ]
                         for coll, key in candidates:
+                            # Match month sia come int sia come stringa italiana legacy
+                            month_or_q = [{"month": m_int}]
+                            if 1 <= m_int <= 12:
+                                month_or_q.append({"month": month_names[m_int]})
                             comp = await db[coll].find_one(
-                                {key: coach_id, "month": m_int, "year": y_int}
+                                {key: coach_id, "$or": month_or_q, "year": y_int}
                             )
                             if comp:
                                 if not signature_b64:
-                                    signature_b64 = comp.get("receipt_signature_base64") or ""
+                                    signature_b64 = comp.get("receipt_signature_base64") or comp.get("signature_base64") or ""
                                 if not source_signed_at:
                                     source_signed_at = comp.get("receipt_signed_date") or comp.get("signed_date")
+                                if not amount_val:
+                                    amount_val = comp.get("amount_gross") or comp.get("amount")
                                 if signature_b64 and source_signed_at:
                                     break
                     except Exception:
@@ -24841,6 +24924,8 @@ async def download_document(
                     signer_id=doc.get("signer_id") or coach_id,
                     ip_address=doc.get("ip_address") or source_ip,
                     document_hash=doc.get("document_hash") or doc.get("hash"),
+                    # 🆕 30/06/2026 — Label "Atleta:" sulle quietanze atleti PRO
+                    role_label=("Atleta" if is_athlete_doc else "Collaboratore"),
                 )
             else:
                 pdf_bytes = _generate_consent_summary_pdf(doc, signer, society)
@@ -25742,11 +25827,15 @@ async def _regenerate_threshold_communication_pdf(document: dict) -> Optional[by
             }, {"_id": 0})
 
         # Signature: try multiple sources
+        # 🆕 30/06/2026 — athlete_compensation_receipts salva il campo
+        # `signature_base64` (NON `receipt_signature_base64` come Coach/Dir/Collab),
+        # quindi controlliamo ENTRAMBI per non lasciare la PDF senza firma.
         add = document.get("additional_data") or {}
         sig_b64 = (
             document.get("signature_base64")
             or add.get("signature_base64")
             or (comp.get("receipt_signature_base64") if comp else None)
+            or (comp.get("signature_base64") if comp else None)
             or (decl.get("signature_base64") if decl else None)
         )
 

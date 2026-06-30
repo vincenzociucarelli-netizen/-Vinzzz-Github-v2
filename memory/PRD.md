@@ -16,6 +16,34 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🎯 30/06/2026 (pomeriggio) — Fix DEFINITIVO PDF quietanze Atleti PRO ✅
+
+**Problema reale**: nonostante i fix di stamattina, Giulia (Atleta 18+ PRO) vedeva:
+- **Quietanza 5K Settembre** + **15K Dicembre**: PDF con testo + metadati + QR corretti MA FIRMA VUOTA
+- **Quietanza Novembre 2025**: PDF di **fallback minimale** "PDF originale non più disponibile" con Firmatario/Email vuoti
+
+**Root cause** (3 bug indipendenti):
+1. `_get_or_regen_pdf` (la funzione che serve i PDF dall'endpoint download) aveva un branch dedicato `compensation_receipt` (L24755) che gestiva SOLO Coach/Collaboratore: cercava `coach_id = doc.coach_id or doc.signer_id` → entrambi None per atleti → falliva → cadeva sul fallback `_generate_consent_summary_pdf` (= la PDF "Riepilogo firma" di Foto 3). NON aveva l'item `athlete_compensation_receipts` nei candidati per la firma.
+2. `_regenerate_threshold_communication_pdf` cercava la firma in `comp.receipt_signature_base64` MA la tabella `athlete_compensation_receipts` salva il campo come `signature_base64` (legacy) → firma sempre None per atleti.
+3. Il PDF cached (`pdf_base64` in DB) era stato generato dal codice rotto stamattina e non veniva mai invalidato perché >3500 byte (formato pieno ma firma vuota).
+
+**Fix backend** (`/app/backend/server.py`):
+- `_get_or_regen_pdf` branch `compensation_receipt` (L24755-24900): ora rileva atleti via `doc.athlete_id`/`atleta_id`, carica il record da `db.athletes`, ricostruisce nome+CF dall'atleta, aggiunge `athlete_compensation_receipts` nei candidati di lookup firma (sia int che stringa italiana del mese), passa `role_label="Atleta"` al generatore.
+- `_regenerate_threshold_communication_pdf` (L25789): aggiunto fallback `comp.signature_base64` oltre a `receipt_signature_base64`.
+- Nuovo check "auto-invalida cache stale ATLETI PRO" (L20130-): forza regenerazione automatica se il PDF cached:
+  - contiene "Collaboratore:" (label vecchia)
+  - contiene "PDF originale non" o "Riepilogo firma" (fallback summary)
+  - O ha `pdf_cached_at` antecedente al 30/06/2026 14:00 (cutoff post-fix)
+  Marca il nuovo `pdf_cached_at` al re-cache così non rigenera all'infinito.
+
+**Cosa fare ora**:
+1. Save & Deploy su registrateam.it.
+2. Riapri qualsiasi PDF di Giulia in "I Miei Documenti" → auto-regen al primo accesso → PDF corretto cached.
+
+**Spiegazione del perché "negli altri ruoli va, su Atleti no"**: l'intero sottosistema PDF era stato progettato originariamente per Coach/Collaboratore/Dirigente (chiave `signer_id`/`coach_id`, collezione `coach_compensations`). Quando è stata aggiunta la categoria "Atleta 18+ PRO" (in `db.athletes`, collezione `athlete_compensation_receipts`), i punti di lookup sono stati aggiornati uno alla volta — restavano due percorsi non sincronizzati (`_get_or_regen_pdf` branch compensation_receipt e signature lookup nelle threshold communications). Ora entrambi sono allineati.
+
+
+
 ## 🎯 30/06/2026 — Fase 1: Test E2E Atleta 18+ PRO + Fase 2: Promozione "Federica flow" ✅
 
 ### Fase 1 — Test E2E (testing_agent_v3_fork iter79)
