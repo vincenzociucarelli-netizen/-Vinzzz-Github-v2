@@ -23109,6 +23109,9 @@ class EnablePrimeSquadreBody(BaseModel):
     monthly_compensation: Optional[float] = None
     contract_start_date: Optional[str] = None  # YYYY-MM-DD
     contract_end_date: Optional[str] = None    # YYYY-MM-DD
+    # 🆕 30/06/2026 — Pregresso annuale (compensi già percepiti da altri enti
+    # nello stesso anno solare) per il calcolo soglie Riforma Sport 5K/15K.
+    other_annual_compensation: Optional[float] = None
 
 
 @api_router.post("/prime-squadre/athletes/{athlete_id}/enable")
@@ -23176,6 +23179,8 @@ async def enable_athlete_compensation(
             athlete_set["contract_start_date"] = body.contract_start_date
         if body and body.contract_end_date:
             athlete_set["contract_end_date"] = body.contract_end_date
+        if body and body.other_annual_compensation is not None:
+            athlete_set["other_annual_compensation"] = float(body.other_annual_compensation)
 
     result = await db.athletes.update_one(
         {"id": athlete_id},

@@ -114,6 +114,8 @@ export default function PrimeSquadrePage() {
   const [promoteMode, setPromoteMode] = useState<'compensated' | 'quota'>('compensated');
   const [promoteMonthly, setPromoteMonthly] = useState('');
   const [promoteStartDate, setPromoteStartDate] = useState(''); // dd/mm/yyyy
+  const [promoteEndDate, setPromoteEndDate] = useState(''); // dd/mm/yyyy
+  const [promoteOtherAnnual, setPromoteOtherAnnual] = useState(''); // pregresso annuale
   const [promoteBusy, setPromoteBusy] = useState(false);
   const [configForm, setConfigForm] = useState<ConfigFormData>({
     monthly_compensation: '',
@@ -234,6 +236,8 @@ export default function PrimeSquadrePage() {
     setAthleteToPromote(athlete);
     setPromoteMode('compensated');
     setPromoteMonthly('');
+    setPromoteEndDate('');
+    setPromoteOtherAnnual('');
     // Default: primo del mese corrente
     const today = new Date();
     const dd = String(today.getDate()).padStart(2, '0');
@@ -258,6 +262,13 @@ export default function PrimeSquadrePage() {
         payload.monthly_compensation = amt;
         if (promoteStartDate && promoteStartDate.length >= 10) {
           payload.contract_start_date = italianToIso(promoteStartDate);
+        }
+        if (promoteEndDate && promoteEndDate.length >= 10) {
+          payload.contract_end_date = italianToIso(promoteEndDate);
+        }
+        const oth = parseFloat((promoteOtherAnnual || '0').replace(',', '.'));
+        if (oth > 0) {
+          payload.other_annual_compensation = oth;
         }
       }
       await api.post(`/prime-squadre/athletes/${athleteToPromote.id}/enable`, payload);
@@ -771,6 +782,33 @@ export default function PrimeSquadrePage() {
                     keyboardType="numeric"
                     style={{ borderWidth: 1, borderColor: '#DDD', borderRadius: 8, padding: 10, fontSize: 14 }}
                     data-testid="promote-start-date-input"
+                  />
+                </View>
+                <View>
+                  <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>Data fine contratto (opzionale)</Text>
+                  <TextInput
+                    value={promoteEndDate}
+                    onChangeText={(v) => setPromoteEndDate(formatDateWithSlashes(v))}
+                    placeholder="gg/mm/aaaa"
+                    keyboardType="numeric"
+                    style={{ borderWidth: 1, borderColor: '#DDD', borderRadius: 8, padding: 10, fontSize: 14 }}
+                    data-testid="promote-end-date-input"
+                  />
+                </View>
+                <View>
+                  <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
+                    Pregresso annuale dichiarato (€) — opzionale
+                  </Text>
+                  <Text style={{ fontSize: 11, color: '#999', marginBottom: 4, fontStyle: 'italic' }}>
+                    Compensi già percepiti da altri enti sportivi nell&apos;anno solare in corso. Usato per il tracciamento soglie €5K/€15K (Riforma Sport).
+                  </Text>
+                  <TextInput
+                    value={promoteOtherAnnual}
+                    onChangeText={setPromoteOtherAnnual}
+                    keyboardType="decimal-pad"
+                    placeholder="es. 2500 (default: 0)"
+                    style={{ borderWidth: 1, borderColor: '#DDD', borderRadius: 8, padding: 10, fontSize: 14 }}
+                    data-testid="promote-other-annual-input"
                   />
                 </View>
               </View>
