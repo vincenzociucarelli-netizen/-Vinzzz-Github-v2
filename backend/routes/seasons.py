@@ -17,34 +17,50 @@ from utils import clean_mongo_doc, clean_mongo_docs, get_current_season
 router = APIRouter()
 
 
+def _society_filter(current_user) -> dict:
+    """🆕 30/06/2026 — Multi-tenancy: ogni admin vede SOLO i dati della propria
+    società. Se per qualche motivo manca `society_id` su current_user
+    restituiamo un filtro impossibile per essere conservativi (zero risultati,
+    nessuna fuga di dati cross-società)."""
+    sid = current_user.get("society_id")
+    if not sid:
+        return {"society_id": "__none__"}
+    return {"society_id": sid}
+
+
 @router.get("/seasons")
 async def get_seasons(current_user = Depends(get_current_user)):
-    """Get all season archives (admin only)."""
+    """Get all season archives (admin only) — filtered by current admin's society."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere l'archivio")
-    seasons = await db.season_archives.find({}).sort("start_date", -1).to_list(100)
+    seasons = await db.season_archives.find(_society_filter(current_user)).sort("start_date", -1).to_list(100)
     clean_mongo_docs(seasons)
     return seasons
 
 
 @router.get("/seasons/current")
 async def get_current_season_data(current_user = Depends(get_current_user)):
-    """Get current season summary."""
+    """Get current season summary — filtered by current admin's society."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere i dati stagione")
     
     season_name = get_current_season()
-    
-    teams = await db.teams.find({}).to_list(100)
+    soc_q = _society_filter(current_user)
+
+    teams = await db.teams.find(soc_q).to_list(100)
     clean_mongo_docs(teams)
-    
-    athletes = await db.athletes.find({}).to_list(1000)
+
+    athletes = await db.athletes.find(soc_q).to_list(1000)
     clean_mongo_docs(athletes)
-    
-    coaches = await db.users.find({"role": UserRole.COACH, "status": UserStatus.APPROVED}).to_list(100)
+
+    coaches = await db.users.find({
+        **soc_q, "role": UserRole.COACH, "status": UserStatus.APPROVED
+    }).to_list(100)
     clean_mongo_docs(coaches)
-    
-    championships = await db.championships.find({"season": season_name}).to_list(100)
+
+    championships = await db.championships.find({
+        **soc_q, "season": season_name
+    }).to_list(100)
     clean_mongo_docs(championships)
     
     team_data = []
@@ -73,7 +89,7 @@ async def get_current_season_data(current_user = Depends(get_current_user)):
 
 @router.post("/seasons/archive")
 async def archive_season(current_user = Depends(get_current_user)):
-    """Archive current season and create new one (admin only)."""
+    """Archive current season and create new one (admin only) — society-scoped."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può archiviare stagioni")
     
@@ -81,6 +97,7 @@ async def archive_season(current_user = Depends(get_current_user)):
     
     now = datetime.utcnow()
     season_name = get_current_season()
+    sid = current_user.get("society_id")
     
     year_parts = season_name.split("-")
     start_year = int(year_parts[0])
@@ -101,25 +118,31 @@ async def archive_season(current_user = Depends(get_current_user)):
         archived_at=now,
         archived_by=current_user["id"]
     )
-    
-    existing = await db.season_archives.find_one({"season_name": season_name})
+    archive_doc = archive.dict()
+    # 🆕 30/06/2026 — Stamp society_id sull'archivio (era sempre None → cross-leak)
+    archive_doc["society_id"] = sid
+
+    existing = await db.season_archives.find_one({"season_name": season_name, "society_id": sid})
     if existing:
         await db.season_archives.update_one(
-            {"season_name": season_name},
-            {"$set": archive.dict()}
+            {"season_name": season_name, "society_id": sid},
+            {"$set": archive_doc}
         )
     else:
-        await db.season_archives.insert_one(archive.dict())
+        await db.season_archives.insert_one(archive_doc)
     
     return {"message": f"Stagione {season_name} archiviata con successo"}
 
 
 @router.get("/seasons/{season_name}")
 async def get_season_archive(season_name: str, current_user = Depends(get_current_user)):
-    """Get specific season archive details."""
+    """Get specific season archive details — scoped to current admin's society."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere l'archivio")
-    archive = await db.season_archives.find_one({"season_name": season_name})
+    archive = await db.season_archives.find_one({
+        "season_name": season_name,
+        **_society_filter(current_user),
+    })
     if not archive:
         raise HTTPException(status_code=404, detail="Stagione non trovata")
     clean_mongo_doc(archive)
