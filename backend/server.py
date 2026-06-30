@@ -23165,18 +23165,58 @@ async def enable_athlete_compensation(
     # 🆕 30/06/2026 — Se mode='quota' la promozione AGGIUNGE l'atleta a Prima
     # Squadra MA mantiene athlete_type='quota' (paga ancora la quota) e setta
     # `pro_without_compensation=True` per disattivare il tab Compensi/soglie.
+    # 🆕 30/06/2026 (sera) — Niente periodo di prova per atleti PRO: chi viene
+    # dalle giovanili ha già provato e chi viene "voluta e inserita" non deve
+    # provare. Unico blocco rimane il certificato medico:
+    #   • cert valido → status 'active' subito
+    #   • cert mancante/scaduto → 'pending_certificate' (in attesa convalida coach)
+    existing_athlete = await db.athletes.find_one({"id": athlete_id}, {
+        "_id": 0,
+        "medical_certificate_expiry": 1,
+        "medical_certificate_validated_at": 1,
+        "medical_certificate_validated_by": 1,
+        "medical_certificate_status": 1,
+        "status": 1,
+    })
+    cert_valid = False
+    if existing_athlete:
+        exp_raw = existing_athlete.get("medical_certificate_expiry")
+        try:
+            if exp_raw:
+                if isinstance(exp_raw, str):
+                    exp_dt = datetime.fromisoformat(exp_raw.replace("Z", "+00:00"))
+                else:
+                    exp_dt = exp_raw
+                cert_valid = exp_dt and exp_dt.replace(tzinfo=None) > datetime.utcnow()
+                # Deve anche essere stato convalidato dal coach
+                if cert_valid and not existing_athlete.get("medical_certificate_validated_at"):
+                    cert_valid = False
+        except Exception:
+            cert_valid = False
+    promotion_status = "active" if cert_valid else "pending_certificate"
+
     if mode == "quota":
         athlete_set = {
             "is_compensated": True,
             "athlete_type": "quota",
             "pro_without_compensation": True,
             "monthly_compensation": 0,
+            "is_trial": False,
+            "trial_status": "completed",
+            "trial_start_date": None,
+            "trial_end_date": None,
+            "status": promotion_status,
         }
     else:
         athlete_set = {
             "is_compensated": True,
             "athlete_type": "compensated",
             "pro_without_compensation": False,
+            "is_trial": False,
+            "trial_status": "completed",
+            "trial_start_date": None,
+            "trial_end_date": None,
+            "status": promotion_status,
         }
         if body and body.monthly_compensation is not None:
             athlete_set["monthly_compensation"] = float(body.monthly_compensation)
@@ -32304,7 +32344,70 @@ body{{font-family:-apple-system,system-ui,Helvetica,Arial,sans-serif;background:
     return HTMLResponse(content=html, headers={"Cache-Control": "no-store"})
 
 
-@api_router.post("/admin/compensations/regenerate-all-receipts")
+@api_router.post("/admin/athletes/cleanup-pro-trial-status")
+async def admin_cleanup_pro_trial_status(current_user = Depends(get_current_user)):
+    """🆕 30/06/2026 — One-shot: ripulisce lo stato 'trial/pending_trial' dagli
+    atleti PRO (`is_compensated=True`). Le atlete promosse a PRO non devono mai
+    essere in periodo di prova; lo stato corretto è:
+      • 'active' se hanno certificato medico convalidato
+      • 'pending_certificate' altrimenti (in attesa convalida del coach)
+
+    Pensato per allineare i record creati prima del fix del 30/06 (es. sorelle
+    Prati che mostravano "In attesa" pur essendo PRO)."""
+    if current_user.get("role") not in ("admin", "super_admin"):
+        raise HTTPException(status_code=403, detail="Solo admin")
+    society_id = current_user.get("society_id")
+    q: dict = {"is_compensated": True}
+    if society_id:
+        q["society_id"] = society_id
+    athletes = await db.athletes.find(q, {
+        "_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1,
+        "is_trial": 1, "trial_status": 1, "status": 1,
+        "medical_certificate_expiry": 1, "medical_certificate_validated_at": 1,
+    }).to_list(1000)
+    updated = 0
+    out: list = []
+    now_dt = datetime.utcnow()
+    for ath in athletes:
+        # Calcola lo status target (active vs pending_certificate)
+        cert_valid = False
+        exp_raw = ath.get("medical_certificate_expiry")
+        try:
+            if exp_raw:
+                if isinstance(exp_raw, str):
+                    exp_dt = datetime.fromisoformat(exp_raw.replace("Z", "+00:00"))
+                else:
+                    exp_dt = exp_raw
+                exp_naive = exp_dt.replace(tzinfo=None) if hasattr(exp_dt, "tzinfo") else exp_dt
+                cert_valid = exp_naive > now_dt and bool(ath.get("medical_certificate_validated_at"))
+        except Exception:
+            cert_valid = False
+        target_status = "active" if cert_valid else "pending_certificate"
+        # Aggiorna solo se necessario
+        needs_update = (
+            ath.get("is_trial") is True
+            or ath.get("trial_status") in ("active", "ongoing", "pending")
+            or ath.get("status") in ("trial", "pending_trial", "in_attesa", "pending_decision")
+        )
+        if needs_update or ath.get("status") != target_status:
+            await db.athletes.update_one(
+                {"id": ath["id"]},
+                {"$set": {
+                    "is_trial": False,
+                    "trial_status": "completed",
+                    "trial_start_date": None,
+                    "trial_end_date": None,
+                    "status": target_status,
+                }}
+            )
+            updated += 1
+            out.append({
+                "id": ath["id"],
+                "name": ath.get("full_name") or f"{ath.get('last_name','')} {ath.get('first_name','')}".strip(),
+                "old_status": ath.get("status"),
+                "new_status": target_status,
+            })
+    return {"total_pro_athletes": len(athletes), "updated": updated, "details": out}
 async def admin_regenerate_all_receipts(current_user = Depends(get_current_user)):
     """Admin: forza la rigenerazione di TUTTE le quietanze della società.
 

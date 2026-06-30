@@ -201,6 +201,25 @@ export default function PrimeSquadrePage() {
     }
   }, [showAddModal, athletes]);
 
+  // 🆕 30/06/2026 — Auto-cleanup status atleti PRO: rimuove residui di
+  // "trial/in_attesa" dagli atleti già compensati (es. sorelle Prati).
+  // L'endpoint è idempotente: se non c'è nulla da fare, ritorna updated=0.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await api.post('/admin/athletes/cleanup-pro-trial-status');
+        if (!cancelled && (r.data?.updated || 0) > 0) {
+          // Ricarica la lista in modo che lo stato "In attesa" sparisca subito
+          loadData();
+        }
+      } catch {
+        // silent — non bloccare l'admin se l'endpoint non risponde
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const onRefresh = async () => {
     setRefreshing(true);
     await loadData();
