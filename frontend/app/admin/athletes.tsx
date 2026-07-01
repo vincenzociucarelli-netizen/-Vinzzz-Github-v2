@@ -537,43 +537,6 @@ export default function AdminAthletes() {
           <Text style={styles.compensatedBadgeText}>PRO</Text>
         </View>
       )}
-      {/* 🆕 01/07/2026 — Flag "Riconferma per nuova stagione".
-          Stati: GRIGIO (già importato in questa stagione, immutabile) |
-          VERDE (riconfermato per il prossimo import) | VUOTO (non riconfermato). */}
-      {(() => {
-        const it: any = item;
-        const isImported = !!currentSeason && it.imported_to_season === currentSeason;
-        const isRenewed = !!it.renewed_for_next_season;
-        const busy = renewToggleBusy === item.id;
-        const handleToggle = async (e: any) => {
-          e?.stopPropagation?.();
-          if (isImported || busy) return;
-          setRenewToggleBusy(item.id);
-          try {
-            await api.post(`/seasons/athletes/${item.id}/renew-toggle`);
-            await loadData();
-          } catch (err: any) {
-            // 409 = già importato (race condition con altri admin)
-            console.warn('renew toggle failed', err?.response?.data);
-          } finally {
-            setRenewToggleBusy(null);
-          }
-        };
-        const bg = isImported ? '#E0E0E0' : (isRenewed ? '#C8E6C9' : '#FFF');
-        const border = isImported ? '#9E9E9E' : (isRenewed ? '#2E7D32' : '#BDBDBD');
-        const color = isImported ? '#616161' : (isRenewed ? '#1B5E20' : '#757575');
-        const label = isImported ? 'Già importato' : (isRenewed ? '✓ Riconfermato' : 'Riconferma');
-        return (
-          <TouchableOpacity
-            onPress={handleToggle}
-            disabled={isImported || busy}
-            style={{ position: 'absolute', top: 8, right: 8, borderRadius: 12, borderWidth: 1, borderColor: border, backgroundColor: bg, paddingHorizontal: 8, paddingVertical: 3, opacity: busy ? 0.5 : 1 }}
-            data-testid={`athlete-renew-flag-${item.id}`}
-          >
-            <Text style={{ fontSize: 10, fontWeight: '700', color }}>{label}</Text>
-          </TouchableOpacity>
-        );
-      })()}
       <View style={styles.athleteInfo}>
         <View style={styles.athleteNameRow}>
           <Text style={[

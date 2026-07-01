@@ -4459,9 +4459,17 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
     society = await db.societies.find_one({"id": society_id})
     society_owner_id = society.get("owner_id") if society else None
     
+    # 🆕 01/07/2026 — Filtro clean-slate: solo dirigenti della stagione corrente
+    # Fallback per record senza il campo (nuovi): mostrati sempre.
+    from utils import get_current_season_for_society as _get_cs
+    _current_season = await _get_cs(db, society_id)
     query = {
         "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER, UserRole.DIRIGENTE]},
-        "society_id": society_id
+        "society_id": society_id,
+        "$or": [
+            {"active_seasons": _current_season},
+            {"active_seasons": {"$exists": False}},
+        ],
     }
     # Exclude the society owner account from the dirigenti list
     if society_owner_id:
@@ -4523,14 +4531,22 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
 
 @api_router.get("/users/coaches")
 async def get_coaches(current_user = Depends(get_current_user)):
-    """Get all coaches"""
+    """Get all coaches — filtrati per stagione attiva (active_seasons contains current_season)."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere i coach")
     
     society_id = current_user.get("society_id")
+    # 🆕 01/07/2026 — Filtro clean-slate: solo coach della stagione corrente.
+    # Fallback per nuovi record senza il campo (`$exists: false`): sono comunque mostrati.
+    from utils import get_current_season_for_society as _get_cs
+    _current_season = await _get_cs(db, society_id)
     coaches = await db.users.find({
         "role": UserRole.COACH,
-        "society_id": society_id
+        "society_id": society_id,
+        "$or": [
+            {"active_seasons": _current_season},
+            {"active_seasons": {"$exists": False}},
+        ],
     }).to_list(1000)
     
     result = []
@@ -4600,9 +4616,15 @@ async def get_collaboratorees(current_user = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Solo admin può vedere i collaboratori")
     
     society_id = current_user.get("society_id")
+    from utils import get_current_season_for_society as _get_cs
+    _current_season = await _get_cs(db, society_id)
     collaboratori = await db.users.find({
         "role": "collaboratore",
-        "society_id": society_id
+        "society_id": society_id,
+        "$or": [
+            {"active_seasons": _current_season},
+            {"active_seasons": {"$exists": False}},
+        ],
     }).to_list(1000)
     
     result = []
@@ -6362,12 +6384,22 @@ async def save_federation_preferences(data: dict, current_user = Depends(get_cur
 
 @api_router.get("/athletes")
 async def get_all_athletes(current_user = Depends(get_current_user)):
-    """Get all athletes - admin only"""
+    """Get all athletes - admin only.
+    🆕 01/07/2026 — Filtro clean-slate: solo atleti della stagione corrente
+    (active_seasons contains current_season)."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere tutti gli atleti")
     
     society_id = current_user.get("society_id")
-    athletes = await db.athletes.find({"society_id": society_id}).to_list(5000)
+    from utils import get_current_season_for_society as _get_cs
+    _current_season = await _get_cs(db, society_id)
+    athletes = await db.athletes.find({
+        "society_id": society_id,
+        "$or": [
+            {"active_seasons": _current_season},
+            {"active_seasons": {"$exists": False}},
+        ],
+    }).to_list(5000)
     
     # Enrich with team names
     team_ids = list(set([a.get("team_id") for a in athletes if a.get("team_id")]))
@@ -33422,4 +33454,70 @@ async def run_data_migrations():
         logger.info(f"Migration compensation_accepted sync: {synced}/{len(accepted_users)} atleti aggiornati")
     except Exception as exc:
         logger.warning(f"Migration compensation_accepted sync failed: {exc}")
+
+    # 🆕 01/07/2026 — Migrazione one-shot `active_seasons`: modello "clean slate" per rinnovi.
+    # Ogni user/athlete diventa "membro di una stagione". La lista operativa filtra per
+    # active_seasons contains <current_season>. L'archivio lista per <archived_season>.
+    # Idempotente: aggiorna solo record senza il campo.
+    try:
+        # Trova tutte le società con impostazioni per calcolare la propria stagione precedente.
+        societies_settings = await db.settings.find({"type": "society"}).to_list(1000)
+        for s in societies_settings:
+            sid = s.get("society_id")
+            if not sid:
+                continue
+            start_month = int(s.get("season_start_month", 7) or 7)
+            start_day = int(s.get("season_start_day", 1) or 1)
+            from utils import get_current_season_for_society as _get_cs
+            current_season = await _get_cs(db, sid)
+            try:
+                cur_start = int(current_season.split("-")[0])
+                prev_season = f"{cur_start - 1}-{cur_start}"
+            except Exception:
+                prev_season = current_season
+
+            # Cleanup residui flag "Riconferma" di stamattina (li abbiamo abbandonati).
+            await db.athletes.update_many(
+                {"society_id": sid},
+                {"$unset": {
+                    "renewed_for_next_season": "",
+                    "imported_to_season": "",
+                    "imported_at": "",
+                    "imported_by": "",
+                    "pro_data_pending_review": "",
+                    "pro_data_pending_review_season": "",
+                    "monthly_compensation_previous_season": "",
+                    "other_annual_compensation_previous_season": "",
+                }},
+            )
+            await db.users.update_many(
+                {"society_id": sid},
+                {"$unset": {
+                    "renewed_for_next_season": "",
+                    "imported_to_season": "",
+                    "imported_at": "",
+                    "imported_by": "",
+                    "pro_data_pending_review": "",
+                    "pro_data_pending_review_season": "",
+                    "monthly_compensation_previous_season": "",
+                    "other_annual_compensation_previous_season": "",
+                }},
+            )
+
+            # Migrazione: seed active_seasons alla stagione precedente (per user/athlete già esistenti).
+            a_res = await db.athletes.update_many(
+                {"society_id": sid, "active_seasons": {"$exists": False}},
+                {"$set": {"active_seasons": [prev_season]}},
+            )
+            u_res = await db.users.update_many(
+                {"society_id": sid, "active_seasons": {"$exists": False}},
+                {"$set": {"active_seasons": [prev_season]}},
+            )
+            if a_res.modified_count or u_res.modified_count:
+                logger.info(
+                    f"Migration active_seasons society={sid} prev={prev_season}: "
+                    f"athletes={a_res.modified_count}, users={u_res.modified_count}"
+                )
+    except Exception as exc:
+        logger.warning(f"Migration active_seasons failed: {exc}")
 

@@ -266,6 +266,18 @@ export default function SeasonsArchive() {
           <Text style={styles.archivedTeamAthletes}>{team.total_athletes} atleti</Text>
         </View>
       ))}
+
+      {/* 🆕 01/07/2026 — Pulsante "Riconferma da archivio" */}
+      <TouchableOpacity
+        onPress={() => router.push(`/admin/season-reconfirm?season=${encodeURIComponent(season.season_name)}` as any)}
+        style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#1B5E20', paddingVertical: 12, borderRadius: 10 }}
+        data-testid={`reconfirm-from-archive-${season.season_name}`}
+      >
+        <Ionicons name="checkmark-done" size={18} color="#fff" />
+        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+          Riconferma da {season.season_name} → stagione corrente
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 

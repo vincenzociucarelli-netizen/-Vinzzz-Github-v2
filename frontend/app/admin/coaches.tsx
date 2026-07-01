@@ -347,29 +347,6 @@ export default function CoachesScreen() {
     const targetRoute = item.linked_athlete_id
       ? `/admin/athlete/${item.linked_athlete_id}`
       : `/admin/coach/${item.id}`;
-    // 🆕 01/07/2026 — Riconferma stagione (nascosto per dual-role → gestione unificata su atleta)
-    const it: any = item;
-    const isImported = !!currentSeason && it.imported_to_season === currentSeason;
-    const isRenewed = !!it.renewed_for_next_season;
-    const busy = renewToggleBusy === item.id;
-    const showRenewFlag = !item.linked_athlete_id && item.status === 'approved';
-    const handleRenewToggle = async (e: any) => {
-      e?.stopPropagation?.();
-      if (isImported || busy) return;
-      setRenewToggleBusy(item.id);
-      try {
-        await api.post(`/seasons/users/${item.id}/renew-toggle`);
-        await loadData();
-      } catch (err: any) {
-        console.warn('renew toggle failed', err?.response?.data);
-      } finally {
-        setRenewToggleBusy(null);
-      }
-    };
-    const renewBg = isImported ? '#E0E0E0' : (isRenewed ? '#C8E6C9' : '#FFF');
-    const renewBorder = isImported ? '#9E9E9E' : (isRenewed ? '#2E7D32' : '#BDBDBD');
-    const renewColor = isImported ? '#616161' : (isRenewed ? '#1B5E20' : '#757575');
-    const renewLabel = isImported ? 'Già importato' : (isRenewed ? '✓ Riconfermato' : 'Riconferma');
     
     return (
       <TouchableOpacity 
@@ -377,17 +354,6 @@ export default function CoachesScreen() {
         onPress={() => router.push(targetRoute as any)}
         onLongPress={() => openActionModal(item)}
       >
-        {/* 🆕 01/07/2026 — Flag Riconferma stagione */}
-        {showRenewFlag && (
-          <TouchableOpacity
-            onPress={handleRenewToggle}
-            disabled={isImported || busy}
-            style={{ position: 'absolute', top: 8, right: 8, borderRadius: 12, borderWidth: 1, borderColor: renewBorder, backgroundColor: renewBg, paddingHorizontal: 8, paddingVertical: 3, opacity: busy ? 0.5 : 1, zIndex: 5 }}
-            data-testid={`coach-renew-flag-${item.id}`}
-          >
-            <Text style={{ fontSize: 10, fontWeight: '700', color: renewColor }}>{renewLabel}</Text>
-          </TouchableOpacity>
-        )}
         <View style={styles.userAvatar}>
           <Text style={{ fontSize: 22 }}>🏋️</Text>
         </View>
@@ -405,7 +371,7 @@ export default function CoachesScreen() {
                 <Text style={[styles.compBadgeText, { color: compBadge.color }]}>{compBadge.text}</Text>
               </View>
             )}
-            {/* 🆕 01/07/2026 — Badge "Compenso da riconfermare" */}
+            {/* 🆕 01/07/2026 — Badge "Compenso da riconfermare" (post-riconferma da archivio) */}
             {(item as any).pro_data_pending_review && (
               <View
                 style={{ backgroundColor: '#FFEBEE', borderColor: '#C62828', borderWidth: 1, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, flexDirection: 'row', alignItems: 'center', gap: 3 }}

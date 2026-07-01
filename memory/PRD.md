@@ -16,6 +16,42 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🚨 01/07/2026 (SERALE) — Fix regressione lentezza + Refactor UX "Clean Slate" per rinnovi ✅
+
+### 🐌 Fix P0 lentezza dopo Save & Deploy mattina
+Colpevole: le liste admin (Atleti/Coach/Collab/Dirigenti) chiamavano `/api/seasons/current` inside Promise.all — endpoint pesante che scarica **1000 atleti + 100 team + coach + championships** solo per sapere il nome della stagione. Fix:
+- Nuovo endpoint LEGGERO `/api/seasons/current-name` (~150ms invece di 3-5s).
+- Tutti i frontend list pages ora usano l'endpoint leggero.
+- `get_primary_admin_history` ottimizzato: era 500 log in-memory filter → ora query diretta con `$or` (LIMIT 50).
+
+### 🎯 Refactor UX "Clean Slate al cambio stagione" ✅
+Vincenzo segnalava caos: confermati + non confermati + nuovi mescolati nelle liste operative. Nuovo modello mentale:
+
+**Concetto**: `active_seasons: List[str]` — ogni utente/atleta appartiene a una o più stagioni. Le liste operative mostrano SOLO chi ha la stagione corrente nel proprio array. L'archivio mostra chi ha la stagione archiviata.
+
+**Migrazione one-shot** (all'avvio del backend, idempotente):
+- Tutti gli utenti/atleti esistenti approvati → `active_seasons = ["2025-2026"]` (stagione precedente).
+- Cleanup flag "Riconferma" di stamattina (`renewed_for_next_season`, `imported_to_season`, `pro_data_pending_review`, `*_previous_season`).
+- Testato: 44 atleti + 78 users migrati sul preview environment.
+
+**Backend** (nuovi endpoint):
+- `GET /api/seasons/{season_name}/members?type=athletes|coach|collaboratore|dirigente`: lista membri della stagione archiviata + flag `already_in_current` (per grigiare quelli già riconfermati).
+- `POST /api/seasons/reconfirm-bulk` con body `{athlete_ids:[], user_ids:[]}`: `$addToSet` della stagione corrente. Per utenti compensati (`monthly_compensation > 0`) valorizza `pro_data_pending_review = True` + snapshot compenso precedente.
+- Filtri `active_seasons: current_season` (con fallback `$exists: false` per nuovi record) su `/api/users/coaches`, `/api/users/collaboratorees`, `/api/users/dirigenti`, `/api/athletes`.
+
+**Frontend**:
+- **RIMOSSO** flag verde "Riconferma" dalle card di Atleti/Coach/Collab/Dirigenti (UX vecchia).
+- **NUOVA** pagina `/admin/season-reconfirm?season=YYYY-YYYY`: tabs (Atleti/Coach/Collab/Dirigenti) → lista raggruppata per squadra → checkbox multi-select → header "Seleziona tutti" per gruppo → footer con "Riconferma X → stagione corrente".
+- In `admin/seasons.tsx` ogni card archivio ha ora un pulsante "**Riconferma da YYYY-YYYY → stagione corrente**" che apre la nuova pagina.
+
+**Test end-to-end (curl)**:
+1. Migrazione applicata → 44 atleti + 78 users con `active_seasons=["2025-2026"]`.
+2. `GET /api/athletes` → 0 elementi (lista operativa pulita, come vuole Vincenzo).
+3. `GET /api/seasons/2025-2026/members?type=athletes` → 44 elementi con `already_in_current=false`.
+4. `POST /api/seasons/reconfirm-bulk {athlete_ids: [2 id]}` → `confirmed: 2`.
+5. `GET /api/athletes` → 2 elementi (solo i riconfermati).
+
+
 ## 🚨 01/07/2026 — Fix P0: Multi-tenancy leak in Responsabile Admin (Storico + Delega) ✅
 
 **Bug segnalato da Sirio**: nell'"Archivio Storico" della pagina Responsabile Admin vedeva le dichiarazioni firmate di admin di ALTRE società (ENZO BIANCHI, CEPPITELLI ENRICO, MARTINETTI LUIGI di società diverse). Data leak GDPR cross-tenant.

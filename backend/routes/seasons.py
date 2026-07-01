@@ -11,7 +11,7 @@ Season archive routes (admin only).
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from database import db
 from auth_utils import get_current_user
@@ -222,6 +222,150 @@ async def delete_season_archive(season_name: str, current_user = Depends(get_cur
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail=f"Archivio {season_name} non trovato per questa società")
     return {"message": f"Archivio {season_name} eliminato", "season_name": season_name}
+
+
+# ==================== 🆕 01/07/2026 — Riconferma da archivio ====================
+
+class ReconfirmBulkBody(BaseModel):
+    """Payload per la riconferma multipla da vista archivio verso la stagione corrente."""
+    athlete_ids: List[str] = Field(default_factory=list)
+    user_ids: List[str] = Field(default_factory=list)
+
+
+@router.get("/seasons/{season_name}/members")
+async def list_season_members(
+    season_name: str,
+    type: str = "athletes",
+    current_user = Depends(get_current_user),
+):
+    """Elenca i membri (atleti o utenti staff) attivi nella stagione data.
+    Filtro: `active_seasons` contiene `season_name`. Include un flag `already_in_current`
+    così il frontend sa se un elemento è già stato riconfermato per la stagione corrente."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    if not sid:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+    current_season = await get_current_season_for_society(db, sid)
+
+    if type == "athletes":
+        docs = await db.athletes.find(
+            {"society_id": sid, "active_seasons": season_name},
+            {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1,
+             "team_id": 1, "athlete_type": 1, "monthly_compensation": 1,
+             "other_annual_compensation": 1, "active_seasons": 1, "email": 1},
+        ).sort([("last_name", 1), ("first_name", 1)]).to_list(5000)
+        # Team names
+        team_ids = list({d.get("team_id") for d in docs if d.get("team_id")})
+        teams = await db.teams.find({"id": {"$in": team_ids}}, {"_id": 0, "id": 1, "name": 1}).to_list(200)
+        team_name = {t["id"]: t["name"] for t in teams}
+        for d in docs:
+            d["team_name"] = team_name.get(d.get("team_id"), "—")
+            d["already_in_current"] = current_season in (d.get("active_seasons") or [])
+        return {"season": season_name, "current_season": current_season, "type": type, "members": docs}
+    else:
+        # coach | collaboratore | dirigente | viewer
+        role_map = {
+            "coach": [UserRole.COACH],
+            "collaboratore": [UserRole.COLLABORATORE],
+            "dirigente": [UserRole.DIRIGENTE, UserRole.VIEWER],
+        }
+        roles = role_map.get(type)
+        if not roles:
+            raise HTTPException(status_code=400, detail="type non valido (athletes|coach|collaboratore|dirigente)")
+        docs = await db.users.find(
+            {"society_id": sid, "role": {"$in": roles}, "active_seasons": season_name},
+            {"_id": 0, "id": 1, "email": 1, "full_name": 1, "role": 1,
+             "assigned_teams": 1, "monthly_compensation": 1,
+             "other_annual_compensation": 1, "active_seasons": 1,
+             "qualification": 1, "linked_athlete_id": 1},
+        ).sort("full_name", 1).to_list(5000)
+        # Team names
+        all_team_ids = set()
+        for d in docs:
+            for tid in (d.get("assigned_teams") or []):
+                all_team_ids.add(tid)
+        teams = await db.teams.find({"id": {"$in": list(all_team_ids)}}, {"_id": 0, "id": 1, "name": 1}).to_list(200)
+        team_name = {t["id"]: t["name"] for t in teams}
+        for d in docs:
+            d["assigned_team_names"] = [team_name.get(tid, "—") for tid in (d.get("assigned_teams") or [])]
+            d["already_in_current"] = current_season in (d.get("active_seasons") or [])
+        return {"season": season_name, "current_season": current_season, "type": type, "members": docs}
+
+
+@router.post("/seasons/reconfirm-bulk")
+async def reconfirm_bulk(
+    body: ReconfirmBulkBody,
+    current_user = Depends(get_current_user),
+):
+    """Riconferma multipla: aggiunge la stagione corrente a `active_seasons` degli id
+    passati. Per gli utenti con compenso, valorizza anche `pro_data_pending_review` +
+    snapshot precedente, così l'admin ricorda di aggiornare il contratto/lettera d'incarico."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    if not sid:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+    current_season = await get_current_season_for_society(db, sid)
+
+    # Athletes
+    ath_confirmed = 0
+    ath_pro_flagged = 0
+    if body.athlete_ids:
+        # Prima leggi per gestire lo snapshot compenso solo per PRO/compensated
+        cursor = db.athletes.find(
+            {"id": {"$in": body.athlete_ids}, "society_id": sid},
+            {"_id": 0, "id": 1, "athlete_type": 1, "monthly_compensation": 1,
+             "other_annual_compensation": 1, "active_seasons": 1},
+        )
+        async for a in cursor:
+            if current_season in (a.get("active_seasons") or []):
+                continue  # già riconfermato → skip idempotente
+            update = {"$addToSet": {"active_seasons": current_season}}
+            is_pro = a.get("athlete_type") == "compensated" or (a.get("monthly_compensation") or 0) > 0 or (a.get("other_annual_compensation") or 0) > 0
+            if is_pro:
+                update.setdefault("$set", {})
+                update["$set"].update({
+                    "pro_data_pending_review": True,
+                    "pro_data_pending_review_season": current_season,
+                    "monthly_compensation_previous_season": a.get("monthly_compensation") or 0,
+                    "other_annual_compensation_previous_season": a.get("other_annual_compensation") or 0,
+                })
+                ath_pro_flagged += 1
+            await db.athletes.update_one({"id": a["id"], "society_id": sid}, update)
+            ath_confirmed += 1
+
+    # Users
+    usr_confirmed = 0
+    usr_pro_flagged = 0
+    if body.user_ids:
+        cursor = db.users.find(
+            {"id": {"$in": body.user_ids}, "society_id": sid},
+            {"_id": 0, "id": 1, "role": 1, "monthly_compensation": 1,
+             "other_annual_compensation": 1, "active_seasons": 1},
+        )
+        async for u in cursor:
+            if current_season in (u.get("active_seasons") or []):
+                continue
+            update = {"$addToSet": {"active_seasons": current_season}}
+            is_pro = (u.get("monthly_compensation") or 0) > 0 or (u.get("other_annual_compensation") or 0) > 0
+            if is_pro:
+                update.setdefault("$set", {})
+                update["$set"].update({
+                    "pro_data_pending_review": True,
+                    "pro_data_pending_review_season": current_season,
+                    "monthly_compensation_previous_season": u.get("monthly_compensation") or 0,
+                    "other_annual_compensation_previous_season": u.get("other_annual_compensation") or 0,
+                })
+                usr_pro_flagged += 1
+            await db.users.update_one({"id": u["id"], "society_id": sid}, update)
+            usr_confirmed += 1
+
+    return {
+        "current_season": current_season,
+        "athletes": {"confirmed": ath_confirmed, "pro_flagged": ath_pro_flagged},
+        "users": {"confirmed": usr_confirmed, "pro_flagged": usr_pro_flagged},
+    }
 
 
 @router.get("/seasons/{season_name}")
