@@ -799,42 +799,37 @@ export default function AdminCoachDetail() {
       {/* 🆕 23/02/2026 — Tab Navigator STICKY fuori dalla ScrollView */}
       <AdminPersonTabs activeTab={activeTab} onChange={setActiveTab} />
 
-      {/* 🆕 26/06/2026 — Banner unificazione dual-role: se il coach è promosso da atleta,
-          tutta la gestione (compensi, quietanze, anagrafica, presenze) avviene nella scheda Atleta.
-          Mostriamo solo un banner-link per evitare duplicazioni / disallineamenti. */}
-      {(isDualRole || (coach as any)?.linked_athlete_id) && (coach as any)?.linked_athlete_id ? (
-        <ScrollView
-          style={styles.content}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        >
-          <View style={{ margin: 16, backgroundColor: '#E3F2FD', borderRadius: 14, padding: 18, borderLeftWidth: 4, borderLeftColor: '#1565C0' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-              <Ionicons name="information-circle" size={24} color="#1565C0" />
-              <Text style={{ fontSize: 17, fontWeight: '800', color: '#0D47A1', flex: 1 }}>
-                👤 Scheda unificata Atleta + Coach
-              </Text>
-            </View>
-            <Text style={{ fontSize: 13, color: '#1565C0', lineHeight: 19, marginBottom: 14 }}>
-              <Text style={{ fontWeight: '700' }}>{coach.full_name}</Text> è sia <Text style={{ fontWeight: '700' }}>Atleta</Text> che <Text style={{ fontWeight: '700' }}>Coach</Text> in questa società. Tutta la gestione (compensi, quietanze, anagrafica, presenze come atleta e come coach) avviene nella scheda Atleta per evitare duplicazioni e disallineamenti.
-            </Text>
-            <TouchableOpacity
-              onPress={() => router.replace(`/admin/athlete/${(coach as any).linked_athlete_id}` as any)}
-              data-testid="admin-coach-go-to-athlete-btn"
-              style={{ backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}
-            >
-              <Ionicons name="person" size={20} color="#fff" />
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>
-                Apri Scheda Atleta
-              </Text>
-              <Ionicons name="chevron-forward" size={18} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      ) : (
+      {/* 🆕 26/06/2026 — Banner unificazione dual-role (informativo, non bloccante).
+          🐛 01/07/2026 — Ex early-return che nascondeva la scheda compensi/date incarico.
+          Ora mostrato come INFO-BOX in cima, la scheda coach resta editabile perché le
+          date d'inizio/fine incarico Coach sono un dato specifico del ruolo coach. */}
       <ScrollView
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {(isDualRole || (coach as any)?.linked_athlete_id) && (coach as any)?.linked_athlete_id && (
+          <View style={{ margin: 12, backgroundColor: '#E3F2FD', borderRadius: 12, padding: 12, borderLeftWidth: 4, borderLeftColor: '#1565C0' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <Ionicons name="information-circle" size={20} color="#1565C0" />
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0D47A1', flex: 1 }}>
+                👤 Doppio Ruolo — Anche Atleta
+              </Text>
+            </View>
+            <Text style={{ fontSize: 12, color: '#1565C0', lineHeight: 17, marginBottom: 10 }}>
+              <Text style={{ fontWeight: '700' }}>{coach.full_name}</Text> è anche Atleta. Dati atleta e quietanze si gestiscono dalla scheda Atleta. Qui puoi comunque modificare le <Text style={{ fontWeight: '700' }}>date d&apos;incarico Coach</Text> e il <Text style={{ fontWeight: '700' }}>compenso Coach</Text>.
+            </Text>
+            <TouchableOpacity
+              onPress={() => router.replace(`/admin/athlete/${(coach as any).linked_athlete_id}` as any)}
+              data-testid="admin-coach-go-to-athlete-btn"
+              style={{ backgroundColor: '#1565C0', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              <Ionicons name="person" size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Apri Scheda Atleta</Text>
+              <Ionicons name="chevron-forward" size={14} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Status Banner */}
         <View style={[styles.statusBanner, { backgroundColor: getStatusColor(coach.status) + '20' }]}>
           <View style={[styles.statusDot, { backgroundColor: getStatusColor(coach.status) }]} />
@@ -999,9 +994,13 @@ export default function AdminCoachDetail() {
 
         {/* 🆕 19/06/2026 — Tab Navigator: Impegni / Anagrafica / Compensi (ora sticky FUORI ScrollView) */}
 
-        {/* 🗓️ TAB DA FARE OGGI — Impegni reali del coach */}
+        {/* 🗓️ TAB DA FARE OGGI — Impegni reali del coach (con merge atleta se dual-role) */}
         <TabSection tab="impegni" activeTab={activeTab}>
-          <AdminCoachCommitments userId={coach.id} roleLabel="coach" />
+          <AdminCoachCommitments
+            userId={coach.id}
+            athleteId={(coach as any)?.linked_athlete_id || undefined}
+            roleLabel={(coach as any)?.linked_athlete_id ? 'coach + atleta' : 'coach'}
+          />
 
           {/* 🆕 22/02/2026 — "🏆 Stagione" card (allineato a vista Admin Dirigente) */}
           <View style={styles.card}>
@@ -1961,7 +1960,6 @@ export default function AdminCoachDetail() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
-      )}
 
       {/* Image Viewer Modal */}
       <Modal

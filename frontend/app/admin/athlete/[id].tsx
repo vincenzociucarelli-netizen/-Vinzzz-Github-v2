@@ -2107,7 +2107,11 @@ export default function AdminAthleteDetail() {
 
         {/* 🆕 23/06/2026 — DA FARE TAB (impegni atleta 7 giorni) */}
         {activeTab === 'dafare' && athlete && (
-          <AdminCoachCommitments athleteId={athlete.id} roleLabel="atleta" />
+          <AdminCoachCommitments
+            athleteId={athlete.id}
+            userId={linkedCoach?.coach_user_id || undefined}
+            roleLabel={linkedCoach ? 'atleta + coach' : 'atleta'}
+          />
         )}
 
         {/* DATI TAB */}

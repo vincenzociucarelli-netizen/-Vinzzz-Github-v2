@@ -22,6 +22,8 @@ interface CommitmentItem {
   cancelled?: boolean;
   day_name?: string;
   date?: string;
+  // 🆕 01/07/2026 — Badge lato per dual-role (Atleta/Coach)
+  as_role?: 'atleta' | 'coach';
 }
 
 interface Commitments {
@@ -40,6 +42,24 @@ interface Props {
   roleLabel?: string;
 }
 
+const RoleBadge: React.FC<{ role?: 'atleta' | 'coach' }> = ({ role }) => {
+  if (!role) return null;
+  const isAthlete = role === 'atleta';
+  return (
+    <View style={{
+      paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8,
+      backgroundColor: isAthlete ? '#E3F2FD' : '#FFF3E0',
+      borderWidth: 1, borderColor: isAthlete ? '#1565C0' : '#F57C00',
+      marginRight: 6,
+    }}>
+      <Text style={{
+        fontSize: 9, fontWeight: '700',
+        color: isAthlete ? '#0D47A1' : '#E65100',
+      }}>{isAthlete ? 'ATL' : 'COACH'}</Text>
+    </View>
+  );
+};
+
 const DayBlock: React.FC<{ title: string; items: CommitmentItem[]; emoji: string }> = ({ title, items, emoji }) => (
   <View style={styles.dayBlock}>
     <Text style={styles.dayTitle}>{emoji} {title}</Text>
@@ -55,10 +75,13 @@ const DayBlock: React.FC<{ title: string; items: CommitmentItem[]; emoji: string
             style={{ marginRight: 6 }}
           />
           <View style={{ flex: 1 }}>
-            <Text style={styles.itemTitle}>
-              {it.team_name || 'Squadra'} {it.type === 'match' ? `vs ${it.opponent || '?'}` : ''}
-              {it.cancelled ? ' (ANNULLATO)' : ''}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+              <RoleBadge role={it.as_role} />
+              <Text style={styles.itemTitle}>
+                {it.team_name || 'Squadra'} {it.type === 'match' ? `vs ${it.opponent || '?'}` : ''}
+                {it.cancelled ? ' (ANNULLATO)' : ''}
+              </Text>
+            </View>
             <Text style={styles.itemSubtitle}>
               {it.time_start || ''}{it.time_end ? `–${it.time_end}` : ''}
               {it.venue ? ` · ${it.venue}` : ''}
@@ -81,11 +104,30 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, athleteId, role
   useEffect(() => {
     setLoading(true);
     setError(null);
-    const params: any = {};
-    if (athleteId) params.athlete_id = athleteId;
-    else if (userId) params.user_id = userId;
-    api.get('/coach/commitments', { params })
-      .then((res) => setData(res.data))
+    // 🆕 01/07/2026 — Dual-role: se entrambi userId+athleteId, faccio 2 fetch e mergio.
+    const isDual = !!userId && !!athleteId;
+    const fetchOne = (params: any) => api.get('/coach/commitments', { params }).then(r => r.data);
+    const promise: Promise<Commitments> = isDual
+      ? Promise.all([
+          fetchOne({ user_id: userId }).catch(() => null),
+          fetchOne({ athlete_id: athleteId }).catch(() => null),
+        ]).then(([coachData, athleteData]: any) => {
+          const tag = (arr: any[] = [], role: 'coach' | 'atleta') => (arr || []).map((x) => ({ ...x, as_role: role }));
+          const sortBy = (a: any, b: any) => {
+            const ka = `${a.date || ''}T${a.time_start || '00:00'}`;
+            const kb = `${b.date || ''}T${b.time_start || '00:00'}`;
+            return ka.localeCompare(kb);
+          };
+          return {
+            today: [...tag(coachData?.today, 'coach'), ...tag(athleteData?.today, 'atleta')].sort(sortBy),
+            tomorrow: [...tag(coachData?.tomorrow, 'coach'), ...tag(athleteData?.tomorrow, 'atleta')].sort(sortBy),
+            day_after: [...tag(coachData?.day_after, 'coach'), ...tag(athleteData?.day_after, 'atleta')].sort(sortBy),
+            upcoming: [...tag(coachData?.upcoming, 'coach'), ...tag(athleteData?.upcoming, 'atleta')].sort(sortBy),
+          } as Commitments;
+        })
+      : fetchOne(athleteId ? { athlete_id: athleteId } : { user_id: userId });
+    promise
+      .then((res: any) => setData(res))
       .catch((err) => {
         console.error('Errore caricamento impegni admin:', err);
         setError('Impossibile caricare gli impegni');

@@ -16,6 +16,29 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🐛 01/07/2026 (SERALE-2) — Fix dual-role Prati Giulia: Scheda Compensi + Impegni unificati ✅
+
+### 🐛 P0 — Bug bloccante scheda compensi Coach dual-role
+Su `admin/coach/[id].tsx`, i coach dual-role (`linked_athlete_id` valorizzato) erano dirottati in un **early-return** che mostrava SOLO un banner "Vai su Scheda Atleta", nascondendo tab Compensi/Anagrafica. Impossibile modificare le **date d'inizio/fine incarico Coach**.
+**Fix**: rimosso early-return. Ora il banner "Doppio Ruolo — Anche Atleta" è mostrato come **info-box in cima** e tutta la scheda coach (inclusa la sezione Compensi con date contrattuali) è **editabile**.
+
+### 🎨 P1a — Impegni unificati Admin per dual-role
+Estesa la logica di `AdminCoachCommitments` per accettare simultaneamente `userId` (coach) e `athleteId` (atleta). Se entrambi valorizzati, fa 2 fetch e mergia in ordine cronologico con **badge "ATL" (blu) / "COACH" (arancio)** su ogni impegno. Aggiornati i callsite:
+- `admin/coach/[id].tsx` → passa `athleteId={linked_athlete_id}` quando dual-role.
+- `admin/athlete/[id].tsx` → passa `userId={linkedCoach.coach_user_id}` quando dual-role.
+
+### 📋 Da fare (Vincenzo → verifica dopo il deploy):
+1. Save & Deploy.
+2. Login admin → Prati Giulia (dual-role) → **Scheda Coach**: verifica che ora si vedano i tab e la sezione Compensi con le date modificabili.
+3. Nella scheda "Da Fare" sia di Atleta che di Coach: verifica che compaiano gli impegni **di entrambi i ruoli**, ciascuno col proprio badge blu (ATL) / arancio (COACH).
+
+### 🔜 Sotto-task ancora da fare in questa serie (P1c + P2)
+- **P1c**: Rendere collassabili (normalmente chiusi) i 3 blocchi Staff (Coach/Dirigenti/Collaboratori) alla fine del **dashboard user Atleta** (`athlete/index.tsx`, righe 1400-1414). Attualmente sono espansi tutti.
+- **P2**: Dashboard USER dual-role ("Zaino Coach"):
+  - `/athlete/index.tsx`: se dual-role, aggiungere sezione "Impegni come Coach" sotto "Prossimi Impegni".
+  - `/coach/index.tsx`: se dual-role, aggiungere sezione "Impegni come Atleta".
+
+
 ## 🚨 01/07/2026 (SERALE) — Fix regressione lentezza + Refactor UX "Clean Slate" per rinnovi ✅
 
 ### 🐌 Fix P0 lentezza dopo Save & Deploy mattina
