@@ -27,8 +27,20 @@ class BulkRenewBody(BaseModel):
     value: bool = True
 
 
+class BulkRenewUsersBody(BaseModel):
+    """🆕 01/07/2026 — Bulk renew per Coach/Collaboratore/Dirigente (tabella db.users)."""
+    user_ids: List[str]
+    value: bool = True
+
+
 class RenewToggleBody(BaseModel):
     value: Optional[bool] = None  # se None, toggla; se True/False, force-set
+
+
+def _user_roles_in_scope() -> List[str]:
+    """Ruoli sottoposti al ciclo di riconferma stagionale (oltre agli atleti).
+    Include VIEWER perché la lista dirigenti nell'UI include sia DIRIGENTE che VIEWER."""
+    return [UserRole.COACH, UserRole.COLLABORATORE, UserRole.DIRIGENTE, UserRole.VIEWER]
 
 
 def _society_filter(current_user) -> dict:
@@ -234,6 +246,79 @@ async def renew_athletes_bulk(body: BulkRenewBody, current_user = Depends(get_cu
     return {"matched": res.matched_count, "modified": res.modified_count, "value": body.value}
 
 
+@router.post("/seasons/users/{user_id}/renew-toggle")
+async def renew_user_toggle(
+    user_id: str,
+    body: Optional[RenewToggleBody] = None,
+    current_user = Depends(get_current_user),
+):
+    """🆕 01/07/2026 — Riconferma toggle per Coach/Collaboratore/Dirigente.
+    Stessa semantica di /seasons/athletes/{id}/renew-toggle."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    u = await db.users.find_one({
+        "id": user_id,
+        "role": {"$in": _user_roles_in_scope()},
+        **_society_filter(current_user),
+    })
+    if not u:
+        raise HTTPException(status_code=404, detail="Coach/Collaboratore/Dirigente non trovato in questa società")
+    current_season = await get_current_season_for_society(db, current_user.get("society_id"))
+    if u.get("imported_to_season") == current_season:
+        raise HTTPException(status_code=409, detail="Già importato nella stagione corrente — non modificabile.")
+    new_value = (not bool(u.get("renewed_for_next_season"))) if (body is None or body.value is None) else bool(body.value)
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {
+            "renewed_for_next_season": new_value,
+            "renewed_at": datetime.utcnow().isoformat() if new_value else None,
+            "renewed_by": current_user["id"] if new_value else None,
+        }}
+    )
+    return {"user_id": user_id, "renewed_for_next_season": new_value}
+
+
+@router.post("/seasons/users/bulk-renew")
+async def renew_users_bulk(body: BulkRenewUsersBody, current_user = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    current_season = await get_current_season_for_society(db, current_user.get("society_id"))
+    soc_q = _society_filter(current_user)
+    set_doc = {
+        "renewed_for_next_season": bool(body.value),
+        "renewed_at": datetime.utcnow().isoformat() if body.value else None,
+        "renewed_by": current_user["id"] if body.value else None,
+    }
+    res = await db.users.update_many(
+        {
+            "id": {"$in": body.user_ids},
+            "role": {"$in": _user_roles_in_scope()},
+            **soc_q,
+            "imported_to_season": {"$ne": current_season},
+        },
+        {"$set": set_doc},
+    )
+    return {"matched": res.matched_count, "modified": res.modified_count, "value": body.value}
+
+
+@router.post("/seasons/users/{user_id}/confirm-pro-data")
+async def confirm_user_pro_data(user_id: str, current_user = Depends(get_current_user)):
+    """Conferma dati compenso Coach/Collab/Dir dopo revisione col nuovo contratto."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    res = await db.users.update_one(
+        {"id": user_id, "role": {"$in": _user_roles_in_scope()}, **_society_filter(current_user)},
+        {"$set": {
+            "pro_data_pending_review": False,
+            "pro_data_confirmed_at": datetime.utcnow().isoformat(),
+            "pro_data_confirmed_by": current_user["id"],
+        }},
+    )
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Utente non trovato in questa società")
+    return {"user_id": user_id, "pro_data_pending_review": False}
+
+
 @router.get("/seasons/import-renewed/preview")
 async def preview_import_renewed(current_user = Depends(get_current_user)):
     """🆕 01/07/2026 — Anteprima: quanti riconfermati e quanti non-riconfermati
@@ -242,15 +327,14 @@ async def preview_import_renewed(current_user = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Solo admin")
     current_season = await get_current_season_for_society(db, current_user.get("society_id"))
     soc_q = _society_filter(current_user)
-    # Riconfermati pronti per l'import (non ancora importati in questa stagione)
-    to_import = await db.athletes.count_documents({
+    # Atleti
+    to_import_athletes = await db.athletes.count_documents({
         **soc_q,
         "renewed_for_next_season": True,
         "imported_to_season": {"$ne": current_season},
         "is_withdrawn": {"$ne": True},
     })
-    # Non riconfermati ancora attivi che diventerebbero inactive
-    to_inactivate = await db.athletes.count_documents({
+    to_inactivate_athletes = await db.athletes.count_documents({
         **soc_q,
         "$or": [
             {"renewed_for_next_season": {"$exists": False}},
@@ -261,7 +345,31 @@ async def preview_import_renewed(current_user = Depends(get_current_user)):
         "status": {"$nin": ["inactive", "withdrawn"]},
         "is_withdrawn": {"$ne": True},
     })
-    return {"season": current_season, "to_import": to_import, "to_inactivate": to_inactivate}
+    # 🆕 01/07/2026 — Coach / Collaboratore / Dirigente
+    to_import_users = await db.users.count_documents({
+        **soc_q,
+        "role": {"$in": _user_roles_in_scope()},
+        "renewed_for_next_season": True,
+        "imported_to_season": {"$ne": current_season},
+    })
+    to_inactivate_users = await db.users.count_documents({
+        **soc_q,
+        "role": {"$in": _user_roles_in_scope()},
+        "$or": [
+            {"renewed_for_next_season": {"$exists": False}},
+            {"renewed_for_next_season": False},
+            {"renewed_for_next_season": None},
+        ],
+        "imported_to_season": {"$ne": current_season},
+        "status": {"$nin": ["inactive", "withdrawn"]},
+    })
+    return {
+        "season": current_season,
+        "to_import": to_import_athletes + to_import_users,
+        "to_inactivate": to_inactivate_athletes + to_inactivate_users,
+        "athletes": {"to_import": to_import_athletes, "to_inactivate": to_inactivate_athletes},
+        "users": {"to_import": to_import_users, "to_inactivate": to_inactivate_users},
+    }
 
 
 @router.post("/seasons/import-renewed")
@@ -342,11 +450,74 @@ async def import_renewed_athletes(current_user = Depends(get_current_user)):
         },
         {"$set": {"status": "inactive", "inactivated_at": now_iso, "inactivated_reason": f"Non riconfermato per stagione {current_season}"}},
     )
+
+    # 🆕 01/07/2026 — Step 4: Import Coach/Collaboratore/Dirigente/Viewer
+    # Utenti compensati (monthly_compensation > 0) → segnati pro_data_pending_review
+    # Utenti non compensati → import semplice.
+    users_to_import = await db.users.find(
+        {
+            **soc_q,
+            "role": {"$in": _user_roles_in_scope()},
+            "renewed_for_next_season": True,
+            "imported_to_season": {"$ne": current_season},
+        },
+        {"_id": 0, "id": 1, "monthly_compensation": 1, "other_annual_compensation": 1}
+    ).to_list(2000)
+    users_imported_simple = 0
+    users_imported_pro = 0
+    for u in users_to_import:
+        mc = u.get("monthly_compensation") or 0
+        oac = u.get("other_annual_compensation") or 0
+        is_pro = (mc and mc > 0) or (oac and oac > 0)
+        set_doc = {
+            "imported_to_season": current_season,
+            "imported_at": now_iso,
+            "imported_by": current_user["id"],
+            "renewed_for_next_season": False,
+        }
+        if is_pro:
+            set_doc.update({
+                "monthly_compensation_previous_season": mc,
+                "other_annual_compensation_previous_season": oac,
+                "pro_data_pending_review": True,
+                "pro_data_pending_review_season": current_season,
+            })
+            users_imported_pro += 1
+        else:
+            users_imported_simple += 1
+        await db.users.update_one({"id": u["id"]}, {"$set": set_doc})
+
+    # Step 5: Utenti non riconfermati → status='inactive'
+    users_inact_res = await db.users.update_many(
+        {
+            **soc_q,
+            "role": {"$in": _user_roles_in_scope()},
+            "$or": [
+                {"renewed_for_next_season": {"$exists": False}},
+                {"renewed_for_next_season": False},
+                {"renewed_for_next_season": None},
+            ],
+            "imported_to_season": {"$ne": current_season},
+            "status": {"$nin": ["inactive", "withdrawn", "rejected"]},
+        },
+        {"$set": {"status": "inactive", "inactivated_at": now_iso, "inactivated_reason": f"Non riconfermato per stagione {current_season}"}},
+    )
+
     return {
         "season": current_season,
-        "imported": imp_non_pro.modified_count + pro_imported,
-        "imported_pro_pending_review": pro_imported,
-        "inactivated": inact_res.modified_count,
+        "imported": imp_non_pro.modified_count + pro_imported + users_imported_simple + users_imported_pro,
+        "imported_pro_pending_review": pro_imported + users_imported_pro,
+        "inactivated": inact_res.modified_count + users_inact_res.modified_count,
+        "athletes": {
+            "imported": imp_non_pro.modified_count + pro_imported,
+            "imported_pro_pending_review": pro_imported,
+            "inactivated": inact_res.modified_count,
+        },
+        "users": {
+            "imported": users_imported_simple + users_imported_pro,
+            "imported_pro_pending_review": users_imported_pro,
+            "inactivated": users_inact_res.modified_count,
+        },
     }
 
 

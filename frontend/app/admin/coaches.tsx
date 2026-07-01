@@ -59,6 +59,9 @@ export default function CoachesScreen() {
   const [teamsModalVisible, setTeamsModalVisible] = useState(false);
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
   const [exporting, setExporting] = useState(false);
+  // 🆕 01/07/2026 — Riconferma per nuova stagione (Coach)
+  const [currentSeason, setCurrentSeason] = useState<string>('');
+  const [renewToggleBusy, setRenewToggleBusy] = useState<string | null>(null);
   
   // Compensation modal state
   const [compensationModalVisible, setCompensationModalVisible] = useState(false);
@@ -94,13 +97,15 @@ export default function CoachesScreen() {
 
   const loadData = async () => {
     try {
-      const [coachesRes, pendingRes, teamsRes] = await Promise.all([
+      const [coachesRes, pendingRes, teamsRes, seasonRes] = await Promise.all([
         api.get('/users/coaches'),
         api.get('/users/pending'),
         api.get('/teams'),
+        api.get('/seasons/current').catch(() => ({ data: { season: '' } })),
       ]);
       setCoaches(coachesRes.data);
       setTeams(teamsRes.data);
+      setCurrentSeason(seasonRes.data?.season || '');
       // Filter pending users for coaches only
       const pendingCoachesList = pendingRes.data.filter(
         (u: Coach) => u.role === 'coach'
@@ -342,6 +347,29 @@ export default function CoachesScreen() {
     const targetRoute = item.linked_athlete_id
       ? `/admin/athlete/${item.linked_athlete_id}`
       : `/admin/coach/${item.id}`;
+    // 🆕 01/07/2026 — Riconferma stagione (nascosto per dual-role → gestione unificata su atleta)
+    const it: any = item;
+    const isImported = !!currentSeason && it.imported_to_season === currentSeason;
+    const isRenewed = !!it.renewed_for_next_season;
+    const busy = renewToggleBusy === item.id;
+    const showRenewFlag = !item.linked_athlete_id && item.status === 'approved';
+    const handleRenewToggle = async (e: any) => {
+      e?.stopPropagation?.();
+      if (isImported || busy) return;
+      setRenewToggleBusy(item.id);
+      try {
+        await api.post(`/seasons/users/${item.id}/renew-toggle`);
+        await loadData();
+      } catch (err: any) {
+        console.warn('renew toggle failed', err?.response?.data);
+      } finally {
+        setRenewToggleBusy(null);
+      }
+    };
+    const renewBg = isImported ? '#E0E0E0' : (isRenewed ? '#C8E6C9' : '#FFF');
+    const renewBorder = isImported ? '#9E9E9E' : (isRenewed ? '#2E7D32' : '#BDBDBD');
+    const renewColor = isImported ? '#616161' : (isRenewed ? '#1B5E20' : '#757575');
+    const renewLabel = isImported ? 'Già importato' : (isRenewed ? '✓ Riconfermato' : 'Riconferma');
     
     return (
       <TouchableOpacity 
@@ -349,6 +377,17 @@ export default function CoachesScreen() {
         onPress={() => router.push(targetRoute as any)}
         onLongPress={() => openActionModal(item)}
       >
+        {/* 🆕 01/07/2026 — Flag Riconferma stagione */}
+        {showRenewFlag && (
+          <TouchableOpacity
+            onPress={handleRenewToggle}
+            disabled={isImported || busy}
+            style={{ position: 'absolute', top: 8, right: 8, borderRadius: 12, borderWidth: 1, borderColor: renewBorder, backgroundColor: renewBg, paddingHorizontal: 8, paddingVertical: 3, opacity: busy ? 0.5 : 1, zIndex: 5 }}
+            data-testid={`coach-renew-flag-${item.id}`}
+          >
+            <Text style={{ fontSize: 10, fontWeight: '700', color: renewColor }}>{renewLabel}</Text>
+          </TouchableOpacity>
+        )}
         <View style={styles.userAvatar}>
           <Text style={{ fontSize: 22 }}>🏋️</Text>
         </View>
@@ -364,6 +403,18 @@ export default function CoachesScreen() {
             {compBadge && (
               <View style={[styles.compBadge, { backgroundColor: compBadge.bg }]}>
                 <Text style={[styles.compBadgeText, { color: compBadge.color }]}>{compBadge.text}</Text>
+              </View>
+            )}
+            {/* 🆕 01/07/2026 — Badge "Compenso da riconfermare" */}
+            {(item as any).pro_data_pending_review && (
+              <View
+                style={{ backgroundColor: '#FFEBEE', borderColor: '#C62828', borderWidth: 1, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, flexDirection: 'row', alignItems: 'center', gap: 3 }}
+                data-testid={`coach-pro-pending-review-${item.id}`}
+              >
+                <Ionicons name="warning" size={11} color="#C62828" />
+                <Text style={{ fontSize: 10, color: '#C62828', fontWeight: '700' }}>
+                  Compenso da riconfermare
+                </Text>
               </View>
             )}
           </View>

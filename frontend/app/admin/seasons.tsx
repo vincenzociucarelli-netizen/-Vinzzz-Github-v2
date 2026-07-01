@@ -295,8 +295,8 @@ export default function SeasonsArchive() {
                   🔄 Importa riconfermati ({importPreview.season})
                 </Text>
                 <Text style={{ fontSize: 13, color: '#2E7D32', marginBottom: 10 }}>
-                  Pronti per l&apos;import: <Text style={{ fontWeight: '700' }}>{importPreview.to_import}</Text> atleti riconfermati.{'\n'}
-                  Verranno marcati &quot;inactive&quot;: <Text style={{ fontWeight: '700' }}>{importPreview.to_inactivate}</Text> atleti non riconfermati.
+                  Pronti per l&apos;import: <Text style={{ fontWeight: '700' }}>{importPreview.to_import}</Text> tra atleti, coach, collaboratori e dirigenti riconfermati.{'\n'}
+                  Verranno marcati &quot;inactive&quot;: <Text style={{ fontWeight: '700' }}>{importPreview.to_inactivate}</Text> non riconfermati.
                 </Text>
                 <TouchableOpacity
                   onPress={handleImportRenewed}
@@ -310,7 +310,7 @@ export default function SeasonsArchive() {
                   </Text>
                 </TouchableOpacity>
                 <Text style={{ fontSize: 11, color: '#558B2F', marginTop: 6, fontStyle: 'italic' }}>
-                  💡 Per riconfermare gli atleti, vai su Atleti e clicca il flag &quot;Riconferma&quot; su ognuno.
+                  💡 Per riconfermare, vai sulle liste Atleti/Coach/Collaboratori/Dirigenti e clicca il flag &quot;Riconferma&quot; su ognuno.
                 </Text>
               </View>
             )}
