@@ -88,15 +88,28 @@ export default function SeasonsArchive() {
     }
   };
 
+  const getPreviousSeasonLabel = () => {
+    // Calcola l'etichetta della stagione APPENA CONCLUSA (start_year - 1) - (start_year)
+    const cur = currentSeason?.season || '';
+    const parts = cur.split('-');
+    if (parts.length === 2 && !isNaN(Number(parts[0]))) {
+      const s = Number(parts[0]);
+      return `${s - 1}-${s}`;
+    }
+    return cur;
+  };
+
   const confirmArchive = () => {
+    const prev = getPreviousSeasonLabel();
+    const msg = `Sei sicuro di voler archiviare la stagione appena conclusa ${prev}?\n\nQuesto salverà uno snapshot di tutti gli atleti, coach, squadre e campionati.`;
     if (Platform.OS === 'web') {
-      if (window.confirm('Sei sicuro di voler archiviare la stagione corrente?\n\nQuesto salverà uno snapshot di tutti gli atleti, coach, squadre e campionati.')) {
+      if (window.confirm(msg)) {
         handleArchiveSeason();
       }
     } else {
       Alert.alert(
         'Archivia Stagione',
-        'Sei sicuro di voler archiviare la stagione corrente?\n\nQuesto salverà uno snapshot di tutti gli atleti, coach, squadre e campionati.',
+        msg,
         [
           { text: 'Annulla', style: 'cancel' },
           { text: 'Archivia', onPress: handleArchiveSeason },
@@ -108,13 +121,32 @@ export default function SeasonsArchive() {
   const handleArchiveSeason = async () => {
     setArchiving(true);
     try {
-      await api.post('/seasons/archive');
-      showAlert('Successo', 'Stagione archiviata con successo!');
+      const r = await api.post('/seasons/archive');
+      showAlert('Successo', `Stagione ${r.data?.season_name || ''} archiviata con successo!`);
       await loadData();
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'archiviazione');
     } finally {
       setArchiving(false);
+    }
+  };
+
+  // 🆕 01/07/2026 — Elimina archivio erroneo
+  const handleDeleteArchive = async (seasonName: string) => {
+    const msg = `Eliminare l'archivio della stagione ${seasonName}?\n\nQuesto rimuove solo lo snapshot archiviato, NON i dati operativi.`;
+    const ok = Platform.OS === 'web' ? window.confirm(msg) : await new Promise<boolean>((resolve) => {
+      Alert.alert('Elimina archivio', msg, [
+        { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Elimina', style: 'destructive', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!ok) return;
+    try {
+      await api.delete(`/seasons/${encodeURIComponent(seasonName)}`);
+      showAlert('Eliminato', `Archivio ${seasonName} rimosso.`);
+      await loadData();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Eliminazione non riuscita');
     }
   };
 
@@ -205,6 +237,15 @@ export default function SeasonsArchive() {
             Archiviata il {new Date(season.archived_at).toLocaleDateString('it-IT')}
           </Text>
         </View>
+        {/* 🆕 01/07/2026 — Pulsante elimina archivio (utile per correggere archivi errati) */}
+        <TouchableOpacity
+          onPress={() => handleDeleteArchive(season.season_name)}
+          style={{ padding: 8, borderRadius: 8, backgroundColor: '#FFEBEE', borderWidth: 1, borderColor: '#EF9A9A' }}
+          data-testid={`delete-archive-${season.season_name}`}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        >
+          <Ionicons name="trash-outline" size={18} color="#C62828" />
+        </TouchableOpacity>
       </View>
       <View style={styles.archivedSeasonStats}>
         <View style={styles.archivedStat}>
@@ -277,10 +318,11 @@ export default function SeasonsArchive() {
               style={[styles.archiveButton, archiving && styles.buttonDisabled]}
               onPress={confirmArchive}
               disabled={archiving}
+              data-testid="archive-season-btn"
             >
               <Ionicons name="archive" size={20} color="#fff" />
               <Text style={styles.archiveButtonText}>
-                {archiving ? 'Archiviazione...' : 'Archivia Stagione'}
+                {archiving ? 'Archiviazione...' : `Archivia stagione ${getPreviousSeasonLabel()}`}
               </Text>
             </TouchableOpacity>
 

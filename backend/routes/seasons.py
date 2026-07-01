@@ -113,21 +113,50 @@ async def get_current_season_data(current_user = Depends(get_current_user)):
     }
 
 
+class ArchiveSeasonBody(BaseModel):
+    """🆕 01/07/2026 — Permette all'admin di specificare quale stagione archiviare.
+    Se None, archivia la stagione APPENA CONCLUSA (precedente alla corrente),
+    che è il comportamento normale a inizio nuova stagione."""
+    season_name: Optional[str] = None
+
+
 @router.post("/seasons/archive")
-async def archive_season(current_user = Depends(get_current_user)):
-    """Archive current season and create new one (admin only) — society-scoped."""
+async def archive_season(
+    body: Optional[ArchiveSeasonBody] = None,
+    current_user = Depends(get_current_user),
+):
+    """Archive a season and create new one (admin only) — society-scoped.
+    🆕 01/07/2026 — Default: archivia la stagione APPENA CONCLUSA (precedente),
+    non quella corrente. Un admin che clicca "Archivia" il 01/07/2026 vuole
+    chiudere il libro sul 2025-2026, non su quello appena iniziato."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può archiviare stagioni")
-    
+
     current_data = await get_current_season_data(current_user)
-    
+
     now = datetime.utcnow()
-    season_name = await get_current_season_for_society(db, current_user.get("society_id"))
     sid = current_user.get("society_id")
-    
+    current_season = await get_current_season_for_society(db, sid)
+
+    # Determina quale stagione archiviare
+    if body and body.season_name:
+        # Esplicito: usa quella richiesta (con validazione basilare)
+        season_name = body.season_name.strip()
+        parts = season_name.split("-")
+        if len(parts) != 2 or not all(p.isdigit() for p in parts):
+            raise HTTPException(status_code=400, detail="Formato stagione non valido (atteso 'YYYY-YYYY')")
+    else:
+        # Default: archivia la PRECEDENTE (appena conclusa)
+        cur_parts = current_season.split("-")
+        try:
+            cur_start = int(cur_parts[0])
+            season_name = f"{cur_start - 1}-{cur_start}"
+        except Exception:
+            season_name = current_season  # fallback conservativo
+
     year_parts = season_name.split("-")
     start_year = int(year_parts[0])
-    # 🆕 30/06/2026 — Date inizio/fine dalla configurazione società
+    # Date inizio/fine dalla configurazione società
     settings_doc = await db.settings.find_one({"type": "society", "society_id": sid}) if sid else None
     if not settings_doc:
         settings_doc = await db.settings.find_one({"type": "society"})
@@ -135,13 +164,12 @@ async def archive_season(current_user = Depends(get_current_user)):
     start_day = int((settings_doc or {}).get("season_start_day", 1) or 1)
     try:
         start_date = datetime(start_year, start_month, start_day)
-        # Fine = giorno PRIMA dell'inizio della stagione successiva
         next_start = datetime(start_year + 1, start_month, start_day)
         end_date = datetime.fromtimestamp(next_start.timestamp() - 86400)
     except Exception:
         start_date = datetime(start_year, 7, 1)
         end_date = datetime(start_year + 1, 6, 30)
-    
+
     archive = SeasonArchive(
         season_name=season_name,
         start_date=start_date,
@@ -157,7 +185,6 @@ async def archive_season(current_user = Depends(get_current_user)):
         archived_by=current_user["id"]
     )
     archive_doc = archive.dict()
-    # 🆕 30/06/2026 — Stamp society_id sull'archivio (era sempre None → cross-leak)
     archive_doc["society_id"] = sid
 
     existing = await db.season_archives.find_one({"season_name": season_name, "society_id": sid})
@@ -168,8 +195,24 @@ async def archive_season(current_user = Depends(get_current_user)):
         )
     else:
         await db.season_archives.insert_one(archive_doc)
-    
-    return {"message": f"Stagione {season_name} archiviata con successo"}
+
+    return {"message": f"Stagione {season_name} archiviata con successo", "season_name": season_name}
+
+
+@router.delete("/seasons/{season_name}")
+async def delete_season_archive(season_name: str, current_user = Depends(get_current_user)):
+    """🆕 01/07/2026 — Rimuove un archivio di stagione (utile per correggere archivi
+    creati per errore con il nome sbagliato). Solo la stessa società.
+    NOTA: rimuove solo lo snapshot in `season_archives`, NON i dati operativi."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    if not sid:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+    res = await db.season_archives.delete_one({"season_name": season_name, "society_id": sid})
+    if res.deleted_count == 0:
+        raise HTTPException(status_code=404, detail=f"Archivio {season_name} non trovato per questa società")
+    return {"message": f"Archivio {season_name} eliminato", "season_name": season_name}
 
 
 @router.get("/seasons/{season_name}")
