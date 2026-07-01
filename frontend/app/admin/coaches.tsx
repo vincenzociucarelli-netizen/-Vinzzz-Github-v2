@@ -101,7 +101,7 @@ export default function CoachesScreen() {
         api.get('/users/coaches'),
         api.get('/users/pending'),
         api.get('/teams'),
-        api.get('/seasons/current').catch(() => ({ data: { season: '' } })),
+        api.get('/seasons/current-name').catch(() => ({ data: { season: '' } })),
       ]);
       setCoaches(coachesRes.data);
       setTeams(teamsRes.data);

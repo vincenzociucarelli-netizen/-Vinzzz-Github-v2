@@ -64,6 +64,15 @@ async def get_seasons(current_user = Depends(get_current_user)):
     return seasons
 
 
+@router.get("/seasons/current-name")
+async def get_current_season_name(current_user = Depends(get_current_user)):
+    """🆕 01/07/2026 — Endpoint LEGGERO: restituisce solo il nome della stagione corrente.
+    Usato dalle liste admin per capire quale stagione mostrare nel badge 'Riconferma',
+    senza tirare giù atleti/team/coach (query pesanti)."""
+    season_name = await get_current_season_for_society(db, current_user.get("society_id"))
+    return {"season": season_name}
+
+
 @router.get("/seasons/current")
 async def get_current_season_data(current_user = Depends(get_current_user)):
     """Get current season summary — filtered by current admin's society."""

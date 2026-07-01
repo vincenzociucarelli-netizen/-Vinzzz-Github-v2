@@ -98,7 +98,7 @@ export default function CollaboratoreesScreen() {
         api.get('/users/collaboratorees'),
         api.get('/users/pending'),
         api.get('/teams'),
-        api.get('/seasons/current').catch(() => ({ data: { season: '' } })),
+        api.get('/seasons/current-name').catch(() => ({ data: { season: '' } })),
       ]);
       setCollaboratorees(collaboratoreesRes.data);
       setTeams(teamsRes.data);

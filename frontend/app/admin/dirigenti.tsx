@@ -60,7 +60,7 @@ export default function DirigentiScreen() {
         api.get('/users/dirigenti'),
         api.get('/users/pending'),
         api.get('/settings/society'),
-        api.get('/seasons/current').catch(() => ({ data: { season: '' } })),
+        api.get('/seasons/current-name').catch(() => ({ data: { season: '' } })),
       ]);
       setDirigenti(dirigentiRes.data);
       setSocietyName(societyRes.data.name || 'Società');

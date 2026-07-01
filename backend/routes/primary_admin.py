@@ -914,15 +914,14 @@ async def crown_legal_representative(
 @router.get("/admin/primary-admin/history")
 async def get_primary_admin_history(current_user=Depends(get_current_user)):
     """Return audit log entries related to the Responsabile Admin role.
-    🆕 01/07/2026 — Multi-tenant safe: filtra per society_id.
-    - I log recenti hanno il campo `society_id` diretto.
-    - I log legacy (pre-fix) non lo hanno: fallback via join con `users` (user_id → society_id)."""
+    🆕 01/07/2026 — Multi-tenant safe: filtra per society_id direttamente in query
+    tramite $or su society_id (per log recenti) o user_id in {utenti della società}
+    (per log legacy senza tenant)."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin")
 
     society_id = current_user.get("society_id")
     if not society_id:
-        # Difensivo: senza society_id restituiamo lista vuota per evitare data leak.
         return {"events": []}
 
     actions = [
@@ -933,36 +932,29 @@ async def get_primary_admin_history(current_user=Depends(get_current_user)):
         "primary_admin_crowned",
     ]
 
-    # Costruisci mappa user_id → society_id per join legacy (log senza society_id)
-    society_users = await db.users.find(
+    # Costruisci lista user_id della società (per log legacy senza society_id)
+    society_user_ids = await db.users.find(
         {"society_id": society_id},
         {"_id": 0, "id": 1},
     ).to_list(1000)
-    society_user_ids = {u["id"] for u in society_users}
+    uid_list = [u["id"] for u in society_user_ids]
+
+    # Query DIRETTA con $or (evita di scaricare 500 log per filtrare in memoria)
+    query = {
+        "action": {"$in": actions},
+        "$or": [
+            {"society_id": society_id},
+            {"society_id": {"$exists": False}, "user_id": {"$in": uid_list}},
+        ],
+    }
 
     events = []
-    async for log in db.audit_logs.find(
-        {"action": {"$in": actions}},
-        {"_id": 0},
-    ).sort("created_at", -1).limit(500):  # fetch di più per filtrare in-memory
+    async for log in db.audit_logs.find(query, {"_id": 0}).sort("created_at", -1).limit(50):
         log.pop("_id", None)
-        # Filtro multi-tenancy:
-        # 1) Se il log ha society_id, deve matchare quello dell'admin corrente
-        # 2) Se il log NON ha society_id (legacy), controlliamo che l'user_id
-        #    appartenga alla società corrente
-        log_soc = log.get("society_id")
-        if log_soc:
-            if log_soc != society_id:
-                continue
-        else:
-            if log.get("user_id") not in society_user_ids:
-                continue
         if "created_at" in log and not isinstance(log["created_at"], str):
             try:
                 log["created_at"] = log["created_at"].isoformat()
             except Exception:
                 log["created_at"] = str(log["created_at"])
         events.append(log)
-        if len(events) >= 50:
-            break
     return {"events": events}
