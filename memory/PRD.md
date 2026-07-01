@@ -16,6 +16,41 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🚨 01/07/2026 — Fix P0: Multi-tenancy leak in Responsabile Admin (Storico + Delega) ✅
+
+**Bug segnalato da Sirio**: nell'"Archivio Storico" della pagina Responsabile Admin vedeva le dichiarazioni firmate di admin di ALTRE società (ENZO BIANCHI, CEPPITELLI ENRICO, MARTINETTI LUIGI di società diverse). Data leak GDPR cross-tenant.
+
+**Root causes** in `/app/backend/routes/primary_admin.py`:
+1. `get_primary_admin_history` (endpoint `/api/admin/primary-admin/history`) faceva `db.audit_logs.find({"action": {"$in": [...]}})` SENZA `society_id` → tornava log di tutte le società.
+2. `audit_logs.insert_one` (5 punti: declare/delegate/resign/revoke/crown) NON persisteva `society_id` → log legacy senza tenant.
+3. `_notify_legal_rep_scepter_event`, `delegate_primary_admin.new_admin lookup`, `resign_primary_admin.legal_rep`, `revoke_delegation.current_delegate`, `crown_legal_representative.existing_lr + new_lr`: TUTTE le query senza `society_id` → potenziali leak.
+4. `db.settings.update_one({"type": "society"}, ...)` in delegate/resign/revoke/crown: senza `society_id` → potrebbe modificare settings di altra società (RACE con più tenant).
+
+**Fix applicati**:
+- Aggiunto `society_id` a tutti gli `audit_logs.insert_one` (5 punti).
+- Filtro `society_id` su tutte le query LR/delegate/settings.
+- `get_primary_admin_history` ora filtra per `society_id`; per i log **legacy** (pre-fix) senza `society_id`, fallback via join con `users` (user_id → society_id) per capire a chi appartiene.
+- `_notify_legal_rep_scepter_event` accetta `society_id` opzionale e filtra il LR.
+
+**Test curl (dev)**: Vincenzo (society 697f...73eea) ora vede 9 eventi tutti della propria società (0 leak da altre).
+
+## 🆕 01/07/2026 — Riconferma Stagione: parità Coach/Collaboratori/Dirigenti + Import Users ✅
+
+**Contesto**: già implementato per Atleti (30/06). L'utente ha chiesto la stessa UX per Coach/Collab/Dirig.
+
+**Backend** (`/app/backend/routes/seasons.py`):
+- `_user_roles_in_scope()` esteso: include ora COACH + COLLABORATORE + DIRIGENTE + **VIEWER** (nella lista dirigenti dell'UI ci sono anche viewer).
+- `/api/seasons/import-renewed` **esteso**: dopo aver processato gli atleti, processa anche `db.users` (Coach/Collab/Dirig/Viewer): utenti con compenso (`monthly_compensation > 0` o `other_annual_compensation > 0`) vengono importati con flag `pro_data_pending_review=True` (snapshot vecchio compenso salvato in `*_previous_season`); utenti senza compenso: import semplice; non riconfermati → `status='inactive'`.
+- Risposta include ora sezioni separate `athletes` e `users`.
+
+**Frontend**:
+- `admin/coaches.tsx`, `admin/collaboratori.tsx`, `admin/dirigenti.tsx`: aggiunto pulsante "Riconferma" top-right sulle card degli utenti approved, con stati GRIGIO (già importato) / VERDE (riconfermato) / VUOTO (da riconfermare). Chiamata `POST /api/seasons/users/{id}/renew-toggle`. Badge rosso "⚠ Compenso da riconfermare" nella row nome se `pro_data_pending_review=True`. In `dirigenti.tsx` il flag è nascosto per l'account admin owner della società.
+- `admin/coach/[id].tsx`, `admin/collaboratore/[id].tsx`, `admin/dirigente/[id].tsx`: aggiunto banner rosso "Compenso da riconfermare per stagione X" con dettaglio della vecchia stagione (compenso mensile + pregresso) e pulsante verde "Conferma" che chiama `POST /api/seasons/users/{id}/confirm-pro-data`.
+- `admin/seasons.tsx`: testo dell'import esteso a "atleti, coach, collaboratori e dirigenti".
+
+**Da fare in produzione**: Save & Deploy su Vercel per vedere le modifiche frontend live su registrateam.it (il backend è già live via Render hot reload, ma le UI cambia solo dopo il build di Vercel).
+
+
 ## 🎯 30/06/2026 (pomeriggio) — Fix DEFINITIVO PDF quietanze Atleti PRO ✅
 
 **Problema reale**: nonostante i fix di stamattina, Giulia (Atleta 18+ PRO) vedeva:

@@ -100,20 +100,25 @@ async def _notify_legal_rep_scepter_event(
     event_type: str,
     summary: str,
     actor_name: str,
+    society_id: Optional[str] = None,
     details_html: str = "",
 ) -> None:
     """Send an email to the current Legal Representative about a scepter-related event.
     Silently ignores errors (email is best-effort notification, not a hard dependency).
     event_type: 'delegated' | 'resigned' | 'revoked' | 'crowned'
-    """
+    🆕 01/07/2026 — Multi-tenant: filtra LR per society_id per evitare cross-society leak."""
     try:
-        legal_rep = await db.users.find_one(
-            {"role": "admin", "primary_admin_declaration": "legal_representative"}
-        )
+        legal_rep_q = {"role": "admin", "primary_admin_declaration": "legal_representative"}
+        if society_id:
+            legal_rep_q["society_id"] = society_id
+        legal_rep = await db.users.find_one(legal_rep_q)
         if not legal_rep or not legal_rep.get("email"):
             return  # No LR to notify (orphan state, common in bootstrap)
 
-        settings = await db.settings.find_one({"type": "society"}) or {}
+        settings_q = {"type": "society"}
+        if society_id:
+            settings_q["society_id"] = society_id
+        settings = await db.settings.find_one(settings_q) or {}
         society_name = settings.get("name", "la tua Società")
 
         subject_map = {
@@ -465,6 +470,7 @@ async def declare_primary_admin(
 
     await db.audit_logs.insert_one({
         "id": str(uuid.uuid4()),
+        "society_id": society_id,
         "user_id": current_user["id"],
         "user_email": current_user.get("email", ""),
         "user_name": current_user.get("full_name", ""),
@@ -481,6 +487,7 @@ async def declare_primary_admin(
             event_type="crowned",
             summary="Ti sei registrato come <strong>Legale Rappresentante</strong> della società. Lo scettro di Responsabile Admin è nelle tue mani.",
             actor_name=current_user.get("full_name", current_user.get("email", "—")),
+            society_id=society_id,
             details_html="Da questa pagina (Impostazioni → Responsabile Admin) puoi delegare lo scettro ad un admin di fiducia, revocare eventuali deleghe e consultare lo storico.",
         )
 
@@ -515,7 +522,11 @@ async def delegate_primary_admin(
             detail="Solo il Legale Rappresentante può delegare. I Dirigenti autorizzati possono solo rimettere l'incarico."
         )
 
-    new_admin = await db.users.find_one({"id": data.new_admin_id, "role": "admin"})
+    new_admin = await db.users.find_one({
+        "id": data.new_admin_id,
+        "role": "admin",
+        **({"society_id": current_user.get("society_id")} if current_user.get("society_id") else {}),
+    })
     if not new_admin:
         raise HTTPException(status_code=404, detail="Admin destinatario non trovato")
     if new_admin["id"] == current_user["id"]:
@@ -551,6 +562,7 @@ async def delegate_primary_admin(
 
     await db.audit_logs.insert_one({
         "id": str(uuid.uuid4()),
+        "society_id": current_user.get("society_id"),
         "user_id": current_user["id"],
         "user_email": current_user.get("email", ""),
         "user_name": current_user.get("full_name", ""),
@@ -567,10 +579,13 @@ async def delegate_primary_admin(
     })
 
     # Any active 'keep_disabled' override must be reset on delegation (new holder must re-authorize)
-    settings = await db.settings.find_one({"type": "society"})
+    settings_q = {"type": "society"}
+    if current_user.get("society_id"):
+        settings_q["society_id"] = current_user.get("society_id")
+    settings = await db.settings.find_one(settings_q)
     if settings and settings.get("override_keep_disabled"):
         await db.settings.update_one(
-            {"type": "society"},
+            settings_q,
             {"$set": {
                 "override_keep_disabled": False,
                 "block_expired_certificates": True,
@@ -587,6 +602,7 @@ async def delegate_primary_admin(
         event_type="delegated",
         summary=f"Hai delegato lo <strong>scettro di Responsabile Admin</strong> a <strong>{new_admin.get('full_name', '')}</strong> ({new_admin.get('email', '')}), che ora agirà come Dirigente autorizzato fino a quando non rimetterà l'incarico (o revocherai la delega).",
         actor_name=current_user.get("full_name", current_user.get("email", "—")),
+        society_id=current_user.get("society_id"),
         details_html=f"<strong>Dirigente autorizzato</strong>: {new_admin.get('full_name', '')}<br><strong>Email</strong>: {new_admin.get('email', '')}",
     )
 
@@ -623,7 +639,10 @@ async def resign_primary_admin(
             status_code=403,
             detail="Solo un Dirigente autorizzato può rimettere l'incarico. Il Legale Rappresentante non può 'rimettersi' lo scettro."
         )
-    legal_rep = await db.users.find_one({"role": "admin", "primary_admin_declaration": "legal_representative"})
+    legal_rep_q = {"role": "admin", "primary_admin_declaration": "legal_representative"}
+    if current_user.get("society_id"):
+        legal_rep_q["society_id"] = current_user.get("society_id")
+    legal_rep = await db.users.find_one(legal_rep_q)
     if not legal_rep:
         raise HTTPException(
             status_code=400,
@@ -656,6 +675,7 @@ async def resign_primary_admin(
 
     await db.audit_logs.insert_one({
         "id": str(uuid.uuid4()),
+        "society_id": current_user.get("society_id"),
         "user_id": current_user["id"],
         "user_email": current_user.get("email", ""),
         "user_name": current_user.get("full_name", ""),
@@ -672,8 +692,11 @@ async def resign_primary_admin(
     })
 
     # Reset override keep_disabled (new holder decides)
+    settings_q = {"type": "society"}
+    if current_user.get("society_id"):
+        settings_q["society_id"] = current_user.get("society_id")
     await db.settings.update_one(
-        {"type": "society"},
+        settings_q,
         {"$set": {"override_keep_disabled": False, "block_expired_certificates": True}},
     )
 
@@ -682,6 +705,7 @@ async def resign_primary_admin(
         event_type="resigned",
         summary=f"Il Dirigente autorizzato <strong>{current_user.get('full_name', '—')}</strong> ha <strong>rimesso l'incarico</strong>. Lo scettro di Responsabile Admin è tornato nelle tue mani.",
         actor_name=current_user.get("full_name", current_user.get("email", "—")),
+        society_id=current_user.get("society_id"),
         details_html="Ora sei di nuovo Responsabile Admin operativo. Se desideri, puoi delegare nuovamente dalla pagina Impostazioni → Responsabile Admin.",
     )
 
@@ -706,7 +730,10 @@ async def revoke_delegation(
     if me_fresh.get("is_primary_admin"):
         raise HTTPException(status_code=400, detail="Sei già Responsabile Admin: nessuna delega attiva da revocare")
 
-    current_delegate = await db.users.find_one({"role": "admin", "is_primary_admin": True})
+    current_delegate_q = {"role": "admin", "is_primary_admin": True}
+    if current_user.get("society_id"):
+        current_delegate_q["society_id"] = current_user.get("society_id")
+    current_delegate = await db.users.find_one(current_delegate_q)
     if not current_delegate:
         raise HTTPException(status_code=400, detail="Nessun delegato attualmente in carica")
     if current_delegate["id"] == current_user["id"]:
@@ -738,6 +765,7 @@ async def revoke_delegation(
 
     await db.audit_logs.insert_one({
         "id": str(uuid.uuid4()),
+        "society_id": current_user.get("society_id"),
         "user_id": current_user["id"],
         "user_email": current_user.get("email", ""),
         "user_name": current_user.get("full_name", ""),
@@ -752,8 +780,11 @@ async def revoke_delegation(
     })
 
     # Reset override keep_disabled (scepter changed hands)
+    settings_q = {"type": "society"}
+    if current_user.get("society_id"):
+        settings_q["society_id"] = current_user.get("society_id")
     await db.settings.update_one(
-        {"type": "society"},
+        settings_q,
         {"$set": {"override_keep_disabled": False, "block_expired_certificates": True}},
     )
 
@@ -762,6 +793,7 @@ async def revoke_delegation(
         event_type="revoked",
         summary=f"Hai <strong>revocato la delega</strong> a <strong>{current_delegate.get('full_name', '')}</strong> e ripreso l'incarico di Responsabile Admin.",
         actor_name=current_user.get("full_name", current_user.get("email", "—")),
+        society_id=current_user.get("society_id"),
         details_html=f"<strong>Delegato revocato</strong>: {current_delegate.get('full_name', '')}<br><strong>Email</strong>: {current_delegate.get('email', '')}",
     )
 
@@ -792,14 +824,20 @@ async def crown_legal_representative(
     if (me_fresh or {}).get("primary_admin_declaration") != "authorized_delegate":
         raise HTTPException(status_code=403, detail="Solo un Dirigente autorizzato può incoronare un Legale Rappresentante")
 
-    existing_legal_rep = await db.users.find_one({"role": "admin", "primary_admin_declaration": "legal_representative"})
+    existing_lr_q = {"role": "admin", "primary_admin_declaration": "legal_representative"}
+    if current_user.get("society_id"):
+        existing_lr_q["society_id"] = current_user.get("society_id")
+    existing_legal_rep = await db.users.find_one(existing_lr_q)
     if existing_legal_rep:
         raise HTTPException(
             status_code=400,
             detail=f"Esiste già un Legale Rappresentante registrato ({existing_legal_rep.get('full_name', '')}). Nessuna incoronazione necessaria."
         )
 
-    new_legal_rep = await db.users.find_one({"id": data.new_admin_id, "role": "admin"})
+    new_lr_q = {"id": data.new_admin_id, "role": "admin"}
+    if current_user.get("society_id"):
+        new_lr_q["society_id"] = current_user.get("society_id")
+    new_legal_rep = await db.users.find_one(new_lr_q)
     if not new_legal_rep:
         raise HTTPException(status_code=404, detail="Admin destinatario non trovato")
     if new_legal_rep["id"] == current_user["id"]:
@@ -831,6 +869,7 @@ async def crown_legal_representative(
 
     await db.audit_logs.insert_one({
         "id": str(uuid.uuid4()),
+        "society_id": current_user.get("society_id"),
         "user_id": current_user["id"],
         "user_email": current_user.get("email", ""),
         "user_name": current_user.get("full_name", ""),
@@ -847,8 +886,11 @@ async def crown_legal_representative(
     })
 
     # Reset override keep_disabled (new scepter-holder must re-decide)
+    settings_q = {"type": "society"}
+    if current_user.get("society_id"):
+        settings_q["society_id"] = current_user.get("society_id")
     await db.settings.update_one(
-        {"type": "society"},
+        settings_q,
         {"$set": {"override_keep_disabled": False, "block_expired_certificates": True}},
     )
 
@@ -858,6 +900,7 @@ async def crown_legal_representative(
         event_type="crowned",
         summary="Sei stato registrato come <strong>Legale Rappresentante</strong> della società. Lo scettro di Responsabile Admin è ora nelle tue mani.",
         actor_name=current_user.get("full_name", current_user.get("email", "—")),
+        society_id=current_user.get("society_id"),
         details_html=f"Incoronazione eseguita da: <strong>{current_user.get('full_name', '—')}</strong> (Dirigente autorizzato).<br>Ora puoi delegare ad un admin di fiducia o operare direttamente.",
     )
 
@@ -870,9 +913,17 @@ async def crown_legal_representative(
 
 @router.get("/admin/primary-admin/history")
 async def get_primary_admin_history(current_user=Depends(get_current_user)):
-    """Return audit log entries related to the Responsabile Admin role."""
+    """Return audit log entries related to the Responsabile Admin role.
+    🆕 01/07/2026 — Multi-tenant safe: filtra per society_id.
+    - I log recenti hanno il campo `society_id` diretto.
+    - I log legacy (pre-fix) non lo hanno: fallback via join con `users` (user_id → society_id)."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin")
+
+    society_id = current_user.get("society_id")
+    if not society_id:
+        # Difensivo: senza society_id restituiamo lista vuota per evitare data leak.
+        return {"events": []}
 
     actions = [
         "primary_admin_declaration_signed",
@@ -881,16 +932,37 @@ async def get_primary_admin_history(current_user=Depends(get_current_user)):
         "primary_admin_delegation_revoked",
         "primary_admin_crowned",
     ]
+
+    # Costruisci mappa user_id → society_id per join legacy (log senza society_id)
+    society_users = await db.users.find(
+        {"society_id": society_id},
+        {"_id": 0, "id": 1},
+    ).to_list(1000)
+    society_user_ids = {u["id"] for u in society_users}
+
     events = []
     async for log in db.audit_logs.find(
         {"action": {"$in": actions}},
         {"_id": 0},
-    ).sort("created_at", -1).limit(50):
+    ).sort("created_at", -1).limit(500):  # fetch di più per filtrare in-memory
         log.pop("_id", None)
+        # Filtro multi-tenancy:
+        # 1) Se il log ha society_id, deve matchare quello dell'admin corrente
+        # 2) Se il log NON ha society_id (legacy), controlliamo che l'user_id
+        #    appartenga alla società corrente
+        log_soc = log.get("society_id")
+        if log_soc:
+            if log_soc != society_id:
+                continue
+        else:
+            if log.get("user_id") not in society_user_ids:
+                continue
         if "created_at" in log and not isinstance(log["created_at"], str):
             try:
                 log["created_at"] = log["created_at"].isoformat()
             except Exception:
                 log["created_at"] = str(log["created_at"])
         events.append(log)
+        if len(events) >= 50:
+            break
     return {"events": events}

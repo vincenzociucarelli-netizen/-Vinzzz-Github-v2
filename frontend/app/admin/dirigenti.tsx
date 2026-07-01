@@ -37,6 +37,9 @@ export default function DirigentiScreen() {
   const [actionModalVisible, setActionModalVisible] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [societyName, setSocietyName] = useState('Società');
+  // 🆕 01/07/2026 — Riconferma per nuova stagione
+  const [currentSeason, setCurrentSeason] = useState<string>('');
+  const [renewToggleBusy, setRenewToggleBusy] = useState<string | null>(null);
 
   const handleExport = async () => {
     setExporting(true);
@@ -53,13 +56,15 @@ export default function DirigentiScreen() {
 
   const loadData = async () => {
     try {
-      const [dirigentiRes, pendingRes, societyRes] = await Promise.all([
+      const [dirigentiRes, pendingRes, societyRes, seasonRes] = await Promise.all([
         api.get('/users/dirigenti'),
         api.get('/users/pending'),
         api.get('/settings/society'),
+        api.get('/seasons/current').catch(() => ({ data: { season: '' } })),
       ]);
       setDirigenti(dirigentiRes.data);
       setSocietyName(societyRes.data.name || 'Società');
+      setCurrentSeason(seasonRes.data?.season || '');
       // Filter pending users for dirigenti only
       const pendingDirigenti = pendingRes.data.filter(
         (u: Dirigente) => u.role === 'admin' || u.role === 'viewer'
@@ -211,43 +216,93 @@ export default function DirigentiScreen() {
     </View>
   );
 
-  const renderDirigenteItem = ({ item }: { item: Dirigente }) => (
-    <TouchableOpacity 
-      style={styles.userCard} 
-      onPress={() => router.push(`/admin/dirigente/${item.id}`)}
-      onLongPress={() => openActionModal(item)}
-    >
-      <View style={styles.userAvatar}>
-        <Ionicons 
-          name={item.role === 'admin' ? 'shield-checkmark' : 'briefcase'} 
-          size={24} 
-          color={item.role === 'admin' ? '#007AFF' : '#8E44AD'} 
-        />
-      </View>
-      <View style={styles.userInfo}>
-        <Text style={styles.userName}>{item.full_name}</Text>
-        {item.qualification && (
-          <Text style={styles.userQualification}>🏅 {item.qualification}</Text>
-        )}
-        <Text style={styles.userEmail}>{item.email}</Text>
-        <View style={styles.userMeta}>
-          <View style={[styles.roleBadge, item.role === 'admin' && styles.adminBadge]}>
-            <Text style={[styles.roleBadgeText, item.role === 'admin' && styles.adminBadgeText]}>
-              {item.role === 'admin' ? 'ADMIN' : 'DIRIGENTE'}
-            </Text>
-          </View>
-          <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
-          <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
-        </View>
-      </View>
+  const renderDirigenteItem = ({ item }: { item: Dirigente }) => {
+    // 🆕 01/07/2026 — Riconferma stagione
+    const it: any = item;
+    const isImported = !!currentSeason && it.imported_to_season === currentSeason;
+    const isRenewed = !!it.renewed_for_next_season;
+    const busy = renewToggleBusy === item.id;
+    // L'admin owner della società NON è ricaricabile (non è un dirigente stagionale).
+    const showRenewFlag = item.status === 'approved' && item.role !== 'admin';
+    const handleRenewToggle = async (e: any) => {
+      e?.stopPropagation?.();
+      if (isImported || busy) return;
+      setRenewToggleBusy(item.id);
+      try {
+        await api.post(`/seasons/users/${item.id}/renew-toggle`);
+        await loadData();
+      } catch (err: any) {
+        console.warn('renew toggle failed', err?.response?.data);
+      } finally {
+        setRenewToggleBusy(null);
+      }
+    };
+    const renewBg = isImported ? '#E0E0E0' : (isRenewed ? '#C8E6C9' : '#FFF');
+    const renewBorder = isImported ? '#9E9E9E' : (isRenewed ? '#2E7D32' : '#BDBDBD');
+    const renewColor = isImported ? '#616161' : (isRenewed ? '#1B5E20' : '#757575');
+    const renewLabel = isImported ? 'Già importato' : (isRenewed ? '✓ Riconfermato' : 'Riconferma');
+
+    return (
       <TouchableOpacity 
-        style={styles.moreBtn}
-        onPress={() => openActionModal(item)}
+        style={styles.userCard} 
+        onPress={() => router.push(`/admin/dirigente/${item.id}`)}
+        onLongPress={() => openActionModal(item)}
       >
-        <Ionicons name="ellipsis-vertical" size={20} color="#999" />
+        {/* 🆕 01/07/2026 — Flag Riconferma stagione */}
+        {showRenewFlag && (
+          <TouchableOpacity
+            onPress={handleRenewToggle}
+            disabled={isImported || busy}
+            style={{ position: 'absolute', top: 8, right: 8, borderRadius: 12, borderWidth: 1, borderColor: renewBorder, backgroundColor: renewBg, paddingHorizontal: 8, paddingVertical: 3, opacity: busy ? 0.5 : 1, zIndex: 5 }}
+            data-testid={`dirig-renew-flag-${item.id}`}
+          >
+            <Text style={{ fontSize: 10, fontWeight: '700', color: renewColor }}>{renewLabel}</Text>
+          </TouchableOpacity>
+        )}
+        <View style={styles.userAvatar}>
+          <Ionicons 
+            name={item.role === 'admin' ? 'shield-checkmark' : 'briefcase'} 
+            size={24} 
+            color={item.role === 'admin' ? '#007AFF' : '#8E44AD'} 
+          />
+        </View>
+        <View style={styles.userInfo}>
+          <Text style={styles.userName}>{item.full_name}</Text>
+          {item.qualification && (
+            <Text style={styles.userQualification}>🏅 {item.qualification}</Text>
+          )}
+          <Text style={styles.userEmail}>{item.email}</Text>
+          <View style={styles.userMeta}>
+            <View style={[styles.roleBadge, item.role === 'admin' && styles.adminBadge]}>
+              <Text style={[styles.roleBadgeText, item.role === 'admin' && styles.adminBadgeText]}>
+                {item.role === 'admin' ? 'ADMIN' : 'DIRIGENTE'}
+              </Text>
+            </View>
+            <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
+            <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
+            {/* 🆕 01/07/2026 — Badge "Compenso da riconfermare" */}
+            {(item as any).pro_data_pending_review && (
+              <View
+                style={{ marginLeft: 6, backgroundColor: '#FFEBEE', borderColor: '#C62828', borderWidth: 1, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, flexDirection: 'row', alignItems: 'center', gap: 3 }}
+                data-testid={`dirig-pro-pending-review-${item.id}`}
+              >
+                <Ionicons name="warning" size={11} color="#C62828" />
+                <Text style={{ fontSize: 10, color: '#C62828', fontWeight: '700' }}>
+                  Compenso da riconfermare
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+        <TouchableOpacity 
+          style={styles.moreBtn}
+          onPress={() => openActionModal(item)}
+        >
+          <Ionicons name="ellipsis-vertical" size={20} color="#999" />
+        </TouchableOpacity>
       </TouchableOpacity>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
