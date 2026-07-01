@@ -604,6 +604,20 @@ export default function AdminAthletes() {
               </Text>
             </View>
           )}
+          {/* 🆕 01/07/2026 — Badge "Compenso da riconfermare" (post-import stagionale).
+              Segnala all'admin che monthly_compensation/other_annual sono default
+              della stagione precedente e vanno riverificati col nuovo contratto. */}
+          {(item as any).pro_data_pending_review && (
+            <View
+              style={{ marginLeft: 6, backgroundColor: '#FFEBEE', borderColor: '#C62828', borderWidth: 1, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, flexDirection: 'row', alignItems: 'center', gap: 3 }}
+              data-testid={`athlete-pro-pending-review-${item.id}`}
+            >
+              <Ionicons name="warning" size={11} color="#C62828" />
+              <Text style={{ fontSize: 10, color: '#C62828', fontWeight: '700' }}>
+                Compenso da riconfermare
+              </Text>
+            </View>
+          )}
         </View>
         <Text style={[
           styles.teamName,

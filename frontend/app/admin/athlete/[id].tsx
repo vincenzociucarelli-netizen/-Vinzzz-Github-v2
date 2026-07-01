@@ -2070,6 +2070,41 @@ export default function AdminAthleteDetail() {
           </View>
         )}
 
+        {/* 🆕 01/07/2026 — Banner "Compenso da riconfermare" (post-import stagionale) */}
+        {(athlete as any).pro_data_pending_review && (
+          <View style={{ margin: 12, padding: 12, backgroundColor: '#FFEBEE', borderLeftWidth: 4, borderLeftColor: '#C62828', borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Ionicons name="warning" size={22} color="#C62828" />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: '700', color: '#C62828', fontSize: 14 }}>
+                Compenso da riconfermare per stagione {(athlete as any).pro_data_pending_review_season || ''}
+              </Text>
+              <Text style={{ color: '#B71C1C', fontSize: 12, marginTop: 2 }}>
+                I valori riportati (compenso mensile, pregresso annuale) sono default dalla stagione precedente. Verificali/aggiornali col nuovo contratto o lettera d&apos;incarico, poi conferma.
+              </Text>
+              {typeof (athlete as any).monthly_compensation_previous_season === 'number' && (
+                <Text style={{ color: '#666', fontSize: 11, marginTop: 4 }}>
+                  Vecchia stagione: compenso mensile €{Number((athlete as any).monthly_compensation_previous_season || 0).toFixed(2)}
+                  {typeof (athlete as any).other_annual_compensation_previous_season === 'number' ? ` • pregresso €${Number((athlete as any).other_annual_compensation_previous_season || 0).toFixed(2)}` : ''}
+                </Text>
+              )}
+            </View>
+            <TouchableOpacity
+              onPress={async () => {
+                try {
+                  await api.post(`/seasons/athletes/${athlete.id}/confirm-pro-data`);
+                  await loadData();
+                } catch (e: any) {
+                  Alert.alert('Errore', e?.response?.data?.detail || 'Conferma non riuscita');
+                }
+              }}
+              style={{ backgroundColor: '#2E7D32', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6 }}
+              data-testid="confirm-pro-data-btn"
+            >
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>Conferma</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* 🆕 23/06/2026 — DA FARE TAB (impegni atleta 7 giorni) */}
         {activeTab === 'dafare' && athlete && (
           <AdminCoachCommitments athleteId={athlete.id} roleLabel="atleta" />

@@ -269,6 +269,11 @@ async def import_renewed_athletes(current_user = Depends(get_current_user)):
     """🆕 01/07/2026 — Esegue l'import nella stagione corrente:
     - Atleti `renewed_for_next_season=True` → segnati come `imported_to_season=<stagione_corrente>`,
       mantengono lo status, e `renewed_for_next_season` viene azzerato (verranno mostrati grigi nell'UI).
+      • Certificato medico: NON toccato (resta valido + convalidato).
+      • Atleti PRO (is_compensated=True): `monthly_compensation` e `other_annual_compensation`
+        restano come default della vecchia stagione, MA viene settato `pro_data_pending_review=True`
+        per ricordare all'admin che devono essere riconfermati o modificati col nuovo contratto/
+        lettera d'incarico (nel frattempo l'atleta può aver percepito altri compensi sportivi).
     - Atleti non riconfermati → `status='inactive'` (recuperabili al volo). NON marcati withdrawn.
     Idempotente: gli atleti già `imported_to_season=<corrente>` vengono saltati."""
     if current_user["role"] != UserRole.ADMIN:
@@ -276,21 +281,53 @@ async def import_renewed_athletes(current_user = Depends(get_current_user)):
     current_season = await get_current_season_for_society(db, current_user.get("society_id"))
     soc_q = _society_filter(current_user)
     now_iso = datetime.utcnow().isoformat()
-    # Import dei riconfermati
-    imp_res = await db.athletes.update_many(
+
+    # Step 1: Import atleti NON compensati (semplice)
+    imp_non_pro = await db.athletes.update_many(
         {
             **soc_q,
             "renewed_for_next_season": True,
             "imported_to_season": {"$ne": current_season},
+            "$or": [{"is_compensated": {"$exists": False}}, {"is_compensated": False}, {"is_compensated": None}],
         },
         {"$set": {
             "imported_to_season": current_season,
             "imported_at": now_iso,
             "imported_by": current_user["id"],
-            "renewed_for_next_season": False,  # azzera per ciclo successivo
+            "renewed_for_next_season": False,
         }},
     )
-    # Mark non-renewed as inactive
+
+    # Step 2: Import atleti PRO (compenso/pregresso vanno riconfermati)
+    pro_to_import = await db.athletes.find(
+        {
+            **soc_q,
+            "renewed_for_next_season": True,
+            "imported_to_season": {"$ne": current_season},
+            "is_compensated": True,
+        },
+        {"_id": 0, "id": 1, "monthly_compensation": 1, "other_annual_compensation": 1}
+    ).to_list(2000)
+    pro_imported = 0
+    for ath in pro_to_import:
+        await db.athletes.update_one(
+            {"id": ath["id"]},
+            {"$set": {
+                "imported_to_season": current_season,
+                "imported_at": now_iso,
+                "imported_by": current_user["id"],
+                "renewed_for_next_season": False,
+                # Snapshot vecchia stagione (per storico)
+                "monthly_compensation_previous_season": ath.get("monthly_compensation", 0),
+                "other_annual_compensation_previous_season": ath.get("other_annual_compensation", 0),
+                # Flag "da riconfermare con nuovo contratto/lettera d'incarico"
+                "pro_data_pending_review": True,
+                "pro_data_pending_review_season": current_season,
+            }},
+        )
+        pro_imported += 1
+
+    # Step 3: Atleti non riconfermati → inactive
     inact_res = await db.athletes.update_many(
         {
             **soc_q,
@@ -307,6 +344,27 @@ async def import_renewed_athletes(current_user = Depends(get_current_user)):
     )
     return {
         "season": current_season,
-        "imported": imp_res.modified_count,
+        "imported": imp_non_pro.modified_count + pro_imported,
+        "imported_pro_pending_review": pro_imported,
         "inactivated": inact_res.modified_count,
     }
+
+
+@router.post("/seasons/athletes/{athlete_id}/confirm-pro-data")
+async def confirm_pro_data_after_review(athlete_id: str, current_user = Depends(get_current_user)):
+    """🆕 01/07/2026 — Dopo che l'admin ha aggiornato manualmente
+    monthly_compensation e/o other_annual_compensation a seguito del nuovo
+    contratto/lettera d'incarico, conferma azzerando `pro_data_pending_review`."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    res = await db.athletes.update_one(
+        {"id": athlete_id, **_society_filter(current_user)},
+        {"$set": {
+            "pro_data_pending_review": False,
+            "pro_data_confirmed_at": datetime.utcnow().isoformat(),
+            "pro_data_confirmed_by": current_user["id"],
+        }},
+    )
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Atleta non trovato in questa società")
+    return {"athlete_id": athlete_id, "pro_data_pending_review": False}
