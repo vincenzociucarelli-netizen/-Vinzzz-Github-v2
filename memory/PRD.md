@@ -16,6 +16,17 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🔀 02/07/2026 — Switch ruolo dual-role ("Zaino Coach") ✅
+
+**Nuovo endpoint** `POST /api/auth/switch-role` (in `server.py`): valida che l'utente sia effettivamente dual-role (athlete → coach: richiede `linked_coach_user_id` sull'athlete; coach → athlete: richiede `linked_athlete_id` sull'user). Emette un nuovo JWT con `role=target_role` e restituisce token + user object aggiornato. Testato via curl (403 se non dual-role, 400 se target non valido).
+
+**Nuovo componente frontend** `src/services/RoleSwitchButton.tsx`: pulsante pill con icona `swap-horizontal` che chiama l'endpoint, aggiorna authStore + AsyncStorage, poi reindirizza a `/coach` o `/athlete` con `window.location.href` (web) o `router.replace` (mobile).
+
+**Integrato in**:
+- `athlete/index.tsx`: pulsante arancione "🏋️ Passa a Coach" vicino al saluto, visibile se `profile.linked_coach_user_id` presente.
+- `coach/index.tsx`: pulsante blu "🏐 Passa ad Atleta" vicino al saluto, visibile se `user.linked_athlete_id` presente.
+
+
 ## 🐛 02/07/2026 — Fix dual-role Prati Giulia Parte 2 (5 correzioni) ✅
 
 ### 1. Nascondi "Compensi Pregressi" nel Coach dual-role

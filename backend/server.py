@@ -3550,6 +3550,79 @@ async def _record_minor_login_attempt(rate_key: str, success: bool):
         upsert=True
     )
 
+
+class SwitchRoleBody(BaseModel):
+    """🆕 02/07/2026 — Body per switch ruolo dual-role (Zaino Coach)."""
+    target_role: str  # 'coach' | 'athlete'
+
+
+@api_router.post("/auth/switch-role")
+async def switch_role(body: SwitchRoleBody, current_user = Depends(get_current_user)):
+    """🆕 02/07/2026 — Switch ruolo attivo per utenti dual-role (atleta+coach).
+    Emette un nuovo JWT con `role=target_role`. Consentito SOLO se l'utente ha
+    effettivamente il record dell'altro ruolo (linked_athlete_id / linked_coach_user_id).
+    """
+    target = (body.target_role or "").strip().lower()
+    if target not in ("coach", "athlete"):
+        raise HTTPException(status_code=400, detail="target_role deve essere 'coach' o 'athlete'")
+
+    # Se sto già in quel ruolo, restituisco il token corrente (no-op)
+    if current_user.get("role") == target:
+        raise HTTPException(status_code=400, detail=f"Sei già attivo come {target}")
+
+    # Caso 1: sono ATLETA e voglio diventare COACH
+    if target == "coach":
+        # L'atleta corrente deve avere un linked_coach_user_id
+        athlete = await db.athletes.find_one({"id": current_user["id"]})
+        if not athlete:
+            raise HTTPException(status_code=404, detail="Record atleta non trovato")
+        linked_coach_user_id = athlete.get("linked_coach_user_id")
+        if not linked_coach_user_id:
+            raise HTTPException(status_code=403, detail="Non sei un utente dual-role (nessun coach collegato)")
+        coach_user = await db.users.find_one({"id": linked_coach_user_id})
+        if not coach_user or coach_user.get("role") != "coach":
+            raise HTTPException(status_code=404, detail="Coach collegato non trovato")
+        new_token = create_token(coach_user["id"], "coach")
+        return {
+            "token": new_token,
+            "access_token": new_token,
+            "user": {
+                "id": coach_user["id"],
+                "role": "coach",
+                "email": coach_user.get("email"),
+                "full_name": coach_user.get("full_name"),
+                "first_name": coach_user.get("first_name"),
+                "linked_athlete_id": coach_user.get("linked_athlete_id"),
+            },
+        }
+
+    # Caso 2: sono COACH e voglio diventare ATLETA
+    else:  # target == 'athlete'
+        linked_athlete_id = current_user.get("linked_athlete_id")
+        if not linked_athlete_id:
+            raise HTTPException(status_code=403, detail="Non sei un utente dual-role (nessun atleta collegato)")
+        athlete = await db.athletes.find_one({"id": linked_athlete_id})
+        if not athlete:
+            raise HTTPException(status_code=404, detail="Atleta collegato non trovato")
+        # Per gli atleti, il JWT contiene user_id (dell'utente) + athlete_id.
+        user_id_for_token = athlete.get("user_id") or current_user["id"]
+        new_token = create_token(user_id_for_token, "athlete", athlete_id=athlete["id"])
+        return {
+            "token": new_token,
+            "access_token": new_token,
+            "user": {
+                "id": user_id_for_token,
+                "role": "athlete",
+                "email": athlete.get("email"),
+                "full_name": athlete.get("full_name"),
+                "first_name": athlete.get("first_name"),
+                "athlete_id": athlete["id"],
+                "linked_coach_user_id": athlete.get("linked_coach_user_id"),
+            },
+        }
+
+
+
 @api_router.get("/auth/me")
 async def get_me(request: Request, current_user = Depends(get_current_user)):
     """Get full user profile.

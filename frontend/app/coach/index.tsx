@@ -20,6 +20,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import api from '../../src/services/api';
+import { RoleSwitchButton } from '../../src/services/RoleSwitchButton';
 import { Ionicons } from '../../src/components/Icon';
 import { Team } from '../../src/types';
 import { format } from 'date-fns';
@@ -1583,7 +1584,10 @@ export default function CoachScreen() {
       >
         {/* Welcome */}
         <View style={styles.welcomeCard}>
-          <Text style={styles.welcomeText}>Ciao, {(user?.first_name || (user?.full_name || '').split(' ')[0] || '').trim()}! 👋</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <Text style={styles.welcomeText}>Ciao, {(user?.first_name || (user?.full_name || '').split(' ')[0] || '').trim()}! 👋</Text>
+            <RoleSwitchButton targetRole="athlete" visible={!!(user as any)?.linked_athlete_id} />
+          </View>
           <Text style={styles.welcomeSubtext}>
             Seleziona una squadra per vedere gli atleti
           </Text>
