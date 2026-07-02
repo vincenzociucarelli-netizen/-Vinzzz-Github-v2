@@ -134,11 +134,13 @@ export default function SeasonReconfirmScreen() {
       const r = await api.post('/seasons/reconfirm-bulk', body);
       const conf = (r.data?.athletes?.confirmed || 0) + (r.data?.users?.confirmed || 0);
       const flagged = (r.data?.athletes?.pro_flagged || 0) + (r.data?.users?.pro_flagged || 0);
+      const parentsAuto = r.data?.parents?.auto_confirmed || 0;
       const flaggedMsg = flagged > 0 ? `\n\n${flagged} risultano compensati: appariranno nelle liste con il badge rosso "Compenso da riconfermare".` : '';
+      const parentsMsg = parentsAuto > 0 ? `\n\n👨‍👩 Riconfermati automaticamente anche ${parentsAuto} genitori di minori. Dovranno rifirmare la privacy per la nuova stagione.` : '';
       if (Platform.OS === 'web') {
-        window.alert(`✅ Riconfermati ${conf} per la stagione ${currentSeason}.${flaggedMsg}`);
+        window.alert(`✅ Riconfermati ${conf} per la stagione ${currentSeason}.${flaggedMsg}${parentsMsg}`);
       } else {
-        Alert.alert('Successo', `Riconfermati ${conf} per la stagione ${currentSeason}.${flaggedMsg}`);
+        Alert.alert('Successo', `Riconfermati ${conf} per la stagione ${currentSeason}.${flaggedMsg}${parentsMsg}`);
       }
       await loadMembers();
     } catch (err: any) {

@@ -314,13 +314,22 @@ async def reconfirm_bulk(
     # Athletes
     ath_confirmed = 0
     ath_pro_flagged = 0
+    parents_confirmed = 0  # 🆕 02/07/2026 — Auto-riconferma genitori di atleti minorenni
+    parent_ids_seen: set = set()
     if body.athlete_ids:
         # Prima leggi per gestire lo snapshot compenso solo per PRO/compensated
         cursor = db.athletes.find(
             {"id": {"$in": body.athlete_ids}, "society_id": sid},
             {"_id": 0, "id": 1, "athlete_type": 1, "monthly_compensation": 1,
-             "other_annual_compensation": 1, "active_seasons": 1},
+             "other_annual_compensation": 1, "active_seasons": 1,
+             "parent_id": 1, "birth_date": 1},
         )
+        # Calcolo maggiore/minore età alla data di start della stagione corrente
+        try:
+            cur_start_year = int(current_season.split("-")[0])
+            season_start_ref = datetime(cur_start_year, 9, 1)
+        except Exception:
+            season_start_ref = datetime.utcnow()
         async for a in cursor:
             if current_season in (a.get("active_seasons") or []):
                 continue  # già riconfermato → skip idempotente
@@ -337,6 +346,32 @@ async def reconfirm_bulk(
                 ath_pro_flagged += 1
             await db.athletes.update_one({"id": a["id"], "society_id": sid}, update)
             ath_confirmed += 1
+
+            # 🆕 02/07/2026 — Auto-riconferma parent se atleta è minorenne
+            parent_id = a.get("parent_id")
+            bd = a.get("birth_date")
+            is_minor = False
+            if bd:
+                try:
+                    bd_dt = datetime.fromisoformat(bd) if isinstance(bd, str) else bd
+                    age_years = (season_start_ref - bd_dt).days / 365.25
+                    is_minor = age_years < 18
+                except Exception:
+                    is_minor = False
+            if parent_id and is_minor and parent_id not in parent_ids_seen:
+                parent_ids_seen.add(parent_id)
+                p_res = await db.users.update_one(
+                    {"id": parent_id, "society_id": sid, "role": "parent"},
+                    {
+                        "$addToSet": {"active_seasons": current_season},
+                        "$set": {
+                            "privacy_pending_renewal": True,
+                            "privacy_pending_renewal_season": current_season,
+                        },
+                    },
+                )
+                if p_res.modified_count:
+                    parents_confirmed += 1
 
     # Users
     usr_confirmed = 0
@@ -368,6 +403,7 @@ async def reconfirm_bulk(
         "current_season": current_season,
         "athletes": {"confirmed": ath_confirmed, "pro_flagged": ath_pro_flagged},
         "users": {"confirmed": usr_confirmed, "pro_flagged": usr_pro_flagged},
+        "parents": {"auto_confirmed": parents_confirmed},
     }
 
 
