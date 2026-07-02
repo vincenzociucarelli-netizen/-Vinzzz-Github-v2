@@ -601,7 +601,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
             </TouchableOpacity>
           </View>
           <Text style={styles.welcomeName}>
-            {user?.full_name?.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
+            {(user?.first_name || user?.full_name?.split(' ')[0] || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
           </Text>
         </View>
 

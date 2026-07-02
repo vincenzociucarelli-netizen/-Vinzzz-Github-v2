@@ -353,10 +353,36 @@ export default function AthleteScreen() {
         console.log('Could not load notifications');
       }
 
-      // Load commitments (trainings + matches) for next 7 days
+      // Load commitments (trainings + matches) for next 7 days.
+      // 🆕 02/07/2026 — Se atleta dual-role (linked_coach_user_id), fetcho ANCHE
+      // gli impegni come coach e li mergio in ordine cronologico con badge di ruolo.
       try {
-        const commitmentsResponse = await api.get('/athlete/commitments');
-        setCommitments(commitmentsResponse.data || { today: [], tomorrow: [], day_after: [], upcoming: [] });
+        // Rileggo /auth/me per avere la flag dual-role fresca (evita race con setProfile async)
+        let isDualRole = false;
+        try {
+          const meRes = await api.get('/auth/me');
+          isDualRole = !!(meRes.data as any)?.linked_coach_user_id;
+        } catch { /* fallback */ }
+        const [athleteRes, coachRes] = await Promise.all([
+          api.get('/athlete/commitments').catch(() => ({ data: null })),
+          isDualRole
+            ? api.get('/coach/commitments').catch(() => ({ data: null }))
+            : Promise.resolve({ data: null }),
+        ]);
+        const tag = (arr: any[] = [], as_role: 'atleta' | 'coach') => (arr || []).map((x) => ({ ...x, as_role }));
+        const sortBy = (a: any, b: any) => {
+          const ka = `${a.date || ''}T${a.time_start || '00:00'}`;
+          const kb = `${b.date || ''}T${b.time_start || '00:00'}`;
+          return ka.localeCompare(kb);
+        };
+        const a = athleteRes?.data || { today: [], tomorrow: [], day_after: [], upcoming: [] };
+        const c = coachRes?.data || { today: [], tomorrow: [], day_after: [], upcoming: [] };
+        setCommitments({
+          today: [...tag(a.today, 'atleta'), ...tag(c.today, 'coach')].sort(sortBy),
+          tomorrow: [...tag(a.tomorrow, 'atleta'), ...tag(c.tomorrow, 'coach')].sort(sortBy),
+          day_after: [...tag(a.day_after, 'atleta'), ...tag(c.day_after, 'coach')].sort(sortBy),
+          upcoming: [...tag(a.upcoming, 'atleta'), ...tag(c.upcoming, 'coach')].sort(sortBy),
+        });
       } catch {
         console.log('Could not load commitments');
       }
@@ -539,7 +565,7 @@ export default function AthleteScreen() {
         <View style={{ backgroundColor: '#fff', borderRadius: 12, marginHorizontal: 16, marginBottom: 12, padding: 14, borderWidth: 1, borderColor: '#e0e0e0' }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 18, fontWeight: '700', color: '#333' }} data-testid="athlete-name">{profile?.full_name || 'Atleta'}</Text>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: '#333' }} data-testid="athlete-name">Ciao {profile?.first_name || (profile?.full_name || '').split(' ')[0] || 'Atleta'}! 👋</Text>
               <Text style={{ fontSize: 14, color: '#666', marginTop: 2 }}>
                 Squadra: <Text style={{ fontWeight: '600', color: '#E53935' }}>{profile?.team_name || 'Non assegnata'}</Text>
               </Text>
@@ -1226,9 +1252,22 @@ export default function AthleteScreen() {
                   <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 6, gap: 8 }}>
                     <Ionicons name={item.type === 'training' ? 'fitness' : 'trophy'} size={16} color={item.type === 'training' ? '#007AFF' : '#FF9500'} style={{ marginTop: 2 }} />
                     <View style={{ flex: 1 }}>
-                      <Text style={[{ fontSize: 14, fontWeight: '600' }, item.cancelled && { textDecorationLine: 'line-through', color: '#888' }]}>
-                        {item.type === 'training' ? `Allenamento ${item.team_name}${item.modified ? ' ✏️ Variato' : ''}` : item.title}
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+                        {item.as_role && (
+                          <View style={{
+                            paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6,
+                            backgroundColor: item.as_role === 'atleta' ? '#E3F2FD' : '#FFF3E0',
+                            borderWidth: 1, borderColor: item.as_role === 'atleta' ? '#1565C0' : '#F57C00',
+                          }}>
+                            <Text style={{ fontSize: 9, fontWeight: '700', color: item.as_role === 'atleta' ? '#0D47A1' : '#E65100' }}>
+                              {item.as_role === 'atleta' ? 'ATL' : 'COACH'}
+                            </Text>
+                          </View>
+                        )}
+                        <Text style={[{ fontSize: 14, fontWeight: '600' }, item.cancelled && { textDecorationLine: 'line-through', color: '#888' }]}>
+                          {item.type === 'training' ? `Allenamento ${item.team_name}${item.modified ? ' ✏️ Variato' : ''}` : (item.title || `${item.team_name || ''} ${item.opponent ? `vs ${item.opponent}` : ''}`.trim())}
+                        </Text>
+                      </View>
                       {section.key === 'upcoming' && (
                         <Text style={{ fontSize: 12, color: '#666' }}>📅 {item.date} - {item.day_name}</Text>
                       )}
@@ -1398,22 +1437,31 @@ export default function AthleteScreen() {
               </Text>
 
               {coachFiltered.length > 0 && (
-                <View style={{ marginTop: 10 }}>
-                  <Text style={athleteStaffStyles.sectionLabel}>Allenatori</Text>
+                <CollapsibleStaffSection
+                  label="Allenatori"
+                  count={coachFiltered.length}
+                  testId="staff-section-allenatori"
+                >
                   {coachFiltered.map((c: any) => renderContact(c, ['#E65100', '#1565C0', '#2E7D32', '#6A1B9A', '#00838F'], 'Allenatore'))}
-                </View>
+                </CollapsibleStaffSection>
               )}
               {dirFiltered.length > 0 && (
-                <View style={{ marginTop: 10 }}>
-                  <Text style={athleteStaffStyles.sectionLabel}>Dirigenti</Text>
+                <CollapsibleStaffSection
+                  label="Dirigenti"
+                  count={dirFiltered.length}
+                  testId="staff-section-dirigenti"
+                >
                   {dirFiltered.map((d: any) => renderContact(d, ['#1565C0', '#6A1B9A', '#00838F', '#2E7D32', '#D84315'], 'Dirigente'))}
-                </View>
+                </CollapsibleStaffSection>
               )}
               {colFiltered.length > 0 && (
-                <View style={{ marginTop: 10 }}>
-                  <Text style={athleteStaffStyles.sectionLabel}>Collaboratori</Text>
+                <CollapsibleStaffSection
+                  label="Collaboratori"
+                  count={colFiltered.length}
+                  testId="staff-section-collaboratori"
+                >
                   {colFiltered.map((c: any) => renderContact(c, ['#00838F', '#2E7D32', '#6A1B9A', '#D84315', '#4527A0'], 'Collaboratore'))}
-                </View>
+                </CollapsibleStaffSection>
               )}
             </View>
           </View>
@@ -1494,6 +1542,27 @@ export default function AthleteScreen() {
     </View>
   );
 }
+
+
+// 🆕 02/07/2026 — Sezione staff collassabile (accordion) per Da Fare atleta
+const CollapsibleStaffSection: React.FC<{ label: string; count: number; children: any; testId?: string }> = ({ label, count, children, testId }) => {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <View style={{ marginTop: 10 }}>
+      <TouchableOpacity
+        onPress={() => setOpen(v => !v)}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F5F5F5', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 }}
+        data-testid={testId}
+      >
+        <Text style={athleteStaffStyles.sectionLabel}>
+          {label} <Text style={{ color: '#999', fontWeight: '400', fontSize: 11 }}>({count})</Text>
+        </Text>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color="#666" />
+      </TouchableOpacity>
+      {open && <View style={{ marginTop: 8 }}>{children}</View>}
+    </View>
+  );
+};
 
 // 🆕 26/06/2026 — Stili widget "Staff" su Da Fare atleta
 const athleteStaffStyles = StyleSheet.create({

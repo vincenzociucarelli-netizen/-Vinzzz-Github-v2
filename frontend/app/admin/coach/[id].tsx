@@ -1404,6 +1404,10 @@ export default function AdminCoachDetail() {
                 selectTextOnFocus={true}
               />
               
+              {/* 🆕 02/07/2026 — Nascondi Compensi Pregressi per coach dual-role
+                  (già dichiarato lato Atleta, evita doppioni conflittuali) */}
+              {!(coach as any)?.linked_athlete_id && (
+                <>
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>📋 Compensi Pregressi Dichiarati (€)</Text>
               <TextInput
                 style={styles.input}
@@ -1424,6 +1428,8 @@ export default function AdminCoachDetail() {
               <Text style={styles.inputHint}>
                 Importo dichiarato dal coach percepito prima dell&apos;assunzione (Gen-Ago se assunto a Set)
               </Text>
+                </>
+              )}
 
               {/* 🆕 30/06/2026 — Periodo contratto coach (modificabile direttamente
                   dalla scheda, prima si poteva impostare solo dal modal di

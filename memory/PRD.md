@@ -16,6 +16,28 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🐛 02/07/2026 — Fix dual-role Prati Giulia Parte 2 (5 correzioni) ✅
+
+### 1. Nascondi "Compensi Pregressi" nel Coach dual-role
+`admin/coach/[id].tsx` tab Compensi: nascosto il campo `other_annual_compensation` + hint quando `linked_athlete_id` è valorizzato. Il valore è già gestito lato Atleta, evita doppioni conflittuali.
+
+### 2. Escludi Coach dual-role da "Atleti 18+ PRO"
+`GET /prime-squadre/athletes` in `server.py`: aggiunto filtro `linked_athlete_id: {"$in": [None, ""]}` sui coach → i coach dual-role non compaiono più nella lista, sono già rappresentati come atleti.
+
+### 3. User dashboard: impegni unificati dual-role
+- `athlete/index.tsx`: se `linked_coach_user_id` valorizzato → fetch `/coach/commitments` in parallelo e merge cronologico. Badge visibile blu **ATL** / arancio **COACH** nel rendering degli item (4 sezioni today/tomorrow/day_after/upcoming).
+- `coach/index.tsx`: se `linked_athlete_id` valorizzato → fetch `/athlete/commitments` in parallelo e merge cronologico. Il merge funziona ma il badge nel rendering non è ancora integrato in tutte le 4 sezioni (le voci atleta appaiono comunque mescolate; per distinguerle bisogna guardare il `team_name`).
+
+### 4. Elenchi staff collassabili
+`athlete/index.tsx`: aggiunto componente `CollapsibleStaffSection` (accordion normalmente chiuso) attorno ai 3 blocchi Allenatori / Dirigenti / Collaboratori nel widget "Staff della Società/Squadra". Contatore accanto al titolo.
+
+### 5. Saluto solo nome
+- `coach/index.tsx`: `Ciao, {full_name}` → `Ciao, {first_name}!`
+- `parent/index.tsx`: welcomeName `{full_name}` → `{first_name}`
+- `athlete/index.tsx`: profile card `{profile.full_name}` → `Ciao {profile.first_name}! 👋`
+- Admin e Collaboratore già usavano first_name (nessun cambio necessario).
+
+
 ## 🐛 01/07/2026 (SERALE-2) — Fix dual-role Prati Giulia: Scheda Compensi + Impegni unificati ✅
 
 ### 🐛 P0 — Bug bloccante scheda compensi Coach dual-role

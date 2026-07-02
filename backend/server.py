@@ -23079,6 +23079,10 @@ async def get_prime_squadre_athletes(current_user = Depends(get_current_user)):
     clean_mongo_docs(athletes)
     
     # Get coaches with is_compensated = True
+    # 🆕 02/07/2026 — Escludi coach dual-role (linked_athlete_id): sono già rappresentati
+    # come atleta nella stessa lista → evita doppioni. I loro compensi coach sono
+    # comunque tracciati nel record atleta per soglie 5k/15k.
+    _u_q_coach["linked_athlete_id"] = {"$in": [None, ""]}
     coaches = await db.users.find(_u_q_coach).to_list(50)
     clean_mongo_docs(coaches)
     

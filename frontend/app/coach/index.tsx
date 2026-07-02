@@ -152,8 +152,36 @@ export default function CoachScreen() {
 
   const loadCommitments = async () => {
     try {
-      const response = await api.get('/coach/commitments');
-      setCommitments(response.data);
+      // 🆕 02/07/2026 — Coach dual-role: merge con impegni atleta
+      let isDualRole = !!(user as any)?.linked_athlete_id;
+      if (!isDualRole) {
+        try {
+          const meRes = await api.get('/auth/me');
+          isDualRole = !!(meRes.data as any)?.linked_athlete_id;
+        } catch { /* fallback */ }
+      }
+      const [coachRes, athleteRes] = await Promise.all([
+        api.get('/coach/commitments').catch(() => ({ data: null })),
+        isDualRole ? api.get('/athlete/commitments').catch(() => ({ data: null })) : Promise.resolve({ data: null }),
+      ]);
+      if (!isDualRole) {
+        setCommitments(coachRes.data);
+        return;
+      }
+      const tag = (arr: any[] = [], as_role: 'atleta' | 'coach') => (arr || []).map((x) => ({ ...x, as_role }));
+      const sortBy = (a: any, b: any) => {
+        const ka = `${a.date || ''}T${a.time_start || '00:00'}`;
+        const kb = `${b.date || ''}T${b.time_start || '00:00'}`;
+        return ka.localeCompare(kb);
+      };
+      const c = coachRes?.data || { today: [], tomorrow: [], day_after: [], upcoming: [] };
+      const a = athleteRes?.data || { today: [], tomorrow: [], day_after: [], upcoming: [] };
+      setCommitments({
+        today: [...tag(c.today, 'coach'), ...tag(a.today, 'atleta')].sort(sortBy),
+        tomorrow: [...tag(c.tomorrow, 'coach'), ...tag(a.tomorrow, 'atleta')].sort(sortBy),
+        day_after: [...tag(c.day_after, 'coach'), ...tag(a.day_after, 'atleta')].sort(sortBy),
+        upcoming: [...tag(c.upcoming, 'coach'), ...tag(a.upcoming, 'atleta')].sort(sortBy),
+      });
     } catch (error) {
       console.error('Error loading commitments:', error);
     }
@@ -1555,7 +1583,7 @@ export default function CoachScreen() {
       >
         {/* Welcome */}
         <View style={styles.welcomeCard}>
-          <Text style={styles.welcomeText}>Ciao, {user?.full_name}! 👋</Text>
+          <Text style={styles.welcomeText}>Ciao, {(user?.first_name || (user?.full_name || '').split(' ')[0] || '').trim()}! 👋</Text>
           <Text style={styles.welcomeSubtext}>
             Seleziona una squadra per vedere gli atleti
           </Text>
