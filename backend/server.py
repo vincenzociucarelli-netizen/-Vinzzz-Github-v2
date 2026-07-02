@@ -4767,9 +4767,16 @@ async def get_parents(current_user = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Solo admin può vedere i genitori")
     
     society_id = current_user.get("society_id")
+    # 🆕 02/07/2026 — Filtro clean-slate: solo genitori attivi nella stagione corrente
+    from utils import get_current_season_for_society as _get_cs
+    _cs = await _get_cs(db, society_id)
     parents = await db.users.find({
         "role": UserRole.PARENT,
-        "society_id": society_id
+        "society_id": society_id,
+        "$or": [
+            {"active_seasons": _cs},
+            {"active_seasons": {"$exists": False}},
+        ],
     }).to_list(1000)
     
     # Batch fetch athlete counts using aggregation (avoid N+1 queries)

@@ -16,6 +16,18 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🐛 02/07/2026 (SERALE-3) — Fix conteggi + Genitori + Badge stagione ✅
+
+### 1️⃣ Conteggi errati nell'Archivio "Stagione Corrente"
+`GET /api/seasons/current` restituiva 17 atleti + 6 coach ma le liste operative erano vuote perché non filtrava per `active_seasons`. Fix: aggiunto filtro `active_seasons: current_season` (con fallback `$exists: false`) sia sugli atleti che sui coach. Testato: ora `total_athletes: 2` allineato con `/api/athletes`.
+
+### 2️⃣ Genitori dovevano essere spostati nella vecchia stagione
+La migrazione all'avvio già settava `active_seasons` per tutti gli users, inclusi i parents (avevano già `["2025-2026"]`). Mancava solo il filtro sull'endpoint `GET /api/users/parents`. Fix: aggiunto filtro `active_seasons: current_season` (con fallback). Testato: `parents count: 0` ora.
+
+### 3️⃣ Badge stagione sempre visibile
+Nuovo componente `src/services/SeasonBadge.tsx`: pill compatto con icona calendario + "2026-2027", cached in memoria per non fare fetch ripetuti. Integrato dentro `SocietyBranding` (header condiviso in tutte le pagine) → apparirà automaticamente in cima a ogni schermata che usa quel componente.
+
+
 ## 🔀 02/07/2026 — Switch ruolo dual-role ("Zaino Coach") ✅
 
 **Nuovo endpoint** `POST /api/auth/switch-role` (in `server.py`): valida che l'utente sia effettivamente dual-role (athlete → coach: richiede `linked_coach_user_id` sull'athlete; coach → athlete: richiede `linked_athlete_id` sull'user). Emette un nuovo JWT con `role=target_role` e restituisce token + user object aggiornato. Testato via curl (403 se non dual-role, 400 se target non valido).

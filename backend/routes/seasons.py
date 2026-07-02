@@ -81,15 +81,18 @@ async def get_current_season_data(current_user = Depends(get_current_user)):
     
     season_name = await get_current_season_for_society(db, current_user.get("society_id"))
     soc_q = _society_filter(current_user)
+    # 🆕 02/07/2026 — Filtro clean-slate: mostra solo atleti/coach appartenenti alla stagione corrente
+    active_or = [{"active_seasons": season_name}, {"active_seasons": {"$exists": False}}]
 
     teams = await db.teams.find(soc_q).to_list(100)
     clean_mongo_docs(teams)
 
-    athletes = await db.athletes.find(soc_q).to_list(1000)
+    athletes = await db.athletes.find({**soc_q, "$or": active_or}).to_list(1000)
     clean_mongo_docs(athletes)
 
     coaches = await db.users.find({
-        **soc_q, "role": UserRole.COACH, "status": UserStatus.APPROVED
+        **soc_q, "role": UserRole.COACH, "status": UserStatus.APPROVED,
+        "$or": active_or,
     }).to_list(100)
     clean_mongo_docs(coaches)
 

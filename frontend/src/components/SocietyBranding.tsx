@@ -85,6 +85,8 @@ export default function SocietyBranding({ light = true, logoSize = 40, style }: 
           {name}
         </Text>
       ) : null}
+      {/* 🆕 02/07/2026 — Badge stagione corrente, sempre visibile */}
+      <SeasonBadge compact />
     </View>
   );
 }
