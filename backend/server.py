@@ -4467,6 +4467,9 @@ class SocietySettingsUpdate(BaseModel):
     # Season settings
     season_start_month: Optional[int] = None  # Month when season starts (1-12, default 7 = July)
     season_start_day: Optional[int] = None  # Day when season starts (1-31, default 1)
+    # 🆕 02/07/2026 — Periodo di prova per rifirma privacy genitori a inizio nuova stagione
+    trial_max_trainings: Optional[int] = None  # Numero max allenamenti prima del blocco totale (default 3)
+    trial_max_days: Optional[int] = None  # Giorni max dal primo login prima del blocco totale (default 7)
     # Medical certificate settings
     block_expired_certificates: Optional[bool] = None  # If True, QR scan blocked for expired certificates
     override_keep_disabled: Optional[bool] = None  # If True, override stays disabled past midnight (admin responsibility)
@@ -4759,6 +4762,130 @@ async def get_staff_collaboratori(current_user = Depends(get_current_user)):
             "assigned_teams": c.get("assigned_teams", []),
         })
     return result
+
+
+# ============ 🆕 02/07/2026 — Rifirma privacy genitore a inizio nuova stagione ============
+
+@api_router.get("/parent/privacy-renewal-status")
+async def parent_privacy_renewal_status(current_user = Depends(get_current_user)):
+    """Restituisce lo stato del banner rifirma-privacy per il genitore corrente."""
+    if current_user.get("role") != UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Solo genitori")
+
+    must_sign = bool(current_user.get("privacy_pending_renewal"))
+    season = current_user.get("privacy_pending_renewal_season")
+    if not must_sign:
+        return {"must_sign": False, "blocking": False}
+
+    sid = current_user.get("society_id")
+    settings = await db.settings.find_one({"type": "society", "society_id": sid}) or {}
+    max_trainings = int(settings.get("trial_max_trainings", 3) or 3)
+    max_days = int(settings.get("trial_max_days", 7) or 7)
+
+    # Primo login: se non memorizzato, lo memorizzo adesso.
+    first_login = current_user.get("privacy_renewal_first_login")
+    now = datetime.utcnow()
+    if not first_login:
+        await db.users.update_one({"id": current_user["id"]}, {"$set": {"privacy_renewal_first_login": now.isoformat()}})
+        first_login_dt = now
+    else:
+        try:
+            first_login_dt = datetime.fromisoformat(first_login)
+        except Exception:
+            first_login_dt = now
+    days_elapsed = (now - first_login_dt).days
+
+    # Conteggio allenamenti frequentati dai figli minorenni nella nuova stagione
+    children = await db.athletes.find(
+        {"society_id": sid, "parent_id": current_user["id"]},
+        {"_id": 0, "id": 1}
+    ).to_list(20)
+    child_ids = [c["id"] for c in children]
+    trainings_attended = 0
+    if child_ids and season:
+        try:
+            season_start_year = int(season.split("-")[0])
+        except Exception:
+            season_start_year = now.year
+        start_iso = datetime(season_start_year, int(settings.get("season_start_month", 7) or 7), int(settings.get("season_start_day", 1) or 1)).isoformat()
+        trainings_attended = await db.attendance.count_documents({
+            "athlete_id": {"$in": child_ids},
+            "present": True,
+            "date": {"$gte": start_iso},
+        })
+
+    blocking = (trainings_attended >= max_trainings) or (days_elapsed >= max_days)
+    return {
+        "must_sign": True,
+        "blocking": blocking,
+        "season": season,
+        "trainings_attended": trainings_attended,
+        "max_trainings": max_trainings,
+        "days_elapsed": days_elapsed,
+        "max_days": max_days,
+    }
+
+
+class PrivacyDeclineBody(BaseModel):
+    reason: Optional[str] = None
+
+
+@api_router.post("/parent/privacy-renewal-decline")
+async def parent_privacy_renewal_decline(body: PrivacyDeclineBody, current_user = Depends(get_current_user)):
+    """Rinuncia alla nuova stagione: ritira gli atleti minorenni linkati + notifica coach.
+    Soft-delete (15gg per ripensamento)."""
+    if current_user.get("role") != UserRole.PARENT:
+        raise HTTPException(status_code=403, detail="Solo genitori")
+    sid = current_user.get("society_id")
+    now_iso = datetime.utcnow().isoformat()
+    children = await db.athletes.find(
+        {"society_id": sid, "parent_id": current_user["id"]},
+        {"_id": 0, "id": 1, "full_name": 1, "team_id": 1},
+    ).to_list(20)
+
+    withdrawn_ids = []
+    for c in children:
+        await db.athletes.update_one(
+            {"id": c["id"], "society_id": sid},
+            {"$set": {
+                "is_withdrawn": True,
+                "withdrawn_at": now_iso,
+                "withdrawn_reason": (body.reason or "Rinuncia genitore a rifirma privacy nuova stagione"),
+                "withdrawn_reversible_until": (datetime.utcnow() + timedelta(days=15)).isoformat(),
+            }},
+        )
+        withdrawn_ids.append(c["id"])
+
+        # Notifica in-app al coach della squadra
+        if c.get("team_id"):
+            team_coaches = await db.users.find(
+                {"role": UserRole.COACH, "assigned_teams": c["team_id"], "society_id": sid},
+                {"_id": 0, "id": 1},
+            ).to_list(10)
+            for coach in team_coaches:
+                await db.notifications.insert_one({
+                    "id": str(uuid.uuid4()),
+                    "society_id": sid,
+                    "user_id": coach["id"],
+                    "type": "athlete_withdrawn",
+                    "title": "⚠️ Ritiro atleta",
+                    "message": f"{current_user.get('full_name', 'Un genitore')} ha ritirato {c.get('full_name', 'un atleta')} dalla società (mancata rifirma privacy nuova stagione).",
+                    "read": False,
+                    "created_at": now_iso,
+                })
+
+    if current_user.get("privacy_pending_renewal_season"):
+        cs = current_user["privacy_pending_renewal_season"]
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$pull": {"active_seasons": cs}, "$set": {
+                "privacy_pending_renewal": False,
+                "privacy_declined_at": now_iso,
+                "privacy_declined_reason": body.reason,
+            }},
+        )
+    return {"withdrawn_athletes": len(withdrawn_ids), "reversible_until_days": 15}
+
 
 @api_router.get("/users/parents")
 async def get_parents(current_user = Depends(get_current_user)):

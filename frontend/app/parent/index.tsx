@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import { PrivacyRenewalBanner } from '../../src/components/PrivacyRenewalBanner';
 import {
   View,
   Text,
@@ -566,6 +567,9 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+        {/* 🆕 02/07/2026 — Banner rifirma privacy nuova stagione */}
+        <PrivacyRenewalBanner />
+
         {/* Pannello notifiche utente (solleciti, avvisi) */}
         {showUserNotifs && (
           <View style={{ backgroundColor: '#FFF8E1', marginHorizontal: 16, marginTop: 12, borderRadius: 12, padding: 14, borderLeftWidth: 4, borderLeftColor: '#FF9800' }} data-testid="user-notifications-panel">

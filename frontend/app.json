@@ -18,7 +18,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Scan QR codes to check athlete attendance",
         "NSPhotoLibraryUsageDescription": "Upload medical certificates for athletes"
-      }
+      },
+      "bundleIdentifier": "com.emergent.registrateamvol.sl9jk8"
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +30,8 @@
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE"
-      ]
+      ],
+      "package": "com.emergent.registrateamvol.sl9jk8"
     },
     "web": {
       "bundler": "metro",
