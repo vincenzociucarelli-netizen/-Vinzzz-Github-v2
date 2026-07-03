@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import { PrivacyRenewalBanner } from '../../src/components/PrivacyRenewalBanner';
+import { ConflictBanner } from '../../src/components/ConflictBanner';
 import {
   View,
   Text,

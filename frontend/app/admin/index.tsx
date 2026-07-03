@@ -19,6 +19,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import InstitutionalBadge from '../../src/components/InstitutionalBadge';
 import InstitutionalBanner from '../../src/components/InstitutionalBanner';
+import { AdminLiveStats } from '../../src/components/AdminLiveStats';
 import CompensationExportModal from '../../src/components/admin/CompensationExportModal';
 
 // Emoji icons for reliable cross-platform support
@@ -471,6 +472,9 @@ export default function AdminDashboard() {
           </Text>
           <InstitutionalBadge size="md" />
         </View>
+
+        {/* 🆕 03/07/2026 — Widget live: utenti online / privacy scaduta / ritiri reversibili */}
+        <AdminLiveStats />
 
         {/* Quick Stats */}
         {stats && (

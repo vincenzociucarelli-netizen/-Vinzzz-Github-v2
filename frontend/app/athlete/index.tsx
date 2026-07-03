@@ -19,6 +19,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { RoleSwitchButton } from '../../src/services/RoleSwitchButton';
+import { ConflictBanner } from '../../src/components/ConflictBanner';
 import { Ionicons } from '../../src/components/Icon';
 import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
 import { SportIcon } from '../../src/components/SportIcon';
@@ -570,6 +571,8 @@ export default function AthleteScreen() {
                 <Text style={{ fontSize: 18, fontWeight: '700', color: '#333' }} data-testid="athlete-name">Ciao {profile?.first_name || (profile?.full_name || '').split(' ')[0] || 'Atleta'}! 👋</Text>
                 <RoleSwitchButton targetRole="coach" visible={!!(profile as any)?.linked_coach_user_id} />
               </View>
+              {/* 🆕 03/07/2026 — Conflict banner dual-role */}
+              <ConflictBanner commitments={commitments as any} />
               <Text style={{ fontSize: 14, color: '#666', marginTop: 2 }}>
                 Squadra: <Text style={{ fontWeight: '600', color: '#E53935' }}>{profile?.team_name || 'Non assegnata'}</Text>
               </Text>

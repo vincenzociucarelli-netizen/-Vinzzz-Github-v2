@@ -21,6 +21,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import api from '../../src/services/api';
 import { RoleSwitchButton } from '../../src/services/RoleSwitchButton';
+import { ConflictBanner } from '../../src/components/ConflictBanner';
 import { Ionicons } from '../../src/components/Icon';
 import { Team } from '../../src/types';
 import { format } from 'date-fns';
@@ -1588,6 +1589,8 @@ export default function CoachScreen() {
             <Text style={styles.welcomeText}>Ciao, {(user?.first_name || (user?.full_name || '').split(' ')[0] || '').trim()}! 👋</Text>
             <RoleSwitchButton targetRole="athlete" visible={!!(user as any)?.linked_athlete_id} />
           </View>
+          {/* 🆕 03/07/2026 — Conflict banner dual-role */}
+          <ConflictBanner commitments={commitments as any} />
           <Text style={styles.welcomeSubtext}>
             Seleziona una squadra per vedere gli atleti
           </Text>

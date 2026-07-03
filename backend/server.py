@@ -1198,7 +1198,17 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         )
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
-        
+
+        # 🆕 03/07/2026 — Traccia "utenti online" (aggiornamento fire-and-forget del last_active_at)
+        try:
+            import asyncio as _asyncio
+            _asyncio.create_task(db.users.update_one(
+                {"id": user_id},
+                {"$set": {"last_active_at": datetime.utcnow().isoformat()}},
+            ))
+        except Exception:
+            pass
+
         return {
             "id": user_id, 
             "role": role, 
@@ -4885,6 +4895,42 @@ async def parent_privacy_renewal_decline(body: PrivacyDeclineBody, current_user 
             }},
         )
     return {"withdrawn_athletes": len(withdrawn_ids), "reversible_until_days": 15}
+
+
+# ============ 🆕 03/07/2026 — Widget dashboard admin: online count + privacy alert ============
+
+@api_router.get("/admin/dashboard-live-stats")
+async def admin_dashboard_live_stats(current_user = Depends(get_current_user)):
+    """Statistiche live per la dashboard admin:
+    - `online_users`: utenti attivi negli ultimi 5 minuti (any role, stessa società)
+    - `privacy_pending_count`: genitori con privacy da rifirmare per la nuova stagione
+    - `withdrawn_reversible_count`: atleti in soft-delete ancora reversibile (entro 15gg)
+    """
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    now = datetime.utcnow()
+    five_min_ago = (now - timedelta(minutes=5)).isoformat()
+
+    online_users = await db.users.count_documents({
+        "society_id": sid,
+        "last_active_at": {"$gte": five_min_ago},
+    })
+    privacy_pending_count = await db.users.count_documents({
+        "society_id": sid,
+        "role": UserRole.PARENT,
+        "privacy_pending_renewal": True,
+    })
+    withdrawn_reversible_count = await db.athletes.count_documents({
+        "society_id": sid,
+        "is_withdrawn": True,
+        "withdrawn_reversible_until": {"$gte": now.isoformat()},
+    })
+    return {
+        "online_users": online_users,
+        "privacy_pending_count": privacy_pending_count,
+        "withdrawn_reversible_count": withdrawn_reversible_count,
+    }
 
 
 @api_router.get("/users/parents")
