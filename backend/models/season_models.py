@@ -17,7 +17,12 @@ class SeasonArchive(BaseModel):
     teams: List[dict] = []
     coaches: List[dict] = []
     total_athletes: int = 0
+    total_athletes_minor: int = 0  # 🆕 02/07/2026 - Atleti U18 al momento dell'archiviazione
+    total_athletes_adult: int = 0  # 🆕 02/07/2026 - Atleti 18+ al momento dell'archiviazione
     total_teams: int = 0
+    total_coaches: int = 0
+    total_collaboratori: int = 0  # 🆕 02/07/2026
+    total_dirigenti: int = 0  # 🆕 02/07/2026 - Include VIEWER + DIRIGENTE
     created_at: datetime = Field(default_factory=datetime.utcnow)
     archived_at: Optional[datetime] = None
     archived_by: Optional[str] = None

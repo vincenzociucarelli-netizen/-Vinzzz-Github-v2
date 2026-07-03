@@ -182,6 +182,48 @@ async def archive_season(
         start_date = datetime(start_year, 7, 1)
         end_date = datetime(start_year + 1, 6, 30)
 
+    # 🆕 02/07/2026 — Conteggi separati per ruolo/età al momento dell'archiviazione.
+    # Filtriamo per `active_seasons` contenente la stagione da archiviare così l'archivio
+    # rappresenta chi era EFFETTIVAMENTE in quella stagione (non chi è stato ricaricato dopo).
+    soc_q = _society_filter(current_user)
+    season_scope = {"active_seasons": season_name}
+
+    # Atleti: split 18-/18+ usando date_of_birth alla data di start della stagione archiviata
+    athletes_docs = await db.athletes.find(
+        {**soc_q, **season_scope},
+        {"_id": 0, "id": 1, "date_of_birth": 1},
+    ).to_list(5000)
+    total_minor = 0
+    total_adult = 0
+    for a in athletes_docs:
+        bd = a.get("date_of_birth")
+        is_minor = False
+        if bd:
+            try:
+                bd_dt = datetime.fromisoformat(bd) if isinstance(bd, str) else bd
+                age_years = (start_date - bd_dt).days / 365.25
+                is_minor = age_years < 18
+            except Exception:
+                is_minor = False
+        if is_minor:
+            total_minor += 1
+        else:
+            total_adult += 1
+
+    # Staff: conteggio Coach, Collaboratori, Dirigenti (Viewer aggregato con Dirigenti)
+    total_coaches_count = await db.users.count_documents({
+        **soc_q, **season_scope,
+        "role": UserRole.COACH,
+    })
+    total_collab_count = await db.users.count_documents({
+        **soc_q, **season_scope,
+        "role": UserRole.COLLABORATORE,
+    })
+    total_dir_count = await db.users.count_documents({
+        **soc_q, **season_scope,
+        "role": {"$in": [UserRole.DIRIGENTE, UserRole.VIEWER]},
+    })
+
     archive = SeasonArchive(
         season_name=season_name,
         start_date=start_date,
@@ -191,8 +233,13 @@ async def archive_season(
         coaches=[{"name": c} for c in set(
             name for t in current_data["teams"] for name in t.get("coach_names", [])
         )],
-        total_athletes=current_data["total_athletes"],
+        total_athletes=len(athletes_docs),
+        total_athletes_minor=total_minor,
+        total_athletes_adult=total_adult,
         total_teams=current_data["total_teams"],
+        total_coaches=total_coaches_count,
+        total_collaboratori=total_collab_count,
+        total_dirigenti=total_dir_count,
         archived_at=now,
         archived_by=current_user["id"]
     )
@@ -256,15 +303,32 @@ async def list_season_members(
             {"society_id": sid, "active_seasons": season_name},
             {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1,
              "team_id": 1, "athlete_type": 1, "monthly_compensation": 1,
-             "other_annual_compensation": 1, "active_seasons": 1, "email": 1},
+             "other_annual_compensation": 1, "active_seasons": 1, "email": 1,
+             "date_of_birth": 1},
         ).sort([("last_name", 1), ("first_name", 1)]).to_list(5000)
         # Team names
         team_ids = list({d.get("team_id") for d in docs if d.get("team_id")})
         teams = await db.teams.find({"id": {"$in": team_ids}}, {"_id": 0, "id": 1, "name": 1}).to_list(200)
         team_name = {t["id"]: t["name"] for t in teams}
+        # 🆕 02/07/2026 - calcolo is_minor riferito alla data di start della stagione archiviata
+        try:
+            arch_start_year = int(season_name.split("-")[0])
+            arch_start_ref = datetime(arch_start_year, 9, 1)
+        except Exception:
+            arch_start_ref = datetime.utcnow()
         for d in docs:
             d["team_name"] = team_name.get(d.get("team_id"), "—")
             d["already_in_current"] = current_season in (d.get("active_seasons") or [])
+            bd = d.get("date_of_birth")
+            is_minor = False
+            if bd:
+                try:
+                    bd_dt = datetime.fromisoformat(bd) if isinstance(bd, str) else bd
+                    age_years = (arch_start_ref - bd_dt).days / 365.25
+                    is_minor = age_years < 18
+                except Exception:
+                    is_minor = False
+            d["is_minor"] = is_minor
         return {"season": season_name, "current_season": current_season, "type": type, "members": docs}
     else:
         # coach | collaboratore | dirigente | viewer
