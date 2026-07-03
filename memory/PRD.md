@@ -16,6 +16,34 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 03/07/2026 — Archivio Stagioni: conteggi Coach/Coll/Dir + Riconferma per categoria ✅
+
+### 1️⃣ Archivio Stagioni: mancavano conteggi Coach/Collaboratori/Dirigenti
+Il modello `SeasonArchive` salvava solo `total_teams` e `total_athletes`. Non c'era modo di sapere quanti Coach/Collab/Dir erano attivi in una stagione archiviata. Fix:
+- **`models/season_models.py`**: aggiunti `total_athletes_minor`, `total_athletes_adult`, `total_coaches`, `total_collaboratori`, `total_dirigenti`.
+- **`routes/seasons.py::archive_season`**: ora calcola i conteggi filtrando `active_seasons: season_name` per atleti/users; split minorenni/maggiorenni usando `date_of_birth` alla data di start della stagione archiviata.
+- **`routes/seasons.py::list_season_members`**: aggiunto flag `is_minor: bool` in ogni atleta della response.
+- **Frontend `seasons.tsx`**: due righe di stats — riga 1 "Squadre + Atleti (U18/18+)", riga 2 "Coach + Collab + Dirigenti". Fallback "—" per archivi legacy pre-aggiornamento + nota informativa.
+
+### 2️⃣ Bug import "api" in `season-reconfirm.tsx` → "Caricamento non riuscito"
+Il file usava `import { api } from '...'` come named export, ma `api.ts` esporta solo default. Le chiamate API silenziosamente non partivano. Fix: `import api from '...'`.
+
+### 3️⃣ Nuova UI Riconferma: 5 cartelle collassabili per categoria
+L'utente richiedeva di poter riconfermare gli utenti raggruppati per **categoria** (non più per squadra assegnata, dato che al rinnovo non è detto vengano riassegnati alle stesse squadre). Riscritto `season-reconfirm.tsx`:
+- Rimosse le tabs a pillole in alto (Atleti/Coach/Coll/Dir).
+- Fetch parallelo di 4 endpoint (`Promise.all` con `types = ['athletes','coach','collaboratore','dirigente']`) al mount.
+- 5 cartelle collassabili con colori distintivi: 🧒 Atleti U18 (blu) · 🧑 Atleti 18+ (verde) · 🏋️ Coach (arancio) · 💼 Dirigenti (viola) · 👷 Collaboratori (teal).
+- Ogni cartella: header cliccabile con freccia ▶/▼, badge conteggio "selezionati/totale", "Seleziona tutti (N)" al primo click, lista membri con checkbox + badge PRO + squadre assegnate + qualifica + email.
+- Split athlete_ids vs user_ids al submit → chiamata unica `POST /seasons/reconfirm-bulk`.
+
+**Testato via preview**: 20 U18 + 24 18+ + 6 Coach + 3 Dir + 3 Coll = 56 candidati. Espansione cartelle Coach/Dirigenti mostra correttamente FARO REMO, ALICE LUPI, MARZO LELLA, etc.
+
+**⚠️ Deploy required**: le modifiche sono in `02-05-2026` branch. Utente deve:
+1. Redeploy Render (backend) — Dashboard Render → servizio → Manual Deploy → Deploy latest commit.
+2. Redeploy Vercel (frontend) — se non auto-deploy, forzare via dashboard.
+3. Nuova archiviazione stagione per popolare i nuovi conteggi (gli archivi già esistenti mostrano "—" sui campi Coach/Collab/Dir finché non li si riarchivia).
+
+
 ## 🐛 02/07/2026 (SERALE-3) — Fix conteggi + Genitori + Badge stagione ✅
 
 ### 1️⃣ Conteggi errati nell'Archivio "Stagione Corrente"

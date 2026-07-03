@@ -40,6 +40,11 @@ interface ArchivedSeason {
   end_date: string;
   total_teams: number;
   total_athletes: number;
+  total_athletes_minor?: number;   // 🆕 02/07/2026
+  total_athletes_adult?: number;   // 🆕 02/07/2026
+  total_coaches?: number;          // 🆕 02/07/2026
+  total_collaboratori?: number;    // 🆕 02/07/2026
+  total_dirigenti?: number;        // 🆕 02/07/2026
   teams: TeamArchive[];
   archived_at: string;
 }
@@ -256,8 +261,41 @@ export default function SeasonsArchive() {
         <View style={styles.archivedStat}>
           <Text style={styles.archivedStatNumber}>{season.total_athletes}</Text>
           <Text style={styles.archivedStatLabel}>Atleti</Text>
+          {(season.total_athletes_minor !== undefined || season.total_athletes_adult !== undefined) && (
+            <Text style={styles.archivedStatSublabel}>
+              U18: {season.total_athletes_minor ?? 0} · 18+: {season.total_athletes_adult ?? 0}
+            </Text>
+          )}
         </View>
       </View>
+      {/* 🆕 02/07/2026 — Seconda riga: Coach / Collaboratori / Dirigenti */}
+      <View style={[styles.archivedSeasonStats, { marginTop: 8 }]}>
+        <View style={styles.archivedStat}>
+          <Text style={styles.archivedStatNumber}>
+            {season.total_coaches !== undefined ? season.total_coaches : '—'}
+          </Text>
+          <Text style={styles.archivedStatLabel}>🏋️ Coach</Text>
+        </View>
+        <View style={styles.archivedStatDivider} />
+        <View style={styles.archivedStat}>
+          <Text style={styles.archivedStatNumber}>
+            {season.total_collaboratori !== undefined ? season.total_collaboratori : '—'}
+          </Text>
+          <Text style={styles.archivedStatLabel}>👷 Collaboratori</Text>
+        </View>
+        <View style={styles.archivedStatDivider} />
+        <View style={styles.archivedStat}>
+          <Text style={styles.archivedStatNumber}>
+            {season.total_dirigenti !== undefined ? season.total_dirigenti : '—'}
+          </Text>
+          <Text style={styles.archivedStatLabel}>💼 Dirigenti</Text>
+        </View>
+      </View>
+      {(season.total_coaches === undefined && season.total_collaboratori === undefined && season.total_dirigenti === undefined) && (
+        <Text style={styles.legacyArchiveNote}>
+          ℹ️ Archivio creato prima dell&apos;aggiornamento. Elimina e riarchivia per vedere i conteggi Coach/Collaboratori/Dirigenti.
+        </Text>
+      )}
       
       {/* Teams in archived season */}
       {season.teams?.map((team, index) => (
@@ -650,6 +688,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#666',
     marginTop: 2,
+  },
+  archivedStatSublabel: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
+  legacyArchiveNote: {
+    fontSize: 11,
+    color: '#F57C00',
+    marginTop: 6,
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
   archivedStatDivider: {
     width: 1,
