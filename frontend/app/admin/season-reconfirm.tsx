@@ -29,8 +29,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import api from '../../src/services/api';
 
-type CategoryKey = 'athletes_minor' | 'athletes_adult' | 'coach' | 'dirigente' | 'collaboratore';
-type BackendType = 'athletes' | 'coach' | 'collaboratore' | 'dirigente';
+type CategoryKey = 'teams' | 'athletes_minor' | 'athletes_adult' | 'coach' | 'dirigente' | 'collaboratore';
+type BackendType = 'teams' | 'athletes' | 'coach' | 'collaboratore' | 'dirigente';
 
 interface Member {
   id: string;
@@ -49,14 +49,16 @@ interface Member {
   linked_athlete_id?: string;
   qualification?: string;
   is_minor?: boolean;
+  category?: string; // solo per teams
   _backendType?: BackendType; // set client-side per identificare l'origine
 }
 
 const CATEGORIES: { key: CategoryKey; icon: string; label: string; color: string }[] = [
-  { key: 'athletes_minor', icon: '🧒', label: 'Atleti U18', color: '#1976D2' },
-  { key: 'athletes_adult', icon: '🧑', label: 'Atleti 18+', color: '#388E3C' },
-  { key: 'coach',          icon: '🏋️', label: 'Coach',       color: '#F57C00' },
-  { key: 'dirigente',      icon: '💼', label: 'Dirigenti',   color: '#7B1FA2' },
+  { key: 'teams',          icon: '🏐', label: 'Squadre',      color: '#546E7A' },
+  { key: 'athletes_minor', icon: '🧒', label: 'Atleti U18',   color: '#1976D2' },
+  { key: 'athletes_adult', icon: '🧑', label: 'Atleti 18+',   color: '#388E3C' },
+  { key: 'coach',          icon: '🏋️', label: 'Coach',        color: '#F57C00' },
+  { key: 'dirigente',      icon: '💼', label: 'Dirigenti',    color: '#7B1FA2' },
   { key: 'collaboratore',  icon: '👷', label: 'Collaboratori', color: '#00796B' },
 ];
 
@@ -72,6 +74,7 @@ export default function SeasonReconfirmScreen() {
   const [busy, setBusy] = useState(false);
   // Cartelle: default TUTTE COLLASSATE (chiuse)
   const [expanded, setExpanded] = useState<Record<CategoryKey, boolean>>({
+    teams: false,
     athletes_minor: false,
     athletes_adult: false,
     coach: false,
@@ -88,8 +91,8 @@ export default function SeasonReconfirmScreen() {
     setLoading(true);
     setSelectedIds(new Set());
     try {
-      // 🆕 02/07/2026 - Fetch parallelo dei 4 tipi (athletes, coach, coll, dir)
-      const types: BackendType[] = ['athletes', 'coach', 'collaboratore', 'dirigente'];
+      // 🆕 02/07/2026 - Fetch parallelo dei 5 tipi (teams, athletes, coach, coll, dir)
+      const types: BackendType[] = ['teams', 'athletes', 'coach', 'collaboratore', 'dirigente'];
       const responses = await Promise.all(
         types.map(t => api.get(`/seasons/${encodeURIComponent(season)}/members?type=${t}`))
       );
@@ -111,13 +114,14 @@ export default function SeasonReconfirmScreen() {
   };
 
   const categorize = (m: Member): CategoryKey => {
+    if (m._backendType === 'teams') return 'teams';
     if (m._backendType === 'athletes') return m.is_minor ? 'athletes_minor' : 'athletes_adult';
     return m._backendType as CategoryKey;
   };
 
   const grouped = useMemo(() => {
     const g: Record<CategoryKey, Member[]> = {
-      athletes_minor: [], athletes_adult: [], coach: [], dirigente: [], collaboratore: [],
+      teams: [], athletes_minor: [], athletes_adult: [], coach: [], dirigente: [], collaboratore: [],
     };
     for (const m of members) {
       g[categorize(m)].push(m);
@@ -160,15 +164,17 @@ export default function SeasonReconfirmScreen() {
 
   const handleConfirm = async () => {
     if (selectedIds.size === 0) return;
-    // Split selected ids per backend type (athletes vs users)
+    // Split selected ids per backend type (athletes vs users vs teams)
     const athleteIds: string[] = [];
     const userIds: string[] = [];
+    const teamIds: string[] = [];
     for (const m of members) {
       if (!selectedIds.has(m.id)) continue;
       if (m._backendType === 'athletes') athleteIds.push(m.id);
+      else if (m._backendType === 'teams') teamIds.push(m.id);
       else userIds.push(m.id);
     }
-    const total = athleteIds.length + userIds.length;
+    const total = athleteIds.length + userIds.length + teamIds.length;
     const msg = `Confermi la riconferma di ${total} elemento/i per la stagione ${currentSeason}?`;
     const ok = Platform.OS === 'web' ? window.confirm(msg) : await new Promise<boolean>(res => {
       Alert.alert('Riconferma', msg, [
@@ -179,16 +185,18 @@ export default function SeasonReconfirmScreen() {
     if (!ok) return;
     setBusy(true);
     try {
-      const r = await api.post('/seasons/reconfirm-bulk', { athlete_ids: athleteIds, user_ids: userIds });
-      const conf = (r.data?.athletes?.confirmed || 0) + (r.data?.users?.confirmed || 0);
+      const r = await api.post('/seasons/reconfirm-bulk', { athlete_ids: athleteIds, user_ids: userIds, team_ids: teamIds });
+      const conf = (r.data?.athletes?.confirmed || 0) + (r.data?.users?.confirmed || 0) + (r.data?.teams?.confirmed || 0);
       const flagged = (r.data?.athletes?.pro_flagged || 0) + (r.data?.users?.pro_flagged || 0);
       const parentsAuto = r.data?.parents?.auto_confirmed || 0;
+      const teamsConf = r.data?.teams?.confirmed || 0;
       const flaggedMsg = flagged > 0 ? `\n\n${flagged} risultano compensati: appariranno nelle liste con il badge rosso "Compenso da riconfermare".` : '';
       const parentsMsg = parentsAuto > 0 ? `\n\n👨‍👩 Riconfermati automaticamente anche ${parentsAuto} genitori di minori. Dovranno rifirmare la privacy per la nuova stagione.` : '';
+      const teamsMsg = teamsConf > 0 ? `\n\n🏐 Ripristinate ${teamsConf} squadre nella stagione corrente.` : '';
       if (Platform.OS === 'web') {
-        window.alert(`✅ Riconfermati ${conf} per la stagione ${currentSeason}.${flaggedMsg}${parentsMsg}`);
+        window.alert(`✅ Riconfermati ${conf} per la stagione ${currentSeason}.${teamsMsg}${flaggedMsg}${parentsMsg}`);
       } else {
-        Alert.alert('Successo', `Riconfermati ${conf} per la stagione ${currentSeason}.${flaggedMsg}${parentsMsg}`);
+        Alert.alert('Successo', `Riconfermati ${conf} per la stagione ${currentSeason}.${teamsMsg}${flaggedMsg}${parentsMsg}`);
       }
       await loadAllMembers();
     } catch (err: any) {
@@ -281,7 +289,9 @@ export default function SeasonReconfirmScreen() {
                           const compTag = (m.monthly_compensation || 0) > 0 || (m.other_annual_compensation || 0) > 0 ? '💰 PRO' : '';
                           const teamsInfo = m._backendType === 'athletes'
                             ? m.team_name
-                            : (m.assigned_team_names && m.assigned_team_names.length > 0 ? m.assigned_team_names.join(', ') : null);
+                            : m._backendType === 'teams'
+                              ? m.category
+                              : (m.assigned_team_names && m.assigned_team_names.length > 0 ? m.assigned_team_names.join(', ') : null);
                           return (
                             <TouchableOpacity
                               key={m.id}

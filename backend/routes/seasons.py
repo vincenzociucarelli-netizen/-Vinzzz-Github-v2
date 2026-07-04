@@ -341,6 +341,7 @@ class ReconfirmBulkBody(BaseModel):
     """Payload per la riconferma multipla da vista archivio verso la stagione corrente."""
     athlete_ids: List[str] = Field(default_factory=list)
     user_ids: List[str] = Field(default_factory=list)
+    team_ids: List[str] = Field(default_factory=list)  # 🆕 04/07/2026
 
 
 @router.get("/seasons/{season_name}/members")
@@ -358,6 +359,24 @@ async def list_season_members(
     if not sid:
         raise HTTPException(status_code=400, detail="Società non identificata")
     current_season = await get_current_season_for_society(db, sid)
+
+    # 🆕 04/07/2026 — Cartella Squadre nella riconferma bulk
+    if type == "teams":
+        docs = await db.teams.find(
+            {"society_id": sid, "active_seasons": season_name},
+            {"_id": 0, "id": 1, "name": 1, "category": 1, "active_seasons": 1},
+        ).sort("name", 1).to_list(500)
+        fallback_used = False
+        if not docs:
+            fallback_used = True
+            docs = await db.teams.find(
+                {"society_id": sid},
+                {"_id": 0, "id": 1, "name": 1, "category": 1, "active_seasons": 1, "is_current": 1},
+            ).sort("name", 1).to_list(500)
+        for d in docs:
+            d["already_in_current"] = current_season in (d.get("active_seasons") or [])
+            d["full_name"] = d.get("name")  # per compatibilità con il rendering client
+        return {"season": season_name, "current_season": current_season, "type": type, "members": docs, "fallback_used": fallback_used}
 
     if type == "athletes":
         docs = await db.athletes.find(
@@ -550,11 +569,28 @@ async def reconfirm_bulk(
             await db.users.update_one({"id": u["id"], "society_id": sid}, update)
             usr_confirmed += 1
 
+    # Teams — 🆕 04/07/2026
+    teams_confirmed = 0
+    if body.team_ids:
+        cursor = db.teams.find(
+            {"id": {"$in": body.team_ids}, "society_id": sid},
+            {"_id": 0, "id": 1, "active_seasons": 1},
+        )
+        async for t in cursor:
+            if current_season in (t.get("active_seasons") or []):
+                continue
+            await db.teams.update_one(
+                {"id": t["id"], "society_id": sid},
+                {"$addToSet": {"active_seasons": current_season}},
+            )
+            teams_confirmed += 1
+
     return {
         "current_season": current_season,
         "athletes": {"confirmed": ath_confirmed, "pro_flagged": ath_pro_flagged},
         "users": {"confirmed": usr_confirmed, "pro_flagged": usr_pro_flagged},
         "parents": {"auto_confirmed": parents_confirmed},
+        "teams": {"confirmed": teams_confirmed},
     }
 
 
