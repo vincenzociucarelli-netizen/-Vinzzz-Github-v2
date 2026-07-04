@@ -136,6 +136,25 @@ export default function SeasonsArchive() {
     }
   };
 
+  // 🆕 04/07/2026 — Backfill reset assegnazioni (per users riconfermati con codice vecchio)
+  const handleBackfillReset = async () => {
+    const msg = `Reset delle assegnazioni per Coach/Collab/Dirigenti già riconfermati SENZA lo svuotamento automatico.\n\nEffetti:\n- squadre e palestre azzerate\n- snapshot precedente salvato\n- appariranno "Da riassegnare"\n\nNessun dato viene perso.\n\nProcedere?`;
+    const ok = Platform.OS === 'web' ? window.confirm(msg) : await new Promise<boolean>(res => {
+      Alert.alert('Reset assegnazioni', msg, [
+        { text: 'Annulla', style: 'cancel', onPress: () => res(false) },
+        { text: 'Procedi', onPress: () => res(true) },
+      ]);
+    });
+    if (!ok) return;
+    try {
+      const r = await api.post('/seasons/backfill-reset-assignments');
+      showAlert('Fatto', `${r.data?.reset_count || 0} utenti resettati per la stagione ${r.data?.current_season || ''}`);
+      await loadData();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Reset non riuscito');
+    }
+  };
+
   // 🆕 01/07/2026 — Elimina archivio erroneo
   const handleDeleteArchive = async (seasonName: string) => {
     const msg = `Eliminare l'archivio della stagione ${seasonName}?\n\nQuesto rimuove solo lo snapshot archiviato, NON i dati operativi.`;
@@ -378,6 +397,21 @@ export default function SeasonsArchive() {
 
             <Text style={styles.archiveNote}>
               💡 L&apos;archiviazione salva uno snapshot della stagione corrente. Può essere eseguita più volte.
+            </Text>
+
+            {/* 🆕 04/07/2026 — Backfill reset assegnazioni (per riconferme vecchie senza svuotamento) */}
+            <TouchableOpacity
+              onPress={handleBackfillReset}
+              style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F57C00', paddingVertical: 12, borderRadius: 8, gap: 8 }}
+              data-testid="backfill-reset-btn"
+            >
+              <Ionicons name="refresh-circle" size={20} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>
+                🔄 Reset assegnazioni Coach/Collab/Dir (riconferme vecchie)
+              </Text>
+            </TouchableOpacity>
+            <Text style={{ fontSize: 11, color: '#888', textAlign: 'center', marginTop: 4, fontStyle: 'italic' }}>
+              Applica lo &quot;svuota squadre + snapshot&quot; anche a chi era stato riconfermato prima del fix.
             </Text>
 
             {/* 🆕 01/07/2026 — Import riconfermati nella stagione corrente */}

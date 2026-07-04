@@ -615,7 +615,76 @@ async def reconfirm_bulk(
 
 
 # 🆕 04/07/2026 — Endpoint per richiedere all'atleta (o al genitore se minore)
-# di rifirmare privacy + accettare periodo di prova (post riconferma bulk)
+@router.post("/seasons/backfill-reset-assignments")
+async def backfill_reset_assignments(current_user = Depends(get_current_user)):
+    """Fix retroattivo: users riconfermati con il codice VECCHIO non hanno avuto le
+    assegnazioni svuotate. Questo endpoint rileva quelli con `active_seasons ⊃ current_season`
+    ma senza `assignment_pending_review=True` (indice del reset non applicato) e svuota
+    le loro `assigned_teams` / `assigned_gyms` salvando lo snapshot precedente."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    if not sid:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+    current_season = await get_current_season_for_society(db, sid)
+
+    q = {
+        "society_id": sid,
+        "active_seasons": current_season,
+        "role": {"$in": [UserRole.COACH, UserRole.COLLABORATORE, UserRole.DIRIGENTE, UserRole.VIEWER]},
+        "$or": [
+            {"assignment_pending_review": {"$exists": False}},
+            {"assignment_pending_review": False},
+        ],
+    }
+    fixed = 0
+    async for u in db.users.find(q, {"_id": 0, "id": 1, "assigned_teams": 1, "assigned_gyms": 1}):
+        teams_prev = u.get("assigned_teams") or []
+        gyms_prev = u.get("assigned_gyms") or []
+        if not teams_prev and not gyms_prev:
+            continue  # niente da resettare
+        await db.users.update_one(
+            {"id": u["id"], "society_id": sid},
+            {"$set": {
+                "assigned_teams_previous_season": teams_prev,
+                "assigned_gyms_previous_season": gyms_prev,
+                "assignment_pending_review": True,
+                "assignment_pending_review_season": current_season,
+                "assigned_teams": [],
+                "assigned_gyms": [],
+            }},
+        )
+        fixed += 1
+    return {"ok": True, "reset_count": fixed, "current_season": current_season}
+
+
+@router.post("/seasons/users/{user_id}/reset-assignments")
+async def reset_user_assignments(user_id: str, current_user = Depends(get_current_user)):
+    """Reset singolo utente: sposta assegnazioni in snapshot e mette in stato Da riassegnare."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    if not sid:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+    current_season = await get_current_season_for_society(db, sid)
+    u = await db.users.find_one({"id": user_id, "society_id": sid}, {"_id": 0, "id": 1, "assigned_teams": 1, "assigned_gyms": 1, "role": 1})
+    if not u:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    await db.users.update_one(
+        {"id": user_id, "society_id": sid},
+        {"$set": {
+            "assigned_teams_previous_season": u.get("assigned_teams") or [],
+            "assigned_gyms_previous_season": u.get("assigned_gyms") or [],
+            "assignment_pending_review": True,
+            "assignment_pending_review_season": current_season,
+            "assigned_teams": [],
+            "assigned_gyms": [],
+        }},
+    )
+    return {"ok": True, "current_season": current_season}
+
+
+# 🆕 04/07/2026 — Endpoint per richiedere all'atleta (o al genitore se minore)
 @router.post("/seasons/athletes/{athlete_id}/request-renewal")
 async def request_athlete_renewal(athlete_id: str, current_user = Depends(get_current_user)):
     """Admin ha assegnato l'atleta a una nuova squadra e vuole che rifirmi

@@ -2203,10 +2203,10 @@ export default function AdminAthleteDetail() {
                   </View>
                 )}
 
-                {athlete.status === 'pending_certificate' && (
+                {athlete.status === 'pending_certificate' && !certificate?.verified && (
                   <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
                     <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', marginBottom: 4 }}>Validazione Certificato</Text>
-                    <Text style={{ fontSize: 13, color: '#666' }}>Privacy firmata. In attesa della validazione del certificato medico da parte dell'admin.</Text>
+                    <Text style={{ fontSize: 13, color: '#666' }}>Privacy firmata. In attesa della validazione del certificato medico da parte dell&apos;admin.</Text>
                   </View>
                 )}
               </View>

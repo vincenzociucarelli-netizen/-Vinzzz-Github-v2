@@ -16,6 +16,22 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 04/07/2026 (pomeriggio) — Fix banner certificato + Backfill reset assegnazioni ✅
+
+### BUG 1 — Coach Andrea vede ancora U14/U16 (riconferma vecchia)
+Coach riconfermati con il codice VECCHIO (prima dello svuotamento automatico di `assigned_teams`) restano assegnati alle vecchie squadre. Il `reconfirm-bulk` è idempotente e li skippa.
+
+**Fix**:
+- **Backend `POST /api/seasons/backfill-reset-assignments`**: itera su tutti gli users della società con `active_seasons ⊃ current_season` MA senza `assignment_pending_review = true` e con assegnazioni valorizzate → svuota `assigned_teams` + `assigned_gyms`, salva snapshot in `_previous_season`, setta `assignment_pending_review = true`.
+- **Backend `POST /api/seasons/users/{id}/reset-assignments`**: reset singolo user.
+- **Frontend `/admin/seasons.tsx`**: pulsante arancio 🔄 "Reset assegnazioni Coach/Collab/Dir (riconferme vecchie)" nella card "Stagione Corrente".
+
+### BUG 2 — Banner "Validazione Certificato" appare anche se certificato validato
+`athlete.status === 'pending_certificate'` visibile pur avendo `certificate.verified = true`. Fix: aggiunto `&& !certificate?.verified` al condizionale del banner in `athlete/[id].tsx`.
+
+**⚠️ Deploy required**: Save to Github → Vercel + Render auto-deploy.
+
+
 ## 🆕 04/07/2026 — Cartella "Da controllare" post-riconferma bulk ✅
 
 Al termine della riconferma bulk (dagli archivi stagione precedente), atleti/coach/collaboratori/dirigenti riconfermati ora:
