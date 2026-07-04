@@ -2105,6 +2105,45 @@ export default function AdminAthleteDetail() {
           </View>
         )}
 
+        {/* 🆕 04/07/2026 — Banner "Riconferma da controllare" (post-riconferma bulk).
+            Mostra squadra precedente e permette all'admin di richiedere all'atleta
+            (o al genitore se minore) di firmare privacy + accettare periodo di prova. */}
+        {((athlete as any).team_id_previous_season || (athlete as any).privacy_pending_renewal) && (
+          <View style={{ margin: 12, padding: 12, backgroundColor: '#F3E5F5', borderLeftWidth: 4, borderLeftColor: '#9C27B0', borderRadius: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <Ionicons name="mail-unread" size={22} color="#6A1B9A" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: '700', color: '#6A1B9A', fontSize: 14 }}>
+                  Riconferma da controllare
+                </Text>
+                <Text style={{ color: '#4A148C', fontSize: 12, marginTop: 2 }}>
+                  L&apos;atleta è stato riconfermato dalla stagione precedente. Assegnalo alla nuova squadra e chiedigli di rifirmare la privacy + accettare il periodo di prova.
+                </Text>
+                {(athlete as any).team_id_previous_season && (
+                  <Text style={{ color: '#666', fontSize: 11, marginTop: 4, fontStyle: 'italic' }}>
+                    Squadra precedente: {(athlete as any).team_id_previous_season}
+                  </Text>
+                )}
+              </View>
+            </View>
+            <TouchableOpacity
+              onPress={async () => {
+                try {
+                  await api.post(`/seasons/athletes/${athlete.id}/request-renewal`);
+                  Alert.alert('Richiesta inviata', 'L&apos;atleta (o il genitore se minore) vedrà il banner Privacy al prossimo accesso e potrà firmare la privacy + accettare il periodo di prova.');
+                  await loadData();
+                } catch (e: any) {
+                  Alert.alert('Errore', e?.response?.data?.detail || 'Invio richiesta non riuscito');
+                }
+              }}
+              style={{ backgroundColor: '#6A1B9A', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 6, alignItems: 'center' }}
+              data-testid="request-renewal-btn"
+            >
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>📩 Reinvia richiesta privacy + periodo prova</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* 🆕 23/06/2026 — DA FARE TAB (impegni atleta 7 giorni) */}
         {activeTab === 'dafare' && athlete && (
           <AdminCoachCommitments

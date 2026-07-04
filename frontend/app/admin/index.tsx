@@ -468,7 +468,7 @@ export default function AdminDashboard() {
         <InstitutionalBanner />
         <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingTop: 16 }}>
           <Text style={[styles.welcomeText, { paddingHorizontal: 0, paddingTop: 0 }]}>
-            Benvenuto, {(user?.first_name || user?.full_name?.split(' ')[0] || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
+            Benvenuto {(user?.first_name || user?.full_name?.split(' ')[0] || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())},
           </Text>
           <InstitutionalBadge size="md" />
         </View>
@@ -1654,8 +1654,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   welcomeText: {
-    fontSize: 18,
-    color: '#333',
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#222',
     padding: 20,
     paddingBottom: 10,
   },
@@ -1664,8 +1665,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     marginHorizontal: 16,
     borderRadius: 12,
-    paddingVertical: 20,
-    paddingHorizontal: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1676,16 +1677,17 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingHorizontal: 4,
+    paddingVertical: 4,
   },
   quickStatNumber: {
-    fontSize: 22,
+    fontSize: 17,
     fontWeight: 'bold',
     color: '#007AFF',
   },
   quickStatLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#666',
-    marginTop: 6,
+    marginTop: 3,
     textAlign: 'center',
   },
   quickStatIconRow: {

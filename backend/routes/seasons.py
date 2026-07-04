@@ -614,6 +614,45 @@ async def reconfirm_bulk(
     }
 
 
+# 🆕 04/07/2026 — Endpoint per richiedere all'atleta (o al genitore se minore)
+# di rifirmare privacy + accettare periodo di prova (post riconferma bulk)
+@router.post("/seasons/athletes/{athlete_id}/request-renewal")
+async def request_athlete_renewal(athlete_id: str, current_user = Depends(get_current_user)):
+    """Admin ha assegnato l'atleta a una nuova squadra e vuole che rifirmi
+    privacy + periodo di prova. Setta i flag così che al prossimo login vedano il banner."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    if not sid:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+    current_season = await get_current_season_for_society(db, sid)
+    ath = await db.athletes.find_one({"id": athlete_id, "society_id": sid}, {"_id": 0, "id": 1, "parent_id": 1, "date_of_birth": 1})
+    if not ath:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    # 1) Atleta stesso
+    await db.athletes.update_one(
+        {"id": athlete_id, "society_id": sid},
+        {"$set": {
+            "privacy_pending_renewal": True,
+            "privacy_pending_renewal_season": current_season,
+            "status": "pending_privacy",
+        }},
+    )
+    # 2) Genitore se minore
+    parent_confirmed = False
+    parent_id = ath.get("parent_id")
+    if parent_id:
+        p_res = await db.users.update_one(
+            {"id": parent_id, "society_id": sid, "role": "parent"},
+            {"$set": {
+                "privacy_pending_renewal": True,
+                "privacy_pending_renewal_season": current_season,
+            }},
+        )
+        parent_confirmed = p_res.modified_count > 0
+    return {"ok": True, "parent_notified": parent_confirmed, "season": current_season}
+
+
 @router.get("/seasons/{season_name}")
 async def get_season_archive(season_name: str, current_user = Depends(get_current_user)):
     """Get specific season archive details — scoped to current admin's society."""

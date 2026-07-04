@@ -34,17 +34,17 @@ export const AdminLiveStats: React.FC = () => {
   const Item = ({ icon, color, count, label, testId, onPress, dotColor }: any) => (
     <TouchableOpacity
       onPress={onPress}
-      style={{ flex: 1, backgroundColor: '#fff', borderRadius: 10, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: '#EEE' }}
+      style={{ flex: 1, backgroundColor: '#fff', borderRadius: 10, padding: 6, alignItems: 'center', borderWidth: 1, borderColor: '#EEE' }}
       data-testid={testId}
     >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
         {dotColor && (
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: dotColor }} />
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: dotColor }} />
         )}
-        <Ionicons name={icon} size={16} color={color} />
+        <Ionicons name={icon} size={13} color={color} />
       </View>
-      <Text style={{ fontSize: 22, fontWeight: '800', color, marginTop: 2 }}>{count}</Text>
-      <Text style={{ fontSize: 10, color: '#666', textAlign: 'center', marginTop: 2 }}>{label}</Text>
+      <Text style={{ fontSize: 16, fontWeight: '800', color, marginTop: 1 }}>{count}</Text>
+      <Text style={{ fontSize: 9, color: '#666', textAlign: 'center', marginTop: 1 }}>{label}</Text>
     </TouchableOpacity>
   );
 
