@@ -185,6 +185,8 @@ async def archive_season(
     # 🆕 02/07/2026 — Conteggi separati per ruolo/età al momento dell'archiviazione.
     # Filtriamo per `active_seasons` contenente la stagione da archiviare così l'archivio
     # rappresenta chi era EFFETTIVAMENTE in quella stagione (non chi è stato ricaricato dopo).
+    # 🆕 03/07/2026 — FALLBACK: se nessuno ha `active_seasons: season_name` (migrazione
+    # mancante), archivia il CENSIMENTO ATTUALE della società (tutti gli users/athletes).
     soc_q = _society_filter(current_user)
     season_scope = {"active_seasons": season_name}
 
@@ -193,6 +195,13 @@ async def archive_season(
         {**soc_q, **season_scope},
         {"_id": 0, "id": 1, "date_of_birth": 1},
     ).to_list(5000)
+    fallback_athletes = False
+    if not athletes_docs:
+        fallback_athletes = True
+        athletes_docs = await db.athletes.find(
+            soc_q,
+            {"_id": 0, "id": 1, "date_of_birth": 1},
+        ).to_list(5000)
     total_minor = 0
     total_adult = 0
     for a in athletes_docs:
@@ -211,18 +220,18 @@ async def archive_season(
             total_adult += 1
 
     # Staff: conteggio Coach, Collaboratori, Dirigenti (Viewer aggregato con Dirigenti)
-    total_coaches_count = await db.users.count_documents({
-        **soc_q, **season_scope,
-        "role": UserRole.COACH,
-    })
-    total_collab_count = await db.users.count_documents({
-        **soc_q, **season_scope,
-        "role": UserRole.COLLABORATORE,
-    })
-    total_dir_count = await db.users.count_documents({
-        **soc_q, **season_scope,
-        "role": {"$in": [UserRole.DIRIGENTE, UserRole.VIEWER]},
-    })
+    async def _count_users(roles: list) -> int:
+        q_scoped = {**soc_q, **season_scope, "role": {"$in": roles} if isinstance(roles, list) else roles}
+        n = await db.users.count_documents(q_scoped)
+        if n == 0:
+            # fallback: conta tutti gli utenti della società con quel ruolo
+            q_all = {**soc_q, "role": {"$in": roles} if isinstance(roles, list) else roles}
+            n = await db.users.count_documents(q_all)
+        return n
+
+    total_coaches_count = await _count_users([UserRole.COACH])
+    total_collab_count = await _count_users([UserRole.COLLABORATORE])
+    total_dir_count = await _count_users([UserRole.DIRIGENTE, UserRole.VIEWER])
 
     archive = SeasonArchive(
         season_name=season_name,
@@ -274,6 +283,58 @@ async def delete_season_archive(season_name: str, current_user = Depends(get_cur
     return {"message": f"Archivio {season_name} eliminato", "season_name": season_name}
 
 
+# 🆕 03/07/2026 — Diagnostica active_seasons
+@router.get("/seasons/diagnose")
+async def diagnose_active_seasons(current_user = Depends(get_current_user)):
+    """Diagnostica: mostra come sono distribuiti i valori di `active_seasons` fra
+    atleti, users (per ruolo) e teams della società. Utile per capire perché le
+    liste operative o gli archivi possono apparire vuoti."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    if not sid:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+    current_season = await get_current_season_for_society(db, sid)
+
+    def _key(as_val):
+        if as_val is None:
+            return "MISSING"
+        if not isinstance(as_val, list):
+            return f"NOT_LIST({type(as_val).__name__})"
+        if len(as_val) == 0:
+            return "EMPTY_LIST"
+        return "|".join(sorted(str(x) for x in as_val))
+
+    async def _scan(coll, extra=None):
+        q = {"society_id": sid}
+        if extra:
+            q.update(extra)
+        buckets: dict[str, int] = {}
+        total = 0
+        async for d in coll.find(q, {"_id": 0, "active_seasons": 1}):
+            total += 1
+            k = _key(d.get("active_seasons"))
+            buckets[k] = buckets.get(k, 0) + 1
+        return {"total": total, "by_active_seasons": buckets}
+
+    out = {
+        "society_id": sid,
+        "current_season": current_season,
+        "athletes": await _scan(db.athletes),
+        "teams": await _scan(db.teams),
+        "users_by_role": {
+            "admin": await _scan(db.users, {"role": UserRole.ADMIN}),
+            "coach": await _scan(db.users, {"role": UserRole.COACH}),
+            "collaboratore": await _scan(db.users, {"role": UserRole.COLLABORATORE}),
+            "dirigente": await _scan(db.users, {"role": UserRole.DIRIGENTE}),
+            "viewer": await _scan(db.users, {"role": UserRole.VIEWER}),
+            "genitore": await _scan(db.users, {"role": UserRole.PARENT}),
+            "athlete_user": await _scan(db.users, {"role": UserRole.ATHLETE}),
+        },
+    }
+    return out
+
+
 # ==================== 🆕 01/07/2026 — Riconferma da archivio ====================
 
 class ReconfirmBulkBody(BaseModel):
@@ -306,6 +367,21 @@ async def list_season_members(
              "other_annual_compensation": 1, "active_seasons": 1, "email": 1,
              "date_of_birth": 1},
         ).sort([("last_name", 1), ("first_name", 1)]).to_list(5000)
+        # 🆕 03/07/2026 — FALLBACK: se il campo `active_seasons` è vuoto/inconsistente
+        # (migrazione mancante o pre-Clean-Slate), mostriamo TUTTI gli atleti della società
+        # che NON sono già nella stagione corrente. Così l'admin può comunque riconfermarli.
+        fallback_used = False
+        if not docs:
+            fallback_used = True
+            docs = await db.athletes.find(
+                {"society_id": sid},
+                {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1,
+                 "team_id": 1, "athlete_type": 1, "monthly_compensation": 1,
+                 "other_annual_compensation": 1, "active_seasons": 1, "email": 1,
+                 "date_of_birth": 1, "status": 1},
+            ).sort([("last_name", 1), ("first_name", 1)]).to_list(5000)
+            # Non escludiamo nulla qui: `already_in_current` verrà settato sotto e
+            # gli elementi già in stagione corrente appariranno disabilitati nella UI.
         # Team names
         team_ids = list({d.get("team_id") for d in docs if d.get("team_id")})
         teams = await db.teams.find({"id": {"$in": team_ids}}, {"_id": 0, "id": 1, "name": 1}).to_list(200)
@@ -329,7 +405,7 @@ async def list_season_members(
                 except Exception:
                     is_minor = False
             d["is_minor"] = is_minor
-        return {"season": season_name, "current_season": current_season, "type": type, "members": docs}
+        return {"season": season_name, "current_season": current_season, "type": type, "members": docs, "fallback_used": fallback_used}
     else:
         # coach | collaboratore | dirigente | viewer
         role_map = {
@@ -347,6 +423,17 @@ async def list_season_members(
              "other_annual_compensation": 1, "active_seasons": 1,
              "qualification": 1, "linked_athlete_id": 1},
         ).sort("full_name", 1).to_list(5000)
+        # 🆕 03/07/2026 — FALLBACK come sopra per Coach/Collab/Dirigenti.
+        fallback_used = False
+        if not docs:
+            fallback_used = True
+            docs = await db.users.find(
+                {"society_id": sid, "role": {"$in": roles}},
+                {"_id": 0, "id": 1, "email": 1, "full_name": 1, "role": 1,
+                 "assigned_teams": 1, "monthly_compensation": 1,
+                 "other_annual_compensation": 1, "active_seasons": 1,
+                 "qualification": 1, "linked_athlete_id": 1, "status": 1},
+            ).sort("full_name", 1).to_list(5000)
         # Team names
         all_team_ids = set()
         for d in docs:
@@ -357,7 +444,7 @@ async def list_season_members(
         for d in docs:
             d["assigned_team_names"] = [team_name.get(tid, "—") for tid in (d.get("assigned_teams") or [])]
             d["already_in_current"] = current_season in (d.get("active_seasons") or [])
-        return {"season": season_name, "current_season": current_season, "type": type, "members": docs}
+        return {"season": season_name, "current_season": current_season, "type": type, "members": docs, "fallback_used": fallback_used}
 
 
 @router.post("/seasons/reconfirm-bulk")
