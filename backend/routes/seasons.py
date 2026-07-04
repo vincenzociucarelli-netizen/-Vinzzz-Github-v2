@@ -195,9 +195,7 @@ async def archive_season(
         {**soc_q, **season_scope},
         {"_id": 0, "id": 1, "date_of_birth": 1},
     ).to_list(5000)
-    fallback_athletes = False
     if not athletes_docs:
-        fallback_athletes = True
         athletes_docs = await db.athletes.find(
             soc_q,
             {"_id": 0, "id": 1, "date_of_birth": 1},
@@ -492,7 +490,8 @@ async def reconfirm_bulk(
             {"id": {"$in": body.athlete_ids}, "society_id": sid},
             {"_id": 0, "id": 1, "athlete_type": 1, "monthly_compensation": 1,
              "other_annual_compensation": 1, "active_seasons": 1,
-             "parent_id": 1, "birth_date": 1},
+             "parent_id": 1, "birth_date": 1,
+             "team_id": 1, "status": 1},
         )
         # Calcolo maggiore/minore età alla data di start della stagione corrente
         try:
@@ -503,10 +502,20 @@ async def reconfirm_bulk(
         async for a in cursor:
             if current_season in (a.get("active_seasons") or []):
                 continue  # già riconfermato → skip idempotente
-            update = {"$addToSet": {"active_seasons": current_season}}
+            # 🆕 04/07/2026 — Snapshot precedente + reset team + status "pending"
+            update: dict = {
+                "$addToSet": {"active_seasons": current_season},
+                "$set": {
+                    "status": "pending",  # In attesa (admin riassegnerà squadra/palestra)
+                    "team_id_previous_season": a.get("team_id"),
+                    "status_previous_season": a.get("status"),
+                    "privacy_pending_renewal": True,  # atleta rifirmerà privacy
+                    "privacy_pending_renewal_season": current_season,
+                },
+                "$unset": {"team_id": ""},
+            }
             is_pro = a.get("athlete_type") == "compensated" or (a.get("monthly_compensation") or 0) > 0 or (a.get("other_annual_compensation") or 0) > 0
             if is_pro:
-                update.setdefault("$set", {})
                 update["$set"].update({
                     "pro_data_pending_review": True,
                     "pro_data_pending_review_season": current_season,
@@ -550,15 +559,26 @@ async def reconfirm_bulk(
         cursor = db.users.find(
             {"id": {"$in": body.user_ids}, "society_id": sid},
             {"_id": 0, "id": 1, "role": 1, "monthly_compensation": 1,
-             "other_annual_compensation": 1, "active_seasons": 1},
+             "other_annual_compensation": 1, "active_seasons": 1,
+             "assigned_teams": 1, "assigned_gyms": 1},
         )
         async for u in cursor:
             if current_season in (u.get("active_seasons") or []):
                 continue
-            update = {"$addToSet": {"active_seasons": current_season}}
+            # 🆕 04/07/2026 — Snapshot precedente + reset assegnazioni (admin riassegnerà)
+            update: dict = {
+                "$addToSet": {"active_seasons": current_season},
+                "$set": {
+                    "assigned_teams_previous_season": u.get("assigned_teams") or [],
+                    "assigned_gyms_previous_season": u.get("assigned_gyms") or [],
+                    "assignment_pending_review": True,
+                    "assignment_pending_review_season": current_season,
+                    "assigned_teams": [],
+                    "assigned_gyms": [],
+                },
+            }
             is_pro = (u.get("monthly_compensation") or 0) > 0 or (u.get("other_annual_compensation") or 0) > 0
             if is_pro:
-                update.setdefault("$set", {})
                 update["$set"].update({
                     "pro_data_pending_review": True,
                     "pro_data_pending_review_season": current_season,

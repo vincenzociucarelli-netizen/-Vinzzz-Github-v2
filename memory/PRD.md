@@ -16,6 +16,22 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 04/07/2026 — Cartella "Da controllare" post-riconferma bulk ✅
+
+Al termine della riconferma bulk (dagli archivi stagione precedente), atleti/coach/collaboratori/dirigenti riconfermati ora:
+- **Atleti**: status → `pending` ("In attesa"), `team_id` svuotato, snapshot in `team_id_previous_season` + `status_previous_season`, flag `privacy_pending_renewal = True` (dovranno rifirmare privacy + accettare periodo di prova).
+- **Coach/Collab/Dirig**: `assigned_teams` e `assigned_gyms` svuotati, snapshot in `assigned_teams_previous_season` + `assigned_gyms_previous_season`, flag `assignment_pending_review = True`.
+- Idempotente: chi è già in stagione corrente viene skippato.
+
+Frontend:
+- **`athletes.tsx`**: sezione speciale in cima `🗂️ Da controllare (N) · riconferme + nuove iscrizioni` (bordo/badge viola). Include atleti in tutti gli stati `pending*` (nuove iscrizioni) + quelli con `team_id_previous_season` valorizzato (riconferme). Sotto ogni card mostra riga grigia _"Prec.: [squadra] · da riconfermare"_.
+- **`coaches.tsx`**, **`collaboratori.tsx`**, **`dirigenti.tsx`**: riga grigia _"Prec.: [squadre] · da riconfermare"_ quando `assignment_pending_review = True`.
+
+**Testato via preview**: BIANCHI SOFIA riconfermata → appare in cima con "In attesa" + badge compenso, squadra "—". Le altre (BABBI CARLA) restano nella sezione alfabetica normale.
+
+**⚠️ Deploy required**: Save to Github → Vercel + Render auto-deploy.
+
+
 ## 🆕 03/07/2026 — Archivio Stagioni: conteggi Coach/Coll/Dir + Riconferma per categoria ✅
 
 ### 1️⃣ Archivio Stagioni: mancavano conteggi Coach/Collaboratori/Dirigenti

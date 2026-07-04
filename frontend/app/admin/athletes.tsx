@@ -446,9 +446,21 @@ export default function AdminAthletes() {
 
   // Group athletes by first letter of surname for sections
   const sections = useMemo(() => {
+    // 🆕 04/07/2026 — Sezione speciale in cima "Da controllare":
+    //   Include atleti in stato "pending"/"pending_email" (nuove iscrizioni)
+    //   e atleti riconfermati dall'archivio (hanno team_id_previous_season).
+    const toReview: Athlete[] = [];
+    const others: Athlete[] = [];
+    processedAthletes.forEach(a => {
+      const st = (a as any).status;
+      const hasPrev = !!(a as any).team_id_previous_season;
+      const isPending = st === 'pending' || st === 'pending_email' || st === 'pending_privacy' || st === 'pending_certificate' || st === 'pending_trial';
+      if (isPending || hasPrev) toReview.push(a);
+      else others.push(a);
+    });
+
     const grouped: { [key: string]: Athlete[] } = {};
-    
-    processedAthletes.forEach(athlete => {
+    others.forEach(athlete => {
       const surname = getSurname(athlete);
       const firstLetter = surname.charAt(0).toUpperCase() || '#';
       if (!grouped[firstLetter]) {
@@ -457,12 +469,20 @@ export default function AdminAthletes() {
       grouped[firstLetter].push(athlete);
     });
 
-    return Object.keys(grouped)
+    const alphaSections = Object.keys(grouped)
       .sort((a, b) => a.localeCompare(b, 'it'))
       .map(letter => ({
         title: letter,
         data: grouped[letter],
       }));
+
+    if (toReview.length > 0) {
+      return [
+        { title: `🗂️ Da controllare (${toReview.length}) · riconferme + nuove iscrizioni`, data: toReview, isReview: true },
+        ...alphaSections,
+      ] as any;
+    }
+    return alphaSections;
   }, [processedAthletes]);
 
   // Get available letters for sidebar
@@ -586,9 +606,15 @@ export default function AdminAthletes() {
           styles.teamName,
           (item as any).athlete_type === 'compensated' && styles.teamNameCompensated
         ]} numberOfLines={1}>
-          {teams[item.team_id]?.name || '-'}
+          {teams[item.team_id]?.name || '—'}
           {(item as any).athlete_type === 'compensated' && ' • Retribuito'}
         </Text>
+        {/* 🆕 04/07/2026 — Snapshot squadra precedente (post-riconferma bulk) */}
+        {(item as any).team_id_previous_season && !item.team_id && (
+          <Text style={styles.previousSeasonHint} numberOfLines={1} data-testid={`athlete-prev-team-${item.id}`}>
+            Prec.: {teams[(item as any).team_id_previous_season]?.name || 'squadra sconosciuta'} · da riconfermare
+          </Text>
+        )}
       </View>
       <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item) + '20' }]}>
         <Text style={[styles.statusText, { color: getStatusColor(item) }]}>
@@ -599,9 +625,11 @@ export default function AdminAthletes() {
     </TouchableOpacity>
   );
 
-  const renderSectionHeader = ({ section }: { section: { title: string } }) => (
-    <View style={styles.sectionHeader}>
-      <Text style={styles.sectionHeaderText}>{section.title}</Text>
+  const renderSectionHeader = ({ section }: { section: { title: string; isReview?: boolean } }) => (
+    <View style={[styles.sectionHeader, section.isReview && styles.sectionHeaderReview]}>
+      <Text style={[styles.sectionHeaderText, section.isReview && styles.sectionHeaderTextReview]}>
+        {section.title}
+      </Text>
     </View>
   );
 
@@ -1228,6 +1256,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     color: '#007AFF',
+  },
+  sectionHeaderReview: {
+    backgroundColor: '#F3E5F5',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#9C27B0',
+    marginBottom: 2,
+  },
+  sectionHeaderTextReview: {
+    color: '#6A1B9A',
+    fontSize: 13,
+  },
+  previousSeasonHint: {
+    fontSize: 11,
+    color: '#9E9E9E',
+    fontStyle: 'italic',
+    marginTop: 2,
   },
   athleteCard: {
     backgroundColor: '#fff',

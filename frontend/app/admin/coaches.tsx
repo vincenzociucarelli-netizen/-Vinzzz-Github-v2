@@ -388,6 +388,13 @@ export default function CoachesScreen() {
           <Text style={styles.userTeams} numberOfLines={1}>
             {getTeamNames(item.assigned_teams)}
           </Text>
+          {/* 🆕 04/07/2026 — Snapshot squadre/palestre precedenti (post-riconferma bulk) */}
+          {(item as any).assignment_pending_review && (
+            <Text style={{ fontSize: 11, color: '#9E9E9E', fontStyle: 'italic', marginTop: 2 }} numberOfLines={2}
+              data-testid={`coach-prev-teams-${item.id}`}>
+              Prec.: {getTeamNames((item as any).assigned_teams_previous_season) || '—'} · da riconfermare
+            </Text>
+          )}
           <View style={styles.userMeta}>
             <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
             <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
