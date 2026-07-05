@@ -8398,9 +8398,12 @@ async def update_athlete_approval(athlete_id: str, data: AthleteApprovalUpdate, 
     
     # If approving, create payment records
     if data.status in [AthleteStatus.TRIAL, AthleteStatus.ACTIVE]:
-        # Check if payments already exist
-        existing_payments = await db.payments.count_documents({"athlete_id": athlete_id})
-        if existing_payments == 0:
+        # Check if payments already exist for CURRENT season (ignora archiviati)
+        existing_payments = await db.payments.count_documents({
+            "athlete_id": athlete_id,
+            "$or": [{"is_previous_season": {"$ne": True}}, {"is_previous_season": {"$exists": False}}],
+        })
+        if existing_payments == 0 and athlete.get("team_id"):
             team = await db.teams.find_one({"id": athlete["team_id"]})
             if team and team.get("installment_1_amount", 0) > 0:
                 trial_end = update_data.get("trial_end_date", datetime.utcnow())

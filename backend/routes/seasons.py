@@ -689,8 +689,10 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
                     "privacy_pending_renewal": True,
                     "privacy_pending_renewal_season": current_season,
                     "status": "pending",
+                    "privacy_accepted": False,
+                    "privacy_accepted_previous_season": True,
                 },
-                "$unset": {"team_id": ""},
+                "$unset": {"team_id": "", "privacy_accepted_at": "", "privacy_accepted_by": ""},
             },
         )
         # Archivia i pagamenti (marca stagione precedente + flag). Non li cancella.
@@ -714,6 +716,19 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
             {"$set": {"season": prev_season, "is_previous_season": True}},
         )
         payments_archived += p_res2.modified_count
+        # 🆕 05/07/2026 — Reset privacy anche per atleti già-resettati in precedenza
+        await db.athletes.update_one(
+            {"id": a["id"], "society_id": sid},
+            {
+                "$set": {
+                    "privacy_pending_renewal": True,
+                    "privacy_pending_renewal_season": current_season,
+                    "privacy_accepted": False,
+                    "privacy_accepted_previous_season": True,
+                },
+                "$unset": {"privacy_accepted_at": "", "privacy_accepted_by": ""},
+            },
+        )
 
     return {"ok": True, "reset_count": fixed, "athletes_reset": fixed_ath, "payments_archived": payments_archived, "current_season": current_season}
 
