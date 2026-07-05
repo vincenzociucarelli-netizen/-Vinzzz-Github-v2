@@ -3858,14 +3858,27 @@ export default function AdminAthleteDetail() {
         {activeTab === 'presenze' && (
           <>
           {/* 🆕 22/02/2026 — Card "Periodo di Prova" (solo atleti quota in trial) — spostata da Anagrafica */}
-          {athlete.status === 'trial' && athleteType === 'quota' && (
+          {athlete.status === 'trial' && athleteType === 'quota' && (() => {
+            // 🆕 05/07/2026 — La prova è ATTIVA solo se:
+            //  1) la dichiarazione è stata firmata
+            //  2) il coach ha fatto la prima scansione QR (trial_start_date valorizzato)
+            // I 7gg / 3 allenamenti decorrono dalla prima scansione.
+            const trialActive = !!athlete.trial_document_generated && !!athlete.trial_start_date;
+            return (
             <View style={styles.card}>
               <Text style={[styles.cardTitle, { marginTop: 0 }]}>🏁 Periodo di Prova</Text>
-              <View style={{ backgroundColor: athlete.trial_start_date ? '#E3F2FD' : '#F3E5F5', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: athlete.trial_start_date ? '#1976D2' : '#9C27B0', marginTop: 8 }} data-testid="admin-trial-info-box">
-                <Text style={{ fontSize: 15, fontWeight: '700', color: athlete.trial_start_date ? '#1565C0' : '#7B1FA2', marginBottom: 8 }}>
-                  {athlete.trial_start_date ? 'Periodo di prova attivo' : 'In attesa di inizio prova'}
+              <View style={{ backgroundColor: trialActive ? '#E3F2FD' : '#F3E5F5', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: trialActive ? '#1976D2' : '#9C27B0', marginTop: 8 }} data-testid="admin-trial-info-box">
+                <Text style={{ fontSize: 15, fontWeight: '700', color: trialActive ? '#1565C0' : '#7B1FA2', marginBottom: 8 }}>
+                  {trialActive ? 'Periodo di prova attivo' : 'In attesa di inizio prova'}
                 </Text>
-                {athlete.trial_start_date && (
+                {!trialActive && (
+                  <Text style={{ fontSize: 12, color: '#7B1FA2', marginBottom: 8, fontStyle: 'italic' }}>
+                    {!athlete.trial_document_generated
+                      ? 'La dichiarazione di prova deve essere firmata dal genitore.'
+                      : 'La prova partirà al primo allenamento (scansione QR del coach).'}
+                  </Text>
+                )}
+                {trialActive && (
                   <>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                       <Ionicons name="calendar-outline" size={16} color="#1976D2" />
@@ -3905,7 +3918,8 @@ export default function AdminAthleteDetail() {
                 </View>
               </View>
             </View>
-          )}
+            );
+          })()}
 
           {/* 🆕 22/02/2026 — Card "Squadra" spostata qui da Anagrafica */}
           <View style={styles.card}>
