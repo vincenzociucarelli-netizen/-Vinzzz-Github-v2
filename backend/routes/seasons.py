@@ -692,7 +692,14 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
                     "privacy_accepted": False,
                     "privacy_accepted_previous_season": True,
                 },
-                "$unset": {"team_id": "", "privacy_accepted_at": "", "privacy_accepted_by": ""},
+                "$unset": {
+                    "team_id": "",
+                    "privacy_accepted_at": "", "privacy_accepted_by": "",
+                    "trial_start_date": "", "trial_end_date": "",
+                    "trial_document_generated": "", "trial_document_id": "",
+                    "trial_workouts_used": "", "trial_workouts_dates": "",
+                    "is_trial": "", "trial_signed_at": "",
+                },
             },
         )
         # Archivia i pagamenti (marca stagione precedente + flag). Non li cancella.
@@ -716,7 +723,7 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
             {"$set": {"season": prev_season, "is_previous_season": True}},
         )
         payments_archived += p_res2.modified_count
-        # 🆕 05/07/2026 — Reset privacy + status per atleti già-resettati in precedenza
+        # 🆕 05/07/2026 — Reset privacy + status + trial per atleti già-resettati in precedenza
         await db.athletes.update_one(
             {"id": a["id"], "society_id": sid, "status": {"$ne": "pending"}},
             {
@@ -725,11 +732,51 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
                     "privacy_pending_renewal_season": current_season,
                     "privacy_accepted": False,
                     "privacy_accepted_previous_season": True,
-                    "status": "pending",  # Forza in attesa: nessuna squadra assegnata ancora
+                    "status": "pending",
                 },
-                "$unset": {"privacy_accepted_at": "", "privacy_accepted_by": ""},
+                "$unset": {
+                    "privacy_accepted_at": "", "privacy_accepted_by": "",
+                    "trial_start_date": "", "trial_end_date": "",
+                    "trial_document_generated": "", "trial_document_id": "",
+                    "trial_workouts_used": "", "trial_workouts_dates": "",
+                    "is_trial": "", "trial_signed_at": "",
+                },
             },
         )
+        # Anche gli atleti "pending" senza flag privacy_pending: applica il reset trial
+        await db.athletes.update_one(
+            {"id": a["id"], "society_id": sid, "status": "pending", "privacy_accepted": {"$ne": False}},
+            {
+                "$set": {
+                    "privacy_pending_renewal": True,
+                    "privacy_pending_renewal_season": current_season,
+                    "privacy_accepted": False,
+                    "privacy_accepted_previous_season": True,
+                },
+                "$unset": {
+                    "privacy_accepted_at": "", "privacy_accepted_by": "",
+                    "trial_start_date": "", "trial_end_date": "",
+                    "trial_document_generated": "", "trial_document_id": "",
+                    "trial_workouts_used": "", "trial_workouts_dates": "",
+                    "is_trial": "", "trial_signed_at": "",
+                },
+            },
+        )
+        # 🆕 05/07/2026 — Reset privacy anche del GENITORE (per atleti minorenni la privacy è del parent)
+        ath_full = await db.athletes.find_one({"id": a["id"], "society_id": sid}, {"_id": 0, "parent_id": 1})
+        if ath_full and ath_full.get("parent_id"):
+            await db.users.update_one(
+                {"id": ath_full["parent_id"], "society_id": sid, "role": "parent"},
+                {
+                    "$set": {
+                        "privacy_pending_renewal": True,
+                        "privacy_pending_renewal_season": current_season,
+                        "privacy_accepted": False,
+                        "privacy_accepted_previous_season": True,
+                    },
+                    "$unset": {"privacy_accepted_at": "", "privacy_accepted_by": ""},
+                },
+            )
 
     return {"ok": True, "reset_count": fixed, "athletes_reset": fixed_ath, "payments_archived": payments_archived, "current_season": current_season}
 
