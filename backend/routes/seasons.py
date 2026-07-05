@@ -716,15 +716,16 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
             {"$set": {"season": prev_season, "is_previous_season": True}},
         )
         payments_archived += p_res2.modified_count
-        # 🆕 05/07/2026 — Reset privacy anche per atleti già-resettati in precedenza
+        # 🆕 05/07/2026 — Reset privacy + status per atleti già-resettati in precedenza
         await db.athletes.update_one(
-            {"id": a["id"], "society_id": sid},
+            {"id": a["id"], "society_id": sid, "status": {"$ne": "pending"}},
             {
                 "$set": {
                     "privacy_pending_renewal": True,
                     "privacy_pending_renewal_season": current_season,
                     "privacy_accepted": False,
                     "privacy_accepted_previous_season": True,
+                    "status": "pending",  # Forza in attesa: nessuna squadra assegnata ancora
                 },
                 "$unset": {"privacy_accepted_at": "", "privacy_accepted_by": ""},
             },

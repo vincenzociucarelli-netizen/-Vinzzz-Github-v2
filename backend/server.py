@@ -6734,6 +6734,10 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
             "trial_end_date": a.get("trial_end_date"),
             "trial_document_generated": a.get("trial_document_generated", False),
             "is_trial": a.get("is_trial", False),
+            # 🆕 05/07/2026 — Snapshot post-riconferma bulk (per cartella "Da controllare")
+            "team_id_previous_season": a.get("team_id_previous_season"),
+            "status_previous_season": a.get("status_previous_season"),
+            "privacy_pending_renewal": a.get("privacy_pending_renewal", False),
         })
     
     return result
