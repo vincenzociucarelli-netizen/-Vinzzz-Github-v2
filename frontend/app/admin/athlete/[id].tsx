@@ -3204,8 +3204,18 @@ export default function AdminAthleteDetail() {
               </View>
               
               {(() => {
-                // 🆕 05/07/2026 — Banner residuo stagione precedente (SOLO se ci sono pagamenti prev NON saldati)
-                const prevUnpaid = payments.filter((p: any) => p.is_previous_season && !p.paid_date);
+                // 🆕 05/07/2026 — Calcolo season start date lato client: qualsiasi pagamento
+                // con paid_date PRIMA del 1 luglio dell'anno di start è "stagione precedente".
+                const now = new Date();
+                const seasonStartYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+                const seasonStart = new Date(seasonStartYear, 6, 1); // 1 luglio
+                const isPrevSeason = (p: any) => {
+                  if (p.is_previous_season) return true;
+                  if (!p.paid_date) return false;
+                  try { return new Date(p.paid_date) < seasonStart; } catch { return false; }
+                };
+                // Banner residuo stagione precedente (SOLO se ci sono pagamenti prev NON saldati)
+                const prevUnpaid = payments.filter((p: any) => isPrevSeason(p) && !p.paid_date);
                 if (prevUnpaid.length === 0) return null;
                 const residuo = prevUnpaid.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
                 return (
@@ -3222,13 +3232,25 @@ export default function AdminAthleteDetail() {
                   </View>
                 );
               })()}
-              {payments.filter((p: any) => p.paid_date && !p.is_previous_season).length === 0 ? (
-                <View style={styles.emptyPayments}>
-                  <Ionicons name="card-outline" size={32} color="#ccc" />
-                  <Text style={styles.emptyText}>Nessun pagamento registrato</Text>
-                </View>
-              ) : (
-                payments.filter((p: any) => p.paid_date && !p.is_previous_season).map((payment: any, index: number) => (
+              {(() => {
+                const now = new Date();
+                const seasonStartYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+                const seasonStart = new Date(seasonStartYear, 6, 1);
+                const isCurrent = (p: any) => {
+                  if (p.is_previous_season) return false;
+                  if (!p.paid_date) return true;
+                  try { return new Date(p.paid_date) >= seasonStart; } catch { return true; }
+                };
+                const current = payments.filter((p: any) => p.paid_date && isCurrent(p));
+                if (current.length === 0) {
+                  return (
+                    <View style={styles.emptyPayments}>
+                      <Ionicons name="card-outline" size={32} color="#ccc" />
+                      <Text style={styles.emptyText}>Nessun pagamento registrato</Text>
+                    </View>
+                  );
+                }
+                return current.map((payment: any, index: number) => (
                         <View key={payment.id || index} style={styles.paymentItem}>
                           <View style={styles.paymentInfo}>
                             <Text style={styles.paymentAmount}>{formatCurrency(payment.amount)}</Text>
@@ -3259,8 +3281,8 @@ export default function AdminAthleteDetail() {
                       </TouchableOpacity>
                     </View>
                   </View>
-                ))
-              )}
+                ));
+              })()}
             </View>
 
             {/* Attestato di Versamento Button - Sempre visibile */}

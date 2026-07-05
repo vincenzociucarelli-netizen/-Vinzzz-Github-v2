@@ -75,25 +75,7 @@ export default function SeasonsArchive() {
   };
 
   useEffect(() => {
-    (async () => {
-      await loadData();
-      // 🆕 05/07/2026 — Backfill AUTOMATICO all'apertura della pagina.
-      // Ripulisce silenziosamente atleti/coach/collab/dir riconfermati con codice vecchio.
-      try {
-        const r = await api.post('/seasons/backfill-reset-assignments');
-        const u = r.data?.reset_count || 0;
-        const a = r.data?.athletes_reset || 0;
-        if (u + a > 0) {
-          showAlert(
-            'Reset assegnazioni completato',
-            `${a} atleti e ${u} tra Coach/Collab/Dir sono stati messi in stato "Da riassegnare".\n\nLe vecchie squadre e palestre sono salvate come snapshot grigio "Prec.:".\n\nRicarico la pagina...`
-          );
-          await loadData();
-        }
-      } catch (e) {
-        // silenzio: se fallisce non blocchiamo la UI
-      }
-    })();
+    loadData();
   }, []);
 
   const onRefresh = async () => {
