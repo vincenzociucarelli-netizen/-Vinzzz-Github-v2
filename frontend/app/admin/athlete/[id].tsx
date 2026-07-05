@@ -24,6 +24,7 @@ import DualRoleHubBanner from '../../../src/components/admin/DualRoleHubBanner';
 import { Ionicons } from '../../../src/components/Icon';
 import { Athlete, Team, Payment, Certificate } from '../../../src/types';
 import { format } from 'date-fns';
+import { getCurrentSeasonStart } from '../../../src/utils/season';
 import { it } from 'date-fns/locale';
 import * as ImagePicker from 'expo-image-picker';
 import * as Print from 'expo-print';
@@ -3211,14 +3212,8 @@ export default function AdminAthleteDetail() {
               </View>
               
               {(() => {
-                // 🆕 05/07/2026 — Data inizio stagione sportiva dalle impostazioni società (default 1/7)
-                const startMonth = (societySettings.season_start_month || 7) - 1; // JS months 0-indexed
-                const startDay = societySettings.season_start_day || 1;
-                const now = new Date();
-                const currentSeasonStartYear = (now.getMonth() > startMonth || (now.getMonth() === startMonth && now.getDate() >= startDay))
-                  ? now.getFullYear()
-                  : now.getFullYear() - 1;
-                const seasonStart = new Date(currentSeasonStartYear, startMonth, startDay);
+                // 🆕 05/07/2026 — Usa utility centrale che rispetta le impostazioni della società
+                const seasonStart = getCurrentSeasonStart(societySettings);
                 const isPrevSeason = (p: any) => {
                   if (p.is_previous_season) return true;
                   if (!p.paid_date) return false;
@@ -3243,13 +3238,7 @@ export default function AdminAthleteDetail() {
                 );
               })()}
               {(() => {
-                const startMonth = (societySettings.season_start_month || 7) - 1;
-                const startDay = societySettings.season_start_day || 1;
-                const now = new Date();
-                const currentSeasonStartYear = (now.getMonth() > startMonth || (now.getMonth() === startMonth && now.getDate() >= startDay))
-                  ? now.getFullYear()
-                  : now.getFullYear() - 1;
-                const seasonStart = new Date(currentSeasonStartYear, startMonth, startDay);
+                const seasonStart = getCurrentSeasonStart(societySettings);
                 const isCurrent = (p: any) => {
                   if (p.is_previous_season) return false;
                   if (!p.paid_date) return true;
