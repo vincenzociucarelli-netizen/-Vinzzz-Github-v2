@@ -6680,9 +6680,10 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
         if a.get("last_name") or a.get("first_name"):
             full_name = f"{a.get('last_name', '')} {a.get('first_name', '')}".strip()
         
-        # Calculate payment residual
+        # Calculate payment residual — 🆕 05/07/2026 esclude pagamenti stagione precedente
         athlete_payments = payments_by_athlete.get(a["id"], [])
-        total_paid = sum(p.get("amount", 0) for p in athlete_payments)
+        athlete_payments_current = [p for p in athlete_payments if not p.get("is_previous_season")]
+        total_paid = sum(p.get("amount", 0) for p in athlete_payments_current)
         
         # Get team-specific total_amount (same as athlete detail page)
         team_id = a.get("team_id")
