@@ -16,6 +16,21 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 05/07/2026 (sera) — Badge stagione visibile ovunque + fix pending 500 ✅
+
+### 1️⃣ Badge stagione sempre visibile
+Il componente `SeasonBadge` era referenziato in `SocietyBranding.tsx` ma **mancava l'import** → non appariva su nessuna pagina. Fix:
+- Aggiunto `import { SeasonBadge } from '../services/SeasonBadge'` in SocietyBranding.
+- Corretto `import api` (era `{ api }` named su un solo-default export).
+- Se il branding ha né logo né nome, mostra comunque il badge solo.
+- Aggiunto `<SeasonBadge />` esplicitamente nell'header custom di `/admin/index.tsx` (che NON usa SocietyBranding).
+
+### 2️⃣ Fix `GET /api/athletes/pending` HTTP 500
+Il reset atleti ha svuotato `team_id` con `$unset`. Il endpoint accedeva a `athlete["team_id"]` KeyError. Fix: `athlete.get("team_id")` (linea 8303) — così `team_name: "Da assegnare"` per gli atleti in reset.
+
+**⚠️ Deploy required**: Save to Github → auto-deploy.
+
+
 ## 🆕 05/07/2026 (tarda notte) — Pagamenti stagione precedente + banner residuo ✅
 
 Al `POST /api/seasons/backfill-reset-assignments`, oltre a resettare l'atleta, ora marca anche tutti i suoi pagamenti con `season: <prev_season>` + `is_previous_season: true`. Response include ora `payments_archived`.

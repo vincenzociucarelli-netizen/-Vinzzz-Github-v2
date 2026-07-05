@@ -20,6 +20,7 @@ import api from '../../src/services/api';
 import InstitutionalBadge from '../../src/components/InstitutionalBadge';
 import InstitutionalBanner from '../../src/components/InstitutionalBanner';
 import { AdminLiveStats } from '../../src/components/AdminLiveStats';
+import { SeasonBadge } from '../../src/services/SeasonBadge';
 import CompensationExportModal from '../../src/components/admin/CompensationExportModal';
 
 // Emoji icons for reliable cross-platform support
@@ -399,14 +400,18 @@ export default function AdminDashboard() {
     <View style={styles.container}>
       <View style={styles.header}>
         {/* 🆕 24/02/2026 — Nome società in cima a tutta larghezza, allineato a sinistra */}
-        <Text
-          style={styles.headerTitle}
-          numberOfLines={2}
-          adjustsFontSizeToFit
-          minimumFontScale={0.7}
-        >
-          {society.name}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <Text
+            style={styles.headerTitle}
+            numberOfLines={2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
+            {society.name}
+          </Text>
+          {/* 🆕 05/07/2026 — Badge stagione corrente sempre visibile nella dashboard */}
+          <SeasonBadge />
+        </View>
         <View style={styles.headerMainRow}>
           {/* Society logo on the LEFT, scaled to fit blue band (abbassato leggermente) */}
           {logoOk ? (

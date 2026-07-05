@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from './api';
+import api from './api';
 
 interface Props {
   compact?: boolean;

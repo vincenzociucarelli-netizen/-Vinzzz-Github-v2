@@ -8300,8 +8300,8 @@ async def get_pending_athletes(current_user = Depends(get_current_user)):
     
     result = []
     for athlete in pending:
-        team = teams_dict.get(athlete["team_id"])
-        parent = users_dict.get(athlete["parent_id"])
+        team = teams_dict.get(athlete.get("team_id")) if athlete.get("team_id") else None
+        parent = users_dict.get(athlete.get("parent_id")) if athlete.get("parent_id") else None
         
         # Check if adult athlete (no parent_id)
         is_adult = athlete.get("parent_id") is None or athlete.get("parents_detached") is True

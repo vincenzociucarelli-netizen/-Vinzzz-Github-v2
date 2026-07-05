@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
 import api from '../services/api';
+import { SeasonBadge } from '../services/SeasonBadge';
 import { useAuthStore } from '../store/authStore';
 
 interface SocietyBrandingProps {
@@ -63,7 +64,14 @@ export default function SocietyBranding({ light = true, logoSize = 40, style }: 
     })();
   }, [societyIdQuery]);
 
-  if (!name && !hasLogo) return null;
+  if (!name && !hasLogo) {
+    // 🆕 05/07/2026 — Anche senza brand, mostra almeno il badge stagione
+    return (
+      <View style={[styles.row, style]} data-testid="society-branding-minimal">
+        <SeasonBadge compact />
+      </View>
+    );
+  }
 
   const textColor = light ? 'rgba(255,255,255,0.92)' : '#1a1a2e';
 
