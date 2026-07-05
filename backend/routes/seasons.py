@@ -701,6 +701,20 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
         payments_archived += p_res.modified_count
         fixed_ath += 1
 
+    # 🆕 05/07/2026 — Passaggio aggiuntivo: marca i pagamenti anche per gli atleti
+    # GIA' resettati in precedenza (quando il codice di archiviazione pagamenti non c'era).
+    # Filtro: atleti con team_id_previous_season valorizzato ma pagamenti senza season.
+    already_reset = db.athletes.find(
+        {"society_id": sid, "team_id_previous_season": {"$exists": True, "$nin": [None, ""]}},
+        {"_id": 0, "id": 1},
+    )
+    async for a in already_reset:
+        p_res2 = await db.payments.update_many(
+            {"athlete_id": a["id"], "season": {"$exists": False}},
+            {"$set": {"season": prev_season, "is_previous_season": True}},
+        )
+        payments_archived += p_res2.modified_count
+
     return {"ok": True, "reset_count": fixed, "athletes_reset": fixed_ath, "payments_archived": payments_archived, "current_season": current_season}
 
 
