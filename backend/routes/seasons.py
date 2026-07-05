@@ -657,6 +657,15 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
         fixed += 1
 
     # 🆕 04/07/2026 — Stesso backfill per gli ATLETI riconfermati con codice vecchio
+    # 🆕 05/07/2026 — In più marca i loro PAGAMENTI come stagione precedente.
+    # Calcola la stagione appena chiusa (start_year - 1) - start_year.
+    prev_season = current_season
+    try:
+        cur_start = int(current_season.split("-")[0])
+        prev_season = f"{cur_start - 1}-{cur_start}"
+    except Exception:
+        pass
+
     q_ath = {
         "society_id": sid,
         "active_seasons": current_season,
@@ -667,6 +676,7 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
         ],
     }
     fixed_ath = 0
+    payments_archived = 0
     async for a in db.athletes.find(q_ath, {"_id": 0, "id": 1, "team_id": 1, "status": 1}):
         prev_team = a.get("team_id")
         prev_status = a.get("status")
@@ -683,9 +693,15 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
                 "$unset": {"team_id": ""},
             },
         )
+        # Archivia i pagamenti (marca stagione precedente + flag). Non li cancella.
+        p_res = await db.payments.update_many(
+            {"athlete_id": a["id"], "season": {"$exists": False}},
+            {"$set": {"season": prev_season, "is_previous_season": True}},
+        )
+        payments_archived += p_res.modified_count
         fixed_ath += 1
 
-    return {"ok": True, "reset_count": fixed, "athletes_reset": fixed_ath, "current_season": current_season}
+    return {"ok": True, "reset_count": fixed, "athletes_reset": fixed_ath, "payments_archived": payments_archived, "current_season": current_season}
 
 
 @router.post("/seasons/users/{user_id}/reset-assignments")

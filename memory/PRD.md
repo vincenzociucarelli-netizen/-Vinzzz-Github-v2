@@ -16,6 +16,18 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 05/07/2026 (tarda notte) — Pagamenti stagione precedente + banner residuo ✅
+
+Al `POST /api/seasons/backfill-reset-assignments`, oltre a resettare l'atleta, ora marca anche tutti i suoi pagamenti con `season: <prev_season>` + `is_previous_season: true`. Response include ora `payments_archived`.
+
+Nel dettaglio atleta tab Pagamenti:
+- La lista mostra SOLO i pagamenti della stagione corrente (`!is_previous_season`).
+- Se ci sono pagamenti previous NON saldati (senza `paid_date`) → banner giallo **"Residuo stagione precedente: N pagamenti non saldati per un totale di €X"**.
+- I pagamenti storici saldati non appaiono più (mantenuti nel DB per tracciabilità fiscale ma nascosti dalla UI corrente).
+
+**⚠️ Deploy required**: Save to Github → auto-deploy.
+
+
 ## 🆕 05/07/2026 (notte) — Backfill reset esteso ANCHE agli atleti ✅
 
 Il fix di `backfill-reset-assignments` precedente puliva solo i ruoli staff (Coach/Coll/Dir). Ma le atlete riconfermate con codice vecchio hanno il `team_id` ancora valorizzato (Under 14, MiniVolley, Starter, ecc.) — non passano da riconferma bulk perché idempotente.

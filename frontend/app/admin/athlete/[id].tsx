@@ -3203,16 +3203,35 @@ export default function AdminAthleteDetail() {
                 </Text>
               </View>
               
-              {payments.filter((p: any) => p.paid_date).length === 0 ? (
+              {(() => {
+                // 🆕 05/07/2026 — Banner residuo stagione precedente (SOLO se ci sono pagamenti prev NON saldati)
+                const prevUnpaid = payments.filter((p: any) => p.is_previous_season && !p.paid_date);
+                if (prevUnpaid.length === 0) return null;
+                const residuo = prevUnpaid.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0);
+                return (
+                  <View style={{ marginBottom: 10, padding: 12, backgroundColor: '#FFF8E1', borderLeftWidth: 4, borderLeftColor: '#F9A825', borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Ionicons name="alert-circle" size={22} color="#F57F17" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontWeight: '700', color: '#F57F17', fontSize: 13 }}>
+                        Residuo stagione precedente
+                      </Text>
+                      <Text style={{ color: '#8D6E63', fontSize: 12, marginTop: 2 }}>
+                        Rimasti {prevUnpaid.length} pagamenti non saldati per un totale di {formatCurrency(residuo)}.
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })()}
+              {payments.filter((p: any) => p.paid_date && !p.is_previous_season).length === 0 ? (
                 <View style={styles.emptyPayments}>
                   <Ionicons name="card-outline" size={32} color="#ccc" />
                   <Text style={styles.emptyText}>Nessun pagamento registrato</Text>
                 </View>
               ) : (
-                payments.filter((p: any) => p.paid_date).map((payment: any, index) => (
-                  <View key={payment.id || index} style={styles.paymentItem}>
-                    <View style={styles.paymentInfo}>
-                      <Text style={styles.paymentAmount}>{formatCurrency(payment.amount)}</Text>
+                payments.filter((p: any) => p.paid_date && !p.is_previous_season).map((payment: any, index: number) => (
+                        <View key={payment.id || index} style={styles.paymentItem}>
+                          <View style={styles.paymentInfo}>
+                            <Text style={styles.paymentAmount}>{formatCurrency(payment.amount)}</Text>
                       <Text style={styles.paymentDate}>
                         {payment.paid_date ? formatDate(payment.paid_date) : '-'}
                       </Text>
