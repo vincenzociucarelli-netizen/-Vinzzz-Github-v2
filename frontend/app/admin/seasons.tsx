@@ -136,9 +136,9 @@ export default function SeasonsArchive() {
     }
   };
 
-  // 🆕 04/07/2026 — Backfill reset assegnazioni (per users riconfermati con codice vecchio)
+  // 🆕 04/07/2026 — Backfill reset assegnazioni (per riconferme vecchie senza svuotamento)
   const handleBackfillReset = async () => {
-    const msg = `Reset delle assegnazioni per Coach/Collab/Dirigenti già riconfermati SENZA lo svuotamento automatico.\n\nEffetti:\n- squadre e palestre azzerate\n- snapshot precedente salvato\n- appariranno "Da riassegnare"\n\nNessun dato viene perso.\n\nProcedere?`;
+    const msg = `Reset delle assegnazioni per Atleti + Coach + Collab + Dirigenti già riconfermati SENZA lo svuotamento automatico.\n\nEffetti:\n- squadre / palestre azzerate\n- snapshot precedente salvato\n- appariranno "Da riassegnare" nelle liste\n- gli atleti passano a status "In attesa" + privacy da rifirmare\n\nNessun dato viene perso.\n\nProcedere?`;
     const ok = Platform.OS === 'web' ? window.confirm(msg) : await new Promise<boolean>(res => {
       Alert.alert('Reset assegnazioni', msg, [
         { text: 'Annulla', style: 'cancel', onPress: () => res(false) },
@@ -148,7 +148,9 @@ export default function SeasonsArchive() {
     if (!ok) return;
     try {
       const r = await api.post('/seasons/backfill-reset-assignments');
-      showAlert('Fatto', `${r.data?.reset_count || 0} utenti resettati per la stagione ${r.data?.current_season || ''}`);
+      const users = r.data?.reset_count || 0;
+      const athletes = r.data?.athletes_reset || 0;
+      showAlert('Fatto', `${users} tra Coach/Collab/Dir + ${athletes} atleti resettati per la stagione ${r.data?.current_season || ''}`);
       await loadData();
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Reset non riuscito');
@@ -407,7 +409,7 @@ export default function SeasonsArchive() {
             >
               <Ionicons name="refresh-circle" size={20} color="#fff" />
               <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>
-                🔄 Reset assegnazioni Coach/Collab/Dir (riconferme vecchie)
+                🔄 Reset assegnazioni Atleti + Coach + Collab + Dir (riconferme vecchie)
               </Text>
             </TouchableOpacity>
             <Text style={{ fontSize: 11, color: '#888', textAlign: 'center', marginTop: 4, fontStyle: 'italic' }}>

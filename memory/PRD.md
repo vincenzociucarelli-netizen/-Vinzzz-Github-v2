@@ -16,6 +16,19 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 05/07/2026 (notte) — Backfill reset esteso ANCHE agli atleti ✅
+
+Il fix di `backfill-reset-assignments` precedente puliva solo i ruoli staff (Coach/Coll/Dir). Ma le atlete riconfermate con codice vecchio hanno il `team_id` ancora valorizzato (Under 14, MiniVolley, Starter, ecc.) — non passano da riconferma bulk perché idempotente.
+
+**Fix**:
+- **Backend `POST /api/seasons/backfill-reset-assignments`**: aggiunta seconda query su `db.athletes` con `active_seasons ⊃ current_season` MA senza `team_id_previous_season` valorizzato E con `team_id` non vuoto. Svuota `team_id` + snapshot in `team_id_previous_season` + `status_previous_season`. Setta `status = pending`, `privacy_pending_renewal = true`.
+- **Response**: `{reset_count, athletes_reset, current_season}`.
+- **Frontend `seasons.tsx`**: aggiornato pulsante "Reset assegnazioni Atleti + Coach + Collab + Dir" e messaggio conferma. La `showAlert` mostra i due contatori separati (users e atleti).
+- **Preview testato**: `athletes_reset: 1` (BIANCHI SOFIA, l'unica riconferma vecchia).
+
+**⚠️ Deploy required**: Save to Github → auto-deploy Vercel+Render.
+
+
 ## 🆕 04/07/2026 (pomeriggio) — Fix banner certificato + Backfill reset assegnazioni ✅
 
 ### BUG 1 — Coach Andrea vede ancora U14/U16 (riconferma vecchia)

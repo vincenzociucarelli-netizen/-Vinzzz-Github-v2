@@ -655,7 +655,37 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
             }},
         )
         fixed += 1
-    return {"ok": True, "reset_count": fixed, "current_season": current_season}
+
+    # 🆕 04/07/2026 — Stesso backfill per gli ATLETI riconfermati con codice vecchio
+    q_ath = {
+        "society_id": sid,
+        "active_seasons": current_season,
+        "team_id": {"$exists": True, "$nin": [None, ""]},
+        "$or": [
+            {"team_id_previous_season": {"$exists": False}},
+            {"team_id_previous_season": None},
+        ],
+    }
+    fixed_ath = 0
+    async for a in db.athletes.find(q_ath, {"_id": 0, "id": 1, "team_id": 1, "status": 1}):
+        prev_team = a.get("team_id")
+        prev_status = a.get("status")
+        await db.athletes.update_one(
+            {"id": a["id"], "society_id": sid},
+            {
+                "$set": {
+                    "team_id_previous_season": prev_team,
+                    "status_previous_season": prev_status,
+                    "privacy_pending_renewal": True,
+                    "privacy_pending_renewal_season": current_season,
+                    "status": "pending",
+                },
+                "$unset": {"team_id": ""},
+            },
+        )
+        fixed_ath += 1
+
+    return {"ok": True, "reset_count": fixed, "athletes_reset": fixed_ath, "current_season": current_season}
 
 
 @router.post("/seasons/users/{user_id}/reset-assignments")
