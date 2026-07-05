@@ -169,6 +169,8 @@ export default function AdminAthleteDetail() {
   const [paymentSummary, setPaymentSummary] = useState<PaymentSummary | null>(null);
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [stats, setStats] = useState<AthleteAttendanceStats | null>(null);
+  // 🆕 05/07/2026 — Impostazioni società (per data inizio stagione sportiva)
+  const [societySettings, setSocietySettings] = useState<{ season_start_month?: number; season_start_day?: number }>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'dafare' | 'dati' | 'pagamenti' | 'presenze'>('dafare');
@@ -577,6 +579,11 @@ export default function AdminAthleteDetail() {
         setAvailableRoles(settingsRes.data.athlete_roles || []);
         setAvailableCharacteristics(settingsRes.data.athlete_characteristics || []);
         setSocietyData(settingsRes.data); // Save full society data for receipt
+        // 🆕 05/07/2026 — Salva anche data inizio stagione sportiva
+        setSocietySettings({
+          season_start_month: settingsRes.data?.season_start_month,
+          season_start_day: settingsRes.data?.season_start_day,
+        });
       } catch (e) {
         console.log('Could not load settings');
       }
@@ -3204,11 +3211,14 @@ export default function AdminAthleteDetail() {
               </View>
               
               {(() => {
-                // 🆕 05/07/2026 — Calcolo season start date lato client: qualsiasi pagamento
-                // con paid_date PRIMA del 1 luglio dell'anno di start è "stagione precedente".
+                // 🆕 05/07/2026 — Data inizio stagione sportiva dalle impostazioni società (default 1/7)
+                const startMonth = (societySettings.season_start_month || 7) - 1; // JS months 0-indexed
+                const startDay = societySettings.season_start_day || 1;
                 const now = new Date();
-                const seasonStartYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
-                const seasonStart = new Date(seasonStartYear, 6, 1); // 1 luglio
+                const currentSeasonStartYear = (now.getMonth() > startMonth || (now.getMonth() === startMonth && now.getDate() >= startDay))
+                  ? now.getFullYear()
+                  : now.getFullYear() - 1;
+                const seasonStart = new Date(currentSeasonStartYear, startMonth, startDay);
                 const isPrevSeason = (p: any) => {
                   if (p.is_previous_season) return true;
                   if (!p.paid_date) return false;
@@ -3233,9 +3243,13 @@ export default function AdminAthleteDetail() {
                 );
               })()}
               {(() => {
+                const startMonth = (societySettings.season_start_month || 7) - 1;
+                const startDay = societySettings.season_start_day || 1;
                 const now = new Date();
-                const seasonStartYear = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
-                const seasonStart = new Date(seasonStartYear, 6, 1);
+                const currentSeasonStartYear = (now.getMonth() > startMonth || (now.getMonth() === startMonth && now.getDate() >= startDay))
+                  ? now.getFullYear()
+                  : now.getFullYear() - 1;
+                const seasonStart = new Date(currentSeasonStartYear, startMonth, startDay);
                 const isCurrent = (p: any) => {
                   if (p.is_previous_season) return false;
                   if (!p.paid_date) return true;
