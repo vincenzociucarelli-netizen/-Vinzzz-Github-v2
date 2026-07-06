@@ -555,6 +555,14 @@ async def reconfirm_bulk(
     # Users
     usr_confirmed = 0
     usr_pro_flagged = 0
+    docs_archived_reconfirm = 0
+    # prev_season per archiviazione documenti
+    _prev_season_reconfirm = current_season
+    try:
+        _cs = int(current_season.split("-")[0])
+        _prev_season_reconfirm = f"{_cs - 1}-{_cs}"
+    except Exception:
+        pass
     if body.user_ids:
         cursor = db.users.find(
             {"id": {"$in": body.user_ids}, "society_id": sid},
@@ -562,21 +570,26 @@ async def reconfirm_bulk(
              "other_annual_compensation": 1, "prior_compensation": 1,
              "contract_start_date": 1, "contract_end_date": 1,
              "compensation_accepted": 1, "active_seasons": 1,
-             "assigned_teams": 1, "assigned_gyms": 1},
+             "assigned_teams": 1, "assigned_gyms": 1,
+             "onboarding_checklist": 1},
         )
         async for u in cursor:
             if current_season in (u.get("active_seasons") or []):
                 continue
             # 🆕 04/07/2026 — Snapshot precedente + reset assegnazioni (admin riassegnerà)
+            # 🆕 06/07/2026 — Reset esteso a checklist onboarding + documenti firmati.
             update: dict = {
                 "$addToSet": {"active_seasons": current_season},
                 "$set": {
                     "assigned_teams_previous_season": u.get("assigned_teams") or [],
                     "assigned_gyms_previous_season": u.get("assigned_gyms") or [],
+                    "onboarding_checklist_previous_season": u.get("onboarding_checklist") or {},
                     "assignment_pending_review": True,
                     "assignment_pending_review_season": current_season,
                     "assigned_teams": [],
                     "assigned_gyms": [],
+                    "onboarding_checklist": {},
+                    "onboarding_completed": False,
                 },
                 "$unset": {},
             }
@@ -603,7 +616,6 @@ async def reconfirm_bulk(
                     "monthly_compensation": 0,
                     "other_annual_compensation": 0,
                     "prior_compensation": 0,
-                    "onboarding_completed": False,
                 })
                 update["$unset"].update({
                     "compensation_accepted_date": "",
@@ -614,6 +626,16 @@ async def reconfirm_bulk(
             if not update["$unset"]:
                 update.pop("$unset")
             await db.users.update_one({"id": u["id"], "society_id": sid}, update)
+            # Archivia documenti firmati (non li cancella)
+            try:
+                d_res = await db.signed_documents.update_many(
+                    {"signer_id": u["id"], "society_id": sid,
+                     "$or": [{"is_previous_season": {"$exists": False}}, {"is_previous_season": False}]},
+                    {"$set": {"season": _prev_season_reconfirm, "is_previous_season": True}},
+                )
+                docs_archived_reconfirm += d_res.modified_count
+            except Exception:
+                pass
             usr_confirmed += 1
 
     # Teams — 🆕 04/07/2026
@@ -705,23 +727,42 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
         ],
     }
     users_reset_ext = 0
-    async for u in db.users.find(q_ext, {"_id": 0, "id": 1, "monthly_compensation": 1, "other_annual_compensation": 1, "prior_compensation": 1, "contract_start_date": 1, "contract_end_date": 1}):
+    docs_archived_ext = 0
+    # prev_season per marcare i documenti come archivio
+    _prev_season_for_docs = current_season
+    try:
+        _cs = int(current_season.split("-")[0])
+        _prev_season_for_docs = f"{_cs - 1}-{_cs}"
+    except Exception:
+        pass
+    async for u in db.users.find(q_ext, {"_id": 0, "id": 1, "monthly_compensation": 1, "other_annual_compensation": 1, "prior_compensation": 1, "contract_start_date": 1, "contract_end_date": 1, "assigned_teams": 1, "assigned_gyms": 1, "onboarding_checklist": 1}):
         await db.users.update_one(
             {"id": u["id"], "society_id": sid},
             {
                 "$set": {
+                    # Snapshot completo
                     "monthly_compensation_previous_season": u.get("monthly_compensation") or 0,
                     "other_annual_compensation_previous_season": u.get("other_annual_compensation") or 0,
                     "prior_compensation_previous_season": u.get("prior_compensation") or 0,
                     "contract_start_date_previous_season": u.get("contract_start_date"),
                     "contract_end_date_previous_season": u.get("contract_end_date"),
+                    "assigned_teams_previous_season": u.get("assigned_teams") or [],
+                    "assigned_gyms_previous_season": u.get("assigned_gyms") or [],
+                    "onboarding_checklist_previous_season": u.get("onboarding_checklist") or {},
+                    # Flags
                     "pro_data_pending_review": True,
                     "pro_data_pending_review_season": current_season,
+                    "assignment_pending_review": True,
+                    "assignment_pending_review_season": current_season,
+                    # Reset operativi
                     "compensation_accepted": False,
                     "monthly_compensation": 0,
                     "other_annual_compensation": 0,
                     "prior_compensation": 0,
                     "onboarding_completed": False,
+                    "assigned_teams": [],
+                    "assigned_gyms": [],
+                    "onboarding_checklist": {},
                 },
                 "$unset": {
                     "compensation_accepted_date": "",
@@ -730,6 +771,16 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
                 },
             },
         )
+        # Archivia documenti firmati come stagione precedente
+        try:
+            d_res = await db.signed_documents.update_many(
+                {"signer_id": u["id"], "society_id": sid,
+                 "$or": [{"is_previous_season": {"$exists": False}}, {"is_previous_season": False}]},
+                {"$set": {"season": _prev_season_for_docs, "is_previous_season": True}},
+            )
+            docs_archived_ext += d_res.modified_count
+        except Exception:
+            pass
         users_reset_ext += 1
 
     # 🆕 04/07/2026 — Stesso backfill per gli ATLETI riconfermati con codice vecchio
@@ -888,19 +939,28 @@ async def reset_user_assignments(user_id: str, current_user = Depends(get_curren
 # o già riconfermato con il codice vecchio). L'admin può chiamarlo dalla scheda profilo.
 @router.post("/seasons/users/{user_id}/reset-compensation")
 async def reset_user_compensation(user_id: str, current_user = Depends(get_current_user)):
-    """Reset FORZATO compenso/contratto/pregresso/onboarding di un singolo utente pro
-    (Coach/Collab/Dirigente). Salva snapshot su *_previous_season."""
+    """Reset FORZATO singolo Coach/Collab/Dirigente. Ripulisce compenso, contratto,
+    pregresso, onboarding, squadre/palestre assegnate, checklist. I documenti firmati
+    vengono archiviati come `is_previous_season: true`. Salva snapshot su *_previous_season."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin")
     sid = current_user.get("society_id")
     if not sid:
         raise HTTPException(status_code=400, detail="Società non identificata")
     current_season = await get_current_season_for_society(db, sid)
+    # Calcola prev_season per marcatura documenti/checklist
+    try:
+        cur_start = int(current_season.split("-")[0])
+        prev_season = f"{cur_start - 1}-{cur_start}"
+    except Exception:
+        prev_season = current_season
     u = await db.users.find_one(
         {"id": user_id, "society_id": sid},
         {"_id": 0, "id": 1, "role": 1, "monthly_compensation": 1,
          "other_annual_compensation": 1, "prior_compensation": 1,
-         "contract_start_date": 1, "contract_end_date": 1},
+         "contract_start_date": 1, "contract_end_date": 1,
+         "assigned_teams": 1, "assigned_gyms": 1,
+         "onboarding_checklist": 1},
     )
     if not u:
         raise HTTPException(status_code=404, detail="Utente non trovato")
@@ -910,18 +970,29 @@ async def reset_user_compensation(user_id: str, current_user = Depends(get_curre
         {"id": user_id, "society_id": sid},
         {
             "$set": {
+                # Snapshot completo della stagione precedente
                 "monthly_compensation_previous_season": u.get("monthly_compensation") or 0,
                 "other_annual_compensation_previous_season": u.get("other_annual_compensation") or 0,
                 "prior_compensation_previous_season": u.get("prior_compensation") or 0,
                 "contract_start_date_previous_season": u.get("contract_start_date"),
                 "contract_end_date_previous_season": u.get("contract_end_date"),
+                "assigned_teams_previous_season": u.get("assigned_teams") or [],
+                "assigned_gyms_previous_season": u.get("assigned_gyms") or [],
+                "onboarding_checklist_previous_season": u.get("onboarding_checklist") or {},
+                # Flags per banner "da riconfermare"
                 "pro_data_pending_review": True,
                 "pro_data_pending_review_season": current_season,
+                "assignment_pending_review": True,
+                "assignment_pending_review_season": current_season,
+                # Reset campi operativi
                 "compensation_accepted": False,
                 "monthly_compensation": 0,
                 "other_annual_compensation": 0,
                 "prior_compensation": 0,
                 "onboarding_completed": False,
+                "assigned_teams": [],
+                "assigned_gyms": [],
+                "onboarding_checklist": {},
             },
             "$unset": {
                 "compensation_accepted_date": "",
@@ -930,7 +1001,17 @@ async def reset_user_compensation(user_id: str, current_user = Depends(get_curre
             },
         },
     )
-    return {"ok": True, "current_season": current_season}
+    # 🆕 Archivia i documenti firmati (non li cancella): li marca come stagione precedente
+    docs_res = await db.signed_documents.update_many(
+        {"signer_id": user_id, "society_id": sid,
+         "$or": [{"is_previous_season": {"$exists": False}}, {"is_previous_season": False}]},
+        {"$set": {"season": prev_season, "is_previous_season": True}},
+    )
+    return {
+        "ok": True,
+        "current_season": current_season,
+        "documents_archived": docs_res.modified_count,
+    }
 
 
 # 🆕 04/07/2026 — Endpoint per richiedere all'atleta (o al genitore se minore)

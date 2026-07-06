@@ -16,7 +16,28 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
-## 🆕 06/07/2026 (v2) — Reset per-utente forzato + backfill filtro più tollerante ✅
+## 🆕 06/07/2026 (v3) — Reset esteso a squadre/palestre/checklist/documenti ✅
+
+Feedback utente: il reset v2 azzerava solo compenso mensile e pregresso. Restavano ancora: date contratto, squadre assegnate, palestre (Collab/Dir), checklist onboarding, documenti firmati.
+
+**Fix v3** — `POST /api/seasons/users/{id}/reset-compensation`, `/seasons/reconfirm-bulk` (ramo Users) e `/seasons/backfill-reset-assignments` (loop `q_ext`) ora azzerano TUTTO in un colpo solo:
+
+**Campi ripuliti su `db.users`**:
+- `compensation_accepted`, `monthly_compensation`, `other_annual_compensation`, `prior_compensation` → 0/false
+- `$unset`: `contract_start_date`, `contract_end_date`, `compensation_accepted_date`
+- `assigned_teams`, `assigned_gyms` → []
+- `onboarding_checklist` → {}, `onboarding_completed` → false
+- Flag banner: `pro_data_pending_review: true`, `assignment_pending_review: true`
+
+**Snapshot conservati su `*_previous_season`**: monthly/other/prior compensation, contract dates, assigned_teams, assigned_gyms, onboarding_checklist.
+
+**Documenti firmati** (`db.signed_documents`): marcati con `is_previous_season: true` + `season: <prev_season>`. Non cancellati (storico rispettato).
+
+**`GET /api/documents/my-documents`** ora esclude di default i documenti con `is_previous_season: true`, così la scheda profilo mostra solo i documenti della stagione corrente.
+
+**⚠️ Deploy required**: Save to Github → attendi Vercel/Render (~5 min) → apri profilo RICA FEDE → clic sul pulsante arancione **"🔄 Reset dati compenso/contratto stagione"** → il coach diventa completamente blank slate (nessuna data contratto, nessuna squadra, nessuna palestra, nessuna checklist, nessun documento visibile — tutti archiviati come stagione precedente).
+
+
 
 Post-deploy del fix precedente il coach RICA FEDE continuava a mostrare i dati vecchi. Cause probabili: `active_seasons` mancante sul record (backfill lo saltava) oppure filtri troppo restrittivi.
 

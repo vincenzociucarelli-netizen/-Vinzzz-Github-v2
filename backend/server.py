@@ -26727,6 +26727,14 @@ async def get_my_documents(
         {"collaboratore_id": target_user_id},
         {"parent_id": target_user_id}
     ]}
+    # 🆕 06/07/2026 — Escludi documenti archiviati come stagione precedente
+    # (reset compenso/riconferma stagionale). Restano nel DB come storico.
+    query["$and"] = [
+        {"$or": [
+            {"is_previous_season": {"$exists": False}},
+            {"is_previous_season": {"$ne": True}},
+        ]}
+    ]
     
     # For athletes: also include documents linked via related_entity_id
     athlete_id = current_user.get("athlete_id")
