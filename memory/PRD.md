@@ -16,7 +16,26 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
-## 🆕 06/07/2026 (v3) — Reset esteso a squadre/palestre/checklist/documenti ✅
+## 🆕 06/07/2026 (v4) — Filtro `is_previous_season` sulle query soglie 5k/15k ✅
+
+Feedback utente: dopo il reset restava il banner "⚠️ Anno X: Soglia dei €5.000" nella scheda compensi.
+
+**Root cause**: le quietanze in `db.coach_compensations`, `db.collaboratore_compensations`, `db.dirigente_compensations` e i compensi esterni in `db.external_compensations` sono indicizzati per anno solare (non per stagione). Dopo il reset il frontend ricalcolava la soglia includendo i record residui della stagione precedente.
+
+**Fix v4**:
+1. **`routes/seasons.py`**: nuova helper `_archive_user_compensation_records()` che marca `is_previous_season: true` + `archived_season: <prev>` su:
+   - `coach_compensations`, `collaboratore_compensations`, `dirigente_compensations`
+   - `external_compensations`
+   - `threshold_declarations`
+   Applicata a: `POST /seasons/users/{id}/reset-compensation` + `/seasons/reconfirm-bulk` + `/seasons/backfill-reset-assignments`.
+2. **`server.py`**: aggiunto filtro `is_previous_season: {$ne: true}` a tutte le query di:
+   - `/coach/{id}/compensation`, `/collaboratore/{id}/compensation`, `/dirigente/{id}/compensation`
+   - Threshold-status endpoints (Coach, Collab, Dirigente): `yearly_records`, `next_unsigned_record`, `all_year_records`
+   - Helper `_get_year_external_compensations_total`, `_get_year_external_by_month`
+
+**⚠️ Deploy required**: Save to Github → attendi ~5 min → refresh forzato del profilo Coach/Collab/Dirigente → il banner soglie sparisce (proj_total = 0 dopo il reset).
+
+
 
 Feedback utente: il reset v2 azzerava solo compenso mensile e pregresso. Restavano ancora: date contratto, squadre assegnate, palestre (Collab/Dir), checklist onboarding, documenti firmati.
 

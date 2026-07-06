@@ -37,6 +37,31 @@ class RenewToggleBody(BaseModel):
     value: Optional[bool] = None  # se None, toggla; se True/False, force-set
 
 
+async def _archive_user_compensation_records(user_id: str, prev_season: str) -> int:
+    """🆕 06/07/2026 — Marca come `is_previous_season: True` tutte le collezioni di
+    quietanze compenso e dichiarazioni soglie per un utente, così i banner soglie
+    non mostrano più dati residui dopo il reset stagionale.
+    Ritorna il conteggio totale dei documenti modificati."""
+    total = 0
+    for coll, field in (("coach_compensations", "coach_id"),
+                         ("collaboratore_compensations", "collaboratore_id"),
+                         ("dirigente_compensations", "dirigente_id"),
+                         ("external_compensations", "user_id"),
+                         ("threshold_declarations", "coach_id"),
+                         ("threshold_declarations", "collaboratore_id"),
+                         ("threshold_declarations", "dirigente_id")):
+        try:
+            r = await db[coll].update_many(
+                {field: user_id,
+                 "$or": [{"is_previous_season": {"$exists": False}}, {"is_previous_season": False}]},
+                {"$set": {"is_previous_season": True, "archived_season": prev_season}},
+            )
+            total += r.modified_count
+        except Exception:
+            pass
+    return total
+
+
 def _user_roles_in_scope() -> List[str]:
     """Ruoli sottoposti al ciclo di riconferma stagionale (oltre agli atleti).
     Include VIEWER perché la lista dirigenti nell'UI include sia DIRIGENTE che VIEWER."""
@@ -636,6 +661,11 @@ async def reconfirm_bulk(
                 docs_archived_reconfirm += d_res.modified_count
             except Exception:
                 pass
+            # 🆕 06/07/2026 — Archivia anche compensi/soglie
+            try:
+                await _archive_user_compensation_records(u["id"], _prev_season_reconfirm)
+            except Exception:
+                pass
             usr_confirmed += 1
 
     # Teams — 🆕 04/07/2026
@@ -779,6 +809,11 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
                 {"$set": {"season": _prev_season_for_docs, "is_previous_season": True}},
             )
             docs_archived_ext += d_res.modified_count
+        except Exception:
+            pass
+        # 🆕 06/07/2026 — Archivia anche compensi/soglie
+        try:
+            await _archive_user_compensation_records(u["id"], _prev_season_for_docs)
         except Exception:
             pass
         users_reset_ext += 1
@@ -1007,10 +1042,15 @@ async def reset_user_compensation(user_id: str, current_user = Depends(get_curre
          "$or": [{"is_previous_season": {"$exists": False}}, {"is_previous_season": False}]},
         {"$set": {"season": prev_season, "is_previous_season": True}},
     )
+    # 🆕 06/07/2026 — Archivia anche quietanze compenso e dichiarazioni soglie 5k/15k
+    # e compensi esterni dichiarati (ricevuti da altre ASD). Così il banner "Anno X:
+    # supererà la soglia" non appare più con dati residui.
+    comp_archived = await _archive_user_compensation_records(user_id, prev_season)
     return {
         "ok": True,
         "current_season": current_season,
         "documents_archived": docs_res.modified_count,
+        "compensations_archived": comp_archived,
     }
 
 

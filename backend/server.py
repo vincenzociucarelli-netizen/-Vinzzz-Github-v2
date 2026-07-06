@@ -13858,7 +13858,7 @@ async def get_coach_compensation(coach_id: str, current_user = Depends(get_curre
     if current_user["role"] == UserRole.COACH and current_user["id"] != coach_id:
         raise HTTPException(status_code=403, detail="Puoi vedere solo i tuoi compensi")
     
-    records = await db.coach_compensations.find({"coach_id": coach_id}).sort([("year", -1), ("month", -1)]).to_list(100)
+    records = await db.coach_compensations.find({"coach_id": coach_id, "is_previous_season": {"$ne": True}}).sort([("year", -1), ("month", -1)]).to_list(100)
     clean_mongo_docs(records)
     return records
 
@@ -14670,7 +14670,8 @@ async def _get_year_external_compensations_total(user_id: str, year: int) -> flo
     try:
         total = 0.0
         async for d in db.external_compensations.find(
-            {"user_id": user_id, "year": year},
+            {"user_id": user_id, "year": year,
+             "is_previous_season": {"$ne": True}},
             {"_id": 0, "amount": 1},
         ):
             total += float(d.get("amount") or 0)
@@ -14687,7 +14688,8 @@ async def _get_year_external_by_month(user_id: str, year: int) -> Dict[int, floa
     res: Dict[int, float] = {}
     try:
         async for d in db.external_compensations.find(
-            {"user_id": user_id, "year": year},
+            {"user_id": user_id, "year": year,
+             "is_previous_season": {"$ne": True}},
             {"_id": 0, "amount": 1, "related_receipt_month": 1},
         ):
             m = d.get("related_receipt_month")
@@ -16879,7 +16881,8 @@ async def get_coach_threshold_status(
     yearly_records = await db.coach_compensations.find({
         "coach_id": coach_id,
         "year": year,
-        "receipt_signed": True
+        "receipt_signed": True,
+        "is_previous_season": {"$ne": True}
     }).to_list(12)
     
     yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
@@ -16946,7 +16949,8 @@ async def get_coach_threshold_status(
     next_unsigned_record = await db.coach_compensations.find_one({
         "coach_id": coach_id,
         "year": year,
-        "receipt_signed": {"$ne": True}
+        "receipt_signed": {"$ne": True},
+        "is_previous_season": {"$ne": True}
     })
     # Use custom amount if exists, otherwise use standard monthly compensation
     next_amount = monthly_compensation
@@ -21619,7 +21623,7 @@ async def get_dirigente_compensation(dirigente_id: str, current_user = Depends(g
     if current_user["role"] in [UserRole.VIEWER, UserRole.DIRIGENTE] and current_user["id"] != dirigente_id:
         raise HTTPException(status_code=403, detail="Puoi vedere solo i tuoi compensi")
     
-    records = await db.dirigente_compensations.find({"dirigente_id": dirigente_id}).sort([("year", -1), ("month", -1)]).to_list(100)
+    records = await db.dirigente_compensations.find({"dirigente_id": dirigente_id, "is_previous_season": {"$ne": True}}).sort([("year", -1), ("month", -1)]).to_list(100)
     clean_mongo_docs(records)
     return records
 
@@ -22158,7 +22162,8 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
     yearly_records = await db.dirigente_compensations.find({
         "dirigente_id": dirigente_id,
         "year": year,
-        "receipt_signed": True
+        "receipt_signed": True,
+        "is_previous_season": {"$ne": True}
     }).to_list(12)
     
     yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
@@ -22174,7 +22179,8 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
     next_unsigned_record = await db.dirigente_compensations.find_one({
         "dirigente_id": dirigente_id,
         "year": year,
-        "receipt_signed": {"$ne": True}
+        "receipt_signed": {"$ne": True},
+        "is_previous_season": {"$ne": True}
     })
     # Use custom amount if exists, otherwise use standard monthly compensation
     next_amount = monthly_compensation
@@ -22215,7 +22221,8 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
     # Get ALL records for this year (signed and unsigned)
     all_year_records = await db.dirigente_compensations.find({
         "dirigente_id": dirigente_id,
-        "year": year
+        "year": year,
+        "is_previous_season": {"$ne": True}
     }).to_list(12)
     
     # Calculate projected total with actual amounts where available
@@ -22435,7 +22442,7 @@ async def get_collaboratore_compensation(collaboratore_id: str, current_user = D
     if not collaboratore:
         raise HTTPException(status_code=404, detail="Collaboratore non trovato")
     
-    records = await db.collaboratore_compensations.find({"collaboratore_id": collaboratore_id}).to_list(100)
+    records = await db.collaboratore_compensations.find({"collaboratore_id": collaboratore_id, "is_previous_season": {"$ne": True}}).to_list(100)
     clean_mongo_docs(records)
     
     return {
@@ -22893,7 +22900,8 @@ async def get_collaboratore_threshold_status(
     yearly_records = await db.collaboratore_compensations.find({
         "collaboratore_id": collaboratore_id,
         "year": year,
-        "receipt_signed": True
+        "receipt_signed": True,
+        "is_previous_season": {"$ne": True}
     }).to_list(12)
     
     yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
@@ -22943,7 +22951,8 @@ async def get_collaboratore_threshold_status(
     next_unsigned_record = await db.collaboratore_compensations.find_one({
         "collaboratore_id": collaboratore_id,
         "year": year,
-        "receipt_signed": {"$ne": True}
+        "receipt_signed": {"$ne": True},
+        "is_previous_season": {"$ne": True}
     })
     # Use custom amount if exists, otherwise use standard monthly compensation
     next_amount = monthly_compensation
@@ -23001,7 +23010,8 @@ async def get_collaboratore_threshold_status(
         collab_months_in_year = list(range(1, 13))
     
     all_collab_year_records = await db.collaboratore_compensations.find({
-        "collaboratore_id": collaboratore_id, "year": year
+        "collaboratore_id": collaboratore_id, "year": year,
+        "is_previous_season": {"$ne": True}
     }).to_list(12)
     
     eff_prior = prior_compensation if (collab_start_year_val and year == collab_start_year_val) else 0
@@ -23148,7 +23158,8 @@ async def get_collaboratore_threshold_status(
     yearly_records = await db.collaboratore_compensations.find({
         "collaboratore_id": collaboratore_id,
         "year": year,
-        "receipt_signed": True
+        "receipt_signed": True,
+        "is_previous_season": {"$ne": True}
     }).to_list(12)
     
     yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
@@ -23191,7 +23202,8 @@ async def get_collaboratore_threshold_status(
     next_unsigned_record = await db.collaboratore_compensations.find_one({
         "collaboratore_id": collaboratore_id,
         "year": year,
-        "receipt_signed": {"$ne": True}
+        "receipt_signed": {"$ne": True},
+        "is_previous_season": {"$ne": True}
     })
     # Use custom amount if exists, otherwise use standard monthly compensation
     next_amount = monthly_compensation
@@ -23278,7 +23290,8 @@ async def get_collaboratore_annual_compensation(
     yearly_records = await db.collaboratore_compensations.find({
         "collaboratore_id": collaboratore_id,
         "year": year,
-        "receipt_signed": True
+        "receipt_signed": True,
+        "is_previous_season": {"$ne": True}
     }).to_list(12)
     
     yearly_total = sum(r.get("amount_gross", 0) for r in yearly_records)
