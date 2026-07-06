@@ -656,6 +656,46 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
         )
         fixed += 1
 
+    # 🆕 05/07/2026 — Reset ESTESO per Coach/Collab/Dir già riconfermati (con o senza fix precedente).
+    # Azzeriamo: compenso, contratto, pregresso, accettazione, onboarding, checklist.
+    q_ext = {
+        "society_id": sid,
+        "active_seasons": current_season,
+        "role": {"$in": [UserRole.COACH, UserRole.COLLABORATORE, UserRole.DIRIGENTE, UserRole.VIEWER]},
+        "$or": [
+            {"compensation_accepted": True},
+            {"contract_start_date": {"$exists": True, "$ne": None}},
+            {"monthly_compensation": {"$gt": 0}},
+        ],
+    }
+    users_reset_ext = 0
+    async for u in db.users.find(q_ext, {"_id": 0, "id": 1, "monthly_compensation": 1, "other_annual_compensation": 1, "prior_compensation": 1, "contract_start_date": 1, "contract_end_date": 1}):
+        await db.users.update_one(
+            {"id": u["id"], "society_id": sid},
+            {
+                "$set": {
+                    "monthly_compensation_previous_season": u.get("monthly_compensation") or 0,
+                    "other_annual_compensation_previous_season": u.get("other_annual_compensation") or 0,
+                    "prior_compensation_previous_season": u.get("prior_compensation") or 0,
+                    "contract_start_date_previous_season": u.get("contract_start_date"),
+                    "contract_end_date_previous_season": u.get("contract_end_date"),
+                    "pro_data_pending_review": True,
+                    "pro_data_pending_review_season": current_season,
+                    "compensation_accepted": False,
+                    "monthly_compensation": 0,
+                    "other_annual_compensation": 0,
+                    "prior_compensation": 0,
+                    "onboarding_completed": False,
+                },
+                "$unset": {
+                    "compensation_accepted_date": "",
+                    "contract_start_date": "",
+                    "contract_end_date": "",
+                },
+            },
+        )
+        users_reset_ext += 1
+
     # 🆕 04/07/2026 — Stesso backfill per gli ATLETI riconfermati con codice vecchio
     # 🆕 05/07/2026 — In più marca i loro PAGAMENTI come stagione precedente.
     # Calcola la stagione appena chiusa (start_year - 1) - start_year.
@@ -778,7 +818,7 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
                 },
             )
 
-    return {"ok": True, "reset_count": fixed, "athletes_reset": fixed_ath, "payments_archived": payments_archived, "current_season": current_season}
+    return {"ok": True, "reset_count": fixed, "users_reset_extended": users_reset_ext, "athletes_reset": fixed_ath, "payments_archived": payments_archived, "current_season": current_season}
 
 
 @router.post("/seasons/users/{user_id}/reset-assignments")
