@@ -647,6 +647,34 @@ export default function AdminCollaboratoreDetail() {
           </View>
         )}
 
+        {/* 🆕 06/07/2026 — Bottone reset FORZATO compenso/contratto (per residui da vecchia stagione) */}
+        {(collaboratore?.compensation_accepted || collaboratore?.contract_start_date || (collaboratore?.monthly_compensation || 0) > 0 || (collaboratore?.other_annual_compensation || 0) > 0 || (collaboratore?.prior_compensation || 0) > 0) && (
+          <TouchableOpacity
+            onPress={async () => {
+              const msg = `Azzerare compenso, contratto, pregresso e onboarding di ${collaboratore?.full_name || 'questo collaboratore'}?\n\nGli attuali valori verranno salvati come snapshot "*_previous_season".\nProcedere?`;
+              const ok = Platform.OS === 'web' ? window.confirm(msg) : await new Promise<boolean>(res => {
+                Alert.alert('Reset dati stagione', msg, [
+                  { text: 'Annulla', style: 'cancel', onPress: () => res(false) },
+                  { text: 'Reset', style: 'destructive', onPress: () => res(true) },
+                ]);
+              });
+              if (!ok) return;
+              try {
+                await api.post(`/seasons/users/${collaboratore.id}/reset-compensation`);
+                Alert.alert('Fatto', 'Compenso e contratto azzerati.');
+                await loadData();
+              } catch (e: any) {
+                Alert.alert('Errore', e?.response?.data?.detail || 'Reset non riuscito');
+              }
+            }}
+            style={{ marginHorizontal: 12, marginBottom: 4, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: '#F57C00', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+            data-testid="reset-collaboratore-compensation-btn"
+          >
+            <Ionicons name="refresh-circle" size={16} color="#fff" />
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>🔄 Reset dati compenso/contratto stagione</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Header con nome e contatti */}
         <View style={styles.profileSection}>
           <Text style={styles.profileName}>{collaboratore.full_name}</Text>

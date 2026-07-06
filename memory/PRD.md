@@ -16,7 +16,18 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
-## 🆕 06/07/2026 — Fix definitivo residuo compensi/contratti Coach/Dirigente ✅
+## 🆕 06/07/2026 (v2) — Reset per-utente forzato + backfill filtro più tollerante ✅
+
+Post-deploy del fix precedente il coach RICA FEDE continuava a mostrare i dati vecchi. Cause probabili: `active_seasons` mancante sul record (backfill lo saltava) oppure filtri troppo restrittivi.
+
+**Fix v2**:
+1. **Backfill filtro allargato** (`routes/seasons.py`): rimosso vincolo stretto `active_seasons: current_season`. Ora il filtro `q_ext` include anche i record dove `active_seasons` non esiste + condizioni OR estese (`other_annual_compensation > 0`, `prior_compensation > 0`).
+2. **Nuovo endpoint per-utente** `POST /api/seasons/users/{user_id}/reset-compensation`: reset FORZATO singolo Coach/Collab/Dirigente. Ignora tutti i filtri e ripulisce compenso, contratto, pregresso, onboarding, salvando snapshot.
+3. **Nuovo pulsante UI arancione** `🔄 Reset dati compenso/contratto stagione` su `/admin/coach/[id]`, `/admin/dirigente/[id]`, `/admin/collaboratore/[id]`. Visibile ogni volta che il profilo ha ancora dati compenso/contratto valorizzati. Conferma via prompt.
+
+**⚠️ Deploy required**: Save to Github → attendi deploy Vercel/Render (~4-6 min). Poi apri il profilo di RICA FEDE → clic su "🔄 Reset dati compenso/contratto stagione" → conferma. Il coach diventa "blank slate" istantaneo.
+
+
 
 **Bug segnalato dall'utente**: dopo la riconferma bulk di Coach/Collab/Dirigenti nella nuova stagione, i profili mostravano ancora `compensation_accepted: Sì`, `contract_start_date`/`end_date`, `monthly_compensation`, `prior_compensation` della stagione precedente. Il backfill esisteva ma andava cliccato manualmente.
 

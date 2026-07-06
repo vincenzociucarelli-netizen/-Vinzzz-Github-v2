@@ -685,14 +685,23 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
 
     # 🆕 05/07/2026 — Reset ESTESO per Coach/Collab/Dir già riconfermati (con o senza fix precedente).
     # Azzeriamo: compenso, contratto, pregresso, accettazione, onboarding, checklist.
+    # 🆕 06/07/2026 — Rimosso vincolo su `active_seasons` per catturare anche i record
+    # migrati senza il campo popolato (fallback identico a /api/users/coaches).
     q_ext = {
         "society_id": sid,
-        "active_seasons": current_season,
         "role": {"$in": [UserRole.COACH, UserRole.COLLABORATORE, UserRole.DIRIGENTE, UserRole.VIEWER]},
-        "$or": [
-            {"compensation_accepted": True},
-            {"contract_start_date": {"$exists": True, "$ne": None}},
-            {"monthly_compensation": {"$gt": 0}},
+        "$and": [
+            {"$or": [
+                {"active_seasons": current_season},
+                {"active_seasons": {"$exists": False}},
+            ]},
+            {"$or": [
+                {"compensation_accepted": True},
+                {"contract_start_date": {"$exists": True, "$ne": None}},
+                {"monthly_compensation": {"$gt": 0}},
+                {"other_annual_compensation": {"$gt": 0}},
+                {"prior_compensation": {"$gt": 0}},
+            ]},
         ],
     }
     users_reset_ext = 0
@@ -870,6 +879,56 @@ async def reset_user_assignments(user_id: str, current_user = Depends(get_curren
             "assigned_teams": [],
             "assigned_gyms": [],
         }},
+    )
+    return {"ok": True, "current_season": current_season}
+
+
+# 🆕 06/07/2026 — Reset FORZATO singolo Coach/Collab/Dirigente per la stagione corrente
+# Utile quando il backfill batch non ha catturato l'utente (es. active_seasons mancante
+# o già riconfermato con il codice vecchio). L'admin può chiamarlo dalla scheda profilo.
+@router.post("/seasons/users/{user_id}/reset-compensation")
+async def reset_user_compensation(user_id: str, current_user = Depends(get_current_user)):
+    """Reset FORZATO compenso/contratto/pregresso/onboarding di un singolo utente pro
+    (Coach/Collab/Dirigente). Salva snapshot su *_previous_season."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    if not sid:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+    current_season = await get_current_season_for_society(db, sid)
+    u = await db.users.find_one(
+        {"id": user_id, "society_id": sid},
+        {"_id": 0, "id": 1, "role": 1, "monthly_compensation": 1,
+         "other_annual_compensation": 1, "prior_compensation": 1,
+         "contract_start_date": 1, "contract_end_date": 1},
+    )
+    if not u:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    if u.get("role") not in [UserRole.COACH, UserRole.COLLABORATORE, UserRole.DIRIGENTE, UserRole.VIEWER]:
+        raise HTTPException(status_code=400, detail="Solo Coach/Collaboratori/Dirigenti")
+    await db.users.update_one(
+        {"id": user_id, "society_id": sid},
+        {
+            "$set": {
+                "monthly_compensation_previous_season": u.get("monthly_compensation") or 0,
+                "other_annual_compensation_previous_season": u.get("other_annual_compensation") or 0,
+                "prior_compensation_previous_season": u.get("prior_compensation") or 0,
+                "contract_start_date_previous_season": u.get("contract_start_date"),
+                "contract_end_date_previous_season": u.get("contract_end_date"),
+                "pro_data_pending_review": True,
+                "pro_data_pending_review_season": current_season,
+                "compensation_accepted": False,
+                "monthly_compensation": 0,
+                "other_annual_compensation": 0,
+                "prior_compensation": 0,
+                "onboarding_completed": False,
+            },
+            "$unset": {
+                "compensation_accepted_date": "",
+                "contract_start_date": "",
+                "contract_end_date": "",
+            },
+        },
     )
     return {"ok": True, "current_season": current_season}
 
