@@ -16,7 +16,41 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
-## 🆕 06/07/2026 (v5) — Nuovo flusso ROLLOVER STAGIONE (import solo anagrafica) ✅
+## 🆕 08/07/2026 (v6) — Rollover a 2 step + import granulare ✅
+
+Feedback utente: il rollover atomico "tutto in un click" non è realistico perché i tesserati (specialmente famiglie di atleti minorenni) decidono di rinnovare in tempi diversi. Serve un flusso in 2 tempi + import uno per uno spalmato su settimane/mesi.
+
+**Backend** (`routes/seasons.py`):
+- **`POST /api/seasons/open-new-season`** — Step A: archivia tutto lo storico operativo + aggiorna `settings.current_season` alla nuova. Non tocca `active_seasons` degli utenti. Setta `settings.new_season_opened_at`.
+- **`POST /api/seasons/import-member/{id}`** — Step B: importa singolo utente o atleta (auto-detect). Mantiene solo anagrafica (+ genitori/certificato/QR per minori). Aggiunge current_season a `active_seasons`. Setta `rollover_decision: imported`.
+- **`POST /api/seasons/dismiss-member/{id}`** — Marca "non riconfermato": setta `rollover_decision: dismissed`. Non tocca dati.
+- **`POST /api/seasons/undo-decision/{id}`** — Reset a stato "pending" (rimuove flag e, se era imported, rimuove current_season da active_seasons).
+- **`GET /api/seasons/rollover/preview`** — restituisce 6 cartelle con `decision_status` per ognuno.
+
+**6 cartelle nella preview**:
+- Coach (`role=coach`)
+- Dirigenti (`role=viewer|dirigente`)
+- Collaboratori (`role=collaboratore`)
+- Genitori (`role=parent`) — NUOVO
+- Atleti (`db.athletes` con `athlete_type != 'pro'`, sia 18- che 18+ insieme) — verranno smistati poi nelle squadre dall'admin
+- Atleti 18+ PRO (`athlete_type == 'pro'`)
+
+**Frontend** (`/app/admin/nuova-stagione.tsx`):
+- Riscritta da zero. Card superiore "Step A" con campo CONFERMA + pulsante "🚀 Apri stagione X". Diventa "✅ Stagione X aperta" dopo l'apertura.
+- 6 accordion sotto, ognuno con 3 chip (⏳ pending / ✅ imported / 🚫 dismissed).
+- Ogni riga pending mostra 2 pulsanti: 🟢 "Importa" + ⚪ "Non riconferma".
+- Righe già decise restano visibili ma **grigie con icona di stato** + pulsante piccolo "↩️ Annulla" per revocare la decisione.
+- Se la stagione non è ancora aperta, tutte le righe mostrano "Apri prima la stagione".
+
+**Testato**: `/rollover/preview` risponde 200 con conteggi corretti (6 coaches, 32 genitori, 44 atleti). Lint OK sia Python che TypeScript.
+
+**⚠️ Deploy required**: `Save to Github` → Vercel/Render redeploy → apri `/admin/seasons` → clic pulsante rosso "🚀 Passaggio a Nuova Stagione" → arriva alla nuova pagina.
+
+**Note post-deploy**:
+- Per la stagione attuale (2025-2026 → 2026-2027 in produzione), quando cliccherai "Apri stagione 2026-2027" tutte le liste (Coach/Atleti/Dirigenti/…) diventeranno vuote nell'admin. È voluto: solo i tesserati che importerai uno per uno ricompariranno.
+- L'import è ripetibile su giorni/settimane/mesi. Nessuna scadenza.
+
+
 
 Su richiesta dell'utente, sostituito il flusso caotico "archivia + riconferma bulk + backfill + reset per-utente" con un unico rollover atomico.
 

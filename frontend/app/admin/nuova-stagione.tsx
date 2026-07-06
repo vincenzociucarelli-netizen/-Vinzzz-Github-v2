@@ -1,38 +1,26 @@
 /**
- * 🆕 06/07/2026 — Nuova Stagione: rollover atomico
+ * 🆕 08/07/2026 — Nuova Stagione: flusso a 2 step
  *
- * Sostituisce il vecchio flusso Riconferma Bulk / Backfill / Reset per-utente.
- * L'admin dopo la data `season_start_month/day` configurata nelle impostazioni
- * società può:
- *   1. Vedere TUTTI i tesserati raggruppati per ruolo (5 accordion)
- *   2. Spuntare/deselezionare chi importare nella nuova stagione
- *   3. Confermare digitando "CONFERMA" e cliccare il pulsante rosso
+ * STEP A (una volta): admin clicca "🚀 Apri stagione X-Y" → backend archivia
+ * tutto lo storico operativo + aggiorna current_season. Nessuno viene importato.
  *
- * L'endpoint `/seasons/rollover` esegue atomicamente:
- *   - Archivia tutto lo storico stagione precedente (is_previous_season: true)
- *   - Per i selezionati: mantiene SOLO anagrafica (adulti) o anagrafica + genitori
- *     + certificato medico + qr_code (minorenni). Tutto il resto ripartito da zero.
- *   - Aggiorna current_season
- *
- * Nessun banner, nessun snapshot temporaneo, nessuna riconferma successiva richiesta.
+ * STEP B (ripetibile per mesi): sotto compaiono 6 accordion:
+ *   - Coach, Dirigenti, Collaboratori, Genitori (utenti)
+ *   - Atleti (18- e 18+ quota, tutti insieme)
+ *   - Atleti PRO (18+ compensati)
+ * Ogni riga ha 2 bottoni: 🟢 "Importa" e ⚪ "Non riconferma".
+ * Dopo la decisione la riga resta in grigio con "↩️ Annulla".
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-  TextInput,
-  Platform,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator,
+  Alert, TextInput, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
 
-type SectionKey = 'coaches' | 'dirigenti' | 'collaboratori' | 'athletes_adult' | 'athletes_minor';
+type SectionKey = 'coaches' | 'dirigenti' | 'collaboratori' | 'genitori' | 'athletes' | 'athletes_pro';
 
 interface Member {
   id: string;
@@ -42,60 +30,59 @@ interface Member {
   email?: string;
   fiscal_code?: string;
   role?: string;
-  status?: string;
+  athlete_type?: string;
+  is_minor?: boolean;
   birth_date?: string;
   date_of_birth?: string;
   parent_id?: string;
   second_parent_id?: string;
   medical_certificate_expiry?: string;
   qr_code?: string;
+  decision_status?: 'pending' | 'imported' | 'dismissed';
 }
 
 interface PreviewData {
   current_season: string;
   next_season: string;
+  target_season: string;
+  is_new_season_open: boolean;
   can_rollover: boolean;
   season_start_month: number;
   season_start_day: number;
   coaches: Member[];
   dirigenti: Member[];
   collaboratori: Member[];
-  athletes_adult: Member[];
-  athletes_minor: Member[];
+  genitori: Member[];
+  athletes: Member[];
+  athletes_pro: Member[];
 }
 
-const SECTION_META: Record<SectionKey, { title: string; icon: keyof typeof Ionicons.glyphMap; color: string; kind: 'user' | 'athlete' }> = {
-  coaches:         { title: 'Coach',              icon: 'fitness',           color: '#E65100', kind: 'user' },
-  dirigenti:       { title: 'Dirigenti',          icon: 'briefcase',         color: '#1565C0', kind: 'user' },
-  collaboratori:   { title: 'Collaboratori',      icon: 'construct',         color: '#6A1B9A', kind: 'user' },
-  athletes_adult:  { title: 'Atleti maggiorenni', icon: 'person',            color: '#2E7D32', kind: 'athlete' },
-  athletes_minor:  { title: 'Atleti minorenni',   icon: 'people',            color: '#F57C00', kind: 'athlete' },
+const SECTION_META: Record<SectionKey, { title: string; icon: keyof typeof Ionicons.glyphMap; color: string }> = {
+  coaches:       { title: 'Coach',           icon: 'fitness',   color: '#E65100' },
+  dirigenti:     { title: 'Dirigenti',       icon: 'briefcase', color: '#1565C0' },
+  collaboratori: { title: 'Collaboratori',   icon: 'construct', color: '#6A1B9A' },
+  genitori:      { title: 'Genitori',        icon: 'home',      color: '#00838F' },
+  athletes:      { title: 'Atleti',          icon: 'people',    color: '#2E7D32' },
+  athletes_pro:  { title: 'Atleti 18+ PRO',  icon: 'trophy',    color: '#B71C1C' },
 };
 
-const SECTION_ORDER: SectionKey[] = ['coaches', 'dirigenti', 'collaboratori', 'athletes_adult', 'athletes_minor'];
+const SECTION_ORDER: SectionKey[] = ['coaches', 'dirigenti', 'collaboratori', 'genitori', 'athletes', 'athletes_pro'];
 
 export default function NuovaStagione() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<PreviewData | null>(null);
   const [expanded, setExpanded] = useState<Record<SectionKey, boolean>>({
-    coaches: true, dirigenti: true, collaboratori: true, athletes_adult: true, athletes_minor: true,
+    coaches: true, dirigenti: true, collaboratori: true, genitori: true, athletes: true, athletes_pro: true,
   });
-  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [openingSeason, setOpeningSeason] = useState(false);
   const [confirmText, setConfirmText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [busy, setBusy] = useState<Record<string, boolean>>({});
 
   const loadPreview = async () => {
-    setLoading(true);
     try {
       const r = await api.get('/seasons/rollover/preview');
       setData(r.data);
-      // Pre-seleziona tutti di default
-      const initial: Record<string, boolean> = {};
-      (['coaches', 'dirigenti', 'collaboratori', 'athletes_adult', 'athletes_minor'] as SectionKey[]).forEach((k) => {
-        (r.data[k] as Member[]).forEach((m) => { initial[m.id] = true; });
-      });
-      setSelected(initial);
     } catch (e: any) {
       Alert.alert('Errore', e?.response?.data?.detail || 'Preview non disponibile');
     } finally {
@@ -105,79 +92,77 @@ export default function NuovaStagione() {
 
   useEffect(() => { loadPreview(); }, []);
 
-  const toggleAll = (section: SectionKey, value: boolean) => {
+  const handleOpenNewSeason = async () => {
     if (!data) return;
-    const items = data[section] as Member[];
-    setSelected((prev) => {
-      const next = { ...prev };
-      items.forEach((m) => { next[m.id] = value; });
-      return next;
-    });
+    if (confirmText.trim().toUpperCase() !== 'CONFERMA') {
+      Alert.alert('Manca conferma', 'Digita "CONFERMA" per procedere.');
+      return;
+    }
+    const msg = `Stai per APRIRE la stagione ${data.next_season}.\n\n• Tutta la storia operativa della ${data.current_season} verrà archiviata.\n• Nessun tesserato passa in automatico: dovrai importarli tu, uno per uno, in questa pagina.\n\nProcedere?`;
+    const ok = Platform.OS === 'web'
+      ? window.confirm(msg)
+      : await new Promise<boolean>((res) => Alert.alert('Apri nuova stagione', msg, [
+          { text: 'Annulla', style: 'cancel', onPress: () => res(false) },
+          { text: 'Apri', style: 'destructive', onPress: () => res(true) },
+        ]));
+    if (!ok) return;
+    setOpeningSeason(true);
+    try {
+      const r = await api.post('/seasons/open-new-season', { confirmation: 'CONFERMA' });
+      Alert.alert('Stagione aperta', `Nuova stagione attiva: ${r.data.current_season}\n\nOra puoi importare i tesserati uno per uno.`);
+      setConfirmText('');
+      await loadPreview();
+    } catch (e: any) {
+      Alert.alert('Errore', e?.response?.data?.detail || 'Apertura fallita');
+    } finally {
+      setOpeningSeason(false);
+    }
+  };
+
+  const decide = async (m: Member, action: 'import' | 'dismiss' | 'undo') => {
+    if (busy[m.id]) return;
+    setBusy((p) => ({ ...p, [m.id]: true }));
+    try {
+      if (action === 'import') {
+        await api.post(`/seasons/import-member/${m.id}`);
+      } else if (action === 'dismiss') {
+        await api.post(`/seasons/dismiss-member/${m.id}`);
+      } else {
+        await api.post(`/seasons/undo-decision/${m.id}`);
+      }
+      await loadPreview();
+    } catch (e: any) {
+      Alert.alert('Errore', e?.response?.data?.detail || 'Operazione fallita');
+    } finally {
+      setBusy((p) => ({ ...p, [m.id]: false }));
+    }
   };
 
   const counts = useMemo(() => {
-    const res: Record<SectionKey, { total: number; sel: number }> = {
-      coaches: { total: 0, sel: 0 },
-      dirigenti: { total: 0, sel: 0 },
-      collaboratori: { total: 0, sel: 0 },
-      athletes_adult: { total: 0, sel: 0 },
-      athletes_minor: { total: 0, sel: 0 },
+    const res: Record<SectionKey, { total: number; pending: number; imported: number; dismissed: number }> = {
+      coaches: { total: 0, pending: 0, imported: 0, dismissed: 0 },
+      dirigenti: { total: 0, pending: 0, imported: 0, dismissed: 0 },
+      collaboratori: { total: 0, pending: 0, imported: 0, dismissed: 0 },
+      genitori: { total: 0, pending: 0, imported: 0, dismissed: 0 },
+      athletes: { total: 0, pending: 0, imported: 0, dismissed: 0 },
+      athletes_pro: { total: 0, pending: 0, imported: 0, dismissed: 0 },
     };
     if (!data) return res;
     (Object.keys(res) as SectionKey[]).forEach((k) => {
       const items = data[k] as Member[];
       res[k].total = items.length;
-      res[k].sel = items.filter((m) => selected[m.id]).length;
+      items.forEach((m) => {
+        if (m.decision_status === 'imported') res[k].imported += 1;
+        else if (m.decision_status === 'dismissed') res[k].dismissed += 1;
+        else res[k].pending += 1;
+      });
     });
     return res;
-  }, [data, selected]);
-
-  const totalSelected = useMemo(() => Object.values(selected).filter(Boolean).length, [selected]);
-
-  const handleSubmit = async () => {
-    if (!data) return;
-    if (confirmText.trim().toUpperCase() !== 'CONFERMA') {
-      Alert.alert('Manca conferma', 'Digita "CONFERMA" nel campo in basso per procedere.');
-      return;
-    }
-    const selected_user_ids: string[] = [];
-    const selected_athlete_ids: string[] = [];
-    (['coaches', 'dirigenti', 'collaboratori'] as SectionKey[]).forEach((k) => {
-      (data[k] as Member[]).forEach((m) => { if (selected[m.id]) selected_user_ids.push(m.id); });
-    });
-    (['athletes_adult', 'athletes_minor'] as SectionKey[]).forEach((k) => {
-      (data[k] as Member[]).forEach((m) => { if (selected[m.id]) selected_athlete_ids.push(m.id); });
-    });
-
-    const msg = `Stai per passare dalla stagione ${data.current_season} alla ${data.next_season}.\n\n• Importa (solo anagrafica): ${selected_user_ids.length + selected_athlete_ids.length} tesserati\n• Archivia in sola lettura: tutti gli altri + tutta la storia operativa (compensi, contratti, quietanze, presenze)\n\nProcedere?`;
-    const ok = Platform.OS === 'web'
-      ? window.confirm(msg)
-      : await new Promise<boolean>((res) => Alert.alert('Rollover stagione', msg, [
-          { text: 'Annulla', style: 'cancel', onPress: () => res(false) },
-          { text: 'Procedi', style: 'destructive', onPress: () => res(true) },
-        ]));
-    if (!ok) return;
-    setSubmitting(true);
-    try {
-      const r = await api.post('/seasons/rollover', {
-        selected_user_ids,
-        selected_athlete_ids,
-        confirmation: 'CONFERMA',
-      });
-      Alert.alert('Rollover completato',
-        `Da ${r.data.from_season} → ${r.data.to_season}\n\nImportati: ${r.data.users_imported} utenti + ${r.data.athletes_imported} atleti.`);
-      router.replace('/admin');
-    } catch (e: any) {
-      Alert.alert('Errore', e?.response?.data?.detail || 'Rollover fallito');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  }, [data]);
 
   if (loading) {
     return <View style={styles.center}><ActivityIndicator size="large" color="#E65100" /></View>;
   }
-
   if (!data) {
     return (
       <View style={styles.center}>
@@ -189,7 +174,7 @@ export default function NuovaStagione() {
     );
   }
 
-  const disabled = !data.can_rollover;
+  const gateBlocked = !data.can_rollover;
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: '#f5f5f5' }} contentContainerStyle={{ paddingBottom: 100 }}>
@@ -202,24 +187,68 @@ export default function NuovaStagione() {
         <View style={{ width: 42 }} />
       </View>
 
-      {/* Banner data-gate */}
-      <View style={[styles.banner, disabled ? styles.bannerDisabled : styles.bannerReady]}>
-        <Ionicons name={disabled ? 'lock-closed' : 'unlock'} size={20} color={disabled ? '#B71C1C' : '#2E7D32'} />
-        <View style={{ flex: 1, marginLeft: 10 }}>
-          <Text style={[styles.bannerTitle, { color: disabled ? '#B71C1C' : '#2E7D32' }]}>
-            {disabled
-              ? `🔒 Rollover disponibile dal ${data.season_start_day.toString().padStart(2, '0')}/${data.season_start_month.toString().padStart(2, '0')}`
-              : `Pronto per il passaggio: ${data.current_season} → ${data.next_season}`}
-          </Text>
-          <Text style={{ fontSize: 12, color: '#444', marginTop: 4 }}>
-            {disabled
-              ? 'La data di inizio stagione è configurata nelle Impostazioni Società. Torna dopo il primo giorno di stagione.'
-              : 'Spunta chi vuoi importare nella nuova stagione (di default: tutti). Verrà mantenuta SOLO l\u2019anagrafica (per minorenni anche genitori, certificato medico, QR). Il resto ripartira\u2019 da zero.'}
+      {/* STEP A — Apri nuova stagione */}
+      {!data.is_new_season_open ? (
+        <View style={[styles.card, gateBlocked ? { backgroundColor: '#FFEBEE' } : { backgroundColor: '#FFF3E0' }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <Ionicons name={gateBlocked ? 'lock-closed' : 'flag'} size={22} color={gateBlocked ? '#B71C1C' : '#E65100'} />
+            <Text style={{ fontSize: 15, fontWeight: '800', color: gateBlocked ? '#B71C1C' : '#E65100' }}>
+              Step A — Apri la stagione {data.next_season}
+            </Text>
+          </View>
+          {gateBlocked ? (
+            <Text style={{ fontSize: 13, color: '#B71C1C', lineHeight: 20 }}>
+              🔒 Puoi aprire la nuova stagione dal {String(data.season_start_day).padStart(2, '0')}/{String(data.season_start_month).padStart(2, '0')}.
+              Configura la data in Impostazioni Società.
+            </Text>
+          ) : (
+            <>
+              <Text style={{ fontSize: 13, color: '#333', lineHeight: 20 }}>
+                Attualmente sei nella stagione <Text style={{ fontWeight: '700' }}>{data.current_season}</Text>.{'\n'}
+                Cliccando qui sotto: (1) tutto lo storico operativo verrà archiviato,{'\n'}
+                (2) la stagione attiva diventa <Text style={{ fontWeight: '700' }}>{data.next_season}</Text>,{'\n'}
+                (3) tutte le liste (Coach/Atleti/…) risulteranno vuote,{'\n'}
+                (4) potrai importare i tesserati uno per uno con calma.
+              </Text>
+              <TextInput
+                value={confirmText}
+                onChangeText={setConfirmText}
+                placeholder="Digita CONFERMA per abilitare il pulsante"
+                autoCapitalize="characters"
+                style={styles.confirmInput}
+                data-testid="open-season-confirm-input"
+              />
+              <TouchableOpacity
+                onPress={handleOpenNewSeason}
+                disabled={openingSeason || confirmText.trim().toUpperCase() !== 'CONFERMA'}
+                style={[styles.openBtn, (openingSeason || confirmText.trim().toUpperCase() !== 'CONFERMA') && { backgroundColor: '#bdbdbd' }]}
+                data-testid="open-new-season-btn"
+              >
+                {openingSeason ? <ActivityIndicator color="#fff" /> : (
+                  <>
+                    <Ionicons name="rocket" size={18} color="#fff" />
+                    <Text style={styles.openBtnText}>🚀 Apri stagione {data.next_season}</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      ) : (
+        <View style={[styles.card, { backgroundColor: '#E8F5E9' }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Ionicons name="checkmark-circle" size={22} color="#2E7D32" />
+            <Text style={{ fontSize: 15, fontWeight: '800', color: '#2E7D32' }}>
+              ✅ Stagione {data.current_season} aperta
+            </Text>
+          </View>
+          <Text style={{ fontSize: 12, color: '#1B5E20', marginTop: 4 }}>
+            Ora usa gli accordion qui sotto per importare i tesserati uno per uno. Puoi tornare in questa pagina in giorni diversi finché completi tutti.
           </Text>
         </View>
-      </View>
+      )}
 
-      {/* Sezioni */}
+      {/* STEP B — Import individuale (visibile sempre, ma se stagione non aperta è read-only con hint) */}
       {SECTION_ORDER.map((key) => {
         const meta = SECTION_META[key];
         const items = data[key] as Member[];
@@ -234,8 +263,10 @@ export default function NuovaStagione() {
             >
               <Ionicons name={meta.icon} size={18} color="#fff" />
               <Text style={styles.sectionTitle}>{meta.title}</Text>
-              <View style={styles.sectionCount}>
-                <Text style={styles.sectionCountText}>{c.sel} / {c.total}</Text>
+              <View style={styles.sectionCountsRow}>
+                <View style={[styles.chip, { backgroundColor: '#FFC107' }]}><Text style={styles.chipText}>⏳ {c.pending}</Text></View>
+                <View style={[styles.chip, { backgroundColor: '#4CAF50' }]}><Text style={styles.chipText}>✅ {c.imported}</Text></View>
+                <View style={[styles.chip, { backgroundColor: '#9E9E9E' }]}><Text style={styles.chipText}>🚫 {c.dismissed}</Text></View>
               </View>
               <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={18} color="#fff" />
             </TouchableOpacity>
@@ -244,88 +275,74 @@ export default function NuovaStagione() {
                 {items.length === 0 ? (
                   <Text style={{ padding: 12, color: '#999', fontStyle: 'italic' }}>Nessun tesserato in questa categoria.</Text>
                 ) : (
-                  <>
-                    <View style={styles.bulkRow}>
-                      <TouchableOpacity onPress={() => toggleAll(key, true)} data-testid={`select-all-${key}`}>
-                        <Text style={styles.bulkLink}>Seleziona tutti</Text>
-                      </TouchableOpacity>
-                      <Text style={{ color: '#ccc' }}> | </Text>
-                      <TouchableOpacity onPress={() => toggleAll(key, false)} data-testid={`deselect-all-${key}`}>
-                        <Text style={styles.bulkLink}>Deseleziona tutti</Text>
-                      </TouchableOpacity>
-                    </View>
-                    {items.map((m) => {
-                      const isSel = !!selected[m.id];
-                      const name = m.full_name || `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.email || '—';
-                      const meta2 = key === 'athletes_minor'
-                        ? [
-                            m.parent_id ? '👨 gen.1' : null,
-                            m.second_parent_id ? '👩 gen.2' : null,
-                            m.medical_certificate_expiry ? `⚕️ ${m.medical_certificate_expiry.split('T')[0]}` : null,
-                            m.qr_code ? '🔗 QR' : null,
-                          ].filter(Boolean).join(' · ')
-                        : (m.fiscal_code || m.email || '');
-                      return (
-                        <TouchableOpacity
-                          key={m.id}
-                          style={[styles.item, isSel && styles.itemSelected]}
-                          onPress={() => setSelected((p) => ({ ...p, [m.id]: !p[m.id] }))}
-                          data-testid={`row-${m.id}`}
-                        >
-                          <Ionicons
-                            name={isSel ? 'checkbox' : 'square-outline'}
-                            size={22}
-                            color={isSel ? meta.color : '#bbb'}
-                          />
-                          <View style={{ flex: 1, marginLeft: 10 }}>
-                            <Text style={{ fontWeight: '700', color: '#222' }}>{name}</Text>
-                            {!!meta2 && <Text style={{ fontSize: 12, color: '#777', marginTop: 2 }}>{meta2}</Text>}
+                  items.map((m) => {
+                    const name = m.full_name || `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.email || '—';
+                    const isMinor = m.is_minor;
+                    const status = m.decision_status || 'pending';
+                    const meta2 = key === 'athletes' && isMinor
+                      ? [
+                          m.parent_id ? '👨 gen.1' : null,
+                          m.second_parent_id ? '👩 gen.2' : null,
+                          m.medical_certificate_expiry ? `⚕️ ${m.medical_certificate_expiry.split('T')[0]}` : null,
+                          m.qr_code ? '🔗 QR' : null,
+                        ].filter(Boolean).join(' · ')
+                      : (m.fiscal_code || m.email || '');
+                    return (
+                      <View key={m.id} style={[styles.item, status !== 'pending' && styles.itemGrey]} data-testid={`row-${m.id}`}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.itemName, status !== 'pending' && styles.textGrey]}>
+                            {status === 'imported' ? '✅ ' : status === 'dismissed' ? '🚫 ' : ''}{name}
+                            {key === 'athletes' && isMinor ? <Text style={{ fontSize: 10, color: '#F57C00' }}>  · minorenne</Text> : null}
+                          </Text>
+                          {!!meta2 && <Text style={[styles.itemMeta, status !== 'pending' && styles.textGrey]}>{meta2}</Text>}
+                        </View>
+                        {!data.is_new_season_open ? (
+                          <Text style={{ fontSize: 11, color: '#999', fontStyle: 'italic' }}>Apri prima la stagione</Text>
+                        ) : status === 'pending' ? (
+                          <View style={{ flexDirection: 'row', gap: 6 }}>
+                            <TouchableOpacity
+                              onPress={() => decide(m, 'import')}
+                              disabled={!!busy[m.id]}
+                              style={[styles.actionBtn, { backgroundColor: '#2E7D32' }]}
+                              data-testid={`import-btn-${m.id}`}
+                            >
+                              {busy[m.id] ? <ActivityIndicator color="#fff" size="small" /> : (
+                                <>
+                                  <Ionicons name="arrow-forward-circle" size={14} color="#fff" />
+                                  <Text style={styles.actionText}>Importa</Text>
+                                </>
+                              )}
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => decide(m, 'dismiss')}
+                              disabled={!!busy[m.id]}
+                              style={[styles.actionBtn, { backgroundColor: '#757575' }]}
+                              data-testid={`dismiss-btn-${m.id}`}
+                            >
+                              <Ionicons name="close-circle" size={14} color="#fff" />
+                              <Text style={styles.actionText}>Non riconferma</Text>
+                            </TouchableOpacity>
                           </View>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </>
+                        ) : (
+                          <TouchableOpacity
+                            onPress={() => decide(m, 'undo')}
+                            disabled={!!busy[m.id]}
+                            style={[styles.actionBtn, { backgroundColor: '#455A64' }]}
+                            data-testid={`undo-btn-${m.id}`}
+                          >
+                            <Ionicons name="arrow-undo" size={14} color="#fff" />
+                            <Text style={styles.actionText}>Annulla</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    );
+                  })
                 )}
               </View>
             )}
           </View>
         );
       })}
-
-      {/* Footer conferma */}
-      <View style={styles.footer}>
-        <Text style={styles.footerLabel}>Digita <Text style={{ fontWeight: '900' }}>CONFERMA</Text> per procedere:</Text>
-        <TextInput
-          value={confirmText}
-          onChangeText={setConfirmText}
-          placeholder="CONFERMA"
-          autoCapitalize="characters"
-          style={styles.confirmInput}
-          editable={!disabled && !submitting}
-          data-testid="confirm-input"
-        />
-        <TouchableOpacity
-          onPress={handleSubmit}
-          disabled={disabled || submitting || confirmText.trim().toUpperCase() !== 'CONFERMA'}
-          style={[
-            styles.submitBtn,
-            (disabled || submitting || confirmText.trim().toUpperCase() !== 'CONFERMA') && styles.submitBtnDisabled,
-          ]}
-          data-testid="rollover-submit-btn"
-        >
-          {submitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <>
-              <Ionicons name="rocket" size={18} color="#fff" />
-              <Text style={styles.submitText}>Conferma passaggio a {data.next_season}</Text>
-            </>
-          )}
-        </TouchableOpacity>
-        <Text style={{ fontSize: 11, color: '#777', marginTop: 8, textAlign: 'center' }}>
-          Importi selezionati: {totalSelected}. Gli altri restano archiviati in sola lettura.
-        </Text>
-      </View>
     </ScrollView>
   );
 }
@@ -337,40 +354,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#B71C1C', paddingHorizontal: 8, paddingVertical: 12,
   },
   headerTitle: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  banner: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    margin: 12, padding: 14, borderRadius: 10, borderLeftWidth: 4,
+  card: {
+    margin: 12, padding: 16, borderRadius: 10, borderLeftWidth: 4, borderLeftColor: '#E65100',
   },
-  bannerDisabled: { backgroundColor: '#FFEBEE', borderLeftColor: '#B71C1C' },
-  bannerReady:    { backgroundColor: '#E8F5E9', borderLeftColor: '#2E7D32' },
-  bannerTitle: { fontSize: 14, fontWeight: '700' },
+  confirmInput: {
+    borderWidth: 2, borderColor: '#E65100', borderRadius: 8, padding: 10, fontSize: 14,
+    fontWeight: '700', color: '#E65100', backgroundColor: '#fff', marginTop: 12, textAlign: 'center',
+  },
+  openBtn: {
+    marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: '#E65100', padding: 12, borderRadius: 8,
+  },
+  openBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   section: {
     marginHorizontal: 12, marginBottom: 10, borderRadius: 10, overflow: 'hidden',
     backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee',
   },
-  sectionHeader: {
-    flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10,
-  },
-  sectionTitle: { color: '#fff', fontWeight: '700', fontSize: 15, flex: 1, marginLeft: 6 },
-  sectionCount: { backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  sectionCountText: { color: '#fff', fontWeight: '700', fontSize: 12 },
-  bulkRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
-  bulkLink: { color: '#1565C0', fontSize: 12, fontWeight: '600' },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', padding: 12, gap: 8 },
+  sectionTitle: { color: '#fff', fontWeight: '700', fontSize: 14, flex: 1, marginLeft: 4 },
+  sectionCountsRow: { flexDirection: 'row', gap: 4 },
+  chip: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
+  chipText: { color: '#fff', fontSize: 10, fontWeight: '700' },
   item: {
     flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 12,
     borderBottomWidth: 1, borderBottomColor: '#f5f5f5',
   },
-  itemSelected: { backgroundColor: '#fffbf0' },
-  footer: { margin: 12, padding: 16, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#eee' },
-  footerLabel: { fontSize: 13, color: '#333', marginBottom: 8 },
-  confirmInput: {
-    borderWidth: 2, borderColor: '#B71C1C', borderRadius: 8, padding: 12, fontSize: 15,
-    fontWeight: '700', color: '#B71C1C', backgroundColor: '#fff', marginBottom: 12, textAlign: 'center',
+  itemGrey: { backgroundColor: '#f9f9f9', opacity: 0.7 },
+  itemName: { fontWeight: '700', color: '#222', fontSize: 13 },
+  itemMeta: { fontSize: 11, color: '#777', marginTop: 2 },
+  textGrey: { color: '#999' },
+  actionBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6,
   },
-  submitBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#B71C1C', padding: 14, borderRadius: 10,
-  },
-  submitBtnDisabled: { backgroundColor: '#999' },
-  submitText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  actionText: { color: '#fff', fontWeight: '700', fontSize: 11 },
 });

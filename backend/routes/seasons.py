@@ -1503,8 +1503,9 @@ def _prev_season(current: str) -> str:
 @router.get("/seasons/rollover/preview")
 async def rollover_preview(current_user = Depends(get_current_user)):
     """Preview: restituisce tutti i tesserati raggruppati per ruolo con dati anagrafici
-    minimi + flag `will_be_imported` (default true). L'admin sceglie manualmente
-    chi importare deselezionando."""
+    minimi + flag `decision_status` (`pending` | `imported` | `dismissed`).
+    Include anche `is_new_season_open` per capire se admin ha già cliccato
+    "Apri nuova stagione"."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin")
     sid = current_user.get("society_id")
@@ -1520,39 +1521,59 @@ async def rollover_preview(current_user = Depends(get_current_user)):
     current_season = await get_current_season_for_society(db, sid)
     next_season = _next_season(current_season)
 
+    # 🆕 08/07/2026 — Il concetto è: la stagione "aperta" è quella in `settings.current_season`.
+    # Se un utente ha `current_season` nel proprio `active_seasons` → è già dentro (imported).
+    # Se ha `rollover_decision == 'dismissed'` per current_season → non ricomparirà.
+    # Altrimenti → pending (mostrato con bottoni Importa / Non riconferma).
+    # Per capire se il rollover è "iniziato" guardiamo se esiste `settings.new_season_opened_at`.
+    is_new_season_open = bool(settings.get("new_season_opened_at"))
+
+    def _decision(m: dict, active_season: str) -> str:
+        if active_season in (m.get("active_seasons") or []):
+            return "imported"
+        if m.get("rollover_decision") == "dismissed" and m.get("rollover_decision_season") == active_season:
+            return "dismissed"
+        return "pending"
+
     users_proj = {
         "_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1,
         "email": 1, "role": 1, "fiscal_code": 1, "status": 1, "active_seasons": 1,
+        "rollover_decision": 1, "rollover_decision_season": 1,
     }
-    coaches = await db.users.find(
-        {"society_id": sid, "role": UserRole.COACH,
-         "$or": [{"active_seasons": current_season}, {"active_seasons": {"$exists": False}}]},
-        users_proj,
-    ).to_list(1000)
-    dirigenti = await db.users.find(
-        {"society_id": sid, "role": {"$in": [UserRole.DIRIGENTE, UserRole.VIEWER]},
-         "$or": [{"active_seasons": current_season}, {"active_seasons": {"$exists": False}}]},
-        users_proj,
-    ).to_list(1000)
-    collaboratori = await db.users.find(
-        {"society_id": sid, "role": UserRole.COLLABORATORE,
-         "$or": [{"active_seasons": current_season}, {"active_seasons": {"$exists": False}}]},
-        users_proj,
-    ).to_list(1000)
-
     ath_proj = {
         "_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1,
         "birth_date": 1, "date_of_birth": 1, "fiscal_code": 1, "status": 1,
+        "athlete_type": 1,
         "parent_id": 1, "second_parent_id": 1,
         "medical_certificate_expiry": 1, "qr_code": 1, "active_seasons": 1,
+        "rollover_decision": 1, "rollover_decision_season": 1,
     }
-    athletes = await db.athletes.find(
-        {"society_id": sid,
-         "$or": [{"active_seasons": current_season}, {"active_seasons": {"$exists": False}}]},
-        ath_proj,
-    ).to_list(5000)
 
-    # Separa maggiorenni / minorenni in base alla data di nascita
+    # Preleva TUTTI i tesserati registrati alla società (attivi o archiviati)
+    all_users = await db.users.find(
+        {"society_id": sid,
+         "role": {"$in": [UserRole.COACH, UserRole.DIRIGENTE, UserRole.VIEWER,
+                            UserRole.COLLABORATORE, UserRole.PARENT]}},
+        users_proj,
+    ).to_list(2000)
+    all_athletes = await db.athletes.find({"society_id": sid}, ath_proj).to_list(5000)
+
+    # Il campo per il "match" dipende se la stagione è aperta:
+    #   - se aperta (settings.current_season = nuova): current_season stessa è la nuova
+    #   - se non aperta: la nuova è next_season
+    target_season = current_season if is_new_season_open else next_season
+
+    def _annotate(items: list) -> list:
+        for m in items:
+            m["decision_status"] = _decision(m, target_season)
+        return items
+
+    coaches = _annotate([u for u in all_users if u.get("role") == UserRole.COACH])
+    dirigenti = _annotate([u for u in all_users if u.get("role") in [UserRole.DIRIGENTE, UserRole.VIEWER]])
+    collaboratori = _annotate([u for u in all_users if u.get("role") == UserRole.COLLABORATORE])
+    genitori = _annotate([u for u in all_users if u.get("role") == UserRole.PARENT])
+
+    # Separa atleti "quota" (tutti insieme: 18- e 18+) vs PRO (18+ pro)
     from datetime import date as _date
     today = _date.today()
 
@@ -1572,20 +1593,28 @@ async def rollover_preview(current_user = Depends(get_current_user)):
         except Exception:
             return False
 
-    minors = [a for a in athletes if _is_minor(a)]
-    adults = [a for a in athletes if not _is_minor(a)]
+    # 🆕 08/07/2026 — Atleti divisi in 2 cartelle: "Atleti" (tutti i quota, sia 18- che 18+)
+    # e "Atleti PRO" (18+ compensati). Per la cartella "Atleti" l'admin distribuirà poi
+    # gli iscritti nelle varie squadre della nuova stagione.
+    for a in all_athletes:
+        a["is_minor"] = _is_minor(a)
+    athletes = _annotate([a for a in all_athletes if a.get("athlete_type") != "pro"])
+    athletes_pro = _annotate([a for a in all_athletes if a.get("athlete_type") == "pro"])
 
     return {
         "current_season": current_season,
         "next_season": next_season,
+        "target_season": target_season,
+        "is_new_season_open": is_new_season_open,
         "can_rollover": can_rollover,
         "season_start_month": season_start_month,
         "season_start_day": season_start_day,
         "coaches": coaches,
         "dirigenti": dirigenti,
         "collaboratori": collaboratori,
-        "athletes_adult": adults,
-        "athletes_minor": minors,
+        "genitori": genitori,
+        "athletes": athletes,
+        "athletes_pro": athletes_pro,
     }
 
 
@@ -1722,6 +1751,227 @@ async def _archive_all_current_season_operational(sid: str, prev_season: str) ->
     return counts
 
 
+@router.post("/seasons/open-new-season")
+async def open_new_season(body: RolloverBody, current_user = Depends(get_current_user)):
+    """🚀 Apre la nuova stagione: archivia tutto lo storico operativo e sposta
+    `current_season` alla successiva. NON importa nessun tesserato: tutti restano
+    nella stagione precedente finché l'admin non li importa uno per uno.
+    Requisiti:
+      - Admin only
+      - Data corrente >= season_start (dalle impostazioni società)
+      - body.confirmation == "CONFERMA"
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    if (body.confirmation or "").strip().upper() != "CONFERMA":
+        raise HTTPException(status_code=400, detail="Conferma mancante: digita 'CONFERMA' per procedere")
+    sid = current_user.get("society_id")
+    if not sid:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+
+    settings = await db.settings.find_one({"society_id": sid}) or {}
+    season_start_month = int(settings.get("season_start_month") or 7)
+    season_start_day = int(settings.get("season_start_day") or 1)
+    now = datetime.utcnow()
+    if (now.month, now.day) < (season_start_month, season_start_day):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Apertura nuova stagione disponibile solo dal {season_start_day:02d}/{season_start_month:02d}."
+        )
+
+    prev_season = await get_current_season_for_society(db, sid)
+    new_season = _next_season(prev_season)
+
+    # Se è già stata aperta, non rifare l'archiviazione (idempotent)
+    if settings.get("new_season_opened_at") and settings.get("current_season") == new_season:
+        return {"ok": True, "already_open": True, "from_season": prev_season, "current_season": new_season}
+
+    # 1. Archivia tutto lo storico operativo come stagione precedente
+    archive_counts = await _archive_all_current_season_operational(sid, prev_season)
+
+    # 2. Snapshot in season_archives (backup navigabile)
+    try:
+        await db.season_archives.insert_one({
+            "id": str(datetime.utcnow().timestamp()).replace(".", ""),
+            "society_id": sid,
+            "season": prev_season,
+            "archived_at": datetime.utcnow().isoformat(),
+            "archived_by": current_user["id"],
+            "archived_by_name": current_user.get("full_name", ""),
+            "operational_counts": archive_counts,
+        })
+    except Exception:
+        pass
+
+    # 3. Aggiorna current_season nelle impostazioni + flag apertura
+    await db.settings.update_one(
+        {"society_id": sid},
+        {"$set": {
+            "current_season": new_season,
+            "current_season_updated_at": datetime.utcnow().isoformat(),
+            "new_season_opened_at": datetime.utcnow().isoformat(),
+            "new_season_opened_by": current_user["id"],
+            "previous_season": prev_season,
+        }},
+        upsert=True,
+    )
+
+    # 4. Audit log
+    try:
+        await db.audit_logs.insert_one({
+            "id": str(datetime.utcnow().timestamp()).replace(".", ""),
+            "society_id": sid,
+            "user_id": current_user["id"],
+            "user_name": current_user.get("full_name", ""),
+            "action": "open_new_season",
+            "from_season": prev_season,
+            "to_season": new_season,
+            "archive_counts": archive_counts,
+            "timestamp": datetime.utcnow().isoformat(),
+        })
+    except Exception:
+        pass
+
+    return {
+        "ok": True,
+        "from_season": prev_season,
+        "current_season": new_season,
+        "archive_counts": archive_counts,
+    }
+
+
+async def _find_member(member_id: str, sid: str):
+    """Ritorna (kind, doc) dove kind = 'user' | 'athlete' | None."""
+    u = await db.users.find_one({"id": member_id, "society_id": sid}, {"_id": 0})
+    if u:
+        return ("user", u)
+    a = await db.athletes.find_one({"id": member_id, "society_id": sid}, {"_id": 0})
+    if a:
+        return ("athlete", a)
+    return (None, None)
+
+
+@router.post("/seasons/import-member/{member_id}")
+async def import_member(member_id: str, current_user = Depends(get_current_user)):
+    """🟢 Importa un singolo tesserato (user o atleta) nella stagione corrente.
+    Auto-detecta il tipo. Mantiene solo anagrafica (per minorenne anche genitori/
+    certificato/QR). Aggiunge current_season a active_seasons."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    if not sid:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+    kind, doc = await _find_member(member_id, sid)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Tesserato non trovato")
+
+    current_season = await get_current_season_for_society(db, sid)
+
+    if kind == "user":
+        await _reset_user_to_registry_only(member_id, sid, current_season)
+        await db.users.update_one(
+            {"id": member_id, "society_id": sid},
+            {"$set": {"rollover_decision": "imported",
+                       "rollover_decision_season": current_season,
+                       "rollover_decision_at": datetime.utcnow().isoformat()}},
+        )
+    else:
+        # atleta
+        from datetime import date as _date
+        today = _date.today()
+        dob = doc.get("birth_date") or doc.get("date_of_birth")
+        is_minor = False
+        if dob:
+            try:
+                if isinstance(dob, str):
+                    d = datetime.fromisoformat(dob.split("T")[0]).date()
+                elif hasattr(dob, "date"):
+                    d = dob.date()
+                else:
+                    d = dob
+                years = today.year - d.year - ((today.month, today.day) < (d.month, d.day))
+                is_minor = years < 18
+            except Exception:
+                pass
+        await _reset_athlete_to_registry_only(member_id, sid, current_season, is_minor)
+        await db.athletes.update_one(
+            {"id": member_id, "society_id": sid},
+            {"$set": {"rollover_decision": "imported",
+                       "rollover_decision_season": current_season,
+                       "rollover_decision_at": datetime.utcnow().isoformat()}},
+        )
+
+    try:
+        await db.audit_logs.insert_one({
+            "id": str(datetime.utcnow().timestamp()).replace(".", ""),
+            "society_id": sid,
+            "user_id": current_user["id"],
+            "user_name": current_user.get("full_name", ""),
+            "action": "import_member",
+            "target_id": member_id,
+            "target_kind": kind,
+            "season": current_season,
+            "timestamp": datetime.utcnow().isoformat(),
+        })
+    except Exception:
+        pass
+
+    return {"ok": True, "kind": kind, "season": current_season}
+
+
+@router.post("/seasons/dismiss-member/{member_id}")
+async def dismiss_member(member_id: str, current_user = Depends(get_current_user)):
+    """⚪ Marca il tesserato come "non riconfermato" per la stagione corrente.
+    Non tocca i suoi dati (anagrafica resta), semplicemente non entrerà nella
+    nuova stagione. Reversibile con /undo-decision."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    if not sid:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+    kind, doc = await _find_member(member_id, sid)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Tesserato non trovato")
+    current_season = await get_current_season_for_society(db, sid)
+    coll = db.users if kind == "user" else db.athletes
+    await coll.update_one(
+        {"id": member_id, "society_id": sid},
+        {"$set": {"rollover_decision": "dismissed",
+                   "rollover_decision_season": current_season,
+                   "rollover_decision_at": datetime.utcnow().isoformat()}},
+    )
+    return {"ok": True, "kind": kind}
+
+
+@router.post("/seasons/undo-decision/{member_id}")
+async def undo_decision(member_id: str, current_user = Depends(get_current_user)):
+    """↩️ Annulla la decisione (dismiss o import) e riporta in stato pending.
+    Se era dismissed: rimuove semplicemente il flag.
+    Se era imported: rimuove current_season da active_seasons (la persona
+    torna in stato "da decidere"). NON ripristina però le informazioni
+    operative già azzerate dall'importazione — questa è una scelta consapevole
+    per evitare confusione."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    if not sid:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+    kind, doc = await _find_member(member_id, sid)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Tesserato non trovato")
+    current_season = await get_current_season_for_society(db, sid)
+    coll = db.users if kind == "user" else db.athletes
+    prev_decision = doc.get("rollover_decision")
+    update: dict = {
+        "$unset": {"rollover_decision": "", "rollover_decision_season": "", "rollover_decision_at": ""},
+    }
+    if prev_decision == "imported":
+        update["$pull"] = {"active_seasons": current_season}
+    await coll.update_one({"id": member_id, "society_id": sid}, update)
+    return {"ok": True, "kind": kind, "was": prev_decision}
+
+
+# Endpoint legacy mantenuto per compatibilità (bulk rollover atomico)
 @router.post("/seasons/rollover")
 async def rollover_season(body: RolloverBody, current_user = Depends(get_current_user)):
     """🚀 Rollover atomico stagione: archivia storico + importa SOLO anagrafica dei selezionati.
