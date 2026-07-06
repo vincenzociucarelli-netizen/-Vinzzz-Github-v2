@@ -1716,13 +1716,16 @@ export default function AdminCoachDetail() {
           ) : (
             <>
               {/* 🆕 24/02/2026 — CompensationSummaryCard riusabile (replica grafica user Dirigente) */}
+              {/* 🐛 08/07/2026 — FIX: leggeva `prior_compensation` (campo athlete) ma
+                  il form di modifica salva in `other_annual_compensation` (campo user coach).
+                  Il pregresso €4500 dichiarato dal coach ora è visibile anche in view mode. */}
               <CompensationSummaryCard
                 fullName={coach?.full_name || 'Coach'}
                 monthlyCompensation={coach?.monthly_compensation || 0}
                 compensationAccepted={!!coach?.compensation_accepted}
                 contractStartDate={coach?.contract_start_date}
                 contractEndDate={coach?.contract_end_date}
-                priorCompensation={Number(coach?.prior_compensation || 0)}
+                priorCompensation={Number(coach?.other_annual_compensation || coach?.prior_compensation || 0)}
                 formatCurrency={formatCurrency}
                 readOnly
                 pregressoNotice={isDualRole ? "Conteggiato sull'anagrafica Atleta (evita doppio conteggio)" : undefined}
