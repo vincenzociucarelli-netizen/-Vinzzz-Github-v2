@@ -1459,3 +1459,391 @@ async def confirm_pro_data_after_review(athlete_id: str, current_user = Depends(
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Atleta non trovato in questa società")
     return {"athlete_id": athlete_id, "pro_data_pending_review": False}
+
+
+# =============================================================================
+# 🆕 06/07/2026 — NUOVO FLUSSO ROLLOVER STAGIONE (import solo anagrafica)
+# =============================================================================
+# L'admin, dopo la data di inizio stagione configurata nelle impostazioni società,
+# apre `/admin/nuova-stagione`. Vede TUTTI i tesserati raggruppati per ruolo con
+# checkbox pre-selezionati. Spunta chi vuole importare e clicca "Conferma".
+# In un'unica operazione atomica:
+#   - archivia tutto lo storico stagione precedente (is_previous_season: true)
+#   - copia SOLO l'anagrafica dei selezionati nella nuova stagione (adulti)
+#   - copia anagrafica + genitori + certificato medico + qr_code (minorenni)
+#   - aggiorna current_season nelle impostazioni società
+# Nessuna nuova iterazione di riconferma/backfill richiesta.
+# =============================================================================
+
+
+class RolloverBody(BaseModel):
+    """Payload per il rollover atomico di stagione."""
+    selected_user_ids: List[str] = []
+    selected_athlete_ids: List[str] = []
+    confirmation: str = ""
+
+
+def _next_season(current: str) -> str:
+    """Data una stagione '2025-2026' torna '2026-2027'."""
+    try:
+        start = int(current.split("-")[0])
+        return f"{start + 1}-{start + 2}"
+    except Exception:
+        return current
+
+
+def _prev_season(current: str) -> str:
+    try:
+        start = int(current.split("-")[0])
+        return f"{start - 1}-{start}"
+    except Exception:
+        return current
+
+
+@router.get("/seasons/rollover/preview")
+async def rollover_preview(current_user = Depends(get_current_user)):
+    """Preview: restituisce tutti i tesserati raggruppati per ruolo con dati anagrafici
+    minimi + flag `will_be_imported` (default true). L'admin sceglie manualmente
+    chi importare deselezionando."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    if not sid:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+
+    # Data-gate: la pagina è accessibile solo dopo il season_start_month
+    settings = await db.settings.find_one({"society_id": sid}) or {}
+    season_start_month = int(settings.get("season_start_month") or 7)
+    season_start_day = int(settings.get("season_start_day") or 1)
+    now = datetime.utcnow()
+    can_rollover = (now.month, now.day) >= (season_start_month, season_start_day)
+    current_season = await get_current_season_for_society(db, sid)
+    next_season = _next_season(current_season)
+
+    users_proj = {
+        "_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1,
+        "email": 1, "role": 1, "fiscal_code": 1, "status": 1, "active_seasons": 1,
+    }
+    coaches = await db.users.find(
+        {"society_id": sid, "role": UserRole.COACH,
+         "$or": [{"active_seasons": current_season}, {"active_seasons": {"$exists": False}}]},
+        users_proj,
+    ).to_list(1000)
+    dirigenti = await db.users.find(
+        {"society_id": sid, "role": {"$in": [UserRole.DIRIGENTE, UserRole.VIEWER]},
+         "$or": [{"active_seasons": current_season}, {"active_seasons": {"$exists": False}}]},
+        users_proj,
+    ).to_list(1000)
+    collaboratori = await db.users.find(
+        {"society_id": sid, "role": UserRole.COLLABORATORE,
+         "$or": [{"active_seasons": current_season}, {"active_seasons": {"$exists": False}}]},
+        users_proj,
+    ).to_list(1000)
+
+    ath_proj = {
+        "_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1,
+        "birth_date": 1, "date_of_birth": 1, "fiscal_code": 1, "status": 1,
+        "parent_id": 1, "second_parent_id": 1,
+        "medical_certificate_expiry": 1, "qr_code": 1, "active_seasons": 1,
+    }
+    athletes = await db.athletes.find(
+        {"society_id": sid,
+         "$or": [{"active_seasons": current_season}, {"active_seasons": {"$exists": False}}]},
+        ath_proj,
+    ).to_list(5000)
+
+    # Separa maggiorenni / minorenni in base alla data di nascita
+    from datetime import date as _date
+    today = _date.today()
+
+    def _is_minor(a: dict) -> bool:
+        dob = a.get("birth_date") or a.get("date_of_birth")
+        if not dob:
+            return False
+        try:
+            if isinstance(dob, str):
+                d = datetime.fromisoformat(dob.split("T")[0]).date()
+            elif hasattr(dob, "date"):
+                d = dob.date()
+            else:
+                d = dob
+            years = today.year - d.year - ((today.month, today.day) < (d.month, d.day))
+            return years < 18
+        except Exception:
+            return False
+
+    minors = [a for a in athletes if _is_minor(a)]
+    adults = [a for a in athletes if not _is_minor(a)]
+
+    return {
+        "current_season": current_season,
+        "next_season": next_season,
+        "can_rollover": can_rollover,
+        "season_start_month": season_start_month,
+        "season_start_day": season_start_day,
+        "coaches": coaches,
+        "dirigenti": dirigenti,
+        "collaboratori": collaboratori,
+        "athletes_adult": adults,
+        "athletes_minor": minors,
+    }
+
+
+# Campi anagrafici da preservare (adulti)
+_ADULT_KEEP_FIELDS = {
+    "id", "society_id", "email", "password_hash", "role", "full_name", "status",
+    "created_at", "approved_at", "approved_by",
+    "first_name", "last_name", "date_of_birth", "place_of_birth", "birth_province",
+    "fiscal_code", "address", "city", "postal_code", "province", "phone",
+    "identity_document_type", "identity_document_number", "identity_document_expiry",
+    "coach_license_number", "coach_license_level", "coach_license_expiry",
+    "qualification", "qualification2", "qualifications", "is_scorekeeper",
+    "active_seasons",
+}
+
+
+# Campi anagrafici da preservare (atleta, sia maggiorenne che minorenne)
+_ATHLETE_KEEP_BASE = {
+    "id", "society_id", "full_name", "first_name", "last_name",
+    "birth_date", "date_of_birth", "birth_place", "birth_province", "gender",
+    "fiscal_code", "address", "city", "postal_code", "province", "phone", "email",
+    "status", "created_at", "qr_code",
+}
+
+# Extra per minorenni
+_ATHLETE_KEEP_MINOR = _ATHLETE_KEEP_BASE | {
+    "parent_id", "second_parent_id",
+    "tax_payer_first_name", "tax_payer_last_name", "tax_payer_fiscal_code",
+    "medical_certificate", "medical_certificate_expiry",
+    "medical_certificate_issue_date", "medical_certificate_verified",
+    "medical_certificate_type", "medical_certificate_inserted_by",
+    "medical_certificate_inserted_by_name", "medical_certificate_inserted_by_role",
+    "medical_certificate_inserted_at", "medical_certificate_verified_by",
+    "medical_certificate_verified_by_name", "medical_certificate_verified_at",
+    "medical_certificate_updated_by", "medical_certificate_updated_by_name",
+    "medical_certificate_updated_by_role", "medical_certificate_updated_at",
+}
+
+
+async def _reset_user_to_registry_only(user_id: str, sid: str, next_season: str) -> None:
+    """Azzera tutti i campi operativi dell'utente, mantiene solo anagrafica.
+    Aggiunge next_season a active_seasons."""
+    user = await db.users.find_one({"id": user_id, "society_id": sid}, {"_id": 0})
+    if not user:
+        return
+    # $set = solo campi anagrafici + reset esplicito di operativi + active_seasons
+    to_set: dict = {
+        "assigned_teams": [],
+        "assigned_venues": [],
+        "monthly_compensation": 0,
+        "other_annual_compensation": 0,
+        "prior_compensation": 0,
+        "compensation_accepted": False,
+        "onboarding_completed": False,
+        "onboarding_checklist": {},
+        "pro_data_pending_review": False,
+        "assignment_pending_review": False,
+        "is_terminated": False,
+    }
+    # Rimuovi campi operativi
+    to_unset = {
+        "contract_start_date": "",
+        "contract_end_date": "",
+        "compensation_accepted_date": "",
+        "assigned_gyms": "",
+        "assigned_teams_previous_season": "",
+        "assigned_gyms_previous_season": "",
+        "onboarding_checklist_previous_season": "",
+        "monthly_compensation_previous_season": "",
+        "other_annual_compensation_previous_season": "",
+        "prior_compensation_previous_season": "",
+        "contract_start_date_previous_season": "",
+        "contract_end_date_previous_season": "",
+        "pro_data_pending_review_season": "",
+        "assignment_pending_review_season": "",
+    }
+    await db.users.update_one(
+        {"id": user_id, "society_id": sid},
+        {"$set": to_set, "$unset": to_unset, "$addToSet": {"active_seasons": next_season}},
+    )
+
+
+async def _reset_athlete_to_registry_only(athlete_id: str, sid: str, next_season: str, is_minor: bool) -> None:
+    """Azzera team, prova, quote, privacy, presenze; mantiene anagrafica.
+    Per minorenni mantiene anche parent_id, second_parent_id, medical_certificate*, qr_code."""
+    to_set: dict = {
+        "team_id": None,
+        "team_ids": [],
+        "trial_period": False,
+        "trial_start": None,
+        "trial_end": None,
+        "annual_fee_amount": 0,
+        "monthly_fee_amount": 0,
+        "payment_status": "pending",
+        "privacy_accepted": False,
+        "privacy_accepted_date": None,
+        "gdpr_signed": False,
+    }
+    to_unset = {
+        "team_id_previous_season": "",
+        "trial_type": "",
+        "trial_start_previous_season": "",
+        "trial_end_previous_season": "",
+    }
+    if not is_minor:
+        # Adulti PRO: rimuovi anche parent_id ereditato
+        to_unset["parent_id"] = ""
+        to_unset["second_parent_id"] = ""
+    await db.athletes.update_one(
+        {"id": athlete_id, "society_id": sid},
+        {"$set": to_set, "$unset": to_unset, "$addToSet": {"active_seasons": next_season}},
+    )
+
+
+async def _archive_all_current_season_operational(sid: str, prev_season: str) -> dict:
+    """Marca is_previous_season: true su tutte le collezioni operative della società.
+    Non tocca le anagrafiche (users, athletes)."""
+    counts = {}
+    collections_soc = [
+        "signed_documents", "coach_compensations", "collaboratore_compensations",
+        "dirigente_compensations", "external_compensations", "threshold_declarations",
+        "payments", "attendance", "notifications", "matches", "trainings",
+    ]
+    for coll in collections_soc:
+        try:
+            r = await db[coll].update_many(
+                {"society_id": sid,
+                 "$or": [{"is_previous_season": {"$exists": False}}, {"is_previous_season": False}]},
+                {"$set": {"is_previous_season": True, "archived_season": prev_season}},
+            )
+            counts[coll] = r.modified_count
+        except Exception:
+            counts[coll] = 0
+    return counts
+
+
+@router.post("/seasons/rollover")
+async def rollover_season(body: RolloverBody, current_user = Depends(get_current_user)):
+    """🚀 Rollover atomico stagione: archivia storico + importa SOLO anagrafica dei selezionati.
+    Requisiti:
+      - Admin only
+      - Data corrente >= season_start (dalle impostazioni società)
+      - body.confirmation == "CONFERMA"
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    if (body.confirmation or "").strip().upper() != "CONFERMA":
+        raise HTTPException(status_code=400, detail="Conferma mancante: digita 'CONFERMA' per procedere")
+    sid = current_user.get("society_id")
+    if not sid:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+
+    settings = await db.settings.find_one({"society_id": sid}) or {}
+    season_start_month = int(settings.get("season_start_month") or 7)
+    season_start_day = int(settings.get("season_start_day") or 1)
+    now = datetime.utcnow()
+    if (now.month, now.day) < (season_start_month, season_start_day):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Rollover disponibile solo dal {season_start_day:02d}/{season_start_month:02d}."
+        )
+
+    current_season = await get_current_season_for_society(db, sid)
+    next_season = _next_season(current_season)
+
+    # 1. Archivia tutto lo storico operativo come stagione precedente
+    archive_counts = await _archive_all_current_season_operational(sid, current_season)
+
+    # 2. Snapshot in season_archives (backup navigabile)
+    archive_doc = {
+        "id": str(datetime.utcnow().timestamp()).replace(".", ""),
+        "society_id": sid,
+        "season": current_season,
+        "archived_at": datetime.utcnow().isoformat(),
+        "archived_by": current_user["id"],
+        "archived_by_name": current_user.get("full_name", ""),
+        "operational_counts": archive_counts,
+        "selected_user_ids": body.selected_user_ids,
+        "selected_athlete_ids": body.selected_athlete_ids,
+    }
+    try:
+        await db.season_archives.insert_one(archive_doc)
+    except Exception:
+        pass
+
+    # 3. Per gli utenti selezionati: reset ai soli campi anagrafici + aggiungi next_season
+    users_imported = 0
+    for uid in body.selected_user_ids:
+        try:
+            await _reset_user_to_registry_only(uid, sid, next_season)
+            users_imported += 1
+        except Exception:
+            pass
+
+    # 4. Per gli atleti selezionati: reset ai soli campi anagrafici (+ parent/med/qr se minorenne)
+    athletes_imported = 0
+    from datetime import date as _date
+    today = _date.today()
+
+    def _is_minor_date(dob) -> bool:
+        if not dob:
+            return False
+        try:
+            if isinstance(dob, str):
+                d = datetime.fromisoformat(dob.split("T")[0]).date()
+            elif hasattr(dob, "date"):
+                d = dob.date()
+            else:
+                d = dob
+            years = today.year - d.year - ((today.month, today.day) < (d.month, d.day))
+            return years < 18
+        except Exception:
+            return False
+
+    for aid in body.selected_athlete_ids:
+        try:
+            a = await db.athletes.find_one({"id": aid, "society_id": sid}, {"_id": 0, "birth_date": 1, "date_of_birth": 1})
+            if not a:
+                continue
+            is_minor = _is_minor_date(a.get("birth_date") or a.get("date_of_birth"))
+            await _reset_athlete_to_registry_only(aid, sid, next_season, is_minor)
+            athletes_imported += 1
+        except Exception:
+            pass
+
+    # 5. Aggiorna current_season nelle impostazioni società
+    try:
+        await db.settings.update_one(
+            {"society_id": sid},
+            {"$set": {"current_season": next_season, "current_season_updated_at": datetime.utcnow().isoformat()}},
+            upsert=True,
+        )
+    except Exception:
+        pass
+
+    # 6. Audit log
+    try:
+        await db.audit_logs.insert_one({
+            "id": str(datetime.utcnow().timestamp()).replace(".", ""),
+            "society_id": sid,
+            "user_id": current_user["id"],
+            "user_name": current_user.get("full_name", ""),
+            "action": "season_rollover",
+            "from_season": current_season,
+            "to_season": next_season,
+            "users_imported": users_imported,
+            "athletes_imported": athletes_imported,
+            "archive_counts": archive_counts,
+            "timestamp": datetime.utcnow().isoformat(),
+        })
+    except Exception:
+        pass
+
+    return {
+        "ok": True,
+        "from_season": current_season,
+        "to_season": next_season,
+        "users_imported": users_imported,
+        "athletes_imported": athletes_imported,
+        "archive_counts": archive_counts,
+    }

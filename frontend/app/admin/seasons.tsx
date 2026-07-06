@@ -395,6 +395,27 @@ export default function SeasonsArchive() {
             <Text style={styles.teamsSectionTitle}>Squadre della stagione:</Text>
             {currentSeason.teams?.map(renderTeamCard)}
 
+            {/* 🆕 06/07/2026 — NUOVO FLUSSO: rollover atomico. Sostituisce archiviazione + riconferma + backfill */}
+            <TouchableOpacity
+              style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#B71C1C', paddingVertical: 14, borderRadius: 10, gap: 8 }}
+              onPress={() => router.push('/admin/nuova-stagione')}
+              data-testid="new-season-rollover-btn"
+            >
+              <Ionicons name="rocket" size={20} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>
+                🚀 Passaggio a Nuova Stagione (atomico)
+              </Text>
+            </TouchableOpacity>
+            <Text style={{ fontSize: 11, color: '#666', textAlign: 'center', marginTop: 4, fontStyle: 'italic' }}>
+              Nuovo flusso: importa solo anagrafica + genitori/certificato/QR per minorenni. Tutto il resto ripartira&apos; da zero. Disponibile dal {'01'}/{'07'}.
+            </Text>
+
+            <View style={{ marginTop: 20, marginBottom: 8, padding: 8, backgroundColor: '#FFF9C4', borderRadius: 6 }}>
+              <Text style={{ fontSize: 11, color: '#7A5C00', fontWeight: '700', textAlign: 'center' }}>
+                ⚠️ Sezione legacy — usa il pulsante rosso qui sopra per il nuovo flusso semplificato.
+              </Text>
+            </View>
+
             <TouchableOpacity
               style={[styles.archiveButton, archiving && styles.buttonDisabled]}
               onPress={confirmArchive}

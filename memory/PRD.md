@@ -16,7 +16,36 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
-## 🆕 06/07/2026 (v4) — Filtro `is_previous_season` sulle query soglie 5k/15k ✅
+## 🆕 06/07/2026 (v5) — Nuovo flusso ROLLOVER STAGIONE (import solo anagrafica) ✅
+
+Su richiesta dell'utente, sostituito il flusso caotico "archivia + riconferma bulk + backfill + reset per-utente" con un unico rollover atomico.
+
+**Backend** (`routes/seasons.py`):
+- `GET /api/seasons/rollover/preview` — restituisce tutti i tesserati della stagione corrente raggruppati in 5 categorie (Coach, Dirigenti, Collaboratori, Atleti maggiorenni, Atleti minorenni). Include flag `can_rollover` basato su data corrente vs `season_start_month/day` da `db.settings`.
+- `POST /api/seasons/rollover` — operazione atomica:
+  1. Marca `is_previous_season: true` su tutte le collezioni operative della società (documenti, quietanze, dichiarazioni soglie, compensi esterni, pagamenti, presenze, notifiche, gare, allenamenti).
+  2. Crea snapshot su `season_archives`.
+  3. Per gli utenti selezionati: reset di TUTTI i campi operativi (compensi, contratti, squadre, palestre, checklist), mantenendo SOLO anagrafica + credenziali. Aggiunge `next_season` a `active_seasons`.
+  4. Per gli atleti selezionati: reset di team/prova/pagamenti/privacy. Per i minorenni MANTIENE anche `parent_id`, `second_parent_id`, `medical_certificate*`, `qr_code` (permanente lifetime).
+  5. Aggiorna `settings.current_season` = next_season.
+  6. Audit log completo.
+- Data-gate: rollover disponibile solo dal `season_start_day/month`. Prima di quella data l'endpoint risponde 400.
+
+**Frontend** (`/app/admin/nuova-stagione.tsx`):
+- Nuova pagina con 5 accordion collapsable, checkbox pre-selezionati di default.
+- Banner "🔒 Locked" se prima della data di inizio stagione.
+- Footer con campo "digita CONFERMA" + pulsante rosso "🚀 Conferma passaggio a X-Y".
+- Prompt di conferma finale con riassunto numerico.
+- Bottone ingresso da `/admin/seasons` sopra la sezione legacy (banner giallo di deprecazione sotto).
+
+**Codice legacy NON rimosso ancora** (rimarrà finché l'utente non conferma che il nuovo flusso funziona in prod):
+- `season-reconfirm.tsx`, endpoint `reconfirm-bulk`
+- Pulsante backfill + auto-trigger su `/admin/seasons`
+- Bottoni "Reset dati compenso" e banner "Compenso da riconfermare" su schede coach/dirigente/collaboratore
+
+**Testato**: endpoint `/seasons/rollover/preview` risponde 200 con dati corretti. Lint OK sia Python che TypeScript.
+
+
 
 Feedback utente: dopo il reset restava il banner "⚠️ Anno X: Soglia dei €5.000" nella scheda compensi.
 
