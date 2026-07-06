@@ -559,7 +559,9 @@ async def reconfirm_bulk(
         cursor = db.users.find(
             {"id": {"$in": body.user_ids}, "society_id": sid},
             {"_id": 0, "id": 1, "role": 1, "monthly_compensation": 1,
-             "other_annual_compensation": 1, "active_seasons": 1,
+             "other_annual_compensation": 1, "prior_compensation": 1,
+             "contract_start_date": 1, "contract_end_date": 1,
+             "compensation_accepted": 1, "active_seasons": 1,
              "assigned_teams": 1, "assigned_gyms": 1},
         )
         async for u in cursor:
@@ -576,16 +578,41 @@ async def reconfirm_bulk(
                     "assigned_teams": [],
                     "assigned_gyms": [],
                 },
+                "$unset": {},
             }
-            is_pro = (u.get("monthly_compensation") or 0) > 0 or (u.get("other_annual_compensation") or 0) > 0
+            is_pro = (
+                (u.get("monthly_compensation") or 0) > 0
+                or (u.get("other_annual_compensation") or 0) > 0
+                or (u.get("prior_compensation") or 0) > 0
+                or bool(u.get("compensation_accepted"))
+                or bool(u.get("contract_start_date"))
+            )
             if is_pro:
+                # 🆕 06/07/2026 — Reset ESTESO al momento della riconferma per
+                # Coach/Collab/Dir: azzera compenso, contratto, pregresso, onboarding
+                # (prima veniva fatto solo dal backfill retroattivo).
                 update["$set"].update({
                     "pro_data_pending_review": True,
                     "pro_data_pending_review_season": current_season,
                     "monthly_compensation_previous_season": u.get("monthly_compensation") or 0,
                     "other_annual_compensation_previous_season": u.get("other_annual_compensation") or 0,
+                    "prior_compensation_previous_season": u.get("prior_compensation") or 0,
+                    "contract_start_date_previous_season": u.get("contract_start_date"),
+                    "contract_end_date_previous_season": u.get("contract_end_date"),
+                    "compensation_accepted": False,
+                    "monthly_compensation": 0,
+                    "other_annual_compensation": 0,
+                    "prior_compensation": 0,
+                    "onboarding_completed": False,
+                })
+                update["$unset"].update({
+                    "compensation_accepted_date": "",
+                    "contract_start_date": "",
+                    "contract_end_date": "",
                 })
                 usr_pro_flagged += 1
+            if not update["$unset"]:
+                update.pop("$unset")
             await db.users.update_one({"id": u["id"], "society_id": sid}, update)
             usr_confirmed += 1
 

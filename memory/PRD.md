@@ -16,6 +16,22 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 06/07/2026 — Fix definitivo residuo compensi/contratti Coach/Dirigente ✅
+
+**Bug segnalato dall'utente**: dopo la riconferma bulk di Coach/Collab/Dirigenti nella nuova stagione, i profili mostravano ancora `compensation_accepted: Sì`, `contract_start_date`/`end_date`, `monthly_compensation`, `prior_compensation` della stagione precedente. Il backfill esisteva ma andava cliccato manualmente.
+
+**Root cause**: `/api/seasons/reconfirm-bulk` per gli utenti resettava SOLO squadre/palestre. Nessun reset compenso/contratto al momento della riconferma.
+
+**Fix applicati**:
+1. **`routes/seasons.py::reconfirm_bulk`** — Esteso il ramo Users: se l'utente è "pro" (monthly>0, other>0, prior>0, compensation_accepted, o contract_start_date), al momento della riconferma:
+   - `$set`: `compensation_accepted:false`, `monthly_compensation:0`, `other_annual_compensation:0`, `prior_compensation:0`, `onboarding_completed:false`, snapshot precedente su `*_previous_season`.
+   - `$unset`: `compensation_accepted_date`, `contract_start_date`, `contract_end_date`.
+2. **`app/admin/seasons.tsx`** — Auto-trigger silenzioso di `/seasons/backfill-reset-assignments` al mount della pagina (retroattivo per utenti già riconfermati con il codice vecchio, come RICA FEDE).
+
+**⚠️ Deploy required**: Save to Github → auto-deploy. Dopo il deploy visitare `/admin/seasons` una volta perché il backfill retroattivo giri automaticamente.
+
+
+
 ## 🆕 05/07/2026 (sera) — Badge stagione visibile ovunque + fix pending 500 ✅
 
 ### 1️⃣ Badge stagione sempre visibile
