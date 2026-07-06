@@ -2476,25 +2476,22 @@ export default function AdminCoachDetail() {
               {/* Lista quietanze compatta - con calcolo soglie dinamico */}
               {(() => {
                 const signedOnly = signedReceipts.filter((r: any) => r.receipt_signed);
-                
+
                 // Sort chronologically to calculate thresholds
                 const sortedForCalc = [...signedOnly].sort((a: any, b: any) => {
                   if (a.year !== b.year) return a.year - b.year;
                   return a.month - b.month;
                 });
-                
-                // Calculate threshold months per year
-                const thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } } = {};
-                const cumulativeByYear: { [year: number]: number } = {};
-                const priorComp = coach?.other_annual_compensation || 0;
-                const contractYear = coach?.contract_start_date ? parseInt(coach.contract_start_date.split('-')[0]) : new Date().getFullYear();
-                
-                // Add prior compensation to first year
-                if (priorComp > 0) {
-                  cumulativeByYear[contractYear] = priorComp;
-                }
 
-                // 🆕 Mappa external compensations per (year, month) — imputati al mese in cui sono stati dichiarati
+                // 🆕 08/07/2026 — Calcolo soglie PROIETTATO sui mesi ancora non percepiti,
+                // usando il monthly_compensation del coach come importo di default.
+                // Segna il mese esatto (per anno) in cui il totale cumulato supera €5k/€15k.
+                const thresholdsByYear: { [year: number]: { first5k: { year: number, month: number } | null, first15k: { year: number, month: number } | null } } = {};
+                const priorComp = coach?.other_annual_compensation || 0;
+                const monthlyComp = coach?.monthly_compensation || 0;
+                const contractYear = coach?.contract_start_date ? parseInt(coach.contract_start_date.split('-')[0]) : new Date().getFullYear();
+
+                // Mappa external compensations per (year, month) — imputati al mese in cui sono stati dichiarati
                 const externalByYearMonth: { [key: string]: number } = {};
                 for (const ext of (externalDeclarations || [])) {
                   const y = Number(ext.year);
@@ -2504,28 +2501,7 @@ export default function AdminCoachDetail() {
                   externalByYearMonth[k] = (externalByYearMonth[k] || 0) + (Number(ext.amount) || 0);
                 }
 
-                for (const r of sortedForCalc) {
-                  if (!thresholdsByYear[r.year]) {
-                    thresholdsByYear[r.year] = { first5k: null, first15k: null };
-                  }
-                  if (!cumulativeByYear[r.year]) {
-                    cumulativeByYear[r.year] = r.year === contractYear ? (priorComp || 0) : 0;
-                  }
-                  
-                  // 🆕 Somma l'importo interno + eventuali esterni dichiarati nello stesso mese
-                  const internalAmt = r.amount_gross || r.amount || 0;
-                  const externalAmt = externalByYearMonth[`${r.year}-${r.month}`] || 0;
-                  cumulativeByYear[r.year] += internalAmt + externalAmt;
-                  
-                  if (cumulativeByYear[r.year] > 5000 && thresholdsByYear[r.year].first5k === null) {
-                    thresholdsByYear[r.year].first5k = r.month;
-                  }
-                  if (cumulativeByYear[r.year] > 15000 && thresholdsByYear[r.year].first15k === null) {
-                    thresholdsByYear[r.year].first15k = r.month;
-                  }
-                }
-                
-                // 🆕 Genera TUTTI i mesi del contratto (firmati e non) per visualizzazione completa
+                // Genera TUTTI i mesi del contratto (firmati e non) per il calcolo cumulativo
                 const MONTH_NAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
                 const allMonths: Array<{ year: number; month: number; receipt: any | null }> = [];
                 const cStart = coach?.contract_start_date;
@@ -2541,6 +2517,28 @@ export default function AdminCoachDetail() {
                     if (m > 12) { m = 1; y++; }
                   }
                 }
+
+                // Calcolo cumulativo per anno solare, includendo anche mesi non ancora firmati
+                // (importo proiettato = monthly_compensation)
+                const cumulativeByYear: { [year: number]: number } = {};
+                for (const { year, month, receipt } of allMonths) {
+                  if (!thresholdsByYear[year]) {
+                    thresholdsByYear[year] = { first5k: null, first15k: null };
+                  }
+                  if (cumulativeByYear[year] == null) {
+                    cumulativeByYear[year] = year === contractYear ? (priorComp || 0) : 0;
+                  }
+                  const internalAmt = receipt ? (receipt.amount_gross || receipt.amount || 0) : monthlyComp;
+                  const externalAmt = externalByYearMonth[`${year}-${month}`] || 0;
+                  cumulativeByYear[year] += internalAmt + externalAmt;
+                  if (cumulativeByYear[year] > 5000 && thresholdsByYear[year].first5k === null) {
+                    thresholdsByYear[year].first5k = { year, month };
+                  }
+                  if (cumulativeByYear[year] > 15000 && thresholdsByYear[year].first15k === null) {
+                    thresholdsByYear[year].first15k = { year, month };
+                  }
+                }
+
                 // Most recent first
                 const sortedAllMonths = [...allMonths].sort((a, b) => {
                   if (a.year !== b.year) return b.year - a.year;
@@ -2548,7 +2546,11 @@ export default function AdminCoachDetail() {
                 });
 
                 return sortedAllMonths.map(({ year, month, receipt }, index: number) => {
-                  // Mese NON firmato → riga grigia placeholder
+                  const yearThresholds = thresholdsByYear[year] || { first5k: null, first15k: null };
+                  const isThreshold5kMonth = yearThresholds.first5k?.year === year && yearThresholds.first5k?.month === month;
+                  const isThreshold15kMonth = yearThresholds.first15k?.year === year && yearThresholds.first15k?.month === month;
+
+                  // Mese NON firmato → riga grigia placeholder (con badge di proiezione se supera soglia)
                   if (!receipt) {
                     return (
                       <View
@@ -2559,14 +2561,26 @@ export default function AdminCoachDetail() {
                           paddingHorizontal: 10,
                           marginBottom: 6,
                           borderLeftWidth: 3,
-                          borderLeftColor: '#BDBDBD',
+                          borderLeftColor: isThreshold15kMonth ? '#8E44AD' : isThreshold5kMonth ? '#FF9800' : '#BDBDBD',
                           borderRadius: 6,
                         }}
                       >
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Text style={{ fontSize: 14, fontWeight: '500', color: '#9E9E9E' }}>
-                            {MONTH_NAMES[month]} {year}
-                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                            <Text style={{ fontSize: 14, fontWeight: '500', color: '#9E9E9E' }}>
+                              {MONTH_NAMES[month]} {year}
+                            </Text>
+                            {isThreshold5kMonth && !isThreshold15kMonth && (
+                              <View style={{ backgroundColor: '#FF9800', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 6, opacity: 0.85 }}>
+                                <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>&gt;5K (prev.)</Text>
+                              </View>
+                            )}
+                            {isThreshold15kMonth && (
+                              <View style={{ backgroundColor: '#8E44AD', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3, marginLeft: 6, opacity: 0.85 }}>
+                                <Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>&gt;15K (prev.)</Text>
+                              </View>
+                            )}
+                          </View>
                           <Text style={{ fontSize: 12, color: '#9E9E9E', fontStyle: 'italic' }}>
                             Non firmata
                           </Text>
@@ -2576,11 +2590,8 @@ export default function AdminCoachDetail() {
                   }
 
                   // Mese FIRMATO → riga colorata in base alle soglie
-                  const yearThresholds = thresholdsByYear[receipt.year] || { first5k: null, first15k: null };
-                  const isAfter5k = yearThresholds.first5k !== null && receipt.month >= yearThresholds.first5k;
-                  const isAfter15k = yearThresholds.first15k !== null && receipt.month >= yearThresholds.first15k;
-                  const isThreshold5kMonth = yearThresholds.first5k === receipt.month;
-                  const isThreshold15kMonth = yearThresholds.first15k === receipt.month;
+                  const isAfter5k = yearThresholds.first5k !== null && (year > yearThresholds.first5k!.year || (year === yearThresholds.first5k!.year && month >= yearThresholds.first5k!.month));
+                  const isAfter15k = yearThresholds.first15k !== null && (year > yearThresholds.first15k!.year || (year === yearThresholds.first15k!.year && month >= yearThresholds.first15k!.month));
 
                   return (
                     <View
