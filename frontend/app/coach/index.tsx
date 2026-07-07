@@ -1417,9 +1417,9 @@ export default function CoachScreen() {
           style={styles.scrollContent}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
-          {/* 🆕 08/07/2026 — Logo società centrato in alto (grande) */}
+          {/* 🆕 08/07/2026 — Logo società senza cerchio (variant flat), grande e centrato */}
           <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-            <MiniSocietyLogo size={110} />
+            <MiniSocietyLogo size={140} variant="flat" />
           </View>
 
           {/* Dirigenti Section — collapsible, chiuso di default */}

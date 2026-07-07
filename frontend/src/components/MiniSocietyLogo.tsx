@@ -15,12 +15,14 @@ import { useAuthStore } from '../store/authStore';
 interface Props {
   size?: number;
   style?: any;
+  /** 🆕 08/07/2026 — 'circle' (default, per tab bar) o 'flat' (sfondo trasparente, contain) */
+  variant?: 'circle' | 'flat';
 }
 
 let cachedLogoExists: boolean | null = null;
 let inflight: Promise<void> | null = null;
 
-export default function MiniSocietyLogo({ size = 28, style }: Props) {
+export default function MiniSocietyLogo({ size = 28, style, variant = 'circle' }: Props) {
   const [hasLogo, setHasLogo] = useState<boolean>(cachedLogoExists ?? false);
   const user = useAuthStore((state) => state.user);
   const societyIdQuery = user?.society_id ? `?society_id=${user.society_id}` : '';
@@ -49,6 +51,18 @@ export default function MiniSocietyLogo({ size = 28, style }: Props) {
   }, [societyIdQuery]);
 
   if (!hasLogo) return null;
+
+  // 🆕 08/07/2026 — Variant 'flat': logo direttamente su sfondo, resizeMode contain,
+  // così anche loghi con soggetti alti (scudi, stemmi) entrano completamente.
+  if (variant === 'flat') {
+    return (
+      <Image
+        source={{ uri: `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/settings/society/logo.png${societyIdQuery}` }}
+        style={[{ width: size, height: size }, style]}
+        resizeMode="contain"
+      />
+    );
+  }
 
   return (
     <View style={[styles.wrapper, { width: size, height: size, borderRadius: size / 2 }, style]}>
