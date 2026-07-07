@@ -205,24 +205,47 @@ async def get_athlete_commitments(current_user = Depends(get_current_user)):
     """Get commitments (trainings + matches) for an athlete user — 7 days."""
     if current_user["role"] != UserRole.ATHLETE:
         raise HTTPException(status_code=403, detail="Solo atleti possono vedere i propri impegni")
-    
-    # Find the athlete record matching this user (by linked_user_id or email)
-    athlete = await db.athletes.find_one({
-        "$or": [
+
+    # 🆕 08/07/2026 — Lookup atleta più robusto:
+    #   1. Primo tentativo: user.linked_athlete_id → athletes.id (link canonical dal lato user)
+    #   2. Fallback: match su linked_user_id / user_id / email + società
+    #   3. Preferisci record non archiviati (is_withdrawn != True)
+    athlete = None
+    linked_athlete_id = current_user.get("linked_athlete_id")
+    if linked_athlete_id:
+        athlete = await db.athletes.find_one({"id": linked_athlete_id})
+    if not athlete:
+        query = {"$or": [
             {"linked_user_id": current_user["id"]},
             {"user_id": current_user["id"]},
-            {"email": current_user.get("email")},
-        ]
-    })
+        ]}
+        if current_user.get("email"):
+            query["$or"].append({"email": current_user["email"]})
+        if current_user.get("society_id"):
+            query["society_id"] = current_user["society_id"]
+        # Prefer non-withdrawn
+        candidates = await db.athletes.find(query).to_list(5)
+        candidates = sorted(candidates, key=lambda a: (bool(a.get("is_withdrawn")), 0))
+        athlete = candidates[0] if candidates else None
+
     if not athlete:
         return {"today": [], "tomorrow": [], "day_after": [], "upcoming": []}
-    
-    athlete_name = athlete.get("first_name", athlete.get("full_name", "").split()[0] if athlete.get("full_name") else "")
+
+    athlete_name = athlete.get("first_name") or (athlete.get("full_name", "").split()[0] if athlete.get("full_name") else "")
     team_athletes = {}
-    for team_id in (athlete.get("team_id"), athlete.get("team_id_2")):
-        if team_id:
+    # 🆕 08/07/2026 — Considera team_id, team_id_2, team_ids (array), e team_id_secondary
+    # (nomi alternativi legacy) per essere sicuri di catturare la seconda squadra.
+    team_id_candidates = [
+        athlete.get("team_id"),
+        athlete.get("team_id_2"),
+        athlete.get("team_id_secondary"),
+    ]
+    for extra in (athlete.get("team_ids") or []):
+        team_id_candidates.append(extra)
+    for team_id in team_id_candidates:
+        if team_id and team_id not in team_athletes:
             team_athletes[team_id] = [athlete_name]
-    
+
     return await _build_commitments_payload(team_athletes)
 
 
@@ -241,8 +264,12 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
     
     team_athletes = {}
     for a in athletes:
-        athlete_name = a.get("first_name", a.get("full_name", "").split()[0] if a.get("full_name") else "")
-        for team_id in (a.get("team_id"), a.get("team_id_2")):
+        athlete_name = a.get("first_name") or (a.get("full_name", "").split()[0] if a.get("full_name") else "")
+        # 🆕 08/07/2026 — Considera team_id + team_id_2 + team_ids array (schema legacy)
+        team_id_candidates = [a.get("team_id"), a.get("team_id_2"), a.get("team_id_secondary")]
+        for extra in (a.get("team_ids") or []):
+            team_id_candidates.append(extra)
+        for team_id in team_id_candidates:
             if team_id:
                 if team_id not in team_athletes:
                     team_athletes[team_id] = []
