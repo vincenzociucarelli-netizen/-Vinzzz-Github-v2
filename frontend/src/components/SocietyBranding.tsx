@@ -32,7 +32,10 @@ export default function SocietyBranding({ light = true, logoSize = 40, style }: 
   const societyIdQuery = user?.society_id ? `?society_id=${user.society_id}` : '';
 
   useEffect(() => {
-    if (cachedName !== null) return;
+    // 🆕 08/07/2026 — Refresh se il logo non era stato caricato al primo tentativo
+    // (l'admin potrebbe averlo caricato dopo). Retry silenzioso a ogni mount.
+    const shouldRefresh = cachedName === null || cachedLogoExists === false;
+    if (!shouldRefresh) return;
     if (inflight) {
       inflight.then(() => {
         setName(cachedName);

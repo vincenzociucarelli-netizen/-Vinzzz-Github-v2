@@ -1322,9 +1322,10 @@ export default function CoachScreen() {
     <View style={styles.container}>
       <OnboardingTutorial role="coach" steps={COACH_STEPS} />
       <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <SocietyBranding />
+        <View style={{ flex: 1, marginHorizontal: 8 }}>
+          <SocietyBranding logoSize={44} />
           <Text style={styles.headerTitle}>Le Mie Squadre</Text>
+          <Text style={styles.headerSubtitle}>Benvenuto, {user?.first_name || user?.full_name?.split(' ')[0] || 'Coach'}</Text>
         </View>
         <TouchableOpacity onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color="#fff" />
@@ -1994,6 +1995,11 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 2,
   },
   tabBar: {
     flexDirection: 'row',
