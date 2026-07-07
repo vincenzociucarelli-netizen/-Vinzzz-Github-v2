@@ -215,7 +215,25 @@ export default function ParentDashboard() {
   const loadCommitments = async () => {
     try {
       const response = await api.get('/parent/commitments');
-      setCommitments(response.data);
+      // 🆕 08/07/2026 — Dedup impegni identici (stesso team+data+ora+venue)
+      const dedup = (arr: any[] = []) => {
+        const seen = new Set<string>();
+        const out: any[] = [];
+        for (const it of arr) {
+          const k = `${it.type || ''}|${it.team_id || it.team_name || ''}|${it.date || ''}|${it.time_start || ''}|${it.venue || ''}`;
+          if (seen.has(k)) continue;
+          seen.add(k);
+          out.push(it);
+        }
+        return out;
+      };
+      const d = response.data || {};
+      setCommitments({
+        today: dedup(d.today || []),
+        tomorrow: dedup(d.tomorrow || []),
+        day_after: dedup(d.day_after || []),
+        upcoming: dedup(d.upcoming || []),
+      } as any);
     } catch (error) {
       console.error('Error loading commitments:', error);
     }

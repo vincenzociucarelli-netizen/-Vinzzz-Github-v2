@@ -37,16 +37,36 @@ interface Commitments {
   upcoming: CommitmentItem[];
 }
 
-const formatItem = (it: CommitmentItem) => {
+const DAYS_UPPER = ['DOMENICA', 'LUNEDÌ', 'MARTEDÌ', 'MERCOLEDÌ', 'GIOVEDÌ', 'VENERDÌ', 'SABATO'];
+const dayLabel = (offset: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return DAYS_UPPER[d.getDay()];
+};
+// 🆕 08/07/2026 — Dedup impegni identici
+const dedupCommitments = (arr: CommitmentItem[] = []): CommitmentItem[] => {
+  const seen = new Set<string>();
+  const out: CommitmentItem[] = [];
+  for (const it of arr) {
+    const k = `${it.type || ''}|${(it as any).team_id || it.team_name || ''}|${(it as any).date || ''}|${it.time_start || ''}|${it.venue || ''}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(it);
+  }
+  return out;
+};
+
+const formatItem = (it: CommitmentItem, includeDate: boolean = false) => {
   const time = `${it.time_start || ''}${it.time_end ? `–${it.time_end}` : ''}`;
   const where = it.venue ? ` · ${it.venue}` : '';
   const homeAway = it.home_away ? ` · ${it.home_away === 'home' ? 'Casa' : 'Trasferta'}` : '';
-  return `${time}${where}${homeAway}`;
+  const datePrefix = includeDate ? `${(it as any).day_name ? `${(it as any).day_name} ` : ''}${(it as any).date ? `${(it as any).date} · ` : ''}` : '';
+  return `${datePrefix}${time}${where}${homeAway}`;
 };
 
-const DayBlock: React.FC<{ title: string; items: CommitmentItem[]; emoji: string }> = ({ title, items, emoji }) => (
+const DayBlock: React.FC<{ title: string; items: CommitmentItem[]; emoji: string; dayName?: string; isUpcoming?: boolean }> = ({ title, items, emoji, dayName, isUpcoming }) => (
   <View style={styles.dayBlock}>
-    <Text style={styles.dayTitle}>{emoji} {title}</Text>
+    {title ? <Text style={styles.dayTitle}>{emoji} {title}{dayName ? ` — ${dayName}` : ''}</Text> : null}
     {items.length === 0 ? (
       <Text style={styles.emptyText}>Nessun impegno</Text>
     ) : (
@@ -63,7 +83,7 @@ const DayBlock: React.FC<{ title: string; items: CommitmentItem[]; emoji: string
               {it.team_name || 'Squadra'} {it.type === 'match' ? `vs ${it.opponent || '?'}` : ''}
               {it.cancelled ? ' (ANNULLATO)' : ''}
             </Text>
-            <Text style={styles.itemSubtitle}>{formatItem(it)}</Text>
+            <Text style={styles.itemSubtitle}>{formatItem(it, !!isUpcoming)}</Text>
           </View>
         </View>
       ))
@@ -170,26 +190,30 @@ export default function CollaboratoreHome() {
             </View>
           ) : (
             <>
-              <DayBlock title="Oggi" items={data?.today || []} emoji="🔴" />
-              <DayBlock title="Domani" items={data?.tomorrow || []} emoji="🟠" />
-              <DayBlock title="Dopodomani" items={data?.day_after || []} emoji="🟡" />
-              {(data?.upcoming || []).length > 0 && (
+              <DayBlock title="Oggi" items={dedupCommitments(data?.today || [])} emoji="🔴" dayName={dayLabel(0)} />
+              <DayBlock title="Domani" items={dedupCommitments(data?.tomorrow || [])} emoji="🟠" dayName={dayLabel(1)} />
+              <DayBlock title="Dopodomani" items={dedupCommitments(data?.day_after || [])} emoji="🟡" dayName={dayLabel(2)} />
+              {(() => {
+                const dedupedUpcoming = dedupCommitments(data?.upcoming || []);
+                if (dedupedUpcoming.length === 0) return null;
+                return (
                 <View>
                   <TouchableOpacity
                     onPress={() => setUpcomingOpen(!upcomingOpen)}
                     style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F3F4F6', padding: 10, borderRadius: 8, marginTop: 6 }}
                     data-testid="coll-upcoming-toggle"
                   >
-                    <Text style={{ fontWeight: '700', color: '#1F2937', fontSize: 14 }}>📅 Prossimi giorni ({data!.upcoming.length})</Text>
+                    <Text style={{ fontWeight: '700', color: '#1F2937', fontSize: 14 }}>📅 Successivi ({dedupedUpcoming.length})</Text>
                     <Ionicons name={upcomingOpen ? 'chevron-up' : 'chevron-down'} size={20} color="#1F2937" />
                   </TouchableOpacity>
                   {upcomingOpen && (
                     <View style={{ marginTop: 6 }}>
-                      <DayBlock title="" items={data!.upcoming} emoji="📅" />
+                      <DayBlock title="" items={dedupedUpcoming} emoji="📅" isUpcoming />
                     </View>
                   )}
                 </View>
-              )}
+                );
+              })()}
             </>
           )}
         </View>

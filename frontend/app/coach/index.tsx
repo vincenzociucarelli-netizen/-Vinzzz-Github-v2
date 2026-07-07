@@ -166,8 +166,26 @@ export default function CoachScreen() {
         api.get('/coach/commitments').catch(() => ({ data: null })),
         isDualRole ? api.get('/athlete/commitments').catch(() => ({ data: null })) : Promise.resolve({ data: null }),
       ]);
+      // 🆕 08/07/2026 — Dedup impegni identici (stesso team+data+ora+venue)
+      const _dedup = (arr: any[] = []) => {
+        const seen = new Set<string>();
+        const out: any[] = [];
+        for (const it of arr) {
+          const k = `${it.type || ''}|${it.team_id || it.team_name || ''}|${it.date || ''}|${it.time_start || ''}|${it.venue || ''}`;
+          if (seen.has(k)) continue;
+          seen.add(k);
+          out.push(it);
+        }
+        return out;
+      };
+      const _dedupData = (d: any) => d ? ({
+        today: _dedup(d.today || []),
+        tomorrow: _dedup(d.tomorrow || []),
+        day_after: _dedup(d.day_after || []),
+        upcoming: _dedup(d.upcoming || []),
+      }) : d;
       if (!isDualRole) {
-        setCommitments(coachRes.data);
+        setCommitments(_dedupData(coachRes.data));
         return;
       }
       const tag = (arr: any[] = [], as_role: 'atleta' | 'coach') => (arr || []).map((x) => ({ ...x, as_role }));
@@ -176,13 +194,13 @@ export default function CoachScreen() {
         const kb = `${b.date || ''}T${b.time_start || '00:00'}`;
         return ka.localeCompare(kb);
       };
-      const c = coachRes?.data || { today: [], tomorrow: [], day_after: [], upcoming: [] };
-      const a = athleteRes?.data || { today: [], tomorrow: [], day_after: [], upcoming: [] };
+      const c = _dedupData(coachRes?.data) || { today: [], tomorrow: [], day_after: [], upcoming: [] };
+      const a = _dedupData(athleteRes?.data) || { today: [], tomorrow: [], day_after: [], upcoming: [] };
       setCommitments({
-        today: [...tag(c.today, 'coach'), ...tag(a.today, 'atleta')].sort(sortBy),
-        tomorrow: [...tag(c.tomorrow, 'coach'), ...tag(a.tomorrow, 'atleta')].sort(sortBy),
-        day_after: [...tag(c.day_after, 'coach'), ...tag(a.day_after, 'atleta')].sort(sortBy),
-        upcoming: [...tag(c.upcoming, 'coach'), ...tag(a.upcoming, 'atleta')].sort(sortBy),
+        today: _dedup([...tag(c.today, 'coach'), ...tag(a.today, 'atleta')]).sort(sortBy),
+        tomorrow: _dedup([...tag(c.tomorrow, 'coach'), ...tag(a.tomorrow, 'atleta')]).sort(sortBy),
+        day_after: _dedup([...tag(c.day_after, 'coach'), ...tag(a.day_after, 'atleta')]).sort(sortBy),
+        upcoming: _dedup([...tag(c.upcoming, 'coach'), ...tag(a.upcoming, 'atleta')]).sort(sortBy),
       });
     } catch (error) {
       console.error('Error loading commitments:', error);
