@@ -688,11 +688,10 @@ export default function CoachScreen() {
             }
             /* File picker (galleria): pulsante e input più cliccabili su mobile */
             #web-qr-scanner input[type="file"] {
-              display: block !important;
-              margin: 12px auto !important;
-              padding: 10px !important;
-              font-size: 14px !important;
-              max-width: 90% !important;
+              /* Nascondiamo l'input nativo: c'è già il pulsante custom "Scegli immagine"
+                 che apre il picker; il "Choose File / No file chosen" del browser
+                 non è traducibile via JS e crea confusione linguistica. */
+              display: none !important;
             }
             #web-qr-scanner #html5-qrcode-button-file-selection {
               background-color: #34C759 !important;
@@ -702,51 +701,75 @@ export default function CoachScreen() {
               padding: 12px 20px !important;
               margin: 10px 5px !important;
             }
+            /* 🆕 08/07/2026 — Nascondi il selettore Camera:
+               forziamo comunque videoConstraints.facingMode='environment' (back camera),
+               quindi il dropdown è ridondante e crea confusione (appare greyed durante lo streaming). */
+            #web-qr-scanner #html5-qrcode-select-camera,
+            #web-qr-scanner span:has(> #html5-qrcode-select-camera),
+            #web-qr-scanner div:has(> #html5-qrcode-select-camera) {
+              display: none !important;
+            }
           `;
           document.head.appendChild(style);
 
-          // 🆕 08/07/2026 — Traduce in italiano i testi della libreria html5-qrcode
+          // 🆕 08/07/2026 — Traduce in italiano i testi della libreria html5-qrcode.
+          // ⚠️ Attenzione: disconnetto l'observer durante la modifica per NON generare
+          // mutation ricorsive che potrebbero interferire con i click handler della libreria
+          // (bug segnalato: "Scansiona da foto in galleria" non rispondeva).
+          let observer: MutationObserver | null = null;
           const translate = () => {
             const scanner = document.getElementById('web-qr-scanner');
             if (!scanner) return;
-            const anchor = scanner.querySelector('#html5-qrcode-anchor-scan-type-change') as HTMLElement | null;
-            if (anchor) {
-              const t = anchor.textContent || '';
-              if (t.includes('Image')) anchor.textContent = '📁 Scansiona da foto in galleria';
-              else if (t.includes('Camera') || t.includes('camera')) anchor.textContent = '📷 Torna alla fotocamera';
+            // Disconnetti prima di modificare
+            if (observer) observer.disconnect();
+            try {
+              const anchor = scanner.querySelector('#html5-qrcode-anchor-scan-type-change') as HTMLElement | null;
+              if (anchor) {
+                const t = (anchor.textContent || '').trim();
+                if (t === 'Scan an Image File') anchor.textContent = '📁 Scansiona da foto in galleria';
+                else if (t === 'Scan using camera directly') anchor.textContent = '📷 Torna alla fotocamera';
+              }
+              scanner.querySelectorAll('button').forEach((b) => {
+                const t = (b.textContent || '').trim();
+                if (t === 'Scan an Image File' || t === 'Select Image') b.textContent = 'Seleziona immagine';
+                else if (t.startsWith('Choose Image')) {
+                  b.textContent = t
+                    .replace('Choose Image', '📁 Scegli immagine')
+                    .replace(' - No image choosen', '')
+                    .replace(' - No image chosen', '');
+                }
+                else if (t === 'Stop Scanning') b.textContent = 'Ferma scansione';
+                else if (t === 'Request Camera Permissions') b.textContent = 'Consenti fotocamera';
+                else if (t === 'Start Scanning') b.textContent = 'Avvia scansione';
+                else if (t === 'Switch On Torch') b.textContent = '🔦 Accendi torcia';
+                else if (t === 'Switch Off Torch') b.textContent = '🔦 Spegni torcia';
+              });
+              // Nascondiamo il Select Camera via CSS: non serve tradurlo più.
+              scanner.querySelectorAll('span, div, p, label').forEach((el) => {
+                if (el.children.length > 0) return;
+                const t = (el.textContent || '').trim();
+                if (t === 'Or drop an image to scan') (el as HTMLElement).textContent = 'Oppure trascina qui un\'immagine';
+                else if (t.startsWith('Choose Image')) {
+                  (el as HTMLElement).textContent = t
+                    .replace('Choose Image', 'Scegli immagine')
+                    .replace('No image choosen', 'nessuna selezionata')
+                    .replace('No image chosen', 'nessuna selezionata');
+                }
+              });
+            } finally {
+              // Riconnetti
+              if (observer && scanner) {
+                observer.observe(scanner, { childList: true, subtree: true });
+              }
             }
-            scanner.querySelectorAll('button').forEach((b) => {
-              const t = (b.textContent || '').trim();
-              if (t === 'Scan an Image File' || t === 'Select Image') b.textContent = 'Seleziona immagine';
-              else if (t === 'Stop Scanning') b.textContent = 'Ferma scansione';
-              else if (t === 'Request Camera Permissions') b.textContent = 'Consenti fotocamera';
-              else if (t === 'Start Scanning') b.textContent = 'Avvia scansione';
-              else if (t === 'Switch On Torch') b.textContent = '🔦 Accendi torcia';
-              else if (t === 'Switch Off Torch') b.textContent = '🔦 Spegni torcia';
-              else if (t === 'Scan using camera directly') b.textContent = '📷 Usa la fotocamera';
-            });
-            scanner.querySelectorAll('span, div, p, label').forEach((el) => {
-              // Traduci solo se ha solo testo (senza figli elemento)
-              if (el.children.length > 0) return;
-              const t = (el.textContent || '').trim();
-              if (t === 'Select Camera') (el as HTMLElement).textContent = 'Seleziona fotocamera';
-              else if (t.startsWith('Select Camera (')) {
-                (el as HTMLElement).textContent = t.replace('Select Camera', 'Seleziona fotocamera');
-              }
-              else if (t === 'Or drop an image to scan') (el as HTMLElement).textContent = 'Oppure trascina qui un\'immagine';
-              else if (t.startsWith('Choose Image')) {
-                (el as HTMLElement).textContent = t
-                  .replace('Choose Image', 'Scegli immagine')
-                  .replace('No image choosen', 'nessuna selezionata');
-              }
-            });
-            // Il file input mostra "Choose File" / "No file chosen" ma sono valori nativi del browser: non modificabili via JS.
           };
           translate();
-          // Osserva mutations e ritraduce
-          const observer = new MutationObserver(() => translate());
+          observer = new MutationObserver(() => {
+            // debounce con requestAnimationFrame per evitare traduzioni troppo frequenti
+            requestAnimationFrame(translate);
+          });
           const target = document.getElementById('web-qr-scanner');
-          if (target) observer.observe(target, { childList: true, subtree: true, characterData: true });
+          if (target) observer.observe(target, { childList: true, subtree: true });
         }, 200);
       } catch (error) {
         console.error('Error starting web scanner:', error);

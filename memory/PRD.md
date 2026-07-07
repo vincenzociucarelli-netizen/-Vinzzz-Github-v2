@@ -16,6 +16,33 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 08/07/2026 (v7.2) — Scanner Coach: 2 fix funzionali ✅
+
+**Bug segnalati dall'utente**:
+- **A)** Dropdown "Select Camera" non funzionava (greyed durante lo streaming)
+- **B)** Link "Scansiona da foto in galleria" non rispondeva al click
+
+**Root cause**:
+- (A) La libreria html5-qrcode disabilita il selettore camera durante la scansione attiva. Inoltre, forziamo comunque `videoConstraints.facingMode='environment'` → il selettore è ridondante.
+- (B) Il mio `MutationObserver` triggerava mutazioni ricorsive (osservava `characterData` + modificava textContent → osservava di nuovo) che interferivano con il click handler dell'anchor `#html5-qrcode-anchor-scan-type-change`.
+
+**Fix applicati** (`/app/frontend/app/coach/index.tsx`):
+1. **Nascosto il selettore camera** via CSS (`#html5-qrcode-select-camera { display:none }`).
+2. **Nascosto l'input file nativo** (`input[type="file"] { display:none }`) — restava "Choose File / No file chosen" non traducibile.
+3. **MutationObserver ridisegnato**:
+   - `disconnect()` all'inizio di `translate()`, `observe()` alla fine (evita ricorsione).
+   - Rimosso `characterData: true` (ridondante).
+   - Debounce via `requestAnimationFrame`.
+4. **Traduzione completa** — aggiunto pattern `startsWith('Choose Image')` sui `<button>` per catturare "Choose Image - No image choosen" → "📁 Scegli immagine".
+
+**Testing E2E**: Screenshot mobile 420×900:
+- Vista start scanner: `Consenti fotocamera` + `📁 Scansiona da foto in galleria` (NO camera selector greyed).
+- Vista galleria: `📁 Scegli immagine` + `Oppure trascina qui un'immagine` + `📷 Torna alla fotocamera`.
+- Click sull'anchor RESPONDS correttamente (verificato via `.click()` DOM → switch mode).
+
+---
+
+
 ## 🆕 08/07/2026 (v7.1) — Scanner Presenze Coach: 2 fix ✅
 
 **Fix 1 — Sovrapposizione "Chiudi Scanner" ↔ Torcia**:
