@@ -17,6 +17,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import SocietyContactsSection from '../../src/components/SocietyContactsSection';
 import CollaboratoreTabBar from '../../src/components/collaboratore/CollaboratoreTabBar';
 
 interface CommitmentItem {
@@ -217,6 +218,9 @@ export default function CollaboratoreHome() {
             </>
           )}
         </View>
+
+        {/* 🆕 08/07/2026 — Sezione Società (logo + contatti collassabili) */}
+        <SocietyContactsSection currentUserId={user?.id} />
 
         {/* 🆕 23/02/2026 — Card "🏆 Stagione" spostata dal profilo (Squadre + Palestre) */}
         {(assignedTeams.length > 0 || assignedVenues.length > 0) && (

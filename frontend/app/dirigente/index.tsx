@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import SocietyContactsSection from '../../src/components/SocietyContactsSection';
 import AdminCoachCommitments from '../../src/components/admin/AdminCoachCommitments';
 import DirigenteTabBar from '../../src/components/dirigente/DirigenteTabBar';
 import {
@@ -284,6 +285,9 @@ export default function DirigenteIndex() {
 
         {/* Impegni del dirigente (riusa AdminCoachCommitments senza userId = current user) */}
         <AdminCoachCommitments roleLabel="dirigente" />
+
+        {/* 🆕 08/07/2026 — Sezione Società (logo + contatti collassabili) */}
+        <SocietyContactsSection currentUserId={user?.id} />
 
         {/* Mappa Palestre */}
         <TouchableOpacity
