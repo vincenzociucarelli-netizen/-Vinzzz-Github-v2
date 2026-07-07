@@ -2,6 +2,7 @@ import React from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
+import MiniSocietyLogo from '../MiniSocietyLogo';
 
 type TabKey = 'dafare' | 'anagrafica' | 'compensi';
 
@@ -26,7 +27,8 @@ export default function CollaboratoreTabBar({ active }: Props) {
   const current = active || detected;
 
   return (
-    <View style={{ flexDirection: 'row', gap: 8, marginHorizontal: 12, marginTop: 12, marginBottom: 8 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 12, marginTop: 12, marginBottom: 8 }}>
+      <MiniSocietyLogo size={28} />
       {TABS.map(t => {
         const isActive = current === t.key;
         return (
