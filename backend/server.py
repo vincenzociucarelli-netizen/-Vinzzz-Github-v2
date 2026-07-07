@@ -918,8 +918,8 @@ class AthleteCreate(BaseModel):
     tax_payer_first_name: Optional[str] = None
     tax_payer_fiscal_code: Optional[str] = None
     team_id: Optional[str] = None
-    team_id_2: Optional[str] = None  # Seconda squadra (opzionale)
-    is_trial: bool = True  # Default: periodo di prova
+    team_id_2: Optional[str] = None  # Seconda squadra (opzionale, legacy)
+    team_ids: Optional[List[str]] = None  # 🆕 08/07/2026 — Array dinamico squadre (canonical)
     privacy_accepted: bool = False
     consent_images_internal: Optional[bool] = None
     consent_images_promo: Optional[bool] = None
