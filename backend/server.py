@@ -13200,7 +13200,15 @@ async def get_coach_commitments(
         if current_user.get("society_id") and ath.get("society_id") and current_user["society_id"] != ath["society_id"]:
             raise HTTPException(status_code=403, detail="Atleta di altra società")
         is_athlete_view = True
-        athlete_team_id = ath.get("team_id")
+        # 🆕 08/07/2026 — Considera anche team_id_2 (seconda squadra) e team_ids array
+        athlete_team_ids: List[str] = []
+        for tid in [ath.get("team_id"), ath.get("team_id_2"), ath.get("team_id_secondary")]:
+            if tid and tid not in athlete_team_ids:
+                athlete_team_ids.append(tid)
+        for tid in (ath.get("team_ids") or []):
+            if tid and tid not in athlete_team_ids:
+                athlete_team_ids.append(tid)
+        athlete_team_id = athlete_team_ids  # ora è una list, gestita a linea 13224
         # Fake a target_user shape
         target_user = {**current_user, "society_id": ath.get("society_id"), "fiscal_code": ath.get("fiscal_code")}
     elif user_id and current_user.get("role") == UserRole.ADMIN:
@@ -13218,16 +13226,27 @@ async def get_coach_commitments(
     elif current_user["role"] not in (UserRole.COACH, UserRole.DIRIGENTE, UserRole.COLLABORATORE, UserRole.VIEWER, UserRole.ADMIN):
         raise HTTPException(status_code=403, detail="Ruolo non autorizzato a vedere gli impegni")
 
-    # 🆕 23/06/2026 — Atleti: cerchiamo il loro team_id nel record athletes (no assigned_teams)
+    # 🆕 23/06/2026 — Atleti: cerchiamo i team_ids nel record athletes (no assigned_teams)
     if is_athlete_view:
         if athlete_team_id is not None:
-            team_ids = [athlete_team_id] if athlete_team_id else []
+            # Può essere una lista (nuovo formato 08/07/2026) o singolo string (legacy)
+            if isinstance(athlete_team_id, list):
+                team_ids = [t for t in athlete_team_id if t]
+            else:
+                team_ids = [athlete_team_id] if athlete_team_id else []
         else:
             athlete_doc = await db.athletes.find_one(
                 {"fiscal_code": target_user.get("fiscal_code")},
-                {"_id": 0, "team_id": 1, "society_id": 1},
+                {"_id": 0, "team_id": 1, "team_id_2": 1, "team_id_secondary": 1, "team_ids": 1, "society_id": 1},
             )
-            team_ids = [athlete_doc["team_id"]] if athlete_doc and athlete_doc.get("team_id") else []
+            team_ids = []
+            if athlete_doc:
+                for tid in [athlete_doc.get("team_id"), athlete_doc.get("team_id_2"), athlete_doc.get("team_id_secondary")]:
+                    if tid and tid not in team_ids:
+                        team_ids.append(tid)
+                for tid in (athlete_doc.get("team_ids") or []):
+                    if tid and tid not in team_ids:
+                        team_ids.append(tid)
     else:
         team_ids = target_user.get("assigned_teams", [])
     

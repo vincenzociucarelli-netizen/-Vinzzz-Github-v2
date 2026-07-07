@@ -60,9 +60,30 @@ const RoleBadge: React.FC<{ role?: 'atleta' | 'coach' }> = ({ role }) => {
   );
 };
 
-const DayBlock: React.FC<{ title: string; items: CommitmentItem[]; emoji: string }> = ({ title, items, emoji }) => (
+const DAYS_UPPER = ['DOMENICA', 'LUNEDÌ', 'MARTEDÌ', 'MERCOLEDÌ', 'GIOVEDÌ', 'VENERDÌ', 'SABATO'];
+const dayLabel = (offset: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return DAYS_UPPER[d.getDay()];
+};
+
+// 🆕 08/07/2026 — Dedup impegni identici (stesso team + stessa data/time + stesso venue).
+// Serve per evitare doppioni quando un team ha per errore due training_sessions sullo stesso giorno.
+const dedupCommitments = (arr: CommitmentItem[] = []): CommitmentItem[] => {
+  const seen = new Set<string>();
+  const out: CommitmentItem[] = [];
+  for (const it of arr) {
+    const k = `${it.type || ''}|${it.team_id || it.team_name || ''}|${(it as any).date || ''}|${it.time_start || ''}|${it.venue || ''}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(it);
+  }
+  return out;
+};
+
+const DayBlock: React.FC<{ title: string; items: CommitmentItem[]; emoji: string; dayName?: string }> = ({ title, items, emoji, dayName }) => (
   <View style={styles.dayBlock}>
-    <Text style={styles.dayTitle}>{emoji} {title}</Text>
+    <Text style={styles.dayTitle}>{emoji} {title}{dayName ? ` — ${dayName}` : ''}</Text>
     {items.length === 0 ? (
       <Text style={styles.emptyText}>Nessun impegno</Text>
     ) : (
@@ -163,10 +184,14 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, athleteId, role
         </View>
       ) : (
         <>
-          <DayBlock title="Oggi" items={data.today || []} emoji="🔴" />
-          <DayBlock title="Domani" items={data.tomorrow || []} emoji="🟠" />
-          <DayBlock title="Dopodomani" items={data.day_after || []} emoji="🟡" />
-          {(data?.upcoming || []).length > 0 && (
+          <DayBlock title="Oggi" items={dedupCommitments(data.today || [])} emoji="🔴" dayName={dayLabel(0)} />
+          <DayBlock title="Domani" items={dedupCommitments(data.tomorrow || [])} emoji="🟠" dayName={dayLabel(1)} />
+          <DayBlock title="Dopodomani" items={dedupCommitments(data.day_after || [])} emoji="🟡" dayName={dayLabel(2)} />
+          {(() => {
+            // 🆕 08/07/2026 — Dedup e uso "Successivi" al posto di "Prossimi giorni"
+            const dedupedUpcoming = dedupCommitments(data?.upcoming || []);
+            if (dedupedUpcoming.length === 0) return null;
+            return (
             <View style={[styles.dayBlock, { borderBottomWidth: 0, paddingBottom: 0, marginBottom: 0 }]}>
               <TouchableOpacity
                 onPress={() => setUpcomingOpen(!upcomingOpen)}
@@ -176,12 +201,12 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, athleteId, role
               >
                 <Ionicons name={upcomingOpen ? 'chevron-down' : 'chevron-forward'} size={18} color="#374151" />
                 <Text style={[styles.dayTitle, { marginLeft: 4, marginBottom: 0 }]}>
-                  📅 Prossimi giorni ({(data?.upcoming || []).length})
+                  📅 Successivi ({dedupedUpcoming.length})
                 </Text>
               </TouchableOpacity>
               {upcomingOpen && (
                 <View style={{ marginTop: 6 }}>
-                  {(data?.upcoming || []).map((it, idx) => (
+                  {dedupedUpcoming.map((it, idx) => (
                     <View key={idx} style={[styles.itemRow, it.cancelled && { opacity: 0.5 }]}>
                       <Ionicons
                         name={it.type === 'match' ? 'trophy' : 'fitness'}
@@ -195,6 +220,9 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, athleteId, role
                           {it.cancelled ? ' (ANNULLATO)' : ''}
                         </Text>
                         <Text style={styles.itemSubtitle}>
+                          {/* 🆕 Giorno della settimana + data */}
+                          {(it as any).day_name ? `${(it as any).day_name} ` : ''}
+                          {(it as any).date ? `${(it as any).date} · ` : ''}
                           {it.time_start || ''}{it.time_end ? `–${it.time_end}` : ''}
                           {it.venue ? ` · ${it.venue}` : ''}
                         </Text>
@@ -204,7 +232,8 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, athleteId, role
                 </View>
               )}
             </View>
-          )}
+            );
+          })()}
         </>
       )}
     </View>
