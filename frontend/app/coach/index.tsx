@@ -29,6 +29,7 @@ import { it } from 'date-fns/locale';
 import { SportIcon } from '../../src/components/SportIcon';
 import { OnboardingTutorial, COACH_STEPS } from '../../src/components/OnboardingTutorial';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import MiniSocietyLogo from '../../src/components/MiniSocietyLogo';
 import SwitchAccountButton from '../../src/components/SwitchAccountButton';
 
 // Web QR Scanner
@@ -52,6 +53,10 @@ export default function CoachScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
   const [activeTab, setActiveTab] = useState<'teams' | 'scanner' | 'society'>('teams');
+  // 🆕 08/07/2026 — Sezioni Società collassabili (chiuse di default)
+  const [societyExpanded, setSocietyExpanded] = useState<{ dirigenti: boolean; allenatori: boolean; collaboratori: boolean }>({
+    dirigenti: false, allenatori: false, collaboratori: false,
+  });
   const [teams, setTeams] = useState<Team[]>([]);
   const [allTeams, setAllTeams] = useState<Team[]>([]); // All society teams for substitution
   const [showAllTeams, setShowAllTeams] = useState(false); // Toggle for substitution mode
@@ -1412,14 +1417,28 @@ export default function CoachScreen() {
           style={styles.scrollContent}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
-          {/* Dirigenti Section */}
+          {/* 🆕 08/07/2026 — Logo società centrato in alto (grande) */}
+          <View style={{ alignItems: 'center', paddingVertical: 20 }}>
+            <MiniSocietyLogo size={110} />
+          </View>
+
+          {/* Dirigenti Section — collapsible, chiuso di default */}
           <View style={styles.societySection}>
-            <Text style={styles.sectionTitle}>Dirigenti della Societa</Text>
-            <Text style={styles.sectionSubtitle}>
-              Contatta i dirigenti tramite WhatsApp
-            </Text>
-            
-            {dirigenti.length === 0 ? (
+            <TouchableOpacity
+              onPress={() => setSocietyExpanded((p) => ({ ...p, dirigenti: !p.dirigenti }))}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+              data-testid="toggle-dirigenti"
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Dirigenti della Societa ({dirigenti.length})</Text>
+                <Text style={styles.sectionSubtitle}>
+                  Contatta i dirigenti tramite WhatsApp
+                </Text>
+              </View>
+              <Ionicons name={societyExpanded.dirigenti ? 'chevron-up' : 'chevron-down'} size={22} color="#666" />
+            </TouchableOpacity>
+
+            {societyExpanded.dirigenti && (dirigenti.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="people-outline" size={48} color="#ccc" />
                 <Text style={styles.emptyText}>Nessun dirigente trovato</Text>
@@ -1474,17 +1493,26 @@ export default function CoachScreen() {
                 </View>
                 );
               })
-            )}
+            ))}
           </View>
 
-          {/* Allenatori Section */}
+          {/* Allenatori Section — collapsible, chiuso di default */}
           <View style={[styles.societySection, { marginTop: 16 }]}>
-            <Text style={styles.sectionTitle}>Allenatori della Societa</Text>
-            <Text style={styles.sectionSubtitle}>
-              I tuoi colleghi allenatori
-            </Text>
-            
-            {fellowCoaches.length === 0 ? (
+            <TouchableOpacity
+              onPress={() => setSocietyExpanded((p) => ({ ...p, allenatori: !p.allenatori }))}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+              data-testid="toggle-allenatori"
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Allenatori della Societa ({fellowCoaches.length})</Text>
+                <Text style={styles.sectionSubtitle}>
+                  I tuoi colleghi allenatori
+                </Text>
+              </View>
+              <Ionicons name={societyExpanded.allenatori ? 'chevron-up' : 'chevron-down'} size={22} color="#666" />
+            </TouchableOpacity>
+
+            {societyExpanded.allenatori && (fellowCoaches.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="fitness-outline" size={48} color="#ccc" />
                 <Text style={styles.emptyText}>Nessun allenatore trovato</Text>
@@ -1533,7 +1561,7 @@ export default function CoachScreen() {
                 </View>
                 );
               })
-            )}
+            ))}
           </View>
 
           {/* 🆕 26/06/2026 — Collaboratori assegnati alle squadre del coach */}
@@ -1546,11 +1574,20 @@ export default function CoachScreen() {
             if (myCollabs.length === 0) return null;
             return (
               <View style={[styles.societySection, { marginTop: 16 }]}>
-                <Text style={styles.sectionTitle}>Collaboratori delle tue squadre</Text>
-                <Text style={styles.sectionSubtitle}>
-                  Assegnati alle squadre che alleni
-                </Text>
-                {myCollabs.map((col: any) => {
+                <TouchableOpacity
+                  onPress={() => setSocietyExpanded((p) => ({ ...p, collaboratori: !p.collaboratori }))}
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+                  data-testid="toggle-collaboratori"
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.sectionTitle}>Collaboratori delle tue squadre ({myCollabs.length})</Text>
+                    <Text style={styles.sectionSubtitle}>
+                      Assegnati alle squadre che alleni
+                    </Text>
+                  </View>
+                  <Ionicons name={societyExpanded.collaboratori ? 'chevron-up' : 'chevron-down'} size={22} color="#666" />
+                </TouchableOpacity>
+                {societyExpanded.collaboratori && myCollabs.map((col: any) => {
                   const fullName = col.full_name || '';
                   const initials = fullName ? fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) : '?';
                   const colorList = ['#00838F', '#2E7D32', '#6A1B9A', '#D84315', '#4527A0', '#AD1457'];
