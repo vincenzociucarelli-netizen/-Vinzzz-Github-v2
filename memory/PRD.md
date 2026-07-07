@@ -16,6 +16,35 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 08/07/2026 (v7.1) — Scanner Presenze Coach: 2 fix ✅
+
+**Fix 1 — Sovrapposizione "Chiudi Scanner" ↔ Torcia**:
+- Rimosso il pulsante custom "Chiudi Scanner" duplicato in basso allo `ScrollView` dello scanner (`/app/frontend/app/coach/index.tsx`).
+- Restano attivi:
+  - la **X** in alto a destra nell'header dello scanner (chiude tutto),
+  - il pulsante nativo **"Ferma scansione"** (rosso, stilizzato) che la libreria html5-qrcode mostra durante lo streaming video.
+- CSS: `#html5-qrcode-button-camera-stop { background:#E53935; margin-top:12px; }` — non copre più il torch.
+
+**Fix 2 — Upload QR da galleria (foto scattata)**:
+- Abilitato `supportedScanTypes: [SCAN_TYPE_CAMERA, SCAN_TYPE_FILE]` nel constructor `Html5QrcodeScanner`.
+- Nuovo link **"📁 Scansiona da foto in galleria"** che apre il selettore file / roll foto del dispositivo → decodifica del QR client-side.
+- Tornare alla fotocamera → **"📷 Torna alla fotocamera"**.
+
+**Bonus — Traduzione completa in italiano dei testi html5-qrcode**:
+- MutationObserver + funzione `translate()` che intercetta e traduce dinamicamente:
+  - "Request Camera Permissions" → "Consenti fotocamera"
+  - "Select Camera" → "Seleziona fotocamera"
+  - "Start/Stop Scanning" → "Avvia/Ferma scansione"
+  - "Switch On/Off Torch" → "🔦 Accendi/Spegni torcia"
+  - "Scan an Image File" → "Seleziona immagine"
+  - "Or drop an image to scan" → "Oppure trascina qui un'immagine"
+
+**Testing**: Screenshot mobile 420×850 mostra vista pulita:
+`[Consenti fotocamera] + [📁 Scansiona da foto in galleria]` — nessuna sovrapposizione.
+
+---
+
+
 ## 🆕 08/07/2026 (v7) — Refactor `team_ids`: array dinamico squadre atleti ✅
 
 **Problema**: gli atleti erano vincolati a max 2 squadre (`team_id`/`team_id_2`). Utente ha richiesto la possibilità di assegnarli a 3+ squadre.

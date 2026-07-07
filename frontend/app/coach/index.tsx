@@ -34,8 +34,11 @@ import SwitchAccountButton from '../../src/components/SwitchAccountButton';
 
 // Web QR Scanner
 let Html5QrcodeScanner: any = null;
+let Html5QrcodeScanType: any = null;
 if (Platform.OS === 'web') {
-  Html5QrcodeScanner = require('html5-qrcode').Html5QrcodeScanner;
+  const lib = require('html5-qrcode');
+  Html5QrcodeScanner = lib.Html5QrcodeScanner;
+  Html5QrcodeScanType = lib.Html5QrcodeScanType;
 }
 
 interface Dirigente {
@@ -587,6 +590,10 @@ export default function CoachScreen() {
             // Hide UI elements for simpler interface
             showZoomSliderIfSupported: false,
             defaultZoomValueIfSupported: 1,
+            // 🆕 08/07/2026 — Abilita anche la scansione da immagine (galleria)
+            supportedScanTypes: Html5QrcodeScanType
+              ? [Html5QrcodeScanType.SCAN_TYPE_CAMERA, Html5QrcodeScanType.SCAN_TYPE_FILE]
+              : undefined,
           },
           false
         );
@@ -644,9 +651,15 @@ export default function CoachScreen() {
               border: none !important;
               border-radius: 10px !important;
             }
-            /* Hide the library's Stop Scanning button - we use our own Chiudi Scanner button */
+            /* 🆕 08/07/2026 — Mostro il pulsante "Ferma scansione" nativo (tradotto)
+               dato che ho rimosso il duplicato "Chiudi Scanner" custom in basso */
             #web-qr-scanner #html5-qrcode-button-camera-stop {
-              display: none !important;
+              background-color: #E53935 !important;
+              color: white !important;
+              border: none !important;
+              border-radius: 10px !important;
+              padding: 12px 20px !important;
+              margin-top: 12px !important;
             }
             #web-qr-scanner video {
               margin-bottom: 10px !important;
@@ -660,8 +673,80 @@ export default function CoachScreen() {
               border: none !important;
               border-radius: 10px !important;
             }
+            /* 🆕 08/07/2026 — Link "Scan an Image File" e torch: distanziamento pulito */
+            #web-qr-scanner #html5-qrcode-anchor-scan-type-change {
+              display: inline-block !important;
+              margin-top: 20px !important;
+              margin-bottom: 12px !important;
+              padding: 10px 16px !important;
+              background-color: #F0F7FF !important;
+              color: #007AFF !important;
+              border: 1px solid #007AFF !important;
+              border-radius: 10px !important;
+              text-decoration: none !important;
+              font-weight: 600 !important;
+            }
+            /* File picker (galleria): pulsante e input più cliccabili su mobile */
+            #web-qr-scanner input[type="file"] {
+              display: block !important;
+              margin: 12px auto !important;
+              padding: 10px !important;
+              font-size: 14px !important;
+              max-width: 90% !important;
+            }
+            #web-qr-scanner #html5-qrcode-button-file-selection {
+              background-color: #34C759 !important;
+              color: white !important;
+              border: none !important;
+              border-radius: 10px !important;
+              padding: 12px 20px !important;
+              margin: 10px 5px !important;
+            }
           `;
           document.head.appendChild(style);
+
+          // 🆕 08/07/2026 — Traduce in italiano i testi della libreria html5-qrcode
+          const translate = () => {
+            const scanner = document.getElementById('web-qr-scanner');
+            if (!scanner) return;
+            const anchor = scanner.querySelector('#html5-qrcode-anchor-scan-type-change') as HTMLElement | null;
+            if (anchor) {
+              const t = anchor.textContent || '';
+              if (t.includes('Image')) anchor.textContent = '📁 Scansiona da foto in galleria';
+              else if (t.includes('Camera') || t.includes('camera')) anchor.textContent = '📷 Torna alla fotocamera';
+            }
+            scanner.querySelectorAll('button').forEach((b) => {
+              const t = (b.textContent || '').trim();
+              if (t === 'Scan an Image File' || t === 'Select Image') b.textContent = 'Seleziona immagine';
+              else if (t === 'Stop Scanning') b.textContent = 'Ferma scansione';
+              else if (t === 'Request Camera Permissions') b.textContent = 'Consenti fotocamera';
+              else if (t === 'Start Scanning') b.textContent = 'Avvia scansione';
+              else if (t === 'Switch On Torch') b.textContent = '🔦 Accendi torcia';
+              else if (t === 'Switch Off Torch') b.textContent = '🔦 Spegni torcia';
+              else if (t === 'Scan using camera directly') b.textContent = '📷 Usa la fotocamera';
+            });
+            scanner.querySelectorAll('span, div, p, label').forEach((el) => {
+              // Traduci solo se ha solo testo (senza figli elemento)
+              if (el.children.length > 0) return;
+              const t = (el.textContent || '').trim();
+              if (t === 'Select Camera') (el as HTMLElement).textContent = 'Seleziona fotocamera';
+              else if (t.startsWith('Select Camera (')) {
+                (el as HTMLElement).textContent = t.replace('Select Camera', 'Seleziona fotocamera');
+              }
+              else if (t === 'Or drop an image to scan') (el as HTMLElement).textContent = 'Oppure trascina qui un\'immagine';
+              else if (t.startsWith('Choose Image')) {
+                (el as HTMLElement).textContent = t
+                  .replace('Choose Image', 'Scegli immagine')
+                  .replace('No image choosen', 'nessuna selezionata');
+              }
+            });
+            // Il file input mostra "Choose File" / "No file chosen" ma sono valori nativi del browser: non modificabili via JS.
+          };
+          translate();
+          // Osserva mutations e ritraduce
+          const observer = new MutationObserver(() => translate());
+          const target = document.getElementById('web-qr-scanner');
+          if (target) observer.observe(target, { childList: true, subtree: true, characterData: true });
         }, 200);
       } catch (error) {
         console.error('Error starting web scanner:', error);
@@ -875,14 +960,7 @@ export default function CoachScreen() {
               </View>
             )}
             
-            <div id="web-qr-scanner" style={{ width: '100%', maxWidth: 500 }} />
-            
-            <TouchableOpacity
-              style={[styles.cancelButton, { marginTop: 30, marginBottom: 40 }]}
-              onPress={stopWebScanner}
-            >
-              <Text style={styles.cancelButtonText}>Chiudi Scanner</Text>
-            </TouchableOpacity>
+            <div id="web-qr-scanner" style={{ width: '100%', maxWidth: 500, paddingBottom: 40 }} />
           </ScrollView>
         </View>
       );
