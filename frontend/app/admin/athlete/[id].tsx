@@ -191,6 +191,9 @@ export default function AdminAthleteDetail() {
   // Collapsible team sections
   const [showPrimaryTeam, setShowPrimaryTeam] = useState(false);
   const [showSecondaryTeam, setShowSecondaryTeam] = useState(false);
+  // 🆕 08/07/2026 — Espansione riga N-esima per selezione squadra multipla
+  const [expandedTeamSlot, setExpandedTeamSlot] = useState<number | null>(null);
+  const [showAddTeamSelector, setShowAddTeamSelector] = useState(false);
   
   // Reactivate modal with team selection
   const [reactivateModalVisible, setReactivateModalVisible] = useState(false);
@@ -629,6 +632,10 @@ export default function AdminAthleteDetail() {
         // Team
         team_id: athleteData.team_id || '',
         team_id_2: athleteData.team_id_2 || '',
+        // 🆕 08/07/2026 — Array canonico squadre (illimitato). Priorità athlete.team_ids, altrimenti costruito da legacy fields.
+        team_ids: (Array.isArray(athleteData.team_ids) && athleteData.team_ids.length > 0)
+          ? [...athleteData.team_ids]
+          : [athleteData.team_id, athleteData.team_id_2].filter((x: any) => !!x),
         // Athlete code for payment import
         athlete_code: athleteData.athlete_code || '',
       });
@@ -855,6 +862,8 @@ export default function AdminAthleteDetail() {
         // perché il backend interpreta null come "campo non toccato" (ignora l'update),
         // mentre "" viene esplicitamente convertito in null lato server (=rimozione).
         team_id_2: editData.team_id_2 || "",
+        // 🆕 08/07/2026 — Invia sempre l'array canonico. Sovrascrive team_id/team_id_2 lato server.
+        team_ids: Array.isArray(editData.team_ids) ? editData.team_ids.filter((x: string) => !!x) : [],
         // Athlete code for payment import
         athlete_code: editData.athlete_code?.toUpperCase().trim() || null,
       };
@@ -3942,127 +3951,172 @@ export default function AdminAthleteDetail() {
             </View>
             {editing ? (
               <>
-                {/* Squadra Principale - collassabile */}
-                <TouchableOpacity
-                  style={{
-                    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-                    backgroundColor: '#F0F7FF', borderRadius: 10, padding: 12, marginBottom: 8,
-                  }}
-                  onPress={() => setShowPrimaryTeam(!showPrimaryTeam)}
-                  data-testid="toggle-primary-team"
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#007AFF' }}>Squadra Principale</Text>
-                    {!showPrimaryTeam && editData.team_id && (
-                      <Text style={{ fontSize: 13, color: '#333', marginTop: 2 }}>
-                        {allTeams.find(t => t.id === editData.team_id)?.name || ''}
-                      </Text>
-                    )}
-                  </View>
-                  <Ionicons name={showPrimaryTeam ? "chevron-up" : "chevron-down"} size={20} color="#007AFF" />
-                </TouchableOpacity>
-                {showPrimaryTeam && (
-                  <View style={styles.teamSelector}>
-                    {allTeams.map((t) => (
+                {/* 🆕 08/07/2026 — Lista dinamica squadre (illimitate).
+                    La prima squadra è la Principale, le successive sono Secondarie.
+                    Ogni riga può essere espansa per cambiare la squadra o rimossa. */}
+                {(editData.team_ids || []).map((tid: string, idx: number) => {
+                  const isPrimary = idx === 0;
+                  const teamName = allTeams.find(t => t.id === tid)?.name || '(non trovata)';
+                  const isExpanded = expandedTeamSlot === idx;
+                  // squadre disponibili = tutte tranne quelle già presenti in altri slot
+                  const usedInOtherSlots = (editData.team_ids || []).filter((_id: string, j: number) => j !== idx);
+                  const availableTeams = allTeams.filter(t => !usedInOtherSlots.includes(t.id));
+                  return (
+                    <View key={`team-slot-${idx}`} style={{ marginBottom: 8 }}>
                       <TouchableOpacity
-                        key={t.id}
-                        style={[
-                          styles.teamOption,
-                          editData.team_id === t.id && styles.teamOptionSelected
-                        ]}
-                        onPress={() => setEditData({...editData, team_id: t.id})}
+                        style={{
+                          flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                          backgroundColor: isPrimary ? '#F0F7FF' : '#F5F5F5', borderRadius: 10, padding: 12,
+                        }}
+                        onPress={() => setExpandedTeamSlot(isExpanded ? null : idx)}
+                        data-testid={`toggle-team-slot-${idx}`}
                       >
-                        <Ionicons
-                          name={editData.team_id === t.id ? "radio-button-on" : "radio-button-off"}
-                          size={20}
-                          color={editData.team_id === t.id ? "#007AFF" : "#999"}
-                        />
-                        <Text style={[
-                          styles.teamOptionText,
-                          editData.team_id === t.id && styles.teamOptionTextSelected
-                        ]}>{t.name}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 14, fontWeight: '700', color: isPrimary ? '#007AFF' : '#666' }}>
+                            {isPrimary ? 'Squadra Principale' : `Squadra ${idx + 1}`}
+                          </Text>
+                          {!isExpanded && (
+                            <Text style={{ fontSize: 13, color: '#333', marginTop: 2 }}>{teamName}</Text>
+                          )}
+                        </View>
+                        {!isPrimary && (
+                          <TouchableOpacity
+                            style={{ padding: 4, marginRight: 8 }}
+                            onPress={() => {
+                              const next = [...(editData.team_ids || [])];
+                              next.splice(idx, 1);
+                              setEditData({
+                                ...editData,
+                                team_ids: next,
+                                team_id: next[0] || '',
+                                team_id_2: next[1] || '',
+                              });
+                              setExpandedTeamSlot(null);
+                            }}
+                            data-testid={`remove-team-slot-${idx}`}
+                          >
+                            <Ionicons name="trash-outline" size={20} color="#E53935" />
+                          </TouchableOpacity>
+                        )}
+                        <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color={isPrimary ? '#007AFF' : '#666'} />
                       </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
+                      {isExpanded && (
+                        <View style={styles.teamSelector}>
+                          {availableTeams.map((t) => (
+                            <TouchableOpacity
+                              key={t.id}
+                              style={[
+                                styles.teamOption,
+                                tid === t.id && styles.teamOptionSelected,
+                              ]}
+                              onPress={() => {
+                                const next = [...(editData.team_ids || [])];
+                                next[idx] = t.id;
+                                setEditData({
+                                  ...editData,
+                                  team_ids: next,
+                                  team_id: next[0] || '',
+                                  team_id_2: next[1] || '',
+                                });
+                              }}
+                              data-testid={`team-slot-${idx}-option-${t.id}`}
+                            >
+                              <Ionicons
+                                name={tid === t.id ? 'radio-button-on' : 'radio-button-off'}
+                                size={20}
+                                color={tid === t.id ? '#007AFF' : '#999'}
+                              />
+                              <Text style={[
+                                styles.teamOptionText,
+                                tid === t.id && styles.teamOptionTextSelected,
+                              ]}>{t.name}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  );
+                })}
 
-                {/* Squadra Secondaria - collassabile */}
-                <TouchableOpacity
-                  style={{
-                    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-                    backgroundColor: '#F5F5F5', borderRadius: 10, padding: 12, marginTop: 8, marginBottom: 8,
-                  }}
-                  onPress={() => setShowSecondaryTeam(!showSecondaryTeam)}
-                  data-testid="toggle-secondary-team"
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#666' }}>Squadra Secondaria (opzionale)</Text>
-                    {!showSecondaryTeam && (
-                      <Text style={{ fontSize: 13, color: '#333', marginTop: 2 }}>
-                        {editData.team_id_2 ? (allTeams.find(t => t.id === editData.team_id_2)?.name || '') : 'Nessuna'}
-                      </Text>
-                    )}
-                  </View>
-                  <Ionicons name={showSecondaryTeam ? "chevron-up" : "chevron-down"} size={20} color="#666" />
-                </TouchableOpacity>
-                {showSecondaryTeam && (
-                  <View style={styles.teamSelector}>
-                    <TouchableOpacity
-                      style={[
-                        styles.teamOption,
-                        !editData.team_id_2 && styles.teamOptionSelected
-                      ]}
-                      onPress={() => setEditData({...editData, team_id_2: ''})}
-                    >
-                      <Ionicons
-                        name={!editData.team_id_2 ? "radio-button-on" : "radio-button-off"}
-                        size={20}
-                        color={!editData.team_id_2 ? "#007AFF" : "#999"}
-                      />
-                      <Text style={[
-                        styles.teamOptionText,
-                        !editData.team_id_2 && styles.teamOptionTextSelected
-                      ]}>Nessuna</Text>
-                    </TouchableOpacity>
-                    {allTeams.filter(t => t.id !== editData.team_id).map((t) => (
+                {/* Bottone "Aggiungi squadra" — mostra il selettore per una nuova squadra */}
+                {(() => {
+                  const currentIds = editData.team_ids || [];
+                  const remaining = allTeams.filter(t => !currentIds.includes(t.id));
+                  if (remaining.length === 0) return null;
+                  return (
+                    <View style={{ marginTop: 4 }}>
                       <TouchableOpacity
-                        key={t.id}
-                        style={[
-                          styles.teamOption,
-                          editData.team_id_2 === t.id && styles.teamOptionSelected
-                        ]}
-                        onPress={() => setEditData({...editData, team_id_2: t.id})}
+                        style={{
+                          flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                          backgroundColor: '#E8F5E9', borderRadius: 10, padding: 12,
+                          borderWidth: 1, borderColor: '#4CAF50', borderStyle: 'dashed',
+                        }}
+                        onPress={() => setShowAddTeamSelector(!showAddTeamSelector)}
+                        data-testid="add-team-button"
                       >
-                        <Ionicons
-                          name={editData.team_id_2 === t.id ? "radio-button-on" : "radio-button-off"}
-                          size={20}
-                          color={editData.team_id_2 === t.id ? "#007AFF" : "#999"}
-                        />
-                        <Text style={[
-                          styles.teamOptionText,
-                          editData.team_id_2 === t.id && styles.teamOptionTextSelected
-                        ]}>{t.name}</Text>
+                        <Ionicons name="add-circle-outline" size={20} color="#2E7D32" />
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: '#2E7D32' }}>
+                          {currentIds.length === 0 ? 'Aggiungi squadra' : 'Aggiungi un\'altra squadra'}
+                        </Text>
                       </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
+                      {showAddTeamSelector && (
+                        <View style={styles.teamSelector}>
+                          {remaining.map((t) => (
+                            <TouchableOpacity
+                              key={t.id}
+                              style={styles.teamOption}
+                              onPress={() => {
+                                const next = [...currentIds, t.id];
+                                setEditData({
+                                  ...editData,
+                                  team_ids: next,
+                                  team_id: next[0] || '',
+                                  team_id_2: next[1] || '',
+                                });
+                                setShowAddTeamSelector(false);
+                              }}
+                              data-testid={`add-team-option-${t.id}`}
+                            >
+                              <Ionicons name="radio-button-off" size={20} color="#999" />
+                              <Text style={styles.teamOptionText}>{t.name}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  );
+                })()}
               </>
             ) : (
               <>
-                <View style={styles.infoRow}>
-                  <Text style={styles.label}>Squadra Principale</Text>
-                  <Text style={[styles.value, { color: '#E53935', fontWeight: 'bold' }]}>
-                    {team?.name || '-'}
-                  </Text>
-                </View>
-                {athlete?.team_id_2 && (
-                  <View style={styles.infoRow}>
-                    <Text style={styles.label}>Squadra Secondaria</Text>
-                    <Text style={styles.value}>
-                      {allTeams.find(t => t.id === athlete?.team_id_2)?.name || '-'}
-                    </Text>
-                  </View>
-                )}
+                {/* Read-only: mostra tutte le squadre in team_ids (fallback su legacy fields). */}
+                {(() => {
+                  const readIds: string[] = (Array.isArray(athlete?.team_ids) && (athlete?.team_ids as string[]).length > 0)
+                    ? (athlete?.team_ids as string[])
+                    : [athlete?.team_id, athlete?.team_id_2].filter((x: any) => !!x) as string[];
+                  if (readIds.length === 0) {
+                    return (
+                      <View style={styles.infoRow}>
+                        <Text style={styles.label}>Squadra Principale</Text>
+                        <Text style={styles.value}>-</Text>
+                      </View>
+                    );
+                  }
+                  return readIds.map((tid, idx) => {
+                    const name = allTeams.find(t => t.id === tid)?.name || (idx === 0 ? (team?.name || '-') : '-');
+                    return (
+                      <View key={`ro-team-${idx}`} style={styles.infoRow}>
+                        <Text style={styles.label}>{idx === 0 ? 'Squadra Principale' : `Squadra ${idx + 1}`}</Text>
+                        <Text style={[
+                          styles.value,
+                          idx === 0 ? { color: '#E53935', fontWeight: 'bold' } : {},
+                        ]}>
+                          {name}
+                        </Text>
+                      </View>
+                    );
+                  });
+                })()}
               </>
             )}
             {/* 🆕 28/06/2026 — Save button in-line per salvare la modifica squadra dal tab Presenze */}

@@ -16,6 +16,32 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🆕 08/07/2026 (v7) — Refactor `team_ids`: array dinamico squadre atleti ✅
+
+**Problema**: gli atleti erano vincolati a max 2 squadre (`team_id`/`team_id_2`). Utente ha richiesto la possibilità di assegnarli a 3+ squadre.
+
+**Soluzione**: introdotto il campo canonico `team_ids: List[str]` nel documento `athletes`. Mantenuti in DB anche `team_id` e `team_id_2` sincronizzati automaticamente sui primi 2 elementi per backward compatibility (query legacy continuano a funzionare).
+
+**Backend (`/app/backend/server.py`)**:
+- `Athlete.team_ids: List[str] = Field(default_factory=list)` (modello canonical)
+- `AthleteCreate.team_ids` + `AthleteUpdate.team_ids` (Optional[List[str]])
+- PATCH `/api/athletes/{id}`: gestisce `team_ids` con dedup, filtro ID inesistenti, sync legacy `team_id=[0]`/`team_id_2=[1]`, ricrea pagamenti solo se `team_id` (primary) cambia.
+- Se arriva solo `team_id` o `team_id_2` (path legacy) sincronizza automaticamente `team_ids` per mantenere coerenza.
+- Migrazione one-shot allo startup (`run_data_migrations`): popola `team_ids` da `team_id`+`team_id_2` per gli atleti esistenti. **Risultato prima run: 33/45 atleti migrati.**
+
+**Frontend (`/app/frontend/app/admin/athlete/[id].tsx`)**:
+- `editData.team_ids: string[]` inizializzato da `athlete.team_ids` (fallback ai legacy fields).
+- UI dinamica nel tab **Presenze**: lista con N squadre (Principale + Squadra 2 + Squadra 3 + …), bottone "🗑️ rimuovi" su ogni secondaria, bottone **⊕ Aggiungi un'altra squadra** con selettore delle squadre residue.
+- Save: invia `team_ids` (array). Il backend fa il resto.
+- Read-only: itera su `team_ids` mostrando "Squadra Principale / Squadra 2 / …".
+
+**Testing**:
+- ✅ Backend via curl: 4 scenari (array vuoto, 1 team, dedup+ID inesistenti, path legacy con sync retroattivo).
+- ✅ Frontend via screenshot: atleta PEDANA LUIGIA modificata da 2 → 3 squadre → salvato → riletto correttamente.
+
+---
+
+
 ## 🆕 08/07/2026 (v6) — Rollover a 2 step + import granulare ✅
 
 Feedback utente: il rollover atomico "tutto in un click" non è realistico perché i tesserati (specialmente famiglie di atleti minorenni) decidono di rinnovare in tempi diversi. Serve un flusso in 2 tempi + import uno per uno spalmato su settimane/mesi.

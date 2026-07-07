@@ -801,8 +801,9 @@ class Athlete(BaseModel):
     tax_payer_first_name: Optional[str] = None  # Nome genitore detrazione
     tax_payer_fiscal_code: Optional[str] = None  # CF genitore detrazione
     # Squadra e stato
-    team_id: Optional[str] = None  # Squadra principale (optional for adult registration)
-    team_id_2: Optional[str] = None  # Seconda squadra (opzionale)
+    team_id: Optional[str] = None  # Squadra principale (optional for adult registration) — LEGACY, sync from team_ids[0]
+    team_id_2: Optional[str] = None  # Seconda squadra (opzionale) — LEGACY, sync from team_ids[1]
+    team_ids: List[str] = Field(default_factory=list)  # 🆕 08/07/2026 — Array dinamico squadre (canonical, unlimited)
     qr_code: str = ""  # Base64 encoded QR code
     registration_date: datetime = Field(default_factory=datetime.utcnow)
     trial_end_date: Optional[datetime] = None  # 7 days after registration (None per atleti maggiorenni)
@@ -957,7 +958,8 @@ class AthleteUpdate(BaseModel):
     privacy_accepted_date: Optional[str] = None
     image_consent: Optional[bool] = None
     team_id: Optional[str] = None
-    team_id_2: Optional[str] = None  # Seconda squadra (opzionale)
+    team_id_2: Optional[str] = None  # Seconda squadra (opzionale, legacy)
+    team_ids: Optional[List[str]] = None  # 🆕 08/07/2026 — Array dinamico squadre (canonical). Se presente, sovrascrive team_id/team_id_2.
     discount_amount: Optional[float] = None
     discount_reason: Optional[str] = None
     discount_note: Optional[str] = None
@@ -8967,8 +8969,56 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
                     )
                 update_dict["athlete_code"] = update_data.athlete_code.upper().strip()
     
-    # Seconda squadra (opzionale)
-    if update_data.team_id_2 is not None:
+    # 🆕 08/07/2026 — Nuovo array team_ids (canonical). Se presente sovrascrive team_id/team_id_2 e viceversa
+    # per backward compatibility popoliamo sempre entrambi (team_ids + team_id/team_id_2).
+    if update_data.team_ids is not None:
+        # Deduplica preservando l'ordine e filtra stringhe vuote
+        seen = set()
+        deduped_ids = []
+        for tid in update_data.team_ids:
+            if tid and tid not in seen:
+                seen.add(tid)
+                deduped_ids.append(tid)
+        # Verifica che tutte le squadre esistano
+        if deduped_ids:
+            existing_teams = await db.teams.find(
+                {"id": {"$in": deduped_ids}},
+                {"_id": 0, "id": 1}
+            ).to_list(100)
+            existing_ids = {t["id"] for t in existing_teams}
+            deduped_ids = [tid for tid in deduped_ids if tid in existing_ids]
+
+        update_dict["team_ids"] = deduped_ids
+        # Sync legacy fields
+        old_team_id = athlete.get("team_id")
+        new_primary = deduped_ids[0] if len(deduped_ids) > 0 else None
+        new_secondary = deduped_ids[1] if len(deduped_ids) > 1 else None
+        update_dict["team_id"] = new_primary
+        update_dict["team_id_2"] = new_secondary
+
+        # Ricrea pagamenti se la squadra principale è cambiata (per atleti quota)
+        if old_team_id != new_primary and athlete.get("athlete_type") == "quota" and new_primary:
+            primary_team = await db.teams.find_one({"id": new_primary})
+            if primary_team:
+                await db.payments.delete_many({"athlete_id": athlete_id})
+                installments = primary_team.get("installments", [])
+                for i, installment in enumerate(installments):
+                    payment = {
+                        "id": str(uuid.uuid4()),
+                        "athlete_id": athlete_id,
+                        "society_id": athlete.get("society_id"),
+                        "amount": installment.get("amount", 0),
+                        "due_date": installment.get("due_date"),
+                        "paid_date": None,
+                        "status": "pending",
+                        "description": installment.get("name", f"Rata {i+1}"),
+                        "installment_number": i + 1,
+                        "created_at": datetime.utcnow()
+                    }
+                    await db.payments.insert_one(payment)
+
+    # Seconda squadra (opzionale) — LEGACY path (usato solo se team_ids NON è stato inviato)
+    elif update_data.team_id_2 is not None:
         if update_data.team_id_2 == "":
             # Remove secondary team
             update_dict["team_id_2"] = None
@@ -9082,6 +9132,17 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
             update_dict["medical_certificate_expiry"] = update_data.medical_certificate_expiry
     
     if update_dict:
+        # 🆕 08/07/2026 — Sincronizza sempre team_ids in linea con team_id/team_id_2 se non fornito esplicitamente
+        # (garantisce la coerenza anche quando arrivano richieste legacy che modificano solo team_id o team_id_2).
+        if "team_ids" not in update_dict and ("team_id" in update_dict or "team_id_2" in update_dict):
+            new_primary = update_dict.get("team_id", athlete.get("team_id"))
+            new_secondary = update_dict.get("team_id_2", athlete.get("team_id_2"))
+            synced_ids = []
+            for tid in [new_primary, new_secondary]:
+                if tid and tid not in synced_ids:
+                    synced_ids.append(tid)
+            update_dict["team_ids"] = synced_ids
+
         await db.athletes.update_one({"id": athlete_id}, {"$set": update_dict})
         athlete.update(update_dict)
     
@@ -33825,4 +33886,32 @@ async def run_data_migrations():
                 )
     except Exception as exc:
         logger.warning(f"Migration active_seasons failed: {exc}")
+
+    # 🆕 08/07/2026 — Migrazione one-shot `team_ids` (array canonico squadre atleti).
+    # Popola team_ids dai campi legacy team_id/team_id_2 per gli atleti che non hanno ancora l'array.
+    # Idempotente: aggiorna solo record con `team_ids` mancante/vuoto.
+    try:
+        cursor = db.athletes.find(
+            {"$or": [
+                {"team_ids": {"$exists": False}},
+                {"team_ids": {"$size": 0}},
+            ]},
+            {"_id": 0, "id": 1, "team_id": 1, "team_id_2": 1},
+        )
+        migrated = 0
+        async for a in cursor:
+            ids = []
+            for tid in [a.get("team_id"), a.get("team_id_2")]:
+                if tid and tid not in ids:
+                    ids.append(tid)
+            if ids:
+                await db.athletes.update_one(
+                    {"id": a["id"]},
+                    {"$set": {"team_ids": ids}},
+                )
+                migrated += 1
+        if migrated:
+            logger.info(f"Migration team_ids: {migrated} atleti aggiornati con array team_ids canonico")
+    except Exception as exc:
+        logger.warning(f"Migration team_ids failed: {exc}")
 
