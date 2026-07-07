@@ -1336,8 +1336,9 @@ async def check_athlete_status(athlete_id: str):
     if is_trial and trial_start and not trial_active and not athlete.get("privacy_accepted"):
         return {"allowed": False, "reason": "Periodo di prova terminato - iscrizione richiesta", "warning": None}
     
-    # Check society settings for certificate blocking
-    society_settings = await db.settings.find_one({"type": "society"})
+    # Check society settings for certificate blocking — 🐛 08/07/2026 fix multi-tenancy
+    _asid = athlete.get("society_id")
+    society_settings = await db.settings.find_one({"type": "society", "society_id": _asid}) if _asid else await db.settings.find_one({"type": "society"})
     block_certificates = True  # Default: block
     if society_settings:
         block_certificates = society_settings.get("block_expired_certificates", True)
@@ -5992,6 +5993,45 @@ async def backfill_match_society_ids(current_user = Depends(get_current_user)):
     }
 
 
+@api_router.post("/admin/maintenance/invalidate-pdf-cache")
+async def invalidate_pdf_cache(current_user = Depends(get_current_user)):
+    """🆕 08/07/2026 — One-shot maintenance: forza rigenerazione PDF firmati della propria società.
+    
+    Contesto: prima del fix multi-tenancy (7/8/2026), i PDF di quietanze/soglie/privacy
+    generati venivano intestati alla PRIMA società del DB invece che a quella dell'utente.
+    Questo endpoint svuota `pdf_base64` dai documenti firmati della società corrente,
+    forzando la rigenerazione al prossimo download con la ragione sociale corretta.
+    
+    La firma digitale, la data di firma e i metadati NON vengono toccati: il PDF viene
+    ricostruito con le stesse informazioni ma con l'intestazione societaria corretta.
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può eseguire la maintenance")
+    
+    society_id = current_user.get("society_id")
+    if not society_id:
+        raise HTTPException(status_code=400, detail="Admin senza society_id: impossibile procedere")
+    
+    # Tipi documento da rigenerare (quelli con intestazione societaria):
+    doc_types = [
+        "compensation_receipt", "coach_compensation_receipt",
+        "collaboratore_compensation_receipt", "dirigente_compensation_receipt",
+        "threshold_5000_communication", "threshold_15000_communication",
+        "gdpr_privacy_adult", "gdpr_privacy_minor", "gdpr_adult", "gdpr_minor",
+        "privacy_consent",
+    ]
+    
+    result = await db.signed_documents.update_many(
+        {"society_id": society_id, "document_type": {"$in": doc_types}, "pdf_base64": {"$exists": True, "$ne": None}},
+        {"$unset": {"pdf_base64": ""}},
+    )
+    
+    logger.info(f"[ADMIN-MAINT] PDF cache invalidata per society_id={society_id}: {result.modified_count} documenti da rigenerare")
+    return {
+        "message": "Cache PDF invalidata. I documenti verranno rigenerati al prossimo download.",
+        "invalidated": result.modified_count,
+    }
+
 
 # ==================== FEDERATION CALENDAR IMPORT ====================
 
@@ -7837,9 +7877,12 @@ async def sign_athlete_compensation_receipt_with_signature(
     if not signature_base64:
         raise HTTPException(status_code=400, detail="Firma digitale obbligatoria")
     
-    # Get society data
-    society_settings = await db.settings.find_one({"type": "society"})
-    society_rec = await db.societies.find_one()
+    # Get society data — 🐛 08/07/2026 fix multi-tenancy: filtriamo per society_id dell'atleta,
+    # altrimenti db.societies.find_one() senza filtro prende la PRIMA società del DB e
+    # genera PDF con intestazione della società sbagliata.
+    ath_society_id = athlete.get("society_id")
+    society_settings = await db.settings.find_one({"type": "society", "society_id": ath_society_id}) if ath_society_id else None
+    society_rec = await db.societies.find_one({"id": ath_society_id}) if ath_society_id else None
     # ALWAYS use ragione_sociale for official documents, fallback to name
     society_name = (society_settings.get("ragione_sociale") if society_settings else None) or (society_rec.get("ragione_sociale") if society_rec else None) or (society_settings.get("name") if society_settings else None) or (society_rec.get("name") if society_rec else None) or "ASD/SSD"
     admin_email = (society_settings.get("email") if society_settings else None) or (society_rec.get("email") if society_rec else None)
@@ -11506,9 +11549,9 @@ async def send_solleciti_notification(data: dict, current_user = Depends(get_cur
     if not athlete_ids:
         raise HTTPException(status_code=400, detail="Nessun atleta selezionato")
     
-    # Get society info for email
+    # Get society info for email — 🐛 08/07/2026 fix multi-tenancy
     society_id = current_user.get("society_id")
-    society = await db.settings.find_one({"type": "society"}) or {}
+    society = await db.settings.find_one({"type": "society", "society_id": society_id}) or {}
     society_name = society.get("name", "La tua società sportiva")
     base_url = os.environ.get("WEB_APP_URL", "")
     logo_url = f"{base_url}/api/settings/society/logo.png" if base_url else ""
@@ -12017,8 +12060,8 @@ async def get_fiscal_receipt_data(athlete_id: str, current_user = Depends(get_cu
     # Get team
     team = await db.teams.find_one({"id": athlete.get("team_id")})
     
-    # Get society settings from correct collection
-    society = await db.settings.find_one({"type": "society"})
+    # Get society settings from correct collection — 🐛 08/07/2026 fix multi-tenancy
+    society = await db.settings.find_one({"type": "society", "society_id": athlete.get("society_id")}) if athlete.get("society_id") else await db.settings.find_one({"type": "society"})
     
     # Get all payments for this athlete
     payments = await db.payments.find({"athlete_id": athlete_id, "paid": True}).sort("paid_date", 1).to_list(100)
@@ -12123,8 +12166,8 @@ async def get_next_receipt_number(society_id: str) -> str:
     """
     now = datetime.utcnow()
     
-    # Get season start from society settings
-    settings = await db.settings.find_one({"type": "society"})
+    # Get season start from society settings — 🐛 08/07/2026 fix multi-tenancy
+    settings = await db.settings.find_one({"type": "society", "society_id": society_id}) if society_id else await db.settings.find_one({"type": "society"})
     season_start_month = settings.get("season_start_month", 7) if settings else 7  # Default July
     season_start_day = settings.get("season_start_day", 1) if settings else 1  # Default 1st
     
@@ -12695,8 +12738,8 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
         trial_days = 14  # default trial period
         trial_sessions = 3  # default max sessions
         
-        # Get society settings for trial config
-        society_settings = await db.settings.find_one({"type": "society"})
+        # Get society settings for trial config — 🐛 08/07/2026 fix multi-tenancy
+        society_settings = await db.settings.find_one({"type": "society", "society_id": athlete.get("society_id")}) if athlete.get("society_id") else await db.settings.find_one({"type": "society"})
         if society_settings:
             trial_days = society_settings.get("trial_days", 14)
             trial_sessions = society_settings.get("trial_max_sessions", 3)
@@ -12965,8 +13008,9 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
     
     # 9b. Trial period: if first attendance, set trial start date
     if athlete.get("is_trial") and not athlete.get("trial_start_date"):
-        # Get trial settings from society
-        society_settings = await db.settings.find_one({"type": "society"})
+        # Get trial settings from society — 🐛 08/07/2026 fix multi-tenancy
+        _sid = athlete.get("society_id")
+        society_settings = await db.settings.find_one({"type": "society", "society_id": _sid}) if _sid else await db.settings.find_one({"type": "society"})
         max_days = society_settings.get("trial_max_days", 7) if society_settings else 7
         trial_start = datetime.now()
         trial_end = trial_start + timedelta(days=max_days)
@@ -13023,7 +13067,9 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
     
     # Add trial info if athlete is in trial
     if athlete.get("is_trial"):
-        society_settings = await db.settings.find_one({"type": "society"})
+        # 🐛 08/07/2026 fix multi-tenancy
+        _sid2 = athlete.get("society_id")
+        society_settings = await db.settings.find_one({"type": "society", "society_id": _sid2}) if _sid2 else await db.settings.find_one({"type": "society"})
         max_sessions = society_settings.get("trial_max_sessions", 3) if society_settings else 3
         max_days = society_settings.get("trial_max_days", 7) if society_settings else 7
         sessions_count = athlete.get("trial_sessions_count", 0)
@@ -16383,8 +16429,10 @@ async def sign_compensation_receipt(
     )
     
     # Get society data from settings and societies collection
-    society_settings = await db.settings.find_one({"type": "society"})
-    society = await db.societies.find_one()
+    # 🐛 08/07/2026 fix multi-tenancy: filtriamo per society_id del coach.
+    coach_society_id = coach.get("society_id")
+    society_settings = await db.settings.find_one({"type": "society", "society_id": coach_society_id}) if coach_society_id else None
+    society = await db.societies.find_one({"id": coach_society_id}) if coach_society_id else None
     # ALWAYS use ragione_sociale for official documents, fallback to name
     society_name = (society_settings.get("ragione_sociale") if society_settings else None) or (society.get("ragione_sociale") if society else None) or (society_settings.get("name") if society_settings else None) or (society.get("name") if society else None) or "ASD/SSD"
     admin_email = (society_settings.get("email") if society_settings else None) or (society.get("email") if society else None)
@@ -17206,8 +17254,10 @@ async def sign_threshold_declaration(
         raise HTTPException(status_code=404, detail="Coach non trovato")
     
     # Get society data
-    society = await db.societies.find_one()
-    settings = await db.settings.find_one({"type": "society"})
+    # 🐛 08/07/2026 fix multi-tenancy: filtriamo per society_id del coach.
+    coach_society_id = coach.get("society_id")
+    society = await db.societies.find_one({"id": coach_society_id}) if coach_society_id else None
+    settings = await db.settings.find_one({"type": "society", "society_id": coach_society_id}) if coach_society_id else None
     # ALWAYS use ragione_sociale for official documents
     society_name = (settings.get("ragione_sociale") if settings else None) or (society.get("ragione_sociale") if society else None) or (settings.get("name") if settings else None) or (society.get("name") if society else None) or "ASD/SSD"
     admin_email = society.get("email") if society else None
@@ -26225,7 +26275,9 @@ async def _regenerate_threshold_communication_pdf(document: dict) -> Optional[by
         society_id = document.get("society_id") or (signer.get("society_id") if signer else None)
         society = await db.societies.find_one({"id": society_id}, {"_id": 0}) if society_id else None
         settings = await db.settings.find_one({"type": "society", "society_id": society_id}, {"_id": 0}) if society_id else None
-        if not settings:
+        # 🐛 08/07/2026 — Fallback SOLO se non abbiamo un society_id valido, per evitare
+        # di prendere le impostazioni di un'altra società.
+        if not settings and not society_id:
             settings = await db.settings.find_one({"type": "society"}, {"_id": 0})
 
         # Year/month
@@ -26496,8 +26548,16 @@ async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes
         society_settings = await db.settings.find_one(
             {"type": "society", "society_id": society_id}, {"_id": 0}
         ) if society_id else None
+        # 🐛 08/07/2026 — Fallback SOLO se non abbiamo alcun society_id (edge case legacy).
+        # Se abbiamo l'id ma non troviamo il settings dedicato, preferiamo prendere il record
+        # societies (che potrebbe avere ragione_sociale/name) piuttosto che un settings a caso
+        # che potrebbe appartenere a un'altra società.
         if not society_settings:
-            society_settings = await db.settings.find_one({"type": "society"}, {"_id": 0}) or {}
+            if society_id:
+                soc_rec = await db.societies.find_one({"id": society_id}, {"_id": 0})
+                society_settings = soc_rec or {}
+            else:
+                society_settings = await db.settings.find_one({"type": "society"}, {"_id": 0}) or {}
         society_name = society_settings.get("ragione_sociale") or society_settings.get("society_name") or ""
 
         signer_name = (

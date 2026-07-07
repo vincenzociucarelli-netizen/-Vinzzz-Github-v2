@@ -16,6 +16,46 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🐛 08/07/2026 (v7.3) — FIX CRITICO Multi-tenancy: PDF documenti ✅
+
+**Bug segnalato** (screenshots utente): la società attiva era "LA TUA SOCIETÀ ASD" ma:
+- Quietanza compenso Mario Rubino (750€) → intestata "Pallavolo Perugia SSD a RL" ❌
+- Comunicazione soglia 5.000€ → stessa società sbagliata ❌
+- Presumibilmente anche soglia 15.000€ ❌
+- Informativa Privacy → CORRETTA "LA TUA SOCIETÀ ASD" ✓ (era stata fixata il 24/02)
+
+**Root cause**: nel `server.py` c'erano ancora ~10 punti che facevano
+```python
+db.societies.find_one()         # ⚠️ senza filtro → prende PRIMA società del DB
+db.settings.find_one({"type": "society"})   # ⚠️ senza society_id
+```
+Il fix multi-tenancy applicato a febbraio 2026 aveva coperto solo `sign_document` (Privacy). Gli endpoint di quietanze/soglie erano rimasti scoperti.
+
+**Fix applicati** (`/app/backend/server.py`):
+Aggiunto filtro `society_id` in tutte le query societarie di:
+- Riga 1340: `is_athlete_allowed_to_train` (certificato bloccante)
+- Riga 7841: Quietanza atleta + threshold atleta
+- Riga 11511: Notifica firma compenso email
+- Riga 12021: Ricevuta fiscale annuale
+- Riga 12127: `get_next_receipt_number` (numerazione ricevute stagionali)
+- Riga 12699: QR scan trial start
+- Riga 12969 + 13026: attendance trial tracking
+- Riga 16386: **Quietanza Coach/Collab/Dirigente** ← bug segnalato
+- Riga 17209: **Threshold 5k/15k Coach/Collab/Dirigente** ← bug segnalato
+- Righe 26236/26510: fallback su `_regenerate_*_pdf` reso sicuro (usa `societies` invece di primo `settings` globale)
+
+**Endpoint di manutenzione**: `POST /api/admin/maintenance/invalidate-pdf-cache`
+- Admin-only, filtra per `society_id` corrente.
+- Svuota `pdf_base64` dai documenti firmati (quietanze, soglie, privacy) forzando la rigenerazione al prossimo download con la nuova intestazione corretta.
+- Testato in preview: 13 documenti invalidati con successo.
+- **Firma digitale e metadati preservati**, solo l'intestazione societaria viene aggiornata.
+
+**Testing**: Backend up, endpoint di maintenance verified.
+**Come sfruttarlo in prod**: l'admin di "LA TUA SOCIETÀ" chiama l'endpoint una volta → tutti i suoi PDF vecchi (con intestazione sbagliata) verranno rigenerati automaticamente al prossimo download da parte dell'utente.
+
+---
+
+
 ## 🆕 08/07/2026 (v7.2) — Scanner Coach: 2 fix funzionali ✅
 
 **Bug segnalati dall'utente**:
