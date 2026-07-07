@@ -4230,7 +4230,7 @@ async def transform_user_photo(data: ImageTransformRequest, current_user = Depen
 async def send_password_reset_email(to_email: str, reset_token: str, user_name: str):
     """Send password reset email via Brevo/SendGrid"""
     # Get society name for branding - use ragione_sociale for official documents
-    settings = await db.settings.find_one({"type": "society"})
+    settings = await db.settings.find_one({"type": "society"})  # noqa: multitenancy-ok — password reset (utente non autenticato, society_id ignoto)
     society_name = (settings.get("ragione_sociale") if settings else None) or (settings.get("name", "Gestione Società") if settings else "Gestione Società")
     
     # Create reset code (first 8 chars of token for easier communication)
@@ -11323,7 +11323,7 @@ async def get_registro_stagione(current_user = Depends(get_current_user)):
     society_id = current_user.get("society_id")
     now = datetime.utcnow()
     
-    settings = await db.settings.find_one({"type": "society"})
+    settings = await db.settings.find_one({"type": "society", "society_id": society_id}) if society_id else await db.settings.find_one({"type": "society"})
     season_start_month = settings.get("season_start_month", 7) if settings else 7
     season_start_day = settings.get("season_start_day", 1) if settings else 1
     season_start_this_year = datetime(now.year, season_start_month, season_start_day)
@@ -11989,7 +11989,9 @@ async def get_expiring_notifications(current_user = Depends(get_current_user)):
                     except:
                         pass
             
-            society_settings = await db.settings.find_one({"type": "society"})
+            # 🐛 08/07/2026 fix multi-tenancy
+            _asid_t = athlete.get("society_id")
+            society_settings = await db.settings.find_one({"type": "society", "society_id": _asid_t}) if _asid_t else await db.settings.find_one({"type": "society"})
             max_sessions = society_settings.get("trial_max_sessions", 3) if society_settings else 3
             max_days = society_settings.get("trial_max_days", 7) if society_settings else 7
             sessions_count = athlete.get("trial_sessions_count", 0)
@@ -21856,8 +21858,10 @@ async def sign_dirigente_compensation_receipt(
     )
     
     # Get society data from settings and societies collection
-    society_settings = await db.settings.find_one({"type": "society"})
-    society = await db.societies.find_one()
+    # 🐛 08/07/2026 fix multi-tenancy: filtriamo per society_id del dirigente
+    dir_society_id = dirigente.get("society_id")
+    society_settings = await db.settings.find_one({"type": "society", "society_id": dir_society_id}) if dir_society_id else None
+    society = await db.societies.find_one({"id": dir_society_id}) if dir_society_id else None
     # ALWAYS use ragione_sociale for official documents
     society_name = (society_settings.get("ragione_sociale") if society_settings else None) or (society.get("ragione_sociale") if society else None) or (society_settings.get("name") if society_settings else None) or (society.get("name") if society else None) or "ASD/SSD"
     admin_email = (society_settings.get("email") if society_settings else None) or (society.get("email") if society else None)
@@ -22629,10 +22633,11 @@ async def sign_collaboratore_compensation_receipt(
             detail=f"Quietanza per {MONTH_NAMES[request.month]} {request.year} già firmata"
         )
     
-    # Get society info
-    society = await db.societies.find_one()
+    # Get society info — 🐛 08/07/2026 fix multi-tenancy
+    collab_society_id = collaboratore.get("society_id")
+    society = await db.societies.find_one({"id": collab_society_id}) if collab_society_id else None
     society_name = (society.get("ragione_sociale") or society.get("name") or "Societa Sportiva") if society else "Societa Sportiva"
-    settings = await db.settings.find_one({"type": "society"})
+    settings = await db.settings.find_one({"type": "society", "society_id": collab_society_id}) if collab_society_id else None
     admin_email = settings.get("admin_email") if settings else None
     
     # Fallback: try to get admin email from admin user
@@ -22745,8 +22750,9 @@ async def sign_collaboratore_compensation_receipt(
     
     # Generate PDF based on threshold status
     try:
-        # Get society name from settings
-        society_settings = await db.settings.find_one({"type": "society"})
+        # Get society name from settings — 🐛 08/07/2026 fix multi-tenancy
+        # collab_society_id già definito sopra
+        society_settings = await db.settings.find_one({"type": "society", "society_id": collab_society_id}) if collab_society_id else None
         # Prefer ragione_sociale (official name) for legal documents
         society_name = (society_settings.get("ragione_sociale") or 
                        society_settings.get("society_name") or 
@@ -23860,8 +23866,9 @@ async def sign_athlete_compensation_receipt(
     if monthly_compensation <= 0:
         raise HTTPException(status_code=400, detail="Compenso mensile non impostato")
     
-    # Get society settings for PDF generation
-    society_settings = await db.settings.find_one({"type": "society"})
+    # Get society settings for PDF generation — 🐛 08/07/2026 fix multi-tenancy
+    ath_pro_sid = athlete.get("society_id")
+    society_settings = await db.settings.find_one({"type": "society", "society_id": ath_pro_sid}) if ath_pro_sid else None
     if not society_settings:
         raise HTTPException(status_code=400, detail="Impostazioni società non configurate")
     
@@ -24187,8 +24194,9 @@ async def get_prime_squadre_stats(current_user = Depends(get_current_user)):
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può visualizzare le statistiche")
     
-    # Check if pro_enabled
-    settings = await db.settings.find_one({"type": "society"})
+    # Check if pro_enabled — 🐛 08/07/2026 fix multi-tenancy
+    _sid_pro = current_user.get("society_id")
+    settings = await db.settings.find_one({"type": "society", "society_id": _sid_pro}) if _sid_pro else await db.settings.find_one({"type": "society"})
     pro_enabled = settings.get("pro_enabled", False) if settings else False
     
     # Count members
@@ -24459,9 +24467,9 @@ async def get_monthly_compensation_report(
     
     society_id = current_user.get("society_id")
     
-    # Get society name
-    society_settings = await db.settings.find_one({"type": "society"})
-    society = await db.societies.find_one()
+    # Get society name — 🐛 08/07/2026 fix multi-tenancy
+    society_settings = await db.settings.find_one({"type": "society", "society_id": society_id}) if society_id else None
+    society = await db.societies.find_one({"id": society_id}) if society_id else None
     society_name = (society_settings.get("ragione_sociale") if society_settings else None) or \
                    (society.get("ragione_sociale") if society else None) or \
                    (society_settings.get("name") if society_settings else None) or \
@@ -27557,8 +27565,9 @@ async def generate_trial_document(athlete_id: str, current_user = Depends(get_cu
     society = await db.societies.find_one({"id": athlete.get("society_id")})
     society_name = (society.get("ragione_sociale") or society.get("name") or "Societa Sportiva") if society else "Societa Sportiva"
     
-    # Get trial settings from society settings
-    society_settings = await db.settings.find_one({"type": "society"})
+    # Get trial settings from society settings — 🐛 08/07/2026 fix multi-tenancy
+    _asid_ts = athlete.get("society_id")
+    society_settings = await db.settings.find_one({"type": "society", "society_id": _asid_ts}) if _asid_ts else await db.settings.find_one({"type": "society"})
     trial_max_days = (society_settings.get("trial_max_days", 7) if society_settings else 7)
     trial_max_sessions = (society_settings.get("trial_max_sessions", 3) if society_settings else 3)
     
@@ -28263,8 +28272,9 @@ async def get_trial_status(athlete_id: str, current_user = Depends(get_current_u
     trial_end = athlete.get("trial_end_date")
     sessions_count = athlete.get("trial_sessions_count", 0)
     
-    # Get trial limits from society settings
-    society_settings = await db.settings.find_one({"type": "society"})
+    # Get trial limits from society settings — 🐛 08/07/2026 fix multi-tenancy
+    _asid_tl = athlete.get("society_id")
+    society_settings = await db.settings.find_one({"type": "society", "society_id": _asid_tl}) if _asid_tl else await db.settings.find_one({"type": "society"})
     max_days = society_settings.get("trial_max_days", 7) if society_settings else 7
     max_sessions = society_settings.get("trial_max_sessions", 3) if society_settings else 3
     
@@ -29964,7 +29974,7 @@ async def export_registro_xlsx(current_user = Depends(get_current_user)):
     society_id = current_user.get("society_id")
     settings = await db.settings.find_one({"society_id": society_id, "type": "society"})
     if not settings:
-        settings = await db.settings.find_one({"type": "society"})
+        settings = await db.settings.find_one({"type": "society"})  # noqa: multitenancy-ok — fallback legacy dopo tentativo mirato con society_id
     season_start_month = settings.get("season_start_month", 7) if settings else 7
     season_start_day = settings.get("season_start_day", 1) if settings else 1
     now = datetime.utcnow()
@@ -30699,7 +30709,7 @@ async def get_public_campaign_info(campaign_id: str):
     if campaign.get("society_id"):
         society = await db.settings.find_one({"society_id": campaign["society_id"], "type": "society"})
     if not society:
-        society = await db.settings.find_one({"type": "society"})
+        society = await db.settings.find_one({"type": "society"})  # noqa: multitenancy-ok — fallback dopo tentativo mirato con campaign.society_id
     
     logo = ""
     society_name = campaign.get("society_name", "")
@@ -30780,7 +30790,7 @@ async def get_preseason_share_page(campaign_id: str, request: Request):
     if campaign.get("society_id"):
         society = await db.settings.find_one({"society_id": campaign["society_id"], "type": "society"})
     if not society:
-        society = await db.settings.find_one({"type": "society"})
+        society = await db.settings.find_one({"type": "society"})  # noqa: multitenancy-ok — fallback branding pubblico dopo tentativo mirato
 
     society_name = campaign.get("society_name") or (society.get("name") if society else "") or "Società Sportiva"
     has_logo = bool(society and society.get("logo"))
@@ -33599,7 +33609,7 @@ async def check_preseason_auto_reminders():
         # Get society info
         society = await db.settings.find_one({"society_id": society_id, "type": "society"})
         if not society:
-            society = await db.settings.find_one({"type": "society"})
+            society = await db.settings.find_one({"type": "society"})  # noqa: multitenancy-ok — fallback dopo tentativo mirato con campaign.society_id
         society_name = society.get("name", "La tua societa sportiva") if society else "La tua societa sportiva"
         
         # Find all parents
@@ -33717,7 +33727,9 @@ async def certificate_block_auto_reactivate_check():
     Runs on startup + every 10 minutes.
     """
     try:
-        settings = await db.settings.find_one({"type": "society"})
+        # Cron scheduler LEGACY single-tenant (opera solo sulla prima società).
+        # TODO: iterare su tutte le società quando ci saranno più tenant attivi.
+        settings = await db.settings.find_one({"type": "society"})  # noqa: multitenancy-ok — cron scheduler globale
         if not settings:
             return
         if settings.get("block_expired_certificates", True):

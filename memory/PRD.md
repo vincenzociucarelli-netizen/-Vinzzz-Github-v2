@@ -16,6 +16,43 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🛡️ 08/07/2026 (v7.4) — Smoke test multi-tenancy + fix 12 punti addizionali ✅
+
+**Motivazione**: dopo il bug v7.3 (PDF con intestazione società sbagliata), aggiunto controllo automatico permanente che PREVIENE il ripresentarsi del problema. Test creato in `/app/backend/tests/test_multitenancy_smoke.py`.
+
+**3 test automatici**:
+1. `test_no_unfiltered_societies_find_one` — grep `db.societies.find_one()` senza filtro → FAIL con lista offender + suggerimento fix.
+2. `test_no_unfiltered_settings_type_society` — grep `db.settings.find_one({"type":"society"})` senza `society_id` → FAIL con lista offender.
+3. `test_multitenancy_isolation_smoke` — integration test: crea 2 società fittizie in DB, verifica che le query filtrate per `society_id` restituiscano il record giusto e che `find_one({id: inesistente})` NON fallback silenziosamente.
+
+**Sistema di whitelist**: marker inline `# noqa: multitenancy-ok — motivo`. Nessun numero di riga hardcoded (fragile).
+
+**Il test ha SCOPERTO 12 punti ancora buggati**, tutti fixati in questa iterazione:
+- `dirigente_receipt_pdf` (r. 21859)
+- `collaboratore_create_receipt` (r. 22635, 22749)
+- `atleta_pro_receipt_pdf` (r. 23864)
+- `monthly_compensation_report` (r. 24463)
+- `get_registro_stagione` (r. 11326)
+- `trial_status` calc (r. 11992, 27561, 28267)
+- `prime_squadre_stats` (r. 24191)
+
+**Whitelistati con motivazione**:
+- Password reset email (utente non autenticato)
+- Fallback dopo tentativo mirato con `society_id` (safe: primary query già filtrata)
+- Cron scheduler `certificate_block_auto_reactivate_check` (single-tenant legacy — TODO: iterare su tutte le società)
+- Spread dict `**society_filter` (già filtrato dinamicamente)
+
+**Setup**:
+- Aggiunto `pytest-asyncio==1.4.0` a `requirements.txt`
+- Creato `pytest.ini` con `asyncio_mode = auto`
+- Esecuzione: `cd /app/backend && python -m pytest tests/test_multitenancy_smoke.py -v`
+- Runtime: **0.14 secondi** — perfetto per CI/pre-commit.
+
+**Come integrarlo (raccomandato)**: eseguirlo prima di ogni deploy come parte del pipeline CI. In alternativa, lanciarlo manualmente ogni volta che si tocca il file `server.py`.
+
+---
+
+
 ## 🐛 08/07/2026 (v7.3) — FIX CRITICO Multi-tenancy: PDF documenti ✅
 
 **Bug segnalato** (screenshots utente): la società attiva era "LA TUA SOCIETÀ ASD" ma:

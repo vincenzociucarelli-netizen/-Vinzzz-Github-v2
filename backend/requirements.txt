@@ -95,6 +95,7 @@ PyJWT==2.10.1
 pymongo==4.5.0
 pyparsing==3.3.1
 pytest==9.0.2
+pytest-asyncio==1.4.0
 python-codicefiscale==0.11.3
 python-dateutil==2.9.0.post0
 python-docx==1.2.0
