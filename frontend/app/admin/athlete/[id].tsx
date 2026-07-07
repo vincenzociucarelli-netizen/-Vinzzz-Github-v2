@@ -851,7 +851,10 @@ export default function AdminAthleteDetail() {
         second_parent_email: editData.second_parent_email?.toLowerCase().trim() || null,
         // Team change
         team_id: editData.team_id || athlete?.team_id || null,
-        team_id_2: editData.team_id_2 || null,
+        // 🐛 08/07/2026 — FIX: mandiamo "" (stringa vuota) per "Nessuna" invece di null,
+        // perché il backend interpreta null come "campo non toccato" (ignora l'update),
+        // mentre "" viene esplicitamente convertito in null lato server (=rimozione).
+        team_id_2: editData.team_id_2 || "",
         // Athlete code for payment import
         athlete_code: editData.athlete_code?.toUpperCase().trim() || null,
       };
