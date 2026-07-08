@@ -702,74 +702,66 @@ export default function CoachScreen() {
               margin: 10px 5px !important;
             }
             /* 🆕 08/07/2026 — Nascondi il selettore Camera:
-               forziamo comunque videoConstraints.facingMode='environment' (back camera),
-               quindi il dropdown è ridondante e crea confusione (appare greyed durante lo streaming). */
-            #web-qr-scanner #html5-qrcode-select-camera,
-            #web-qr-scanner span:has(> #html5-qrcode-select-camera),
-            #web-qr-scanner div:has(> #html5-qrcode-select-camera) {
+               forziamo comunque videoConstraints.facingMode='environment' (back camera).
+               Uso attribute selectors invece di :has() per compatibilità mobile browser vecchi. */
+            #web-qr-scanner select#html5-qrcode-select-camera {
+              display: none !important;
+            }
+            /* Anche il <span> che contiene la label "Select Camera (N)" e il select — la label
+               è renderizzata come sibling del select dentro lo stesso container. Nascondiamo
+               tutti i div SPAN diretti figli di #reader__camera_selection se ci sono. */
+            #web-qr-scanner div[id$="__camera_selection"] {
               display: none !important;
             }
           `;
           document.head.appendChild(style);
 
-          // 🆕 08/07/2026 — Traduce in italiano i testi della libreria html5-qrcode.
-          // ⚠️ Attenzione: disconnetto l'observer durante la modifica per NON generare
-          // mutation ricorsive che potrebbero interferire con i click handler della libreria
-          // (bug segnalato: "Scansiona da foto in galleria" non rispondeva).
-          let observer: MutationObserver | null = null;
+          // 🆕 08/07/2026 v7.5 — Traduzione: SOLO polling one-shot, NO MutationObserver.
+          // Il MutationObserver interferiva col touchend degli utenti mobile (i tap non
+          // venivano registrati come click perché il DOM cambiava tra touchstart e touchend).
+          // Approccio nuovo: polling ogni 300ms per 3 secondi, poi stop. Idempotente.
           const translate = () => {
             const scanner = document.getElementById('web-qr-scanner');
-            if (!scanner) return;
-            // Disconnetti prima di modificare
-            if (observer) observer.disconnect();
-            try {
-              const anchor = scanner.querySelector('#html5-qrcode-anchor-scan-type-change') as HTMLElement | null;
-              if (anchor) {
-                const t = (anchor.textContent || '').trim();
-                if (t === 'Scan an Image File') anchor.textContent = '📁 Scansiona da foto in galleria';
-                else if (t === 'Scan using camera directly') anchor.textContent = '📷 Torna alla fotocamera';
-              }
-              scanner.querySelectorAll('button').forEach((b) => {
-                const t = (b.textContent || '').trim();
-                if (t === 'Scan an Image File' || t === 'Select Image') b.textContent = 'Seleziona immagine';
-                else if (t.startsWith('Choose Image')) {
-                  b.textContent = t
-                    .replace('Choose Image', '📁 Scegli immagine')
-                    .replace(' - No image choosen', '')
-                    .replace(' - No image chosen', '');
-                }
-                else if (t === 'Stop Scanning') b.textContent = 'Ferma scansione';
-                else if (t === 'Request Camera Permissions') b.textContent = 'Consenti fotocamera';
-                else if (t === 'Start Scanning') b.textContent = 'Avvia scansione';
-                else if (t === 'Switch On Torch') b.textContent = '🔦 Accendi torcia';
-                else if (t === 'Switch Off Torch') b.textContent = '🔦 Spegni torcia';
-              });
-              // Nascondiamo il Select Camera via CSS: non serve tradurlo più.
-              scanner.querySelectorAll('span, div, p, label').forEach((el) => {
-                if (el.children.length > 0) return;
-                const t = (el.textContent || '').trim();
-                if (t === 'Or drop an image to scan') (el as HTMLElement).textContent = 'Oppure trascina qui un\'immagine';
-                else if (t.startsWith('Choose Image')) {
-                  (el as HTMLElement).textContent = t
-                    .replace('Choose Image', 'Scegli immagine')
-                    .replace('No image choosen', 'nessuna selezionata')
-                    .replace('No image chosen', 'nessuna selezionata');
-                }
-              });
-            } finally {
-              // Riconnetti
-              if (observer && scanner) {
-                observer.observe(scanner, { childList: true, subtree: true });
-              }
+            if (!scanner) return false;
+            let changed = false;
+            const anchor = scanner.querySelector('#html5-qrcode-anchor-scan-type-change') as HTMLElement | null;
+            if (anchor) {
+              const t = (anchor.textContent || '').trim();
+              if (t === 'Scan an Image File') { anchor.textContent = '📁 Scansiona da foto in galleria'; changed = true; }
+              else if (t === 'Scan using camera directly') { anchor.textContent = '📷 Torna alla fotocamera'; changed = true; }
             }
+            scanner.querySelectorAll('button').forEach((b) => {
+              const t = (b.textContent || '').trim();
+              if (t === 'Scan an Image File' || t === 'Select Image') { b.textContent = 'Seleziona immagine'; changed = true; }
+              else if (t.startsWith('Choose Image')) {
+                b.textContent = t
+                  .replace('Choose Image', '📁 Scegli immagine')
+                  .replace(' - No image choosen', '')
+                  .replace(' - No image chosen', '');
+                changed = true;
+              }
+              else if (t === 'Stop Scanning') { b.textContent = 'Ferma scansione'; changed = true; }
+              else if (t === 'Request Camera Permissions') { b.textContent = 'Consenti fotocamera'; changed = true; }
+              else if (t === 'Start Scanning') { b.textContent = 'Avvia scansione'; changed = true; }
+              else if (t === 'Switch On Torch') { b.textContent = '🔦 Accendi torcia'; changed = true; }
+              else if (t === 'Switch Off Torch') { b.textContent = '🔦 Spegni torcia'; changed = true; }
+            });
+            scanner.querySelectorAll('span, div, p, label').forEach((el) => {
+              if (el.children.length > 0) return;
+              const t = (el.textContent || '').trim();
+              if (t === 'Or drop an image to scan') { (el as HTMLElement).textContent = 'Oppure trascina qui un\'immagine'; changed = true; }
+            });
+            return changed;
           };
           translate();
-          observer = new MutationObserver(() => {
-            // debounce con requestAnimationFrame per evitare traduzioni troppo frequenti
-            requestAnimationFrame(translate);
-          });
-          const target = document.getElementById('web-qr-scanner');
-          if (target) observer.observe(target, { childList: true, subtree: true });
+          // Ripolla brevemente (mobile è lento a renderizzare la UI della libreria).
+          // Dopo 3 secondi si autospegne, niente osservazione continua = niente interferenza con i tap.
+          let pollCount = 0;
+          const pollId = setInterval(() => {
+            translate();
+            pollCount += 1;
+            if (pollCount >= 10) clearInterval(pollId); // 10 x 300ms = 3s
+          }, 300);
         }, 200);
       } catch (error) {
         console.error('Error starting web scanner:', error);

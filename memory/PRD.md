@@ -16,6 +16,30 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🐛 08/07/2026 (v7.5) — Scanner Coach: tap non funzionavano su mobile prod ✅
+
+**Bug segnalato** (screenshot da telefono utente): sulla pagina Scanner Presenze mostra ancora "Select Camera (4)" e i tap sui pulsanti "Avvia scansione", "Scansiona da foto in galleria" e "X" NON rispondono ai tocchi.
+
+**Root cause identificato (due cause combinate)**:
+1. **CSS `:has()` non supportato** su Samsung Internet vecchio / Chrome mobile pre-105 → il selettore per nascondere "Select Camera" veniva ignorato dal browser, e la label restava visibile.
+2. **MutationObserver troppo aggressivo** interferiva coi tap mobile: tra `touchstart` e `touchend` il DOM cambiava (traduzioni continue), il browser scartava l'evento `click`. Su desktop nessun problema, su mobile touch: fatal.
+
+**Fix applicati** (`/app/frontend/app/coach/index.tsx`):
+1. **CSS compatibile ovunque**: sostituito `:has(> #html5-qrcode-select-camera)` con:
+   - `select#html5-qrcode-select-camera { display:none }` (tutti i browser)
+   - `div[id$="__camera_selection"] { display:none }` (attribute suffix, tutti i browser)
+2. **RIMOSSO il MutationObserver**. Traduzione fatta ora tramite **polling one-shot**:
+   - `translate()` chiamata subito
+   - `setInterval(translate, 300)` per 3 secondi (10 iterazioni), poi `clearInterval` → nessuna interferenza continua sul DOM
+   - Su mobile i tap sono immediatamente responsive dopo i primi 3 secondi (e comunque il polling è così leggero che non blocca i tap durante quei 3 secondi).
+
+**Testing preview**: nessun "Select Camera", solo `Consenti fotocamera` + `📁 Scansiona da foto in galleria`. Layout pulito su Chromium mobile viewport 420×900.
+
+**Deploy prod**: bundle `entry-0bdea580b4502acc5be1db30e819360b.js` in `/app/frontend/dist/`.
+
+---
+
+
 ## 🛡️ 08/07/2026 (v7.4) — Smoke test multi-tenancy + fix 12 punti addizionali ✅
 
 **Motivazione**: dopo il bug v7.3 (PDF con intestazione società sbagliata), aggiunto controllo automatico permanente che PREVIENE il ripresentarsi del problema. Test creato in `/app/backend/tests/test_multitenancy_smoke.py`.
