@@ -16,6 +16,21 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## ✨ 08/07/2026 (v7.6) — Mappa Palestre nel Da Fare del Coach ✅
+
+**Segnalazione utente**: i Coach non avevano la card "Mappa Palestre" nella loro dashboard DA FARE, mentre Atleti/Genitori/Dirigenti sì.
+
+**Fix** (`/app/frontend/app/coach/index.tsx`):
+- Aggiunta la stessa TouchableOpacity `🏟️ Mappa Palestre` → `router.push('/palestre')` a fondo pagina della dashboard Coach ("Da Fare"), stile identico a `athlete/index.tsx` (bianco, borderRadius 12, marginTop 16 sopra il padding finale).
+- Aggiunta in ENTRAMBI i rami di rendering (con o senza collaboratori sezione): `coach-palestre-btn-dafare` e `coach-palestre-btn-dafare-2`.
+
+**Testing preview**: screenshot mostra la card visibile a fondo dopo "Squadre Assegnate", con icona map verde e chevron di navigazione.
+
+**Rebuild**: bundle `entry-XXXX.js` in `/app/frontend/dist/`.
+
+---
+
+
 ## 🐛 08/07/2026 (v7.5) — Scanner Coach: tap non funzionavano su mobile prod ✅
 
 **Bug segnalato** (screenshot da telefono utente): sulla pagina Scanner Presenze mostra ancora "Select Camera (4)" e i tap sui pulsanti "Avvia scansione", "Scansiona da foto in galleria" e "X" NON rispondono ai tocchi.

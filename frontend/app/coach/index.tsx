@@ -1725,6 +1725,21 @@ export default function CoachScreen() {
             );
           })()}
 
+          {/* 🆕 08/07/2026 — Mappa Palestre (richiesta utente): stessa card presente
+              nella dashboard "DA FARE" di Atleta / Genitore / Dirigente. */}
+          <TouchableOpacity
+            style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, marginTop: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
+            onPress={() => router.push('/palestre')}
+            data-testid="coach-palestre-btn-dafare"
+          >
+            <Ionicons name="map" size={26} color="#43A047" />
+            <View style={{ marginLeft: 12, flex: 1 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#1a1a2e' }}>🏟️ Mappa Palestre</Text>
+              <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>Palazzetti dei campionati</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={22} color="#999" />
+          </TouchableOpacity>
+
           <View style={{ height: 40 }} />
         </ScrollView>
       ) : (
@@ -2099,6 +2114,21 @@ export default function CoachScreen() {
             teams.map(renderTeamCard)
           )}
         </View>
+
+        {/* 🆕 08/07/2026 — Mappa Palestre (richiesta utente): stessa card presente
+            nella dashboard "DA FARE" di Atleta / Genitore / Dirigente. */}
+        <TouchableOpacity
+          style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, marginTop: 16, marginHorizontal: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
+          onPress={() => router.push('/palestre')}
+          data-testid="coach-palestre-btn-dafare-2"
+        >
+          <Ionicons name="map" size={26} color="#43A047" />
+          <View style={{ marginLeft: 12, flex: 1 }}>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: '#1a1a2e' }}>🏟️ Mappa Palestre</Text>
+            <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>Palazzetti dei campionati</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={22} color="#999" />
+        </TouchableOpacity>
 
         <View style={{ height: 40 }} />
       </ScrollView>
