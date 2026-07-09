@@ -16,6 +16,25 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🐛 08/07/2026 (v7.7) — Link genitore-atleta: schermata approvazione coniuge sparisce troppo velocemente ✅
+
+**Bug segnalato**: quando il secondo genitore chiede il collegamento a una figlia già registrata dal coniuge, la schermata "in attesa di approvazione dell'altro genitore" appariva per un solo istante prima del redirect automatico → l'utente non riusciva a leggere il messaggio importante.
+
+**Root cause**: `setTimeout(2500ms)` che chiamava `router.replace('/parent')` senza attendere conferma utente. Presente in DUE punti:
+- `/app/frontend/app/parent/link-athlete.tsx` (utente già registrato che cerca collegamento a un altro figlio/a)
+- `/app/frontend/app/register.tsx` (registrazione secondo genitore)
+
+**Fix applicati**:
+1. **`link-athlete.tsx`**: sostituito il setTimeout+redirect con `showAlert()` **BLOCCANTE** (title + messaggio) che richiede click "OK" prima del redirect. Su web usa `window.alert`, su mobile `Alert.alert`.
+2. **`register.tsx`**: **rimosso completamente** il redirect automatico. Il pulsante "Vai al Profilo" (già presente nella card di successo) rimane l'UNICO modo per proseguire. Aggiornato anche il testo esplicativo:
+   - Prima: "Verrai reindirizzato al tuo profilo..."
+   - Ora: "Quando avrà approvato, potrai vedere l'anagrafica di tua/o figlia/o nel tuo profilo."
+
+**Testing**: rebuild OK, funzionalità immutata ma UX corretta (l'utente ha tempo di leggere).
+
+---
+
+
 ## ✨ 08/07/2026 (v7.6) — Mappa Palestre nel Da Fare del Coach ✅
 
 **Segnalazione utente**: i Coach non avevano la card "Mappa Palestre" nella loro dashboard DA FARE, mentre Atleti/Genitori/Dirigenti sì.

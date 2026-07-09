@@ -70,16 +70,21 @@ export default function ParentLinkPage() {
     setLinkSuccess('');
     try {
       const response = await api.post('/parent-link/request', { athlete_id: athleteId });
-      const msg = response.data.direct_link 
+      const isDirect = !!response.data.direct_link;
+      const msg = isDirect
         ? `Sei stato collegato direttamente come genitore di ${athleteName}!`
-        : response.data.message || `Richiesta inviata per ${athleteName}`;
+        : response.data.message || `Richiesta inviata per ${athleteName}. In attesa di approvazione dell'altro genitore.`;
       setLinkSuccess(msg);
       setResults(prev => prev.filter(r => r.id !== athleteId));
       loadRequests();
-      // Auto-redirect after success
-      setTimeout(() => {
-        router.replace('/parent');
-      }, 2500);
+
+      // 🐛 08/07/2026 — Fix UX: prima c'era un setTimeout 2500ms che rimandava alla dashboard
+      // senza dare tempo al genitore di leggere il messaggio "in attesa di approvazione del coniuge".
+      // Ora mostriamo un alert BLOCCANTE (OK richiesto) e solo dopo il click redirigiamo.
+      const title = isDirect ? 'Collegamento avvenuto ✅' : 'Richiesta inviata ⏳';
+      showAlert(title, msg);
+      // Redirect DOPO che l'utente ha confermato l'alert (su web è sincrono, su mobile è async ma comunque bloccante)
+      router.replace('/parent');
     } catch (error: any) {
       const msg = error.response?.data?.detail || 'Errore durante l\'invio';
       setLinkError(msg);

@@ -258,14 +258,17 @@ export default function Register() {
     try {
       const res = await api.post('/parent-link/request', { athlete_id: athleteId });
       setLinkRequestSent(true);
-      setTimeout(() => { router.replace('/parent'); }, 2500);
+      // 🐛 08/07/2026 — RIMOSSO setTimeout redirect automatico: il genitore non riusciva
+      // a leggere il messaggio "in attesa di approvazione dell'altro genitore" perché
+      // veniva sbattuto sul profilo dopo 2.5s. Ora il redirect avviene solo cliccando
+      // "Vai al Profilo".
     } catch (error: any) {
       const msg = error.response?.data?.detail || 'Errore nell\'invio della richiesta';
-      // If request already sent or already linked, redirect to profile anyway
+      // If request already sent or already linked, mostriamo comunque lo schermo di
+      // successo (l'utente potrà cliccare "Vai al Profilo" per proseguire).
       const isAlreadyHandled = msg.toLowerCase().includes('già inviata') || msg.toLowerCase().includes('già collegato');
       if (isAlreadyHandled) {
         setLinkRequestSent(true);
-        setTimeout(() => { router.replace('/parent'); }, 2500);
       } else {
         setLinkError(msg);
       }
@@ -970,7 +973,7 @@ export default function Register() {
             L'altro genitore riceverà una notifica e dovrà approvare il collegamento.
           </Text>
           <Text style={{ fontSize: 13, color: '#999', marginTop: 8, textAlign: 'center' }}>
-            Verrai reindirizzato al tuo profilo...
+            Quando avrà approvato, potrai vedere l'anagrafica di tua/o figlia/o nel tuo profilo.
           </Text>
           <TouchableOpacity
             style={[styles.continueBtn, { marginTop: 16 }]}
