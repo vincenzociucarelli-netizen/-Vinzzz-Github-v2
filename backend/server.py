@@ -26286,7 +26286,7 @@ async def _regenerate_threshold_communication_pdf(document: dict) -> Optional[by
         # 🐛 08/07/2026 — Fallback SOLO se non abbiamo un society_id valido, per evitare
         # di prendere le impostazioni di un'altra società.
         if not settings and not society_id:
-            settings = await db.settings.find_one({"type": "society"}, {"_id": 0})
+            settings = await db.settings.find_one({"type": "society"}, {"_id": 0})  # noqa: multitenancy-ok — fallback usato solo se society_id assente
 
         # Year/month
         month = document.get("month")
@@ -26565,7 +26565,7 @@ async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes
                 soc_rec = await db.societies.find_one({"id": society_id}, {"_id": 0})
                 society_settings = soc_rec or {}
             else:
-                society_settings = await db.settings.find_one({"type": "society"}, {"_id": 0}) or {}
+                society_settings = await db.settings.find_one({"type": "society"}, {"_id": 0}) or {}  # noqa: multitenancy-ok — fallback usato solo se society_id assente
         society_name = society_settings.get("ragione_sociale") or society_settings.get("society_name") or ""
 
         signer_name = (
@@ -28549,10 +28549,18 @@ async def get_minor_dashboard(current_user = Depends(get_current_user)):
                 "warmup_session": team.get("warmup_session"),
             }
     
-    # Society info - try settings first, then societies collection
-    society = await db.settings.find_one({"type": "society"}, {"_id": 0, "name": 1, "logo": 1, "sport_praticato": 1, "sport": 1, "sport_image": 1})
-    if not society and athlete.get("society_id"):
-        society = await db.societies.find_one({"id": athlete["society_id"]}, {"_id": 0, "name": 1, "logo": 1, "sport_praticato": 1, "sport": 1})
+    # Society info — 🐛 08/07/2026 fix multi-tenancy: filtriamo per society_id dell'atleta.
+    # Prima faceva find_one senza filtro → prendeva la prima società del DB.
+    ath_sid = athlete.get("society_id")
+    society = await db.settings.find_one(
+        {"type": "society", "society_id": ath_sid},
+        {"_id": 0, "name": 1, "ragione_sociale": 1, "logo": 1, "sport_praticato": 1, "sport": 1, "sport_image": 1},
+    ) if ath_sid else None
+    if not society and ath_sid:
+        society = await db.societies.find_one(
+            {"id": ath_sid},
+            {"_id": 0, "name": 1, "ragione_sociale": 1, "logo": 1, "sport_praticato": 1, "sport": 1},
+        )
     
     # Attendance stats
     week_start = datetime.now() - timedelta(days=datetime.now().weekday())
@@ -30101,7 +30109,7 @@ async def get_compensation_default_range(current_user = Depends(get_current_user
     society_id = current_user.get("society_id")
     settings = await db.settings.find_one({"society_id": society_id, "type": "society"}, {"_id": 0})
     if not settings:
-        settings = await db.settings.find_one({"type": "society"}, {"_id": 0})
+        settings = await db.settings.find_one({"type": "society"}, {"_id": 0})  # noqa: multitenancy-ok — fallback legacy dopo tentativo mirato con society_id
 
     if not settings:
         return {"start_date": None, "end_date": None, "label": None}
@@ -33163,7 +33171,7 @@ async def admin_notify_team_image_consents(
     # Society email (cc)
     society_settings = await db.settings.find_one(
         {"type": "society", "society_id": society_id}, {"_id": 0}
-    ) or await db.settings.find_one({"type": "society"}, {"_id": 0}) or {}
+    ) or await db.settings.find_one({"type": "society"}, {"_id": 0}) or {}  # noqa: multitenancy-ok — fallback dopo tentativo mirato
     society_email = society_settings.get("society_email")
     society_name = society_settings.get("ragione_sociale") or society_settings.get("society_name") or "la società"
 

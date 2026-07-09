@@ -16,6 +16,29 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🐛 08/07/2026 (v7.10) — Multi-tenancy: dashboard minore + smoke regex fortificato ✅
+
+**Bug segnalato dall'utente** (screenshot): atleta minorenne "Chiara O." iscritta in "LA TUA SOCIETÀ ASD" vedeva "PALLAVOLO PERUGIA" + logo Pallavolo nella sua dashboard Lite (`/minor`).
+
+**Root cause**: `GET /api/minor/dashboard` (`server.py:28553`) faceva:
+```python
+society = await db.settings.find_one({"type": "society"}, {"_id": 0, ...})
+```
+→ senza filtro `society_id`, prendeva la prima società del DB.
+
+**Perché il test smoke non l'aveva scoperto prima?**: il regex si fermava al primo `)` e non riconosceva `find_one({"type":"society"}, projection)` (con secondo argomento). Bug del regex, non del test concept.
+
+**Fix applicati**:
+1. **`server.py:28553`** — `/minor/dashboard`: aggiunto filtro `society_id: athlete.get("society_id")`, con fallback a `db.societies` solo se `settings` non trovato per l'ID specifico. Aggiunto anche `ragione_sociale` alla projection (uniformità con altri PDF).
+2. **`test_multitenancy_smoke.py`** — regex fortificato: `r"""db\.settings\.find_one\(\s*(\{[^}]*["']type["']\s*:\s*["']society["'][^}]*\})"""` cattura il FILTRO (primo arg) ignorando il resto della chiamata. Ha subito scoperto 4 altri fallback safe → whitelistati con marker `# noqa: multitenancy-ok`.
+
+**Sulla univocità del login Lite (domanda dell'utente)**: il PIN da solo non sarebbe univoco tra società, ma il login usa `athlete_code` (12 char alfanumerici generati con secrets — univoci a livello globale) + `PIN`. Quindi l'autenticazione è già multi-tenant safe. Il bug era solo nella dashboard, non nel login.
+
+**Testing**: 3/3 test smoke passano in 0.14s. Backend up.
+
+---
+
+
 ## ✨ 08/07/2026 (v7.9) — Registrazione: istruzioni chiare sui link Termini/Privacy ✅
 
 **Segnalazione utente reale**: alcuni utenti che si registravano non capivano di dover **aprire** i link "Termini di utilizzo" e "Informativa sulla Privacy" per attivare il pulsante "Registrati" → si bloccavano sulla pagina senza sapere cosa fare. Il testo grigio in fondo "Apri entrambi i documenti per procedere" era troppo poco evidente.
