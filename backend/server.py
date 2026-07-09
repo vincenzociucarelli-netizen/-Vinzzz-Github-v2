@@ -627,6 +627,9 @@ class UserLogin(BaseModel):
 class MinorLogin(BaseModel):
     athlete_code: str
     pin: str
+    # 🆕 08/07/2026 (v7.11) — Se il frontend conosce già la società (device ricorda), 
+    # passala per restringere la ricerca su nome_lite (che è unico per società, non globalmente).
+    society_id: Optional[str] = None
 
 class SetMinorPin(BaseModel):
     pin: str  # 4-6 digit PIN
@@ -3469,21 +3472,24 @@ async def minor_login(request: Request, credentials: MinorLogin):
                 detail=f"Troppi tentativi. Riprova tra {remaining} secondi."
             )
     
-    # Find athlete by nome_lite first, then fallback to athlete_code/qr_identifier
+    # Find athlete by nome_lite first (filtrato per società se fornito),
+    # then fallback to athlete_code/qr_identifier (che sono globalmente unici).
     # Lightweight projection: only fields needed for auth + dashboard summary.
-    # Avoids loading the heavy athlete_photo / athlete_photo_artistic base64
-    # fields (~500KB) which caused 20+ second delays on the lite login page.
     ATHLETE_LITE_PROJ = {
         "_id": 0, "id": 1, "nome_lite": 1, "athlete_code": 1, "qr_identifier": 1,
         "first_name": 1, "last_name": 1, "full_name": 1,
         "minor_access_enabled": 1, "minor_pin_hash": 1, "society_id": 1,
         "team_id": 1, "status": 1,
     }
-    athlete = await db.athletes.find_one(
-        {"nome_lite": {"$regex": f"^{code}$", "$options": "i"}},
-        ATHLETE_LITE_PROJ,
-    )
+    # 🆕 08/07/2026 (v7.11) — Match nome_lite filtrato per society_id (se fornito dal client).
+    # `nome_lite` è univoco DENTRO la società, non globalmente → filtrare previene collisioni
+    # tra ragazze omonime in società diverse (bug multi-tenancy).
+    nome_lite_filter = {"nome_lite": {"$regex": f"^{code}$", "$options": "i"}}
+    if credentials.society_id:
+        nome_lite_filter["society_id"] = credentials.society_id
+    athlete = await db.athletes.find_one(nome_lite_filter, ATHLETE_LITE_PROJ)
     if not athlete:
+        # Fallback: cerca per athlete_code (12 char, globalmente univoco — no filtro società necessario)
         athlete = await db.athletes.find_one({"athlete_code": code.upper()}, ATHLETE_LITE_PROJ)
     if not athlete:
         athlete = await db.athletes.find_one({"qr_identifier": code.upper()}, ATHLETE_LITE_PROJ)
@@ -3512,6 +3518,14 @@ async def minor_login(request: Request, credentials: MinorLogin):
     # Successful login - clear attempts
     await db.login_attempts.delete_one({"key": rate_key})
     
+    # 🆕 08/07/2026 (v7.11) — Includo nel payload i dati "device pairing" che il frontend
+    # salverà in localStorage per permettere il quick-login futuro (card + PIN).
+    # Salviamo athlete_code (che è a vita) + snapshot corrente di nome_lite/society_id.
+    society = await db.settings.find_one(
+        {"type": "society", "society_id": athlete.get("society_id")},
+        {"_id": 0, "name": 1, "ragione_sociale": 1, "logo": 1},
+    ) if athlete.get("society_id") else None
+    
     # Create token with minor role
     token = create_token(athlete["id"], "minor", athlete_id=athlete["id"])
     
@@ -3524,6 +3538,12 @@ async def minor_login(request: Request, credentials: MinorLogin):
             "full_name": athlete.get("full_name", ""),
             "status": athlete.get("status", "active"),
             "athlete_id": athlete["id"],
+            # 🆕 device-pairing payload (safe da salvare in localStorage)
+            "athlete_code": athlete.get("athlete_code", ""),
+            "nome_lite": athlete.get("nome_lite", ""),
+            "society_id": athlete.get("society_id", ""),
+            "society_name": (society or {}).get("ragione_sociale") or (society or {}).get("name", ""),
+            "society_logo": (society or {}).get("logo", ""),
         }
     )
 
@@ -33831,6 +33851,20 @@ async def ensure_mongodb_indexes():
             await db.athletes.create_index("team_id")
             await db.athletes.create_index("user_id")
             await db.athletes.create_index([("society_id", 1), ("team_id", 1)])
+            # 🆕 08/07/2026 (v7.11) — Indice compound per login Lite: nome_lite deve essere
+            # unico DENTRO la società (una Chiara⭐ per società, non a livello globale).
+            # `sparse=True` ignora gli atleti che non hanno ancora scelto un nome_lite.
+            # `partialFilterExpression` ulteriore garanzia: indice attivo solo quando
+            # nome_lite è una stringa non vuota.
+            try:
+                await db.athletes.create_index(
+                    [("society_id", 1), ("nome_lite", 1)],
+                    unique=True,
+                    partialFilterExpression={"nome_lite": {"$exists": True, "$type": "string"}},
+                    name="ux_society_nomelite",
+                )
+            except Exception as _idx_exc:
+                logger.warning(f"Failed to create ux_society_nomelite index: {_idx_exc}")
             # matches
             await db.matches.create_index("id")
             await db.matches.create_index("society_id")

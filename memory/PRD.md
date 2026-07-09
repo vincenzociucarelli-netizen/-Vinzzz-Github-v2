@@ -16,6 +16,44 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## ✨ 08/07/2026 (v7.11) — Login Lite v2 con Device Pairing + fix multi-tenancy nome_lite ✅
+
+**Contesto**: bug segnalato dall'utente in v7.10 (dashboard minor mostrava società sbagliata) → riflessione sulla natura del codice atleta (a vita) vs società (stagionale). Deciso di implementare il "Device Pairing" per ricordare l'atleta sul dispositivo, così la ragazzina inserisce solo il PIN.
+
+**Architettura**:
+- `athlete_code` (12 char, globalmente univoco, A VITA per la persona) → chiave stabile
+- `nome_lite` (nickname scelto dall'atleta) → **univoco DENTRO la società**, non globalmente
+- `society_id` (aggiornato ad ogni rinnovo/import) → identità stagionale
+- Al cambio società: `nome_lite` viene liberato per altri atleti della vecchia società; l'atleta può sceglierne uno nuovo nella nuova società
+
+**Backend** (`server.py`):
+1. **Indice compound unique** `(society_id, nome_lite)` con `partialFilterExpression` `nome_lite $exists $type string` → previene duplicati di nome_lite nella stessa società, ma tollera atleti senza nome_lite.
+2. **`MinorLogin` model** — aggiunto campo `society_id: Optional[str]`.
+3. **`POST /auth/minor-login`** — se `society_id` è fornito nel body, il match `nome_lite` è ristretto a quella società (fix multi-tenancy). Fallback su `athlete_code` (globalmente univoco) e `qr_identifier` (idem) mantenuto per backward compat.
+4. **Payload response** — include ora `athlete_code`, `nome_lite`, `society_id`, `society_name`, `society_logo` che il frontend salva in localStorage per il quick-login futuro.
+
+**Frontend** (`login.tsx`):
+1. **Card "Device Pairing"** — se in `AsyncStorage` esiste `lite_pairing`, mostro card verde con foto/icona + nome_lite + society_name + solo campo PIN.
+2. **Auto-focus sul PIN** → una ragazza apre l'app → inserisce 4 numeri → dentro.
+3. **Link "Non sei tu? Cambia atleta"** → cancella pairing → torna al form classico (input nome_lite + PIN).
+4. **Fallback classico** funzionante come prima (per primo accesso o dispositivo diverso).
+5. Salvataggio pairing dopo login riuscito → include `society_id` per invii successivi.
+
+**Test end-to-end** (curl):
+- ✅ Login con `nome_lite` senza society_id → fallback su match globale (backward compat)
+- ✅ Login con `nome_lite` + `society_id` corretto → match filtrato → chiede PIN
+- ✅ Login con `nome_lite` + `society_id` sbagliato → **NON trova l'atleta** (401 "Nome Lite non valido") — bug multi-tenancy fixato
+- ✅ Test smoke multi-tenancy: 3/3 passa
+- ✅ UI: screenshot mostra la card verde perfettamente renderizzata con Carla + Pallavolo Perugia
+
+**Flow completo**:
+1. Prima volta: la ragazza inserisce nome_lite/codice atleta + PIN → il device impara.
+2. D'ora in poi apre l'app → card con foto → 4 numeri → dentro (~2 sec).
+3. Al cambio società nell'anno successivo: al primo login il device aggiorna il pairing automaticamente col nuovo `society_id` e `society_name`.
+
+---
+
+
 ## 🐛 08/07/2026 (v7.10) — Multi-tenancy: dashboard minore + smoke regex fortificato ✅
 
 **Bug segnalato dall'utente** (screenshot): atleta minorenne "Chiara O." iscritta in "LA TUA SOCIETÀ ASD" vedeva "PALLAVOLO PERUGIA" + logo Pallavolo nella sua dashboard Lite (`/minor`).

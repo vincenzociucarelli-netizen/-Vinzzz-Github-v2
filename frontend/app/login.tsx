@@ -30,6 +30,17 @@ export default function Login() {
   const [athleteCode, setAthleteCode] = useState('');
   const [pin, setPin] = useState('');
   
+  // 🆕 08/07/2026 (v7.11) — Device pairing per Accesso Lite:
+  // dopo il primo login riuscito salviamo un profilo "carta" in localStorage,
+  // così ai login successivi la ragazza inserisce solo il PIN.
+  const [litePairing, setLitePairing] = useState<null | {
+    athlete_code: string;
+    nome_lite: string;
+    society_id: string;
+    society_name: string;
+    society_logo: string;
+  }>(null);
+  
   // Society branding
   const [societyName, setSocietyName] = useState('GESTIONE SOCIETA');
   const [societyLogo, setSocietyLogo] = useState<string | null>(null);
@@ -37,7 +48,47 @@ export default function Login() {
   useEffect(() => {
     loadSocietySettings();
     loadSavedAthleteCode();
+    loadLitePairing();
   }, []);
+
+  const loadLitePairing = async () => {
+    try {
+      const raw = await AsyncStorage.getItem('lite_pairing');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.athlete_code) {
+          setLitePairing(parsed);
+          // Pre-compila athleteCode con nome_lite per il fallback (se preme "Cambia atleta")
+          setAthleteCode(parsed.nome_lite || parsed.athlete_code);
+        }
+      }
+    } catch {}
+  };
+
+  const saveLitePairing = async (u: any) => {
+    try {
+      if (u?.athlete_code) {
+        const pairing = {
+          athlete_code: u.athlete_code,
+          nome_lite: u.nome_lite || '',
+          society_id: u.society_id || '',
+          society_name: u.society_name || '',
+          society_logo: u.society_logo || '',
+        };
+        await AsyncStorage.setItem('lite_pairing', JSON.stringify(pairing));
+        setLitePairing(pairing);
+      }
+    } catch {}
+  };
+
+  const forgetLitePairing = async () => {
+    try {
+      await AsyncStorage.removeItem('lite_pairing');
+    } catch {}
+    setLitePairing(null);
+    setAthleteCode('');
+    setPin('');
+  };
 
   const loadSavedAthleteCode = async () => {
     try {
@@ -117,18 +168,29 @@ export default function Login() {
   };
 
   const handleMinorLogin = async () => {
-    if (!athleteCode || !pin) {
-      showAlert('Errore', 'Inserisci il Nome Lite e il PIN');
+    // Con litePairing: chiediamo solo il PIN (nome_lite/athlete_code già in memoria)
+    // Senza litePairing: input classico (nome_lite o athlete_code)
+    const identifier = litePairing ? (litePairing.nome_lite || litePairing.athlete_code) : athleteCode.trim();
+    if (!identifier || !pin) {
+      showAlert('Errore', litePairing ? 'Inserisci il PIN' : 'Inserisci il Nome Lite e il PIN');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await api.post('/auth/minor-login', {
-        athlete_code: athleteCode.trim(),
+      const payload: any = {
+        athlete_code: identifier,
         pin: pin.trim(),
-      });
-      await saveAthleteCode(athleteCode.trim().toUpperCase());
+      };
+      // 🆕 v7.11 — Se il device ha già un pairing, passa il society_id per restringere
+      // la ricerca (nome_lite è univoco per società, non globalmente).
+      if (litePairing?.society_id) {
+        payload.society_id = litePairing.society_id;
+      }
+      const response = await api.post('/auth/minor-login', payload);
+      await saveAthleteCode(identifier.toUpperCase());
+      // Salviamo il pairing per il prossimo login (card + PIN)
+      await saveLitePairing(response.data.user);
       await setUser(response.data.user, response.data.token);
       router.replace('/minor');
     } catch (error: any) {
@@ -254,44 +316,119 @@ export default function Login() {
           </View>
         ) : (
           <View style={styles.form}>
-            <Text style={styles.subtitle}>Accedi con Nome Lite e PIN</Text>
-            <Text style={styles.minorHint}>
-              Chiedi al tuo genitore il tuo Nome Lite e il PIN
-            </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Nome Lite"
-              placeholderTextColor="#999"
-              value={athleteCode}
-              onChangeText={setAthleteCode}
-              autoCapitalize="none"
-              autoCorrect={false}
-              data-testid="minor-login-code-input"
-            />
+            {litePairing ? (
+              <>
+                {/* 🆕 v7.11 — Card "Device Pairing": accesso rapido con solo il PIN */}
+                <Text style={styles.subtitle}>Ciao! 👋</Text>
+                <View style={{
+                  backgroundColor: '#fff',
+                  borderRadius: 16,
+                  padding: 16,
+                  marginBottom: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  borderWidth: 2,
+                  borderColor: '#4CAF50',
+                  gap: 12,
+                }} data-testid="lite-pairing-card">
+                  {litePairing.society_logo ? (
+                    <Image
+                      source={{ uri: litePairing.society_logo.startsWith('data:') ? litePairing.society_logo : `data:image/png;base64,${litePairing.society_logo}` }}
+                      style={{ width: 52, height: 52, borderRadius: 12 }}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <View style={{ width: 52, height: 52, borderRadius: 12, backgroundColor: '#E8F5E9', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="person" size={28} color="#4CAF50" />
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 18, fontWeight: '700', color: '#1a1a2e' }} numberOfLines={1}>
+                      {litePairing.nome_lite || 'Atleta'}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }} numberOfLines={1}>
+                      {litePairing.society_name || 'La tua società'}
+                    </Text>
+                  </View>
+                </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="PIN (4-6 cifre)"
-              placeholderTextColor="#999"
-              value={pin}
-              onChangeText={setPin}
-              keyboardType="number-pad"
-              secureTextEntry
-              maxLength={6}
-              data-testid="minor-login-pin-input"
-            />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Inserisci il tuo PIN"
+                  placeholderTextColor="#999"
+                  value={pin}
+                  onChangeText={setPin}
+                  keyboardType="number-pad"
+                  secureTextEntry
+                  maxLength={6}
+                  autoFocus
+                  data-testid="minor-login-pin-input"
+                />
 
-            <TouchableOpacity
-              style={[styles.button, styles.buttonMinor, loading && styles.buttonDisabled]}
-              onPress={handleMinorLogin}
-              disabled={loading}
-              data-testid="minor-login-submit-button"
-            >
-              <Ionicons name="log-in" size={20} color="#fff" />
-              <Text style={[styles.buttonText, { marginLeft: 8 }]}>
-                {loading ? 'Accesso...' : 'Entra'}
-              </Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, styles.buttonMinor, loading && styles.buttonDisabled]}
+                  onPress={handleMinorLogin}
+                  disabled={loading}
+                  data-testid="minor-login-submit-button"
+                >
+                  <Ionicons name="log-in" size={20} color="#fff" />
+                  <Text style={[styles.buttonText, { marginLeft: 8 }]}>
+                    {loading ? 'Accesso...' : 'Entra'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.linkButton}
+                  onPress={forgetLitePairing}
+                  data-testid="lite-pairing-forget-btn"
+                >
+                  <Text style={[styles.linkText, { fontSize: 13 }]}>
+                    Non sei tu? Cambia atleta
+                  </Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.subtitle}>Accedi con Nome Lite e PIN</Text>
+                <Text style={styles.minorHint}>
+                  Chiedi al tuo genitore il tuo Nome Lite (o codice atleta) e il PIN
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nome Lite (o codice atleta)"
+                  placeholderTextColor="#999"
+                  value={athleteCode}
+                  onChangeText={setAthleteCode}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  data-testid="minor-login-code-input"
+                />
+
+                <TextInput
+                  style={styles.input}
+                  placeholder="PIN (4-6 cifre)"
+                  placeholderTextColor="#999"
+                  value={pin}
+                  onChangeText={setPin}
+                  keyboardType="number-pad"
+                  secureTextEntry
+                  maxLength={6}
+                  data-testid="minor-login-pin-input"
+                />
+
+                <TouchableOpacity
+                  style={[styles.button, styles.buttonMinor, loading && styles.buttonDisabled]}
+                  onPress={handleMinorLogin}
+                  disabled={loading}
+                  data-testid="minor-login-submit-button"
+                >
+                  <Ionicons name="log-in" size={20} color="#fff" />
+                  <Text style={[styles.buttonText, { marginLeft: 8 }]}>
+                    {loading ? 'Accesso...' : 'Entra'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         )}
 
