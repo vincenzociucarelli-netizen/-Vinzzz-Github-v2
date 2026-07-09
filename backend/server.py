@@ -1256,6 +1256,44 @@ def generate_qr_identifier() -> str:
     alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
     return ''.join(secrets.choice(alphabet) for _ in range(12))
 
+
+async def resolve_athlete_code_for_cf(fiscal_code: Optional[str]) -> str:
+    """🆕 09/07/2026 (v7.12) — Risolve l'athlete_code garantendo persistenza per Codice Fiscale.
+    
+    Il codice atleta DEVE essere legato alla persona (identificata dal CF italiano),
+    non alla società. Se la stessa persona viene registrata in società diverse
+    (rinnovo o cambio società), riusa lo stesso athlete_code.
+    
+    Regole:
+      1. Se `fiscal_code` è fornito (16 char) e già esiste un atleta con quel CF
+         (in QUALSIASI società, case-insensitive) → riusa il suo `athlete_code`.
+      2. Se il CF non è ancora nel sistema, genera un nuovo codice univoco.
+      3. Se `fiscal_code` è vuoto/None (edge case: registrazione senza CF), genera
+         un nuovo codice univoco.
+    
+    Sicurezza: non espone dati sensibili — solo il codice viene riusato, tutti gli
+    altri campi (email, indirizzo, telefono, iscrizione) sono nuovi per la nuova società.
+    """
+    if fiscal_code and isinstance(fiscal_code, str):
+        cf_normalized = fiscal_code.strip().upper()
+        if len(cf_normalized) == 16:
+            # Il campo in DB è `fiscal_code` (nome inglese). Case-insensitive search.
+            existing = await db.athletes.find_one(
+                {"fiscal_code": {"$regex": f"^{cf_normalized}$", "$options": "i"}},
+                {"_id": 0, "athlete_code": 1, "qr_identifier": 1},
+            )
+            if existing:
+                reused = existing.get("athlete_code") or existing.get("qr_identifier")
+                if reused:
+                    logger.info(f"[athlete_code] Riuso codice esistente per CF={cf_normalized[:6]}****: {reused}")
+                    return reused
+    
+    # Nessun CF matching → genera nuovo codice univoco
+    qr_id = generate_qr_identifier()
+    while await db.athletes.find_one({"$or": [{"qr_identifier": qr_id}, {"athlete_code": qr_id}]}):
+        qr_id = generate_qr_identifier()
+    return qr_id
+
 def generate_qr_code_from_identifier(qr_identifier: str) -> str:
     """Generate QR code image from qr_identifier"""
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
@@ -2511,9 +2549,8 @@ async def register_adult_athlete(data: AdultAthleteRegister):
     # Generate unique athlete code
     athlete_id = str(ObjectId())
     
-    qr_id = generate_qr_identifier()
-    while await db.athletes.find_one({"qr_identifier": qr_id}):
-        qr_id = generate_qr_identifier()
+    # 🆕 v7.12 riusa codice se stesso CF già registrato
+    qr_id = await resolve_athlete_code_for_cf(getattr(data, "fiscal_code", None))
     qr_code = generate_qr_code_from_identifier(qr_id)
     
     athlete_code = qr_id
@@ -3114,10 +3151,8 @@ async def register_via_invite(data: InviteRegisterRequest):
         except ValueError:
             raise HTTPException(status_code=400, detail="Formato data di nascita non valido")
     
-    # Generate QR and athlete code
-    qr_id = generate_qr_identifier()
-    while await db.athletes.find_one({"qr_identifier": qr_id}):
-        qr_id = generate_qr_identifier()
+    # Generate QR and athlete code — 🆕 v7.12 riusa codice se stesso CF già registrato
+    qr_id = await resolve_athlete_code_for_cf(getattr(data, "fiscal_code", None))
     qr_code = generate_qr_code_from_identifier(qr_id)
     
     athlete_id = str(ObjectId())
@@ -6922,10 +6957,8 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
         return Athlete(**updated)
     
     # Generate unique athlete code - now uses qr_identifier
-    # Generate 12-char alphanumeric QR identifier
-    qr_id = generate_qr_identifier()
-    while await db.athletes.find_one({"qr_identifier": qr_id}):
-        qr_id = generate_qr_identifier()
+    # 🆕 v7.12 riusa codice se stesso CF già registrato
+    qr_id = await resolve_athlete_code_for_cf(getattr(athlete_data, "fiscal_code", None))
     qr_code = generate_qr_code_from_identifier(qr_id)
     athlete_code = qr_id  # athlete_code = qr_identifier
     
@@ -7144,10 +7177,8 @@ async def create_adult_athlete(data: AdultAthleteCreate, current_user = Depends(
     athlete_id = str(ObjectId())
     
     # Generate new 12-char alphanumeric QR identifier for adult athletes
-    qr_id = generate_qr_identifier()
-    # Ensure uniqueness
-    while await db.athletes.find_one({"qr_identifier": qr_id}):
-        qr_id = generate_qr_identifier()
+    # 🆕 v7.12 riusa codice se stesso CF già registrato
+    qr_id = await resolve_athlete_code_for_cf(getattr(data, "fiscal_code", None))
     qr_code = generate_qr_code_from_identifier(qr_id)
     
     athlete_code = qr_id  # athlete_code = qr_identifier
@@ -7297,9 +7328,8 @@ async def create_minor_athlete(data: MinorAthleteCreate, current_user = Depends(
     
     # Create new minor athlete
     athlete_id = str(ObjectId())
-    qr_id = generate_qr_identifier()
-    while await db.athletes.find_one({"qr_identifier": qr_id}):
-        qr_id = generate_qr_identifier()
+    # 🆕 v7.12 riusa codice se stesso CF già registrato
+    qr_id = await resolve_athlete_code_for_cf(getattr(data, "fiscal_code", None))
     qr_code = generate_qr_code_from_identifier(qr_id)
     
     athlete_dict = {
@@ -13160,12 +13190,8 @@ async def generate_athlete_qr_identifier(athlete_id: str, current_user = Depends
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     
-    # Generate unique QR identifier
-    while True:
-        qr_id = generate_qr_identifier()
-        existing = await db.athletes.find_one({"qr_identifier": qr_id})
-        if not existing:
-            break
+    # Generate unique QR identifier — 🆕 v7.12 riusa codice se stesso CF già registrato in altro atleta
+    qr_id = await resolve_athlete_code_for_cf(athlete.get("fiscal_code"))
     
     # Generate QR code image
     qr_code_image = generate_qr_code_from_identifier(qr_id)
@@ -13207,12 +13233,8 @@ async def generate_all_qr_identifiers(current_user = Depends(get_current_user)):
     
     updated_count = 0
     for athlete in athletes:
-        # Generate unique QR identifier
-        while True:
-            qr_id = generate_qr_identifier()
-            existing = await db.athletes.find_one({"qr_identifier": qr_id})
-            if not existing:
-                break
+        # 🆕 v7.12 riusa codice se stesso CF già registrato in altro atleta
+        qr_id = await resolve_athlete_code_for_cf(athlete.get("fiscal_code"))
         
         # Generate QR code image
         qr_code_image = generate_qr_code_from_identifier(qr_id)
@@ -13245,12 +13267,8 @@ async def regenerate_all_qr_codes(current_user = Depends(get_current_user)):
     
     updated_count = 0
     for athlete in athletes:
-        # Generate unique QR identifier
-        while True:
-            qr_id = generate_qr_identifier()
-            existing = await db.athletes.find_one({"qr_identifier": qr_id})
-            if not existing:
-                break
+        # 🆕 v7.12 riusa codice se stesso CF già registrato in altro atleta
+        qr_id = await resolve_athlete_code_for_cf(athlete.get("fiscal_code"))
         
         # Generate QR code image
         qr_code_image = generate_qr_code_from_identifier(qr_id)
@@ -33865,6 +33883,19 @@ async def ensure_mongodb_indexes():
                 )
             except Exception as _idx_exc:
                 logger.warning(f"Failed to create ux_society_nomelite index: {_idx_exc}")
+            
+            # 🆕 08/07/2026 (v7.12) — Indice unique su fiscal_code: garantisce che la stessa
+            # persona (identificata dal CF) non venga registrata due volte con codici diversi.
+            # partialFilter perché atleti senza CF sono ammessi (edge case: prova gratuita minori).
+            try:
+                await db.athletes.create_index(
+                    [("fiscal_code", 1)],
+                    unique=True,
+                    partialFilterExpression={"fiscal_code": {"$exists": True, "$type": "string"}},
+                    name="ux_fiscal_code",
+                )
+            except Exception as _idx_exc:
+                logger.warning(f"Failed to create ux_fiscal_code index: {_idx_exc}")
             # matches
             await db.matches.create_index("id")
             await db.matches.create_index("society_id")

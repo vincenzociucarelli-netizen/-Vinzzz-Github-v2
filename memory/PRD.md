@@ -16,6 +16,53 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🔐 09/07/2026 (v7.12) — athlete_code legato al CF (persistenza persona a vita) ✅
+
+**Insight dell'utente**: "Il codice atleta DEVE essere abbinato al codice fiscale, quindi DEVE essere sempre lo stesso codice per la stessa persona anche cambiando società."
+
+**Bug strutturale scoperto**: `generate_qr_identifier()` generava un codice puramente random con `secrets.choice`. Se la stessa persona veniva registrata in società diverse (senza usare il tool `nuova-stagione` di import), otteneva athlete_code DIVERSI → la sua "storia sportiva" a vita era frammentata.
+
+**Fix strutturale** (`server.py`):
+
+1. **Nuova funzione `resolve_athlete_code_for_cf(fiscal_code)`**:
+   - Se `fiscal_code` è valido (16 char) → cerca un atleta esistente con quel CF (case-insensitive, cross-società) → **riusa il suo athlete_code**.
+   - Altrimenti → genera nuovo codice univoco.
+   - Log privacy-safe: CF mascherato `PDNLGA****`.
+
+2. **8 punti di creazione atleta aggiornati** per usare la nuova funzione:
+   - `create_athlete_pending` (adulti registrazione)
+   - `add_athlete` (parent)
+   - `create_child_athlete` (registrazione figlio)
+   - `admin_create_athlete_adult` (admin crea adulto)
+   - `admin_create_athlete_minor` (admin crea minore)
+   - `generate_athlete_qr_identifier` (admin genera QR per atleta esistente)
+   - `regenerate_qr_missing_athletes` (bulk fix)
+   - `regenerate_all_qr_codes` (bulk regenerate — cross-società)
+
+3. **Indice unique `ux_fiscal_code`** su `athletes.fiscal_code` con partialFilterExpression:
+   - Blocca a livello DB la creazione di 2 atleti con lo STESSO CF
+   - Coerente con la regola "un CF = una persona = un athlete_code"
+   - Ammette atleti senza CF (edge case: prova gratuita minori senza CF)
+
+**Test funzionale** (verificato via python asyncio):
+- ✅ CF esistente (PEDANA LUIGIA) → riusa `FJV6XJJMCF87` (stesso codice)
+- ✅ CF nuovo → nuovo codice random 12 char
+- ✅ Test smoke multi-tenancy 3/3 verdi
+
+**Impatto sul design v7.11 (Login Lite Device Pairing)**: perfetto — la ragazza che cambia società l'anno successivo mantiene lo stesso `athlete_code`, quindi al primo login nella nuova società il device pairing aggiorna solo `society_id/name/logo`, senza dover reimparare l'atleta.
+
+### 💡 Idea futura presa in nota (dall'utente):
+**Storia dell'atleta** — pagina dedicata nel profilo che mostra la carriera:
+- Ogni stagione con società di riferimento
+- Squadre in cui ha giocato
+- Compensi/premi ricevuti (per atleti PRO)
+- Statistiche di presenza / partite / gol / assist
+- Timeline con foto per ogni tappa
+Preziosa proprio grazie al `athlete_code` persistente a vita, che permette di aggregare la carriera cross-società. Da implementare quando P0 saranno chiusi.
+
+---
+
+
 ## ✨ 08/07/2026 (v7.11) — Login Lite v2 con Device Pairing + fix multi-tenancy nome_lite ✅
 
 **Contesto**: bug segnalato dall'utente in v7.10 (dashboard minor mostrava società sbagliata) → riflessione sulla natura del codice atleta (a vita) vs società (stagionale). Deciso di implementare il "Device Pairing" per ricordare l'atleta sul dispositivo, così la ragazzina inserisce solo il PIN.
