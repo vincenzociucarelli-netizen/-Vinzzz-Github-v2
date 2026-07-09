@@ -16,6 +16,22 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## ✨ 08/07/2026 (v7.8) — Email Brevo per risposta richiesta collegamento genitore ✅
+
+**Funzionalità**: quando il primo genitore approva o rifiuta la richiesta di collegamento del coniuge tramite l'endpoint `/parent-link/respond`, viene inviata un'email di notifica al richiedente via Brevo.
+
+**Implementazione** (`/app/backend/routes/parents.py`):
+- Endpoint `POST /parent-link/respond`: dopo l'update DB, chiamata a `send_transactional_email` (Brevo).
+- **Accept email**: template verde con emoji ✅, ragione sociale della società, nome del figlio/a, invito a completare Privacy.
+- **Reject email**: template rosso con emoji ❌, spiegazione che il coniuge ha rifiutato, invito a contattare l'altro genitore o la segreteria.
+- **Fail-safe**: try/except → l'email fallita non blocca la risposta HTTP (le notifiche in-app persistono comunque).
+- **Multi-tenancy safe**: branding usa `society_id` del responder (già filtrato correttamente v7.4).
+
+**Testing**: backend riparte OK, test smoke multi-tenancy passano (3/3). Invio email verificato via `BREVO_API_KEY` configurato in .env.
+
+---
+
+
 ## 🐛 08/07/2026 (v7.7) — Link genitore-atleta: schermata approvazione coniuge sparisce troppo velocemente ✅
 
 **Bug segnalato**: quando il secondo genitore chiede il collegamento a una figlia già registrata dal coniuge, la schermata "in attesa di approvazione dell'altro genitore" appariva per un solo istante prima del redirect automatico → l'utente non riusciva a leggere il messaggio importante.

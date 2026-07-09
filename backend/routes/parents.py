@@ -465,6 +465,23 @@ async def respond_parent_link(data: dict, current_user = Depends(get_current_use
     requester_name = link_request.get("requester_name", "")
     requester_id = link_request["requester_id"]
     
+    # 🆕 08/07/2026 — Recuperiamo email del richiedente per inviare notifica Brevo.
+    _req_user = await db.users.find_one({"id": requester_id}, {"_id": 0, "email": 1, "full_name": 1})
+    requester_email = (_req_user or {}).get("email", "")
+    requester_display_name = (_req_user or {}).get("full_name", requester_name)
+    
+    # Branding società (per l'intestazione email — usiamo quella dell'approver che è già nella società)
+    society_id = current_user.get("society_id")
+    society_settings = await db.settings.find_one({"type": "society", "society_id": society_id}) if society_id else None
+    society_rec = await db.societies.find_one({"id": society_id}) if society_id else None
+    society_name = (
+        (society_settings.get("ragione_sociale") if society_settings else None)
+        or (society_rec.get("ragione_sociale") if society_rec else None)
+        or (society_settings.get("name") if society_settings else None)
+        or (society_rec.get("name") if society_rec else None)
+        or "La tua società sportiva"
+    )
+    
     if action == "accept":
         athlete_id = link_request["athlete_id"]
         athlete = await db.athletes.find_one({"id": athlete_id})
@@ -472,9 +489,6 @@ async def respond_parent_link(data: dict, current_user = Depends(get_current_use
             raise HTTPException(status_code=404, detail="Atleta non trovato")
         if athlete.get("second_parent_id"):
             raise HTTPException(status_code=400, detail="Questo atleta ha già un secondo genitore collegato")
-        
-        requester = await db.users.find_one({"id": requester_id}, {"_id": 0, "email": 1})
-        requester_email = requester.get("email", "") if requester else ""
         
         await db.athletes.update_one({"id": athlete_id}, {"$set": {
             "second_parent_id": requester_id,
@@ -502,6 +516,48 @@ async def respond_parent_link(data: dict, current_user = Depends(get_current_use
             "created_at": datetime.now(timezone.utc),
         })
         
+        # 🆕 08/07/2026 — Email di conferma via Brevo al genitore richiedente
+        if requester_email:
+            try:
+                from email_service import send_transactional_email
+                subject = f"✅ Collegamento a {athlete_name} approvato — {society_name}"
+                html_content = f"""
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="background: linear-gradient(135deg, #4CAF50, #2E7D32); color: white; padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+                        <h1 style="margin: 0; font-size: 22px;">✅ Collegamento Approvato</h1>
+                        <p style="margin: 8px 0 0; opacity: 0.9;">{society_name}</p>
+                    </div>
+                    <div style="background: #ffffff; padding: 24px; border: 1px solid #e0e0e0; border-radius: 0 0 12px 12px;">
+                        <p style="font-size: 16px; color: #333;">Ciao <strong>{requester_display_name}</strong>,</p>
+                        <p style="font-size: 15px; color: #444; line-height: 1.6;">
+                            L'altro genitore ha <strong style="color: #2E7D32;">approvato</strong> la tua richiesta di collegamento a <strong>{athlete_name}</strong>.
+                        </p>
+                        <p style="font-size: 15px; color: #444; line-height: 1.6;">
+                            Ora puoi accedere all'anagrafica di tua/o figlia/o dal tuo profilo genitore, consultare gli impegni sportivi, i pagamenti e i documenti.
+                        </p>
+                        <div style="background: #E8F5E9; padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #4CAF50;">
+                            <p style="margin: 0; color: #2E7D32; font-size: 14px;">
+                                💡 <strong>Prossimo passo</strong>: accedi a RegistraTEAM per completare eventuali documenti Privacy che ti riguardano.
+                            </p>
+                        </div>
+                        <p style="font-size: 13px; color: #999; margin-top: 24px; text-align: center;">
+                            Cordiali saluti,<br>
+                            <strong>{society_name}</strong>
+                        </p>
+                    </div>
+                </div>
+                """
+                await send_transactional_email(
+                    to_email=requester_email,
+                    subject=subject,
+                    html_content=html_content,
+                    to_name=requester_display_name,
+                )
+            except Exception as e:
+                # Non blocchiamo la risposta se l'email fallisce (già salvato in notifiche in-app)
+                import logging
+                logging.warning(f"parent_link_accepted email failed for {requester_email}: {e}")
+        
         return {"success": True, "message": f"Collegamento approvato. {requester_name} è ora collegato a {athlete_name}."}
     
     # reject
@@ -520,5 +576,42 @@ async def respond_parent_link(data: dict, current_user = Depends(get_current_use
         "read": False,
         "created_at": datetime.now(timezone.utc),
     })
+    
+    # 🆕 08/07/2026 — Email al richiedente per il rifiuto
+    if requester_email:
+        try:
+            from email_service import send_transactional_email
+            subject = f"❌ Richiesta di collegamento a {athlete_name} rifiutata — {society_name}"
+            html_content = f"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="background: linear-gradient(135deg, #E53935, #B71C1C); color: white; padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+                    <h1 style="margin: 0; font-size: 22px;">❌ Richiesta Rifiutata</h1>
+                    <p style="margin: 8px 0 0; opacity: 0.9;">{society_name}</p>
+                </div>
+                <div style="background: #ffffff; padding: 24px; border: 1px solid #e0e0e0; border-radius: 0 0 12px 12px;">
+                    <p style="font-size: 16px; color: #333;">Ciao <strong>{requester_display_name}</strong>,</p>
+                    <p style="font-size: 15px; color: #444; line-height: 1.6;">
+                        L'altro genitore ha <strong style="color: #C62828;">rifiutato</strong> la tua richiesta di collegamento a <strong>{athlete_name}</strong>.
+                    </p>
+                    <p style="font-size: 15px; color: #444; line-height: 1.6;">
+                        Se ritieni che si tratti di un errore, ti invitiamo a contattare direttamente l'altro genitore
+                        oppure la segreteria della società per chiarimenti.
+                    </p>
+                    <p style="font-size: 13px; color: #999; margin-top: 24px; text-align: center;">
+                        Cordiali saluti,<br>
+                        <strong>{society_name}</strong>
+                    </p>
+                </div>
+            </div>
+            """
+            await send_transactional_email(
+                to_email=requester_email,
+                subject=subject,
+                html_content=html_content,
+                to_name=requester_display_name,
+            )
+        except Exception as e:
+            import logging
+            logging.warning(f"parent_link_rejected email failed for {requester_email}: {e}")
     
     return {"success": True, "message": "Richiesta rifiutata."}
