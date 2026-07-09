@@ -17,6 +17,15 @@ import api from '../src/services/api';
 import { Ionicons } from '../src/components/Icon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// 🆕 09/07/2026 (v7.13) — Scanner QR per Accesso Lite (Web only, html5-qrcode)
+let Html5QrcodeScanner: any = null;
+let Html5QrcodeScanType: any = null;
+if (Platform.OS === 'web') {
+  const lib = require('html5-qrcode');
+  Html5QrcodeScanner = lib.Html5QrcodeScanner;
+  Html5QrcodeScanType = lib.Html5QrcodeScanType;
+}
+
 export default function Login() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
@@ -29,6 +38,10 @@ export default function Login() {
   // Minor login fields
   const [athleteCode, setAthleteCode] = useState('');
   const [pin, setPin] = useState('');
+  
+  // 🆕 09/07/2026 (v7.13) — Scanner QR per popolare automaticamente il codice atleta
+  const [showQrScanner, setShowQrScanner] = useState(false);
+  const [scanError, setScanError] = useState('');
   
   // 🆕 08/07/2026 (v7.11) — Device pairing per Accesso Lite:
   // dopo il primo login riuscito salviamo un profilo "carta" in localStorage,
@@ -89,6 +102,91 @@ export default function Login() {
     setAthleteCode('');
     setPin('');
   };
+
+  // 🆕 v7.13 — Scanner QR
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !showQrScanner || !Html5QrcodeScanner) return;
+    let scanner: any = null;
+    let mounted = true;
+    setScanError('');
+
+    const startScanner = () => {
+      try {
+        scanner = new Html5QrcodeScanner(
+          'lite-qr-scanner',
+          {
+            fps: 10,
+            qrbox: { width: 240, height: 240 },
+            rememberLastUsedCamera: true,
+            showTorchButtonIfSupported: true,
+            videoConstraints: { facingMode: 'environment' },
+            supportedScanTypes: Html5QrcodeScanType
+              ? [Html5QrcodeScanType.SCAN_TYPE_CAMERA, Html5QrcodeScanType.SCAN_TYPE_FILE]
+              : undefined,
+          },
+          false
+        );
+        scanner.render(
+          (decodedText: string) => {
+            if (!mounted) return;
+            // Il QR contiene il qr_identifier (12 char alfanumerico maiuscolo)
+            const clean = (decodedText || '').trim().toUpperCase();
+            if (clean.length >= 4) {
+              setAthleteCode(clean);
+              setShowQrScanner(false);
+              try { scanner.clear(); } catch {}
+            }
+          },
+          (_err: string) => { /* ignore scan-in-progress noise */ }
+        );
+
+        // Traduzione italiana (una tantum + polling breve, no MutationObserver — v7.5 pattern)
+        const translate = () => {
+          const box = document.getElementById('lite-qr-scanner');
+          if (!box) return;
+          box.querySelectorAll('button').forEach((b) => {
+            const t = (b.textContent || '').trim();
+            if (t === 'Request Camera Permissions') b.textContent = 'Consenti fotocamera';
+            else if (t === 'Start Scanning') b.textContent = 'Avvia scansione';
+            else if (t === 'Stop Scanning') b.textContent = 'Ferma scansione';
+            else if (t === 'Switch On Torch') b.textContent = '🔦 Accendi torcia';
+            else if (t === 'Switch Off Torch') b.textContent = '🔦 Spegni torcia';
+            else if (t.startsWith('Choose Image')) {
+              b.textContent = t.replace('Choose Image', '📁 Scegli immagine').replace(/ - No image ch(?:oo)?sen/, '');
+            }
+          });
+          const anchor = box.querySelector('#html5-qrcode-anchor-scan-type-change') as HTMLElement | null;
+          if (anchor) {
+            const t = (anchor.textContent || '').trim();
+            if (t === 'Scan an Image File') anchor.textContent = '📁 Scansiona da foto in galleria';
+            else if (t === 'Scan using camera directly') anchor.textContent = '📷 Torna alla fotocamera';
+          }
+        };
+        translate();
+        let poll = 0;
+        const iv = setInterval(() => { translate(); if (++poll >= 10) clearInterval(iv); }, 300);
+      } catch (e: any) {
+        setScanError(e?.message || 'Errore avvio scanner');
+      }
+    };
+
+    // CSS: nascondi camera selector (forziamo back-camera)
+    const style = document.createElement('style');
+    style.textContent = `
+      #lite-qr-scanner select#html5-qrcode-select-camera { display: none !important; }
+      #lite-qr-scanner div[id$="__camera_selection"] { display: none !important; }
+      #lite-qr-scanner input[type="file"] { display: none !important; }
+      #lite-qr-scanner video { max-height: 260px !important; border-radius: 12px; }
+    `;
+    document.head.appendChild(style);
+
+    startScanner();
+    return () => {
+      mounted = false;
+      try { scanner && scanner.clear(); } catch {}
+      try { document.head.removeChild(style); } catch {}
+    };
+  }, [showQrScanner]);
 
   const loadSavedAthleteCode = async () => {
     try {
@@ -214,6 +312,43 @@ export default function Login() {
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* 🆕 v7.13 — Modal Scanner QR (Web) */}
+        {Platform.OS === 'web' && showQrScanner && (
+          <View style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.85)',
+            zIndex: 9999,
+            padding: 16,
+            alignItems: 'center',
+            justifyContent: 'flex-start',
+          }} data-testid="lite-qr-scanner-modal">
+            <View style={{ width: '100%', maxWidth: 480, backgroundColor: '#fff', borderRadius: 16, padding: 16, marginTop: 40 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: '#1a1a2e' }}>
+                  📷 Scansiona QR
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setShowQrScanner(false)}
+                  style={{ padding: 8 }}
+                  data-testid="lite-qr-scanner-close-btn"
+                >
+                  <Ionicons name="close" size={28} color="#666" />
+                </TouchableOpacity>
+              </View>
+              <Text style={{ fontSize: 13, color: '#666', marginBottom: 12, lineHeight: 18 }}>
+                Chiedi al tuo genitore di aprire l'app sul suo telefono e mostrarti il QR del tuo profilo. Punta la fotocamera al QR per riempire automaticamente il codice.
+              </Text>
+              <div id="lite-qr-scanner" style={{ width: '100%', minHeight: 260 }} />
+              {scanError ? (
+                <Text style={{ fontSize: 13, color: '#C62828', marginTop: 10 }} data-testid="lite-qr-scan-error">
+                  ⚠️ {scanError}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        )}
+
         <View style={styles.logoContainer}>
           <Image
             source={societyLogo ? { uri: societyLogo } : require('../assets/images/registrateam-logo.png')}
@@ -393,6 +528,33 @@ export default function Login() {
                 <Text style={styles.minorHint}>
                   Chiedi al tuo genitore il tuo Nome Lite (o codice atleta) e il PIN
                 </Text>
+
+                {/* 🆕 v7.13 — Pulsante scanner QR: la ragazza scansiona il QR mostrato dal genitore */}
+                {Platform.OS === 'web' && (
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: '#E8F5E9',
+                      borderRadius: 12,
+                      padding: 14,
+                      marginBottom: 12,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 10,
+                      borderWidth: 2,
+                      borderColor: '#4CAF50',
+                      borderStyle: 'dashed',
+                    }}
+                    onPress={() => { setScanError(''); setShowQrScanner(true); }}
+                    data-testid="minor-login-scan-qr-btn"
+                  >
+                    <Ionicons name="qr-code-outline" size={22} color="#2E7D32" />
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#2E7D32' }}>
+                      📷 Scansiona il QR del tuo genitore
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
                 <TextInput
                   style={styles.input}
                   placeholder="Nome Lite (o codice atleta)"

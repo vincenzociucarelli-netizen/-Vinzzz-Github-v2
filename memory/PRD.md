@@ -16,6 +16,44 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## ✨ 09/07/2026 (v7.13) — Login Lite v3: Scanner QR ✅
+
+**Feature proposta e adottata dall'utente**: la ragazza scansiona il QR del genitore invece di digitare a mano un codice atleta di 12 caratteri.
+
+**Flow**:
+1. Il genitore apre l'app sul suo telefono e mostra il QR dell'atleta (già disponibile — è lo stesso QR delle presenze).
+2. La ragazza apre l'app → tab **"Accesso Atleta"**.
+3. Vede il pulsante grande verde **"📷 Scansiona il QR del tuo genitore"**.
+4. Tap → si apre modal scanner con camera già configurata (back camera forzata, testi italiani, opzione galleria per foto già scattate).
+5. Punta al QR del papà → riconoscimento istantaneo → il campo Nome Lite viene popolato automaticamente col `qr_identifier`.
+6. Ragazza inserisce solo il PIN → dentro. Da qui in poi il Device Pairing v7.11 memorizza tutto.
+
+**Implementazione** (`/app/frontend/app/login.tsx`):
+- Import `html5-qrcode` (stessa lib del coach scanner, già in bundle).
+- State: `showQrScanner`, `scanError`.
+- `useEffect` che gestisce start/stop dello scanner al toggle del modal:
+  - `SCAN_TYPE_CAMERA` + `SCAN_TYPE_FILE` (galleria)
+  - Traduzione italiana one-shot con polling breve (pattern v7.5, no MutationObserver → no interferenza tap mobile)
+  - CSS nasconde Select Camera + input file nativo del browser
+- Modal fullscreen con overlay scuro, card bianca centrata, istruzioni per la ragazza.
+- Callback `onScanSuccess` → cleanUpperCase(text) → `setAthleteCode` → chiude il modal.
+
+**Testing E2E** (screenshot preview):
+- ✅ Form Accesso Atleta con pulsante verde dashed visibile
+- ✅ Modal scanner con titolo, X di chiusura, istruzioni, camera pronta
+- ✅ Testi tradotti: "Consenti fotocamera", "📁 Scansiona da foto in galleria"
+- ✅ Nessun Select Camera (nascosto)
+
+**Combinazione con v7.11 (Device Pairing) e v7.12 (codice a vita)**:
+Il flow finale per una ragazzina nuova:
+1. **Primo accesso**: scansione QR → PIN → dentro (30 secondi).
+2. **Ogni volta dopo**: card verde con la sua foto + solo PIN (5 secondi).
+3. **Cambio società**: il device pairing si auto-aggiorna con la nuova società, lo stesso athlete_code resta.
+4. **Cambio telefono**: nuovo device → scansione QR → PIN → device impara.
+
+---
+
+
 ## 🔐 09/07/2026 (v7.12) — athlete_code legato al CF (persistenza persona a vita) ✅
 
 **Insight dell'utente**: "Il codice atleta DEVE essere abbinato al codice fiscale, quindi DEVE essere sempre lo stesso codice per la stessa persona anche cambiando società."
