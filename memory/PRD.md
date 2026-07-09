@@ -16,6 +16,25 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## ✨ 08/07/2026 (v7.9) — Registrazione: istruzioni chiare sui link Termini/Privacy ✅
+
+**Segnalazione utente reale**: alcuni utenti che si registravano non capivano di dover **aprire** i link "Termini di utilizzo" e "Informativa sulla Privacy" per attivare il pulsante "Registrati" → si bloccavano sulla pagina senza sapere cosa fare. Il testo grigio in fondo "Apri entrambi i documenti per procedere" era troppo poco evidente.
+
+**Fix applicati** (`/app/frontend/app/register.tsx`):
+1. **Banner giallo istruttivo** all'inizio della sezione "Privacy e Consensi":
+   > ℹ️ **Come completare la registrazione**  
+   > **Tocca (apri) ENTRAMBI i link qui sotto** — "Termini di utilizzo" e "Informativa sulla Privacy" — per leggere i documenti. Solo dopo averli aperti entrambi il pulsante **"Registrati"** si attiverà.
+2. **Etichette link più esplicite**: prima "Termini di utilizzo" → ora "👉 Tocca qui per aprire i Termini di utilizzo" (idem per Privacy).
+3. **Feedback stato attivo**:
+   - Se mancano 1+ documenti: banner rosso "❗ Mancano ancora N documento/i da aprire per procedere"
+   - Se entrambi letti: banner verde "✓ Perfetto! Ora puoi premere Registrati qui sotto"
+4. **Rimosso** il testo grigio piccolo che passava inosservato.
+
+**Testing**: rebuild OK, no errori compilazione. Modifiche visibili nella pagina `/register` dopo aver inserito il codice invito.
+
+---
+
+
 ## ✨ 08/07/2026 (v7.8) — Email Brevo per risposta richiesta collegamento genitore ✅
 
 **Funzionalità**: quando il primo genitore approva o rifiuta la richiesta di collegamento del coniuge tramite l'endpoint `/parent-link/respond`, viene inviata un'email di notifica al richiedente via Brevo.

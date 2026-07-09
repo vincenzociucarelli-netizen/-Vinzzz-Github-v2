@@ -722,6 +722,30 @@ export default function Register() {
       {/* Privacy e Consensi Section */}
       <View style={{ backgroundColor: '#F5F5F5', borderRadius: 14, padding: 16, marginTop: 16, marginBottom: 16 }}>
         <Text style={{ fontSize: 16, fontWeight: '700', color: '#333', marginBottom: 12 }}>Privacy e Consensi</Text>
+
+        {/* 🆕 08/07/2026 — Istruzione VISIBILE per aiutare gli utenti che non capivano di dover
+            aprire i link (segnalazione utente reale: "non riescono ad andare avanti"). */}
+        <View style={{
+          backgroundColor: '#FFF8E1',
+          borderLeftWidth: 4,
+          borderLeftColor: '#FFA000',
+          borderRadius: 8,
+          padding: 12,
+          marginBottom: 14,
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          gap: 10,
+        }} data-testid="privacy-instructions-banner">
+          <Ionicons name="information-circle" size={22} color="#FFA000" style={{ marginTop: 1 }} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#E65100', marginBottom: 4 }}>
+              Come completare la registrazione
+            </Text>
+            <Text style={{ fontSize: 13, color: '#5D4037', lineHeight: 19 }}>
+              <Text style={{ fontWeight: '700' }}>Tocca (apri) ENTRAMBI i link qui sotto</Text> — "Termini di utilizzo" e "Informativa sulla Privacy" — per leggere i documenti. Solo dopo averli aperti entrambi il pulsante <Text style={{ fontWeight: '700' }}>"Registrati"</Text> si attiverà.
+            </Text>
+          </View>
+        </View>
         
         {/* Open Terms */}
         <TouchableOpacity
@@ -734,8 +758,8 @@ export default function Register() {
           data-testid="open-terms-link"
         >
           <Ionicons name={hasOpenedTerms ? "checkmark-circle" : "document-text-outline"} size={22} color={hasOpenedTerms ? "#4CAF50" : "#007AFF"} />
-          <Text style={{ flex: 1, fontSize: 14, color: '#007AFF', textDecorationLine: 'underline' }}>Termini di utilizzo</Text>
-          {hasOpenedTerms && <Text style={{ fontSize: 11, color: '#4CAF50' }}>Letto</Text>}
+          <Text style={{ flex: 1, fontSize: 14, color: '#007AFF', textDecorationLine: 'underline', fontWeight: '600' }}>👉 Tocca qui per aprire i Termini di utilizzo</Text>
+          {hasOpenedTerms && <Text style={{ fontSize: 11, color: '#4CAF50', fontWeight: '700' }}>✓ Letto</Text>}
         </TouchableOpacity>
 
         {/* Open Privacy */}
@@ -749,8 +773,8 @@ export default function Register() {
           data-testid="open-privacy-policy-link"
         >
           <Ionicons name={hasOpenedPrivacy ? "checkmark-circle" : "shield-outline"} size={22} color={hasOpenedPrivacy ? "#4CAF50" : "#007AFF"} />
-          <Text style={{ flex: 1, fontSize: 14, color: '#007AFF', textDecorationLine: 'underline' }}>Informativa sulla Privacy</Text>
-          {hasOpenedPrivacy && <Text style={{ fontSize: 11, color: '#4CAF50' }}>Letto</Text>}
+          <Text style={{ flex: 1, fontSize: 14, color: '#007AFF', textDecorationLine: 'underline', fontWeight: '600' }}>👉 Tocca qui per aprire l'Informativa sulla Privacy</Text>
+          {hasOpenedPrivacy && <Text style={{ fontSize: 11, color: '#4CAF50', fontWeight: '700' }}>✓ Letto</Text>}
         </TouchableOpacity>
 
         {/* Auto-checked consent when both docs opened */}
@@ -766,10 +790,36 @@ export default function Register() {
         )}
 
         {!hasOpenedPrivacy || !hasOpenedTerms ? (
-          <Text style={{ fontSize: 12, color: '#999', marginTop: 8, fontStyle: 'italic' }}>
-            Apri entrambi i documenti per procedere
-          </Text>
-        ) : null}
+          <View style={{
+            marginTop: 10,
+            padding: 10,
+            backgroundColor: '#FFEBEE',
+            borderRadius: 8,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}>
+            <Ionicons name="alert-circle" size={18} color="#C62828" />
+            <Text style={{ flex: 1, fontSize: 13, color: '#C62828', fontWeight: '600' }}>
+              Mancano ancora {!hasOpenedTerms && !hasOpenedPrivacy ? '2 documenti' : '1 documento'} da aprire per procedere
+            </Text>
+          </View>
+        ) : (
+          <View style={{
+            marginTop: 10,
+            padding: 10,
+            backgroundColor: '#E8F5E9',
+            borderRadius: 8,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          }}>
+            <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />
+            <Text style={{ flex: 1, fontSize: 13, color: '#2E7D32', fontWeight: '600' }}>
+              Perfetto! Ora puoi premere "Registrati" qui sotto.
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Submit Button */}
