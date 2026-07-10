@@ -16,6 +16,59 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🩺 10/07/2026 (v7.15) — Atleti orfani: fix strutturale + diagnostic/repair endpoints ✅
+
+**Segnalazione utente**: "Ci sono vari ragazzi registrati su LA TUA SOCIETA ASD ma nessun genitore 😱".
+
+**Root cause identificata** (`routes/seasons.py::import_member`):
+Quando l'admin importava un atleta MINORE nella nuova stagione via il tool `nuova-stagione`, il codice azzerava i dati operativi dell'atleta mantenendo `parent_id`/`second_parent_id`, MA NON aggiungeva `current_season` all'`active_seasons` del/i genitore/i collegato/i.
+
+Conseguenza: il genitore restava confinato nella stagione precedente → il filtro `active_seasons: current_season` presente su `GET /api/users/parents` (e simili) lo escludeva → nella dashboard admin l'atleta appariva "senza genitore" pur avendo `parent_id` valorizzato correttamente.
+
+**Fix applicati** (`/app/backend/routes/seasons.py`):
+
+1. **`import-member` auto-importa i genitori dei minori**
+   Quando `kind == "athlete"` e `is_minor == True`, dopo il reset dell'atleta:
+   - Legge `parent_id` + `second_parent_id`
+   - Per ogni genitore trovato in `users` (society_id + role=parent), aggiunge `current_season` all'`active_seasons` con `$addToSet`
+   - Marca `rollover_decision=imported` sui genitori
+   - Restituisce `imported_parents` nella response per debug/log
+
+2. **Nuovo endpoint diagnostico** `GET /api/seasons/orphan-athletes/diagnostic` (admin-only, non modifica nulla):
+   - Elenca atleti MINORI in `current_season` classificando le anomalie:
+     - `orphans_no_parent_reference`: né `parent_id` né `second_parent_id` → intervento manuale
+     - `orphans_missing_parent_user`: parent_id punta a utente inesistente → intervento manuale
+     - `orphans_parent_prev_season`: parent user esiste ma non ha current_season → riparabile automaticamente
+   - Restituisce counts + dettaglio per categoria + `parent_ids_to_import`
+
+3. **Nuovo endpoint di riparazione** `POST /api/seasons/orphan-athletes/repair` (admin-only, richiede `confirmation: "CONFERMA"`):
+   - Aggiunge `current_season` all'`active_seasons` di tutti i genitori "recuperabili"
+   - Marca `rollover_repaired_from_orphan=true` come traccia
+   - Restituisce lista dei genitori riparati + count
+   - Audit log dell'operazione
+
+4. **Nuovo pannello UI** `/admin/nuova-stagione`: card viola "🩺 Igiene dati" tra STEP A e STEP B con:
+   - Bottone "Verifica ora" → mostra counts + elenco atleti orfani per categoria
+   - Bottone "Ripara N genitori" (visibile solo se ci sono orfani recuperabili)
+   - Elenco leggibile "Sofia BIANCHI — MARINA BELLI" così l'admin capisce chi verrà riportato in stagione
+
+**Testing**:
+- ✅ 3/3 nuovi test regressione: `/app/backend/tests/test_orphan_athletes_v715.py`
+  - `test_orphan_detection_and_repair` (end-to-end: seed → diag → repair → re-diag)
+  - `test_repair_requires_confirmation` (400 senza CONFERMA)
+  - `test_diagnostic_requires_admin` (403 per non-admin)
+- ✅ 3/3 test smoke multi-tenancy invariati (no regression)
+- ✅ 5/5 test v7.14 password checklist ancora verdi
+- ✅ Verifica end-to-end su preview: trovato 1 orfano (BIANCHI SOFIA / BELLI MARINA), riparato con successo, diagnostica post-fix a 0.
+
+**Come usarlo in produzione**:
+1. Deploy (Save to GitHub → Vercel/Render).
+2. Admin apre `/admin/nuova-stagione` → clic "🩺 Verifica ora".
+3. Se ci sono genitori "recuperabili" → clic "🛠️ Ripara N genitori" → conferma → fatto.
+4. Per orfani non-recuperabili (parent_id inesistente o assente): la lista viene mostrata così l'admin può ri-creare/collegare a mano dal profilo atleta.
+
+---
+
 ## 🐛 09/07/2026 (v7.14) — Fix password protezione dati ricorrente + testi Accesso Lite ✅
 
 **Bug segnalato**: LAURA OPALE (La Tua Società ASD), la parent aveva impostato la Password Protezione Dati ma il sistema continuava a mostrarla come mancante in "Anagrafica incompleta".

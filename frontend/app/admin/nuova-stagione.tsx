@@ -79,6 +79,46 @@ export default function NuovaStagione() {
   const [confirmText, setConfirmText] = useState('');
   const [busy, setBusy] = useState<Record<string, boolean>>({});
 
+  // 🩺 v7.15 — Diagnostica atleti orfani (minori con genitori nella stagione precedente)
+  const [orphanDiag, setOrphanDiag] = useState<any | null>(null);
+  const [orphanLoading, setOrphanLoading] = useState(false);
+  const [orphanRepairing, setOrphanRepairing] = useState(false);
+
+  const loadOrphanDiag = async () => {
+    setOrphanLoading(true);
+    try {
+      const r = await api.get('/seasons/orphan-athletes/diagnostic');
+      setOrphanDiag(r.data);
+    } catch (e: any) {
+      Alert.alert('Errore', e?.response?.data?.detail || 'Diagnostica non disponibile');
+    } finally {
+      setOrphanLoading(false);
+    }
+  };
+
+  const repairOrphans = async () => {
+    if (!orphanDiag || (orphanDiag.counts?.parent_users_to_import || 0) === 0) return;
+    const msg = `Stai per riportare ${orphanDiag.counts.parent_users_to_import} genitore/i nella stagione ${orphanDiag.current_season}.\n\nQuesti genitori sono collegati ad atleti minorenni già importati ma erano rimasti nella stagione precedente. L'operazione aggiunge SOLO la stagione corrente al loro active_seasons — nessun altro dato viene modificato.\n\nProcedere?`;
+    const ok = Platform.OS === 'web'
+      ? window.confirm(msg)
+      : await new Promise<boolean>((res) => Alert.alert('Ripara orfani', msg, [
+          { text: 'Annulla', style: 'cancel', onPress: () => res(false) },
+          { text: 'Ripara', onPress: () => res(true) },
+        ]));
+    if (!ok) return;
+    setOrphanRepairing(true);
+    try {
+      const r = await api.post('/seasons/orphan-athletes/repair', { confirmation: 'CONFERMA' });
+      Alert.alert('Riparazione completata', `${r.data.count} genitori riportati nella stagione corrente.`);
+      await loadOrphanDiag();
+      await loadPreview();
+    } catch (e: any) {
+      Alert.alert('Errore', e?.response?.data?.detail || 'Riparazione fallita');
+    } finally {
+      setOrphanRepairing(false);
+    }
+  };
+
   const loadPreview = async () => {
     try {
       const r = await api.get('/seasons/rollover/preview');
@@ -245,6 +285,107 @@ export default function NuovaStagione() {
           <Text style={{ fontSize: 12, color: '#1B5E20', marginTop: 4 }}>
             Ora usa gli accordion qui sotto per importare i tesserati uno per uno. Puoi tornare in questa pagina in giorni diversi finché completi tutti.
           </Text>
+        </View>
+      )}
+
+      {/* 🩺 Diagnostica atleti orfani (v7.15) */}
+      {data.is_new_season_open && (
+        <View style={[styles.card, { backgroundColor: '#F3E5F5', borderLeftColor: '#6A1B9A' }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <Ionicons name="medkit" size={20} color="#6A1B9A" />
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#6A1B9A', flex: 1 }}>
+              🩺 Igiene dati: atleti minori senza genitore nella stagione corrente
+            </Text>
+          </View>
+          <Text style={{ fontSize: 12, color: '#4A148C', lineHeight: 18, marginBottom: 8 }}>
+            Verifica se ci sono minori già importati ma i cui genitori sono rimasti nella stagione precedente
+            (quindi non compaiono nella lista Genitori). Puoi riportarli nella stagione corrente con un clic.
+          </Text>
+
+          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+            <TouchableOpacity
+              onPress={loadOrphanDiag}
+              disabled={orphanLoading}
+              style={[styles.actionBtn, { backgroundColor: '#6A1B9A', paddingVertical: 8, paddingHorizontal: 12 }]}
+              data-testid="orphan-diag-btn"
+            >
+              {orphanLoading ? <ActivityIndicator size="small" color="#fff" /> : (
+                <>
+                  <Ionicons name="search" size={14} color="#fff" />
+                  <Text style={[styles.actionText, { fontSize: 12 }]}>Verifica ora</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {orphanDiag && (orphanDiag.counts?.parent_users_to_import || 0) > 0 && (
+              <TouchableOpacity
+                onPress={repairOrphans}
+                disabled={orphanRepairing}
+                style={[styles.actionBtn, { backgroundColor: '#2E7D32', paddingVertical: 8, paddingHorizontal: 12 }]}
+                data-testid="orphan-repair-btn"
+              >
+                {orphanRepairing ? <ActivityIndicator size="small" color="#fff" /> : (
+                  <>
+                    <Ionicons name="construct" size={14} color="#fff" />
+                    <Text style={[styles.actionText, { fontSize: 12 }]}>
+                      Ripara {orphanDiag.counts.parent_users_to_import} genitori
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {orphanDiag && (
+            <View style={{ marginTop: 10, padding: 10, backgroundColor: '#fff', borderRadius: 8 }}>
+              <Text style={{ fontSize: 12, color: '#333', marginBottom: 4 }}>
+                Stagione: <Text style={{ fontWeight: '700' }}>{orphanDiag.current_season}</Text>
+              </Text>
+              <Text style={{ fontSize: 12, color: '#333' }}>
+                • Minori in stagione corrente: <Text style={{ fontWeight: '700' }}>{orphanDiag.counts.athletes_minor_current_season}</Text>
+              </Text>
+              <Text style={{ fontSize: 12, color: '#333' }}>
+                • Senza riferimento genitore: <Text style={{ fontWeight: '700', color: orphanDiag.counts.orphans_no_parent_reference > 0 ? '#C62828' : '#2E7D32' }}>{orphanDiag.counts.orphans_no_parent_reference}</Text>
+              </Text>
+              <Text style={{ fontSize: 12, color: '#333' }}>
+                • Con parent_id verso utente inesistente: <Text style={{ fontWeight: '700', color: orphanDiag.counts.orphans_missing_parent_user > 0 ? '#C62828' : '#2E7D32' }}>{orphanDiag.counts.orphans_missing_parent_user}</Text>
+              </Text>
+              <Text style={{ fontSize: 12, color: '#333' }}>
+                • Con genitore ancora in stagione precedente: <Text style={{ fontWeight: '700', color: orphanDiag.counts.orphans_parent_prev_season > 0 ? '#F57C00' : '#2E7D32' }}>{orphanDiag.counts.orphans_parent_prev_season}</Text>
+              </Text>
+
+              {orphanDiag.orphans_parent_prev_season?.length > 0 && (
+                <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 6 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#F57C00', marginBottom: 4 }}>
+                    ⚠ Minori con genitore da riportare in stagione:
+                  </Text>
+                  {orphanDiag.orphans_parent_prev_season.slice(0, 20).map((o: any) => (
+                    <Text key={o.athlete_id} style={{ fontSize: 11, color: '#555' }}>
+                      • {o.name} — {o.parent_issues.map((p: any) => p.full_name || p.email || p.id).join(', ')}
+                    </Text>
+                  ))}
+                  {orphanDiag.orphans_parent_prev_season.length > 20 && (
+                    <Text style={{ fontSize: 10, color: '#999', fontStyle: 'italic' }}>
+                      … e altri {orphanDiag.orphans_parent_prev_season.length - 20}
+                    </Text>
+                  )}
+                </View>
+              )}
+
+              {orphanDiag.orphans_missing_parent_user?.length > 0 && (
+                <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: '#eee', paddingTop: 6 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#C62828', marginBottom: 4 }}>
+                    🚨 Minori con parent_id NON esistente (necessario intervento manuale):
+                  </Text>
+                  {orphanDiag.orphans_missing_parent_user.slice(0, 20).map((o: any) => (
+                    <Text key={o.athlete_id} style={{ fontSize: 11, color: '#555' }}>
+                      • {o.name} — CF {o.fiscal_code || 'n/d'} — parent_id: {o.parent_issues.map((p: any) => p.id).join(', ')}
+                    </Text>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
         </View>
       )}
 

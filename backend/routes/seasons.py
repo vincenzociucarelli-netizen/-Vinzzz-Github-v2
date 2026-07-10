@@ -1901,6 +1901,43 @@ async def import_member(member_id: str, current_user = Depends(get_current_user)
                        "rollover_decision_at": datetime.utcnow().isoformat()}},
         )
 
+        # 🆕 09/07/2026 (v7.15) — Auto-import genitori collegati per atleti minorenni.
+        # Root cause del bug "atleti orfani": importando SOLO l'atleta, il suo genitore
+        # restava nella stagione precedente (active_seasons non aggiornato) → nella
+        # dashboard admin l'atleta appariva senza genitore.
+        # Fix: aggiungi current_season all'active_seasons dei genitori collegati.
+        if is_minor:
+            linked_parent_ids: list = []
+            pid = doc.get("parent_id")
+            sid2 = doc.get("second_parent_id")
+            if pid:
+                linked_parent_ids.append(pid)
+            if sid2:
+                linked_parent_ids.append(sid2)
+            imported_parents: list = []
+            for _pid in linked_parent_ids:
+                parent_user = await db.users.find_one(
+                    {"id": _pid, "society_id": sid, "role": "parent"},
+                    {"_id": 0, "id": 1, "active_seasons": 1, "email": 1, "full_name": 1,
+                     "rollover_decision": 1, "rollover_decision_season": 1},
+                )
+                if not parent_user:
+                    continue
+                already_in = current_season in (parent_user.get("active_seasons") or [])
+                if not already_in:
+                    await db.users.update_one(
+                        {"id": _pid, "society_id": sid},
+                        {"$addToSet": {"active_seasons": current_season},
+                         "$set": {"rollover_decision": "imported",
+                                  "rollover_decision_season": current_season,
+                                  "rollover_decision_at": datetime.utcnow().isoformat()}},
+                    )
+                    imported_parents.append({
+                        "id": _pid,
+                        "email": parent_user.get("email"),
+                        "full_name": parent_user.get("full_name"),
+                    })
+
     try:
         await db.audit_logs.insert_one({
             "id": str(datetime.utcnow().timestamp()).replace(".", ""),
@@ -1916,7 +1953,13 @@ async def import_member(member_id: str, current_user = Depends(get_current_user)
     except Exception:
         pass
 
-    return {"ok": True, "kind": kind, "season": current_season}
+    result: dict = {"ok": True, "kind": kind, "season": current_season}
+    if kind == "athlete":
+        try:
+            result["imported_parents"] = imported_parents  # type: ignore[name-defined]
+        except NameError:
+            result["imported_parents"] = []
+    return result
 
 
 @router.post("/seasons/dismiss-member/{member_id}")
@@ -2096,4 +2139,225 @@ async def rollover_season(body: RolloverBody, current_user = Depends(get_current
         "users_imported": users_imported,
         "athletes_imported": athletes_imported,
         "archive_counts": archive_counts,
+    }
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 🩺 09/07/2026 (v7.15) — Diagnostica & riparazione atleti orfani
+# ─────────────────────────────────────────────────────────────────────────────
+# Segnalazione utente: "Ci sono vari ragazzi registrati su LA TUA SOCIETA ASD
+# ma nessun genitore 😱". Root cause: dopo `import-member` di un minore, il
+# genitore restava nella stagione precedente (active_seasons non aggiornato)
+# → dashboard admin lo perdeva.
+# Fix strutturale: `import-member` ora auto-importa i genitori del minore.
+# Per DB già in stato inconsistente forniamo due endpoint admin-only.
+
+def _is_minor(dob_val) -> bool:
+    """True se la data di nascita indica un'età < 18 anni."""
+    if not dob_val:
+        return False
+    from datetime import date as _date
+    try:
+        if isinstance(dob_val, str):
+            d = datetime.fromisoformat(dob_val.split("T")[0]).date()
+        elif hasattr(dob_val, "date"):
+            d = dob_val.date()
+        else:
+            d = dob_val
+        today = _date.today()
+        years = today.year - d.year - ((today.month, today.day) < (d.month, d.day))
+        return years < 18
+    except Exception:
+        return False
+
+
+@router.get("/seasons/orphan-athletes/diagnostic")
+async def diagnostic_orphan_athletes(current_user = Depends(get_current_user)):
+    """🩺 Diagnostica: elenca atleti MINORI nella stagione corrente che appaiono
+    "orfani" nella dashboard admin perché i genitori collegati non sono ancora
+    stati importati (active_seasons non contiene la stagione corrente) oppure
+    perché il `parent_id`/`second_parent_id` punta a un utente inesistente.
+    Non modifica nulla. Solo admin."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    if not sid:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+
+    current_season = await get_current_season_for_society(db, sid)
+
+    athletes = await db.athletes.find(
+        {"society_id": sid, "active_seasons": current_season},
+        {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1,
+         "date_of_birth": 1, "birth_date": 1,
+         "parent_id": 1, "second_parent_id": 1, "team_id": 1, "status": 1,
+         "fiscal_code": 1},
+    ).to_list(5000)
+
+    orphans_no_parent_ref: list = []       # atleta senza parent_id/second_parent_id
+    orphans_missing_parent_user: list = [] # parent_id punta a utente inesistente/non parent
+    orphans_parent_prev_season: list = []  # parent user esiste ma non ha current_season
+
+    parent_ids_to_import: set = set()
+
+    for a in athletes:
+        dob = a.get("date_of_birth") or a.get("birth_date")
+        if not _is_minor(dob):
+            continue
+        pid = a.get("parent_id")
+        sid2 = a.get("second_parent_id")
+        if not pid and not sid2:
+            orphans_no_parent_ref.append(a)
+            continue
+        # verifica genitori
+        parent_issues: list = []
+        for label, _pid in [("parent_id", pid), ("second_parent_id", sid2)]:
+            if not _pid:
+                continue
+            parent_user = await db.users.find_one(
+                {"id": _pid, "society_id": sid, "role": "parent"},
+                {"_id": 0, "id": 1, "email": 1, "full_name": 1,
+                 "active_seasons": 1, "rollover_decision": 1},
+            )
+            if not parent_user:
+                parent_issues.append({"field": label, "id": _pid, "reason": "not_found"})
+            else:
+                asx = parent_user.get("active_seasons") or []
+                if current_season not in asx:
+                    parent_issues.append({
+                        "field": label,
+                        "id": _pid,
+                        "email": parent_user.get("email"),
+                        "full_name": parent_user.get("full_name"),
+                        "active_seasons": asx,
+                        "rollover_decision": parent_user.get("rollover_decision"),
+                        "reason": "parent_not_in_current_season",
+                    })
+                    parent_ids_to_import.add(_pid)
+        if parent_issues:
+            # classifica: se almeno un genitore è recuperabile (parent_not_in_current_season)
+            recoverable = any(p["reason"] == "parent_not_in_current_season" for p in parent_issues)
+            not_found_only = all(p["reason"] == "not_found" for p in parent_issues)
+            entry = {
+                "athlete_id": a.get("id"),
+                "name": f"{a.get('last_name','')} {a.get('first_name','')}".strip() or a.get("full_name",""),
+                "date_of_birth": a.get("date_of_birth") or a.get("birth_date"),
+                "fiscal_code": a.get("fiscal_code"),
+                "parent_issues": parent_issues,
+                "recoverable": recoverable,
+            }
+            if not_found_only:
+                orphans_missing_parent_user.append(entry)
+            else:
+                orphans_parent_prev_season.append(entry)
+
+    return {
+        "society_id": sid,
+        "current_season": current_season,
+        "counts": {
+            "athletes_minor_current_season": sum(1 for a in athletes
+                if _is_minor(a.get("date_of_birth") or a.get("birth_date"))),
+            "orphans_no_parent_reference": len(orphans_no_parent_ref),
+            "orphans_missing_parent_user": len(orphans_missing_parent_user),
+            "orphans_parent_prev_season": len(orphans_parent_prev_season),
+            "parent_users_to_import": len(parent_ids_to_import),
+        },
+        "orphans_no_parent_reference": [
+            {
+                "athlete_id": a.get("id"),
+                "name": f"{a.get('last_name','')} {a.get('first_name','')}".strip() or a.get("full_name",""),
+                "date_of_birth": a.get("date_of_birth") or a.get("birth_date"),
+                "fiscal_code": a.get("fiscal_code"),
+                "status": a.get("status"),
+            }
+            for a in orphans_no_parent_ref
+        ],
+        "orphans_missing_parent_user": orphans_missing_parent_user,
+        "orphans_parent_prev_season": orphans_parent_prev_season,
+        "parent_ids_to_import": list(parent_ids_to_import),
+    }
+
+
+class RepairOrphanBody(BaseModel):
+    confirmation: str = Field(default="")
+
+
+@router.post("/seasons/orphan-athletes/repair")
+async def repair_orphan_athletes(body: RepairOrphanBody, current_user = Depends(get_current_user)):
+    """🛠️ Riparazione: aggiunge `current_season` all'`active_seasons` di tutti i
+    genitori collegati ad atleti minorenni già importati nella stagione corrente
+    ma che sono rimasti nella stagione precedente.
+    Richiede `confirmation == "CONFERMA"`. Solo admin."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    if (body.confirmation or "").strip().upper() != "CONFERMA":
+        raise HTTPException(status_code=400, detail="Conferma mancante: digita 'CONFERMA'")
+    sid = current_user.get("society_id")
+    if not sid:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+
+    current_season = await get_current_season_for_society(db, sid)
+
+    athletes = await db.athletes.find(
+        {"society_id": sid, "active_seasons": current_season},
+        {"_id": 0, "id": 1, "parent_id": 1, "second_parent_id": 1,
+         "date_of_birth": 1, "birth_date": 1},
+    ).to_list(5000)
+
+    parent_ids_to_import: set = set()
+    for a in athletes:
+        dob = a.get("date_of_birth") or a.get("birth_date")
+        if not _is_minor(dob):
+            continue
+        for _pid in [a.get("parent_id"), a.get("second_parent_id")]:
+            if not _pid:
+                continue
+            parent_user = await db.users.find_one(
+                {"id": _pid, "society_id": sid, "role": "parent"},
+                {"_id": 0, "id": 1, "active_seasons": 1},
+            )
+            if not parent_user:
+                continue
+            if current_season not in (parent_user.get("active_seasons") or []):
+                parent_ids_to_import.add(_pid)
+
+    imported: list = []
+    for pid in parent_ids_to_import:
+        pu = await db.users.find_one(
+            {"id": pid, "society_id": sid},
+            {"_id": 0, "id": 1, "email": 1, "full_name": 1},
+        )
+        await db.users.update_one(
+            {"id": pid, "society_id": sid},
+            {"$addToSet": {"active_seasons": current_season},
+             "$set": {"rollover_decision": "imported",
+                      "rollover_decision_season": current_season,
+                      "rollover_decision_at": datetime.utcnow().isoformat(),
+                      "rollover_repaired_from_orphan": True}},
+        )
+        imported.append({"id": pid,
+                         "email": (pu or {}).get("email"),
+                         "full_name": (pu or {}).get("full_name")})
+
+    try:
+        await db.audit_logs.insert_one({
+            "id": str(datetime.utcnow().timestamp()).replace(".", ""),
+            "society_id": sid,
+            "user_id": current_user["id"],
+            "user_name": current_user.get("full_name", ""),
+            "action": "repair_orphan_athletes",
+            "target_kind": "parents",
+            "season": current_season,
+            "count": len(imported),
+            "timestamp": datetime.utcnow().isoformat(),
+        })
+    except Exception:
+        pass
+
+    return {
+        "ok": True,
+        "current_season": current_season,
+        "parents_imported": imported,
+        "count": len(imported),
     }
