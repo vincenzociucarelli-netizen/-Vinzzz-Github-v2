@@ -42,6 +42,7 @@ export default function Login() {
   // 🆕 09/07/2026 (v7.13) — Scanner QR per popolare automaticamente il codice atleta
   const [showQrScanner, setShowQrScanner] = useState(false);
   const [scanError, setScanError] = useState('');
+  const [scanFeedback, setScanFeedback] = useState<null | string>(null); // v7.14 feedback visivo
   
   // 🆕 08/07/2026 (v7.11) — Device pairing per Accesso Lite:
   // dopo il primo login riuscito salviamo un profilo "carta" in localStorage,
@@ -135,6 +136,9 @@ export default function Login() {
               setAthleteCode(clean);
               setShowQrScanner(false);
               try { scanner.clear(); } catch {}
+              // 🆕 v7.14 — Feedback visivo post-scansione (auto-scompare dopo 3s)
+              setScanFeedback('Riconosciuto! Ora inserisci il PIN 🔑');
+              setTimeout(() => setScanFeedback(null), 3500);
             }
           },
           (_err: string) => { /* ignore scan-in-progress noise */ }
@@ -553,6 +557,26 @@ export default function Login() {
                       📷 Scansiona il QR del tuo genitore
                     </Text>
                   </TouchableOpacity>
+                )}
+
+                {/* 🆕 v7.14 — Feedback visivo post-scansione */}
+                {scanFeedback && (
+                  <View style={{
+                    backgroundColor: '#C8E6C9',
+                    borderRadius: 12,
+                    padding: 12,
+                    marginBottom: 12,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 10,
+                    borderWidth: 2,
+                    borderColor: '#4CAF50',
+                  }} data-testid="scan-success-feedback">
+                    <Ionicons name="checkmark-circle" size={26} color="#2E7D32" />
+                    <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: '#1B5E20' }}>
+                      {scanFeedback}
+                    </Text>
+                  </View>
                 )}
 
                 <TextInput

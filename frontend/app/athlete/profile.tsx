@@ -1309,7 +1309,7 @@ export default function AthleteProfile() {
           </View>
           
           <Text style={{ fontSize: 13, color: '#666', marginBottom: 14, lineHeight: 18 }}>
-            Accedi a una versione semplificata con QR code, presenze e orari. Dalla schermata di login, seleziona "Accesso Atleta" e inserisci il Nome Lite e il PIN.
+            Accedi a una versione semplificata con QR code, presenze e orari. Dalla schermata di login, seleziona "Accesso Atleta" e scegli uno dei 3 modi: 📷 scansiona il QR (più veloce), oppure inserisci il Nome Lite + PIN, oppure il codice atleta + PIN.
           </Text>
 
           {/* Nome Lite */}

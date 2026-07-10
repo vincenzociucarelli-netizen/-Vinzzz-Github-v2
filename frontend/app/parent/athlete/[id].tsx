@@ -2648,7 +2648,7 @@ export default function AthleteDetail() {
                 </TouchableOpacity>
               )}
               <Text style={{ fontSize: 12, color: '#888', fontStyle: 'italic', marginTop: 6 }}>
-                Dalla schermata di login, seleziona "Accesso Atleta" e inserisci il Nick Name e il PIN.
+                Per l'accesso Lite: dalla schermata di login, seleziona "Accesso Atleta" e scegli uno dei 3 modi: 📷 scansiona il QR (più veloce), oppure inserisci il Nick Name + PIN, oppure il codice atleta + PIN.
               </Text>
             </View>
           )}
@@ -3729,7 +3729,8 @@ export default function AthleteDetail() {
                     setMinorHasPin(true);
                     setMinorAccessEnabled(true);
                     setMinorPinModalVisible(false);
-                    showAlert('Successo', `PIN impostato! ${athlete?.first_name || "L'atleta"} puo ora accedere con il codice ${minorAthleteCode} (oppure con un Alias da voi scelto) e il PIN.`);
+                    const firstName = athlete?.first_name || 'L\'atleta';
+                    showAlert('Successo', `PIN impostato! ${firstName} può ora accedere alla Versione Lite in 3 modi:\n\n1️⃣ SCANSIONANDO il QR mostrato dal tuo telefono (più semplice)\n2️⃣ usando il Nick Name scelto + PIN\n3️⃣ usando il codice atleta ${minorAthleteCode} + PIN\n\nCondividi il QR o le credenziali con ${firstName}.`);
                   } catch (e: any) {
                     showAlert('Errore', e.response?.data?.detail || 'Errore nel salvataggio');
                   } finally {
