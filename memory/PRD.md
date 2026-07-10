@@ -16,6 +16,43 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🐛 09/07/2026 (v7.14) — Fix password protezione dati ricorrente + testi Accesso Lite ✅
+
+**Bug segnalato**: LAURA OPALE (La Tua Società ASD), la parent aveva impostato la Password Protezione Dati ma il sistema continuava a mostrarla come mancante in "Anagrafica incompleta".
+
+**Root cause (verificata da testing_agent)**: Il check `validate_athlete_profile` in `server.py:27564` era slot-specific:
+- Se `athlete.parent_id == current_user.id` → controllava `data_password_hash`
+- Se `second_parent_id == current_user.id` → controllava `second_parent_data_password_hash`
+
+Quando un utente veniva re-associato da slot secondario a primario (o viceversa, tipico dopo migrations o import), la password rimaneva nello slot originale e il check falliva sullo slot nuovo.
+
+**Fix** (`/app/backend/server.py`):
+```python
+has_pw = bool(
+    athlete.get("data_password_hash")
+    or athlete.get("second_parent_data_password_hash")
+)
+```
+Basta che UNA delle 2 password sia impostata — coerente con l'obiettivo GDPR (dati protetti = OK, indipendentemente dallo slot).
+
+**Testi Accesso Lite aggiornati** per riflettere il nuovo flow v7.13 (Scanner QR):
+- `parent/athlete/[id].tsx`: alert "PIN impostato" ora menziona 3 modalità (📷 QR, Nick Name, Codice atleta)
+- `athlete/profile.tsx`: descrizione Accesso Lite aggiornata
+- `login.tsx`: hint sotto pulsante scanner + micro-enhancement feedback visivo "Riconosciuto! Ora inserisci il PIN 🔑" (card verde 3.5s post-scansione)
+
+**Testing verificato dal testing_agent**:
+- ✅ 5/5 backend tests (nuovo file `/app/backend/tests/test_data_password_checklist_v714.py`)
+- ✅ 3/3 smoke multi-tenancy (no regression)
+- ✅ Frontend: pulsante QR scan visibile in "Accesso Atleta"
+- ✅ RCA riprodotta e verificata: `test_v714_fix_password_in_second_slot_only`
+
+**Osservazione dal review**: l'endpoint reale è `/api/athletes/{id}/profile-check` (non `/checklist`). Il testing_agent ha notato anche che `GET /has-password` ha logica slot-aware differente rispetto al profile-check — comportamento intenzionale ma documentato.
+
+**Nuovo test di regressione** creato: `/app/backend/tests/test_data_password_checklist_v714.py` — copre 5 scenari (baseline, primary slot, secondo slot solo, entrambi mancanti, integration set+check).
+
+---
+
+
 ## ✨ 09/07/2026 (v7.13) — Login Lite v3: Scanner QR ✅
 
 **Feature proposta e adottata dall'utente**: la ragazza scansiona il QR del genitore invece di digitare a mano un codice atleta di 12 caratteri.
