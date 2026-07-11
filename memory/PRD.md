@@ -16,6 +16,62 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🔥 10/07/2026 (v7.15-hotfix) — Bug "atleti approvati riproposti in attesa" ✅
+
+**Segnalazione utente** (con screenshot):
+> "Ho già accettato queste ragazze e mi vengono riproposte di nuovo" — 9 atlete (Diamante Sofia, Topazio Matteo, Ametista Giulia, Quarzo Andrea, ecc.) su LA TUA SOCIETÀ ASD ricomparivano ogni volta in "Atleti in Attesa di Approvazione" dopo essere state approvate.
+
+**Root cause identificata**:
+1. **Frontend** — `admin/seasons.tsx` (linea 82-88, "Archivio Stagioni" page):
+   ```javascript
+   useEffect(() => {
+     loadData();
+     (async () => { await api.post('/seasons/backfill-reset-assignments'); })();
+   }, []);
+   ```
+   Auto-triggerava un endpoint di "backfill" ad OGNI apertura della pagina.
+
+2. **Backend** — `routes/seasons.py::backfill_reset_assignments` linee 875-907 (secondo pass):
+   ```python
+   already_reset = db.athletes.find({"team_id_previous_season": {"$exists": True, "$nin": [None, ""]}})
+   async for a in already_reset:
+       await db.athletes.update_one(
+           {..., "status": {"$ne": "pending"}},
+           {"$set": {"status": "pending"}, "$unset": {"trial_start_date": ""}}
+       )
+   ```
+   Il campo `team_id_previous_season` è uno **snapshot permanente**: rimane per sempre. Quindi il backfill, ogni volta che veniva eseguito, ripristinava `status="pending"` su TUTTI gli atleti già rientrati in stagione — anche su quelli nel frattempo approvati.
+
+**Loop del bug**:
+1. Admin approva atleta → `status=trial` ✅
+2. Admin apre "Archivio Stagioni" → `useEffect` auto-fires backfill
+3. Backfill matcha l'atleta (team_id_previous_season presente, status != pending) → resetta a `pending`, cancella `trial_start_date`
+4. Atleta ricompare in "Atleti in Attesa" 🔁
+
+**Fix applicati**:
+
+1. **Frontend** (`/app/frontend/app/admin/seasons.tsx`): **RIMOSSO** l'auto-trigger silenzioso. Il backfill resta disponibile solo tramite bottone manuale (`handleBackfillReset`) per interventi retroattivi consapevoli.
+
+2. **Backend** (`/app/backend/routes/seasons.py`): aggiunte **guard idempotenti** al secondo pass del backfill:
+   - `status: {$ne: "pending"}` (già presente — evita atleti già pending)
+   - `approved_at: {$in: [None, ""]}` (**nuovo**) — non tocca atleti approvati dall'admin
+   - `_backfill_v0705_reset_done: {$ne: true}` (**nuovo**) — flag one-shot; l'atleta è marcato dopo il primo reset e non viene più ritoccato
+
+**Testing**:
+- ✅ 3/3 nuovi test in `/app/backend/tests/test_backfill_no_reset_approved_v715.py`:
+  - `test_backfill_does_not_reset_approved_athlete` — atleta con `approved_at` NON viene resettato
+  - `test_backfill_still_resets_untouched_athletes` — atleti mai approvati VENGONO ancora resettati (caso legittimo preservato)
+  - `test_backfill_skips_already_flagged_athlete` — atleta con flag `_backfill_v0705_reset_done` è immune anche in status trial
+- ✅ 9/9 test totali verdi (nuovo + orphan v7.15 + smoke multi-tenancy)
+
+**Cosa deve fare l'admin dopo il deploy**:
+1. Save to GitHub → attendere Vercel + Render (~5 minuti).
+2. Aprire l'app in **finestra in incognito** (per pulire la cache del bundle Vercel).
+3. Andare in Dashboard Admin → cliccare ✓ per ognuno dei 9 atleti in attesa (Diamante Sofia, Topazio Matteo, ecc.).
+4. **Adesso NON ricompariranno più**: il backfill non si triggera automaticamente e comunque non toccherebbe più atleti con `approved_at` valorizzato.
+
+---
+
 ## 🩺 10/07/2026 (v7.15) — Atleti orfani: fix strutturale + diagnostic/repair endpoints ✅
 
 **Segnalazione utente**: "Ci sono vari ragazzi registrati su LA TUA SOCIETA ASD ma nessun genitore 😱".

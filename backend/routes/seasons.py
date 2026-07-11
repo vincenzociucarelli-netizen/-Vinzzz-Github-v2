@@ -886,8 +886,23 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
         )
         payments_archived += p_res2.modified_count
         # 🆕 05/07/2026 — Reset privacy + status + trial per atleti già-resettati in precedenza
+        # ⚠️ 10/07/2026 (v7.15) — HOTFIX BUG "atleti approvati riproposti in attesa".
+        # In precedenza qui si applicava incondizionatamente `status=pending` a ogni
+        # atleta con `team_id_previous_season` valorizzato. Ma questo campo è un
+        # semplice SNAPSHOT permanente: rimane per sempre. Ogni chiamata del
+        # backfill (che è auto-triggered dalla pagina Archivio) ripristinava
+        # `pending` sugli atleti nel frattempo APPROVATI dall'admin, cancellando
+        # `trial_start_date` e le approvazioni. Ora escludiamo:
+        #   1) atleti già `status=pending` (idempotente),
+        #   2) atleti con `approved_at` valorizzato (già ri-approvati),
+        #   3) atleti con `_backfill_v0705_reset_done=true` (già trattati).
         await db.athletes.update_one(
-            {"id": a["id"], "society_id": sid, "status": {"$ne": "pending"}},
+            {
+                "id": a["id"], "society_id": sid,
+                "status": {"$ne": "pending"},
+                "approved_at": {"$in": [None, ""]},
+                "_backfill_v0705_reset_done": {"$ne": True},
+            },
             {
                 "$set": {
                     "privacy_pending_renewal": True,
@@ -895,6 +910,7 @@ async def backfill_reset_assignments(current_user = Depends(get_current_user)):
                     "privacy_accepted": False,
                     "privacy_accepted_previous_season": True,
                     "status": "pending",
+                    "_backfill_v0705_reset_done": True,
                 },
                 "$unset": {
                     "privacy_accepted_at": "", "privacy_accepted_by": "",

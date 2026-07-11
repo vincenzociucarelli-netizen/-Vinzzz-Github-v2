@@ -76,16 +76,12 @@ export default function SeasonsArchive() {
 
   useEffect(() => {
     loadData();
-    // 🆕 06/07/2026 — Auto-trigger silenzioso del backfill per applicare il reset esteso
-    // (compensi/contratti/pregresso/onboarding) a Coach/Collab/Dirigenti riconfermati con il
-    // codice vecchio. Idempotente: rifiltra ogni volta solo chi ha ancora dati residui.
-    (async () => {
-      try {
-        await api.post('/seasons/backfill-reset-assignments');
-      } catch {
-        // Silenzioso: eventuali errori non devono bloccare la pagina
-      }
-    })();
+    // ⚠️ 10/07/2026 (v7.15) — RIMOSSO auto-trigger del backfill.
+    // Motivo: `/seasons/backfill-reset-assignments` rimetteva a `status=pending`
+    // TUTTI gli atleti con `team_id_previous_season` valorizzato (cioè quelli già
+    // rientrati in stagione), cancellando le approvazioni fatte dall'admin.
+    // La routine di backfill resta disponibile SOLO come pulsante manuale
+    // (`handleBackfillReset`) per interventi retroattivi controllati.
   }, []);
 
   const onRefresh = async () => {
