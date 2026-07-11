@@ -16,7 +16,35 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
-## 🔥 10/07/2026 (v7.15-hotfix) — Bug "atleti approvati riproposti in attesa" ✅
+## 🔥 10/07/2026 (v7.15-hotfix2) — "Cartella Genitori vuota" ✅
+
+**Segnalazione utente** (screenshot Chiara Opale — scheda anagrafica → "Password Protezione Dati"):
+- Chiara Opale ha **due genitori collegati** (OPALE SANDRO primario + UNI LISA secondaria)
+- Ma nella cartella Genitori dell'admin: **0 genitori visibili**
+- Conseguenza: Lisa chiedeva reset password ma admin non poteva trovarla
+
+**Root cause** (`/api/users/parents` in `server.py:4994`):
+1. Il filtro era `active_seasons: current_season` (o `$exists: false`). Chi era rimasto nella stagione precedente → sparito.
+2. L'aggregazione `athlete_counts` considerava solo `parent_id`, ignorando `second_parent_id` — quindi anche se un secondo genitore appariva, il counter mostrava 0 atleti.
+
+**Fix strutturale**:
+1. **Source-of-truth invertita**: ora si parte dagli atleti attivi in `current_season`, si raccolgono i loro `parent_id` + `second_parent_id`, e SI CERCANO quei genitori indipendentemente da `active_seasons`.
+2. **Aggregazione con second_parent_id**: counter conta entrambi i ruoli.
+3. **Self-heal automatico** (silenzioso): genitori collegati ad atleti attivi ma senza `active_seasons=current_season` vengono auto-riportati in stagione (`$addToSet`) alla prima chiamata `GET /api/users/parents`. Marca `rollover_repaired_from_orphan=true` per audit.
+
+**Testing**:
+- ✅ 2 nuovi test in `/app/backend/tests/test_get_parents_visibility_v715.py`:
+  - `test_get_parents_shows_linked_parents_even_if_in_prev_season` (scenario Chiara+Sandro+Lisa)
+  - `test_get_parents_second_parent_alone_still_visible` (edge case: solo second_parent_id)
+- ✅ 11/11 test totali verdi (v7.15 nuovo + orphan + backfill + smoke)
+
+**Effetto in produzione**:
+- Dopo il deploy, alla prima apertura di `/admin/parents` l'admin vedrà TUTTI i genitori collegati ad atleti attivi.
+- I genitori con `active_seasons` vecchio vengono auto-riparati (nessuna azione manuale richiesta).
+- Ora admin può trovare Lisa1@test.com e resettarle la password.
+
+---
+
 
 **Segnalazione utente** (con screenshot):
 > "Ho già accettato queste ragazze e mi vengono riproposte di nuovo" — 9 atlete (Diamante Sofia, Topazio Matteo, Ametista Giulia, Quarzo Andrea, ecc.) su LA TUA SOCIETÀ ASD ricomparivano ogni volta in "Atleti in Attesa di Approvazione" dopo essere state approvate.

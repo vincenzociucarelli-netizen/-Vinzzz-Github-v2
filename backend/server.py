@@ -4993,31 +4993,73 @@ async def admin_dashboard_live_stats(current_user = Depends(get_current_user)):
 
 @api_router.get("/users/parents")
 async def get_parents(current_user = Depends(get_current_user)):
-    """Get all parents/athletes - OPTIMIZED with aggregation"""
+    """Get all parents linked to athletes active in current season.
+
+    🐛 10/07/2026 (v7.15) — HOTFIX "cartella Genitori vuota".
+    Prima si filtravano SOLO utenti con `active_seasons: current_season`
+    (o senza active_seasons). Se il genitore era rimasto nella stagione
+    precedente (bug `import-member` originale) SPARIVA dalla dashboard
+    — anche se aveva figli attivi (Chiara Opale con Sandro/Lisa era il
+    caso concreto: entrambi i genitori invisibili).
+
+    Ora la source-of-truth è: "genitori collegati (primary o secondary)
+    ad atleti attivi in stagione corrente". Chi compare ma non ha ancora
+    la stagione corrente viene auto-heal-ato in background."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere i genitori")
-    
+
     society_id = current_user.get("society_id")
-    # 🆕 02/07/2026 — Filtro clean-slate: solo genitori attivi nella stagione corrente
     from utils import get_current_season_for_society as _get_cs
     _cs = await _get_cs(db, society_id)
-    parents = await db.users.find({
+
+    # 1. Atleti attivi in stagione corrente + loro parent_id / second_parent_id
+    current_athletes = await db.athletes.find(
+        {"society_id": society_id, "active_seasons": _cs},
+        {"_id": 0, "id": 1, "parent_id": 1, "second_parent_id": 1},
+    ).to_list(5000)
+
+    linked_parent_ids: set = set()
+    counts_dict: dict = {}
+    for a in current_athletes:
+        for pid in [a.get("parent_id"), a.get("second_parent_id")]:
+            if pid:
+                linked_parent_ids.add(pid)
+                counts_dict[pid] = counts_dict.get(pid, 0) + 1
+
+    # 2. Genitori: quelli collegati agli atleti attivi ∪ quelli con active_seasons=current
+    #    ∪ quelli senza active_seasons (legacy fallback)
+    q: dict = {
         "role": UserRole.PARENT,
         "society_id": society_id,
         "$or": [
+            {"id": {"$in": list(linked_parent_ids)}} if linked_parent_ids else {"id": "__none__"},
             {"active_seasons": _cs},
             {"active_seasons": {"$exists": False}},
         ],
-    }).to_list(1000)
-    
-    # Batch fetch athlete counts using aggregation (avoid N+1 queries)
-    pipeline = [
-        {"$match": {"society_id": society_id}},
-        {"$group": {"_id": "$parent_id", "count": {"$sum": 1}}}
+    }
+    parents = await db.users.find(q).to_list(5000)
+
+    # 3. Self-heal silenzioso: genitori collegati ad atleti attivi ma senza
+    #    active_seasons=current_season → riporta in stagione (idempotente).
+    needing_heal = [
+        p["id"] for p in parents
+        if p["id"] in linked_parent_ids
+        and _cs not in (p.get("active_seasons") or [])
     ]
-    athlete_counts = await db.athletes.aggregate(pipeline).to_list(1000)
-    counts_dict = {item["_id"]: item["count"] for item in athlete_counts if item["_id"]}
-    
+    if needing_heal:
+        try:
+            await db.users.update_many(
+                {"id": {"$in": needing_heal}, "society_id": society_id, "role": UserRole.PARENT},
+                {"$addToSet": {"active_seasons": _cs},
+                 "$set": {"rollover_decision": "auto_healed",
+                          "rollover_decision_season": _cs,
+                          "rollover_decision_at": datetime.utcnow().isoformat(),
+                          "rollover_repaired_from_orphan": True}},
+            )
+            logger.info(f"[parents self-heal] society={society_id} healed={len(needing_heal)} season={_cs}")
+        except Exception as _e:
+            logger.warning(f"[parents self-heal] failed: {_e}")
+
     result = []
     for p in parents:
         result.append({
@@ -5032,7 +5074,7 @@ async def get_parents(current_user = Depends(get_current_user)):
             "phone": p.get("phone", ""),
             "fiscal_code": p.get("fiscal_code", ""),
         })
-    
+
     return result
 
 @api_router.get("/users/pending")
