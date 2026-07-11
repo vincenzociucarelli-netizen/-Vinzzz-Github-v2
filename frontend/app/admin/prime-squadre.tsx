@@ -164,11 +164,24 @@ export default function PrimeSquadrePage() {
         api.get('/users/coaches'),
       ]);
       
-      // Filter out athletes already in Atleti Pro
+      // Filter out athletes already in Atleti Pro + esclude MINORENNI
+      // (Riforma Sport: solo maggiorenni possono essere Atleti PRO)
       const primeSquadreIds = athletes.map(a => a.id);
-      
+
+      const _isAdult = (dob?: string | null) => {
+        if (!dob) return true; // legacy: nessuna data → non filtrare
+        try {
+          const d = new Date(dob);
+          const today = new Date();
+          let age = today.getFullYear() - d.getFullYear();
+          const m = today.getMonth() - d.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+          return age >= 18;
+        } catch { return true; }
+      };
+
       const availableAthletes = athletesRes.data
-        .filter((a: Athlete) => !primeSquadreIds.includes(a.id) && !a.is_compensated)
+        .filter((a: any) => !primeSquadreIds.includes(a.id) && !a.is_compensated && _isAdult(a.date_of_birth || a.birth_date))
         .map((a: Athlete) => ({ ...a, type: 'athlete' as const }));
       
       // Coaches - add type and format for display
@@ -471,6 +484,36 @@ export default function PrimeSquadrePage() {
           disabled={stats?.available_slots === 0}
         >
           <Text style={styles.addButtonText}>+ Aggiungi Atleta/Collaboratore</Text>
+        </TouchableOpacity>
+
+        {/* 🛠️ 10/07/2026 (v7.15) — Bottone di utility: rimuove eventuali minori
+            promossi per errore (backend rifiuta comunque le nuove promozioni). */}
+        <TouchableOpacity
+          style={[styles.addButton, { backgroundColor: '#6A1B9A', marginTop: 8 }]}
+          onPress={async () => {
+            const msg = 'Rimuovi dal roster Atleti PRO eventuali atleti MINORENNI inseriti per errore?\n\nL\'operazione:\n• Toglie il flag is_compensated\n• Ripristina athlete_type=quota\n• Non cancella nessun dato anagrafico/medico\n• È reversibile (li puoi ri-promuovere al compimento del 18°)';
+            const ok = Platform.OS === 'web'
+              ? window.confirm(msg)
+              : await new Promise<boolean>((res) => Alert.alert('Ripara Atleti PRO', msg, [
+                  { text: 'Annulla', style: 'cancel', onPress: () => res(false) },
+                  { text: 'Ripara', onPress: () => res(true) },
+                ]));
+            if (!ok) return;
+            try {
+              const r = await api.post('/prime-squadre/repair-remove-minors');
+              const n = r.data?.removed_count || 0;
+              const names = (r.data?.removed || []).map((x: any) => x.name).filter(Boolean).join(', ');
+              showAlert('Fatto', n > 0
+                ? `${n} minorenn${n === 1 ? 'e rimoss' : 'i rimoss'}${n === 1 ? 'a' : 'i'} dal roster Atleti PRO${names ? ':\n' + names : ''}`
+                : 'Nessun minorenne trovato nel roster. Tutto in ordine.');
+              await loadData();
+            } catch (e: any) {
+              showAlert('Errore', e?.response?.data?.detail || 'Riparazione fallita');
+            }
+          }}
+          data-testid="repair-remove-minors-btn"
+        >
+          <Text style={styles.addButtonText}>🛠️ Ripara: rimuovi minori dal roster</Text>
         </TouchableOpacity>
 
         {/* Athletes List */}

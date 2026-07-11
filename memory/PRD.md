@@ -16,6 +16,46 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 🏆 10/07/2026 (v7.15-hotfix4) — Minorenni erroneamente in Atleti PRO ✅
+
+**Segnalazione utente** (screenshot roster Atleti PRO):
+> "Perché questa ragazza di U15 è fra gli atleti PRO?"
+
+MERLI LISA, U.15 Femminile (minore ~14 anni), figurava tra i "Membri Atleti Pro" con compenso €0/mese e nessun contratto — segno di un click accidentale su "+ Aggiungi".
+
+**Root cause**:
+1. `POST /prime-squadre/athletes/{id}/enable` (server.py:23682) **NON verificava l'età**. Un admin poteva promuovere per errore un minore selezionandolo dalla modale "+ Aggiungi".
+2. `GET /prime-squadre/athletes` (server.py:23583) filtrava solo `is_compensated=True`, senza guardare l'età → se qualcuno era stato promosso per errore, rimaneva visibile.
+3. Frontend `admin/prime-squadre.tsx` modale "+ Aggiungi" non filtrava i minori dalla lista selezionabile.
+
+**Fix v7.15-hotfix4**:
+
+1. **Backend guard** (`enable-prime-squadre`): rifiuto con HTTP 400 e messaggio:
+   *"Impossibile promuovere {nome} a Atleta PRO: l'atleta è minorenne. Solo atleti maggiorenni possono essere inseriti nel roster Atleti PRO (rapporto di collaborazione sportiva Riforma Sport)."*
+
+2. **Backend filtro difensivo** (`GET /prime-squadre/athletes`): esclude atleti minorenni dalla lista PRO usando `date_of_birth` (fallback su `birth_date`, legacy senza data → non filtrati per retrocompatibilità).
+
+3. **Nuovo endpoint** `POST /api/prime-squadre/repair-remove-minors`: admin-only, idempotente, rimuove il flag `is_compensated` da tutti gli atleti minorenni erroneamente promossi, ripristina `athlete_type='quota'`, senza cancellare dati anagrafici/medici/pagamenti. Marca `_removed_from_pro_reason=auto_repair_minor` per audit. Verificato via curl in preview: 2 minori rimossi (test + BIANCHI SOFIA legacy).
+
+4. **Frontend** (`admin/prime-squadre.tsx`):
+   - Modale "+ Aggiungi": filtra i minorenni dalla lista atleti selezionabili
+   - Nuovo bottone viola **"🛠️ Ripara: rimuovi minori dal roster"** — chiama il repair endpoint con conferma
+
+**Testing**:
+- ✅ 3 nuovi test in `/app/backend/tests/test_no_minors_in_pro_v715.py`:
+  - `test_get_prime_squadre_filters_out_minors` (lista esclude minori)
+  - `test_enable_athlete_compensation_rejects_minor` (enable → 400)
+  - `test_repair_remove_minors_untouches_adults` (repair non tocca adulti)
+- ✅ 14/14 test totali verdi (3 nuovi + tutti gli altri v7.15)
+
+**Come rimuovere MERLI LISA dopo il deploy**:
+1. Save to GitHub → attendi ~5 minuti (Vercel + Render).
+2. Apri `/admin/prime-squadre` in produzione (in incognito per cache).
+3. Clicca **"🛠️ Ripara: rimuovi minori dal roster"** → conferma → fatto.
+4. MERLI LISA (e ogni altro minore erroneamente presente) viene rimossa in un click.
+
+---
+
 ## 📄 10/07/2026 (v7.15-hotfix3) — PDF documenti non si aprivano su Chrome Android ✅
 
 **Segnalazione utente** (screenshot Laura Opale, madre di Chiara, sorella Laura):

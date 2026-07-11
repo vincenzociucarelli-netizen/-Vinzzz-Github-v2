@@ -23582,7 +23582,14 @@ async def get_collaboratore_annual_compensation(
 
 @api_router.get("/prime-squadre/athletes")
 async def get_prime_squadre_athletes(current_user = Depends(get_current_user)):
-    """Get list of athletes, coaches, and dirigenti with compensation enabled (Prime Squadre members)"""
+    """Get list of athletes, coaches, and dirigenti with compensation enabled (Prime Squadre members).
+
+    🛡️ 10/07/2026 (v7.15) — Filtro difensivo minorenni.
+    Segnalazione utente: MERLI LISA (U.15 Femminile, minore) appariva
+    negli "Atleti Pro" con compenso €0 — probabile promozione accidentale.
+    Ora escludiamo dalla lista tutti gli atleti minorenni: solo maggiorenni
+    (o senza `date_of_birth`, per retrocompatibilità legacy) restano visibili.
+    """
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può accedere a Atleti Pro")
     
@@ -23601,6 +23608,25 @@ async def get_prime_squadre_athletes(current_user = Depends(get_current_user)):
         _t_q["society_id"] = _sid
     athletes = await db.athletes.find(_a_q).to_list(100)
     clean_mongo_docs(athletes)
+
+    # 🛡️ Filtro difensivo minorenni: usa la stessa logica dell'app.
+    def _is_adult(a: dict) -> bool:
+        dob = a.get("date_of_birth") or a.get("birth_date")
+        if not dob:
+            return True  # legacy: nessuna data → non filtrare
+        try:
+            if isinstance(dob, str):
+                d = datetime.fromisoformat(dob.split("T")[0].replace("Z", "")).date()
+            elif hasattr(dob, "date"):
+                d = dob.date()
+            else:
+                d = dob
+            today = datetime.utcnow().date()
+            years = today.year - d.year - ((today.month, today.day) < (d.month, d.day))
+            return years >= 18
+        except Exception:
+            return True
+    athletes = [a for a in athletes if _is_adult(a)]
     
     # Get coaches with is_compensated = True
     # 🆕 02/07/2026 — Escludi coach dual-role (linked_athlete_id): sono già rappresentati
@@ -23665,6 +23691,65 @@ async def get_prime_squadre_athletes(current_user = Depends(get_current_user)):
     
     # Combine and return
     return athletes + coaches + dirigenti
+
+
+@api_router.post("/prime-squadre/repair-remove-minors")
+async def repair_remove_minors_from_pro(current_user = Depends(get_current_user)):
+    """🛠️ 10/07/2026 (v7.15) — Rimuove immediatamente dal roster Atleti Pro
+    tutti gli atleti minorenni erroneamente promossi. Setta `is_compensated=False`
+    e ripristina `athlete_type='quota'` (default per non-PRO). NON cancella
+    dati anagrafici, medici o pagamenti dell'atleta.
+    Admin-only. Idempotente."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    _sid = current_user.get("society_id")
+    q: dict = {"is_compensated": True}
+    if _sid:
+        q["society_id"] = _sid
+    minors_removed: list = []
+    async for a in db.athletes.find(q, {"_id": 0, "id": 1, "full_name": 1, "date_of_birth": 1, "birth_date": 1, "team_id": 1}):
+        _dob = a.get("date_of_birth") or a.get("birth_date")
+        if not _dob:
+            continue
+        try:
+            if isinstance(_dob, str):
+                _d = datetime.fromisoformat(_dob.split("T")[0].replace("Z", "")).date()
+            elif hasattr(_dob, "date"):
+                _d = _dob.date()
+            else:
+                _d = _dob
+            _today = datetime.utcnow().date()
+            _years = _today.year - _d.year - ((_today.month, _today.day) < (_d.month, _d.day))
+            if _years < 18:
+                await db.athletes.update_one(
+                    {"id": a["id"]},
+                    {"$set": {
+                        "is_compensated": False,
+                        "athlete_type": "quota",
+                        "pro_without_compensation": False,
+                        "monthly_compensation": 0,
+                        "_removed_from_pro_reason": "auto_repair_minor",
+                        "_removed_from_pro_at": datetime.utcnow().isoformat(),
+                    }},
+                )
+                minors_removed.append({"id": a["id"], "name": a.get("full_name", "")})
+        except Exception:
+            continue
+    try:
+        await db.audit_logs.insert_one({
+            "id": str(datetime.utcnow().timestamp()).replace(".", ""),
+            "society_id": _sid,
+            "user_id": current_user["id"],
+            "user_name": current_user.get("full_name", ""),
+            "action": "repair_remove_minors_from_pro",
+            "count": len(minors_removed),
+            "athletes": minors_removed,
+            "timestamp": datetime.utcnow().isoformat(),
+        })
+    except Exception:
+        pass
+    return {"ok": True, "removed_count": len(minors_removed), "removed": minors_removed}
+
 
 class EnablePrimeSquadreBody(BaseModel):
     """🆕 30/06/2026 — Body opzionale per la promozione Atleta 18+ → PRO.
@@ -23737,7 +23822,45 @@ async def enable_athlete_compensation(
         "medical_certificate_validated_by": 1,
         "medical_certificate_status": 1,
         "status": 1,
+        "date_of_birth": 1,
+        "birth_date": 1,
+        "first_name": 1,
+        "last_name": 1,
+        "full_name": 1,
     })
+
+    # 🛡️ 10/07/2026 (v7.15) — Blocca la promozione a Atleta PRO dei minorenni.
+    # Segnalazione utente: MERLI LISA (U.15 Femminile) era finita per errore
+    # negli Atleti Pro. Un minore NON può essere un Atleta PRO (retribuito o
+    # in quota) — la Riforma Sport richiede maggiore età per il rapporto di
+    # collaborazione sportiva remunerata.
+    if existing_athlete:
+        _dob = existing_athlete.get("date_of_birth") or existing_athlete.get("birth_date")
+        _is_minor_check = False
+        if _dob:
+            try:
+                if isinstance(_dob, str):
+                    _d = datetime.fromisoformat(_dob.split("T")[0].replace("Z", "")).date()
+                elif hasattr(_dob, "date"):
+                    _d = _dob.date()
+                else:
+                    _d = _dob
+                _today = datetime.utcnow().date()
+                _years = _today.year - _d.year - ((_today.month, _today.day) < (_d.month, _d.day))
+                _is_minor_check = _years < 18
+            except Exception:
+                _is_minor_check = False
+        if _is_minor_check:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Impossibile promuovere {existing_athlete.get('full_name') or 'atleta'} "
+                    "a Atleta PRO: l'atleta è minorenne. Solo atleti maggiorenni possono "
+                    "essere inseriti nel roster Atleti PRO (rapporto di collaborazione "
+                    "sportiva Riforma Sport)."
+                ),
+            )
+
     cert_valid = False
     if existing_athlete:
         exp_raw = existing_athlete.get("medical_certificate_expiry")
