@@ -16,6 +16,46 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 💰 10/07/2026 (v7.15-hotfix6) — Normalizzazione quietanze estesa a Coach/Dirigente/Collaboratore ✅
+
+**Contesto**: L'hotfix5 aveva risolto la discrepanza "Già Percepito vs. calendario" per gli atleti PRO. Il pattern "record legacy con `month` string + campi `signed`/`amount` invece di `receipt_signed`/`amount_gross`" può esistere in tutte le collezioni compensi. Estendo la stessa logica a **Coach**, **Dirigente**, **Collaboratore** per prevenire lo stesso bug in altre 3 aree critiche (soglie Riforma Sport).
+
+**Refactor DRY** (`server.py`):
+- Nuovi helper condivisi al top della sezione compensi:
+  - `_normalize_receipt_record_inplace(r)` — normalizza on-the-fly un singolo record
+  - `_normalize_legacy_records_in_db(collection, key, user_id)` — fix permanente + report
+  - `_diagnostic_compensation_records(records)` — calcola counters di consistenza
+- Costanti condivise `_COMP_MONTH_NAME_TO_INT` / `_COMP_MONTH_INT_TO_NAME`
+
+**Endpoint modificati** (normalize on-the-fly nel GET):
+- `GET /coach/{id}/compensation`
+- `GET /dirigente/{id}/compensation`
+- `GET /collaboratore/{id}/compensation`
+- `GET /athletes/{id}/compensation/receipts` (già fatto in hotfix5, ora usa l'helper)
+
+**Nuovi endpoint** (admin-only, idempotenti):
+- `GET /admin/coach/{id}/compensation/diagnostic` + `POST /admin/coach/{id}/compensation/normalize-legacy`
+- `GET /admin/dirigente/{id}/compensation/diagnostic` + `POST /admin/dirigente/{id}/compensation/normalize-legacy`
+- `GET /admin/collaboratore/{id}/compensation/diagnostic` + `POST /admin/collaboratore/{id}/compensation/normalize-legacy`
+
+**Helper condiviso** `_admin_check_user_and_society()` per validare admin + società + ruolo compatibile (evita 3 blocchi identici).
+
+**Frontend** — bottone viola **"🩺 Diagnostica quietanze (legacy fix)"** aggiunto in:
+- `/admin/coach/[id].tsx` (tab COMPENSI, sotto "Genera Quietanza Personalizzata")
+- `/admin/dirigente/[id].tsx` (tab COMPENSI, sotto "Genera Quietanza Personalizzata")
+- `/admin/collaboratore/[id].tsx` (sotto "Genera Quietanza Personalizzata")
+- `/admin/athlete/[id].tsx` (già fatto in hotfix5)
+
+Stesso flusso UX: se `needs_normalization=false` → messaggio "Nessuna anomalia"; se `true` → conferma → normalize. Data-testid consistenti (`admin-{role}-normalize-receipts-btn`).
+
+**Testing verificato via curl** (preview): seed di 3 users (coach + dirigente + collaboratore) con record legacy → GET restituisce già normalizzato → diagnostic identifica anomalie → normalize convertono permanentemente (records_updated=1 per ognuno).
+
+**Test regressione**: 3 nuovi test parametrizzati in `test_receipt_legacy_month_v715.py` che eseguono la normalizzazione contro tutte e 3 le collezioni non-atleta. **20/20 test totali verdi**.
+
+**Effetto**: qualunque record legacy in **qualunque delle 4 collezioni compensi** viene ora normalizzato al primo GET (fix immediato senza toccare DB) o al primo click sul bottone diagnostica (fix permanente in DB). I widget aggregati e i calendari mensili di tutti i ruoli sono ora sempre coerenti.
+
+---
+
 ## 💰 10/07/2026 (v7.15-hotfix5) — "Già Percepito" incoerente con calendario ✅
 
 **Segnalazione utente** (BRETELLI PAOLA, Atleta PRO):

@@ -1396,6 +1396,40 @@ export default function AdminCollaboratoreDetail() {
               Genera Quietanza Personalizzata
             </Text>
           </TouchableOpacity>
+
+          {/* 🩺 10/07/2026 (v7.15) — Diagnostica quietanze legacy */}
+          <TouchableOpacity
+            style={{ marginTop: 8, padding: 10, backgroundColor: '#6A1B9A', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+            onPress={async () => {
+              try {
+                const diag = await api.get(`/admin/collaboratore/${id}/compensation/diagnostic`);
+                const t = diag.data.totals;
+                const details = `Record totali: ${t.records}\nFirmati: ${t.signed_records}\nSomma firmati: €${t.signed_total_eur}\nRecord con mese in stringa: ${t.legacy_month_strings}\nRecord senza campo receipt_signed: ${t.missing_receipt_signed_field}`;
+                if (!t.needs_normalization) {
+                  if (Platform.OS === 'web') window.alert(`✅ Nessuna anomalia:\n\n${details}`);
+                  else Alert.alert('Diagnostica quietanze', `✅ Nessuna anomalia:\n\n${details}`);
+                  return;
+                }
+                const ok = Platform.OS === 'web'
+                  ? window.confirm(`⚠ Trovati record da normalizzare:\n\n${details}\n\nProcedo a convertirli in formato moderno? (idempotente, nessun dato viene cancellato)`)
+                  : await new Promise<boolean>((res) => Alert.alert('Normalizza quietanze legacy', `${details}\n\nProcedo?`, [
+                      { text: 'Annulla', style: 'cancel', onPress: () => res(false) },
+                      { text: 'Normalizza', onPress: () => res(true) },
+                    ]));
+                if (!ok) return;
+                const r = await api.post(`/admin/collaboratore/${id}/compensation/normalize-legacy`);
+                const msg = `✅ Normalizzati ${r.data.records_updated} record.`;
+                if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Fatto', msg);
+              } catch (e: any) {
+                const msg = e?.response?.data?.detail || 'Errore diagnostica';
+                if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Errore', msg);
+              }
+            }}
+            data-testid="admin-collaboratore-normalize-receipts-btn"
+          >
+            <Ionicons name="construct-outline" size={16} color="#fff" />
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>🩺 Diagnostica quietanze (legacy fix)</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Assegnazioni Squadre e Palestre - Sezione separata sempre visibile */}

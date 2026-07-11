@@ -7763,6 +7763,128 @@ async def update_athlete_compensation_settings(athlete_id: str, data: dict, curr
     
     return {"message": "Impostazioni compenso aggiornate"}
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 🩺 10/07/2026 (v7.15) — Helper condiviso per normalizzazione record compensi.
+# Gestisce record legacy (`month` string italiano, `signed`/`amount` field names)
+# convertendoli al formato moderno (`month` int, `receipt_signed`/`amount_gross`).
+# Usato da athlete/coach/dirigente/collaboratore compensations endpoints.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_COMP_MONTH_NAME_TO_INT = {
+    "gennaio": 1, "febbraio": 2, "marzo": 3, "aprile": 4, "maggio": 5, "giugno": 6,
+    "luglio": 7, "agosto": 8, "settembre": 9, "ottobre": 10, "novembre": 11, "dicembre": 12,
+}
+_COMP_MONTH_INT_TO_NAME = {v: k.capitalize() for k, v in _COMP_MONTH_NAME_TO_INT.items()}
+
+
+def _normalize_receipt_record_inplace(r: dict) -> dict:
+    """Normalizza on-the-fly un singolo record compensi.
+    Non tocca il DB. Aggiunge/completa i campi mancanti sull'oggetto passato."""
+    _m_raw = r.get("month")
+    _m_int = None
+    if isinstance(_m_raw, int):
+        _m_int = _m_raw
+    elif isinstance(_m_raw, str):
+        _m_int = _COMP_MONTH_NAME_TO_INT.get(_m_raw.strip().lower())
+        if _m_int is None:
+            try:
+                _m_int = int(_m_raw)
+            except (ValueError, TypeError):
+                _m_int = None
+    _rs = r.get("receipt_signed")
+    if _rs is None:
+        _rs = bool(r.get("signed"))
+    _rs_date = r.get("receipt_signed_date") or r.get("signed_date")
+    _amount_gross = r.get("amount_gross")
+    if _amount_gross is None:
+        _amount_gross = r.get("amount")
+    _amount = r.get("amount")
+    if _amount is None:
+        _amount = _amount_gross
+    r["month"] = _m_int if _m_int is not None else _m_raw
+    if _m_int is not None and not r.get("month_name"):
+        r["month_name"] = _COMP_MONTH_INT_TO_NAME.get(_m_int)
+    r["receipt_signed"] = _rs
+    r["receipt_signed_date"] = _rs_date
+    r["amount_gross"] = _amount_gross
+    r["amount"] = _amount
+    return r
+
+
+async def _normalize_legacy_records_in_db(collection_name: str, key: str, user_id: str) -> list:
+    """Applica la normalizzazione PERMANENTE ai record legacy nel DB.
+    Restituisce la lista delle modifiche fatte (per audit/report).
+    Idempotente: rieseguibile senza effetti collaterali."""
+    coll = db[collection_name]
+    updated: list = []
+    async for r in coll.find({key: user_id}, {"_id": 0}):
+        changes: dict = {}
+        _m_raw = r.get("month")
+        if isinstance(_m_raw, str):
+            _m_int = _COMP_MONTH_NAME_TO_INT.get(_m_raw.strip().lower())
+            if _m_int is None:
+                try:
+                    _m_int = int(_m_raw)
+                except (ValueError, TypeError):
+                    _m_int = None
+            if _m_int is not None:
+                changes["month"] = _m_int
+                if not r.get("month_name"):
+                    changes["month_name"] = _COMP_MONTH_INT_TO_NAME.get(_m_int)
+        if r.get("receipt_signed") is None and r.get("signed") is not None:
+            changes["receipt_signed"] = bool(r.get("signed"))
+        if r.get("signed") is None and r.get("receipt_signed") is not None:
+            changes["signed"] = bool(r.get("receipt_signed"))
+        if not r.get("receipt_signed_date") and r.get("signed_date"):
+            changes["receipt_signed_date"] = r.get("signed_date")
+        if not r.get("signed_date") and r.get("receipt_signed_date"):
+            changes["signed_date"] = r.get("receipt_signed_date")
+        if r.get("amount_gross") is None and r.get("amount") is not None:
+            changes["amount_gross"] = r.get("amount")
+        if r.get("amount") is None and r.get("amount_gross") is not None:
+            changes["amount"] = r.get("amount_gross")
+
+        if changes:
+            await coll.update_one(
+                {key: user_id, "year": r.get("year"), "month": r.get("month")},
+                {"$set": changes},
+            )
+            updated.append({
+                "year": r.get("year"),
+                "month_before": _m_raw,
+                "month_after": changes.get("month", _m_raw),
+                "fields_updated": list(changes.keys()),
+            })
+    return updated
+
+
+def _diagnostic_compensation_records(records: list) -> dict:
+    """Calcola i counters di consistenza per un elenco di record raw.
+    Restituisce metriche utili al pannello 'Diagnostica quietanze'."""
+    total_signed = 0.0
+    signed_count = 0
+    legacy_month_strings = 0
+    missing_receipt_signed = 0
+    for r in records:
+        is_signed = r.get("receipt_signed") or r.get("signed") or False
+        if is_signed:
+            signed_count += 1
+            total_signed += float(r.get("amount_gross") or r.get("amount") or 0)
+        _m = r.get("month")
+        if isinstance(_m, str) and not _m.isdigit():
+            legacy_month_strings += 1
+        if r.get("receipt_signed") is None and r.get("signed") is not None:
+            missing_receipt_signed += 1
+    return {
+        "records": len(records),
+        "signed_records": signed_count,
+        "signed_total_eur": round(total_signed, 2),
+        "legacy_month_strings": legacy_month_strings,
+        "missing_receipt_signed_field": missing_receipt_signed,
+        "needs_normalization": legacy_month_strings > 0 or missing_receipt_signed > 0,
+    }
+
+
 @api_router.get("/athletes/{athlete_id}/compensation/receipts")
 async def get_athlete_compensation_receipts(athlete_id: str, current_user = Depends(get_current_user)):
     """Get signed receipts for an athlete - admin or the athlete themselves.
@@ -7785,47 +7907,7 @@ async def get_athlete_compensation_receipts(athlete_id: str, current_user = Depe
 
     receipts = await db.athlete_compensation_receipts.find({"athlete_id": athlete_id}).to_list(100)
     clean_mongo_docs(receipts)
-
-    _month_name_to_int = {
-        "gennaio": 1, "febbraio": 2, "marzo": 3, "aprile": 4, "maggio": 5, "giugno": 6,
-        "luglio": 7, "agosto": 8, "settembre": 9, "ottobre": 10, "novembre": 11, "dicembre": 12,
-    }
-    _month_int_to_name = {v: k.capitalize() for k, v in _month_name_to_int.items()}
-
-    normalized = []
-    for r in receipts:
-        # Normalizza month: se è string legacy → int; se è int → int
-        _m_raw = r.get("month")
-        _m_int = None
-        if isinstance(_m_raw, int):
-            _m_int = _m_raw
-        elif isinstance(_m_raw, str):
-            _m_int = _month_name_to_int.get(_m_raw.strip().lower())
-            if _m_int is None:
-                try:
-                    _m_int = int(_m_raw)
-                except (ValueError, TypeError):
-                    _m_int = None
-        # Normalizza campi firma/importo (legacy vs. moderno)
-        _rs = r.get("receipt_signed")
-        if _rs is None:
-            _rs = bool(r.get("signed"))
-        _rs_date = r.get("receipt_signed_date") or r.get("signed_date")
-        _amount_gross = r.get("amount_gross")
-        if _amount_gross is None:
-            _amount_gross = r.get("amount")
-        _amount = r.get("amount")
-        if _amount is None:
-            _amount = _amount_gross
-        r["month"] = _m_int if _m_int is not None else _m_raw
-        if _m_int is not None:
-            r["month_name"] = r.get("month_name") or _month_int_to_name.get(_m_int)
-        r["receipt_signed"] = _rs
-        r["receipt_signed_date"] = _rs_date
-        r["amount_gross"] = _amount_gross
-        r["amount"] = _amount
-        normalized.append(r)
-    return normalized
+    return [_normalize_receipt_record_inplace(r) for r in receipts]
 
 
 # 🆕 27/02/2026 — Reset Quietanze: cancella TUTTE le quietanze di un atleta (e Coach linked se dual-role)
@@ -7856,57 +7938,7 @@ async def admin_normalize_athlete_receipts(athlete_id: str, current_user = Depen
     if athlete.get("society_id") != current_user.get("society_id"):
         raise HTTPException(status_code=403, detail="Atleta di altra società")
 
-    _month_name_to_int = {
-        "gennaio": 1, "febbraio": 2, "marzo": 3, "aprile": 4, "maggio": 5, "giugno": 6,
-        "luglio": 7, "agosto": 8, "settembre": 9, "ottobre": 10, "novembre": 11, "dicembre": 12,
-    }
-    _month_int_to_name = {v: k.capitalize() for k, v in _month_name_to_int.items()}
-
-    updated = []
-    async for r in db.athlete_compensation_receipts.find({"athlete_id": athlete_id}, {"_id": 0}):
-        changes: dict = {}
-        # 1. month string → int
-        _m_raw = r.get("month")
-        if isinstance(_m_raw, str):
-            _m_int = _month_name_to_int.get(_m_raw.strip().lower())
-            if _m_int is None:
-                try:
-                    _m_int = int(_m_raw)
-                except (ValueError, TypeError):
-                    _m_int = None
-            if _m_int is not None:
-                changes["month"] = _m_int
-                if not r.get("month_name"):
-                    changes["month_name"] = _month_int_to_name.get(_m_int)
-        # 2. receipt_signed / signed
-        if r.get("receipt_signed") is None and r.get("signed") is not None:
-            changes["receipt_signed"] = bool(r.get("signed"))
-        if r.get("signed") is None and r.get("receipt_signed") is not None:
-            changes["signed"] = bool(r.get("receipt_signed"))
-        # 3. dates
-        if not r.get("receipt_signed_date") and r.get("signed_date"):
-            changes["receipt_signed_date"] = r.get("signed_date")
-        if not r.get("signed_date") and r.get("receipt_signed_date"):
-            changes["signed_date"] = r.get("receipt_signed_date")
-        # 4. amounts
-        if r.get("amount_gross") is None and r.get("amount") is not None:
-            changes["amount_gross"] = r.get("amount")
-        if r.get("amount") is None and r.get("amount_gross") is not None:
-            changes["amount"] = r.get("amount_gross")
-
-        if changes:
-            await db.athlete_compensation_receipts.update_one(
-                {"athlete_id": athlete_id, "year": r.get("year"), "month": r.get("month")},
-                {"$set": changes},
-            )
-            updated.append({
-                "year": r.get("year"),
-                "month_before": _m_raw,
-                "month_after": changes.get("month", _m_raw),
-                "receipt_signed": r.get("receipt_signed") or r.get("signed"),
-                "amount": r.get("amount_gross") or r.get("amount"),
-                "fields_updated": list(changes.keys()),
-            })
+    updated = await _normalize_legacy_records_in_db("athlete_compensation_receipts", "athlete_id", athlete_id)
 
     return {
         "ok": True,
@@ -7935,33 +7967,99 @@ async def admin_diagnostic_athlete_receipts(athlete_id: str, current_user = Depe
     receipts = await db.athlete_compensation_receipts.find({"athlete_id": athlete_id}).to_list(200)
     clean_mongo_docs(receipts)
 
-    total_signed = 0.0
-    signed_count = 0
-    legacy_month_strings = 0
-    missing_receipt_signed = 0
-    for r in receipts:
-        is_signed = r.get("receipt_signed") or r.get("signed") or False
-        if is_signed:
-            signed_count += 1
-            total_signed += float(r.get("amount_gross") or r.get("amount") or 0)
-        if isinstance(r.get("month"), str) and not r.get("month", "").isdigit():
-            legacy_month_strings += 1
-        if r.get("receipt_signed") is None and r.get("signed") is not None:
-            missing_receipt_signed += 1
-
     return {
         "athlete_id": athlete_id,
         "athlete_name": athlete.get("full_name", ""),
-        "totals": {
-            "records": len(receipts),
-            "signed_records": signed_count,
-            "signed_total_eur": round(total_signed, 2),
-            "legacy_month_strings": legacy_month_strings,
-            "missing_receipt_signed_field": missing_receipt_signed,
-            "needs_normalization": legacy_month_strings > 0 or missing_receipt_signed > 0,
-        },
+        "totals": _diagnostic_compensation_records(receipts),
         "records": receipts,
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 🩺 10/07/2026 (v7.15) — Diagnostica + normalize-legacy per Coach/Dirigente/Collaboratore.
+# Stesso pattern usato per gli atleti PRO: identifica record con `month` stringa
+# italiana ("Giugno") o campi legacy `signed`/`amount` e li normalizza al formato
+# moderno. Endpoints admin-only, idempotenti, non distruttivi.
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def _admin_check_user_and_society(user_id: str, expected_roles: list, current_user: dict) -> dict:
+    """Verifica che l'utente esista, sia del ruolo giusto e appartenga alla società admin."""
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "id": 1, "society_id": 1, "full_name": 1, "role": 1})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    if user.get("role") not in expected_roles:
+        raise HTTPException(status_code=400, detail=f"Ruolo non compatibile: {user.get('role')}")
+    if user.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Utente di altra società")
+    return user
+
+
+@api_router.get("/admin/coach/{coach_id}/compensation/diagnostic")
+async def admin_diagnostic_coach_receipts(coach_id: str, current_user = Depends(get_current_user)):
+    """Report raw dei record `coach_compensations` per un coach. Read-only."""
+    user = await _admin_check_user_and_society(coach_id, [UserRole.COACH, UserRole.ADMIN], current_user)
+    receipts = await db.coach_compensations.find({"coach_id": coach_id}).to_list(200)
+    clean_mongo_docs(receipts)
+    return {
+        "user_id": coach_id, "user_name": user.get("full_name", ""), "role": "coach",
+        "totals": _diagnostic_compensation_records(receipts),
+        "records": receipts,
+    }
+
+
+@api_router.post("/admin/coach/{coach_id}/compensation/normalize-legacy")
+async def admin_normalize_coach_receipts(coach_id: str, current_user = Depends(get_current_user)):
+    """Normalizza permanentemente i record legacy `coach_compensations`."""
+    user = await _admin_check_user_and_society(coach_id, [UserRole.COACH, UserRole.ADMIN], current_user)
+    updated = await _normalize_legacy_records_in_db("coach_compensations", "coach_id", coach_id)
+    return {"ok": True, "user_id": coach_id, "user_name": user.get("full_name", ""),
+            "role": "coach", "records_updated": len(updated), "updates": updated}
+
+
+@api_router.get("/admin/dirigente/{dirigente_id}/compensation/diagnostic")
+async def admin_diagnostic_dirigente_receipts(dirigente_id: str, current_user = Depends(get_current_user)):
+    """Report raw dei record `dirigente_compensations` per un dirigente. Read-only."""
+    user = await _admin_check_user_and_society(dirigente_id, [UserRole.VIEWER, UserRole.DIRIGENTE, UserRole.ADMIN], current_user)
+    receipts = await db.dirigente_compensations.find({"dirigente_id": dirigente_id}).to_list(200)
+    clean_mongo_docs(receipts)
+    return {
+        "user_id": dirigente_id, "user_name": user.get("full_name", ""), "role": "dirigente",
+        "totals": _diagnostic_compensation_records(receipts),
+        "records": receipts,
+    }
+
+
+@api_router.post("/admin/dirigente/{dirigente_id}/compensation/normalize-legacy")
+async def admin_normalize_dirigente_receipts(dirigente_id: str, current_user = Depends(get_current_user)):
+    """Normalizza permanentemente i record legacy `dirigente_compensations`."""
+    user = await _admin_check_user_and_society(dirigente_id, [UserRole.VIEWER, UserRole.DIRIGENTE, UserRole.ADMIN], current_user)
+    updated = await _normalize_legacy_records_in_db("dirigente_compensations", "dirigente_id", dirigente_id)
+    return {"ok": True, "user_id": dirigente_id, "user_name": user.get("full_name", ""),
+            "role": "dirigente", "records_updated": len(updated), "updates": updated}
+
+
+@api_router.get("/admin/collaboratore/{collaboratore_id}/compensation/diagnostic")
+async def admin_diagnostic_collaboratore_receipts(collaboratore_id: str, current_user = Depends(get_current_user)):
+    """Report raw dei record `collaboratore_compensations`. Read-only."""
+    user = await _admin_check_user_and_society(collaboratore_id, [UserRole.COLLABORATORE, UserRole.ADMIN], current_user)
+    receipts = await db.collaboratore_compensations.find({"collaboratore_id": collaboratore_id}).to_list(200)
+    clean_mongo_docs(receipts)
+    return {
+        "user_id": collaboratore_id, "user_name": user.get("full_name", ""), "role": "collaboratore",
+        "totals": _diagnostic_compensation_records(receipts),
+        "records": receipts,
+    }
+
+
+@api_router.post("/admin/collaboratore/{collaboratore_id}/compensation/normalize-legacy")
+async def admin_normalize_collaboratore_receipts(collaboratore_id: str, current_user = Depends(get_current_user)):
+    """Normalizza permanentemente i record legacy `collaboratore_compensations`."""
+    user = await _admin_check_user_and_society(collaboratore_id, [UserRole.COLLABORATORE, UserRole.ADMIN], current_user)
+    updated = await _normalize_legacy_records_in_db("collaboratore_compensations", "collaboratore_id", collaboratore_id)
+    return {"ok": True, "user_id": collaboratore_id, "user_name": user.get("full_name", ""),
+            "role": "collaboratore", "records_updated": len(updated), "updates": updated}
 
 
 @api_router.delete("/admin/athletes/{athlete_id}/compensation/reset-all")
@@ -14251,6 +14349,8 @@ async def get_coach_compensation(coach_id: str, current_user = Depends(get_curre
     
     records = await db.coach_compensations.find({"coach_id": coach_id, "is_previous_season": {"$ne": True}}).sort([("year", -1), ("month", -1)]).to_list(100)
     clean_mongo_docs(records)
+    # 🐛 10/07/2026 (v7.15) — Normalizza on-the-fly record legacy (month string→int)
+    records = [_normalize_receipt_record_inplace(r) for r in records]
     return records
 
 @api_router.post("/coach/{coach_id}/compensation")
@@ -22054,6 +22154,8 @@ async def get_dirigente_compensation(dirigente_id: str, current_user = Depends(g
     
     records = await db.dirigente_compensations.find({"dirigente_id": dirigente_id, "is_previous_season": {"$ne": True}}).sort([("year", -1), ("month", -1)]).to_list(100)
     clean_mongo_docs(records)
+    # 🐛 10/07/2026 (v7.15) — Normalizza on-the-fly record legacy
+    records = [_normalize_receipt_record_inplace(r) for r in records]
     return records
 
 @api_router.post("/dirigente/{dirigente_id}/compensation")
@@ -22875,6 +22977,8 @@ async def get_collaboratore_compensation(collaboratore_id: str, current_user = D
     
     records = await db.collaboratore_compensations.find({"collaboratore_id": collaboratore_id, "is_previous_season": {"$ne": True}}).to_list(100)
     clean_mongo_docs(records)
+    # 🐛 10/07/2026 (v7.15) — Normalizza on-the-fly record legacy
+    records = [_normalize_receipt_record_inplace(r) for r in records]
     
     return {
         "collaboratore": {
