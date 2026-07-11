@@ -20907,11 +20907,45 @@ async def get_signed_document_pdf(document_id: str, current_user = Depends(get_c
 
     if not pdf_bytes:
         raise HTTPException(status_code=404, detail="PDF non disponibile per questo documento")
-    
+
+    # 🐛 10/07/2026 (v7.15) — HOTFIX "PDF non si apre su Chrome Android".
+    # Prima: `attachment; filename=documento_firmato_<uuid>.pdf` forzava il
+    # download → Chrome mobile mostrava una preview col placeholder PDF + il
+    # nome UUID + bottone "Apri" (che apriva un'app esterna, se installata).
+    # Ora: `inline` così l'iframe di InAppPdfModal renderizza il PDF a schermo
+    # intero come già fa l'endpoint /documents/consent-pdf.
+    # Il filename è costruito dal `document_type` per rendere il nome download
+    # leggibile qualora l'utente decidesse comunque di salvare il file.
+    _doc_type_labels = {
+        "gdpr_privacy_adult": "informativa_privacy",
+        "gdpr_privacy_minor": "informativa_privacy_minore",
+        "gdpr_adult": "informativa_gdpr",
+        "gdpr_minor": "informativa_gdpr_minore",
+        "privacy_consent": "consenso_privacy",
+        "trial_declaration": "dichiarazione_periodo_prova",
+        "compensation_receipt": "quietanza",
+        "coach_compensation_receipt": "quietanza_coach",
+        "collaboratore_compensation_receipt": "quietanza_collaboratore",
+        "threshold_5000_communication": "comunicazione_soglia_5000",
+        "threshold_15000_communication": "comunicazione_soglia_15000",
+    }
+    _dt = document.get("document_type") or "documento"
+    _label = _doc_type_labels.get(_dt, _dt)
+    _signer = (document.get("signer_name") or "").strip().replace(" ", "_")
+    _filename = f"{_label}_{_signer}.pdf" if _signer else f"{_label}.pdf"
+    # Sanitize per Content-Disposition ASCII-safe
+    import re as _re
+    _filename = _re.sub(r"[^\w.\-]", "_", _filename)
+
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=documento_firmato_{document_id}.pdf", "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
+        headers={
+            "Content-Disposition": f"inline; filename=\"{_filename}\"",
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
     )
 
 

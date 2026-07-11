@@ -16,6 +16,38 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 📄 10/07/2026 (v7.15-hotfix3) — PDF documenti non si aprivano su Chrome Android ✅
+
+**Segnalazione utente** (screenshot Laura Opale, madre di Chiara, sorella Laura):
+- Madre vede correttamente l'elenco documenti firmati di Laura (2 documenti: Informativa Privacy + Dichiarazione Periodo di Prova)
+- Cliccando su un documento, viene mostrata la modale con PDF-placeholder + UUID + bottone "Apri" (di Chrome mobile) che non fa nulla
+- **Non riusciva ad aprire nessun PDF**
+
+**Root cause (doppia)**:
+1. **Backend** (`server.py:20914`): endpoint `/api/documents/signed/{doc_id}/pdf` restituiva `Content-Disposition: attachment; filename=documento_firmato_<uuid>.pdf` — `attachment` forza il download, e il filename UUID appariva come nome del file nella preview di Chrome.
+2. **Frontend** (`InAppPdfModal.tsx`): l'iframe con blob URL **non è renderizzato inline da Chrome Android** (il browser mobile non ha lettore PDF built-in per iframe). Chrome mostrava un placeholder grigio + il suo bottone "Apri" (che tentava di lanciare un'app PDF esterna — se assente sul telefono, nulla accadeva).
+
+**Fix v7.15-hotfix3**:
+
+1. **Backend**: `Content-Disposition` cambiato da `attachment` a `inline`, con filename leggibile costruito dal `document_type` + nome firmatario:
+   - Prima: `documento_firmato_7c984ebd-7336-4d07-bd6c-5a9adb718d01.pdf`
+   - Ora: `dichiarazione_periodo_prova_OPALE_LAURA.pdf`
+   - Verificato via `curl -I`: `Content-Disposition: inline; filename="consenso_privacy_Genitore_Test.pdf"` ✅
+
+2. **Frontend** (`InAppPdfModal.tsx`): aggiunta **rete di sicurezza** per dispositivi che non renderizzano PDF inline:
+   - Nuovo bottone verde **"SCARICA"** — usa `<a download>` per salvare il PDF con il nome leggibile nella cartella Downloads del telefono
+   - Nuovo bottone grigio **"NUOVA SCHEDA"** — `window.open(url, '_blank')` per delegare a Chrome la gestione nativa
+   - Hint sotto i bottoni: *"Se il documento non è visibile qui sopra, usa SCARICA per salvarlo e aprirlo con la tua app PDF"*
+   - `CHIUDI` resta come prima
+
+**Effetto in produzione**:
+- Su desktop e iOS l'iframe continua a renderizzare inline (nessuna regressione)
+- Su Chrome Android, l'utente ha ORA tre opzioni affidabili: guardare il placeholder di Chrome (invariato), scaricare con nome leggibile, oppure aprire in nuova scheda dove Chrome dovrebbe delegare a Google Drive o all'app PDF di sistema
+
+**Data-testid aggiunti**: `in-app-pdf-download-btn`, `in-app-pdf-newtab-btn` (per test automatici futuri).
+
+---
+
 ## 🔥 10/07/2026 (v7.15-hotfix2) — "Cartella Genitori vuota" ✅
 
 **Segnalazione utente** (screenshot Chiara Opale — scheda anagrafica → "Password Protezione Dati"):

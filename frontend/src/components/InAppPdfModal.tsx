@@ -20,9 +20,14 @@ interface Props {
 /**
  * Generic in-app PDF viewer modal.
  *
- * Opens the given URL inside an <iframe> (web) so the user can close it with
- * the visible "Chiudi" button OR with the Android hardware back button —
- * instead of being kicked out of the webapp when the OS back is pressed.
+ * 🐛 10/07/2026 (v7.15) — HOTFIX "PDF non si apre su Chrome Android".
+ * Chrome mobile Android NON renderizza PDF inline dentro <iframe> con blob URL:
+ * mostra un placeholder generico con "Apri" (che apre un'app esterna se
+ * installata, altrimenti non fa nulla). Per garantire l'accesso al documento
+ * su qualunque dispositivo aggiungiamo un bottone "SCARICA" affidabile che
+ * salva il PDF con nome leggibile.
+ *
+ * Su desktop e iOS l'iframe continua a renderizzare inline (funziona bene).
  */
 export const InAppPdfModal: React.FC<Props> = ({ visible, url, title, onClose }) => {
   // Android hardware back: close the modal instead of exiting the app.
@@ -37,6 +42,40 @@ export const InAppPdfModal: React.FC<Props> = ({ visible, url, title, onClose })
   }, [visible, onClose]);
 
   if (!url) return null;
+
+  const _safeFilename = (() => {
+    const base = (title || 'documento').replace(/[^\w.\-]+/g, '_').replace(/_+$/, '');
+    return `${base}.pdf`;
+  })();
+
+  const handleDownload = () => {
+    // Su web: crea un anchor con `download` e scatena il click programmatico.
+    // Chrome mobile Android salverà il file in Downloads con il nome corretto.
+    if (Platform.OS !== 'web' || !url) return;
+    try {
+      // @ts-ignore document/window sono globali su react-native-web
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = _safeFilename;
+      // @ts-ignore
+      document.body.appendChild(a);
+      a.click();
+      // @ts-ignore
+      document.body.removeChild(a);
+    } catch {
+      // Fallback: apri in nuova scheda
+      // @ts-ignore
+      window.open(url, '_blank');
+    }
+  };
+
+  const handleOpenInNewTab = () => {
+    if (Platform.OS !== 'web' || !url) return;
+    try {
+      // @ts-ignore
+      window.open(url, '_blank');
+    } catch {}
+  };
 
   return (
     <Modal
@@ -82,6 +121,29 @@ export const InAppPdfModal: React.FC<Props> = ({ visible, url, title, onClose })
           )}
         </View>
         <View style={styles.footer}>
+          {Platform.OS === 'web' && (
+            <View style={styles.actionsRow}>
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.downloadBtn]}
+                onPress={handleDownload}
+                data-testid="in-app-pdf-download-btn"
+              >
+                <Ionicons name="download-outline" size={18} color="#fff" />
+                <Text style={styles.actionBtnText}>SCARICA</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionBtn, styles.newTabBtn]}
+                onPress={handleOpenInNewTab}
+                data-testid="in-app-pdf-newtab-btn"
+              >
+                <Ionicons name="open-outline" size={18} color="#fff" />
+                <Text style={styles.actionBtnText}>NUOVA SCHEDA</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          <Text style={styles.hint}>
+            Se il documento non è visibile qui sopra, usa <Text style={{ fontWeight: '700' }}>SCARICA</Text> per salvarlo e aprirlo con la tua app PDF (Google Drive, Adobe, ecc.).
+          </Text>
           <TouchableOpacity
             style={styles.closeBigBtn}
             onPress={onClose}
@@ -117,7 +179,25 @@ const styles = StyleSheet.create({
     padding: 10,
     borderTopWidth: 1,
     borderTopColor: '#e0e0e0',
+    gap: 8,
   },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 11,
+    borderRadius: 8,
+  },
+  downloadBtn: { backgroundColor: '#2E7D32' },
+  newTabBtn: { backgroundColor: '#455A64' },
+  actionBtnText: { color: '#fff', fontWeight: '700', fontSize: 12 },
+  hint: { fontSize: 11, color: '#666', textAlign: 'center', lineHeight: 15 },
   closeBigBtn: {
     backgroundColor: '#1976D2',
     paddingVertical: 12,
