@@ -7765,7 +7765,16 @@ async def update_athlete_compensation_settings(athlete_id: str, data: dict, curr
 
 @api_router.get("/athletes/{athlete_id}/compensation/receipts")
 async def get_athlete_compensation_receipts(athlete_id: str, current_user = Depends(get_current_user)):
-    """Get signed receipts for an athlete - admin or the athlete themselves"""
+    """Get signed receipts for an athlete - admin or the athlete themselves.
+
+    🐛 10/07/2026 (v7.15) — HOTFIX "Già Percepito €X vs. 0 mesi firmati".
+    Il record legacy salvava `month` come STRING italiana ("Giugno"), mentre
+    calendario/aggregazioni moderni usano INT 1-12. Normalizziamo qui, così:
+      • il widget "Già Percepito" continua a sommare tutti i `receipt_signed`
+      • il calendario Gestione Quietanze trova il record per mese
+    Idem per i campi `receipt_signed`/`amount_gross`/`receipt_signed_date`
+    (già normalizzati lato frontend, ma meglio farlo alla fonte).
+    """
     # Allow admin or the athlete viewing their own receipts
     if current_user["role"] == "athlete":
         # Check if the athlete is viewing their own receipts
@@ -7773,14 +7782,188 @@ async def get_athlete_compensation_receipts(athlete_id: str, current_user = Depe
             raise HTTPException(status_code=403, detail="Puoi vedere solo le tue quietanze")
     elif current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Non autorizzato")
-    
+
     receipts = await db.athlete_compensation_receipts.find({"athlete_id": athlete_id}).to_list(100)
     clean_mongo_docs(receipts)
-    return receipts
+
+    _month_name_to_int = {
+        "gennaio": 1, "febbraio": 2, "marzo": 3, "aprile": 4, "maggio": 5, "giugno": 6,
+        "luglio": 7, "agosto": 8, "settembre": 9, "ottobre": 10, "novembre": 11, "dicembre": 12,
+    }
+    _month_int_to_name = {v: k.capitalize() for k, v in _month_name_to_int.items()}
+
+    normalized = []
+    for r in receipts:
+        # Normalizza month: se è string legacy → int; se è int → int
+        _m_raw = r.get("month")
+        _m_int = None
+        if isinstance(_m_raw, int):
+            _m_int = _m_raw
+        elif isinstance(_m_raw, str):
+            _m_int = _month_name_to_int.get(_m_raw.strip().lower())
+            if _m_int is None:
+                try:
+                    _m_int = int(_m_raw)
+                except (ValueError, TypeError):
+                    _m_int = None
+        # Normalizza campi firma/importo (legacy vs. moderno)
+        _rs = r.get("receipt_signed")
+        if _rs is None:
+            _rs = bool(r.get("signed"))
+        _rs_date = r.get("receipt_signed_date") or r.get("signed_date")
+        _amount_gross = r.get("amount_gross")
+        if _amount_gross is None:
+            _amount_gross = r.get("amount")
+        _amount = r.get("amount")
+        if _amount is None:
+            _amount = _amount_gross
+        r["month"] = _m_int if _m_int is not None else _m_raw
+        if _m_int is not None:
+            r["month_name"] = r.get("month_name") or _month_int_to_name.get(_m_int)
+        r["receipt_signed"] = _rs
+        r["receipt_signed_date"] = _rs_date
+        r["amount_gross"] = _amount_gross
+        r["amount"] = _amount
+        normalized.append(r)
+    return normalized
 
 
 # 🆕 27/02/2026 — Reset Quietanze: cancella TUTTE le quietanze di un atleta (e Coach linked se dual-role)
 # Utile per dati di test o per ricominciare da zero quando admin/user vedono dati incoerenti.
+@api_router.post("/admin/athletes/{athlete_id}/compensation/normalize-legacy")
+async def admin_normalize_athlete_receipts(athlete_id: str, current_user = Depends(get_current_user)):
+    """🛠️ 10/07/2026 (v7.15) — Normalizza permanentemente i record legacy in DB.
+
+    Segnalazione utente (BRETELLI PAOLA): 'Già Percepito €750' ma nessun mese
+    firmato nel calendario. Root cause: record DB con `month: "Giugno"` (string
+    legacy) invece di `month: 6` (int), e/o solo `signed: True` invece di
+    `receipt_signed: True`. Il widget somma tutto (senza filtro mese), il
+    calendario cerca per int → mismatch.
+
+    Questo endpoint:
+      • Converte `month` string italiano → int 1-12
+      • Duplica `signed`→`receipt_signed`, `signed_date`→`receipt_signed_date`,
+        `amount`→`amount_gross` (e viceversa) per garantire idempotenza futura
+      • Restituisce report dei record aggiornati
+
+    Admin-only. Idempotente. Non elimina nulla."""
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    athlete = await db.athletes.find_one({"id": athlete_id}, {"_id": 0, "id": 1, "society_id": 1, "full_name": 1})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    if athlete.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Atleta di altra società")
+
+    _month_name_to_int = {
+        "gennaio": 1, "febbraio": 2, "marzo": 3, "aprile": 4, "maggio": 5, "giugno": 6,
+        "luglio": 7, "agosto": 8, "settembre": 9, "ottobre": 10, "novembre": 11, "dicembre": 12,
+    }
+    _month_int_to_name = {v: k.capitalize() for k, v in _month_name_to_int.items()}
+
+    updated = []
+    async for r in db.athlete_compensation_receipts.find({"athlete_id": athlete_id}, {"_id": 0}):
+        changes: dict = {}
+        # 1. month string → int
+        _m_raw = r.get("month")
+        if isinstance(_m_raw, str):
+            _m_int = _month_name_to_int.get(_m_raw.strip().lower())
+            if _m_int is None:
+                try:
+                    _m_int = int(_m_raw)
+                except (ValueError, TypeError):
+                    _m_int = None
+            if _m_int is not None:
+                changes["month"] = _m_int
+                if not r.get("month_name"):
+                    changes["month_name"] = _month_int_to_name.get(_m_int)
+        # 2. receipt_signed / signed
+        if r.get("receipt_signed") is None and r.get("signed") is not None:
+            changes["receipt_signed"] = bool(r.get("signed"))
+        if r.get("signed") is None and r.get("receipt_signed") is not None:
+            changes["signed"] = bool(r.get("receipt_signed"))
+        # 3. dates
+        if not r.get("receipt_signed_date") and r.get("signed_date"):
+            changes["receipt_signed_date"] = r.get("signed_date")
+        if not r.get("signed_date") and r.get("receipt_signed_date"):
+            changes["signed_date"] = r.get("receipt_signed_date")
+        # 4. amounts
+        if r.get("amount_gross") is None and r.get("amount") is not None:
+            changes["amount_gross"] = r.get("amount")
+        if r.get("amount") is None and r.get("amount_gross") is not None:
+            changes["amount"] = r.get("amount_gross")
+
+        if changes:
+            await db.athlete_compensation_receipts.update_one(
+                {"athlete_id": athlete_id, "year": r.get("year"), "month": r.get("month")},
+                {"$set": changes},
+            )
+            updated.append({
+                "year": r.get("year"),
+                "month_before": _m_raw,
+                "month_after": changes.get("month", _m_raw),
+                "receipt_signed": r.get("receipt_signed") or r.get("signed"),
+                "amount": r.get("amount_gross") or r.get("amount"),
+                "fields_updated": list(changes.keys()),
+            })
+
+    return {
+        "ok": True,
+        "athlete_id": athlete_id,
+        "athlete_name": athlete.get("full_name", ""),
+        "records_updated": len(updated),
+        "updates": updated,
+    }
+
+
+@api_router.get("/admin/athletes/{athlete_id}/compensation/receipts/diagnostic")
+async def admin_diagnostic_athlete_receipts(athlete_id: str, current_user = Depends(get_current_user)):
+    """🩺 10/07/2026 (v7.15) — Report raw dei record `athlete_compensation_receipts`
+    per un atleta, senza normalizzazione. Utile per identificare discrepanze
+    tra widget aggregati (es. Già Percepito) e vista calendario mensile.
+    Restituisce ogni record con TUTTI i campi legacy + moderni.
+    Admin-only. Read-only."""
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    athlete = await db.athletes.find_one({"id": athlete_id}, {"_id": 0, "id": 1, "society_id": 1, "full_name": 1})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    if athlete.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Atleta di altra società")
+
+    receipts = await db.athlete_compensation_receipts.find({"athlete_id": athlete_id}).to_list(200)
+    clean_mongo_docs(receipts)
+
+    total_signed = 0.0
+    signed_count = 0
+    legacy_month_strings = 0
+    missing_receipt_signed = 0
+    for r in receipts:
+        is_signed = r.get("receipt_signed") or r.get("signed") or False
+        if is_signed:
+            signed_count += 1
+            total_signed += float(r.get("amount_gross") or r.get("amount") or 0)
+        if isinstance(r.get("month"), str) and not r.get("month", "").isdigit():
+            legacy_month_strings += 1
+        if r.get("receipt_signed") is None and r.get("signed") is not None:
+            missing_receipt_signed += 1
+
+    return {
+        "athlete_id": athlete_id,
+        "athlete_name": athlete.get("full_name", ""),
+        "totals": {
+            "records": len(receipts),
+            "signed_records": signed_count,
+            "signed_total_eur": round(total_signed, 2),
+            "legacy_month_strings": legacy_month_strings,
+            "missing_receipt_signed_field": missing_receipt_signed,
+            "needs_normalization": legacy_month_strings > 0 or missing_receipt_signed > 0,
+        },
+        "records": receipts,
+    }
+
+
 @api_router.delete("/admin/athletes/{athlete_id}/compensation/reset-all")
 async def admin_reset_athlete_compensations(athlete_id: str, current_user = Depends(get_current_user)):
     """ADMIN ONLY — Cancella TUTTE le quietanze, ricevute firmate, compensi coach linked,

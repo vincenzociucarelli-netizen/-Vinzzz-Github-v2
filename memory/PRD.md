@@ -16,6 +16,56 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 💰 10/07/2026 (v7.15-hotfix5) — "Già Percepito" incoerente con calendario ✅
+
+**Segnalazione utente** (BRETELLI PAOLA, Atleta PRO):
+- Widget "Già Percepito": €750,00 con "1 quietanza firmata"
+- Calendario Gestione Quietanze: TUTTI i mesi mostrati come "Non firmata"
+- **Rischio grave**: sfalsati i totali cumulativi per soglia Riforma Sport 5k/15k
+
+**Root cause**:
+Record DB legacy in `athlete_compensation_receipts` con:
+- `month: "Giugno"` (STRING) invece di `month: 6` (INT)
+- Campo legacy `signed: true` senza `receipt_signed`
+- Campo legacy `amount: 750` senza `amount_gross`
+
+Il widget "Già Percepito" (frontend `admin/athlete/[id].tsx:3696`) **somma tutti** i record con `receipt_signed=true` senza filtrare per mese → contribuisce €750.
+Il calendario Gestione Quietanze cerca `signedReceipts.find(x.month === 6)` (int) → non matcha `"Giugno"` (string) → mostra "Non firmata".
+
+**Fix v7.15-hotfix5**:
+
+1. **Backend `GET /athletes/{id}/compensation/receipts`**: normalizzazione **automatica on-the-fly** dei record legacy:
+   - `month: "Giugno"` → `month: 6`
+   - `signed: true` → duplicato in `receipt_signed: true`
+   - `amount: 750` → duplicato in `amount_gross: 750`
+   - `signed_date` → `receipt_signed_date`
+   - Fix immediato dopo il deploy, senza toccare il DB.
+
+2. **Nuovo endpoint** `POST /admin/athletes/{id}/compensation/normalize-legacy` (admin-only, idempotente): fix **permanente** in DB dei record legacy.
+
+3. **Nuovo endpoint diagnostico** `GET /admin/athletes/{id}/compensation/receipts/diagnostic` (admin-only, read-only): report raw con counters (legacy_month_strings, missing_receipt_signed_field, needs_normalization).
+
+4. **Frontend** (`admin/athlete/[id].tsx`): nuovo bottone viola **"🩺 Diagnostica quietanze (legacy fix)"** che mostra i counters e propone la normalizzazione con un click.
+
+**Verificato end-to-end** (curl in preview): record legacy `month="Giugno", signed=true, amount=750` normalizzato in un ciclo → `month=6, receipt_signed=true, amount_gross=750`.
+
+**Testing**:
+- ✅ 3 nuovi test in `test_receipt_legacy_month_v715.py`:
+  - `test_legacy_receipt_month_string_gets_normalized` (Giugno→6, idempotente)
+  - `test_calendar_find_matches_after_normalize` (calendario trova per int)
+  - `test_widget_sum_matches_calendar_after_normalize` (widget e calendario concordano)
+- ✅ 17/17 test totali verdi
+
+**Come sistemare BRETELLI PAOLA dopo il deploy**:
+1. Save to GitHub → attendi ~5 minuti.
+2. Apri profilo BRETELLI PAOLA in `/admin/athletes/{id}`.
+3. Clicca **"🩺 Diagnostica quietanze (legacy fix)"** → se il report mostra `needs_normalization: true`, conferma → 1 record convertito.
+4. Riapri il profilo: il calendario Gestione Quietanze ora mostrerà Giugno 2026 come firmato con €750, il widget "Già Percepito" concorderà, e i totali soglia Riforma Sport saranno accurati.
+
+**Nota Bug 2 (compenso Coach in dual-role)**: dopo verifica utente, l'accettazione compenso Coach ESISTE già (bottone visibile nella pagina Coach di BRETELLI PAOLA — screenshot foto 4). Era solo un problema di visibilità nel riepilogo aggregato dei due incarichi. Non intervengo per non introdurre regressioni; se vuoi migliorare quel riepilogo aggregato dobbiamo scriverlo esplicitamente.
+
+---
+
 ## 🏆 10/07/2026 (v7.15-hotfix4) — Minorenni erroneamente in Atleti PRO ✅
 
 **Segnalazione utente** (screenshot roster Atleti PRO):

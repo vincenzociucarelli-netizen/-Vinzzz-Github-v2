@@ -3719,6 +3719,44 @@ export default function AdminAthleteDetail() {
                         <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Genera Quietanza Personalizzata</Text>
                       </TouchableOpacity>
 
+                      {/* 🛠️ 10/07/2026 (v7.15) — Bottone diagnostico + normalizzazione record legacy.
+                          Serve a chiarire discrepanze tipo "Già Percepito €750 ma nessun mese firmato". */}
+                      <TouchableOpacity
+                        style={{ backgroundColor: '#6A1B9A', borderRadius: 8, padding: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 8 }}
+                        onPress={async () => {
+                          try {
+                            const diag = await api.get(`/admin/athletes/${id}/compensation/receipts/diagnostic`);
+                            const t = diag.data.totals;
+                            const details = `Record totali: ${t.records}\nFirmati: ${t.signed_records}\nSomma firmati: €${t.signed_total_eur}\nRecord legacy con mese in stringa: ${t.legacy_month_strings}\nRecord senza campo receipt_signed: ${t.missing_receipt_signed_field}`;
+                            if (!t.needs_normalization) {
+                              const msgOk = `✅ Nessuna anomalia:\n\n${details}`;
+                              if (Platform.OS === 'web') { window.alert(msgOk); } else { Alert.alert('Diagnostica quietanze', msgOk); }
+                              return;
+                            }
+                            const doIt = Platform.OS === 'web'
+                              ? window.confirm(`⚠ Trovati record da normalizzare:\n\n${details}\n\nProcedo a convertirli in formato moderno? (idempotente, nessun dato viene cancellato)`)
+                              : await new Promise<boolean>((res) => Alert.alert('Normalizza quietanze legacy', `${details}\n\nProcedo?`, [
+                                  { text: 'Annulla', style: 'cancel', onPress: () => res(false) },
+                                  { text: 'Normalizza', onPress: () => res(true) },
+                                ]));
+                            if (!doIt) return;
+                            const r = await api.post(`/admin/athletes/${id}/compensation/normalize-legacy`);
+                            const msg = `✅ Normalizzati ${r.data.records_updated} record.`;
+                            if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Fatto', msg); }
+                            // Ricarica quietanze
+                            const rec = await api.get(`/athletes/${id}/compensation/receipts`);
+                            setSignedReceipts(Array.isArray(rec.data) ? rec.data : []);
+                          } catch (e: any) {
+                            const msg = e?.response?.data?.detail || 'Errore diagnostica';
+                            if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Errore', msg); }
+                          }
+                        }}
+                        data-testid="admin-normalize-receipts-btn"
+                      >
+                        <Ionicons name="construct-outline" size={16} color="#fff" />
+                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>🩺 Diagnostica quietanze (legacy fix)</Text>
+                      </TouchableOpacity>
+
                       {/* 🚫 26/06/2026 — "Zona di servizio (reset quietanze)" RIMOSSA su richiesta utente.
                           Era stata aggiunta per resettare account di test, ma non serve in produzione. */}
                     </View>
