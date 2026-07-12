@@ -20,7 +20,6 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import api from '../../src/services/api';
-import { RoleSwitchButton } from '../../src/services/RoleSwitchButton';
 import { ConflictBanner } from '../../src/components/ConflictBanner';
 import { Ionicons } from '../../src/components/Icon';
 import { Team } from '../../src/types';
@@ -1751,7 +1750,10 @@ export default function CoachScreen() {
         <View style={styles.welcomeCard}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <Text style={styles.welcomeText}>Ciao, {(user?.first_name || (user?.full_name || '').split(' ')[0] || '').trim()}! 👋</Text>
-            <RoleSwitchButton targetRole="athlete" visible={!!(user as any)?.linked_athlete_id} />
+            {/* 🐛 10/07/2026 (v7.15) — Rimosso RoleSwitchButton duplicato.
+                Il pulsante "Passa a Modalità Atleta" è già presente nella card
+                arancione in alto (banner globale) — averlo anche qui creava
+                confusione visiva (segnalazione utente su BRETELLI PAOLA). */}
           </View>
           {/* 🆕 03/07/2026 — Conflict banner dual-role */}
           <ConflictBanner commitments={commitments as any} />
