@@ -20,6 +20,7 @@ import api from '../../src/services/api';
 import InstitutionalBadge from '../../src/components/InstitutionalBadge';
 import InstitutionalBanner from '../../src/components/InstitutionalBanner';
 import { AdminLiveStats } from '../../src/components/AdminLiveStats';
+import GuideButton from '../../src/components/GuideButton';
 import { SeasonBadge } from '../../src/services/SeasonBadge';
 import CompensationExportModal from '../../src/components/admin/CompensationExportModal';
 
@@ -455,6 +456,8 @@ export default function AdminDashboard() {
               <TouchableOpacity onPress={() => router.push('/admin/settings')} style={styles.headerIconBtn}>
                 <Text style={{ fontSize: 20 }}>{Icons.settings}</Text>
               </TouchableOpacity>
+              {/* 📖 Guida ruolo Admin */}
+              <GuideButton role="admin" compact />
               {/* Logout button */}
               <TouchableOpacity onPress={handleLogout} style={styles.headerIconBtn}>
                 <Text style={{ fontSize: 20 }}>{Icons.logout}</Text>

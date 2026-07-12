@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
+import GuideButton from '../../src/components/GuideButton';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import SocietyContactsSection from '../../src/components/SocietyContactsSection';
 import CollaboratoreTabBar from '../../src/components/collaboratore/CollaboratoreTabBar';
@@ -160,6 +161,7 @@ export default function CollaboratoreHome() {
           <TouchableOpacity onPress={() => router.push('/collaboratore/profile')} style={styles.headerBtn}>
             <Ionicons name="person-circle-outline" size={24} color="#fff" />
           </TouchableOpacity>
+          <GuideButton role="collaboratore" compact />
           <TouchableOpacity onPress={handleLogout} style={styles.headerBtn}>
             <Ionicons name="log-out-outline" size={24} color="#fff" />
           </TouchableOpacity>

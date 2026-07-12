@@ -16,6 +16,54 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 📖 10/07/2026 (v7.15-hotfix9) — Prontuari PDF per ruolo ✅
+
+**Richiesta utente**: prontuario/mini-manuale PDF per ogni ruolo (registrazione, primo accesso, GDPR, attività periodiche, FAQ). Personalizzato con i dati della società attiva.
+
+**Implementazione**:
+
+1. **`/app/backend/guides_content.py`** — contenuti in italiano per 6 ruoli:
+   - Genitore, Atleta 18+, Coach, Dirigente, Collaboratore, Admin
+   - Struttura standard 5 sezioni: Registrazione → Primo accesso → GDPR → Attività periodiche → FAQ
+   - Placeholder `{society_name}`, `{society_email}`, `{society_phone}` per branding dinamico
+   - Metadati (colore accent, icona, audience) per ogni guida
+
+2. **`/app/backend/guides_pdf.py`** — generator PDF con reportlab:
+   - Cover con società (nome, indirizzo, contatti)
+   - Sezioni H1/H2, bullet points, FAQ styling
+   - Footer con nome società + numero pagina + data generazione
+   - Colore accent diverso per ogni ruolo (aiuta il riconoscimento visivo)
+
+3. **Nuovo endpoint** `GET /api/guides/{role}` (server.py):
+   - Genera dinamicamente il PDF prendendo i dati dalla `settings` + `societies` della società attiva
+   - Auth: ogni utente può scaricare la guida del proprio ruolo; admin scarica qualsiasi guida
+   - Cache pubblica 1h (contenuti raramente cambiano)
+   - Content-Disposition inline (renderizzato nell'InAppPdfModal)
+   - Nome file leggibile: `Guida_coach_SirioPallavolo.pdf`
+
+4. **Nuovo componente** `<GuideButton role="..." />` (`/app/frontend/src/components/GuideButton.tsx`):
+   - Scarica il PDF via fetch autenticato → blob URL
+   - Apre `InAppPdfModal` (già consolidato con SCARICA / NUOVA SCHEDA / CHIUDI)
+   - Modalità `compact` per uso in header, con label per menu
+
+5. **Bottone 📖 aggiunto in tutte e 6 le dashboard** (accanto al logout):
+   - `/admin/index.tsx` → `role="admin"`
+   - `/coach/index.tsx` → `role="coach"`
+   - `/dirigente/index.tsx` → `role="dirigente"`
+   - `/collaboratore/index.tsx` → `role="collaboratore"`
+   - `/parent/index.tsx` → `role="parent"`
+   - `/athlete/index.tsx` → `role="athlete"` (entrambi i rami: atleta quota + atleta PRO)
+
+**Testing verificato via curl** (preview): 6/6 PDF generati con HTTP 200, 6.5-8.5 KB, 3-4 pagine ciascuno, validati con PyPDF2.
+
+**Effetto**:
+- Ogni utente ha un prontuario aggiornato in un click, personalizzato per la sua società
+- Zero manutenzione: contenuti hardcoded ma facilmente aggiornabili modificando `guides_content.py`
+- Riusabile per Sirio + tutte le società amiche che partono a fine mese: il branding è dinamico dalle settings
+- Il PDF si apre nella modale esistente con opzioni SCARICA (per Chrome Android) e NUOVA SCHEDA
+
+---
+
 ## 💰 10/07/2026 (v7.15-hotfix6) — Normalizzazione quietanze estesa a Coach/Dirigente/Collaboratore ✅
 
 **Contesto**: L'hotfix5 aveva risolto la discrepanza "Già Percepito vs. calendario" per gli atleti PRO. Il pattern "record legacy con `month` string + campi `signed`/`amount` invece di `receipt_signed`/`amount_gross`" può esistere in tutte le collezioni compensi. Estendo la stessa logica a **Coach**, **Dirigente**, **Collaboratore** per prevenire lo stesso bug in altre 3 aree critiche (soglie Riforma Sport).

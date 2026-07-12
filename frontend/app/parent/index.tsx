@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import { PrivacyRenewalBanner } from '../../src/components/PrivacyRenewalBanner';
 import { ConflictBanner } from '../../src/components/ConflictBanner';
+import GuideButton from '../../src/components/GuideButton';
 import {
   View,
   Text,
@@ -574,6 +575,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
               )}
             </View>
           </TouchableOpacity>
+          <GuideButton role="parent" compact />
           <TouchableOpacity onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={24} color="#fff" />
           </TouchableOpacity>

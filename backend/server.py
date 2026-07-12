@@ -21306,6 +21306,88 @@ async def get_consent_pdf(consent_type: str, current_user = Depends(get_current_
     )
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# 📖 10/07/2026 (v7.15) — Prontuari/Guide PDF per ruolo
+# Genera un PDF personalizzato con i dati della società attiva per l'utente.
+# Un endpoint per ruolo così ogni dashboard può linkarlo direttamente.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_ROLE_TO_GUIDE_KEY = {
+    "admin": "admin",
+    "coach": "coach",
+    "dirigente": "dirigente",
+    "viewer": "dirigente",           # viewer = dirigente in questa app
+    "collaboratore": "collaboratore",
+    "parent": "parent",
+    "athlete": "athlete",
+}
+
+
+@api_router.get("/guides/{role}")
+async def get_guide_pdf(role: str, current_user = Depends(get_current_user)):
+    """Genera dinamicamente il PDF della guida per il ruolo indicato,
+    personalizzato con i dati della società dell'utente loggato.
+
+    Route pubblica per gli utenti autenticati: ognuno può scaricare la propria
+    guida (o quella del proprio ruolo). Admin può scaricare qualsiasi guida.
+    """
+    # Lazy import per evitare overhead all'avvio
+    from guides_pdf import generate_guide_pdf
+
+    role = (role or "").lower().strip()
+    guide_key = _ROLE_TO_GUIDE_KEY.get(role)
+    if not guide_key:
+        raise HTTPException(status_code=404, detail=f"Guida non disponibile per il ruolo: {role}")
+
+    # Solo admin può scaricare guide di ruoli diversi dal proprio
+    user_role = current_user.get("role", "").lower()
+    if user_role != "admin" and _ROLE_TO_GUIDE_KEY.get(user_role) != guide_key:
+        raise HTTPException(status_code=403, detail="Puoi scaricare solo la guida del tuo ruolo")
+
+    # Recupera i dati della società dalle settings (source-of-truth)
+    sid = current_user.get("society_id")
+    society_ctx: dict = {"society_name": "RegistraTEAM"}
+    if sid:
+        settings_doc = await db.settings.find_one({"type": "society", "society_id": sid})
+        if not settings_doc:
+            # fallback: prova senza filtro type
+            settings_doc = await db.settings.find_one({"society_id": sid})
+        society_doc = await db.societies.find_one({"id": sid}, {"_id": 0, "name": 1, "logo": 1, "address": 1, "city": 1, "postal_code": 1, "province": 1, "email": 1, "phone": 1, "website": 1, "pec": 1})
+        # Preferisci ragione_sociale da settings, altrimenti name da societies
+        rs = (settings_doc or {}).get("ragione_sociale")
+        name = rs or (society_doc or {}).get("name") or "RegistraTEAM"
+        addr = (society_doc or {}).get("address") or (settings_doc or {}).get("address") or ""
+        city = (society_doc or {}).get("city") or (settings_doc or {}).get("city") or ""
+        province = (society_doc or {}).get("province") or (settings_doc or {}).get("province") or ""
+        cap = (society_doc or {}).get("postal_code") or (settings_doc or {}).get("postal_code") or ""
+        full_address = ", ".join([p for p in [addr, f"{cap} {city}".strip(), province] if p])
+        society_ctx = {
+            "society_name": name,
+            "society_address": full_address,
+            "society_email": (settings_doc or {}).get("society_email") or (society_doc or {}).get("email") or "",
+            "society_phone": (society_doc or {}).get("phone") or (settings_doc or {}).get("phone") or "",
+            "society_website": (society_doc or {}).get("website") or (settings_doc or {}).get("website") or "",
+            "society_pec": (settings_doc or {}).get("society_pec") or (society_doc or {}).get("pec") or "",
+        }
+
+    try:
+        pdf_bytes = generate_guide_pdf(guide_key, society_ctx)
+    except Exception as e:
+        logger.exception(f"Errore generazione guida {guide_key}: {e}")
+        raise HTTPException(status_code=500, detail="Errore nella generazione della guida")
+
+    _safe_name = "".join(c for c in (society_ctx.get("society_name") or "RegistraTEAM") if c.isalnum() or c in ("_", "-", " ")).strip().replace(" ", "_") or "RegistraTEAM"
+    filename = f"Guida_{guide_key}_{_safe_name}.pdf"
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"inline; filename=\"{filename}\"",
+            "Cache-Control": "public, max-age=3600",  # cache 1h — contenuti raramente cambiano
+        },
+    )
+
+
 @api_router.get("/documents/signed")
 async def list_signed_documents(
     related_entity_id: Optional[str] = None,

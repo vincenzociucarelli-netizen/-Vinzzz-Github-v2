@@ -21,6 +21,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import api from '../../src/services/api';
 import { ConflictBanner } from '../../src/components/ConflictBanner';
+import GuideButton from '../../src/components/GuideButton';
 import { Ionicons } from '../../src/components/Icon';
 import { Team } from '../../src/types';
 import { format } from 'date-fns';
@@ -1424,6 +1425,7 @@ export default function CoachScreen() {
           <Text style={styles.headerTitle}>Le Mie Squadre</Text>
           <Text style={styles.headerSubtitle}>Benvenuto, {user?.first_name || user?.full_name?.split(' ')[0] || 'Coach'}</Text>
         </View>
+        <GuideButton role="coach" compact />
         <TouchableOpacity onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color="#fff" />
         </TouchableOpacity>

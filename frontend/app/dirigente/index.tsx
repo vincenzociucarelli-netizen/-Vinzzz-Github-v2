@@ -3,6 +3,7 @@ import SocietyBranding from '../../src/components/SocietyBranding';
 import SocietyContactsSection from '../../src/components/SocietyContactsSection';
 import AdminCoachCommitments from '../../src/components/admin/AdminCoachCommitments';
 import DirigenteTabBar from '../../src/components/dirigente/DirigenteTabBar';
+import GuideButton from '../../src/components/GuideButton';
 import {
   View,
   Text,
@@ -249,6 +250,7 @@ export default function DirigenteIndex() {
           <TouchableOpacity onPress={() => router.push('/dirigente/profile')} style={styles.headerBtn}>
             <Ionicons name="person-circle-outline" size={24} color="#fff" />
           </TouchableOpacity>
+          <GuideButton role="dirigente" compact />
           <TouchableOpacity onPress={handleLogout} style={styles.headerBtn}>
             <Ionicons name="log-out-outline" size={24} color="#fff" />
           </TouchableOpacity>
