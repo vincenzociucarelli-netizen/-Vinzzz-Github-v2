@@ -18,7 +18,6 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
-import { RoleSwitchButton } from '../../src/services/RoleSwitchButton';
 import { ConflictBanner } from '../../src/components/ConflictBanner';
 import { Ionicons } from '../../src/components/Icon';
 import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
@@ -569,7 +568,11 @@ export default function AthleteScreen() {
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <Text style={{ fontSize: 18, fontWeight: '700', color: '#333' }} data-testid="athlete-name">Ciao {profile?.first_name || (profile?.full_name || '').split(' ')[0] || 'Atleta'}! 👋</Text>
-                <RoleSwitchButton targetRole="coach" visible={!!(profile as any)?.linked_coach_user_id} />
+                {/* 🐛 10/07/2026 (v7.15) — Rimosso RoleSwitchButton duplicato.
+                    Il pulsante "Passa a Modalità Coach" è già presente nel
+                    banner globale <SwitchAccountButton /> qui sopra (linea ~564).
+                    Averlo anche inline nel saluto creava confusione visiva
+                    (analogo bug rimosso in /coach/index.tsx). */}
               </View>
               {/* 🆕 03/07/2026 — Conflict banner dual-role */}
               <ConflictBanner commitments={commitments as any} />
