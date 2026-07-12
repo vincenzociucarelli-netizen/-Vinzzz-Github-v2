@@ -220,6 +220,8 @@ const iconMap: { [key: string]: string } = {
   'thumbs-down-outline': '👎',
   'bookmark': '🔖',
   'bookmark-outline': '🔖',
+  'book': '📖',
+  'book-outline': '📖',
   'flag': '🚩',
   'flag-outline': '🚩',
   

@@ -142,7 +142,8 @@ export const InAppPdfModal: React.FC<Props> = ({ visible, url, title, onClose })
             </View>
           )}
           <Text style={styles.hint}>
-            Se il documento non è visibile qui sopra, usa <Text style={{ fontWeight: '700' }}>SCARICA</Text> per salvarlo e aprirlo con la tua app PDF (Google Drive, Adobe, ecc.).
+            💡 Su Android il tasto &quot;Apri&quot; del riquadro grigio spesso NON funziona.
+            Usa <Text style={{ fontWeight: '700', color: '#2E7D32' }}>SCARICA</Text> per salvare il PDF e aprirlo con la tua app (Google Drive, Adobe, ecc.).
           </Text>
           <TouchableOpacity
             style={styles.closeBigBtn}
