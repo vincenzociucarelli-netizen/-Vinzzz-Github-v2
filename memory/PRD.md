@@ -16,6 +16,41 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
 
+## 📝 12/07/2026 (v7.15-hotfix11) — Prontuari PDF: contenuti allineati ai flussi reali ✅
+
+**Feedback utente su hotfix9** (screenshot):
+1. Il PDF mostra "Pallavolo Perugia" mentre in dashboard c'è un'altra società → **NON è bug del codice** (in preview c'è una sola società). Aggiunto **log defensive** che stampa `role`, `society_id`, `society_name`, `user_id` a ogni generazione — così in produzione possiamo diagnosticare eventuali mismatch tra `users.society_id` e `settings.society_id`.
+
+2. **Contenuti sbagliati** (correzioni applicate in `/app/backend/guides_content.py`):
+   - **Genitore, Sez. 2**: rimosso "Inserire IBAN se prevedi pagamenti tramite bonifico" (il genitore paga, non riceve — IBAN non serve)
+   - **Genitore, Sez. 2**: riscritta interamente la sottosezione "COLLEGARE FIGLIO/I" secondo il flusso reale:
+     * Il PRIMO genitore inserisce direttamente l'anagrafica del figlio con "Registra Atleta"
+     * Il SECONDO genitore cerca l'atleta già registrato dall'altro e invia richiesta di collegamento
+     * Il PRIMO genitore approva la richiesta → sblocca visibilità completa
+     * Nessuna approvazione admin richiesta per il collegamento
+   - **Coach/Dirigente/Collaboratore, Sez. 4 (SOGLIE)**: sostituita la vecchia formula (2 righe con generazione automatica) con la dicitura corretta: *"Al superamento di €5.000/anno o €15.000/anno riceverai un promemoria per le comunicazioni RAS (Registro Attività Sportive)"* — coerente con quella già presente in Atleta
+
+3. **Flusso onboarding chiarito** (nota importante utente):
+   - **NESSUN utente riceve email di convalida account** → rimosse tutte le occorrenze di "email di conferma" / "attesa email di attivazione"
+   - **Admin autorizza personalmente**: Coach, Dirigenti, Collaboratori, Atleti 18+ PRO → aggiunto avviso "in attesa di autorizzazione admin" in ognuna delle 4 guide
+   - **Iscrizione LIBERA (con periodo di prova)** per: Genitori (atleti minorenni) + Atleti 18+ QUOTA → menzionato esplicitamente nelle guide Genitore e Atleta
+   - **Admin assegna gruppo/squadra per la prova** → nuovo paragrafo dedicato nella Guida Admin (Sez. 4 "AUTORIZZARE NUOVI UTENTI")
+   - **Atleta 18+**: bipartizione chiara QUOTA (libero) vs PRO (autorizzazione admin) in Sez. 1
+
+**Testing verificato via curl** (preview): 6/6 PDF rigenerati con HTTP 200. 11/11 assertion di contenuto verdi (grep dei testi corretti nei PDF generati).
+
+**Effetto**:
+- Le guide ora descrivono ESATTAMENTE il flusso reale dell'app
+- Zero riferimenti a email di convalida che non esistono
+- Distinzione chiara fra ruoli auto-autorizzati e ruoli con approvazione admin
+- Il log defensive aiuterà a diagnosticare il "mismatch società" in produzione se si ripresenta
+
+**Come diagnosticare mismatch società (se ricapita)**:
+Cerca nei log Render dopo il deploy: `[guides] role=... society_id=... society_name=... user_id=... user_role=...`
+Se vedi che `society_name` non corrisponde alla società attesa dell'utente, il problema è nei dati DB (settings orfano o `users.society_id` errato), non nel codice.
+
+---
+
 ## 📖 10/07/2026 (v7.15-hotfix9) — Prontuari PDF per ruolo ✅
 
 **Richiesta utente**: prontuario/mini-manuale PDF per ogni ruolo (registrazione, primo accesso, GDPR, attività periodiche, FAQ). Personalizzato con i dati della società attiva.

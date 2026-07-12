@@ -1,9 +1,15 @@
 """
-📖 10/07/2026 (v7.15) — Contenuti dei manuali/prontuari RegistraTEAM.
+📖 10/07/2026 (v7.15-hotfix11) — Contenuti dei manuali/prontuari RegistraTEAM.
 
-Un dict per ogni ruolo (admin, coach, dirigente, collaboratore, parent, athlete).
-I placeholder `{society_name}`, `{society_email}`, `{society_phone}` vengono
-sostituiti al momento della generazione con i dati della società attiva.
+Modifiche dopo feedback utente 12/07:
+- NESSUN utente riceve email di convalida account
+- Admin autorizza l'accesso di: Dirigente / Coach / Collaboratore / Atleta 18+ PRO
+- Genitori (atleti minorenni) e Atleti 18+ QUOTA: iscrizione libera + periodo di prova,
+  admin poi assegna gruppo/squadra
+- Genitore inserisce l'anagrafica del figlio; il secondo genitore cerca l'atleta
+  già registrato e attende consenso del primo genitore
+- Coach/Dirigente/Collaboratore: soglia RAS = promemoria (non generazione automatica)
+- Rimosso "IBAN" dalla sezione primo accesso del genitore (paga, non riceve)
 
 Struttura standard (5 sezioni):
   1. Registrazione
@@ -13,48 +19,21 @@ Struttura standard (5 sezioni):
   5. FAQ e contatti
 """
 
-# Metadati per ogni guida (titolo, breve descrizione, colore accent)
 GUIDES_META = {
-    "admin": {
-        "role_label": "Amministratore",
-        "accent_color": "#1976D2",
-        "icon": "🛡️",
-        "audience": "responsabili della società",
-    },
-    "coach": {
-        "role_label": "Coach / Allenatore",
-        "accent_color": "#E53935",
-        "icon": "🏐",
-        "audience": "allenatori delle squadre",
-    },
-    "dirigente": {
-        "role_label": "Dirigente Sportivo",
-        "accent_color": "#7B1FA2",
-        "icon": "🎖️",
-        "audience": "dirigenti retribuiti",
-    },
-    "collaboratore": {
-        "role_label": "Collaboratore",
-        "accent_color": "#00838F",
-        "icon": "🧰",
-        "audience": "collaboratori (custodi, segreteria, ecc.)",
-    },
-    "parent": {
-        "role_label": "Genitore",
-        "accent_color": "#43A047",
-        "icon": "👨‍👩‍👧",
-        "audience": "genitori di atleti minorenni",
-    },
-    "athlete": {
-        "role_label": "Atleta maggiorenne (18+)",
-        "accent_color": "#F57C00",
-        "icon": "🏆",
-        "audience": "atleti che hanno compiuto 18 anni",
-    },
+    "admin": {"role_label": "Amministratore", "accent_color": "#1976D2", "icon": "🛡️",
+              "audience": "responsabili della società"},
+    "coach": {"role_label": "Coach / Allenatore", "accent_color": "#E53935", "icon": "🏐",
+              "audience": "allenatori delle squadre"},
+    "dirigente": {"role_label": "Dirigente Sportivo", "accent_color": "#7B1FA2", "icon": "🎖️",
+                  "audience": "dirigenti retribuiti"},
+    "collaboratore": {"role_label": "Collaboratore", "accent_color": "#00838F", "icon": "🧰",
+                      "audience": "collaboratori (custodi, segreteria, ecc.)"},
+    "parent": {"role_label": "Genitore", "accent_color": "#43A047", "icon": "👨‍👩‍👧",
+               "audience": "genitori di atleti minorenni"},
+    "athlete": {"role_label": "Atleta maggiorenne (18+)", "accent_color": "#F57C00", "icon": "🏆",
+                "audience": "atleti che hanno compiuto 18 anni"},
 }
 
-
-# ─── SEZIONE COMUNE FAQ (riusata da tutti) ───
 COMMON_FAQ = [
     ("Ho dimenticato la password. Come faccio?",
      "Nella pagina di login, clicca su 'Password dimenticata?'. Inserisci la tua email registrata. "
@@ -81,16 +60,15 @@ GUIDES = {
             {
                 "title": "1. Registrazione",
                 "body": [
-                    "Sei stato invitato dalla società {society_name} a registrarti come genitore/tutore "
-                    "del/dei tuo/tuoi figlio/figli iscritti.",
+                    "Sei il genitore/tutore di un atleta minorenne di {society_name}.",
                     "PASSI DA SEGUIRE:",
-                    "• Apri il link ricevuto via email/WhatsApp dalla società oppure vai su app.registrateam.it",
-                    "• Clicca su 'Registrati' → seleziona il ruolo 'Genitore'",
+                    "• Vai su app.registrateam.it → clicca 'Registrati' → seleziona 'Genitore'",
                     "• Inserisci: nome, cognome, codice fiscale, email, telefono, password",
                     "• Accetta i consensi di trattamento dati (obbligatorio)",
-                    "• Conferma la registrazione — ti arriverà un'email di verifica",
-                    "IMPORTANTE: usa un'email a cui accedi frequentemente. Riceverai lì tutte le comunicazioni "
-                    "della società (approvazioni, quote, documenti da firmare).",
+                    "• Conferma → l'account è ATTIVO SUBITO, senza email di convalida",
+                    "IMPORTANTE: la registrazione del genitore è LIBERA — non serve autorizzazione admin. "
+                    "Sarà l'admin ad assegnare successivamente il gruppo/squadra dove tuo figlio farà "
+                    "il periodo di prova.",
                 ],
             },
             {
@@ -98,15 +76,20 @@ GUIDES = {
                 "body": [
                     "Al primo login ti verrà chiesto di:",
                     "• Confermare/completare i tuoi dati anagrafici (indirizzo, città, CAP)",
-                    "• Inserire il tuo IBAN se prevedi pagamenti tramite bonifico",
-                    "COLLEGARE IL/I FIGLIO/I:",
-                    "• Dalla dashboard genitore, clicca su 'Collega Atleta'",
-                    "• Cerca il/la figlio/a per nome e cognome o CF",
-                    "• Se non lo trovi, significa che la società non l'ha ancora anagrafato — contatta "
-                    "l'amministratore",
-                    "• L'admin dovrà approvare il collegamento (riceverai email di conferma)",
-                    "Se sei il SECONDO genitore, l'admin ti collegherà manualmente al figlio già registrato "
-                    "dall'altro genitore.",
+                    "REGISTRARE IL/I FIGLIO/I:",
+                    "• Dalla dashboard genitore, clicca su 'Registra Atleta'",
+                    "• Inserisci i dati anagrafici del figlio: nome, cognome, CF, data di nascita, ecc.",
+                    "• Carica il certificato medico di idoneità sportiva",
+                    "• Firma i documenti GDPR per conto del minore",
+                    "• Il figlio è ora iscritto in periodo di prova — l'admin lo assegnerà a un gruppo/squadra",
+                    "SECONDO GENITORE:",
+                    "Se sei il SECONDO genitore (l'altro genitore ha già registrato tuo figlio):",
+                    "• Registrati normalmente come genitore",
+                    "• Dalla dashboard clicca 'Cerca Atleta' → inserisci nome/cognome del figlio",
+                    "• Invia richiesta di collegamento — il PRIMO genitore riceve una notifica",
+                    "• Il primo genitore approva la tua richiesta → potrai vedere tutti i dati del figlio",
+                    "Nota: se non trovi tuo figlio nella ricerca significa che nessun genitore l'ha "
+                    "ancora registrato — sarai TU il primo a inserirlo con la procedura sopra.",
                 ],
             },
             {
@@ -115,29 +98,31 @@ GUIDES = {
                     "Per ogni figlio minorenne collegato, dovrai firmare digitalmente:",
                     "• Informativa Privacy (obbligatoria)",
                     "• Consenso al trattamento dati sanitari",
-                    "• Dichiarazione periodo di prova (se prevista dalla società)",
+                    "• Dichiarazione periodo di prova (all'inizio del percorso)",
                     "• Autorizzazioni foto/video (opzionali)",
                     "COME FIRMARE:",
                     "• Vai su 'Documenti' dalla dashboard",
                     "• Clicca sul documento in stato 'Da firmare'",
                     "• Leggi il testo, spunta le voci obbligatorie, poi firma nel riquadro con dito o mouse",
-                    "• Il PDF firmato viene generato automaticamente — lo trovi nella sezione 'Documenti firmati'",
-                    "IMPORTANTE: la firma è vincolante come una firma cartacea. Se il figlio è già maggiorenne, "
-                    "sarà lui/lei a firmare autonomamente (non tu).",
+                    "• Il PDF firmato viene generato automaticamente — lo trovi in 'Documenti firmati'",
+                    "IMPORTANTE: la firma è vincolante come una firma cartacea. Se il figlio compie 18 anni "
+                    "durante la stagione, dal rinnovo successivo firmerà lui/lei direttamente.",
                 ],
             },
             {
                 "title": "4. Attività periodiche",
                 "body": [
                     "COSA FARE OGNI TANTO (mensile o quando serve):",
-                    "• PAGAMENTI: quando la società emette una quota (iscrizione, mensilità), riceverai una "
-                    "notifica. Vai su 'Pagamenti' → clicca sull'importo → paga con bonifico o carta.",
-                    "• CERTIFICATO MEDICO: quando quello di tuo figlio sta per scadere, riceverai un promemoria. "
-                    "Carica il nuovo certificato in PDF da 'Documenti' → 'Carica certificato'.",
-                    "• COMUNICAZIONI: leggi periodicamente la sezione 'Da fare' della dashboard — lì trovi tutte "
+                    "• PAGAMENTI: quando la società emette una quota, riceverai una notifica. Vai su "
+                    "'Pagamenti' → clicca sull'importo → paga con bonifico o carta (in base a quanto "
+                    "impostato dalla società).",
+                    "• CERTIFICATO MEDICO: quando quello di tuo figlio sta per scadere, ricevi un "
+                    "promemoria. Carica il nuovo certificato in PDF da 'Documenti'.",
+                    "• COMUNICAZIONI: leggi periodicamente 'Da fare' della dashboard — lì trovi tutte "
                     "le richieste in sospeso della società.",
-                    "SE HAI PIÙ FIGLI: dalla dashboard puoi passare da un figlio all'altro con il selettore in "
-                    "alto — così vedi separatamente pagamenti, documenti, allenamenti di ciascuno.",
+                    "SE HAI PIÙ FIGLI: dalla dashboard puoi passare da un figlio all'altro con il "
+                    "selettore in alto — così vedi separatamente pagamenti, documenti, allenamenti "
+                    "di ciascuno.",
                 ],
             },
         ],
@@ -149,15 +134,18 @@ GUIDES = {
             {
                 "title": "1. Registrazione",
                 "body": [
-                    "Sei stato invitato dalla società {society_name} a registrarti come atleta maggiorenne.",
+                    "Sei un atleta maggiorenne di {society_name}.",
                     "PASSI DA SEGUIRE:",
-                    "• Vai su app.registrateam.it → clicca 'Registrati'",
-                    "• Seleziona il ruolo 'Atleta'",
+                    "• Vai su app.registrateam.it → 'Registrati' → 'Atleta'",
                     "• Compila: nome, cognome, codice fiscale, data di nascita, email, telefono, password",
-                    "• Accetta i consensi (obbligatori)",
-                    "• Conferma via email — riceverai un link di attivazione",
-                    "Se sei un atleta PRO (retribuito), l'admin ti abiliterà come 'compensated' dopo la registrazione — "
-                    "vedrai apparire la sezione 'Compensi Sportivi' nella dashboard.",
+                    "• Accetta i consensi obbligatori",
+                    "SE SEI ATLETA QUOTA (paghi la quota di iscrizione):",
+                    "• Registrazione LIBERA — l'account è attivo subito, senza email di convalida",
+                    "• Farai un periodo di prova nella squadra assegnata dall'admin",
+                    "SE SEI ATLETA PRO (retribuito Riforma Sport):",
+                    "• L'account resterà in attesa di autorizzazione dell'admin della società",
+                    "• L'admin ti abiliterà come 'compensated' — solo allora potrai accedere alle "
+                    "sezioni compensi e firmare le quietanze",
                 ],
             },
             {
@@ -165,12 +153,14 @@ GUIDES = {
                 "body": [
                     "Al primo login completa:",
                     "• DATI ANAGRAFICI: indirizzo, città, CAP, luogo di nascita",
-                    "• DATI FISCALI: codice fiscale (per Riforma Sport, se retribuito)",
-                    "• IBAN: solo se sei retribuito (Atleta PRO). Serve per ricevere i compensi.",
+                    "• DATI FISCALI: codice fiscale",
+                    "• IBAN: SOLO se sei atleta PRO retribuito (per ricevere i compensi). "
+                    "Se sei atleta quota che paga, NON serve.",
                     "• DATI SANITARI: carica il certificato di idoneità sportiva agonistica in PDF",
                     "SEZIONE COACH (se sei anche allenatore):",
-                    "Se la società ti ha abilitato come atleta+coach (dual-role), vedrai il pulsante arancione "
-                    "'Passa a Modalità Coach' in alto — usalo per gestire l'altro ruolo senza fare logout.",
+                    "Se la società ti ha abilitato come atleta+coach (dual-role), vedrai il pulsante "
+                    "arancione 'Passa a Modalità Coach' in alto — usalo per gestire l'altro ruolo "
+                    "senza fare logout.",
                 ],
             },
             {
@@ -214,17 +204,18 @@ GUIDES = {
                 "body": [
                     "Sei stato invitato dalla società {society_name} a registrarti come coach.",
                     "PASSI DA SEGUIRE:",
-                    "• Apri il link di invito ricevuto via email",
+                    "• Apri il link di invito ricevuto dalla società (via email o WhatsApp)",
                     "• Compila i dati: nome, cognome, CF, data e luogo di nascita, email, telefono, password",
                     "• Accetta i consensi obbligatori",
-                    "• Conferma via email — l'admin approverà il tuo account e ti abiliterà",
-                    "Una volta approvato, riceverai una seconda email con il link per il primo accesso.",
+                    "IMPORTANTE: l'account NON verrà attivato automaticamente. Sarà l'admin della società "
+                    "ad autorizzare il tuo accesso dopo aver verificato i tuoi dati. Riceverai una "
+                    "notifica quando sarai abilitato.",
                 ],
             },
             {
                 "title": "2. Primo accesso",
                 "body": [
-                    "Completa i tuoi dati per essere operativo:",
+                    "Dopo l'autorizzazione dell'admin, completa i tuoi dati:",
                     "• RESIDENZA: indirizzo, città, CAP",
                     "• DATI FISCALI: CF (richiesto per Riforma Sport)",
                     "• IBAN: obbligatorio se retribuito — è dove ricevi i compensi mensili",
@@ -261,8 +252,8 @@ GUIDES = {
                     "• Ricevi notifica: dashboard → 'Compensi' → mese corrente → 'Firma quietanza'",
                     "• Firma nel riquadro → il PDF firmato ti arriva anche via email",
                     "SOGLIE Riforma Sport:",
-                    "• Al superamento di €5.000/anno il sistema genera automaticamente la Comunicazione RAS",
-                    "• Al superamento di €15.000/anno stessa cosa per la comunicazione superiore",
+                    "• Al superamento di €5.000/anno o €15.000/anno riceverai un promemoria per le "
+                    "comunicazioni RAS (Registro Attività Sportive)",
                     "• Firma queste comunicazioni non appena appaiono in 'Documenti da firmare'",
                     "DUAL-ROLE (se sei anche atleta):",
                     "Usa il pulsante 'Passa a Modalità Atleta' in alto per passare da un ruolo all'altro "
@@ -280,15 +271,15 @@ GUIDES = {
                 "body": [
                     "Sei stato invitato come dirigente sportivo di {society_name}.",
                     "Passi identici al coach: link di invito → compila anagrafica + CF + email + password → "
-                    "conferma via email → attendi approvazione admin.",
-                    "Come dirigente hai accesso a: visualizzazione di squadre, atleti, presenze, gare — MA "
-                    "NON puoi modificare (solo lettura), tranne le tue quietanze personali.",
+                    "attendi l'autorizzazione admin (NON riceverai email di convalida automatica).",
+                    "Come dirigente hai accesso in SOLA LETTURA a: squadre, atleti, presenze, gare. "
+                    "Solo le tue quietanze personali sono modificabili.",
                 ],
             },
             {
                 "title": "2. Primo accesso",
                 "body": [
-                    "Completa i dati per ricevere il compenso:",
+                    "Dopo l'abilitazione dell'admin, completa i dati per ricevere il compenso:",
                     "• Residenza (indirizzo, città, CAP)",
                     "• CF, luogo/data di nascita",
                     "• IBAN (obbligatorio se retribuito)",
@@ -313,7 +304,8 @@ GUIDES = {
                 "body": [
                     "OGNI MESE:",
                     "• Firma la quietanza mensile del compenso (Compensi → mese → Firma)",
-                    "• Verifica soglie €5.000/€15.000 → firma comunicazioni RAS quando appaiono",
+                    "• Al superamento di €5.000/anno o €15.000/anno riceverai un promemoria per le "
+                    "comunicazioni RAS (Registro Attività Sportive)",
                     "OGNI TANTO:",
                     "• Consulta la dashboard 'Squadre/Atleti/Gare' per rimanere aggiornato sull'attività "
                     "della società (solo lettura)",
@@ -331,13 +323,14 @@ GUIDES = {
                 "body": [
                     "Sei stato invitato come collaboratore di {society_name} — questa figura può essere "
                     "custode/manutentore palestra, segretario, addetto marketing, ecc.",
-                    "Passi: link email → anagrafica + CF + email + password → conferma → attesa approvazione admin.",
+                    "Passi: link di invito → anagrafica + CF + email + password → attendi l'autorizzazione "
+                    "admin (NON riceverai email di convalida automatica).",
                 ],
             },
             {
                 "title": "2. Primo accesso",
                 "body": [
-                    "Completa i dati:",
+                    "Dopo l'abilitazione dell'admin, completa i dati:",
                     "• Residenza, CF, data/luogo di nascita",
                     "• IBAN (se retribuito)",
                     "• Attività: descrivi brevemente il tipo di collaborazione (custode palestra X, ecc.)",
@@ -361,7 +354,8 @@ GUIDES = {
                 "body": [
                     "OGNI MESE:",
                     "• Firma quietanza mensile del compenso",
-                    "• Verifica eventuale superamento soglie RAS",
+                    "• Al superamento di €5.000/anno o €15.000/anno riceverai un promemoria per le "
+                    "comunicazioni RAS (Registro Attività Sportive)",
                     "OGNI TANTO:",
                     "• Comunica all'admin variazioni di orari, disponibilità, o problemi operativi",
                     "• Consulta la dashboard per verificare che i dati siano corretti",
@@ -381,9 +375,9 @@ GUIDES = {
                     "• Vai su app.registrateam.it → 'Registra Società'",
                     "• Compila: ragione sociale, CF/P.IVA, sede, PEC, IBAN società, email istituzionale",
                     "• Crea il tuo account admin (email + password personali)",
-                    "• Ricevi email di conferma → attiva l'account",
-                    "Dopo la conferma potrai personalizzare il logo, i colori, i template email, le impostazioni "
-                    "GDPR e le date della stagione sportiva.",
+                    "• L'account è attivo subito, senza email di convalida",
+                    "Dopo il primo login potrai personalizzare logo, colori, template email, impostazioni "
+                    "GDPR e date della stagione sportiva.",
                 ],
             },
             {
@@ -419,8 +413,18 @@ GUIDES = {
             {
                 "title": "4. Attività periodiche (amministratore)",
                 "body": [
+                    "AUTORIZZARE NUOVI UTENTI:",
+                    "L'admin autorizza personalmente l'accesso di:",
+                    "• Coach, Dirigenti, Collaboratori: dopo la registrazione restano in attesa fino a tua approvazione",
+                    "• Atleti 18+ PRO (retribuiti): idem",
+                    "Invece i seguenti si registrano LIBERAMENTE e iniziano subito il periodo di prova:",
+                    "• Genitori di atleti minorenni",
+                    "• Atleti 18+ QUOTA (che pagano la quota)",
+                    "Per questi ultimi, sarà l'admin a indicare successivamente il gruppo/squadra su cui "
+                    "faranno la prova.",
                     "OGNI GIORNO/SETTIMANA:",
-                    "• Approva nuove iscrizioni (dashboard → 'Atleti in attesa di approvazione')",
+                    "• Autorizza nuove iscrizioni Coach/Dirigenti/Collaboratori/Atleti PRO",
+                    "• Assegna gruppo/squadra a nuovi atleti in prova (minori o adulti quota)",
                     "• Verifica pagamenti quote in arrivo (bonifici, carte)",
                     "• Rispondi a richieste utenti (link genitore-figlio, reset password, ecc.)",
                     "OGNI MESE:",

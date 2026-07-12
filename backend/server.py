@@ -21376,6 +21376,10 @@ async def get_guide_pdf(role: str, current_user = Depends(get_current_user)):
         logger.exception(f"Errore generazione guida {guide_key}: {e}")
         raise HTTPException(status_code=500, detail="Errore nella generazione della guida")
 
+    logger.info(
+        f"[guides] role={guide_key} society_id={sid} society_name={society_ctx.get('society_name')!r}"
+        f" user_id={current_user.get('id')} user_role={user_role}"
+    )
     _safe_name = "".join(c for c in (society_ctx.get("society_name") or "RegistraTEAM") if c.isalnum() or c in ("_", "-", " ")).strip().replace(" ", "_") or "RegistraTEAM"
     filename = f"Guida_{guide_key}_{_safe_name}.pdf"
     return StreamingResponse(
