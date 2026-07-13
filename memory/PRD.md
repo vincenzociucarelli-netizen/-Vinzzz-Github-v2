@@ -12,6 +12,17 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Stripe test mode | UptimeRobot
 - Produzione: https://registrateam.it
 
+## 📌 Idee da valutare (nice-to-have, senza priorità definita)
+
+- **Screenshots reali dell'app nei PDF prontuari** (proposto 12/07/2026)
+  - Includere immagini dei form principali (registrazione, primo accesso, firma documenti) generate via Playwright + reportlab
+  - Trasformerebbe le guide da "istruzioni testuali" a "guide visuali"
+  - Utile soprattutto per convincere le società amiche a fine anno gratuita
+  - Stima: ~1h di lavoro
+  - Status: in attesa di decisione utente
+
+---
+
 ## Branch Git
 - **`02-05-2026`** = default branch (GitHub + Vercel + Render). Save to GitHub pusha qui → deploy automatico.
 - `main` obsoleto.
