@@ -114,6 +114,8 @@ const styles = StyleSheet.create({
   name: {
     fontWeight: '600',
     letterSpacing: 0.3,
+    flex: 1,
     flexShrink: 1,
+    minWidth: 0,
   },
 });

@@ -63,14 +63,13 @@ GUIDES = {
                     "Sei il genitore/tutore di un atleta minorenne di {society_name}.",
                     "PASSI DA SEGUIRE:",
                     "• Vai su app.registrateam.it → clicca 'Registrati' → seleziona 'Genitore'",
+                    "• 🔑 Inserisci il CODICE SOCIETÀ: <b>{society_invite_code}</b>",
                     "• Inserisci: nome, cognome, codice fiscale, email, telefono, password",
                     "• Accetta i consensi di trattamento dati (obbligatorio)",
                     "• Conferma → l'account è ATTIVO SUBITO, senza email di convalida",
                     "IMPORTANTE: la registrazione del genitore è LIBERA — non serve autorizzazione admin. "
                     "Sarà l'admin ad assegnare successivamente il gruppo/squadra dove tuo figlio farà "
                     "il periodo di prova.",
-                    "🔑 CODICE SOCIETÀ: al momento dell'iscrizione ti sarà richiesto il codice società "
-                    "<b>{society_invite_code}</b>. Lo trovi anche sulla cover di questa guida.",
                 ],
             },
             {
@@ -139,6 +138,7 @@ GUIDES = {
                     "Sei un atleta maggiorenne di {society_name}.",
                     "PASSI DA SEGUIRE:",
                     "• Vai su app.registrateam.it → 'Registrati' → 'Atleta'",
+                    "• 🔑 Inserisci il CODICE SOCIETÀ: <b>{society_invite_code}</b>",
                     "• Compila: nome, cognome, codice fiscale, data di nascita, email, telefono, password",
                     "• Accetta i consensi obbligatori",
                     "SE SEI ATLETA QUOTA (paghi la quota di iscrizione):",
@@ -148,8 +148,6 @@ GUIDES = {
                     "• L'account resterà in attesa di autorizzazione dell'admin della società",
                     "• L'admin ti abiliterà come 'compensated' — solo allora potrai accedere alle "
                     "sezioni compensi e firmare le quietanze",
-                    "🔑 CODICE SOCIETÀ: al momento dell'iscrizione ti sarà richiesto il codice società "
-                    "<b>{society_invite_code}</b>. Lo trovi anche sulla cover di questa guida.",
                 ],
             },
             {
@@ -209,13 +207,12 @@ GUIDES = {
                     "Sei stato invitato dalla società {society_name} a registrarti come coach.",
                     "PASSI DA SEGUIRE:",
                     "• Apri il link di invito ricevuto dalla società (via email o WhatsApp)",
+                    "• 🔑 Inserisci il CODICE SOCIETÀ: <b>{society_invite_code}</b>",
                     "• Compila i dati: nome, cognome, CF, data e luogo di nascita, email, telefono, password",
                     "• Accetta i consensi obbligatori",
                     "IMPORTANTE: l'account NON verrà attivato automaticamente. Sarà l'admin della società "
                     "ad autorizzare il tuo accesso dopo aver verificato i tuoi dati. Riceverai una "
                     "notifica quando sarai abilitato.",
-                    "🔑 CODICE SOCIETÀ: al momento dell'iscrizione ti sarà richiesto il codice società "
-                    "<b>{society_invite_code}</b>. Lo trovi anche sulla cover di questa guida.",
                 ],
             },
             {
@@ -276,10 +273,11 @@ GUIDES = {
                 "title": "1. Registrazione",
                 "body": [
                     "Sei stato invitato come dirigente sportivo di {society_name}.",
-                    "Passi identici al coach: link di invito → compila anagrafica + CF + email + password → "
-                    "attendi l'autorizzazione admin (NON riceverai email di convalida automatica).",
-                    "🔑 CODICE SOCIETÀ: al momento dell'iscrizione ti sarà richiesto il codice società "
-                    "<b>{society_invite_code}</b>. Lo trovi anche sulla cover di questa guida.",
+                    "PASSI DA SEGUIRE:",
+                    "• Apri il link di invito ricevuto dalla società",
+                    "• 🔑 Inserisci il CODICE SOCIETÀ: <b>{society_invite_code}</b>",
+                    "• Compila anagrafica + CF + email + password",
+                    "• Attendi l'autorizzazione admin (NON riceverai email di convalida automatica)",
                     "Come dirigente hai accesso in SOLA LETTURA a: squadre, atleti, presenze, gare. "
                     "Solo le tue quietanze personali sono modificabili.",
                 ],
@@ -331,10 +329,11 @@ GUIDES = {
                 "body": [
                     "Sei stato invitato come collaboratore di {society_name} — questa figura può essere "
                     "custode/manutentore palestra, segretario, addetto marketing, ecc.",
-                    "Passi: link di invito → anagrafica + CF + email + password → attendi l'autorizzazione "
-                    "admin (NON riceverai email di convalida automatica).",
-                    "🔑 CODICE SOCIETÀ: al momento dell'iscrizione ti sarà richiesto il codice società "
-                    "<b>{society_invite_code}</b>. Lo trovi anche sulla cover di questa guida.",
+                    "PASSI DA SEGUIRE:",
+                    "• Apri il link di invito ricevuto dalla società",
+                    "• 🔑 Inserisci il CODICE SOCIETÀ: <b>{society_invite_code}</b>",
+                    "• Compila anagrafica + CF + email + password",
+                    "• Attendi l'autorizzazione admin (NON riceverai email di convalida automatica)",
                 ],
             },
             {

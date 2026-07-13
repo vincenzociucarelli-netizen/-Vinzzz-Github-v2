@@ -560,11 +560,11 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
       <OnboardingTutorial role="parent" steps={PARENT_STEPS} />
       <View style={styles.header}>
         {/* BRANDING_WRAPPED */}
-          <View style={{ flex: 1, marginHorizontal: 8 }}>
+          <View style={{ flex: 1, marginRight: 8, minWidth: 0 }}>
             <SocietyBranding />
-            <Text style={styles.headerTitle}>I Miei Figli</Text>
+            <Text style={styles.headerTitle} numberOfLines={1}>I Miei Figli</Text>
           </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 }}>
           <TouchableOpacity onPress={() => { setShowUserNotifs(!showUserNotifs); if (!showUserNotifs && unreadCount > 0) markAllUserNotifsRead(); }} data-testid="parent-notifications-bell">
             <View>
               <Ionicons name="notifications-outline" size={24} color="#fff" />
