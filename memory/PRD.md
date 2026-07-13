@@ -12,6 +12,18 @@ Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-
 - Stripe test mode | UptimeRobot
 - Produzione: https://registrateam.it
 
+## 🔑 12/07/2026 (v7.15-hotfix12) — Codice società (invite_code) nelle guide PDF ✅
+
+**Segnalazione utente**: "Su tutte le istruzioni abbiamo dimenticato di mettere il CODICE SOCIETÀ che serve al momento dell'iscrizione."
+
+**Fix**:
+1. Backend `/api/guides/{role}`: aggiunto `invite_code` alla projection di `societies` e al `society_ctx` passato al generator PDF
+2. Cover PDF (`guides_pdf.py`): nuova riga "Codice società: XXXXXXXX" **evidenziata** in giallo tenue con font più grande e colore accent (impossibile da mancare)
+3. Contenuti guide (`guides_content.py`): aggiunto paragrafo dedicato con 🔑 in tutte le sezioni "1. Registrazione" (parent, athlete, coach, dirigente, collaboratore) — placeholder `{society_invite_code}` sostituito dinamicamente
+4. Guida Admin: nuovo paragrafo in "2. Primo accesso" che dice "IL TUO CODICE SOCIETÀ è XXX. Distribuiscilo a genitori/atleti/coach ecc." + nota su come rigenerarlo
+
+**Verificato via curl**: 6/6 PDF con menzione "codice società" + codice reale `BUZHB0WT` (invite_code del preview) presente in tutti e 6.
+
 ## 📌 Idee da valutare (nice-to-have, senza priorità definita)
 
 - **Screenshots reali dell'app nei PDF prontuari** (proposto 12/07/2026)

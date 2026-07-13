@@ -21352,7 +21352,7 @@ async def get_guide_pdf(role: str, current_user = Depends(get_current_user)):
         if not settings_doc:
             # fallback: prova senza filtro type
             settings_doc = await db.settings.find_one({"society_id": sid})
-        society_doc = await db.societies.find_one({"id": sid}, {"_id": 0, "name": 1, "logo": 1, "address": 1, "city": 1, "postal_code": 1, "province": 1, "email": 1, "phone": 1, "website": 1, "pec": 1})
+        society_doc = await db.societies.find_one({"id": sid}, {"_id": 0, "name": 1, "logo": 1, "address": 1, "city": 1, "postal_code": 1, "province": 1, "email": 1, "phone": 1, "website": 1, "pec": 1, "invite_code": 1})
         # Preferisci ragione_sociale da settings, altrimenti name da societies
         rs = (settings_doc or {}).get("ragione_sociale")
         name = rs or (society_doc or {}).get("name") or "RegistraTEAM"
@@ -21368,6 +21368,7 @@ async def get_guide_pdf(role: str, current_user = Depends(get_current_user)):
             "society_phone": (society_doc or {}).get("phone") or (settings_doc or {}).get("phone") or "",
             "society_website": (society_doc or {}).get("website") or (settings_doc or {}).get("website") or "",
             "society_pec": (settings_doc or {}).get("society_pec") or (society_doc or {}).get("pec") or "",
+            "society_invite_code": (society_doc or {}).get("invite_code") or "—",
         }
 
     try:

@@ -69,6 +69,8 @@ GUIDES = {
                     "IMPORTANTE: la registrazione del genitore è LIBERA — non serve autorizzazione admin. "
                     "Sarà l'admin ad assegnare successivamente il gruppo/squadra dove tuo figlio farà "
                     "il periodo di prova.",
+                    "🔑 CODICE SOCIETÀ: al momento dell'iscrizione ti sarà richiesto il codice società "
+                    "<b>{society_invite_code}</b>. Lo trovi anche sulla cover di questa guida.",
                 ],
             },
             {
@@ -146,6 +148,8 @@ GUIDES = {
                     "• L'account resterà in attesa di autorizzazione dell'admin della società",
                     "• L'admin ti abiliterà come 'compensated' — solo allora potrai accedere alle "
                     "sezioni compensi e firmare le quietanze",
+                    "🔑 CODICE SOCIETÀ: al momento dell'iscrizione ti sarà richiesto il codice società "
+                    "<b>{society_invite_code}</b>. Lo trovi anche sulla cover di questa guida.",
                 ],
             },
             {
@@ -210,6 +214,8 @@ GUIDES = {
                     "IMPORTANTE: l'account NON verrà attivato automaticamente. Sarà l'admin della società "
                     "ad autorizzare il tuo accesso dopo aver verificato i tuoi dati. Riceverai una "
                     "notifica quando sarai abilitato.",
+                    "🔑 CODICE SOCIETÀ: al momento dell'iscrizione ti sarà richiesto il codice società "
+                    "<b>{society_invite_code}</b>. Lo trovi anche sulla cover di questa guida.",
                 ],
             },
             {
@@ -272,6 +278,8 @@ GUIDES = {
                     "Sei stato invitato come dirigente sportivo di {society_name}.",
                     "Passi identici al coach: link di invito → compila anagrafica + CF + email + password → "
                     "attendi l'autorizzazione admin (NON riceverai email di convalida automatica).",
+                    "🔑 CODICE SOCIETÀ: al momento dell'iscrizione ti sarà richiesto il codice società "
+                    "<b>{society_invite_code}</b>. Lo trovi anche sulla cover di questa guida.",
                     "Come dirigente hai accesso in SOLA LETTURA a: squadre, atleti, presenze, gare. "
                     "Solo le tue quietanze personali sono modificabili.",
                 ],
@@ -325,6 +333,8 @@ GUIDES = {
                     "custode/manutentore palestra, segretario, addetto marketing, ecc.",
                     "Passi: link di invito → anagrafica + CF + email + password → attendi l'autorizzazione "
                     "admin (NON riceverai email di convalida automatica).",
+                    "🔑 CODICE SOCIETÀ: al momento dell'iscrizione ti sarà richiesto il codice società "
+                    "<b>{society_invite_code}</b>. Lo trovi anche sulla cover di questa guida.",
                 ],
             },
             {
@@ -383,6 +393,10 @@ GUIDES = {
             {
                 "title": "2. Primo accesso e configurazione",
                 "body": [
+                    "🔑 IL TUO CODICE SOCIETÀ è <b>{society_invite_code}</b>. "
+                    "Distribuiscilo a genitori, atleti, coach, dirigenti e collaboratori — sarà loro "
+                    "richiesto al momento della registrazione. Se serve, dalla dashboard puoi rigenerarlo "
+                    "in qualsiasi momento (Impostazioni → Rigenera codice invito).",
                     "COMPILA le IMPOSTAZIONI SOCIETÀ (dashboard admin → Impostazioni):",
                     "• Nome, indirizzo, contatti, logo società",
                     "• Date stagione (inizio/fine) — cruciali per il rollover annuale",

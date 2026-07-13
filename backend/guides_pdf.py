@@ -120,6 +120,11 @@ def generate_guide_pdf(role: str, society_ctx: dict) -> bytes:
     society_info_data = [
         ["Società:", society_ctx.get("society_name", "—")],
     ]
+    # 📝 12/07/2026 (v7.15-hotfix12) — Codice società prominente sulla cover:
+    # serve OBBLIGATORIAMENTE al momento dell'iscrizione. Lo mettiamo subito
+    # sotto il nome così l'utente lo trova senza cercarlo.
+    if society_ctx.get("society_invite_code") and society_ctx.get("society_invite_code") != "—":
+        society_info_data.append(["Codice società:", society_ctx["society_invite_code"]])
     if society_ctx.get("society_address"):
         society_info_data.append(["Indirizzo:", society_ctx["society_address"]])
     if society_ctx.get("society_email"):
@@ -128,8 +133,8 @@ def generate_guide_pdf(role: str, society_ctx: dict) -> bytes:
         society_info_data.append(["Telefono:", society_ctx["society_phone"]])
     if society_ctx.get("society_website"):
         society_info_data.append(["Web:", society_ctx["society_website"]])
-    society_table = Table(society_info_data, colWidths=[3 * cm, 13 * cm])
-    society_table.setStyle(TableStyle([
+    society_table = Table(society_info_data, colWidths=[3.2 * cm, 12.8 * cm])
+    _table_style = [
         ("FONT", (0, 0), (-1, -1), "Helvetica", 10),
         ("FONT", (0, 0), (0, -1), "Helvetica-Bold", 10),
         ("TEXTCOLOR", (0, 0), (0, -1), colors.HexColor("#555555")),
@@ -139,7 +144,16 @@ def generate_guide_pdf(role: str, society_ctx: dict) -> bytes:
         ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F5F5F5")),
         ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#E0E0E0")),
         ("LINEBELOW", (0, 0), (-1, -1), 0.25, colors.HexColor("#EEEEEE")),
-    ]))
+    ]
+    # Evidenzia la riga "Codice società" (in genere la riga 1 se presente)
+    for idx, row in enumerate(society_info_data):
+        if row[0] == "Codice società:":
+            _table_style.extend([
+                ("BACKGROUND", (0, idx), (-1, idx), colors.HexColor("#FFF9C4")),  # giallo tenue
+                ("FONT", (1, idx), (1, idx), "Helvetica-Bold", 12),
+                ("TEXTCOLOR", (1, idx), (1, idx), accent),
+            ])
+    society_table.setStyle(TableStyle(_table_style))
     story.append(society_table)
     story.append(Spacer(1, 12))
 
