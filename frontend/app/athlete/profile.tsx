@@ -1301,7 +1301,9 @@ export default function AthleteProfile() {
           )}
         </View>
 
-        {/* Versione Lite Section — RIPRISTINATA 27/02/2026 (utente vuole mantenerla) */}
+        {/* Versione Lite Section — disponibile a TUTTI gli atleti (minori, 18+, 18+ pro).
+            Chiarimento utente 27/02/2026: la Lite è utile a tutti; la vera regola è
+            che ogni atleta ha il proprio pairing legato al suo codice univoco (CF). */}
         <View style={styles.card} data-testid="lite-access-section">
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
             <Ionicons name="phone-portrait" size={24} color="#007AFF" />

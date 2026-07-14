@@ -209,6 +209,30 @@ def check_profiles_for_document(parent: dict = None, athlete: dict = None):
         detail = "Anagrafica incompleta. Compilare i seguenti campi prima di generare il documento: " + " | ".join(all_missing)
         raise HTTPException(status_code=400, detail=detail)
 
+
+def _compute_is_minor(athlete: dict) -> bool:
+    """Ritorna True se l'atleta è minorenne.
+    - Se il flag `is_minor` è esplicitamente settato → usa quello.
+    - Altrimenti calcola da `date_of_birth` (età < 18).
+    - Default sicuro: True (comportamento pre-esistente per record legacy).
+    """
+    v = athlete.get("is_minor")
+    if isinstance(v, bool):
+        return v
+    dob = athlete.get("date_of_birth")
+    if dob:
+        try:
+            if isinstance(dob, str):
+                dob_dt = datetime.fromisoformat(dob.replace("Z", "").split("T")[0])
+            else:
+                dob_dt = dob
+            today = datetime.utcnow()
+            age = today.year - dob_dt.year - ((today.month, today.day) < (dob_dt.month, dob_dt.day))
+            return age < 18
+        except Exception:
+            pass
+    return True
+
 # Progressive rate limiting configuration
 def get_real_ip(request: Request) -> str:
     """Get real client IP from X-Forwarded-For header or fall back to remote address"""
@@ -3514,7 +3538,7 @@ async def minor_login(request: Request, credentials: MinorLogin):
         "_id": 0, "id": 1, "nome_lite": 1, "athlete_code": 1, "qr_identifier": 1,
         "first_name": 1, "last_name": 1, "full_name": 1,
         "minor_access_enabled": 1, "minor_pin_hash": 1, "society_id": 1,
-        "team_id": 1, "status": 1,
+        "team_id": 1, "status": 1, "is_minor": 1, "date_of_birth": 1,
     }
     # 🆕 08/07/2026 (v7.11) — Match nome_lite filtrato per society_id (se fornito dal client).
     # `nome_lite` è univoco DENTRO la società, non globalmente → filtrare previene collisioni
@@ -3573,6 +3597,10 @@ async def minor_login(request: Request, credentials: MinorLogin):
             "full_name": athlete.get("full_name", ""),
             "status": athlete.get("status", "active"),
             "athlete_id": athlete["id"],
+            # 🐛 27/02/2026 — Includiamo is_minor per far decidere al frontend se
+            # salvare o meno lo Smart Lock pairing (evitiamo cross-contamination
+            # se un atleta maggiorenne dovesse usare l'Accesso Lite).
+            "is_minor": _compute_is_minor(athlete),
             # 🆕 device-pairing payload (safe da salvare in localStorage)
             "athlete_code": athlete.get("athlete_code", ""),
             "nome_lite": athlete.get("nome_lite", ""),

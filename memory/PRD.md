@@ -1,5 +1,35 @@
 # RegistraTEAM — PRD & Stato
 
+
+## 🔗 27/02/2026 (v7.15-hotfix13) — Smart Lock Lite pairing legato al codice atleta (CF) ✅
+
+**Segnalazione utente**: "Lucia atleta 18+ pro ha completato la registrazione, ha impostato nome_lite e PIN… ma andando al login trova il nome di 'chiara_op' pre-impostato."
+
+**Chiarimento utente successivo**: La Versione Lite è utile per **tutti gli atleti** (minori, 18+ e 18+ pro), non solo minorenni. Ma serve:
+- A) L'accesso può tenere in memoria l'atleta ma deve essere **facilmente cambiabile**
+- B) Il `nome_lite` deve essere **abbinato al codice univoco dell'atleta** (che è collegato al codice fiscale)
+
+**Fix implementati**:
+
+1. **Backend** (`/app/backend/server.py`):
+   - Nuovo helper `_compute_is_minor(athlete)` che deduce `is_minor` dal flag esplicito o (fallback) dalla `date_of_birth`
+   - `/api/auth/minor-login` ora include `is_minor` nel payload utente (utile a decisioni frontend future)
+   - `ATHLETE_LITE_PROJ` estesa con `is_minor` e `date_of_birth`
+
+2. **Frontend login** (`/app/frontend/app/login.tsx`):
+   - `saveLitePairing`: la card in localStorage ora usa `athlete_code` come **chiave primaria** (12-char, derivato dal CF via `resolve_athlete_code_for_cf`, stabile a vita)
+   - `handleMinorLogin`: quando un pairing è attivo, invia `athlete_code` al backend invece di `nome_lite` → identificazione univoca
+   - La card Smart Lock mostra ora **3 righe**: nome_lite (display) + società + `Codice: XXXXXXXX` (chiave CF-derived per verificare l'identità)
+   - Pulsante **"Non sei tu? Cambia atleta"** trasformato da link piccolo a **bottone prominente** (arancione, bordo spesso, icona `swap-horizontal`)
+
+3. **Athlete profile** (`/app/frontend/app/athlete/profile.tsx`):
+   - Sezione "Versione Lite" mantenuta per **tutti** gli atleti (minori, 18+, 18+ pro) — chiarimento utente
+   - Solo migliorato il commento inline
+
+**Test**: `/app/backend/tests/test_lite_pairing_isolation.py` (10 test unit, tutti passano)
+
+**File**: server.py (3 modifiche), login.tsx, register.tsx (rollback pulizia troppo aggressiva), athlete/profile.tsx (rollback: no filtro isAdult).
+
 ## Original Problem Statement
 Applicazione gestionale per società sportive italiane (pallavolo, futuro multi-sport). Focus: **conformità GDPR**, onboarding role-specific (Admin/Coach/Dirigente/Collaboratore/Atleta/Genitore), generazione PDF dinamici, gestione soglie compensi €5k/€15k, calendario/partite. Pilota single-tenant Pallavolo Perugia.
 

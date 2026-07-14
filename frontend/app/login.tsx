@@ -72,8 +72,9 @@ export default function Login() {
         const parsed = JSON.parse(raw);
         if (parsed?.athlete_code) {
           setLitePairing(parsed);
-          // Pre-compila athleteCode con nome_lite per il fallback (se preme "Cambia atleta")
-          setAthleteCode(parsed.nome_lite || parsed.athlete_code);
+          // 🐛 27/02/2026 — Pre-compila con athlete_code (chiave univoca legata al CF)
+          // così anche il fallback "Cambia atleta" usa la chiave stabile.
+          setAthleteCode(parsed.athlete_code || parsed.nome_lite);
         }
       }
     } catch {}
@@ -81,6 +82,10 @@ export default function Login() {
 
   const saveLitePairing = async (u: any) => {
     try {
+      // 🐛 27/02/2026 — Il pairing è ancorato ad `athlete_code` (12 char, derivato
+      // dal Codice Fiscale — persistente per l'atleta anche cambiando società).
+      // `nome_lite` è usato SOLO come display friendly. Questo garantisce che
+      // ogni pairing rappresenti in modo univoco lo stesso atleta.
       if (u?.athlete_code) {
         const pairing = {
           athlete_code: u.athlete_code,
@@ -270,9 +275,10 @@ export default function Login() {
   };
 
   const handleMinorLogin = async () => {
-    // Con litePairing: chiediamo solo il PIN (nome_lite/athlete_code già in memoria)
-    // Senza litePairing: input classico (nome_lite o athlete_code)
-    const identifier = litePairing ? (litePairing.nome_lite || litePairing.athlete_code) : athleteCode.trim();
+    // 🐛 27/02/2026 — Usiamo `athlete_code` come chiave primaria del pairing perché
+    // è derivato dal CF (persistente e univoco). `nome_lite` è solo il display name.
+    // Senza pairing: l'utente inserisce nome_lite o codice atleta (backend risolve entrambi).
+    const identifier = litePairing ? (litePairing.athlete_code || litePairing.nome_lite) : athleteCode.trim();
     if (!identifier || !pin) {
       showAlert('Errore', litePairing ? 'Inserisci il PIN' : 'Inserisci il Nome Lite e il PIN');
       return;
@@ -488,6 +494,13 @@ export default function Login() {
                     <Text style={{ fontSize: 12, color: '#666', marginTop: 2 }} numberOfLines={1}>
                       {litePairing.society_name || 'La tua società'}
                     </Text>
+                    {/* 🆕 27/02/2026 — Mostriamo il codice atleta (chiave univoca legata al CF)
+                        per permettere all'utente di verificare che sia davvero il proprio profilo. */}
+                    {litePairing.athlete_code ? (
+                      <Text style={{ fontSize: 11, color: '#999', marginTop: 2, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }} numberOfLines={1}>
+                        Codice: {litePairing.athlete_code}
+                      </Text>
+                    ) : null}
                   </View>
                 </View>
 
@@ -517,11 +530,24 @@ export default function Login() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={styles.linkButton}
+                  style={{
+                    marginTop: 14,
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    borderRadius: 10,
+                    backgroundColor: '#FFF3E0',
+                    borderWidth: 2,
+                    borderColor: '#FF9800',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                  }}
                   onPress={forgetLitePairing}
                   data-testid="lite-pairing-forget-btn"
                 >
-                  <Text style={[styles.linkText, { fontSize: 13 }]}>
+                  <Ionicons name="swap-horizontal" size={18} color="#E65100" />
+                  <Text style={{ color: '#E65100', fontSize: 14, fontWeight: '700' }}>
                     Non sei tu? Cambia atleta
                   </Text>
                 </TouchableOpacity>
