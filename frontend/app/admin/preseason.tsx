@@ -300,6 +300,26 @@ export default function PreseasonAdmin() {
   };
 
   const handleToggleActive = async (campaign: Campaign) => {
+    // 🐛 27/02/2026 — Aggiunta conferma prima di chiudere/riaprire.
+    // Chiudere una campagna attiva blocca nuove iscrizioni → richiede conferma.
+    const isClosing = campaign.is_active;
+    const confirm = Platform.OS === 'web'
+      ? window.confirm(
+          isClosing
+            ? `Vuoi CHIUDERE la campagna "${campaign.title}"?\n\nI nuovi utenti non potranno più iscriversi. Le risposte già ricevute rimarranno visibili. Potrai riaprirla in qualsiasi momento.`
+            : `Vuoi RIAPRIRE la campagna "${campaign.title}"?\n\nGli utenti potranno di nuovo iscriversi.`
+        )
+      : await new Promise(resolve => Alert.alert(
+          isClosing ? 'Chiudi campagna' : 'Riapri campagna',
+          isClosing
+            ? `Chiudere "${campaign.title}"? I nuovi utenti non potranno più iscriversi.`
+            : `Riaprire "${campaign.title}"?`,
+          [
+            { text: 'Annulla', onPress: () => resolve(false) },
+            { text: isClosing ? 'Chiudi' : 'Riapri', style: isClosing ? 'destructive' : 'default', onPress: () => resolve(true) },
+          ]
+        ));
+    if (!confirm) return;
     try {
       await api.patch(`/preseason/campaigns/${campaign.id}`, { is_active: !campaign.is_active });
       loadCampaigns();
@@ -361,17 +381,46 @@ export default function PreseasonAdmin() {
   };
 
   const handleDelete = async (campaign: Campaign) => {
-    const confirm = Platform.OS === 'web'
-      ? window.confirm(`Eliminare la campagna "${campaign.title}"? Tutte le risposte verranno cancellate.`)
-      : await new Promise(resolve => Alert.alert('Conferma', `Eliminare "${campaign.title}"?`, [
+    // 🐛 27/02/2026 — Doppia conferma per eliminazione permanente:
+    //   Step 1: confirm dialog generico
+    //   Step 2: l'admin deve DIGITARE il titolo della campagna (pattern GitHub)
+    // Evita eliminazioni accidentali di campagne con risposte reali.
+    const step1 = Platform.OS === 'web'
+      ? window.confirm(`⚠️ 1/2 — Eliminare definitivamente "${campaign.title}"?\n\nQuesta operazione:\n• Cancella la campagna\n• Cancella TUTTE le ${campaign.response_count || 0} risposte ricevute\n• Non è reversibile\n\nProcedi solo se sei certa/o.`)
+      : await new Promise(resolve => Alert.alert('Conferma 1/2', `Eliminare "${campaign.title}"? Cancellerà anche tutte le risposte.`, [
           { text: 'Annulla', onPress: () => resolve(false) },
-          { text: 'Elimina', style: 'destructive', onPress: () => resolve(true) },
+          { text: 'Continua', style: 'destructive', onPress: () => resolve(true) },
         ]));
-    if (!confirm) return;
+    if (!step1) return;
+    
+    // Step 2: typing confirmation (solo Web ha window.prompt affidabile)
+    if (Platform.OS === 'web') {
+      const typed = window.prompt(
+        `⚠️ 2/2 — Per confermare, digita esattamente il titolo della campagna:\n\n"${campaign.title}"`,
+        ''
+      );
+      if (typed === null) return; // annullato
+      if ((typed || '').trim() !== campaign.title.trim()) {
+        showAlert('Eliminazione annullata', 'Il titolo digitato non corrisponde. La campagna NON è stata eliminata.');
+        return;
+      }
+    } else {
+      const step2 = await new Promise(resolve => Alert.alert(
+        'Conferma finale 2/2',
+        `Sei DAVVERO sicura/o di voler eliminare "${campaign.title}"? Verranno cancellate anche tutte le risposte.`,
+        [
+          { text: 'Annulla', onPress: () => resolve(false) },
+          { text: 'Elimina definitivamente', style: 'destructive', onPress: () => resolve(true) },
+        ]
+      ));
+      if (!step2) return;
+    }
+    
     try {
       await api.delete(`/preseason/campaigns/${campaign.id}`);
       loadCampaigns();
       if (selectedCampaign?.id === campaign.id) { setSelectedCampaign(null); setResponses([]); setStats(null); }
+      showAlert('Eliminata', `Campagna "${campaign.title}" eliminata.`);
     } catch (err: any) {
       showAlert('Errore', err.response?.data?.detail || 'Errore');
     }
@@ -520,18 +569,22 @@ export default function PreseasonAdmin() {
                 <Text style={{ fontSize: 15, fontWeight: '700', color: '#1565C0' }}>{c.response_count}</Text>
                 <Text style={{ fontSize: 13, color: '#555' }}>risposte</Text>
               </View>
-              {(c as any).missing_parents > 0 && (
+              {/* 🐛 27/02/2026 — Il badge "genitori mancanti" ha senso SOLO dopo
+                  che l'admin ha inviato almeno una notifica ai genitori esistenti.
+                  Per campagne pre-iscrizione open-day (rivolte a famiglie NUOVE
+                  senza account), il conteggio dei "parent" della società è fuorviante. */}
+              {c.last_notification_sent && (c as any).missing_parents > 0 && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFF3E0', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
                   <Ionicons name="alert-circle" size={16} color="#E65100" />
                   <Text style={{ fontSize: 13, fontWeight: '600', color: '#E65100' }}>
-                    {(c as any).missing_parents} genitori mancanti
+                    {(c as any).missing_parents} {(c as any).missing_parents === 1 ? 'genitore ancora' : 'genitori ancora'} da notificare
                   </Text>
                 </View>
               )}
-              {(c as any).missing_parents === 0 && (c as any).total_parents > 0 && (
+              {c.last_notification_sent && (c as any).missing_parents === 0 && (c as any).total_parents > 0 && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#E8F5E9', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
                   <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#2E7D32' }}>Tutti hanno risposto</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#2E7D32' }}>Tutti notificati</Text>
                 </View>
               )}
               {c.created_at && (
@@ -694,8 +747,14 @@ export default function PreseasonAdmin() {
       )}
 
       {/* Responses View */}
+      {/* 🐛 27/02/2026 — Wrappato in Modal così l'admin vede subito le risposte
+          quando clicca "Risposte" (prima il pannello era in fondo alla pagina
+          e su mobile risultava invisibile → sembrava non funzionare). */}
       {selectedCampaign && (
-        <View style={{ marginTop: 8 }}>
+        <Modal visible={true} animationType="slide" transparent={false} onRequestClose={() => { setSelectedCampaign(null); setResponses([]); setStats(null); setActiveFilter('all'); }}>
+          <View style={{ flex: 1, backgroundColor: '#F5F7FA' }}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+          <View style={{ marginTop: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
             <Text style={{ fontSize: 16, fontWeight: '700', color: '#0D47A1' }}>
               Risposte: {selectedCampaign.title}
@@ -788,6 +847,9 @@ export default function PreseasonAdmin() {
             })
           )}
         </View>
+        </ScrollView>
+        </View>
+        </Modal>
       )}
 
       {/* Response Detail Modal */}

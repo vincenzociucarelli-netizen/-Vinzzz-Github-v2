@@ -1,6 +1,38 @@
 # RegistraTEAM — PRD & Stato
 
 
+## 🐛 27/02/2026 (v7.15-hotfix15) — Preseason campaigns + Salva QR in galleria ✅
+
+**Segnalazioni utente**:
+- Punto extra: "Salva codice in galleria" per l'atleta (dopo il fix del QR nell'anagrafica)
+- 3 issue sulle campagne pre-iscrizione: A) conteggio "genitori mancanti" fuorviante, B) tab Risposte non visibile su mobile, C) mancano conferme di sicurezza su Chiudi/Elimina
+
+**Fix implementati**:
+
+**1. "Salva codice in galleria" — profilo atleta** (`athlete/profile.tsx`):
+- Aggiunto pulsante prominente sotto il QR code
+- Web: download PNG del data-URI con nome `qr-atleta-<codice>.png`
+- Mobile: alert con istruzioni per screenshot manuale
+- data-testid: `save-qr-btn`
+
+**2. Preseason "genitori mancanti"** (`admin/preseason.tsx`):
+- Badge nascosto finché `campaign.last_notification_sent` è null
+- Ha senso solo DOPO che l'admin ha inviato una notifica ai genitori esistenti
+- Per campagne open-day pubbliche (famiglie nuove senza account) non compare più
+- Testo migliorato: "1 genitore ancora da notificare" (invece di "mancanti")
+
+**3. Modal "Risposte"** (`admin/preseason.tsx`):
+- Il pannello risposte era renderizzato **in fondo** alla ScrollView → invisibile su mobile
+- Wrappato in `Modal` a schermo intero con `animationType="slide"`
+- Ora si apre sopra la lista campagne, sempre visibile
+
+**4. Conferme Chiudi/Elimina** (`admin/preseason.tsx`):
+- **Chiudi/Riapri**: aggiunta conferma singola con testo esplicativo ("I nuovi utenti non potranno più iscriversi...")
+- **Elimina**: doppia conferma con **typing** (pattern GitHub) — l'admin deve digitare esattamente il titolo della campagna per confermare. Se digitato sbagliato o annullato → nessuna cancellazione. Mostra anche il numero di risposte che verranno perse.
+
+**File modificati**: `admin/preseason.tsx`, `athlete/profile.tsx`. Frontend riesportato (bundle: `entry-e6be684bed215a2e986c87c78e2b775a.js`).
+
+
 ## 🐛 27/02/2026 (v7.15-hotfix14) — Atleta 18+: QR, anagrafica, dati bancari, testi login ✅
 
 **Segnalazioni utente** (5 punti):

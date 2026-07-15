@@ -871,14 +871,62 @@ export default function AthleteProfile() {
 
         {/* QR Code */}
         {profile?.qr_code && (
-          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }} data-testid="qr-code-section">
-            <Image source={{ uri: profile.qr_code }} style={{ width: 50, height: 50, borderRadius: 4 }} resizeMode="contain" />
-            <View style={{ marginLeft: 12, flex: 1 }}>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Il Tuo QR Code</Text>
-              {profile?.athlete_code && (
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#007AFF', marginTop: 2, letterSpacing: 1 }}>{profile.athlete_code}</Text>
-              )}
+          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#e0e0e0' }} data-testid="qr-code-section">
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Image source={{ uri: profile.qr_code }} style={{ width: 50, height: 50, borderRadius: 4 }} resizeMode="contain" />
+              <View style={{ marginLeft: 12, flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Il Tuo QR Code</Text>
+                {profile?.athlete_code && (
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#007AFF', marginTop: 2, letterSpacing: 1 }}>{profile.athlete_code}</Text>
+                )}
+              </View>
             </View>
+            {/* 🆕 27/02/2026 — Pulsante "Salva codice in galleria" per tutti gli atleti.
+                Consente di salvare il proprio QR come immagine PNG per scansionarlo
+                al prossimo login (opzione "Scansiona il tuo codice QR"). */}
+            <TouchableOpacity
+              onPress={() => {
+                if (!profile?.qr_code) return;
+                try {
+                  if (Platform.OS === 'web') {
+                    const link = document.createElement('a');
+                    link.href = profile.qr_code;
+                    const codePart = (profile.athlete_code || 'codice').toLowerCase();
+                    link.download = `qr-atleta-${codePart}.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  } else {
+                    // Su mobile: mostra istruzione manuale (screenshot)
+                    Alert.alert(
+                      'Salva codice',
+                      'Fai uno screenshot del QR sopra e salvalo nella galleria del telefono. Al prossimo accesso potrai scansionarlo da lì.'
+                    );
+                  }
+                } catch (e) {
+                  Alert.alert('Errore', 'Impossibile salvare il codice. Riprova.');
+                }
+              }}
+              style={{
+                marginTop: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                backgroundColor: '#E3F2FD',
+                borderWidth: 1,
+                borderColor: '#1565C0',
+                borderRadius: 10,
+                paddingVertical: 10,
+                paddingHorizontal: 12,
+              }}
+              data-testid="save-qr-btn"
+            >
+              <Ionicons name="download-outline" size={18} color="#1565C0" />
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#1565C0' }}>
+                Salva codice in galleria
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
 
