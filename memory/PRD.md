@@ -1,6 +1,40 @@
 # RegistraTEAM — PRD & Stato
 
 
+## 🐛 27/02/2026 (v7.15-hotfix14) — Atleta 18+: QR, anagrafica, dati bancari, testi login ✅
+
+**Segnalazioni utente** (5 punti):
+
+**1. Atleta 18+/18+pro non vedeva il proprio QR/codice nell'anagrafica**
+- Admin vedeva il codice atleta; l'atleta NO
+- Fix backend `/auth/me`: aggiunti `qr_code`, `qr_identifier`, `athlete_code` alla projection ATLETI + copiati nel payload `user`
+- Frontend `athlete/profile.tsx` (linea 872): sezione "Il Tuo QR Code" già presente ma ora popolata
+
+**2. Export XLS admin senza codice univoco atleta**
+- Fix backend `/api/export/athletes`: aggiunta colonna "Codice Atleta" nell'export JSON→XLS
+- `/api/export-csv/athletes` già la aveva
+
+**3. Profilo Granato Francesca: NOME/COGNOME "-" nonostante CF valido**
+- Root cause: `/auth/me` legge da `db.users` ma per atleti 18+ auto-registrati i campi `first_name`/`last_name`/`full_name`/`fiscal_code` etc. sono spesso solo sul record `db.athletes`
+- Fix backend: aggiunta logica di **fallback anagrafica** — se `users.<campo>` è vuoto, riempi da `athletes.<campo>` per: first_name, last_name, full_name, fiscal_code, codice_fiscale, birth_place, place_of_birth, province_of_birth, gender, address, city, postal_code, province, phone
+- Rispetta i dati esistenti su users: se già popolati, NON sovrascrive
+
+**4. Atleta 18+ QUOTA (paga la quota) vedeva sezione "Dati Bancari"**
+- L'atleta quota PAGA, non riceve compensi → non serve IBAN
+- Fix frontend `athlete/profile.tsx`: wrap sezione Dati Bancari in `{!isQuotaAthlete && ...}` (mostrata solo se `athlete_type === 'compensated'`)
+
+**5. Login "Accesso Atleta": pulsante "Scansiona il QR del tuo genitore"**
+- Testo obsoleto: l'atleta può salvare il proprio QR in galleria e scansionarlo direttamente (già supportato via `Html5QrcodeScanType.SCAN_TYPE_FILE`)
+- Fix frontend `login.tsx`: 
+  - Bottone → "📷 Scansiona il tuo codice QR"
+  - Header modal → "Punta la fotocamera al tuo QR (o carica un'immagine salvata in galleria) per compilare automaticamente il codice atleta."
+  - Hint → "Inserisci il tuo Nome Lite (o codice atleta) e il PIN. Se sei minorenne, chiedi al tuo genitore."
+
+**Test**: `tests/test_auth_me_athlete_qr_and_fallback.py` (Case A: fallback | Case B: no overwrite) → PASS
+
+**File modificati**: `server.py` (3 sezioni), `login.tsx`, `athlete/profile.tsx`.
+
+
 ## 🔗 27/02/2026 (v7.15-hotfix13) — Smart Lock Lite pairing legato al codice atleta (CF) ✅
 
 **Segnalazione utente**: "Lucia atleta 18+ pro ha completato la registrazione, ha impostato nome_lite e PIN… ma andando al login trova il nome di 'chiara_op' pre-impostato."

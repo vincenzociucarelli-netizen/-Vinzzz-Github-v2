@@ -1178,7 +1178,11 @@ export default function AthleteProfile() {
 
         {/* 🆕 26/06/2026 — Card "Dati Bancari" ripristinata in Anagrafica Atleta
             (per il dual-role Atleta+Coach, la pagina /coach/profile mostra un link
-            che porta qui, evitando duplicazione). */}
+            che porta qui, evitando duplicazione).
+            🐛 27/02/2026 — Segnalazione utente: l'atleta 18+ QUOTA (che PAGA la
+            quota, non riceve compensi) non deve vedere la sezione Dati Bancari.
+            Mostrata solo se `athlete_type === 'compensated'` (ovvero isQuotaAthlete === false). */}
+        {!isQuotaAthlete && (
         <View style={styles.card}>
           <TouchableOpacity
             style={styles.collapsibleHeader}
@@ -1300,6 +1304,7 @@ export default function AthleteProfile() {
             </View>
           )}
         </View>
+        )}
 
         {/* Versione Lite Section — disponibile a TUTTI gli atleti (minori, 18+, 18+ pro).
             Chiarimento utente 27/02/2026: la Lite è utile a tutti; la vera regola è

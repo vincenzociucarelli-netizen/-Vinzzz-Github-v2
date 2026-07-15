@@ -347,7 +347,7 @@ export default function Login() {
                 </TouchableOpacity>
               </View>
               <Text style={{ fontSize: 13, color: '#666', marginBottom: 12, lineHeight: 18 }}>
-                Chiedi al tuo genitore di aprire l'app sul suo telefono e mostrarti il QR del tuo profilo. Punta la fotocamera al QR per riempire automaticamente il codice.
+                Punta la fotocamera al tuo QR (o carica un&apos;immagine salvata in galleria) per compilare automaticamente il codice atleta.
               </Text>
               <div id="lite-qr-scanner" style={{ width: '100%', minHeight: 260 }} />
               {scanError ? (
@@ -556,7 +556,7 @@ export default function Login() {
               <>
                 <Text style={styles.subtitle}>Accedi con Nome Lite e PIN</Text>
                 <Text style={styles.minorHint}>
-                  Chiedi al tuo genitore il tuo Nome Lite (o codice atleta) e il PIN
+                  Inserisci il tuo Nome Lite (o codice atleta) e il PIN. Se sei minorenne, chiedi al tuo genitore.
                 </Text>
 
                 {/* 🆕 v7.13 — Pulsante scanner QR: la ragazza scansiona il QR mostrato dal genitore */}
@@ -580,7 +580,7 @@ export default function Login() {
                   >
                     <Ionicons name="qr-code-outline" size={22} color="#2E7D32" />
                     <Text style={{ fontSize: 14, fontWeight: '700', color: '#2E7D32' }}>
-                      📷 Scansiona il QR del tuo genitore
+                      📷 Scansiona il tuo codice QR
                     </Text>
                   </TouchableOpacity>
                 )}

@@ -3856,6 +3856,32 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
                 "medical_certificate_verified_at": 1,
                 "nome_lite": 1,
                 "minor_access_enabled": 1,
+                # 🆕 27/02/2026 — QR/codice atleta anche in dashboard atleta 18+
+                # Segnalazione utente: gli atleti maggiorenni non vedevano il loro
+                # codice QR nell'anagrafica (l'Admin sì, l'atleta no).
+                "qr_code": 1,
+                "qr_identifier": 1,
+                "athlete_code": 1,
+                # 🆕 27/02/2026 — Fallback anagrafica per atleti 18+ auto-registrati:
+                # i campi first_name/last_name/full_name/fiscal_code/etc. sono spesso
+                # sul record athletes ma non sul record users. Se il record users
+                # ha i campi vuoti, li integriamo con quelli di athletes così il
+                # profilo mostra i dati corretti (bug Granato Francesca 27/02/2026).
+                "first_name": 1,
+                "last_name": 1,
+                "full_name": 1,
+                "fiscal_code": 1,
+                "codice_fiscale": 1,
+                "birth_place": 1,
+                "place_of_birth": 1,
+                "province_of_birth": 1,
+                "birth_province": 1,
+                "gender": 1,
+                "address": 1,
+                "city": 1,
+                "postal_code": 1,
+                "province": 1,
+                "phone": 1,
             }
             if include_images:
                 athlete_proj["athlete_photo"] = 1
@@ -3906,6 +3932,31 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
                 # Include Lite access fields
                 user["nome_lite"] = athlete.get("nome_lite", "")
                 user["minor_access_enabled"] = athlete.get("minor_access_enabled", False)
+                # 🆕 27/02/2026 — Espone QR + athlete_code all'atleta stesso.
+                user["qr_code"] = athlete.get("qr_code", "")
+                user["qr_identifier"] = athlete.get("qr_identifier", "")
+                user["athlete_code"] = athlete.get("athlete_code", "")
+                # 🐛 27/02/2026 — Fallback anagrafica: per gli atleti 18+ auto-registrati
+                # i campi possono essere solo sul record athletes. Se il record users
+                # è vuoto per un campo, riempiamo con quello dell'atleta (bug Granato Francesca).
+                _ANAGRAFICA_FALLBACK = [
+                    "first_name", "last_name", "full_name",
+                    "fiscal_code", "codice_fiscale",
+                    "birth_place", "place_of_birth", "province_of_birth", "birth_province",
+                    "gender", "address", "city", "postal_code", "province", "phone",
+                ]
+                for f in _ANAGRAFICA_FALLBACK:
+                    curr = user.get(f)
+                    is_empty = curr is None or (isinstance(curr, str) and not curr.strip())
+                    if is_empty:
+                        v = athlete.get(f)
+                        if v:
+                            user[f] = v
+                # Alias: se fiscal_code manca ma c'è codice_fiscale (o viceversa)
+                if not user.get("fiscal_code") and user.get("codice_fiscale"):
+                    user["fiscal_code"] = user["codice_fiscale"]
+                if not user.get("codice_fiscale") and user.get("fiscal_code"):
+                    user["codice_fiscale"] = user["fiscal_code"]
 
         # 🆕 Computed flag "identity_verified": true se l'utente ha
         # (a) firmato la privacy, (b) completato l'anagrafica essenziale,
@@ -14220,6 +14271,7 @@ async def export_athletes(current_user = Depends(get_current_user)):
             "Cognome": athlete.get("last_name", ""),
             "Nome": athlete.get("first_name", ""),
             "Nome Completo": athlete.get("full_name", ""),
+            "Codice Atleta": athlete.get("athlete_code", ""),
             "Data Nascita": birth_date_str,
             "Luogo Nascita": athlete.get("birth_place", ""),
             "Stato Nascita": athlete.get("country_of_birth", "Italia"),
