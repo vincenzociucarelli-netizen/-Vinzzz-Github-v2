@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator,
-  Modal, Alert, Platform, Linking,
+  Modal, Alert, Platform, Linking, Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -153,6 +153,11 @@ export default function PreseasonAdmin() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loadingResponses, setLoadingResponses] = useState(false);
   const [togglingReminders, setTogglingReminders] = useState<string | null>(null);
+  // 🆕 27/02/2026 — Anteprima social (WhatsApp/Facebook simulation) prima della condivisione
+  const [previewCampaign, setPreviewCampaign] = useState<Campaign | null>(null);
+  const [societyName, setSocietyName] = useState<string>('');
+  const [societyLogo, setSocietyLogo] = useState<string>('');
+
 
   // Create form
   const [newTitle, setNewTitle] = useState('');
@@ -246,6 +251,18 @@ export default function PreseasonAdmin() {
   }, []);
 
   useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
+
+  // 🆕 27/02/2026 — Precarica nome + logo società per l'Anteprima social
+  useEffect(() => {
+    (async () => {
+      try {
+        // include_images=true perché serve il logo base64 per la preview
+        const res = await api.get('/settings/society?include_images=true');
+        setSocietyName(res.data?.name || res.data?.ragione_sociale || '');
+        setSocietyLogo(res.data?.logo || '');
+      } catch {}
+    })();
+  }, []);
 
   const handleCreate = async () => {
     if (!newTitle.trim() || !newSeason.trim()) {
@@ -659,6 +676,15 @@ export default function PreseasonAdmin() {
                 <Ionicons name="link" size={16} color="#E65100" />
                 <Text style={{ fontSize: 13, fontWeight: '600', color: '#E65100' }}>Link</Text>
               </TouchableOpacity>
+              {/* 🆕 27/02/2026 — Anteprima social (simulazione WhatsApp/Facebook) */}
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F3E5F5', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 }}
+                onPress={() => setPreviewCampaign(c)}
+                data-testid={`preview-campaign-${c.id}`}
+              >
+                <Ionicons name="eye-outline" size={16} color="#6A1B9A" />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#6A1B9A' }}>Anteprima</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F5F5F5', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 }}
                 onPress={() => handleToggleActive(c)}
@@ -849,6 +875,105 @@ export default function PreseasonAdmin() {
         </View>
         </ScrollView>
         </View>
+        </Modal>
+      )}
+
+      {/* 🆕 27/02/2026 — Modal Anteprima social (simulazione WhatsApp + Facebook)
+          Mostra all'admin come apparirà la card di anteprima nei principali social
+          PRIMA di condividere il link. Dati letti dagli OG tags configurati sul
+          backend endpoint /api/preseason/share/{id}. */}
+      {previewCampaign && (
+        <Modal visible={true} animationType="fade" transparent onRequestClose={() => setPreviewCampaign(null)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+            <View style={{ backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 460, maxHeight: '92%' }}>
+              {/* Header */}
+              <View style={{ backgroundColor: '#6A1B9A', paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopLeftRadius: 16, borderTopRightRadius: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Ionicons name="eye-outline" size={20} color="#fff" />
+                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>Anteprima condivisione</Text>
+                </View>
+                <TouchableOpacity onPress={() => setPreviewCampaign(null)} style={{ padding: 4 }} data-testid="preview-close-btn">
+                  <Ionicons name="close" size={22} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={{ padding: 16 }}>
+                <Text style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>
+                  Ecco come apparirà il tuo link quando lo condividi. Se qualcosa non ti convince, torna alla campagna e modifica titolo/descrizione/info evento.
+                </Text>
+                {/* WhatsApp bubble simulation */}
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#25D366', marginTop: 12, marginBottom: 6 }}>
+                  💬 Come appare su WhatsApp
+                </Text>
+                <View style={{ backgroundColor: '#DCF8C6', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#c7e6b4' }}>
+                  <View style={{ backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#e0e0e0' }}>
+                    {societyLogo ? (
+                      <Image source={{ uri: societyLogo }} style={{ width: '100%', height: 140, backgroundColor: '#f0f0f0' }} resizeMode="contain" />
+                    ) : (
+                      <View style={{ width: '100%', height: 140, backgroundColor: '#eee', alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name="image-outline" size={40} color="#bbb" />
+                      </View>
+                    )}
+                    <View style={{ padding: 10 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e' }} numberOfLines={2}>
+                        {(previewCampaign.title || societyName || 'Titolo campagna') + ((previewCampaign as any).season ? ` — Stagione ${(previewCampaign as any).season}` : '')}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#555', marginTop: 4 }} numberOfLines={3}>
+                        {previewCampaign.description || 'Descrizione della campagna...'}
+                        {(previewCampaign as any).event_info ? `\n\n📅 ${(previewCampaign as any).event_info}` : ''}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#999', marginTop: 6 }} numberOfLines={1}>
+                        {(getPublicLink(previewCampaign.id) || '').replace(/^https?:\/\//, '')}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                {/* Facebook card simulation */}
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#1877F2', marginTop: 16, marginBottom: 6 }}>
+                  📘 Come appare su Facebook / Telegram
+                </Text>
+                <View style={{ backgroundColor: '#F0F2F5', borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#e0e0e0' }}>
+                  {societyLogo ? (
+                    <Image source={{ uri: societyLogo }} style={{ width: '100%', height: 200, backgroundColor: '#fff' }} resizeMode="contain" />
+                  ) : (
+                    <View style={{ width: '100%', height: 200, backgroundColor: '#eee', alignItems: 'center', justifyContent: 'center' }}>
+                      <Ionicons name="image-outline" size={50} color="#bbb" />
+                    </View>
+                  )}
+                  <View style={{ padding: 12, backgroundColor: '#F7F8FA', borderTopWidth: 1, borderTopColor: '#e4e6eb' }}>
+                    <Text style={{ fontSize: 11, color: '#65676B', textTransform: 'uppercase' }} numberOfLines={1}>
+                      {(getPublicLink(previewCampaign.id) || '').replace(/^https?:\/\//, '').split('/')[0]}
+                    </Text>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#050505', marginTop: 3 }} numberOfLines={2}>
+                      {(previewCampaign.title || societyName) + ((previewCampaign as any).season ? ` — Stagione ${(previewCampaign as any).season}` : '')}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: '#65676B', marginTop: 3 }} numberOfLines={3}>
+                      {previewCampaign.description || ''}
+                      {(previewCampaign as any).event_info ? `\n📅 ${(previewCampaign as any).event_info}` : ''}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#8a8d91', marginTop: 3 }}>
+                      {societyName || 'Società Sportiva'}
+                    </Text>
+                  </View>
+                </View>
+                {/* Hint */}
+                <View style={{ marginTop: 14, backgroundColor: '#FFF8E1', borderRadius: 8, padding: 10, borderLeftWidth: 3, borderLeftColor: '#FBC02D' }}>
+                  <Text style={{ fontSize: 11, color: '#795548', lineHeight: 16 }}>
+                    ⚠️ Le anteprime social possono metterci qualche minuto ad aggiornarsi. Se hai appena modificato titolo o descrizione e la vedi ancora {'"'}vecchia{'"'} su WhatsApp, forza il refresh su{' '}
+                    <Text style={{ fontWeight: '700' }}>developers.facebook.com/tools/debug</Text>.
+                  </Text>
+                </View>
+                {/* Copy link button */}
+                <TouchableOpacity
+                  style={{ marginTop: 14, backgroundColor: '#6A1B9A', borderRadius: 10, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  onPress={() => { copyLink(previewCampaign.id); }}
+                  data-testid="preview-copy-link-btn"
+                >
+                  <Ionicons name="copy-outline" size={18} color="#fff" />
+                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>Copia link e condividi</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </View>
         </Modal>
       )}
 

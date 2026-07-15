@@ -1,6 +1,26 @@
 # RegistraTEAM — PRD & Stato
 
 
+## 🚀 27/02/2026 (v7.15-hotfix17) — Modal "Anteprima social" per campagne pre-iscrizione ✅
+
+**Contesto**: dopo aver migliorato le OG tags per l'anteprima social, aggiunto un pulsante `🔍 Anteprima` che mostra all'admin come apparirà il link condiviso PRIMA di inviarlo — evita la classica situazione "invio → apre WhatsApp → l'anteprima è brutta o senza info → devo modificare la campagna".
+
+**Cosa fa**:
+- Bottone `Anteprima` (viola) accanto a `Link` sulla card di ogni campagna
+- Apre un Modal a schermo intero con:
+  - **Simulazione WhatsApp**: bubble verde con logo + titolo + descrizione + link
+  - **Simulazione Facebook/Telegram**: card orizzontale con logo (200px), dominio, titolo (2 righe), descrizione (3 righe) e footer con nome società
+  - **Hint**: avvertimento sui cache social (5-15 min) + link al Facebook Sharing Debugger per forzare refresh
+  - **Bottone "Copia link e condividi"** direttamente dal modal
+
+**Dettagli tecnici**:
+- Carica `nome società` + `logo` con `/settings/society?include_images=true` all'apertura pagina admin
+- Legge titolo/descrizione/season/event_info dalla campagna selezionata
+- data-testid: `preview-campaign-<id>`, `preview-close-btn`, `preview-copy-link-btn`
+
+**File modificati**: `frontend/app/admin/preseason.tsx` (import `Image` + state + useEffect + Modal + pulsante). Bundle rebuild: `entry-68aadd7e09a52790ca8eca5ddfd6105a.js`.
+
+
 ## 🚀 27/02/2026 (v7.15-hotfix16) — OpenGraph preview migliorata per campagne pre-iscrizione ✅
 
 **Contesto**: quando l'admin condivide il link della campagna (WhatsApp, Facebook, Telegram), il crawler social legge le meta tag OpenGraph e mostra un'anteprima. L'endpoint `/api/preseason/share/{id}` esisteva già ma mostrava **solo il nome della società** come titolo → click-through basso.
