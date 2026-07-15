@@ -1,6 +1,28 @@
 # RegistraTEAM — PRD & Stato
 
 
+## 🚀 27/02/2026 (v7.15-hotfix16) — OpenGraph preview migliorata per campagne pre-iscrizione ✅
+
+**Contesto**: quando l'admin condivide il link della campagna (WhatsApp, Facebook, Telegram), il crawler social legge le meta tag OpenGraph e mostra un'anteprima. L'endpoint `/api/preseason/share/{id}` esisteva già ma mostrava **solo il nome della società** come titolo → click-through basso.
+
+**Miglioramenti**:
+1. **`og:title`** = titolo campagna + stagione (es. `"Open Day Volley 2026 — Stagione 2026/2027"`) — molto più attraente per il click che il solo nome società
+2. **`og:site_name`** = nome società (branding sotto il titolo)
+3. **`og:description`** = descrizione + `📅 event_info` (Open Day date/luogo) se presente
+4. **Limite 300 char** per description (best practice OpenGraph)
+5. **HTML `<title>`** aggiornato con lo stesso schema
+
+**Fallback preservati**:
+- Campagna senza titolo → fallback al nome società
+- Campagna inesistente → redirect generico (no 500)
+
+**Test**: `tests/test_preseason_og_preview.py` (4 scenari in un unico test loop-safe) → PASS.
+
+**File modificati**: `server.py` (linea ~31519 — funzione `get_preseason_share_page`). Nessuna modifica frontend necessaria (il link `getPublicLink()` già puntava a questo endpoint).
+
+**Verifica**: `curl -H "User-Agent: WhatsApp/2.23.0.85" .../api/preseason/share/<id>` mostra `og:title` = titolo campagna. Testabile anche su [Facebook Sharing Debugger](https://developers.facebook.com/tools/debug/) e [Twitter Card Validator](https://cards-dev.twitter.com/validator).
+
+
 ## 🐛 27/02/2026 (v7.15-hotfix15) — Preseason campaigns + Salva QR in galleria ✅
 
 **Segnalazioni utente**:

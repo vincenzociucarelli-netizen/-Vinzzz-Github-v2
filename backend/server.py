@@ -31515,16 +31515,32 @@ async def get_preseason_share_page(campaign_id: str, request: Request):
     # Falls back to backend host only if FRONTEND_URL is not configured.
     frontend_url = (os.environ.get("FRONTEND_URL") or "").rstrip("/") or backend_url
 
-    # Description: prefer campaign title + season, fall back to description / event_info
-    title_parts = []
-    if campaign.get("title"):
-        title_parts.append(campaign["title"])
-    if campaign.get("season"):
-        title_parts.append(campaign["season"])
-    page_title = society_name
-    og_description = " — ".join(title_parts) if title_parts else "Pre-iscrizione aperta. Clicca per maggiori informazioni."
+    # 🆕 27/02/2026 — Costruzione anteprima social più ricca:
+    # - og:title = TITOLO campagna (era: nome società). Molto più efficace per il click.
+    # - og:site_name = nome società (branding sotto il titolo su alcuni social).
+    # - og:description = descrizione campagna + info evento (Open Day date) se presente.
+    camp_title = (campaign.get("title") or "").strip()
+    camp_season = (campaign.get("season") or "").strip()
+    if camp_title and camp_season and camp_season not in camp_title:
+        page_title = f"{camp_title} — Stagione {camp_season}"
+    elif camp_title:
+        page_title = camp_title
+    else:
+        page_title = society_name
+
+    # Descrizione: unisci descrizione + info evento (Open Day) se disponibile.
+    desc_parts = []
     if campaign.get("description"):
-        og_description = campaign["description"]
+        desc_parts.append(campaign["description"].strip())
+    ev_info = (campaign.get("event_info") or "").strip()
+    if ev_info:
+        desc_parts.append(f"📅 {ev_info}")
+    if not desc_parts:
+        desc_parts.append("Pre-iscrizione aperta. Clicca per maggiori informazioni.")
+    og_description = "\n\n".join(desc_parts)
+    # WhatsApp/OG raccomandano < 300 caratteri per la description
+    if len(og_description) > 300:
+        og_description = og_description[:297] + "..."
 
     redirect_url = f"{frontend_url}/preseason/{campaign_id}" if frontend_url else f"/preseason/{campaign_id}"
     share_url = redirect_url
