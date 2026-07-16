@@ -1,6 +1,26 @@
 # RegistraTEAM — PRD & Stato
 
 
+## 🐛 16/07/2026 (v7.15-hotfix23) — 3 fix post-rollover stagione + coordinatore ✅
+
+**Bug 1 - Admin/Dirigenti spariti dopo rollover stagione (regressione critica)**
+- Sintomo: il 1° luglio 2026 la stagione è ruotata a 2026-2027, ma tutti gli account admin/dirigente/viewer avevano `active_seasons=['2025-2026']`. La query di `/api/users/dirigenti` filtrava clean-slate → **restituiva array vuoto**.
+- Fix in `backend/server.py` (endpoint `get_dirigenti`): rimosso filtro `$or: [active_seasons=current, exists=false]`; sostituito con `$or: [rollover_decision != 'removed', rollover_decision_season != current]`. Aggiunto self-heal `$addToSet: active_seasons=current_season` (idempotente).
+- Test: `backend/tests/test_dirigenti_rollover_visibility.py` (creato dal testing agent). Live API ora restituisce 4 utenti (Vincenzo admin + Lella viewer + Livia viewer + Test dirigente).
+- Pattern: stesso mirror del fix "cartella genitori vuota" del 10/07/2026.
+
+**Bug 2 - Layout eventi non compattato**
+- Sintomo: nonostante il thumbnail compatto in cima, ogni card mostrava sempre descrizione, event_info, tutti i bottoni azione e auto-reminders → con più eventi la lista era illeggibile.
+- Fix in `frontend/app/admin/preseason.tsx`: aggiunto stato `expandedCards: Set<string>`. Tap sull'header (`data-testid=campaign-toggle-{id}`) toggla lo stato. Dettagli wrapped in `{isExpanded && (...)}`. Chevron: `down` collassato / `up` espanso.
+- Modificato messaggio "SCADUTI/CHIUSI": ora dice "espandi la card e premi Modifica" invece di "tap sul titolo".
+
+**Bug 3 - Badge "Cappello" per Coordinatore**
+- Fix in `frontend/app/coordinatore/index.tsx`: aggiunto badge visibile nell'header con icona Ionicons `school` (graduation-cap) + testo "COORDINATORE" (background #FFB300 giallo distintivo). `data-testid=coordinatore-role-badge`.
+
+**Test**: iteration_82.json — Backend 5/5 tests pass, frontend validato via code review.
+
+
+
 ## 🚀 27/02/2026 (v7.15-hotfix22) — Nuovo ruolo COORDINATORE (MVP) ✅
 
 **Contesto**: figura intermedia tra Admin e Dirigente. Il Main Admin può creare "Coordinatori" e assegnare loro permessi granulari (checkbox per sezione). Il Coordinatore vede/edita solo le sezioni **organizzative** consentite, mai le sezioni **amministrative** (compensi, fatture, IBAN, sponsor, bilanci).
