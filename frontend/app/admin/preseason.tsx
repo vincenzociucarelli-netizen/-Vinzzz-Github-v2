@@ -615,35 +615,54 @@ export default function PreseasonAdmin() {
           const renderCard = (c: Campaign) => (
             <View key={c.id} style={{ backgroundColor: '#fff', borderRadius: 12, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: c.is_active ? '#2E7D32' : '#999', overflow: 'hidden' }}>
             {/* 🆕 27/02/2026 — Cover image + titolo cliccabili → apre modal di modifica */}
+            {/* 🆕 27/02/2026 — Layout compatto: thumbnail cover 72x72 a sinistra +
+                titolo/stagione a destra. Con più eventi aperti si riduce il "caos". */}
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={() => handleOpenEdit(c)}
               data-testid={`campaign-open-${c.id}`}
             >
-              {(c as any).cover_image ? (
-                <Image
-                  source={{ uri: (c as any).cover_image }}
-                  style={{ width: '100%', aspectRatio: 1200 / 630, backgroundColor: '#f0f0f0' }}
-                  resizeMode="cover"
-                />
-              ) : null}
-              <View style={{ padding: 16 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 15, fontWeight: '800', color: '#1565C0', marginBottom: 4, letterSpacing: 0.3 }}>
+              <View style={{ flexDirection: 'row', padding: 12, alignItems: 'center', gap: 12 }}>
+                {(c as any).cover_image ? (
+                  <Image
+                    source={{ uri: (c as any).cover_image }}
+                    style={{ width: 72, height: 72, borderRadius: 10, backgroundColor: '#f0f0f0' }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={{ width: 72, height: 72, borderRadius: 10, backgroundColor: '#E3F2FD', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="megaphone" size={30} color="#1565C0" />
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#1565C0', letterSpacing: 0.3 }}>
                       Stagione {c.season}
                     </Text>
-                    <Text style={{ fontSize: 17, fontWeight: '700', color: '#0D47A1' }} data-testid={`campaign-title-${c.id}`}>{c.title}</Text>
+                    <View style={{
+                      backgroundColor: c.is_active ? '#E8F5E9' : '#F5F5F5',
+                      borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2,
+                    }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: c.is_active ? '#2E7D32' : '#999' }}>
+                        {c.is_active ? 'ATTIVA' : 'CHIUSA'}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={{
-                    backgroundColor: c.is_active ? '#E8F5E9' : '#F5F5F5',
-                    borderRadius: 14, paddingHorizontal: 12, paddingVertical: 5,
-                  }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: c.is_active ? '#2E7D32' : '#999' }}>
-                      {c.is_active ? 'Attiva' : 'Chiusa'}
-                    </Text>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#0D47A1', marginTop: 3 }} numberOfLines={2} data-testid={`campaign-title-${c.id}`}>{c.title}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Ionicons name="people" size={13} color="#666" />
+                      <Text style={{ fontSize: 12, color: '#666', fontWeight: '600' }}>{c.response_count} risposte</Text>
+                    </View>
+                    {c.close_date ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Ionicons name="calendar-outline" size={13} color="#666" />
+                        <Text style={{ fontSize: 12, color: '#666' }}>chiude {new Date(c.close_date).toLocaleDateString('it-IT')}</Text>
+                      </View>
+                    ) : null}
                   </View>
                 </View>
+                <Ionicons name="chevron-forward" size={20} color="#999" />
               </View>
             </TouchableOpacity>
             <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
@@ -672,13 +691,9 @@ export default function PreseasonAdmin() {
               </View>
             ) : null}
 
-            {/* Stats row */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 12, flexWrap: 'wrap' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Ionicons name="people" size={18} color="#1565C0" />
-                <Text style={{ fontSize: 15, fontWeight: '700', color: '#1565C0' }}>{c.response_count}</Text>
-                <Text style={{ fontSize: 13, color: '#555' }}>risposte</Text>
-              </View>
+            {/* Stats row — 🆕 27/02/2026 rimossa (spostata nell'header compatto sopra).
+                Manteniamo solo il badge "genitori mancanti" quando rilevante. */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
               {/* 🐛 27/02/2026 — Il badge "genitori mancanti" ha senso SOLO dopo
                   che l'admin ha inviato almeno una notifica ai genitori esistenti.
                   Per campagne pre-iscrizione open-day (rivolte a famiglie NUOVE
