@@ -4724,16 +4724,24 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
     society = await db.societies.find_one({"id": society_id})
     society_owner_id = society.get("owner_id") if society else None
     
-    # 🆕 01/07/2026 — Filtro clean-slate: solo dirigenti della stagione corrente
-    # Fallback per record senza il campo (nuovi): mostrati sempre.
+    # 🆕 01/07/2026 — Filtro clean-slate: solo dirigenti della stagione corrente.
+    # 🐛 16/07/2026 — HOTFIX "Admin/Dirigenti invisibili dopo rollover stagione":
+    # stesso pattern del bug "cartella Genitori vuota" (10/07/2026). Se lo staff
+    # è rimasto nella stagione precedente (per bug rollover o mancata migrazione),
+    # spariva del tutto dalla dashboard admin — anche se `status=approved`.
+    # Ora la source-of-truth è: "tutti gli staff APPROVATI della società restano
+    # visibili, indipendentemente da active_seasons, a meno che l'admin non li
+    # abbia rimossi esplicitamente (rollover_decision=='removed')". Chi era
+    # nella stagione precedente viene auto-healed nella stagione corrente.
     from utils import get_current_season_for_society as _get_cs
     _current_season = await _get_cs(db, society_id)
     query = {
         "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER, UserRole.DIRIGENTE]},
         "society_id": society_id,
+        # Escludi solo chi è stato esplicitamente rimosso dalla stagione corrente
         "$or": [
-            {"active_seasons": _current_season},
-            {"active_seasons": {"$exists": False}},
+            {"rollover_decision": {"$ne": "removed"}},
+            {"rollover_decision_season": {"$ne": _current_season}},
         ],
     }
     # Exclude the society owner account from the dirigenti list
@@ -4741,6 +4749,24 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
         query["id"] = {"$ne": society_owner_id}
     
     dirigenti = await db.users.find(query).to_list(1000)
+
+    # 🆕 16/07/2026 — Self-heal silenzioso: staff visibile ma senza active_seasons
+    # aggiornato → aggiungi la stagione corrente (idempotente). Così contratti,
+    # export e statistiche mostrano lo staff nella stagione giusta senza dover
+    # fare un rollover manuale.
+    needing_heal = [
+        d["id"] for d in dirigenti
+        if _current_season not in (d.get("active_seasons") or [])
+    ]
+    if needing_heal:
+        try:
+            await db.users.update_many(
+                {"id": {"$in": needing_heal}, "society_id": society_id,
+                 "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER, UserRole.DIRIGENTE]}},
+                {"$addToSet": {"active_seasons": _current_season}},
+            )
+        except Exception as _e:
+            logging.warning(f"[users/dirigenti] self-heal active_seasons failed: {_e}")
 
     # Filtra account istituzionali (società, non persone fisiche): non sono dirigenti.
     from routes.primary_admin import looks_like_society_name, is_society_institutional_email

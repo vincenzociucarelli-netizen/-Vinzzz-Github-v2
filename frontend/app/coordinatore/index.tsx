@@ -58,6 +58,24 @@ export default function CoordinatorDashboard() {
       <View style={styles.header}>
         <View style={{ flex: 1, marginRight: 8 }}>
           <SocietyBranding />
+          {/* 🆕 16/07/2026 — "Cappello" del Coordinatore: badge visibile con icona
+              graduation-cap + label COORDINATORE, così l'utente ha conferma visiva
+              del ruolo attivo (specchio dei badge Admin/Dirigente). */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+            <View
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 6,
+                backgroundColor: '#FFB300', borderRadius: 14,
+                paddingHorizontal: 10, paddingVertical: 4,
+              }}
+              data-testid="coordinatore-role-badge"
+            >
+              <Ionicons name="school" size={14} color="#3E2723" />
+              <Text style={{ color: '#3E2723', fontSize: 11, fontWeight: '800', letterSpacing: 0.6 }}>
+                COORDINATORE
+              </Text>
+            </View>
+          </View>
           <Text style={styles.title}>Coordinatore</Text>
           <Text style={styles.subtitle}>{user?.first_name} {user?.last_name}</Text>
         </View>

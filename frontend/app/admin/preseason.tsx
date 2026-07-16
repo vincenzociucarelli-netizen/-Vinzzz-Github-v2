@@ -158,6 +158,17 @@ export default function PreseasonAdmin() {
   const [previewCampaign, setPreviewCampaign] = useState<Campaign | null>(null);
   const [societyName, setSocietyName] = useState<string>('');
   const [societyLogo, setSocietyLogo] = useState<string>('');
+  // 🆕 16/07/2026 — Card collassabili: mostro SOLO l'header compatto (thumb+titolo)
+  // e nascondo descrizione/azioni finché l'admin non tocca "Espandi". Così con più
+  // eventi aperti la lista resta corta e leggibile.
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const toggleExpanded = (id: string) => {
+    setExpandedCards(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
 
 
   // Create form
@@ -612,15 +623,20 @@ export default function PreseasonAdmin() {
           const active = campaigns.filter(c => !isExpired(c));
           const expired = campaigns.filter(c => isExpired(c));
 
-          const renderCard = (c: Campaign) => (
+          const renderCard = (c: Campaign) => {
+            const isExpanded = expandedCards.has(c.id);
+            return (
             <View key={c.id} style={{ backgroundColor: '#fff', borderRadius: 12, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: c.is_active ? '#2E7D32' : '#999', overflow: 'hidden' }}>
             {/* 🆕 27/02/2026 — Cover image + titolo cliccabili → apre modal di modifica */}
             {/* 🆕 27/02/2026 — Layout compatto: thumbnail cover 72x72 a sinistra +
                 titolo/stagione a destra. Con più eventi aperti si riduce il "caos". */}
+            {/* 🆕 16/07/2026 — Tap sull'header espande/comprime la card. La chevron
+                indica lo stato. Il tap NON apre più la modal di modifica: c'è il
+                bottone dedicato "Modifica" (visibile quando espanso). */}
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => handleOpenEdit(c)}
-              data-testid={`campaign-open-${c.id}`}
+              onPress={() => toggleExpanded(c.id)}
+              data-testid={`campaign-toggle-${c.id}`}
             >
               <View style={{ flexDirection: 'row', padding: 12, alignItems: 'center', gap: 12 }}>
                 {(c as any).cover_image ? (
@@ -662,9 +678,10 @@ export default function PreseasonAdmin() {
                     ) : null}
                   </View>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#999" />
+                <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="#999" />
               </View>
             </TouchableOpacity>
+            {isExpanded && (
             <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
 
             {/* Descrizione mostrata a chi si iscrive */}
@@ -877,8 +894,10 @@ export default function PreseasonAdmin() {
               </View>
             )}
           </View>
+          )}
           </View>
           );
+          };
 
           return (
             <>
@@ -897,7 +916,7 @@ export default function PreseasonAdmin() {
                       ⏰ SCADUTI / CHIUSI · {expired.length}
                     </Text>
                     <Text style={{ fontSize: 12, color: '#5D4400', marginTop: 4, lineHeight: 16 }}>
-                      Per riattivare un evento: apri l&apos;evento (tap sul titolo o {'"'}Modifica{'"'}), aggiorna la data di chiusura e/o rimetti {'"'}Attiva{'"'}.
+                      Per riattivare un evento: espandi la card e premi {'"'}Modifica{'"'}, aggiorna la data di chiusura e/o rimetti {'"'}Attiva{'"'}.
                     </Text>
                   </View>
                   {expired.map(renderCard)}
