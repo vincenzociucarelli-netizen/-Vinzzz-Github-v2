@@ -168,6 +168,24 @@ export default function SettingsIndex() {
           <Ionicons name="chevron-forward" size={24} color="#1565C0" />
         </TouchableOpacity>
 
+        {/* 🆕 27/02/2026 — Card Coordinatori (ruolo intermedio Admin/Dirigente) */}
+        <TouchableOpacity 
+          style={[styles.card, { borderColor: '#00838F', backgroundColor: '#E0F7FA' }]}
+          onPress={() => router.push('/admin/coordinators')}
+          data-testid="settings-coordinators-btn"
+        >
+          <View style={[styles.iconContainer, { backgroundColor: '#00838F' }]}>
+            <Ionicons name="people-circle" size={32} color="#fff" />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={[styles.cardTitle, { color: '#00838F' }]}>Coordinatori</Text>
+            <Text style={styles.cardDescription}>
+              Ruolo intermedio: gestisce sezioni organizzative con permessi granulari
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#00838F" />
+        </TouchableOpacity>
+
         {/* Card Ripristino Backup (solo LR) */}
         <TouchableOpacity
           style={[styles.card, { borderColor: '#C62828', backgroundColor: '#FFEBEE' }]}

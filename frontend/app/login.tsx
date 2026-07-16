@@ -259,6 +259,7 @@ export default function Login() {
       else if (role === 'collaboratore') target = '/collaboratore';
       else if (role === 'parent') target = '/parent';
       else if (role === 'viewer' || role === 'dirigente') target = '/dirigente';
+      else if (role === 'coordinatore') target = '/coordinatore';  // 🆕 27/02/2026
       else if (role === 'athlete') target = '/athlete';
       
       if (Platform.OS === 'web' && typeof window !== 'undefined') {

@@ -32,6 +32,8 @@ GUIDES_META = {
                "audience": "genitori di atleti minorenni"},
     "athlete": {"role_label": "Atleta maggiorenne (18+)", "accent_color": "#F57C00", "icon": "🏆",
                 "audience": "atleti che hanno compiuto 18 anni"},
+    "coordinatore": {"role_label": "Coordinatore", "accent_color": "#00838F", "icon": "🗂️",
+                     "audience": "coordinatori (ruolo intermedio Admin/Dirigente)"},
 }
 
 COMMON_FAQ = [
@@ -452,6 +454,46 @@ GUIDES = {
                     "MANUTENZIONE:",
                     "• Usa i bottoni 'Diagnostica' (Genitori, Atleti PRO, Quietanze) per identificare "
                     "anomalie e ripararle in un click",
+                ],
+            },
+        ],
+    },
+    "coordinatore": {
+        "welcome": "Ciao! Sei stato/a designato/a **Coordinatore** dalla tua società. "
+                   "Questo è un ruolo intermedio tra Admin e Dirigente: gestisci le attività "
+                   "organizzative (squadre, atleti, presenze, eventi, comunicazioni) che ti sono state "
+                   "abilitate dal Main Admin, ma **non hai accesso alle sezioni amministrative** "
+                   "(pagamenti, compensi, IBAN, fatture, sponsor, bilanci).",
+        "sections": [
+            {
+                "title": "COSA VEDI NELLA TUA DASHBOARD",
+                "items": [
+                    "• La tua dashboard mostra SOLO le sezioni che il Main Admin ha attivato per te",
+                    "• Se una sezione non compare, chiedi al Main Admin di abilitarla via 'Impostazioni → Coordinatori'",
+                    "• Se non vedi ancora nessuna sezione: il Main Admin non ha ancora completato la tua configurazione",
+                ],
+            },
+            {
+                "title": "SEZIONI POSSIBILI",
+                "items": [
+                    "• **Squadre e roster**: elenco squadre e atleti assegnati",
+                    "• **Atleti (anagrafica)**: gestione anagrafica atleti",
+                    "• **Allenamenti**: calendario settimanale",
+                    "• **Convocazioni e partite**: gestione gare",
+                    "• **Presenze e QR**: scanner QR e storico presenze",
+                    "• **Comunicazioni**: broadcast a genitori/atleti/coach",
+                    "• **Eventi in programma**: campagne di pre-iscrizione e Open Day",
+                    "• **Certificati medici**: monitoraggio scadenze",
+                    "• **GDPR (lettura)**: consultazione documenti firmati",
+                ],
+            },
+            {
+                "title": "LIMITI DI RUOLO",
+                "items": [
+                    "• NON puoi vedere: compensi, ricevute, IBAN, soglie Riforma Sport",
+                    "• NON puoi vedere: sponsor, contratti, fatture",
+                    "• NON puoi gestire: password amministratore, primary admin, backup",
+                    "• Per queste operazioni contatta il Main Admin",
                 ],
             },
         ],

@@ -1,6 +1,47 @@
 # RegistraTEAM — PRD & Stato
 
 
+## 🚀 27/02/2026 (v7.15-hotfix22) — Nuovo ruolo COORDINATORE (MVP) ✅
+
+**Contesto**: figura intermedia tra Admin e Dirigente. Il Main Admin può creare "Coordinatori" e assegnare loro permessi granulari (checkbox per sezione). Il Coordinatore vede/edita solo le sezioni **organizzative** consentite, mai le sezioni **amministrative** (compensi, fatture, IBAN, sponsor, bilanci).
+
+**Scelte utente**:
+- Nome: **Coordinatore** (validato)
+- Modello permessi: **B** — flag granulari per singolo utente
+- Suddivisione: come proposto (organizzativo vs amministrativo)
+- Azioni: **B** — full edit sulle sezioni consentite
+
+**Backend** (nuovo modulo `routes/coordinator.py`):
+- Nuovo ruolo `UserRole.COORDINATORE = "coordinatore"`
+- Dict `COORDINATOR_PERMISSIONS` con 9 chiavi: teams, athletes, trainings, matches, attendance, communications, events, certificates, gdpr_view
+- Campo `users.coordinator_permissions` (List[str])
+- Endpoint CRUD admin:
+  - `GET /admin/coordinator-permission-keys` — lista chiavi disponibili + label per UI
+  - `GET /admin/coordinators` — lista coordinatori della società
+  - `POST /admin/coordinators` — crea (status: pending_email)
+  - `PATCH /admin/coordinators/{id}` — aggiorna anagrafica
+  - `PATCH /admin/coordinators/{id}/permissions` — aggiorna checkbox permessi
+  - `DELETE /admin/coordinators/{id}` — elimina
+- Endpoint utente:
+  - `GET /coordinator/permissions` — recupera i propri permessi
+- `/auth/me` estende con `coordinator_permissions` per ruolo coordinatore
+- Guida `coordinatore` aggiunta a `guides_content.py` (welcome + 3 sezioni)
+- Endpoint `_ROLE_TO_GUIDE_KEY` include `coordinatore → coordinatore`
+
+**Frontend**:
+- `/admin/coordinators` — nuova pagina admin (lista + Modal crea/modifica con checkbox permessi)
+- `/coordinatore/index.tsx` — nuova dashboard che mostra solo le sezioni consentite (9 possibili, con icon + colore + link)
+- `/coordinatore/_layout.tsx` — expo-router Stack layout
+- `login.tsx` — redirect `role='coordinatore' → /coordinatore`
+- `/admin/settings` — nuova card "Coordinatori" (colore #00838F, icona people-circle)
+
+**Prossimi step** (opzionale, non nell'MVP):
+- Applicare `require_coordinator_perm()` decorator agli endpoint sensibili (attualmente il coordinatore ha accesso via `/admin/*` protette; le pagine da lì mostrano tutte le funzioni admin. Devi filtrare a livello endpoint e/o creare rotte dedicate `/coordinator/*`).
+- Registrazione via email link (attualmente status: `pending_email` — flusso completo di password setup non implementato).
+
+**Bundle**: `entry-7e5af22c5c7a44e5b1dd6f65504dcde8.js`.
+
+
 ## 🐛 27/02/2026 (v7.15-hotfix21) — Libricino istruzioni Dirigente mancante ✅
 
 **Segnalazione utente**: "Il Dirigente non ha il libricino delle istruzioni da scaricare/visualizzare"

@@ -396,6 +396,29 @@ class UserRole:
     COLLABORATORE = "collaboratore"  # Collaboratori (groundskeepers, secretaries, etc.)
     PARENT = "parent"
     ATHLETE = "athlete"
+    COORDINATORE = "coordinatore"  # 🆕 27/02/2026 — Figura intermedia tra Admin e Dirigente:
+                                    # accede a sezioni ORGANIZZATIVE (teams, atleti, presenze,
+                                    # eventi, comunicazioni) ma NON a sezioni AMMINISTRATIVE
+                                    # (compensi, fatture, IBAN, soglie, sponsor).
+                                    # Permessi granulari impostati dall'Admin nel campo
+                                    # users.coordinator_permissions (list of strings).
+
+
+# 🆕 27/02/2026 — Chiavi di permesso per il ruolo Coordinatore.
+# Ogni chiave rappresenta una sezione dell'app; il Main Admin sceglie quali abilitare
+# per ogni coordinatore. Il coordinatore vede solo le sezioni con chiave nel suo
+# campo `coordinator_permissions`.
+COORDINATOR_PERMISSIONS = {
+    "teams":            "Squadre e roster",
+    "athletes":         "Atleti (anagrafica)",
+    "trainings":        "Allenamenti",
+    "matches":          "Convocazioni e partite",
+    "attendance":       "Presenze e QR scanner",
+    "communications":   "Comunicazioni / Broadcast",
+    "events":           "Eventi in programma (pre-iscrizioni)",
+    "certificates":     "Certificati medici",
+    "gdpr_view":        "Documenti GDPR (solo lettura)",
+}
 
 class UserStatus:
     PENDING = "pending"      # In attesa di approvazione
@@ -3811,6 +3834,10 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
     # up as a 500 — return the baseline user record so the frontend dashboard can
     # render at minimum. The error is logged for offline debugging.
     try:
+        # 🆕 27/02/2026 — Espone `coordinator_permissions` per il ruolo Coordinatore
+        # (usato dalla dashboard coordinator per mostrare/nascondere le sezioni).
+        if user.get("role") == UserRole.COORDINATORE:
+            user["coordinator_permissions"] = user.get("coordinator_permissions") or []
         # For collaboratori/coaches, resolve team IDs to names
         if user.get("assigned_teams"):
             teams = await db.teams.find(
@@ -21541,6 +21568,7 @@ _ROLE_TO_GUIDE_KEY = {
     "collaboratore": "collaboratore",
     "parent": "parent",
     "athlete": "athlete",
+    "coordinatore": "coordinatore",  # 🆕 27/02/2026
 }
 
 
@@ -32601,6 +32629,7 @@ from routes.teams import router as teams_router
 from routes.primary_admin import router as primary_admin_router
 from routes.training_overrides import router as training_overrides_router
 from routes.import_athletes import router as import_athletes_router  # 🆕 27/02/2026 (P1)
+from routes.coordinator import router as coordinator_router  # 🆕 27/02/2026 (Coordinatore)
 api_router.include_router(notifications_router)
 api_router.include_router(settings_router)
 api_router.include_router(seasons_router)
@@ -32609,6 +32638,7 @@ api_router.include_router(teams_router)
 api_router.include_router(primary_admin_router)
 api_router.include_router(training_overrides_router)
 api_router.include_router(import_athletes_router)  # 🆕 27/02/2026 (P1)
+api_router.include_router(coordinator_router)  # 🆕 27/02/2026 (Coordinatore)
 
 
 @api_router.post("/admin/compensations/reset-coach-year")
