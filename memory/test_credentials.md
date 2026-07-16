@@ -2,6 +2,13 @@
 
 ## Admin (persona fisica - può firmare come LR o autorizzato)
 - Email: vincenzo.ciucarelli@gmail.com
+
+## Dirigente (LELLA MARZO)
+- Email: lella@dir.com
+- Password: Test1234 (impostata 27/02/2026 per test libricino istruzioni)
+- Nota: role="viewer" nel DB (legacy alias per "dirigente")
+
+
 - Password: Test1234
 
 ## Admin (account intestato alla SOCIETÀ - NON può firmare come LR)

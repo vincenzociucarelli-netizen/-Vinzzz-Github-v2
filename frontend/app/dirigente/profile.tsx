@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import DirigenteTabBar from '../../src/components/dirigente/DirigenteTabBar';
+import GuideButton from '../../src/components/GuideButton';
 import {
   View,
   Text,
@@ -706,6 +707,9 @@ Società sportiva: ${societyName}
             <SocietyBranding />
             <Text style={styles.headerTitle}>Il Mio Profilo</Text>
           </View>
+        {/* 🐛 27/02/2026 — Aggiunto libricino istruzioni: era presente solo su
+            /dirigente ma non sulle sotto-pagine (profile/compensation). */}
+        <GuideButton role="dirigente" compact />
         <TouchableOpacity onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color="#fff" />
         </TouchableOpacity>

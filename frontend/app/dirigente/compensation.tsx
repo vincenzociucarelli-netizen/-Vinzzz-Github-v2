@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import DirigenteTabBar from '../../src/components/dirigente/DirigenteTabBar';
+import GuideButton from '../../src/components/GuideButton';
 import {
   View,
   Text,
@@ -1016,7 +1017,8 @@ export default function DirigenteCompensation() {
             <SocietyBranding />
             <Text style={styles.headerTitle}>Compensi Sportivi</Text>
           </View>
-        <View style={{ width: 40 }} />
+        {/* 🐛 27/02/2026 — Aggiunto libricino istruzioni Dirigente anche qui */}
+        <GuideButton role="dirigente" compact />
       </View>
 
       {/* 🆕 24/02/2026 — DirigenteTabBar (sticky sopra ScrollView) */}

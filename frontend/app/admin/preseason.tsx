@@ -585,7 +585,7 @@ export default function PreseasonAdmin() {
         </View>
       </View>
 
-      {/* Campaigns List */}
+      {/* Campaigns List — 🆕 27/02/2026 divisi in "In programma" (attivi) e "Scaduti/Chiusi" */}
       {campaigns.length === 0 ? (
         <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 32, alignItems: 'center' }}>
           <Ionicons name="megaphone-outline" size={48} color="#CCC" />
@@ -594,24 +594,59 @@ export default function PreseasonAdmin() {
           </Text>
         </View>
       ) : (
-        campaigns.map((c) => (
-          <View key={c.id} style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: c.is_active ? '#2E7D32' : '#999' }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: '800', color: '#1565C0', marginBottom: 4, letterSpacing: 0.3 }}>
-                  Stagione {c.season}
-                </Text>
-                <Text style={{ fontSize: 17, fontWeight: '700', color: '#0D47A1' }} data-testid={`campaign-title-${c.id}`}>{c.title}</Text>
+        (() => {
+          // 🆕 27/02/2026 — Un evento è "scaduto" se:
+          //   - is_active === false, OPPURE
+          //   - close_date è passata (data limite superata)
+          const now = new Date();
+          const isExpired = (c: Campaign): boolean => {
+            if (!c.is_active) return true;
+            if (c.close_date) {
+              try {
+                const cd = new Date(c.close_date);
+                if (!isNaN(cd.getTime()) && cd < now) return true;
+              } catch {}
+            }
+            return false;
+          };
+          const active = campaigns.filter(c => !isExpired(c));
+          const expired = campaigns.filter(c => isExpired(c));
+
+          const renderCard = (c: Campaign) => (
+            <View key={c.id} style={{ backgroundColor: '#fff', borderRadius: 12, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: c.is_active ? '#2E7D32' : '#999', overflow: 'hidden' }}>
+            {/* 🆕 27/02/2026 — Cover image + titolo cliccabili → apre modal di modifica */}
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => handleOpenEdit(c)}
+              data-testid={`campaign-open-${c.id}`}
+            >
+              {(c as any).cover_image ? (
+                <Image
+                  source={{ uri: (c as any).cover_image }}
+                  style={{ width: '100%', aspectRatio: 1200 / 630, backgroundColor: '#f0f0f0' }}
+                  resizeMode="cover"
+                />
+              ) : null}
+              <View style={{ padding: 16 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: '#1565C0', marginBottom: 4, letterSpacing: 0.3 }}>
+                      Stagione {c.season}
+                    </Text>
+                    <Text style={{ fontSize: 17, fontWeight: '700', color: '#0D47A1' }} data-testid={`campaign-title-${c.id}`}>{c.title}</Text>
+                  </View>
+                  <View style={{
+                    backgroundColor: c.is_active ? '#E8F5E9' : '#F5F5F5',
+                    borderRadius: 14, paddingHorizontal: 12, paddingVertical: 5,
+                  }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: c.is_active ? '#2E7D32' : '#999' }}>
+                      {c.is_active ? 'Attiva' : 'Chiusa'}
+                    </Text>
+                  </View>
+                </View>
               </View>
-              <View style={{
-                backgroundColor: c.is_active ? '#E8F5E9' : '#F5F5F5',
-                borderRadius: 14, paddingHorizontal: 12, paddingVertical: 5,
-              }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: c.is_active ? '#2E7D32' : '#999' }}>
-                  {c.is_active ? 'Attiva' : 'Chiusa'}
-                </Text>
-              </View>
-            </View>
+            </TouchableOpacity>
+            <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
 
             {/* Descrizione mostrata a chi si iscrive */}
             {c.description ? (
@@ -827,7 +862,35 @@ export default function PreseasonAdmin() {
               </View>
             )}
           </View>
-        ))
+          </View>
+          );
+
+          return (
+            <>
+              {active.length > 0 && (
+                <>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#2E7D32', marginTop: 4, marginBottom: 10, letterSpacing: 0.5 }}>
+                    IN PROGRAMMA · {active.length}
+                  </Text>
+                  {active.map(renderCard)}
+                </>
+              )}
+              {expired.length > 0 && (
+                <>
+                  <View style={{ marginTop: 20, marginBottom: 10, backgroundColor: '#FFF8E1', borderRadius: 10, padding: 12, borderLeftWidth: 3, borderLeftColor: '#F9A825' }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#7A5D00', letterSpacing: 0.5 }}>
+                      ⏰ SCADUTI / CHIUSI · {expired.length}
+                    </Text>
+                    <Text style={{ fontSize: 12, color: '#5D4400', marginTop: 4, lineHeight: 16 }}>
+                      Per riattivare un evento: apri l&apos;evento (tap sul titolo o {'"'}Modifica{'"'}), aggiorna la data di chiusura e/o rimetti {'"'}Attiva{'"'}.
+                    </Text>
+                  </View>
+                  {expired.map(renderCard)}
+                </>
+              )}
+            </>
+          );
+        })()
       )}
 
       {/* Responses View */}
