@@ -4704,7 +4704,9 @@ class StripeSettingsUpdate(BaseModel):
 # ==================== USER MANAGEMENT ENDPOINTS (ADMIN) ====================
 
 class UserUpdateRole(BaseModel):
-    role: str  # admin, viewer, coach
+    role: str  # admin, viewer, dirigente, coordinatore
+    # 🆕 16/07/2026 — Conversione a Coordinatore: permessi granulari opzionali
+    coordinator_permissions: Optional[List[str]] = None
     
 class UserUpdateStatus(BaseModel):
     status: str  # approved, rejected, suspended
@@ -4736,7 +4738,7 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
     from utils import get_current_season_for_society as _get_cs
     _current_season = await _get_cs(db, society_id)
     query = {
-        "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER, UserRole.DIRIGENTE]},
+        "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER, UserRole.DIRIGENTE, UserRole.COORDINATORE]},
         "society_id": society_id,
         # Escludi solo chi è stato esplicitamente rimosso dalla stagione corrente
         "$or": [
@@ -4762,7 +4764,7 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
         try:
             await db.users.update_many(
                 {"id": {"$in": needing_heal}, "society_id": society_id,
-                 "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER, UserRole.DIRIGENTE]}},
+                 "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER, UserRole.DIRIGENTE, UserRole.COORDINATORE]}},
                 {"$addToSet": {"active_seasons": _current_season}},
             )
         except Exception as _e:
@@ -4816,6 +4818,8 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
             "contract_start_date": contract_start,
             "contract_end_date": contract_end,
             "fees_waived": d.get("fees_waived", False),
+            # 🆕 16/07/2026 — Permessi Coordinatore visibili nella pagina dirigenti
+            "coordinator_permissions": d.get("coordinator_permissions", []) if d.get("role") == UserRole.COORDINATORE else [],
         })
     
     return result
@@ -5269,28 +5273,43 @@ async def update_my_bank_details(data: dict, current_user = Depends(get_current_
 
 @api_router.patch("/users/{user_id}/role")
 async def update_user_role(user_id: str, data: UserUpdateRole, current_user = Depends(get_current_user)):
-    """Update user role (only for dirigenti: admin/viewer)"""
+    """Update user role (dirigenti: admin/viewer/dirigente/coordinatore)."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può modificare i ruoli")
-    
-    # Validate role
-    if data.role not in [UserRole.ADMIN, UserRole.VIEWER]:
-        raise HTTPException(status_code=400, detail="Ruolo non valido per dirigenti")
-    
+
+    # 🆕 16/07/2026 — Accetta anche `dirigente` e `coordinatore` come target
+    allowed_targets = [UserRole.ADMIN, UserRole.VIEWER, UserRole.DIRIGENTE, UserRole.COORDINATORE]
+    if data.role not in allowed_targets:
+        raise HTTPException(status_code=400, detail="Ruolo non valido")
+
     user = await db.users.find_one({"id": user_id})
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
-    
-    # Only allow role change for admin/viewer users
-    if user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
-        raise HTTPException(status_code=400, detail="Questo utente non è un dirigente")
-    
-    await db.users.update_one(
-        {"id": user_id},
-        {"$set": {"role": data.role}}
-    )
-    
-    return {"message": "Ruolo aggiornato con successo"}
+
+    # Consenti conversioni tra admin/viewer/dirigente/coordinatore (staff → staff)
+    staff_roles = {UserRole.ADMIN, UserRole.VIEWER, UserRole.DIRIGENTE, UserRole.COORDINATORE}
+    if user["role"] not in staff_roles:
+        raise HTTPException(status_code=400, detail="Questo utente non è un dirigente/coordinatore")
+
+    # Multi-tenancy: non consentire modifiche cross-società
+    if user.get("society_id") and current_user.get("society_id") and \
+       user["society_id"] != current_user["society_id"]:
+        raise HTTPException(status_code=403, detail="Utente di altra società")
+
+    update: Dict[str, Any] = {"role": data.role}
+
+    # Se target = coordinatore, salva anche i permessi (filtrati)
+    if data.role == UserRole.COORDINATORE:
+        valid_keys = set(COORDINATOR_PERMISSIONS.keys())
+        perms = [p for p in (data.coordinator_permissions or []) if isinstance(p, str) and p in valid_keys]
+        update["coordinator_permissions"] = perms
+    else:
+        # Se target != coordinatore, azzera i permessi coordinatore (pulizia)
+        update["coordinator_permissions"] = []
+
+    await db.users.update_one({"id": user_id}, {"$set": update})
+
+    return {"message": "Ruolo aggiornato con successo", "role": data.role}
 
 class AdminResetPassword(BaseModel):
     new_password: str

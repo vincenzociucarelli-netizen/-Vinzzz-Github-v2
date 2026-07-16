@@ -80,6 +80,14 @@ export default function CoordinatorDashboard() {
           <Text style={styles.subtitle}>{user?.first_name} {user?.last_name}</Text>
         </View>
         <GuideButton role="coordinatore" compact />
+        {/* 🆕 16/07/2026 — Switch to Dirigente per dual-role Coordinatore+Dirigente */}
+        <TouchableOpacity
+          onPress={() => router.replace('/dirigente')}
+          style={{ marginLeft: 8, backgroundColor: '#fff', borderRadius: 20, padding: 8 }}
+          data-testid="switch-to-dirigente-btn"
+        >
+          <Ionicons name="briefcase" size={20} color="#8E44AD" />
+        </TouchableOpacity>
         <TouchableOpacity onPress={handleLogout} style={{ marginLeft: 8 }} data-testid="coord-logout">
           <Ionicons name="log-out-outline" size={26} color="#fff" />
         </TouchableOpacity>

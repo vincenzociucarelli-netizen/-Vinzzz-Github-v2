@@ -169,10 +169,10 @@ export default function AdminDashboard() {
       
       // Count pending by role and save staff pending list
       const pending = pendingRes.data || [];
-      const staffRoles = ['coach', 'collaboratore', 'dirigente', 'admin', 'viewer'];
+      const staffRoles = ['coach', 'collaboratore', 'dirigente', 'admin', 'viewer', 'coordinatore'];
       const staffPending = pending.filter((u: any) => staffRoles.includes(u.role));
       setPendingStaff(staffPending);
-      const dirigentiPending = pending.filter((u: any) => u.role === 'admin' || u.role === 'viewer').length;
+      const dirigentiPending = pending.filter((u: any) => ['admin','viewer','dirigente','coordinatore'].includes(u.role)).length;
       const coachesPending = pending.filter((u: any) => u.role === 'coach').length;
       const collaboratoriPending = pending.filter((u: any) => u.role === 'collaboratore').length;
       const parentsPending = pending.filter((u: any) => u.role === 'parent').length;
@@ -331,7 +331,9 @@ export default function AdminDashboard() {
     switch (role) {
       case 'coach': return 'Coach';
       case 'collaboratore': return 'Collaboratore';
-      case 'admin': case 'viewer': return 'Dirigente';
+      case 'admin': return 'Admin';
+      case 'viewer': case 'dirigente': return 'Dirigente';
+      case 'coordinatore': return 'Coordinatore';
       default: return role;
     }
   };
@@ -340,7 +342,8 @@ export default function AdminDashboard() {
     switch (role) {
       case 'coach': return '#E67E22';
       case 'collaboratore': return '#3498DB';
-      case 'admin': case 'viewer': return '#8E44AD';
+      case 'admin': case 'viewer': case 'dirigente': return '#8E44AD';
+      case 'coordinatore': return '#F9A825';
       default: return '#666';
     }
   };

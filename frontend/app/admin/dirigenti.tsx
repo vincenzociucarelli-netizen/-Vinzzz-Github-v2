@@ -26,7 +26,21 @@ interface Dirigente {
   approved_at?: string;
   is_scorekeeper?: boolean;  // Segnapunti
   qualification?: string;  // Carica nella società
+  coordinator_permissions?: string[];  // 🆕 16/07/2026
 }
+
+// 🆕 16/07/2026 — Mapping fisso permessi Coordinatore (mirror di COORDINATOR_PERMISSIONS backend)
+const COORDINATOR_PERM_LABELS: { key: string; label: string }[] = [
+  { key: 'teams', label: 'Squadre e roster' },
+  { key: 'athletes', label: 'Atleti (anagrafica)' },
+  { key: 'trainings', label: 'Allenamenti' },
+  { key: 'matches', label: 'Convocazioni e partite' },
+  { key: 'attendance', label: 'Presenze e QR scanner' },
+  { key: 'communications', label: 'Comunicazioni / Broadcast' },
+  { key: 'events', label: 'Eventi in programma (pre-iscrizioni)' },
+  { key: 'certificates', label: 'Certificati medici' },
+  { key: 'gdpr_view', label: 'Documenti GDPR (solo lettura)' },
+];
 
 export default function DirigentiScreen() {
   const router = useRouter();
@@ -40,6 +54,11 @@ export default function DirigentiScreen() {
   // 🆕 01/07/2026 — Riconferma per nuova stagione
   const [currentSeason, setCurrentSeason] = useState<string>('');
   const [renewToggleBusy, setRenewToggleBusy] = useState<string | null>(null);
+  // 🆕 16/07/2026 — Modale conversione in Coordinatore con permessi granulari
+  const [coordinatorModalVisible, setCoordinatorModalVisible] = useState(false);
+  const [coordinatorTargetUser, setCoordinatorTargetUser] = useState<Dirigente | null>(null);
+  const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
+  const [savingCoordinator, setSavingCoordinator] = useState(false);
 
   const handleExport = async () => {
     setExporting(true);
@@ -65,9 +84,9 @@ export default function DirigentiScreen() {
       setDirigenti(dirigentiRes.data);
       setSocietyName(societyRes.data.name || 'Società');
       setCurrentSeason(seasonRes.data?.season || '');
-      // Filter pending users for dirigenti only
+      // Filter pending users for staff roles (admin, viewer, dirigente, coordinatore)
       const pendingDirigenti = pendingRes.data.filter(
-        (u: Dirigente) => u.role === 'admin' || u.role === 'viewer'
+        (u: Dirigente) => ['admin', 'viewer', 'dirigente', 'coordinatore'].includes(u.role)
       );
       setPendingUsers(pendingDirigenti);
     } catch (error) {
@@ -118,12 +137,49 @@ export default function DirigentiScreen() {
   const handleChangeRole = async (user: Dirigente, newRole: string) => {
     try {
       await api.patch(`/users/${user.id}/role`, { role: newRole });
-      showAlert('Successo', `Ruolo aggiornato a ${newRole === 'admin' ? 'Admin' : 'Dirigente'}`);
+      const label = newRole === 'admin' ? 'Admin' :
+                    newRole === 'coordinatore' ? 'Coordinatore' :
+                    newRole === 'dirigente' ? 'Dirigente' : 'Dirigente';
+      showAlert('Successo', `Ruolo aggiornato a ${label}`);
       await loadData();
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'aggiornamento');
     }
     setActionModalVisible(false);
+  };
+
+  // 🆕 16/07/2026 — Apertura modale conversione a Coordinatore
+  const openConvertToCoordinator = (user: Dirigente) => {
+    setCoordinatorTargetUser(user);
+    setSelectedPerms(user.coordinator_permissions && user.coordinator_permissions.length > 0
+      ? [...user.coordinator_permissions]
+      // Preset di default per una prima conversione: sezioni "leggere" abilitate
+      : ['teams', 'athletes', 'communications', 'events']);
+    setCoordinatorModalVisible(true);
+    setActionModalVisible(false);
+  };
+
+  const togglePerm = (key: string) => {
+    setSelectedPerms(prev => prev.includes(key) ? prev.filter(p => p !== key) : [...prev, key]);
+  };
+
+  const handleSaveCoordinator = async () => {
+    if (!coordinatorTargetUser) return;
+    setSavingCoordinator(true);
+    try {
+      await api.patch(`/users/${coordinatorTargetUser.id}/role`, {
+        role: 'coordinatore',
+        coordinator_permissions: selectedPerms,
+      });
+      showAlert('Successo', `${coordinatorTargetUser.full_name} è ora Coordinatore con ${selectedPerms.length} permessi`);
+      setCoordinatorModalVisible(false);
+      setCoordinatorTargetUser(null);
+      await loadData();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante la conversione');
+    } finally {
+      setSavingCoordinator(false);
+    }
   };
 
   const handleSuspend = async (user: Dirigente) => {
@@ -169,7 +225,21 @@ export default function DirigentiScreen() {
   };
 
   const getRoleLabel = (role: string) => {
-    return role === 'admin' ? 'Admin' : 'Dirigente';
+    if (role === 'admin') return 'Admin';
+    if (role === 'coordinatore') return 'Coordinatore';
+    return 'Dirigente';
+  };
+
+  const getRoleColor = (role: string) => {
+    if (role === 'admin') return '#007AFF';
+    if (role === 'coordinatore') return '#F9A825';
+    return '#8E44AD';
+  };
+
+  const getRoleIcon = (role: string): any => {
+    if (role === 'admin') return 'shield-checkmark';
+    if (role === 'coordinatore') return 'school';
+    return 'briefcase';
   };
 
   const getStatusColor = (status: string) => {
@@ -225,9 +295,9 @@ export default function DirigentiScreen() {
       >
         <View style={styles.userAvatar}>
           <Ionicons 
-            name={item.role === 'admin' ? 'shield-checkmark' : 'briefcase'} 
+            name={getRoleIcon(item.role)} 
             size={24} 
-            color={item.role === 'admin' ? '#007AFF' : '#8E44AD'} 
+            color={getRoleColor(item.role)} 
           />
         </View>
         <View style={styles.userInfo}>
@@ -244,11 +314,19 @@ export default function DirigentiScreen() {
             </Text>
           )}
           <View style={styles.userMeta}>
-            <View style={[styles.roleBadge, item.role === 'admin' && styles.adminBadge]}>
-              <Text style={[styles.roleBadgeText, item.role === 'admin' && styles.adminBadgeText]}>
-                {item.role === 'admin' ? 'ADMIN' : 'DIRIGENTE'}
+            <View style={[styles.roleBadge, { backgroundColor: getRoleColor(item.role) + '22' }]}>
+              <Text style={[styles.roleBadgeText, { color: getRoleColor(item.role) }]}>
+                {getRoleLabel(item.role).toUpperCase()}
               </Text>
             </View>
+            {item.role === 'coordinatore' && (item.coordinator_permissions?.length || 0) > 0 && (
+              <View style={{ marginLeft: 6, backgroundColor: '#FFF8E1', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 }}
+                data-testid={`coord-perms-count-${item.id}`}>
+                <Text style={{ fontSize: 10, color: '#7A5D00', fontWeight: '700' }}>
+                  {item.coordinator_permissions?.length}/9 sezioni
+                </Text>
+              </View>
+            )}
             <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
             <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
             {(item as any).pro_data_pending_review && (
@@ -346,21 +424,45 @@ export default function DirigentiScreen() {
             <Text style={styles.modalSubtitle}>{selectedUser?.email}</Text>
             
             <View style={styles.modalActions}>
-              {selectedUser?.role === 'admin' ? (
-                <TouchableOpacity
-                  style={styles.modalBtn}
-                  onPress={() => selectedUser && handleChangeRole(selectedUser, 'viewer')}
-                >
-                  <Ionicons name="eye" size={20} color="#007AFF" />
-                  <Text style={styles.modalBtnText}>Rendi Dirigente</Text>
-                </TouchableOpacity>
-              ) : (
+              {/* 🆕 16/07/2026 — Conversione tra ruoli staff: Admin ↔ Dirigente ↔ Coordinatore */}
+              {selectedUser?.role !== 'admin' && (
                 <TouchableOpacity
                   style={styles.modalBtn}
                   onPress={() => selectedUser && handleChangeRole(selectedUser, 'admin')}
+                  data-testid="btn-make-admin"
                 >
                   <Ionicons name="shield-checkmark" size={20} color="#007AFF" />
                   <Text style={styles.modalBtnText}>Rendi Admin</Text>
+                </TouchableOpacity>
+              )}
+              {selectedUser?.role !== 'viewer' && selectedUser?.role !== 'dirigente' && (
+                <TouchableOpacity
+                  style={styles.modalBtn}
+                  onPress={() => selectedUser && handleChangeRole(selectedUser, 'viewer')}
+                  data-testid="btn-make-dirigente"
+                >
+                  <Ionicons name="briefcase" size={20} color="#8E44AD" />
+                  <Text style={styles.modalBtnText}>Rendi Dirigente</Text>
+                </TouchableOpacity>
+              )}
+              {selectedUser?.role !== 'coordinatore' && (
+                <TouchableOpacity
+                  style={styles.modalBtn}
+                  onPress={() => selectedUser && openConvertToCoordinator(selectedUser)}
+                  data-testid="btn-make-coordinator"
+                >
+                  <Ionicons name="school" size={20} color="#F9A825" />
+                  <Text style={styles.modalBtnText}>Trasforma in Coordinatore</Text>
+                </TouchableOpacity>
+              )}
+              {selectedUser?.role === 'coordinatore' && (
+                <TouchableOpacity
+                  style={styles.modalBtn}
+                  onPress={() => selectedUser && openConvertToCoordinator(selectedUser)}
+                  data-testid="btn-edit-coordinator-perms"
+                >
+                  <Ionicons name="options" size={20} color="#F9A825" />
+                  <Text style={styles.modalBtnText}>Modifica Permessi</Text>
                 </TouchableOpacity>
               )}
               
@@ -399,6 +501,85 @@ export default function DirigentiScreen() {
             >
               <Text style={styles.modalCloseBtnText}>Chiudi</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 🆕 16/07/2026 — Modale conversione in Coordinatore con permessi granulari */}
+      <Modal
+        visible={coordinatorModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setCoordinatorModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxHeight: '85%', width: '92%' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFF3E0', alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="school" size={20} color="#F9A825" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>Coordinatore · Permessi</Text>
+                <Text style={styles.modalSubtitle} numberOfLines={1}>{coordinatorTargetUser?.full_name}</Text>
+              </View>
+            </View>
+            <Text style={{ fontSize: 12, color: '#666', marginBottom: 12, lineHeight: 17 }}>
+              Seleziona le sezioni organizzative a cui questo Coordinatore avrà accesso in modifica. Le sezioni amministrative (compensi, IBAN, sponsor, bilanci) restano SEMPRE riservate all&apos;Admin.
+            </Text>
+            <View style={{ maxHeight: 340 }}>
+              <FlatList
+                data={COORDINATOR_PERM_LABELS}
+                keyExtractor={(item) => item.key}
+                renderItem={({ item }) => {
+                  const checked = selectedPerms.includes(item.key);
+                  return (
+                    <TouchableOpacity
+                      style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 10,
+                        paddingVertical: 10, paddingHorizontal: 8,
+                        borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+                      }}
+                      onPress={() => togglePerm(item.key)}
+                      data-testid={`coord-perm-${item.key}`}
+                    >
+                      <View style={{
+                        width: 22, height: 22, borderRadius: 5,
+                        borderWidth: 2, borderColor: checked ? '#F9A825' : '#ccc',
+                        backgroundColor: checked ? '#F9A825' : '#fff',
+                        alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {checked && <Ionicons name="checkmark" size={16} color="#fff" />}
+                      </View>
+                      <Text style={{ fontSize: 14, color: '#333', flex: 1 }}>{item.label}</Text>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            </View>
+            <Text style={{ fontSize: 11, color: '#999', marginTop: 8 }}>
+              {selectedPerms.length} / {COORDINATOR_PERM_LABELS.length} sezioni selezionate
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { flex: 1, justifyContent: 'center', backgroundColor: '#F5F5F5' }]}
+                onPress={() => setCoordinatorModalVisible(false)}
+                disabled={savingCoordinator}
+              >
+                <Text style={[styles.modalBtnText, { color: '#666' }]}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, { flex: 1, justifyContent: 'center', backgroundColor: '#F9A825' }]}
+                onPress={handleSaveCoordinator}
+                disabled={savingCoordinator}
+                data-testid="btn-save-coordinator"
+              >
+                {savingCoordinator ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={[styles.modalBtnText, { color: '#fff', fontWeight: '700' }]}>Salva</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>

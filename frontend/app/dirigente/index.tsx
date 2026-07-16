@@ -247,6 +247,16 @@ export default function DirigenteIndex() {
               <Ionicons name="shield-checkmark" size={20} color="#007AFF" />
             </TouchableOpacity>
           )}
+          {/* 🆕 16/07/2026 — Switch to Coordinatore per dual-role Coordinatore+Dirigente */}
+          {user?.role === 'coordinatore' && (
+            <TouchableOpacity 
+              onPress={() => router.replace('/coordinatore')} 
+              style={[styles.headerBtn, styles.adminSwitchBtn]}
+              data-testid="switch-to-coordinator-btn"
+            >
+              <Ionicons name="school" size={20} color="#F9A825" />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity onPress={() => router.push('/dirigente/profile')} style={styles.headerBtn}>
             <Ionicons name="person-circle-outline" size={24} color="#fff" />
           </TouchableOpacity>
@@ -280,6 +290,26 @@ export default function DirigenteIndex() {
               </Text>
             </View>
             <Ionicons name="arrow-forward-circle" size={28} color="#007AFF" />
+          </TouchableOpacity>
+        )}
+
+        {/* 🆕 16/07/2026 — Coordinatore Switch Card (dual-role Coordinatore+Dirigente) */}
+        {user?.role === 'coordinatore' && (
+          <TouchableOpacity
+            style={[styles.adminSwitchCard, { borderColor: '#F9A825', backgroundColor: '#FFF8E1' }]}
+            onPress={() => router.replace('/coordinatore')}
+            data-testid="dirigente-coord-switch-card"
+          >
+            <View style={[styles.adminSwitchIcon, { backgroundColor: '#FFF3E0' }]}>
+              <Ionicons name="school" size={24} color="#F9A825" />
+            </View>
+            <View style={styles.adminSwitchInfo}>
+              <Text style={[styles.adminSwitchTitle, { color: '#7A5D00' }]}>Passa a Modalità Coordinatore</Text>
+              <Text style={styles.adminSwitchDescription}>
+                Le sezioni organizzative che ti sono state assegnate
+              </Text>
+            </View>
+            <Ionicons name="arrow-forward-circle" size={28} color="#F9A825" />
           </TouchableOpacity>
         )}
 

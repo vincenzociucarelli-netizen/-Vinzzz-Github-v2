@@ -7,7 +7,7 @@ export default function DirigenteLayout() {
   const router = useRouter();
   const { user, isLoading, loadAuth } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
-  const isAuthenticated = !isChecking && !isLoading && !!user && (user.role === 'viewer' || user.role === 'admin' || user.role === 'dirigente');
+  const isAuthenticated = !isChecking && !isLoading && !!user && (user.role === 'viewer' || user.role === 'admin' || user.role === 'dirigente' || user.role === 'coordinatore');
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -19,7 +19,7 @@ export default function DirigenteLayout() {
 
   useEffect(() => {
     if (!isChecking && !isLoading) {
-      if (!user || (user.role !== 'viewer' && user.role !== 'admin' && user.role !== 'dirigente')) {
+      if (!user || (user.role !== 'viewer' && user.role !== 'admin' && user.role !== 'dirigente' && user.role !== 'coordinatore')) {
         router.replace('/login');
       }
     }
@@ -33,7 +33,7 @@ export default function DirigenteLayout() {
     );
   }
 
-  if (!user || (user.role !== 'viewer' && user.role !== 'admin' && user.role !== 'dirigente')) {
+  if (!user || (user.role !== 'viewer' && user.role !== 'admin' && user.role !== 'dirigente' && user.role !== 'coordinatore')) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#8E44AD" />
