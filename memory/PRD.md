@@ -53,7 +53,18 @@ Cognome*, Nome*, Codice Fiscale*, Data Nascita (gg/mm/aaaa)*, Sesso (M/F), Email
 
 
 ## 📌 Promemoria — Backlog features
-- **Sponsor**: creare sezione dedicata (probabilmente sotto `/admin/settings/sponsor` o come tab dedicata) per gestire elenco sponsor, loghi, link, visibilità su pagina pubblica società.
+- **Sponsor** (pagina admin protetta da password, visibile solo agli admin):
+  - **Accesso**: pagina `/admin/sponsor` con re-inserimento password admin all'ingresso (stesso pattern del "Rigenera Codice Invito").
+  - **Card sponsor** — per ogni sponsor:
+    - Logo vettoriale (SVG/PDF) — upload con preview
+    - Ragione sociale ditta sponsor
+    - Copia PDF del contratto (upload + storage)
+    - Copia PDF fattura (upload + storage)
+    - **Scadenze**: elenco delle scadenze definite in fattura (data + importo), ognuna con toggle "pagato/non pagato" e data pagamento ricevuto
+  - **Pagina pagamenti**: le scadenze sponsor sono elencate insieme alle altre scadenze; l'admin può selezionare le rate e marcarle come "ricevute" nel giorno del pagamento
+  - **Sollecito automatico**: pulsante "Invia sollecito pagamento" per scadenza scaduta → email al referente sponsor con template (data scadenza, importo, IBAN società). Log dei solleciti inviati.
+  - **Storico**: tabella cronologica con scadenze, pagamenti ricevuti, solleciti inviati per ogni sponsor
+
 
 
 ## 🐛 27/02/2026 (v7.15-hotfix19) — Fix anteprima social + blocco password codice invito ✅
