@@ -109,6 +109,7 @@ class NewCheckoutRequest(BaseModel):
 @router.post("/payments/create-checkout")
 async def create_pending_payment_and_checkout(
     body: NewCheckoutRequest,
+    request: Request,
     current_user=Depends(get_current_user),
 ):
     """Crea un payment record PENDING + Stripe Checkout Session.
@@ -154,8 +155,16 @@ async def create_pending_payment_and_checkout(
     await db.payments.insert_one(payment_doc)
 
     # Riusa lo stesso builder di checkout URL
-    base = (body.return_url_base or os.environ.get("FRONTEND_URL") or
-            "https://registrateam-vol.preview.emergentagent.com").rstrip("/")
+    # 🆕 16/07/2026 — URL dinamico: preferisci origin passato dal frontend, poi env,
+    # poi X-Forwarded-Host della request (funziona in preview E in produzione).
+    base = (body.return_url_base or os.environ.get("FRONTEND_URL") or "").rstrip("/")
+    if not base:
+        forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+        forwarded_proto = request.headers.get("x-forwarded-proto", "https")
+        if forwarded_host:
+            base = f"{forwarded_proto}://{forwarded_host}"
+    if not base:
+        base = "https://registrateam-vol.preview.emergentagent.com"
     success_url = f"{base}/parent/payment/success?session_id={{CHECKOUT_SESSION_ID}}&payment_id={payment_id}"
     cancel_url = f"{base}/parent/payment/cancel?payment_id={payment_id}"
 
@@ -212,6 +221,7 @@ async def create_pending_payment_and_checkout(
 async def create_stripe_checkout(
     payment_id: str,
     body: CheckoutRequest,
+    request: Request,
     current_user=Depends(get_current_user),
 ):
     """Crea una Stripe Checkout Session per la rata indicata."""
@@ -220,10 +230,14 @@ async def create_stripe_checkout(
     society_sk = settings["stripe_secret_key"]
     society_id = athlete["society_id"]
 
-    # Costruisci URL di ritorno frontend
+    # Costruisci URL di ritorno frontend (dinamico preview↔produzione)
     base = (body.return_url_base or os.environ.get("FRONTEND_URL") or "").rstrip("/")
     if not base:
-        # Fallback all'origine della richiesta se possibile
+        forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+        forwarded_proto = request.headers.get("x-forwarded-proto", "https")
+        if forwarded_host:
+            base = f"{forwarded_proto}://{forwarded_host}"
+    if not base:
         base = "https://registrateam-vol.preview.emergentagent.com"
     success_url = f"{base}/parent/payment/success?session_id={{CHECKOUT_SESSION_ID}}&payment_id={payment_id}"
     cancel_url = f"{base}/parent/payment/cancel?payment_id={payment_id}"
@@ -393,16 +407,28 @@ async def stripe_webhook(society_id: str, request: Request):
 
 
 @router.get("/settings/stripe/webhook-url")
-async def get_webhook_url_for_admin(current_user=Depends(get_current_user)):
-    """Ritorna l'URL webhook che l'admin deve incollare in Stripe Dashboard."""
+async def get_webhook_url_for_admin(request: Request, current_user=Depends(get_current_user)):
+    """Ritorna l'URL webhook che l'admin deve incollare in Stripe Dashboard.
+    🆕 16/07/2026 — URL dinamico: usa l'host della request corrente (preview OR produzione)
+    così l'admin vede sempre il dominio giusto per il suo ambiente."""
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Solo admin")
     sid = current_user.get("society_id")
     if not sid:
         raise HTTPException(status_code=400, detail="Società non identificata")
-    base = os.environ.get("PUBLIC_BACKEND_URL") or "https://registrateam-vol.preview.emergentagent.com"
+
+    # Priorità: env var esplicita > header X-Forwarded-Host (dietro proxy Kubernetes) > host della request
+    base = os.environ.get("PUBLIC_BACKEND_URL")
+    if not base:
+        forwarded_host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+        forwarded_proto = request.headers.get("x-forwarded-proto", "https")
+        if forwarded_host:
+            base = f"{forwarded_proto}://{forwarded_host}"
+        else:
+            base = str(request.base_url).rstrip("/")
+
     return {
-        "webhook_url": f"{base}/api/webhooks/stripe/{sid}",
+        "webhook_url": f"{base.rstrip('/')}/api/webhooks/stripe/{sid}",
         "events_to_subscribe": ["checkout.session.completed", "checkout.session.expired"],
     }
 
