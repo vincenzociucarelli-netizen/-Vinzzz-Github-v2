@@ -113,8 +113,19 @@ async def get_society_logo_image(request: Request, society_id: Optional[str] = N
     settings = await db.settings.find_one(query, {"_id": 0, "logo": 1})
     if not settings or not settings.get("logo"):
         raise HTTPException(status_code=404, detail="Logo non trovato")
-    logo_bytes = base64.b64decode(settings["logo"])
-    return Response(content=logo_bytes, media_type="image/png", headers={"Cache-Control": "public, max-age=300"})
+    # 🐛 27/02/2026 — Gestisce sia il caso raw base64 sia il caso data URI con prefisso
+    logo_str = settings["logo"]
+    media_type = "image/png"
+    if isinstance(logo_str, str) and logo_str.startswith("data:"):
+        try:
+            header, b64 = logo_str.split(",", 1)
+            media_type = header.split(";")[0].replace("data:", "") or media_type
+            logo_bytes = base64.b64decode(b64)
+        except Exception:
+            raise HTTPException(status_code=404, detail="Logo non decodificabile")
+    else:
+        logo_bytes = base64.b64decode(logo_str)
+    return Response(content=logo_bytes, media_type=media_type, headers={"Cache-Control": "public, max-age=300"})
 
 
 @router.get("/settings/society/sport-image.png")

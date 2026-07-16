@@ -1,6 +1,28 @@
 # RegistraTEAM — PRD & Stato
 
 
+## 🐛 27/02/2026 (v7.15-hotfix19) — Fix anteprima social + blocco password codice invito ✅
+
+**Segnalazioni utente**:
+1. P3 "ricevute Coach/Dirigenti/Collaboratori supplementary" → **già presente** ("Genera Quietanza Personalizzata" in tutte e 4 le sezioni admin) → rimosso dal backlog
+2. Anteprima social vuota (WhatsApp/Facebook preview senza immagine)
+3. Bottone "Rigenera Codice Invito" troppo facile da cliccare → chiedere password admin
+
+**Fix**:
+
+**1. Anteprima social senza immagine** (`admin/preseason.tsx`):
+- Root cause: il logo società nel DB è salvato come **raw base64 senza prefisso** `data:image/*;base64,`. `<Image>` di React Native richiede un data URI valido.
+- Fix frontend: prepend automatico del prefisso `data:image/png;base64,` se mancante.
+- Fix backend `routes/settings.py::get_society_logo_image`: gestisce ora entrambi i formati (raw base64 + data URI con prefisso) per robustezza futura.
+
+**2. Blocco password su rigenerazione codice invito**:
+- Backend: `POST /societies/regenerate-invite-code` ora accetta body `{"password": "..."}` e verifica con `verify_password` contro `users.password_hash` dell'admin. Errore 401 se password sbagliata, 400 se account senza password.
+- Frontend `admin/index.tsx`: dopo la prima conferma, mostra `window.prompt` per la password. Se annullato o vuoto → operazione annullata.
+- Test: `tests/test_regenerate_invite_password.py` (3 casi: correct/wrong/no-password) → PASS.
+
+**File modificati**: `server.py` (regenerate_invite_code + RegenInviteCodeRequest), `routes/settings.py`, `admin/index.tsx`, `admin/preseason.tsx`. Bundle rebuild: `entry-9c0f3b630ee9c72162d12e1c79be6128.js`.
+
+
 ## 🚀 27/02/2026 (v7.15-hotfix18) — P2, P3, cover image campagne ✅
 
 **Contesto**: chiusura di tre grosse feature richieste dall'utente.

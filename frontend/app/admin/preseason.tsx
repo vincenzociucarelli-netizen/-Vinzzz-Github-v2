@@ -262,7 +262,13 @@ export default function PreseasonAdmin() {
         // include_images=true perché serve il logo base64 per la preview
         const res = await api.get('/settings/society?include_images=true');
         setSocietyName(res.data?.name || res.data?.ragione_sociale || '');
-        setSocietyLogo(res.data?.logo || '');
+        // 🐛 27/02/2026 — Il logo nel DB spesso è raw base64 SENZA prefisso "data:image/*;base64,".
+        // <Image source={{uri: ...}}> richiede un data URI valido, altrimenti render vuoto ("?").
+        const raw = res.data?.logo || '';
+        const normalized = raw && !raw.startsWith('data:')
+          ? `data:image/png;base64,${raw}`
+          : raw;
+        setSocietyLogo(normalized);
       } catch {}
     })();
   }, []);

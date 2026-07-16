@@ -1508,14 +1508,28 @@ export default function AdminDashboard() {
                         ]
                       );
                     });
-                if (confirmRegen) {
-                  try {
-                    const res = await api.post('/societies/regenerate-invite-code');
-                    setInviteCode(res.data.invite_code);
-                    showInfo('Fatto!', `Nuovo codice: ${res.data.invite_code}`);
-                  } catch (e) {
-                    showInfo('Errore', 'Impossibile rigenerare il codice');
+                if (!confirmRegen) return;
+                // 🐛 27/02/2026 — Blocco password: previene rigenerazioni accidentali.
+                let pw = '';
+                if (Platform.OS === 'web') {
+                  const typed = window.prompt('Per confermare, inserisci la tua password admin:', '');
+                  if (typed === null) return; // annullato
+                  pw = (typed || '').trim();
+                  if (!pw) {
+                    showInfo('Annullato', 'Password vuota. Codice NON rigenerato.');
+                    return;
                   }
+                } else {
+                  showInfo('Non supportato', 'La rigenerazione con password richiede la versione web dell\'app.');
+                  return;
+                }
+                try {
+                  const res = await api.post('/societies/regenerate-invite-code', { password: pw });
+                  setInviteCode(res.data.invite_code);
+                  showInfo('Fatto!', `Nuovo codice: ${res.data.invite_code}`);
+                } catch (e: any) {
+                  const msg = e?.response?.data?.detail || 'Impossibile rigenerare il codice';
+                  showInfo('Errore', msg);
                 }
               }}
             >

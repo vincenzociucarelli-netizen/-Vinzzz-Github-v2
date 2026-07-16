@@ -1605,14 +1605,29 @@ async def get_invite_code(current_user = Depends(get_current_user)):
         "society_name": society["name"]
     }
 
+class RegenInviteCodeRequest(BaseModel):
+    password: str  # 🆕 27/02/2026 — Richiesta conferma password prima della rigenerazione
+
+
 @api_router.post("/societies/regenerate-invite-code")
-async def regenerate_invite_code(current_user = Depends(get_current_user)):
-    """Regenerate society invite code - admin only"""
+async def regenerate_invite_code(data: RegenInviteCodeRequest, current_user = Depends(get_current_user)):
+    """Regenerate society invite code - admin only.
+    🐛 27/02/2026 — Aggiunto blocco password: l'admin deve reinserire la propria
+    password per prevenire rigenerazioni accidentali del codice società (invalidano
+    tutti i link di invito già condivisi).
+    """
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può rigenerare il codice invito")
     
     if not current_user.get("society_id"):
         raise HTTPException(status_code=404, detail="Non sei associato a nessuna società")
+    
+    # Verifica password
+    user_db = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "password_hash": 1})
+    if not user_db or not user_db.get("password_hash"):
+        raise HTTPException(status_code=400, detail="Account admin senza password: contatta il supporto")
+    if not verify_password(data.password, user_db["password_hash"]):
+        raise HTTPException(status_code=401, detail="Password non corretta. Il codice NON è stato rigenerato.")
     
     # Generate new unique code
     new_code = generate_invite_code()
