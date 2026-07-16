@@ -1,6 +1,31 @@
 # RegistraTEAM — PRD & Stato
 
 
+## 🆕 16/07/2026 (v7.15-hotfix24) — Conversione ruoli staff bidirezionale + dual-role Coordinatore/Dirigente ✅
+
+**Contesto**: l'admin chiedeva "come faccio a passare un Admin a Coordinatore?". Non esisteva flusso: l'endpoint conversione accettava solo `admin ↔ viewer`. Inoltre serviva il dual-role autonomo Coordinatore+Dirigente (specchio dell'esistente Admin+Dirigente).
+
+**Backend (`server.py`)**
+- `UserUpdateRole` accetta ora `role ∈ {admin, viewer, dirigente, coordinatore}` + opzionale `coordinator_permissions: List[str]`.
+- `PATCH /api/users/{id}/role` filtra permessi non validi contro `COORDINATOR_PERMISSIONS.keys()`, azzera permessi quando target != coordinatore, enforcement multi-tenancy.
+- `GET /api/users/dirigenti` include ora anche i coordinatori (per gestione unificata staff) e ritorna `coordinator_permissions`.
+
+**Frontend `/admin/dirigenti`**
+- 3 bottoni nel modale azioni: **Rendi Admin** / **Rendi Dirigente** / **Trasforma in Coordinatore** (o **Modifica Permessi** se già coordinator).
+- Modale permessi granulari: 9 checkbox (mirror di `COORDINATOR_PERMISSIONS`). Preset default per prima conversione: `teams, athletes, communications, events`. Badge colorato per ruolo + counter "N/9 sezioni".
+
+**Dual-role autonomo Coordinatore ↔ Dirigente**
+- `/coordinatore` header: bottone briefcase → `/dirigente` (specchio del bottone Admin↔Dirigente esistente).
+- `/dirigente/_layout.tsx`: accetta ora anche `role=coordinatore`.
+- `/dirigente` header: bottone school + card "Passa a Modalità Coordinatore" visibili solo per coordinator.
+- Skip di `AdminCoachCommitments` in `/dirigente` per coordinator (evita l'errore "Impossibile caricare gli impegni" su endpoint 403).
+
+**Test**: iteration_83.json — Backend 8/8 pytest OK (`test_coordinator_role.py`). Frontend visualmente 100% dopo rebuild bundle (`npx expo export --platform web` + `supervisorctl restart expo`).
+
+⚠️ **Nota infra**: il supervisor `expo` serve `/app/frontend/dist` staticamente via `npx serve -s dist`. Hot-reload NON attivo. Ogni change frontend richiede rebuild: `cd /app/frontend && npx expo export --platform web && sudo supervisorctl restart expo`. Rebuild eseguito post-fix.
+
+
+
 ## 🐛 16/07/2026 (v7.15-hotfix23) — 3 fix post-rollover stagione + coordinatore ✅
 
 **Bug 1 - Admin/Dirigenti spariti dopo rollover stagione (regressione critica)**

@@ -316,7 +316,10 @@ export default function DirigenteIndex() {
         {/* 🆕 23/02/2026 — Tab bar spostata FUORI dalla ScrollView (sticky in cima) */}
 
         {/* Impegni del dirigente (riusa AdminCoachCommitments senza userId = current user) */}
-        <AdminCoachCommitments roleLabel="dirigente" />
+        {/* 🆕 16/07/2026 — Skip impegni per coordinator (endpoint /coach/commitments non è pensato per loro) */}
+        {user?.role !== 'coordinatore' && (
+          <AdminCoachCommitments roleLabel="dirigente" />
+        )}
 
         {/* 🆕 08/07/2026 — Sezione Società (logo + contatti collassabili) */}
         <SocietyContactsSection currentUserId={user?.id} />
