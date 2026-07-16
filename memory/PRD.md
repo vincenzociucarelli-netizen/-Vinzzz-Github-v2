@@ -1,6 +1,21 @@
 # RegistraTEAM — PRD & Stato
 
 
+## 🐛 16/07/2026 (v7.15-hotfix25) — Atleti/Coach/Collaboratori spariti dopo rollover stagione ✅
+
+**Sintomo utente (Sirio Perugia Volley)**: dashboard mostra "1 atleti registrati" ma dentro `/admin/athletes` la lista è vuota. Stesso pattern del bug **Genitori vuoti** (10/07/2026) e **Dirigenti spariti** (16/07/2026).
+
+**Causa root**: il filtro clean-slate `$or: [active_seasons=current, exists=false]` (introdotto il 01/07/2026) nascondeva **tutti** i record che avevano ancora la stagione precedente (`2025-2026`) invece della corrente (`2026-2027`), pur essendo attivi. Il contatore su `/admin/stats` invece era senza filtro season → mismatch UI.
+
+**Fix identico al pattern rollover**: rimossa la condizione season-based, sostituita con `$or: [rollover_decision != removed, rollover_decision_season != current]` + self-heal `$addToSet: active_seasons=current_season`. Applicato a:
+- `GET /api/athletes` (line ~6943)
+- `GET /api/users/coaches` (line ~4838)
+- `GET /api/users/collaboratorees` (line ~4916)
+
+**Verifica live (PPG dev)**: prima 0 atleti visibili → ora 51 (con 6 coach + 3 collaboratori + 24 genitori già ok).
+
+
+
 ## 🆕 16/07/2026 (v7.15-hotfix24) — Conversione ruoli staff bidirezionale + dual-role Coordinatore/Dirigente ✅
 
 **Contesto**: l'admin chiedeva "come faccio a passare un Admin a Coordinatore?". Non esisteva flusso: l'endpoint conversione accettava solo `admin ↔ viewer`. Inoltre serviva il dual-role autonomo Coordinatore+Dirigente (specchio dell'esistente Admin+Dirigente).

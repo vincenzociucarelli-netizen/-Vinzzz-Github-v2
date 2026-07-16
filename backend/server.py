@@ -4832,17 +4832,34 @@ async def get_coaches(current_user = Depends(get_current_user)):
     
     society_id = current_user.get("society_id")
     # 🆕 01/07/2026 — Filtro clean-slate: solo coach della stagione corrente.
-    # Fallback per nuovi record senza il campo (`$exists: false`): sono comunque mostrati.
+    # 🆕 01/07/2026 — Filtro clean-slate: solo coach della stagione corrente.
+    # 🐛 16/07/2026 — HOTFIX rollover (mirror di dirigenti/atleti/genitori):
+    # mostro tutti i coach della società non esplicitamente rimossi dalla stagione
+    # corrente, poi self-heal aggiunge active_seasons.
     from utils import get_current_season_for_society as _get_cs
     _current_season = await _get_cs(db, society_id)
     coaches = await db.users.find({
         "role": UserRole.COACH,
         "society_id": society_id,
         "$or": [
-            {"active_seasons": _current_season},
-            {"active_seasons": {"$exists": False}},
+            {"rollover_decision": {"$ne": "removed"}},
+            {"rollover_decision_season": {"$ne": _current_season}},
         ],
     }).to_list(1000)
+
+    # Self-heal silenzioso
+    _coaches_needing_heal = [
+        c["id"] for c in coaches
+        if _current_season not in (c.get("active_seasons") or [])
+    ]
+    if _coaches_needing_heal:
+        try:
+            await db.users.update_many(
+                {"id": {"$in": _coaches_needing_heal}, "society_id": society_id, "role": UserRole.COACH},
+                {"$addToSet": {"active_seasons": _current_season}},
+            )
+        except Exception as _e:
+            logging.warning(f"[users/coaches] self-heal active_seasons failed: {_e}")
     
     result = []
     for c in coaches:
@@ -4911,16 +4928,31 @@ async def get_collaboratorees(current_user = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Solo admin può vedere i collaboratori")
     
     society_id = current_user.get("society_id")
+    # 🐛 16/07/2026 — HOTFIX rollover: stesso pattern coach/atleti/dirigenti.
     from utils import get_current_season_for_society as _get_cs
     _current_season = await _get_cs(db, society_id)
     collaboratori = await db.users.find({
         "role": "collaboratore",
         "society_id": society_id,
         "$or": [
-            {"active_seasons": _current_season},
-            {"active_seasons": {"$exists": False}},
+            {"rollover_decision": {"$ne": "removed"}},
+            {"rollover_decision_season": {"$ne": _current_season}},
         ],
     }).to_list(1000)
+
+    # Self-heal silenzioso
+    _collab_needing_heal = [
+        c["id"] for c in collaboratori
+        if _current_season not in (c.get("active_seasons") or [])
+    ]
+    if _collab_needing_heal:
+        try:
+            await db.users.update_many(
+                {"id": {"$in": _collab_needing_heal}, "society_id": society_id, "role": "collaboratore"},
+                {"$addToSet": {"active_seasons": _current_season}},
+            )
+        except Exception as _e:
+            logging.warning(f"[users/collaboratorees] self-heal active_seasons failed: {_e}")
     
     result = []
     for c in collaboratori:
@@ -6943,8 +6975,15 @@ async def save_federation_preferences(data: dict, current_user = Depends(get_cur
 @api_router.get("/athletes")
 async def get_all_athletes(current_user = Depends(get_current_user)):
     """Get all athletes - admin only.
-    🆕 01/07/2026 — Filtro clean-slate: solo atleti della stagione corrente
-    (active_seasons contains current_season)."""
+    🆕 01/07/2026 — Filtro clean-slate: solo atleti della stagione corrente.
+    🐛 16/07/2026 — HOTFIX "Atleti spariti dopo rollover stagione":
+    stesso pattern dei bug "Genitori vuoti" (10/07) e "Dirigenti spariti"
+    (16/07). Se l'atleta è rimasto nella stagione precedente (mancata
+    migrazione), spariva dalla lista pur essendo contato in /admin/stats.
+    Ora la source-of-truth è: "tutti gli atleti della società non
+    esplicitamente rimossi dalla stagione corrente". Self-heal aggiunge
+    la stagione corrente ad `active_seasons` (idempotente).
+    """
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere tutti gli atleti")
     
@@ -6953,11 +6992,26 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
     _current_season = await _get_cs(db, society_id)
     athletes = await db.athletes.find({
         "society_id": society_id,
+        # Escludi solo chi è stato esplicitamente rimosso dalla stagione corrente
         "$or": [
-            {"active_seasons": _current_season},
-            {"active_seasons": {"$exists": False}},
+            {"rollover_decision": {"$ne": "removed"}},
+            {"rollover_decision_season": {"$ne": _current_season}},
         ],
     }).to_list(5000)
+
+    # Self-heal silenzioso: aggiungi la stagione corrente ad active_seasons
+    needing_heal = [
+        a["id"] for a in athletes
+        if _current_season not in (a.get("active_seasons") or [])
+    ]
+    if needing_heal:
+        try:
+            await db.athletes.update_many(
+                {"id": {"$in": needing_heal}, "society_id": society_id},
+                {"$addToSet": {"active_seasons": _current_season}},
+            )
+        except Exception as _e:
+            logging.warning(f"[athletes] self-heal active_seasons failed: {_e}")
     
     # Enrich with team names
     team_ids = list(set([a.get("team_id") for a in athletes if a.get("team_id")]))
