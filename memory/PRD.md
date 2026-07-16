@@ -55,7 +55,12 @@ Cognome*, Nome*, Codice Fiscale*, Data Nascita (gg/mm/aaaa)*, Sesso (M/F), Email
 ## 📌 Promemoria — Backlog features
 - **Sponsor** (pagina admin protetta da password, visibile solo agli admin):
   - **Accesso**: pagina `/admin/sponsor` con re-inserimento password admin all'ingresso (stesso pattern del "Rigenera Codice Invito").
-  - **Card sponsor** — per ogni sponsor:
+  - **Landing "elenco sponsor"** (dopo autenticazione):
+    - Griglia di **piccole icone/loghi** in **ordine alfabetico** (per ragione sociale)
+    - Ogni icona ha sotto il nome sponsor + indicatore visivo se ci sono scadenze scadute (badge rosso)
+    - Click sull'icona → apre pagina dettaglio sponsor
+    - Pulsante "+ Aggiungi sponsor" in alto
+  - **Pagina dettaglio sponsor** (`/admin/sponsor/[id]`) — per ogni sponsor:
     - Logo vettoriale (SVG/PDF) — upload con preview
     - Ragione sociale ditta sponsor
     - Copia PDF del contratto (upload + storage)
