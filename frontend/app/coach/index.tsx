@@ -50,8 +50,33 @@ interface Dirigente {
   profile_photo?: string;
 }
 
-export default function CoachScreen() {
-  const router = useRouter();
+// 🆕 27/02/2026 — Componente riutilizzabile per card statistica compatta (coach dashboard)
+function StatBox({ icon, color, value, label, testID }: { icon: any; color: string; value: number; label: string; testID?: string }) {
+  return (
+    <View
+      data-testid={testID}
+      style={{
+        flexBasis: '31%',
+        flexGrow: 1,
+        minWidth: 92,
+        backgroundColor: color + '10',
+        borderRadius: 10,
+        paddingVertical: 10,
+        paddingHorizontal: 10,
+        borderWidth: 1,
+        borderColor: color + '30',
+      }}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+        <Ionicons name={icon} size={16} color={color} />
+        <Text style={{ fontSize: 20, fontWeight: '700', color }}>{value}</Text>
+      </View>
+      <Text style={{ fontSize: 11, color: '#555', lineHeight: 14 }} numberOfLines={2}>{label}</Text>
+    </View>
+  );
+}
+
+export default function CoachScreen() {  const router = useRouter();
   const { user, logout } = useAuthStore();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanning, setScanning] = useState(false);
@@ -224,6 +249,24 @@ export default function CoachScreen() {
     }
   };
 
+  // 🆕 27/02/2026 — Statistiche aggregate coach (gare, allenamenti, presenze)
+  const [coachStats, setCoachStats] = useState<{
+    atleti_seguiti: number;
+    gare_stagione: number;
+    gare_prossime: number;
+    allenamenti_settimana: number;
+    presenze_settimana: number;
+    presenze_mese: number;
+  } | null>(null);
+  const loadCoachStats = async () => {
+    try {
+      const response = await api.get('/coach/my-stats');
+      setCoachStats(response.data);
+    } catch (error) {
+      // fail-safe: statistiche opzionali, non blocchiamo la dashboard
+    }
+  };
+
   const loadFellowCoaches = async () => {
     try {
       const response = await api.get('/users/fellow-coaches');
@@ -250,6 +293,7 @@ export default function CoachScreen() {
     loadDirigenti();
     loadFellowCoaches();
     loadCollaboratori();
+    loadCoachStats();
     // WhatsApp pending counter
     api.get('/admin/whatsapp/pending-count')
       .then((r: any) => setWaCount(r?.data?.count || 0))
@@ -269,6 +313,7 @@ export default function CoachScreen() {
     await loadCommitments();
     await loadDirigenti();
     await loadFellowCoaches();
+    await loadCoachStats();
     setRefreshing(false);
   };
 
@@ -2101,6 +2146,25 @@ export default function CoachScreen() {
             </View>
           )}
         </View>
+
+        {/* 🆕 27/02/2026 — Statistiche coach: card compatta con gare/allenamenti/presenze
+            Visibile solo quando l'endpoint ha risposto e c'è almeno un dato > 0. */}
+        {coachStats && (coachStats.atleti_seguiti + coachStats.gare_stagione + coachStats.allenamenti_settimana) > 0 && (
+          <View style={{ marginHorizontal: 16, marginTop: 8, marginBottom: 4, backgroundColor: '#fff', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#e0e0e0' }} data-testid="coach-stats-card">
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
+              <Ionicons name="stats-chart" size={20} color="#1565C0" />
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#1a1a2e' }}>Statistiche</Text>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              <StatBox icon="people" color="#1565C0" value={coachStats.atleti_seguiti} label="Atleti seguiti" testID="stat-atleti-seguiti" />
+              <StatBox icon="trophy-outline" color="#E65100" value={coachStats.gare_stagione} label="Gare stagione" testID="stat-gare-stagione" />
+              <StatBox icon="calendar-outline" color="#6A1B9A" value={coachStats.gare_prossime} label="Prossime 7gg" testID="stat-gare-prossime" />
+              <StatBox icon="fitness-outline" color="#2E7D32" value={coachStats.allenamenti_settimana} label="Allen./sett." testID="stat-allenamenti-sett" />
+              <StatBox icon="checkmark-done" color="#00838F" value={coachStats.presenze_settimana} label="Presenze sett." testID="stat-presenze-sett" />
+              <StatBox icon="calendar-number-outline" color="#4527A0" value={coachStats.presenze_mese} label="Presenze mese" testID="stat-presenze-mese" />
+            </View>
+          </View>
+        )}
 
         {/* Teams List */}
         <View style={styles.section}>

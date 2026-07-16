@@ -13727,6 +13727,94 @@ async def get_coach_teams(current_user = Depends(get_current_user)):
     clean_mongo_docs(teams)
     return [Team(**team) for team in teams]
 
+
+@api_router.get("/coach/my-stats")
+async def get_coach_my_stats(current_user = Depends(get_current_user)):
+    """🆕 27/02/2026 — Statistiche aggregate coach dashboard.
+    Ritorna:
+      • atleti_seguiti: numero atleti attivi nelle squadre assegnate
+      • gare_stagione: gare pianificate stagione corrente
+      • gare_prossime: gare nei prossimi 7 giorni
+      • allenamenti_settimana: allenamenti pianificati questa settimana (Lun-Dom)
+      • presenze_settimana: presenze registrate questa settimana per le squadre del coach
+      • presenze_mese: presenze registrate questo mese per le squadre del coach
+    """
+    if current_user["role"] != UserRole.COACH:
+        raise HTTPException(status_code=403, detail="Solo coach può accedere")
+
+    assigned_team_ids: List[str] = current_user.get("assigned_teams", []) or []
+    _sid = current_user.get("society_id")
+
+    if not assigned_team_ids:
+        return {
+            "atleti_seguiti": 0,
+            "gare_stagione": 0,
+            "gare_prossime": 0,
+            "allenamenti_settimana": 0,
+            "presenze_settimana": 0,
+            "presenze_mese": 0,
+        }
+
+    # Squadre del coach (per contare training_sessions)
+    _q_teams = {"id": {"$in": assigned_team_ids}}
+    if _sid:
+        _q_teams["society_id"] = _sid
+    teams = await db.teams.find(_q_teams).to_list(200)
+
+    now = datetime.utcnow()
+    today_end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+    # Lunedì 00:00 di questa settimana
+    week_start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    # Primo del mese 00:00
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    # Fine settimana (Domenica 23:59)
+    week_end = (week_start + timedelta(days=6)).replace(hour=23, minute=59, second=59, microsecond=999999)
+    # 7 giorni da oggi
+    next_week = today_end + timedelta(days=7)
+
+    # Atleti attivi/trial nelle squadre assegnate (uso $or su team_id / team_id_2 come get_team_attendance_stats)
+    _q_ath = {
+        "$or": [
+            {"team_id": {"$in": assigned_team_ids}},
+            {"team_id_2": {"$in": assigned_team_ids}},
+        ],
+        "status": {"$in": ["active", "trial"]},
+        "is_withdrawn": {"$ne": True},
+    }
+    if _sid:
+        _q_ath["society_id"] = _sid
+    atleti_seguiti = await db.athletes.count_documents(_q_ath)
+
+    # Gare per queste squadre (matches collection ha team_id)
+    _q_match_base = {"team_id": {"$in": assigned_team_ids}}
+    if _sid:
+        _q_match_base["society_id"] = _sid
+    gare_stagione = await db.matches.count_documents(_q_match_base)
+    _q_match_soon = dict(_q_match_base)
+    _q_match_soon["date"] = {"$gte": now.replace(hour=0, minute=0, second=0, microsecond=0), "$lte": next_week}
+    gare_prossime = await db.matches.count_documents(_q_match_soon)
+
+    # Allenamenti settimana: somma dei training_sessions configurati sulle squadre (una sessione = un allenamento/settimana)
+    allenamenti_settimana = 0
+    for t in teams:
+        sessions = t.get("training_sessions") or []
+        allenamenti_settimana += len(sessions)
+
+    # Presenze registrate settimana / mese per le squadre del coach
+    _q_att_week = {"team_id": {"$in": assigned_team_ids}, "check_in_time": {"$gte": week_start, "$lte": week_end}}
+    _q_att_month = {"team_id": {"$in": assigned_team_ids}, "check_in_time": {"$gte": month_start, "$lte": today_end}}
+    presenze_settimana = await db.attendances.count_documents(_q_att_week)
+    presenze_mese = await db.attendances.count_documents(_q_att_month)
+
+    return {
+        "atleti_seguiti": atleti_seguiti,
+        "gare_stagione": gare_stagione,
+        "gare_prossime": gare_prossime,
+        "allenamenti_settimana": allenamenti_settimana,
+        "presenze_settimana": presenze_settimana,
+        "presenze_mese": presenze_mese,
+    }
+
 @api_router.get("/coach/commitments")
 async def get_coach_commitments(
     user_id: Optional[str] = None,
@@ -14338,6 +14426,44 @@ async def get_stats_overview(current_user = Depends(get_current_user)):
             "end_date": LIMIT_END_DATE.strftime("%Y-%m-%d") if limit_active else None
         }
     }
+
+@api_router.get("/admin/recent-18th-birthdays")
+async def get_recent_18th_birthdays(days: int = 30, current_user = Depends(get_current_user)):
+    """🆕 27/02/2026 (P2 GDPR 18°) — Ritorna gli atleti che hanno compiuto
+    18 anni negli ultimi N giorni (default 30). Utile per l'admin dashboard
+    per verificare quali profili sono passati alla gestione autonoma.
+    """
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    _sid = current_user.get("society_id")
+    now = now_it()
+    since = now - timedelta(days=max(1, min(days, 365)))
+    # Un atleta è "recente 18enne" se la sua data di nascita è ESATTAMENTE 18 anni fa,
+    # compreso in [now-days, now]. Costruiamo range su DOB:
+    dob_end = datetime(now.year - 18, now.month, now.day) + timedelta(days=1)
+    dob_start = datetime(since.year - 18, since.month, since.day)
+    q = {
+        "date_of_birth": {"$gte": dob_start, "$lt": dob_end},
+        "is_withdrawn": {"$ne": True},
+    }
+    if _sid:
+        q["society_id"] = _sid
+    proj = {"_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1,
+            "date_of_birth": 1, "email": 1, "parent_ids": 1, "team_id": 1,
+            "birthday_18_notified_at": 1, "birthday_18_recipients_count": 1}
+    items = await db.athletes.find(q, proj).sort("date_of_birth", -1).to_list(200)
+    for a in items:
+        dob = a.get("date_of_birth")
+        if isinstance(dob, datetime):
+            a["date_of_birth"] = dob.strftime("%Y-%m-%d")
+            # calcola età esatta oggi
+            try:
+                a["turned_18_on"] = datetime(dob.year + 18, dob.month, dob.day).strftime("%Y-%m-%d")
+            except Exception:
+                a["turned_18_on"] = None
+    return {"count": len(items), "athletes": items}
+
+
 
 @api_router.get("/birthdays/today")
 async def get_today_birthdays(current_user = Depends(get_current_user)):
@@ -31105,6 +31231,7 @@ class PreseasonCampaignCreate(BaseModel):
     close_date: Optional[str] = None
     description: Optional[str] = None
     event_info: Optional[str] = None  # 🆕 27/02/2026 — Info aggiuntive admin (es. Open Day, indicazioni, contatti)
+    cover_image: Optional[str] = None  # 🆕 27/02/2026 — Immagine di copertina base64 (ratio raccomandato 1200x630) per anteprima social
 
 class PreseasonCampaignUpdate(BaseModel):
     title: Optional[str] = None
@@ -31114,6 +31241,7 @@ class PreseasonCampaignUpdate(BaseModel):
     is_active: Optional[bool] = None
     description: Optional[str] = None
     event_info: Optional[str] = None  # 🆕 27/02/2026
+    cover_image: Optional[str] = None  # 🆕 27/02/2026 — passa "" per rimuovere
     auto_reminders_enabled: Optional[bool] = None
     reminder_frequency_days: Optional[int] = None
 
@@ -31158,6 +31286,7 @@ async def create_preseason_campaign(data: PreseasonCampaignCreate, current_user 
         "season": data.season,
         "description": data.description or "",
         "event_info": data.event_info or "",
+        "cover_image": data.cover_image or "",  # 🆕 27/02/2026
         "open_date": data.open_date,
         "close_date": data.close_date,
         "is_active": True,
@@ -31429,12 +31558,42 @@ async def get_public_campaign_info(campaign_id: str):
         "season": campaign.get("season", ""),
         "description": campaign.get("description", ""),
         "event_info": campaign.get("event_info", ""),
+        "cover_image": campaign.get("cover_image", ""),  # 🆕 27/02/2026
         "society_name": society_name,
         "society_logo": logo,
         "sport_name": sport_name,
         "open_date": campaign.get("open_date"),
         "close_date": campaign.get("close_date"),
     }
+
+
+# 🆕 27/02/2026 — Endpoint pubblico che serve l'immagine di copertina della campagna
+# come immagine binaria (per uso in og:image, che richiede URL assoluto raggiungibile
+# dai crawler social senza autenticazione).
+@api_router.get("/preseason/public/{campaign_id}/cover.jpg")
+async def get_preseason_cover_image(campaign_id: str):
+    """Serve la cover image di una campagna come immagine binaria.
+    Fallback: se la campagna non ha cover_image → 404 (il chiamante userà il logo società).
+    """
+    campaign = await db.preseason_campaigns.find_one(
+        {"id": campaign_id},
+        {"_id": 0, "cover_image": 1}
+    )
+    if not campaign or not campaign.get("cover_image"):
+        raise HTTPException(status_code=404, detail="Cover image non presente")
+    cover = campaign["cover_image"]
+    # cover_image è un data URI base64 "data:image/jpeg;base64,..." o "data:image/png;base64,..."
+    if not cover.startswith("data:"):
+        raise HTTPException(status_code=404, detail="Cover image in formato non valido")
+    try:
+        header, b64 = cover.split(",", 1)
+        media_type = header.split(";")[0].replace("data:", "") or "image/jpeg"
+        import base64 as _b64
+        img_bytes = _b64.b64decode(b64)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Cover image non decodificabile")
+    from fastapi.responses import Response
+    return Response(content=img_bytes, media_type=media_type, headers={"Cache-Control": "public, max-age=300"})
 
 
 def _convert_date_to_italian(date_str: str) -> str:
@@ -31504,8 +31663,14 @@ async def get_preseason_share_page(campaign_id: str, request: Request):
     scheme = request.headers.get("x-forwarded-proto") or request.url.scheme or "https"
     host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
     backend_url = f"{scheme}://{host}" if host else ""
+    # 🆕 27/02/2026 — Priorità immagine OG:
+    #   1. cover_image della campagna (custom banner 1200×630) — se presente
+    #   2. logo società (fallback)
     logo_url = ""
-    if has_logo and backend_url:
+    has_cover = bool(campaign.get("cover_image"))
+    if has_cover and backend_url:
+        logo_url = f"{backend_url}/api/preseason/public/{campaign_id}/cover.jpg"
+    elif has_logo and backend_url:
         if society_id:
             logo_url = f"{backend_url}/api/settings/society/logo.png?society_id={society_id}"
         else:
@@ -34506,6 +34671,152 @@ async def certificate_block_scheduler():
         await _asyncio.sleep(600)  # every 10 minutes
 
 
+# 🆕 27/02/2026 (P2) — Notifica GDPR 18° compleanno
+# Contesto: quando un atleta compie 18 anni, per GDPR il genitore titolare
+# perde progressivamente il diritto di firmare in sua vece. Invece di un
+# unlink automatico invasivo, inviamo una notifica email al giorno del
+# compleanno sia al neo-maggiorenne che al genitore. L'admin ha visibilità
+# tramite l'endpoint /admin/recent-18th-birthdays.
+
+async def send_18th_birthday_notifications():
+    """Cerca atleti che hanno compiuto 18 anni OGGI (fuso Italia) e invia
+    email di notifica GDPR sia all'atleta che ai genitori collegati.
+    Marca ogni atleta con `birthday_18_notified_at` per evitare invii duplicati.
+    """
+    try:
+        from email_service import send_transactional_email
+    except Exception as _e:
+        logger.error(f"18th birthday: email_service not available: {_e}")
+        return
+
+    # Data italiana (UTC+1/+2). Usiamo la data italiana per confronto compleanno.
+    now_it_dt = now_it()
+    today_iso_it = now_it_dt.strftime("%Y-%m-%d")
+    # Cerchiamo atleti con DOB = 18 anni fa (giorno + mese identici)
+    target_year = now_it_dt.year - 18
+    target_month = now_it_dt.month
+    target_day = now_it_dt.day
+
+    # Query: is_minor True o non definito, non ancora notificato oggi
+    # NB: filtriamo per anno + mese + giorno costruendo il range su date_of_birth
+    day_start = datetime(target_year, target_month, target_day)
+    day_end = day_start + timedelta(days=1)
+    q = {
+        "date_of_birth": {"$gte": day_start, "$lt": day_end},
+        "is_withdrawn": {"$ne": True},
+        # non ri-notifichiamo se già inviato
+        "birthday_18_notified_at": {"$exists": False},
+    }
+    cursor = db.athletes.find(q)
+    count = 0
+    async for ath in cursor:
+        try:
+            first_name = ath.get("first_name") or (ath.get("full_name") or "").split(" ")[0] or "Atleta"
+            full_name = ath.get("full_name") or f"{first_name} {ath.get('last_name', '')}".strip()
+            society_id = ath.get("society_id")
+            # Nome società
+            society_name = "la tua Società Sportiva"
+            if society_id:
+                soc = await db.settings.find_one({"society_id": society_id, "type": "society"}, {"_id": 0, "name": 1, "ragione_sociale": 1})
+                if soc:
+                    society_name = soc.get("ragione_sociale") or soc.get("name") or society_name
+
+            # Recipients
+            recipients = []
+            # 1) Atleta stesso (via users se collegato)
+            if ath.get("user_id"):
+                u = await db.users.find_one({"id": ath["user_id"]}, {"_id": 0, "email": 1, "first_name": 1})
+                if u and u.get("email"):
+                    recipients.append({"email": u["email"], "name": u.get("first_name") or first_name, "role": "athlete"})
+            elif ath.get("email"):
+                recipients.append({"email": ath["email"], "name": first_name, "role": "athlete"})
+
+            # 2) Genitori collegati
+            parent_ids = ath.get("parent_ids") or []
+            if parent_ids:
+                parents = await db.users.find({"id": {"$in": parent_ids}}, {"_id": 0, "email": 1, "first_name": 1}).to_list(10)
+                for p in parents:
+                    if p.get("email"):
+                        recipients.append({"email": p["email"], "name": p.get("first_name") or "Genitore", "role": "parent"})
+
+            for r in recipients:
+                subject_ath = f"🎂 Buon 18° compleanno da {society_name}! Ora gestisci il tuo profilo in autonomia"
+                subject_par = f"🎂 {first_name} ha compiuto 18 anni — informativa GDPR"
+                is_parent = r["role"] == "parent"
+                subject = subject_par if is_parent else subject_ath
+                if is_parent:
+                    html = f"""
+                    <div style='font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;'>
+                        <h2 style='color:#1565C0;'>Compleanno di maggiore età</h2>
+                        <p>Ciao {r['name']},</p>
+                        <p><strong>{full_name}</strong> ha compiuto oggi <strong>18 anni</strong> — auguri!</p>
+                        <p>Ai sensi del Regolamento GDPR, da oggi il consenso al trattamento dei dati personali e la firma di documenti spetta <strong>direttamente a {first_name}</strong>. Nel suo profilo su RegistraTEAM potrà d'ora in poi gestire in autonomia:</p>
+                        <ul>
+                            <li>Consensi privacy e informative</li>
+                            <li>Firma dichiarazioni e documenti societari</li>
+                            <li>Iscrizioni a stagioni sportive e attività</li>
+                        </ul>
+                        <p>Il tuo collegamento con {first_name} <strong>resta attivo</strong> per motivi organizzativi e di consultazione, ma non potrai più firmare in sua vece.</p>
+                        <p style='color:#666;font-size:13px;margin-top:24px;'>Se ritieni ci sia un errore sulla data di nascita, contatta l'amministratore della società.</p>
+                        <p style='color:#999;font-size:12px;margin-top:16px;'>{society_name} — via RegistraTEAM</p>
+                    </div>
+                    """
+                else:
+                    html = f"""
+                    <div style='font-family:Arial,sans-serif;max-width:600px;margin:auto;padding:24px;'>
+                        <h2 style='color:#2E7D32;'>Buon compleanno {first_name}! 🎉</h2>
+                        <p>Da oggi hai <strong>18 anni</strong>. Auguri da tutti noi di {society_name}!</p>
+                        <p>Con il compimento della maggiore età, il tuo profilo su RegistraTEAM diventa <strong>completamente autonomo</strong>. Potrai:</p>
+                        <ul>
+                            <li>Firmare in prima persona i documenti societari e i consensi privacy</li>
+                            <li>Gestire i tuoi dati anagrafici e sanitari</li>
+                            <li>Iscriverti alle stagioni sportive e alle attività</li>
+                        </ul>
+                        <p>Accedi al tuo profilo per verificare che tutti i dati siano corretti e completi.</p>
+                        <p style='color:#666;font-size:13px;margin-top:24px;'>Per qualsiasi dubbio, il tuo Coach e l'amministrazione della società sono a tua disposizione.</p>
+                        <p style='color:#999;font-size:12px;margin-top:16px;'>{society_name} — via RegistraTEAM</p>
+                    </div>
+                    """
+                try:
+                    await send_transactional_email(
+                        to_email=r["email"],
+                        subject=subject,
+                        html_content=html,
+                        to_name=r["name"],
+                    )
+                except Exception as _ee:
+                    logger.warning(f"18th birthday email failed for {r['email']}: {_ee}")
+
+            # Marca notificato (anche se recipients è vuoto, così non ri-cicliamo)
+            await db.athletes.update_one(
+                {"id": ath["id"]},
+                {"$set": {
+                    "birthday_18_notified_at": datetime.now(timezone.utc).isoformat(),
+                    "birthday_18_recipients_count": len(recipients),
+                }}
+            )
+            count += 1
+        except Exception as _ex:
+            logger.error(f"18th birthday notification error for athlete {ath.get('id')}: {_ex}")
+
+    if count > 0:
+        logger.info(f"18th birthday notifications sent for {count} athletes.")
+
+
+async def birthday_18_scheduler():
+    """Runs the 18th birthday check daily at ~6:00 Italy time."""
+    import asyncio as _asyncio
+    # Wait 90 seconds after startup then run first pass
+    await _asyncio.sleep(90)
+    while True:
+        try:
+            await send_18th_birthday_notifications()
+        except Exception as e:
+            logger.error(f"birthday_18_scheduler error: {e}")
+        # Sleep 24 hours between runs
+        await _asyncio.sleep(86400)
+
+
 @app.on_event("startup")
 async def start_certificate_scheduler():
     """Start the certificate notification background task on app startup."""
@@ -34516,6 +34827,8 @@ async def start_certificate_scheduler():
     logger.info("Pre-season reminder scheduler started.")
     _asyncio.create_task(certificate_block_scheduler())
     logger.info("Certificate block auto-reactivate scheduler started.")
+    _asyncio.create_task(birthday_18_scheduler())
+    logger.info("18th birthday GDPR notification scheduler started.")
 
 
 @app.on_event("startup")

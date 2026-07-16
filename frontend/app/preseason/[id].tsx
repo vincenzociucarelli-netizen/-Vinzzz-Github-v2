@@ -63,6 +63,8 @@ interface CampaignInfo {
   title: string;
   season: string;
   description: string;
+  event_info?: string;
+  cover_image?: string;  // 🆕 27/02/2026 — banner opzionale in cima al form
   society_name: string;
   society_logo: string;
   sport_name: string;
@@ -193,6 +195,17 @@ export default function PublicPreseasonForm() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView style={{ flex: 1, backgroundColor: '#F5F7FA' }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        {/* 🆕 27/02/2026 — Cover image opzionale in cima al form (banner 1200×630) */}
+        {campaign?.cover_image ? (
+          <View style={{ marginBottom: 20, borderRadius: 12, overflow: 'hidden', backgroundColor: '#eee' }}>
+            <Image
+              source={{ uri: campaign.cover_image }}
+              style={{ width: '100%', aspectRatio: 1200 / 630, backgroundColor: '#f0f0f0' }}
+              resizeMode="cover"
+              data-testid="campaign-cover-image"
+            />
+          </View>
+        ) : null}
         {/* Header */}
         <View style={{ alignItems: 'center', marginBottom: 28, marginTop: 16 }}>
           {campaign?.society_logo ? (

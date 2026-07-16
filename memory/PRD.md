@@ -1,6 +1,48 @@
 # RegistraTEAM — PRD & Stato
 
 
+## 🚀 27/02/2026 (v7.15-hotfix18) — P2, P3, cover image campagne ✅
+
+**Contesto**: chiusura di tre grosse feature richieste dall'utente.
+
+### ⭐ P3 — Statistiche Coach dashboard
+- **Backend**: nuovo endpoint `GET /coach/my-stats` che aggrega:
+  - `atleti_seguiti`, `gare_stagione`, `gare_prossime` (7gg), `allenamenti_settimana`, `presenze_settimana`, `presenze_mese`
+- **Frontend**: card "📊 Statistiche" nella dashboard coach con 6 mini-box colorati (Ionicons + numero + label). Visibile solo se c'è almeno un dato > 0.
+- **Test**: nessun test dedicato (endpoint semplice, aggregation queries già coperte da test squadra esistenti)
+
+### ⭐ P2 — Notifica GDPR 18° compleanno
+- **Backend**:
+  - Scheduler `birthday_18_scheduler()` gira ogni 24h (delay 90s da startup)
+  - `send_18th_birthday_notifications()` cerca atleti con DOB = 18 anni fa oggi, `is_withdrawn ≠ True`, `birthday_18_notified_at` non presente
+  - Invia email Brevo separate per **atleta** (auguri + info gestione autonoma) e per **genitori collegati** (informativa GDPR: firma passa all'atleta)
+  - Marca `birthday_18_notified_at` per evitare invii duplicati
+- **Admin dashboard**:
+  - Nuovo endpoint `GET /admin/recent-18th-birthdays?days=30`
+  - Nuova task card "🎂 Neo-maggiorenni (30gg)" nel Task Center con click → alert modal con la lista
+- **Test**: `tests/test_18th_birthday_scheduler.py` (4 casi: today/yesterday/minor/already-notified) → PASS
+
+### ⭐ Immagine di copertina per anteprima social
+- **Backend**:
+  - Campo `cover_image` (data URI base64) su `PreseasonCampaignCreate/Update`
+  - Endpoint pubblico `GET /preseason/public/{id}/cover.jpg` che serve l'immagine binaria (necessario per `og:image` che richiede URL assoluto senza auth)
+  - OG endpoint usa `cover_image` come priorità 1, fallback su logo società
+- **Frontend admin form**:
+  - Campo "🖼️ Immagine di copertina (opzionale)" con upload picker (web: input file / native: expo-image-picker), max 3MB, ratio 1200×630
+  - Preview immagine caricata + pulsanti "Cambia" / "Rimuovi"
+  - Anteprima Modal (WhatsApp/Facebook) usa la cover_image se presente
+- **Frontend public page** `/preseason/[id]`:
+  - Cover image mostrata come banner in cima al form
+- **Test**: `tests/test_preseason_cover_image.py` (3 casi: with/without/broken) → PASS
+
+**Bundle rebuild**: `entry-42af101a9212fe7a5e6d350f685e92d9.js`.
+
+**File modificati**: 
+- Backend: `server.py` (schedulers + endpoint stats + cover image + OG update)
+- Frontend: `admin/preseason.tsx` (cover upload + preview aggiornata), `preseason/[id].tsx` (banner), `admin/index.tsx` (task 18°), `coach/index.tsx` (stats card + StatBox helper)
+- Tests: `test_18th_birthday_scheduler.py`, `test_preseason_cover_image.py`
+
+
 ## 🚀 27/02/2026 (v7.15-hotfix17) — Modal "Anteprima social" per campagne pre-iscrizione ✅
 
 **Contesto**: dopo aver migliorato le OG tags per l'anteprima social, aggiunto un pulsante `🔍 Anteprima` che mostra all'admin come apparirà il link condiviso PRIMA di inviarlo — evita la classica situazione "invio → apre WhatsApp → l'anteprima è brutta o senza info → devo modificare la campagna".

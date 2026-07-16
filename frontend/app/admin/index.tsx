@@ -93,6 +93,8 @@ export default function AdminDashboard() {
   const [society, setSociety] = useState<SocietySettings>({ name: 'Società Sportiva', logo: null, sport_image: null });
   const [refreshing, setRefreshing] = useState(false);
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
+  // 🆕 27/02/2026 (P2 GDPR 18°) — Neo-maggiorenni ultimi 30gg
+  const [recent18, setRecent18] = useState<any[]>([]);
   const [todayAthletes, setTodayAthletes] = useState<any[]>([]);
   const [expiringCerts, setExpiringCerts] = useState<ExpiringCertificates>({ count_today: 0, count_30_days: 0, expiring_today: [], expiring_soon: [] });
   const [inviteCode, setInviteCode] = useState<string>('');
@@ -183,14 +185,17 @@ export default function AdminDashboard() {
       } catch (e) { /* ignore */ }
 
       // Group 3: Secondary data (can load slightly delayed)
-      const [birthdaysRes, certsRes, inviteRes, notifRes] = await Promise.all([
+      const [birthdaysRes, certsRes, inviteRes, notifRes, recent18Res] = await Promise.all([
         fetchWithRetry('/birthdays/today', []),
         fetchWithRetry('/certificates/expiring', { count_today: 0, count_30_days: 0, expiring_today: [], expiring_soon: [] }),
         fetchWithRetry('/societies/invite-code', { invite_code: '' }),
         fetchWithRetry('/admin/notifications/unread-count', { count: 0 }),
+        // 🆕 27/02/2026 (P2) — Atleti che hanno compiuto 18 anni negli ultimi 30gg
+        fetchWithRetry('/admin/recent-18th-birthdays?days=30', { count: 0, athletes: [] }),
       ]);
       
       setBirthdays(birthdaysRes.data || []);
+      setRecent18(recent18Res.data?.athletes || []);
       
       // Load today's registered athletes
       try {
@@ -623,6 +628,23 @@ export default function AdminDashboard() {
               color: '#5E35B1',
               onPress: () => router.push('/admin/notifications'),
               testId: 'task-notifications',
+            },
+            {
+              // 🆕 27/02/2026 (P2) — Neo-maggiorenni ultimi 30gg (info GDPR)
+              key: 'recent-18',
+              count: recent18?.length || 0,
+              label: 'Neo-maggiorenni (30gg)',
+              icon: '🎂',
+              color: '#00838F',
+              onPress: () => {
+                if (!recent18 || recent18.length === 0) return;
+                const msg = recent18.map((a: any) => {
+                  const notified = a.birthday_18_notified_at ? '✉️ notificato' : '⏳ in coda';
+                  return `• ${a.full_name || `${a.first_name} ${a.last_name}`} — 18° il ${a.turned_18_on || '?'} (${notified})`;
+                }).join('\n');
+                showInfo('🎂 Neo-maggiorenni (ultimi 30 giorni)', msg + '\n\nGDPR: la firma dei documenti passa in autonomia all\'atleta.');
+              },
+              testId: 'task-recent-18',
             },
           ].filter(t => t.count > 0);
 

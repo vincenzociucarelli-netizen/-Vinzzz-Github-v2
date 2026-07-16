@@ -59,6 +59,7 @@ interface Campaign {
   season: string;
   description: string;
   event_info?: string;  // 🆕 27/02/2026 — Info aggiuntive admin (es. indicazioni Open Day, contatti, orari)
+  cover_image?: string;  // 🆕 27/02/2026 — Immagine copertina per anteprima social (data URI base64)
   is_active: boolean;
   open_date?: string;
   close_date?: string;
@@ -164,6 +165,8 @@ export default function PreseasonAdmin() {
   const [newSeason, setNewSeason] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newEventInfo, setNewEventInfo] = useState('');  // 🆕 27/02/2026
+  // 🆕 27/02/2026 — Immagine di copertina campagna (base64 data URI) per anteprima social
+  const [newCoverImage, setNewCoverImage] = useState('');
 
   // 🆕 29/06/2026 — Ref per textarea (necessari per leggere selectionStart su Web)
   const eventInfoRef = useRef<TextInput | null>(null);
@@ -279,11 +282,13 @@ export default function PreseasonAdmin() {
 
     setCreating(true);
     try {
-      const payload = {
+      const payload: any = {
         title: newTitle.trim(),
         season: newSeason.trim(),
         description: newDesc.trim(),
         event_info: newEventInfo.trim() || null,
+        // 🆕 27/02/2026 — Cover image per anteprima social. Passa "" per rimuovere.
+        cover_image: newCoverImage || '',
         open_date: null,
         close_date: closeIso,
       };
@@ -295,6 +300,7 @@ export default function PreseasonAdmin() {
       setShowCreate(false);
       setEditingId(null);
       setNewTitle(''); setNewSeason(''); setNewDesc(''); setNewEventInfo(''); setNewOpenDate(''); setNewCloseDate('');
+      setNewCoverImage('');
       loadCampaigns();
       showAlert('Successo', editingId ? 'Campagna aggiornata!' : 'Campagna creata!');
     } catch (err: any) {
@@ -311,9 +317,55 @@ export default function PreseasonAdmin() {
     setNewSeason(campaign.season || '');
     setNewDesc(campaign.description || '');
     setNewEventInfo(campaign.event_info || '');
+    setNewCoverImage((campaign as any).cover_image || '');
     setNewOpenDate(isoToItalianDate(campaign.open_date));
     setNewCloseDate(isoToItalianDate(campaign.close_date));
     setShowCreate(true);
+  };
+
+  // 🆕 27/02/2026 — Picker immagine di copertina (Web + Native).
+  const handlePickCoverImage = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        // Su Web usiamo un input file nativo (più affidabile di ImagePicker sul browser)
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = async () => {
+          const file = input.files && input.files[0];
+          if (!file) return;
+          if (file.size > 3 * 1024 * 1024) {
+            showAlert('Immagine troppo grande', 'Massimo 3 MB. Comprimi l\'immagine prima di caricarla.');
+            return;
+          }
+          const reader = new FileReader();
+          reader.onload = () => setNewCoverImage(String(reader.result || ''));
+          reader.readAsDataURL(file);
+        };
+        input.click();
+        return;
+      }
+      // Native: expo-image-picker
+      const ImagePicker = await import('expo-image-picker');
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (perm.status !== 'granted') {
+        showAlert('Permesso negato', 'Serve accesso alla galleria per caricare l\'immagine.');
+        return;
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.85,
+        base64: true,
+        aspect: [1200, 630],
+      });
+      if (!res.canceled && res.assets && res.assets[0]) {
+        const asset = res.assets[0];
+        const dataUri = `data:image/${asset.uri.endsWith('.png') ? 'png' : 'jpeg'};base64,${asset.base64}`;
+        setNewCoverImage(dataUri);
+      }
+    } catch (e: any) {
+      showAlert('Errore', 'Impossibile caricare l\'immagine: ' + (e?.message || 'errore sconosciuto'));
+    }
   };
 
   const handleToggleActive = async (campaign: Campaign) => {
@@ -906,8 +958,8 @@ export default function PreseasonAdmin() {
                 </Text>
                 <View style={{ backgroundColor: '#DCF8C6', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#c7e6b4' }}>
                   <View style={{ backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#e0e0e0' }}>
-                    {societyLogo ? (
-                      <Image source={{ uri: societyLogo }} style={{ width: '100%', height: 140, backgroundColor: '#f0f0f0' }} resizeMode="contain" />
+                    {(previewCampaign as any).cover_image || societyLogo ? (
+                      <Image source={{ uri: (previewCampaign as any).cover_image || societyLogo }} style={{ width: '100%', height: 140, backgroundColor: '#f0f0f0' }} resizeMode={(previewCampaign as any).cover_image ? 'cover' : 'contain'} />
                     ) : (
                       <View style={{ width: '100%', height: 140, backgroundColor: '#eee', alignItems: 'center', justifyContent: 'center' }}>
                         <Ionicons name="image-outline" size={40} color="#bbb" />
@@ -932,8 +984,8 @@ export default function PreseasonAdmin() {
                   📘 Come appare su Facebook / Telegram
                 </Text>
                 <View style={{ backgroundColor: '#F0F2F5', borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#e0e0e0' }}>
-                  {societyLogo ? (
-                    <Image source={{ uri: societyLogo }} style={{ width: '100%', height: 200, backgroundColor: '#fff' }} resizeMode="contain" />
+                  {(previewCampaign as any).cover_image || societyLogo ? (
+                    <Image source={{ uri: (previewCampaign as any).cover_image || societyLogo }} style={{ width: '100%', height: 200, backgroundColor: '#fff' }} resizeMode={(previewCampaign as any).cover_image ? 'cover' : 'contain'} />
                   ) : (
                     <View style={{ width: '100%', height: 200, backgroundColor: '#eee', alignItems: 'center', justifyContent: 'center' }}>
                       <Ionicons name="image-outline" size={50} color="#bbb" />
@@ -1169,6 +1221,45 @@ export default function PreseasonAdmin() {
                 numberOfLines={5}
                 data-testid="new-campaign-event-info"
               />
+
+              {/* 🆕 27/02/2026 — Immagine di copertina per anteprima social */}
+              <Text style={lbl}>🖼️ Immagine di copertina (opzionale)</Text>
+              <Text style={{ fontSize: 12, color: '#777', marginTop: -2, marginBottom: 8, lineHeight: 16 }}>
+                Banner mostrato quando qualcuno condivide il link su WhatsApp/Facebook/Telegram. Dimensione consigliata <Text style={{ fontWeight: '700' }}>1200×630 px</Text> (max 3 MB). Se non caricata, viene usato il logo della società.
+              </Text>
+              {newCoverImage ? (
+                <View style={{ marginBottom: 10 }}>
+                  <Image source={{ uri: newCoverImage }} style={{ width: '100%', aspectRatio: 1200 / 630, borderRadius: 10, backgroundColor: '#f0f0f0' }} resizeMode="cover" />
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                    <TouchableOpacity
+                      onPress={handlePickCoverImage}
+                      style={{ flex: 1, backgroundColor: '#E3F2FD', borderColor: '#1976D2', borderWidth: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}
+                      data-testid="cover-image-change-btn"
+                    >
+                      <Ionicons name="refresh" size={16} color="#1976D2" />
+                      <Text style={{ color: '#1976D2', fontWeight: '700', fontSize: 13 }}>Cambia</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setNewCoverImage('')}
+                      style={{ flex: 1, backgroundColor: '#FFEBEE', borderColor: '#C62828', borderWidth: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}
+                      data-testid="cover-image-remove-btn"
+                    >
+                      <Ionicons name="trash-outline" size={16} color="#C62828" />
+                      <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 13 }}>Rimuovi</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  onPress={handlePickCoverImage}
+                  style={{ borderWidth: 2, borderColor: '#c8c8c8', borderStyle: 'dashed', borderRadius: 10, paddingVertical: 26, alignItems: 'center', marginBottom: 10, backgroundColor: '#FAFAFA' }}
+                  data-testid="cover-image-upload-btn"
+                >
+                  <Ionicons name="image-outline" size={32} color="#888" />
+                  <Text style={{ color: '#555', fontWeight: '700', fontSize: 13, marginTop: 6 }}>Carica immagine copertina</Text>
+                  <Text style={{ color: '#888', fontSize: 11, marginTop: 2 }}>JPG o PNG · max 3 MB</Text>
+                </TouchableOpacity>
+              )}
 
               <View>
                 <Text style={lbl}>Data chiusura</Text>
