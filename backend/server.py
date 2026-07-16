@@ -32729,6 +32729,7 @@ from routes.primary_admin import router as primary_admin_router
 from routes.training_overrides import router as training_overrides_router
 from routes.import_athletes import router as import_athletes_router  # 🆕 27/02/2026 (P1)
 from routes.coordinator import router as coordinator_router  # 🆕 27/02/2026 (Coordinatore)
+from routes.stripe_payments import router as stripe_payments_router  # 🆕 16/07/2026 (Stripe multi-tenant checkout)
 api_router.include_router(notifications_router)
 api_router.include_router(settings_router)
 api_router.include_router(seasons_router)
@@ -32738,6 +32739,7 @@ api_router.include_router(primary_admin_router)
 api_router.include_router(training_overrides_router)
 api_router.include_router(import_athletes_router)  # 🆕 27/02/2026 (P1)
 api_router.include_router(coordinator_router)  # 🆕 27/02/2026 (Coordinatore)
+api_router.include_router(stripe_payments_router)  # 🆕 16/07/2026 (Stripe checkout multi-tenant)
 
 
 @api_router.post("/admin/compensations/reset-coach-year")

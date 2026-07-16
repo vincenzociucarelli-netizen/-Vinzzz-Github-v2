@@ -47,6 +47,8 @@ export default function StripeSettings() {
   const [showSecretKey, setShowSecretKey] = useState(false);
   const [showWebhookSecret, setShowWebhookSecret] = useState(false);
   const [editingKeys, setEditingKeys] = useState(false);
+  // 🆕 16/07/2026 — URL webhook multi-tenant per questa società
+  const [webhookUrl, setWebhookUrl] = useState<string>('');
 
   useEffect(() => {
     checkAccessAndLoad();
@@ -75,6 +77,13 @@ export default function StripeSettings() {
       setStripeEnabled(response.data.stripe_enabled || false);
       setPaymentDescription(response.data.payment_description || '');
       setSendEmails(response.data.send_payment_emails !== false);
+      // 🆕 16/07/2026 — Recupera l'URL webhook da mostrare all'admin
+      try {
+        const w = await api.get('/settings/stripe/webhook-url');
+        setWebhookUrl(w.data?.webhook_url || '');
+      } catch (_e) {
+        setWebhookUrl('');
+      }
     } catch (error) {
       console.error('Error loading Stripe settings:', error);
     } finally {
@@ -284,6 +293,26 @@ export default function StripeSettings() {
               <Text style={styles.inputHint}>
                 Per conferme automatiche dei pagamenti
               </Text>
+
+              {/* 🆕 16/07/2026 — URL webhook multi-tenant da incollare in Stripe Dashboard */}
+              {webhookUrl && (
+                <View style={{
+                  marginTop: 14, padding: 12, backgroundColor: '#EDE9FE',
+                  borderRadius: 10, borderLeftWidth: 3, borderLeftColor: '#635BFF',
+                }}>
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#4C1D95', marginBottom: 4 }}>
+                    🔗 URL WEBHOOK PER STRIPE DASHBOARD
+                  </Text>
+                  <Text selectable style={{ fontSize: 11, color: '#1a1a1a', fontFamily: 'monospace', backgroundColor: '#fff', padding: 8, borderRadius: 6, marginBottom: 6 }}>
+                    {webhookUrl}
+                  </Text>
+                  <Text style={{ fontSize: 11, color: '#4C1D95', lineHeight: 15 }}>
+                    Copia questo URL in Stripe → Developers → Webhooks → Aggiungi endpoint.
+                    Eventi da sottoscrivere: <Text style={{ fontWeight: '700' }}>checkout.session.completed</Text> e <Text style={{ fontWeight: '700' }}>checkout.session.expired</Text>.
+                    Dopo l&apos;aggiunta, Stripe ti darà un &quot;Signing secret&quot; (whsec_...) che devi incollare qui sopra.
+                  </Text>
+                </View>
+              )}
 
               {editingKeys && (
                 <TouchableOpacity 

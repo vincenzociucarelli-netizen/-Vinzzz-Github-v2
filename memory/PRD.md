@@ -1,6 +1,43 @@
 # RegistraTEAM — PRD & Stato
 
 
+## 💳 16/07/2026 (v7.16) — Stripe Checkout multi-tenant (MVP) ✅
+
+**Contesto**: l'admin di Sirio ha impostato chiavi Stripe test, ma il flusso non esisteva (solo salvataggio chiavi).
+
+**Nuova architettura BYOK (Bring-Your-Own-Key) multi-tenant** — chiave Stripe per ogni società, mai globale (playbook Stripe seguito rigorosamente):
+
+**Backend (`routes/stripe_payments.py`)**
+- `POST /api/payments/create-checkout` → genitore/atleta/admin crea Stripe Session per una rata calcolata (`athlete_id`, `amount`, `description`). Crea payment record PENDING + Session in un colpo. Ritorna `checkout_url`.
+- `POST /api/payments/{id}/checkout` → variante per payment record già esistenti.
+- `GET /api/payments/{id}/checkout/status?session_id=` → polling client fallback in caso webhook tardi.
+- `POST /api/webhooks/stripe/{society_id}` → endpoint dinamico per società. Verifica firma con whsec, gestisce `checkout.session.completed` (mark paid+idempotente) + `checkout.session.expired` (cleanup payment pending).
+- `GET /api/settings/stripe/webhook-url` → admin: URL da incollare in Stripe Dashboard.
+- `GET /api/settings/stripe/public` → any auth user: mostra `stripe_enabled` per il proprio society_id.
+
+**Multi-tenancy safety**: `api_key=society_sk` passato a ogni singola call di `stripe.checkout.Session.create` (mai `stripe.api_key = ...` globale). Verifica autorizzazione: genitore linked, atleta con stesso CF, o admin della società.
+
+**Frontend**
+- `/parent/athlete/[id]` tab Pagamenti: pulsante **"Paga XX,XX€ con Carta"** (viola Stripe #635BFF) sotto la "Prossima rata". Visibile solo se `stripeEnabled=true`. Redirect a Stripe Checkout via `window.location.href`.
+- Nuove pagine `/parent/payment/success` (polling status 5x @1.5s per gestire webhook lento) e `/parent/payment/cancel`.
+- `/admin/settings/stripe`: nuovo riquadro viola "🔗 URL WEBHOOK PER STRIPE DASHBOARD" che mostra l'URL da incollare + istruzioni eventi da sottoscrivere.
+
+**Istruzioni per l'admin (test mode)**
+1. Salva `pk_test_...` e `sk_test_...` in `/admin/settings/stripe`.
+2. Vai su https://dashboard.stripe.com/test/webhooks → "Add endpoint" → incolla l'URL mostrato nel riquadro viola.
+3. Sottoscrivi `checkout.session.completed` + `checkout.session.expired`.
+4. Stripe ti dà un `whsec_...` → incollalo in "Webhook Secret" e salva.
+5. Login come genitore → scheda atleta → Pagamenti → "Paga con Carta".
+6. Carta test: `4242 4242 4242 4242`, scad `12/34`, CVC `123`.
+7. Rata segnata `paid=true` automaticamente via webhook.
+
+**Verifiche live effettuate**: 
+- `webhook-url` ritorna URL corretto per PPG dev
+- `public status` ritorna `stripe_enabled: false` (chiavi non salvate in dev)
+- `create-checkout` ritorna 400 "Stripe non abilitato" quando non configurato (guard corretta)
+
+
+
 ## 🐛 16/07/2026 (v7.15-hotfix25) — Atleti/Coach/Collaboratori spariti dopo rollover stagione ✅
 
 **Sintomo utente (Sirio Perugia Volley)**: dashboard mostra "1 atleti registrati" ma dentro `/admin/athletes` la lista è vuota. Stesso pattern del bug **Genitori vuoti** (10/07/2026) e **Dirigenti spariti** (16/07/2026).

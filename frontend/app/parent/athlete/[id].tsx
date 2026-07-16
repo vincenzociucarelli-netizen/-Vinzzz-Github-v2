@@ -279,6 +279,9 @@ export default function AthleteDetail() {
   // Fiscal receipt state
   const [generatingReceipt, setGeneratingReceipt] = useState(false);
   const [paymentsListExpanded, setPaymentsListExpanded] = useState(false);
+  // 🆕 16/07/2026 — Stripe Checkout: stato disponibile per la società
+  const [stripeEnabled, setStripeEnabled] = useState(false);
+  const [payingRateName, setPayingRateName] = useState<string | null>(null);
   const paymentsRef = useRef<View>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const [athletePhotoArtistic, setAthletePhotoArtistic] = useState<string | null>(null);
@@ -403,6 +406,14 @@ export default function AthleteDetail() {
       } catch (error) {
         setPaymentSettings(null);
       }
+
+      // 🆕 16/07/2026 — Verifica se Stripe è abilitato per la società (per mostrare "Paga con Carta")
+      try {
+        const stripeInfo = await api.get('/settings/stripe/public');
+        setStripeEnabled(!!stripeInfo.data?.stripe_enabled);
+      } catch (_e) {
+        setStripeEnabled(false);
+      }
       
       // Load team schedule (trainings and match day) from team data
       try {
@@ -467,6 +478,31 @@ export default function AthleteDetail() {
   useEffect(() => {
     loadData();
   }, [id]);
+
+  // 🆕 16/07/2026 — Stripe Checkout handler
+  const handlePayWithStripe = async (amount: number, description: string) => {
+    if (!athlete) return;
+    setPayingRateName(description);
+    try {
+      const origin = typeof window !== 'undefined' ? window.location.origin : '';
+      const res = await api.post('/payments/create-checkout', {
+        athlete_id: athlete.id,
+        amount,
+        description,
+        return_url_base: origin || undefined,
+      });
+      const url = res.data?.checkout_url;
+      if (url && typeof window !== 'undefined') {
+        window.location.href = url;  // redirect Stripe Checkout
+      } else {
+        Alert.alert('Errore', 'Impossibile aprire la pagina di pagamento.');
+        setPayingRateName(null);
+      }
+    } catch (err: any) {
+      Alert.alert('Errore', err?.response?.data?.detail || 'Impossibile avviare il pagamento');
+      setPayingRateName(null);
+    }
+  };
 
   // Auto-scroll to payments section when tab=payments
   useEffect(() => {
@@ -2383,6 +2419,38 @@ export default function AthleteDetail() {
                       <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
                         Scad. {new Date(nextDue.due_date).toLocaleDateString('it-IT')}
                       </Text>
+                    )}
+                    {/* 🆕 16/07/2026 — Pulsante Paga con Carta (Stripe Checkout) */}
+                    {stripeEnabled && (
+                      <TouchableOpacity
+                        onPress={() => handlePayWithStripe(
+                          nextDue.status === 'partial' ? (nextDue.amount - nextDue.paidAmount) : nextDue.amount,
+                          nextDue.name,
+                        )}
+                        disabled={payingRateName === nextDue.name}
+                        style={{
+                          marginTop: 12,
+                          backgroundColor: '#635BFF',
+                          borderRadius: 8,
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 8,
+                          opacity: payingRateName === nextDue.name ? 0.7 : 1,
+                        }}
+                        data-testid="parent-pay-stripe-btn"
+                      >
+                        {payingRateName === nextDue.name ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <Ionicons name="card" size={18} color="#fff" />
+                        )}
+                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                          {payingRateName === nextDue.name ? 'Attendere…' : `Paga ${formatCurrency(nextDue.status === 'partial' ? (nextDue.amount - nextDue.paidAmount) : nextDue.amount)} con Carta`}
+                        </Text>
+                      </TouchableOpacity>
                     )}
                   </View>
                 )}
