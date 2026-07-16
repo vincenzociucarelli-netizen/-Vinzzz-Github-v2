@@ -100,8 +100,11 @@ export default function StripeSettings() {
         send_payment_emails: sendEmails,
       };
 
-      // Only include keys if they're being updated
-      if (editingKeys) {
+      // Include keys se sono in modifica o se non esistono ancora (primo salvataggio)
+      // 🐛 16/07/2026 — Fix: al primo salvataggio (hasKeys=false) `editingKeys` non
+      // veniva attivato → le chiavi digitate non venivano inviate al backend.
+      const shouldSendKeys = editingKeys || !settings?.has_publishable_key || !settings?.has_secret_key;
+      if (shouldSendKeys) {
         if (publishableKey) payload.stripe_publishable_key = publishableKey;
         if (secretKey) payload.stripe_secret_key = secretKey;
         if (webhookSecret) payload.stripe_webhook_secret = webhookSecret;
