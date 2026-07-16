@@ -57,6 +57,8 @@ export const GuideButton: React.FC<Props> = ({ role, label = false, compact = fa
         onPress={handlePress}
         style={[styles.btn, compact && styles.compact, label && styles.withLabel]}
         disabled={loading}
+        testID={`guide-button-${role}`}
+        // @ts-ignore - manteniamo anche data-testid per compatibilità web pura
         data-testid={`guide-button-${role}`}
       >
         {loading ? (

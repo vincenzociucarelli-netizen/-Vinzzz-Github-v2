@@ -1,6 +1,26 @@
 # RegistraTEAM — PRD & Stato
 
 
+## 🐛 27/02/2026 (v7.15-hotfix21) — Libricino istruzioni Dirigente mancante ✅
+
+**Segnalazione utente**: "Il Dirigente non ha il libricino delle istruzioni da scaricare/visualizzare"
+
+**Root cause**: il componente `GuideButton` era presente solo in `dirigente/index.tsx` (dashboard principale), ma **mancava dal header di**:
+- `dirigente/profile.tsx` (pagina Il Mio Profilo)
+- `dirigente/compensation.tsx` (pagina Compensi Sportivi)
+
+Se l'utente Dirigente navigava a una di queste sotto-pagine, non trovava più l'icona del libricino.
+
+**Fix**:
+- Aggiunto `<GuideButton role="dirigente" compact />` nel header di `dirigente/profile.tsx` e `dirigente/compensation.tsx`
+- Import di `GuideButton` in entrambi i file
+- Aggiornato `GuideButton.tsx` per usare `testID` + `data-testid` (React Native Web forwarda solo `testID` come `data-testid` in DOM; abbiamo mantenuto entrambi per compatibilità)
+
+**Testing**: `testing_agent_v3_fork` (iteration_81) → **PASSED** su tutte e 3 le pagine (index / profile / compensation): backend endpoint `/api/guides/dirigente` ritorna 200 + `application/pdf` per role=viewer; frontend apre correttamente InAppPdfModal con il PDF caricato. Backend nega 403 correttamente a utenti con altro ruolo.
+
+**Credenziali test aggiunte**: `lella@dir.com` / `Test1234` (dirigente role=viewer legacy) in `/app/memory/test_credentials.md`.
+
+
 ## 🚀 27/02/2026 (v7.15-hotfix20 / P1) — Import massivo Atleti + Genitori da XLSX ✅
 
 **Contesto**: società che migrano a RegistraTEAM da altri gestionali o da liste PDF/Excel devono poter importare in blocco i propri dati (atleti + genitori), evitando la registrazione manuale famiglia per famiglia. Solo la propria società (no import cross-tenant per motivi GDPR).
