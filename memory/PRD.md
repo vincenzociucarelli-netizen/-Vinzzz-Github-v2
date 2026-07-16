@@ -1,6 +1,61 @@
 # RegistraTEAM — PRD & Stato
 
 
+## 🚀 27/02/2026 (v7.15-hotfix20 / P1) — Import massivo Atleti + Genitori da XLSX ✅
+
+**Contesto**: società che migrano a RegistraTEAM da altri gestionali o da liste PDF/Excel devono poter importare in blocco i propri dati (atleti + genitori), evitando la registrazione manuale famiglia per famiglia. Solo la propria società (no import cross-tenant per motivi GDPR).
+
+**Scope MVP** (opzione B scelta dall'utente): Atleti + Genitori (linkati automaticamente per CF).
+
+**Architettura**:
+- Nuovo modulo `backend/routes/import_athletes.py` (registrato in `server.py`)
+- Endpoint:
+  - `GET /admin/import-athletes/template.xlsx` → scarica template XLSX pre-formattato (colonne + esempio + foglio Istruzioni)
+  - `POST /admin/import-athletes/preview` → riceve XLSX, ritorna anteprima riga per riga con status:
+    - `ok` (verde) — nessun problema
+    - `warning` (arancione) — problemi non bloccanti (es. squadra non trovata)
+    - `error` (rosso) — errori bloccanti (CF errato, campi obbligatori vuoti)
+    - `duplicate_same_society` (blu) — CF già presente nella stessa società → propone Aggiorna/Salta
+    - `duplicate_other_society` (viola) — CF presente in altra società → crea nuovo record ma riusa `athlete_code`
+  - `POST /admin/import-athletes/commit` → esegue import definitivo delle righe approvate
+- Nuova pagina frontend `/admin/settings/import-athletes.tsx`:
+  1. Download template
+  2. Upload file XLSX
+  3. Anteprima con checkbox per riga + azione modificabile per duplicati
+  4. Conferma → risultato (creati/aggiornati/genitori linkati/errori)
+- Card link nella pagina `/admin/settings`
+
+**Colonne template**:
+Cognome*, Nome*, Codice Fiscale*, Data Nascita (gg/mm/aaaa)*, Sesso (M/F), Email, Telefono, Indirizzo, Città, CAP, Provincia, Squadra, Note, + sezione genitore: Cognome/Nome/CF/Email/Telefono Genitore.
+
+**Validazioni**:
+- CF italiano con **checksum** (16 caratteri + carattere di controllo)
+- Data nascita parsable (accetta gg/mm/aaaa, aaaa-mm-gg, datetime da Excel)
+- Sesso M/F
+- CAP 5 cifre
+- Email con `@`
+- Squadra: matching case-insensitive con `db.teams`; se non trovata → warning, atleta creato senza squadra
+
+**Gestione genitori**:
+- Se CF genitore + Nome + Cognome forniti:
+  - Se genitore già esiste nella società (stesso CF) → linka atleta a esistente
+  - Se non esiste → crea nuovo user parent con status `pending_email` (dovrà completare la registrazione via link email)
+
+**Test**: `tests/test_import_athletes.py` — 3 test (CF validator con checksum reale, date parser, template columns) → PASS.
+
+**Prossimi step opzionali** (non fatti in questo MVP):
+- Import PDF FIPAV (parsing OCR/tabellare)
+- Import staff (coach/dirigenti/collaboratori)
+- Email di benvenuto automatica ai genitori creati per completare la registrazione
+- Import team-by-team (creazione automatica squadra se non esiste)
+
+**Bundle rebuild**: `entry-d0635b842f8e799f2bc44da2111fd94b.js`.
+
+
+## 📌 Promemoria — Backlog features
+- **Sponsor**: creare sezione dedicata (probabilmente sotto `/admin/settings/sponsor` o come tab dedicata) per gestire elenco sponsor, loghi, link, visibilità su pagina pubblica società.
+
+
 ## 🐛 27/02/2026 (v7.15-hotfix19) — Fix anteprima social + blocco password codice invito ✅
 
 **Segnalazioni utente**:

@@ -150,6 +150,24 @@ export default function SettingsIndex() {
           <Ionicons name="chevron-forward" size={24} color="#00BCD4" />
         </TouchableOpacity>
 
+        {/* 🆕 27/02/2026 (P1) — Card Import Atleti da XLSX legacy */}
+        <TouchableOpacity 
+          style={[styles.card, { borderColor: '#1565C0', backgroundColor: '#E3F2FD' }]}
+          onPress={() => router.push('/admin/settings/import-athletes')}
+          data-testid="settings-import-athletes-btn"
+        >
+          <View style={[styles.iconContainer, { backgroundColor: '#1565C0' }]}>
+            <Ionicons name="cloud-upload" size={32} color="#fff" />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={[styles.cardTitle, { color: '#1565C0' }]}>Import Atleti (legacy)</Text>
+            <Text style={styles.cardDescription}>
+              Migra atleti + genitori da un altro gestionale via template XLSX
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#1565C0" />
+        </TouchableOpacity>
+
         {/* Card Ripristino Backup (solo LR) */}
         <TouchableOpacity
           style={[styles.card, { borderColor: '#C62828', backgroundColor: '#FFEBEE' }]}
