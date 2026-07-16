@@ -581,7 +581,7 @@ export default function PreseasonAdmin() {
         <TouchableOpacity onPress={() => router.replace('/admin')} data-testid="header-home-btn" style={{ marginLeft: 8 }}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
         </TouchableOpacity>
-          <Text style={{ fontSize: 20, fontWeight: '700', color: '#0D47A1' }}>EVENTI PI</Text>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: '#0D47A1' }}>EVENTI IN PROGRAMMA</Text>
         </View>
       </View>
 
