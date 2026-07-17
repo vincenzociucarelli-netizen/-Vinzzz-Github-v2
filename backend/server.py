@@ -4681,6 +4681,10 @@ async def change_email(data: ChangeEmailRequest, current_user = Depends(get_curr
 # 🆕 17/07/2026 — Collega un atleta all'utente corrente come genitore (per dual-role staff↔genitore)
 class LinkParentRequest(BaseModel):
     slot: Optional[str] = "primary"  # "primary" (parent_id) o "secondary" (second_parent_id)
+    # 🔐 17/07/2026 (sicurezza): verifica CF atleta prima del collegamento.
+    # Prova che l'utente conosce dati anagrafici sensibili → è verosimilmente
+    # il genitore reale, non un impostore.
+    athlete_fiscal_code: Optional[str] = None
 
 
 @api_router.post("/athletes/{athlete_id}/link-me-as-parent")
@@ -4689,15 +4693,17 @@ async def link_me_as_parent(
     data: LinkParentRequest,
     current_user = Depends(get_current_user),
 ):
-    """Collega l'utente corrente come genitore di un atleta (Opzione A: sostituzione
-    secca del parent_id esistente se slot='primary'). Solo admin/dirigente/coordinatore
-    della stessa società, oppure l'utente stesso se è già un genitore.
+    """Collega l'utente corrente come genitore di un atleta con TRIPLA sicurezza:
+    1. Solo staff/parent della stessa società (multi-tenancy)
+    2. DEVE fornire il codice fiscale dell'atleta (verifica identità)
+    3. NON può sovrascrivere il parent_id principale se già valorizzato ≠ current_user
+       (diventa automaticamente second_parent_id se lo slot primary è occupato)
+    Audit log in `parent_link_history` per tracciabilità giuridica.
     """
     ath = await db.athletes.find_one({"id": athlete_id})
     if not ath:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
 
-    # Autorizzazione: staff della stessa società
     role = current_user.get("role")
     staff_roles = {"admin", "viewer", "dirigente", "coordinatore", "coach", "collaboratore"}
     if role not in staff_roles and role != "parent":
@@ -4705,17 +4711,156 @@ async def link_me_as_parent(
     if current_user.get("society_id") != ath.get("society_id"):
         raise HTTPException(status_code=403, detail="Atleta di un'altra società")
 
-    slot_raw = (data.slot or "primary").lower()
-    if slot_raw not in ("primary", "secondary"):
-        raise HTTPException(status_code=400, detail="Slot non valido — usa 'primary' o 'secondary'")
-    slot = slot_raw
-    field = "parent_id" if slot == "primary" else "second_parent_id"
+    # 🔐 Verifica CF atleta obbligatoria
+    provided_cf = (data.athlete_fiscal_code or "").strip().upper()
+    real_cf = (ath.get("fiscal_code") or "").strip().upper()
+    if not real_cf:
+        raise HTTPException(
+            status_code=400,
+            detail="Impossibile verificare: l'atleta non ha un codice fiscale registrato. Contatta l'admin per procedere.",
+        )
+    if not provided_cf:
+        raise HTTPException(
+            status_code=400,
+            detail="Codice fiscale dell'atleta obbligatorio per collegarti come genitore.",
+        )
+    if provided_cf != real_cf:
+        # Log tentativo fallito per audit
+        try:
+            await db.parent_link_history.insert_one({
+                "action": "link_attempt_failed_cf_mismatch",
+                "athlete_id": athlete_id,
+                "user_id": current_user["id"],
+                "user_email": current_user.get("email"),
+                "provided_cf_last4": provided_cf[-4:] if len(provided_cf) >= 4 else "?",
+                "timestamp": datetime.now(timezone.utc),
+            })
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=403,
+            detail="Codice fiscale non corrispondente. Se ritieni che ci sia un errore, contatta l'admin della società.",
+        )
 
-    await db.athletes.update_one(
-        {"id": athlete_id},
-        {"$set": {field: current_user["id"]}},
-    )
-    return {"message": "Collegamento genitore effettuato", "athlete_id": athlete_id, "slot": slot}
+    # 🔐 Regole slot
+    requested_slot = (data.slot or "primary").lower()
+    if requested_slot not in ("primary", "secondary"):
+        raise HTTPException(status_code=400, detail="Slot non valido — usa 'primary' o 'secondary'")
+
+    current_primary = ath.get("parent_id")
+    current_secondary = ath.get("second_parent_id")
+    uid = current_user["id"]
+
+    if requested_slot == "primary":
+        if current_primary and current_primary != uid:
+            # Non sovrascrivere il genitore principale esistente. Fallback a secondary
+            # se libero, altrimenti errore.
+            if current_secondary and current_secondary != uid:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Questo atleta ha già entrambi i genitori registrati. Chiedi all'admin di scollegare uno slot prima.",
+                )
+            actual_slot = "secondary"
+        else:
+            actual_slot = "primary"
+    else:  # requested secondary
+        if current_secondary and current_secondary != uid:
+            if current_primary and current_primary != uid:
+                raise HTTPException(status_code=409, detail="Entrambi gli slot sono già occupati")
+            actual_slot = "primary"
+        else:
+            actual_slot = "secondary"
+
+    field = "parent_id" if actual_slot == "primary" else "second_parent_id"
+    await db.athletes.update_one({"id": athlete_id}, {"$set": {field: uid}})
+
+    # 🔐 Audit log
+    try:
+        await db.parent_link_history.insert_one({
+            "action": "link",
+            "athlete_id": athlete_id,
+            "user_id": uid,
+            "user_email": current_user.get("email"),
+            "user_role": role,
+            "slot": actual_slot,
+            "cf_verified": True,
+            "timestamp": datetime.now(timezone.utc),
+        })
+    except Exception:
+        pass
+
+    return {"message": "Collegamento genitore effettuato", "athlete_id": athlete_id, "slot": actual_slot}
+
+
+@api_router.delete("/athletes/{athlete_id}/unlink-me-as-parent")
+async def unlink_me_as_parent(athlete_id: str, current_user = Depends(get_current_user)):
+    """🆕 17/07/2026 — L'utente corrente si scollega dall'atleta (self-service).
+    Rimuove sé stesso da parent_id e/o second_parent_id se linkato."""
+    ath = await db.athletes.find_one({"id": athlete_id})
+    if not ath:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+
+    uid = current_user["id"]
+    unset: Dict[str, Any] = {}
+    if ath.get("parent_id") == uid:
+        unset["parent_id"] = ""
+    if ath.get("second_parent_id") == uid:
+        unset["second_parent_id"] = ""
+
+    if not unset:
+        raise HTTPException(status_code=400, detail="Non sei collegato a questo atleta")
+
+    await db.athletes.update_one({"id": athlete_id}, {"$unset": unset})
+
+    # Audit log
+    try:
+        await db.parent_link_history.insert_one({
+            "action": "unlink_self",
+            "athlete_id": athlete_id,
+            "user_id": uid,
+            "user_email": current_user.get("email"),
+            "unset_slots": list(unset.keys()),
+            "timestamp": datetime.now(timezone.utc),
+        })
+    except Exception:
+        pass
+
+    return {"message": "Collegamento rimosso"}
+
+
+@api_router.post("/athletes/{athlete_id}/unlink-parent")
+async def admin_unlink_parent(athlete_id: str, data: LinkParentRequest, current_user = Depends(get_current_user)):
+    """🆕 17/07/2026 — Admin scollega un genitore da un atleta (per pulire link errati).
+    Body: {slot: 'primary'|'secondary'}."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    ath = await db.athletes.find_one({"id": athlete_id})
+    if not ath or ath.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+
+    slot = (data.slot or "primary").lower()
+    if slot not in ("primary", "secondary"):
+        raise HTTPException(status_code=400, detail="Slot non valido")
+
+    field = "parent_id" if slot == "primary" else "second_parent_id"
+    prev_id = ath.get(field)
+    await db.athletes.update_one({"id": athlete_id}, {"$unset": {field: ""}})
+
+    try:
+        await db.parent_link_history.insert_one({
+            "action": "unlink_by_admin",
+            "athlete_id": athlete_id,
+            "unlinked_user_id": prev_id,
+            "admin_user_id": current_user["id"],
+            "admin_email": current_user.get("email"),
+            "slot": slot,
+            "timestamp": datetime.now(timezone.utc),
+        })
+    except Exception:
+        pass
+
+    return {"message": f"Slot {slot} scollegato", "previous_user_id": prev_id}
 
 
 @api_router.get("/users/me/parent-of")

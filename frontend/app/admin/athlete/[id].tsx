@@ -2765,17 +2765,34 @@ export default function AdminAthleteDetail() {
                     <Text style={styles.value}>{athlete.phone_father || '-'}</Text>
                   </View>
                   {/* 🆕 17/07/2026 — Link "Sono io il genitore" per staff che sono genitori reali dell'atleta */}
+                  {/* 🔐 17/07/2026 — TRIPLA SICUREZZA: richiede CF atleta (verifica identità),
+                      audit log su parent_link_history, no sovrascrittura parent_id principale */}
                   {currentUser && ['admin','viewer','dirigente','coordinatore'].includes(currentUser.role) &&
                     (athlete as any).parent_id !== currentUser.id && (athlete as any).second_parent_id !== currentUser.id && (
                       <TouchableOpacity
-                        onPress={async () => {
-                          try {
-                            await api.post(`/athletes/${athlete.id}/link-me-as-parent`, { slot: 'primary' });
-                            Alert.alert('Fatto', `Ora sei collegato come genitore di ${athlete.first_name} ${athlete.last_name}. Nella dashboard vedrai la card "Passa a Modalità Genitore".`);
-                            loadData();
-                          } catch (e: any) {
-                            Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile collegare');
+                        onPress={() => {
+                          // Web-only: uso window.prompt per chiedere il CF (mobile: cambierei con modale)
+                          if (typeof window === 'undefined' || !(window as any).prompt) {
+                            Alert.alert('Non disponibile', 'Usa la versione web per collegarti come genitore.');
+                            return;
                           }
+                          const cf = (window as any).prompt(
+                            'SICUREZZA: per collegarti come genitore di ' + (athlete.first_name || '') + ' ' + (athlete.last_name || '') +
+                            ', inserisci il CODICE FISCALE dell\'atleta.\n\nATTENZIONE: dichiaro sotto la mia responsabilità di essere realmente il genitore o esercente la patria potestà. Ogni azione è registrata a scopo di audit.'
+                          );
+                          if (!cf || !cf.trim()) return;
+                          (async () => {
+                            try {
+                              await api.post(`/athletes/${athlete.id}/link-me-as-parent`, {
+                                slot: 'primary',
+                                athlete_fiscal_code: cf.trim().toUpperCase(),
+                              });
+                              Alert.alert('Fatto', `Sei stato collegato come genitore di ${athlete.first_name} ${athlete.last_name}. Nella dashboard vedrai la card "Passa a Modalità Genitore".`);
+                              loadData();
+                            } catch (e: any) {
+                              Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile collegare');
+                            }
+                          })();
                         }}
                         style={{
                           marginTop: 8, backgroundColor: '#EDE9FE',
@@ -2785,22 +2802,57 @@ export default function AdminAthleteDetail() {
                         }}
                         data-testid="link-me-as-parent-btn"
                       >
-                        <Ionicons name="person-add" size={20} color="#635BFF" />
-                        <Text style={{ flex: 1, fontSize: 13, color: '#4C1D95', fontWeight: '600' }}>
-                          Sono io il genitore di questo atleta
-                        </Text>
+                        <Ionicons name="shield-checkmark" size={20} color="#635BFF" />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 13, color: '#4C1D95', fontWeight: '700' }}>
+                            Sono io il genitore di questo atleta
+                          </Text>
+                          <Text style={{ fontSize: 11, color: '#6B46C1', marginTop: 2 }}>
+                            Richiederà il codice fiscale dell&apos;atleta per verifica
+                          </Text>
+                        </View>
                       </TouchableOpacity>
                     )}
                   {currentUser && ((athlete as any).parent_id === currentUser.id || (athlete as any).second_parent_id === currentUser.id) && (
                     <View style={{
                       marginTop: 8, backgroundColor: '#E8F5E9',
                       borderRadius: 8, padding: 10,
-                      flexDirection: 'row', alignItems: 'center', gap: 8,
+                      gap: 8,
                     }}>
-                      <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />
-                      <Text style={{ fontSize: 12, color: '#1B5E20', fontWeight: '600' }}>
-                        Sei collegato come genitore di questo atleta
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />
+                        <Text style={{ fontSize: 12, color: '#1B5E20', fontWeight: '600', flex: 1 }}>
+                          Sei collegato come genitore di questo atleta
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => {
+                          const confirmMsg = 'Sei sicuro di voler rimuovere il collegamento come genitore di ' + athlete.first_name + ' ' + athlete.last_name + '?';
+                          const ok = typeof window !== 'undefined' && (window as any).confirm ? (window as any).confirm(confirmMsg) : true;
+                          if (!ok) return;
+                          (async () => {
+                            try {
+                              await api.delete(`/athletes/${athlete.id}/unlink-me-as-parent`);
+                              Alert.alert('Fatto', 'Collegamento rimosso.');
+                              loadData();
+                            } catch (e: any) {
+                              Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile scollegare');
+                            }
+                          })();
+                        }}
+                        style={{
+                          alignSelf: 'flex-start', backgroundColor: '#fff',
+                          borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6,
+                          borderWidth: 1, borderColor: '#C62828',
+                          flexDirection: 'row', alignItems: 'center', gap: 4,
+                        }}
+                        data-testid="unlink-me-as-parent-btn"
+                      >
+                        <Ionicons name="close-circle" size={14} color="#C62828" />
+                        <Text style={{ fontSize: 11, color: '#C62828', fontWeight: '600' }}>
+                          Rimuovi collegamento
+                        </Text>
+                      </TouchableOpacity>
                     </View>
                   )}
                   {!athlete.parents_detached && (

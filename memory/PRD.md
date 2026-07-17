@@ -1,6 +1,39 @@
 # RegistraTEAM — PRD & Stato
 
 
+## 🔐 17/07/2026 (v7.19) — Sicurezza dual-role Genitore: tripla verifica + rimozione ✅
+
+**Sintomo utente (Vincenzo, PPG)**: si è collegato "come genitore" di Prati Federica con un click → collegamento immediato senza verifica → rischio giuridico serio.
+
+**Fix — tripla sicurezza + audit log**:
+
+**Backend (`POST /athletes/{id}/link-me-as-parent`)**
+1. **Verifica CF atleta obbligatoria** (`athlete_fiscal_code` nel body): se non fornito → 400. Se non combacia con `athlete.fiscal_code` (case-insensitive) → 403 + audit log del tentativo fallito.
+2. **No sovrascrittura parent_id principale**: se `parent_id` è già valorizzato ≠ current_user, il collegamento va automaticamente sullo slot `secondary`. Se anche secondary è preso → 409 "chiedi all'admin di scollegare uno slot".
+3. **Audit log** in nuova collection `parent_link_history`: ogni link/unlink/tentativo-fallito è registrato con timestamp, user email, role, slot, cf_verified.
+
+**Nuovi endpoint**
+- `DELETE /athletes/{id}/unlink-me-as-parent` — l'utente si scollega da sé (self-service)
+- `POST /athletes/{id}/unlink-parent` (admin only) — l'admin scollega uno slot per pulire link errati (body: `{slot: 'primary'|'secondary'}`)
+
+**Frontend (`/admin/athlete/[id]`)**
+- Bottone "Sono io il genitore" ora apre un `window.prompt` che chiede il CF atleta + dichiarazione di responsabilità
+- Pill verde "Sei collegato come genitore" ha ora sotto un pulsante rosso **"Rimuovi collegamento"** (con `window.confirm`)
+- data-testid: `link-me-as-parent-btn`, `unlink-me-as-parent-btn`
+
+**Verifiche live (dev)**:
+- Link senza CF → 400 ✅
+- Link CF sbagliato → 403 + audit log tentativo ✅
+- Link CF giusto ma parent_id occupato → fallback a secondary ✅
+- Unlink self → 200 + audit log ✅
+- Audit log `parent_link_history` popolato con 3 eventi ✅
+
+**Nota per Vincenzo (dopo deploy in prod)**:
+- Su Sirio produzione: apri scheda "PRATI FEDERICA" → nella pill verde vedrai "Rimuovi collegamento" → click → scollegato pulito.
+- L'audit log resta a testimonianza di ogni azione (utile GDPR).
+
+
+
 ## 🎨 17/07/2026 (v7.18.1) — Icone header non coprono più il logo su mobile ✅
 
 **Sintomo utente (Sirio, mobile Chrome)**: 6 icone tonde bianche (bell, briefcase, people, settings, guida, logout) si sovrappongono al logo Sirio sul bg blu.
