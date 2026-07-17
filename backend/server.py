@@ -4717,9 +4717,10 @@ async def link_me_as_parent(
 
     # === CASO 1: nessun genitore linkato → verifica automatica ===
     if not current_primary and not current_secondary:
-        # Recupera CF dell'utente corrente
+        # Recupera CF ed email dell'utente corrente
         user_doc = await db.users.find_one({"id": uid}, {"fiscal_code": 1, "email": 1})
         user_cf = (user_doc.get("fiscal_code") or "").strip().upper() if user_doc else ""
+        user_email = (user_doc.get("email") or current_user.get("email") or "").strip().lower() if user_doc else ""
 
         # Match a) creato da me
         created_by_me = (ath.get("created_by") == uid)
@@ -4730,10 +4731,19 @@ async def link_me_as_parent(
             (ath.get("father_fiscal_code") or "").strip().upper(),
         ]
         cf_match = bool(user_cf) and user_cf in [x for x in athlete_parent_cfs if x]
+        # Match c) email combacia con second_parent_email / parent_email / mother_email / father_email dell'atleta
+        athlete_parent_emails = [
+            (ath.get("second_parent_email") or "").strip().lower(),
+            (ath.get("parent_email") or "").strip().lower(),
+            (ath.get("mother_email") or "").strip().lower(),
+            (ath.get("father_email") or "").strip().lower(),
+        ]
+        email_match = bool(user_email) and user_email in [x for x in athlete_parent_emails if x]
 
-        if created_by_me or cf_match:
+        if created_by_me or cf_match or email_match:
             # Auto-link come parent_id
             await db.athletes.update_one({"id": athlete_id}, {"$set": {"parent_id": uid}})
+            verification = "created_by" if created_by_me else ("cf_match" if cf_match else "email_match")
             try:
                 await db.parent_link_history.insert_one({
                     "action": "link_auto_case1",
@@ -4742,7 +4752,7 @@ async def link_me_as_parent(
                     "user_email": current_user.get("email"),
                     "user_role": role,
                     "slot": "primary",
-                    "verification": "created_by" if created_by_me else "cf_match",
+                    "verification": verification,
                     "timestamp": datetime.now(timezone.utc),
                 })
             except Exception:
@@ -4919,6 +4929,72 @@ async def admin_unlink_parent(athlete_id: str, data: LinkParentRequest, current_
         pass
 
     return {"message": f"Slot {slot} scollegato", "previous_user_id": prev_id}
+
+
+# 🆕 26/07/2026 — Admin force-link parent (override manuale per cleanup)
+class AdminLinkParentRequest(BaseModel):
+    user_id: str  # ID dell'utente da collegare come genitore
+    slot: Optional[str] = "primary"  # "primary" | "secondary"
+
+
+@api_router.post("/athletes/{athlete_id}/admin-link-parent")
+async def admin_link_parent(
+    athlete_id: str,
+    data: AdminLinkParentRequest,
+    current_user = Depends(get_current_user),
+):
+    """Admin-only: collega manualmente un utente come genitore di un atleta.
+    Bypassa la verifica anti-frode (CF/created_by/email). Utile per cleanup
+    di link errati o casi in cui i dati anagrafici non combaciano.
+    Audit log completo in parent_link_history."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    ath = await db.athletes.find_one({"id": athlete_id})
+    if not ath or ath.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+
+    target_user = await db.users.find_one({"id": data.user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    if target_user.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Utente di un'altra società")
+
+    slot = (data.slot or "primary").lower()
+    if slot not in ("primary", "secondary"):
+        raise HTTPException(status_code=400, detail="Slot non valido")
+
+    field = "parent_id" if slot == "primary" else "second_parent_id"
+    other_field = "second_parent_id" if slot == "primary" else "parent_id"
+
+    # Evita doppio link stesso utente
+    if ath.get(other_field) == data.user_id:
+        raise HTTPException(status_code=400, detail=f"Utente già collegato sull'altro slot ({other_field})")
+    if ath.get(field) == data.user_id:
+        raise HTTPException(status_code=400, detail="Utente già collegato su questo slot")
+
+    await db.athletes.update_one({"id": athlete_id}, {"$set": {field: data.user_id}})
+
+    try:
+        await db.parent_link_history.insert_one({
+            "action": "link_by_admin_override",
+            "athlete_id": athlete_id,
+            "linked_user_id": data.user_id,
+            "linked_user_email": target_user.get("email"),
+            "admin_user_id": current_user["id"],
+            "admin_email": current_user.get("email"),
+            "slot": slot,
+            "timestamp": datetime.now(timezone.utc),
+        })
+    except Exception:
+        pass
+
+    return {
+        "message": f"Utente collegato come {slot} parent",
+        "athlete_id": athlete_id,
+        "user_id": data.user_id,
+        "slot": slot,
+    }
 
 
 @api_router.get("/users/me/parent-of")

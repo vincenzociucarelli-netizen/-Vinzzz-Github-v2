@@ -44,6 +44,7 @@ function ParentsPasswordSection({ athleteId, athleteName, token }: { athleteId: 
   const [parents, setParents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [resetting, setResetting] = useState<string | null>(null);
+  const [linking, setLinking] = useState(false);
 
   useEffect(() => {
     loadParents();
@@ -57,6 +58,37 @@ function ParentsPasswordSection({ athleteId, athleteName, token }: { athleteId: 
       console.error('Failed to load parents info', e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAdminForceLink = async () => {
+    if (Platform.OS !== 'web') return;
+    const email = window.prompt(
+      `Collega manualmente un genitore a ${athleteName}\n\nInserisci l'email dell'utente da collegare (deve esistere nella società):`
+    );
+    if (!email) return;
+    const cleanEmail = email.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) {
+      window.alert('Email non valida');
+      return;
+    }
+    const slot = window.confirm('OK = Genitore Primario\nAnnulla = Secondo Genitore') ? 'primary' : 'secondary';
+    setLinking(true);
+    try {
+      // Cerca user_id via lookup per email (admin-only endpoint disponibile via /users)
+      const usersRes = await api.get('/users');
+      const target = (usersRes.data || []).find((u: any) => (u.email || '').toLowerCase() === cleanEmail);
+      if (!target) {
+        window.alert(`Nessun utente trovato con email ${cleanEmail} in questa società.`);
+        return;
+      }
+      await api.post(`/athletes/${athleteId}/admin-link-parent`, { user_id: target.id, slot });
+      window.alert(`Collegato ${target.full_name || cleanEmail} come genitore ${slot === 'primary' ? 'primario' : 'secondario'}.`);
+      loadParents();
+    } catch (e: any) {
+      window.alert(e.response?.data?.detail || 'Errore durante il collegamento');
+    } finally {
+      setLinking(false);
     }
   };
 
@@ -91,7 +123,26 @@ function ParentsPasswordSection({ athleteId, athleteName, token }: { athleteId: 
   };
 
   if (loading) return <ActivityIndicator size="small" color="#1565C0" />;
-  if (parents.length === 0) return <Text style={{ color: '#999', fontSize: 13 }}>Nessun genitore collegato</Text>;
+  if (parents.length === 0) return (
+    <View style={{ marginTop: 8 }}>
+      <Text style={{ color: '#999', fontSize: 13, marginBottom: 10 }}>Nessun genitore collegato</Text>
+      <TouchableOpacity
+        onPress={handleAdminForceLink}
+        disabled={linking}
+        style={{
+          flexDirection: 'row', alignItems: 'center', gap: 6,
+          backgroundColor: '#00838F', paddingVertical: 8, paddingHorizontal: 12,
+          borderRadius: 6, alignSelf: 'flex-start', opacity: linking ? 0.6 : 1,
+        }}
+        data-testid="admin-force-link-parent-btn"
+      >
+        <Ionicons name="link" size={14} color="#fff" />
+        <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>
+          {linking ? 'Collegamento...' : 'Collega manualmente un genitore'}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <View style={{ gap: 8, marginTop: 8 }}>
