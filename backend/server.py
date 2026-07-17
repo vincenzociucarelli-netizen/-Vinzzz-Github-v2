@@ -4689,7 +4689,10 @@ async def link_me_as_parent(
     if current_user.get("society_id") != ath.get("society_id"):
         raise HTTPException(status_code=403, detail="Atleta di un'altra società")
 
-    slot = "primary" if (data.slot or "primary").lower() != "secondary" else "secondary"
+    slot_raw = (data.slot or "primary").lower()
+    if slot_raw not in ("primary", "secondary"):
+        raise HTTPException(status_code=400, detail="Slot non valido — usa 'primary' o 'secondary'")
+    slot = slot_raw
     field = "parent_id" if slot == "primary" else "second_parent_id"
 
     await db.athletes.update_one(

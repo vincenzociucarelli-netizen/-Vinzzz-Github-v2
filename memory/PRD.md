@@ -1,6 +1,34 @@
 # RegistraTEAM — PRD & Stato
 
 
+## 👨‍👧 17/07/2026 (v7.17) — Dual-role Staff↔Genitore + Cambio email self-service ✅
+
+**Contesto**: Vincenzo (admin Sirio) ha creato la figlia Lisa come atleta ma per gestirla doveva loggarsi con account genitore separato. Anche Enrico (dirigente coordinatore) dovrà registrare sua figlia. Serviva: un solo account, due modalità (specchio Admin↔Dirigente e Coord↔Dirigente).
+
+**Backend**
+- `POST /api/auth/change-email` (verifica password + unicità case-insensitive)
+- `POST /api/athletes/{id}/link-me-as-parent` (slot: primary|secondary, valida ruolo staff + multi-tenancy + validazione slot)
+- `GET /api/users/me/parent-of` (list atleti linkati come genitore)
+- **Fix critico** `GET /api/athletes/my`: se staff-user è linkato come parent di ≥1 atleta, ritorna SOLO figli (prima ritornava TUTTI gli atleti della società → leak in modalità genitore)
+
+**Frontend**
+- `/admin/athlete/[id]` scheda contatti: bottone viola "Sono io il genitore" (nascosto se già collegato); pill verde "Sei collegato come genitore" quando linkato
+- `/admin` `/dirigente` `/coordinatore` dashboards: header icon `people` viola → naviga a `/parent` (solo se linkedAthletesCount>0)
+- `/dirigente` dashboard: card viola "Passa a Modalità Genitore"
+- `/parent/_layout.tsx`: accetta staff (admin/viewer/dirigente/coordinatore/coach/collaboratore) SE ha figli linkati
+- `/parent` header: bottone back-to-staff (torna a /admin, /dirigente o /coordinatore in base al role)
+- Nuova pagina `/admin/settings/change-email`: form con conferma password
+
+**Test**: iteration_84.json — Backend 6/6 pytest OK dopo fix slot validation. Frontend 100% funzionale/visivo (data-testid su TouchableOpacity non propagano in react-native-web, ma flow validato via text/coordinate).
+
+**Uso pratico per Sirio** (dopo deploy):
+1. Vincenzo cambia email da `vinzzz4457@gmail.com` → `vincenzo.ciucarelli@gmail.com` (Impostazioni → Cambia la mia email)
+2. Su scheda CIUCARELLI LISA → "Sono io il genitore" → linked
+3. Dashboard admin mostra icona people viola → clicca → sei in modalità genitore per Lisa
+4. Puoi pagare la rata di Lisa con Stripe test (già funzionante da v7.16)
+
+
+
 ## 💳 16/07/2026 (v7.16) — Stripe Checkout multi-tenant (MVP) ✅
 
 **Contesto**: l'admin di Sirio ha impostato chiavi Stripe test, ma il flusso non esisteva (solo salvataggio chiavi).
