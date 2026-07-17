@@ -457,7 +457,7 @@ export default function AdminDashboard() {
                 onPress={() => router.push('/admin/notifications')} 
                 style={styles.headerIconBtn}
               >
-                <Text style={{ fontSize: 20 }}>🔔</Text>
+                <Text style={{ fontSize: 17 }}>🔔</Text>
                 {unreadNotifications > 0 && (
                   <View style={styles.notificationBadge}>
                     <Text style={styles.notificationBadgeText}>
@@ -472,7 +472,7 @@ export default function AdminDashboard() {
                   onPress={() => router.replace('/dirigente')} 
                   style={styles.headerIconBtn}
                 >
-                  <Text style={{ fontSize: 18 }}>{Icons.briefcase}</Text>
+                  <Text style={{ fontSize: 15 }}>{Icons.briefcase}</Text>
                 </TouchableOpacity>
               )}
               {/* 🆕 17/07/2026 — Switch to Genitore (visibile solo se admin è parent di almeno 1 atleta) */}
@@ -482,18 +482,18 @@ export default function AdminDashboard() {
                   style={[styles.headerIconBtn, { backgroundColor: '#F3E5F5' }]}
                   data-testid="admin-switch-to-parent-btn"
                 >
-                  <Ionicons name="people" size={18} color="#8E24AA" />
+                  <Ionicons name="people" size={16} color="#8E24AA" />
                 </TouchableOpacity>
               )}
               {/* Settings button */}
               <TouchableOpacity onPress={() => router.push('/admin/settings')} style={styles.headerIconBtn}>
-                <Text style={{ fontSize: 20 }}>{Icons.settings}</Text>
+                <Text style={{ fontSize: 17 }}>{Icons.settings}</Text>
               </TouchableOpacity>
               {/* 📖 Guida ruolo Admin */}
               <GuideButton role="admin" compact />
               {/* Logout button */}
               <TouchableOpacity onPress={handleLogout} style={styles.headerIconBtn}>
-                <Text style={{ fontSize: 20 }}>{Icons.logout}</Text>
+                <Text style={{ fontSize: 17 }}>{Icons.logout}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1618,6 +1618,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: 8,
+    flexWrap: 'wrap',  // 🐛 17/07/2026 — Su mobile stretto le icone vanno a capo invece di sovrapporsi al logo
   },
   headerBigLogo: {
     width: 90,
@@ -1626,9 +1627,10 @@ const styles = StyleSheet.create({
   },
   headerRightCol: {
     flex: 1,
+    minWidth: 220,  // 🐛 17/07/2026 — Se meno di 220px disponibili, la col va a nuova riga (wrap)
     alignItems: 'flex-end',
     justifyContent: 'flex-end',
-    paddingTop: 40,
+    paddingTop: 8,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -1657,16 +1659,18 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: 8,
+    gap: 6,
+    flexWrap: 'wrap',
+    rowGap: 6,
   },
   headerBtn: {
     padding: 4,
   },
   headerIconBtn: {
     backgroundColor: '#fff',
-    borderRadius: 20,
-    width: 40,
-    height: 40,
+    borderRadius: 17,
+    width: 34,
+    height: 34,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',

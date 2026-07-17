@@ -1,6 +1,23 @@
 # RegistraTEAM — PRD & Stato
 
 
+## 🎨 17/07/2026 (v7.18.1) — Icone header non coprono più il logo su mobile ✅
+
+**Sintomo utente (Sirio, mobile Chrome)**: 6 icone tonde bianche (bell, briefcase, people, settings, guida, logout) si sovrappongono al logo Sirio sul bg blu.
+
+**Root cause**: `headerMainRow` era `flexDirection:'row'` senza wrap. Su viewport stretto (~412px) 6 icone da 40px + gap 8px = 280px + logo 90px = 370px > spazio disponibile → sovrapposizione.
+
+**Fix layout responsivo (`/admin/index.tsx` + `/dirigente/index.tsx`)**:
+- `headerMainRow`: aggiunto `flexWrap:'wrap'` → col icone va a nuova riga sotto il logo se non c'è spazio
+- `headerRightCol`: `minWidth:220` (soglia sotto la quale wrappa) + `paddingTop:8` (era 40) per allinearsi al logo
+- `headerIconBtn`: dimensioni 40×40 → 34×34, `borderRadius` 20→17, `gap` 8→6, aggiunto `rowGap:6` per wrap pulito
+- Icone interne: `fontSize` 20→17, briefcase 18→15, people 18→16
+- Stesso pattern in dirigente dashboard (flexWrap + gap 12→8)
+
+**Risultato**: su tablet e desktop tutto invariato. Su smartphone (<430px) le icone vanno automaticamente a capo sotto il titolo, senza mai coprire il logo società.
+
+
+
 ## 🐛 17/07/2026 (v7.18) — Coordinatore rimbalzato al login aprendo un evento ✅
 
 **Sintomo utente (Enrico Ceppitelli, Sirio)**: convertito da Admin a Coordinatore. Apre `/coordinatore` → clicca "Eventi in programma" → viene navigato a `/admin/preseason` → **rimbalzato al login**.
