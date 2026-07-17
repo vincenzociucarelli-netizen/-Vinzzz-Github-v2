@@ -107,8 +107,9 @@ export default function StripeSettings() {
       if (shouldSendKeys) {
         if (publishableKey) payload.stripe_publishable_key = publishableKey;
         if (secretKey) payload.stripe_secret_key = secretKey;
-        if (webhookSecret) payload.stripe_webhook_secret = webhookSecret;
       }
+      // Webhook secret: inviato SEMPRE quando compilato (card dedicata sempre editabile).
+      if (webhookSecret) payload.stripe_webhook_secret = webhookSecret;
 
       await api.patch('/settings/stripe', payload);
       
@@ -353,6 +354,56 @@ export default function StripeSettings() {
             </>
           )}
         </View>
+
+        {/* 🆕 16/07/2026 — Card Webhook: URL da copiare + campo whsec sempre editabili */}
+        {hasKeys && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Webhook Stripe (conferma automatica pagamenti)</Text>
+            <Text style={{ fontSize: 12, color: '#666', marginBottom: 12, lineHeight: 17 }}>
+              Segui questi 3 passaggi per attivare le conferme automatiche:
+            </Text>
+
+            <View style={{ backgroundColor: '#EDE9FE', borderRadius: 10, borderLeftWidth: 3, borderLeftColor: '#635BFF', padding: 12, marginBottom: 14 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#4C1D95', marginBottom: 6 }}>
+                1️⃣ COPIA QUESTO URL
+              </Text>
+              <Text selectable style={{ fontSize: 11, color: '#1a1a1a', fontFamily: 'monospace', backgroundColor: '#fff', padding: 8, borderRadius: 6, marginBottom: 6 }} data-testid="stripe-webhook-url">
+                {webhookUrl || 'Caricamento...'}
+              </Text>
+              <Text style={{ fontSize: 11, color: '#4C1D95', lineHeight: 15 }}>
+                2️⃣ Incollalo su <Text style={{ fontWeight: '700' }}>dashboard.stripe.com/test/webhooks</Text> → &quot;Aggiungi endpoint&quot;.
+                {'\n'}Eventi da sottoscrivere: <Text style={{ fontWeight: '700' }}>checkout.session.completed</Text> e <Text style={{ fontWeight: '700' }}>checkout.session.expired</Text>.
+                {'\n'}3️⃣ Stripe ti darà un &quot;Signing secret&quot; che inizia con <Text style={{ fontWeight: '700' }}>whsec_...</Text> → incollalo qui sotto.
+              </Text>
+            </View>
+
+            <Text style={styles.inputLabel}>Webhook Signing Secret</Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={styles.passwordInput}
+                value={webhookSecret}
+                onChangeText={setWebhookSecret}
+                placeholder={settings?.has_webhook_secret ? (settings.stripe_webhook_secret_masked || 'whsec_...') : 'whsec_...'}
+                placeholderTextColor="#999"
+                secureTextEntry={!showWebhookSecret}
+                autoCapitalize="none"
+                autoCorrect={false}
+                data-testid="stripe-webhook-secret-input"
+              />
+              <TouchableOpacity
+                style={styles.eyeButton}
+                onPress={() => setShowWebhookSecret(!showWebhookSecret)}
+              >
+                <Ionicons name={showWebhookSecret ? "eye-off" : "eye"} size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.inputHint}>
+              {settings?.has_webhook_secret
+                ? 'Un secret è già salvato. Incolla un nuovo whsec_... solo se vuoi sostituirlo.'
+                : 'Ancora nessun secret salvato. Incolla il whsec_... da Stripe qui e premi Salva Impostazioni in fondo.'}
+            </Text>
+          </View>
+        )}
 
         {/* Payment Options */}
         <View style={styles.card}>
