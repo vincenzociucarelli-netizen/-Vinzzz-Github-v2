@@ -53,13 +53,17 @@ async def _get_society_stripe_settings(society_id: str) -> dict:
     return s
 
 
-async def _get_payment_context(payment_id: str, current_user: dict) -> tuple[dict, dict, dict]:
+async def _get_payment_context(payment_id: str, current_user: dict, allow_paid: bool = False) -> tuple[dict, dict, dict]:
     """Restituisce (payment, athlete, society_settings) verificando che l'utente
-    corrente sia autorizzato a pagare (genitore collegato, oppure admin di società)."""
+    corrente sia autorizzato a pagare (genitore collegato, oppure admin di società).
+    
+    allow_paid=True: NON solleva se la rata è già pagata (usato da /checkout/status
+    per confermare al frontend che il webhook ha già fatto il suo lavoro).
+    """
     payment = await db.payments.find_one({"id": payment_id})
     if not payment:
         raise HTTPException(status_code=404, detail="Rata non trovata")
-    if payment.get("paid"):
+    if payment.get("paid") and not allow_paid:
         raise HTTPException(status_code=400, detail="Rata già pagata")
 
     athlete = await db.athletes.find_one({"id": payment["athlete_id"]})
@@ -306,8 +310,13 @@ async def get_checkout_status(
     """Fallback client-side: interroga Stripe direttamente dopo il redirect di
     success per aggiornare la UI immediatamente anche se il webhook tarda.
     Idempotente: non altera lo stato se già pagata."""
-    payment, athlete, settings = await _get_payment_context(payment_id, current_user)
+    payment, athlete, settings = await _get_payment_context(payment_id, current_user, allow_paid=True)
     society_sk = settings["stripe_secret_key"]
+
+    # 🐛 16/07/2026 — Se il webhook ha già segnato la rata come pagata, ritorna
+    # subito paid=True senza fare la call inutile a Stripe.
+    if payment.get("paid"):
+        return {"paid": True, "session_id": session_id}
 
     try:
         session = stripe.checkout.Session.retrieve(session_id, api_key=society_sk)
