@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, usePathname } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, StyleSheet, Platform, Alert } from 'react-native';
 import api from '../../src/services/api';
@@ -7,6 +7,34 @@ import { Ionicons } from '../../src/components/Icon';
 import CertificateOverridePopup from '../../src/components/CertificateOverridePopup';
 import GlobalOverrideStatusPopup from '../../src/components/GlobalOverrideStatusPopup';
 import PrimaryAdminDeclarationModal from '../../src/components/PrimaryAdminDeclarationModal';
+
+// 🆕 17/07/2026 — Pagine admin accessibili ai COORDINATORI (whitelist).
+// Il layout /admin/_layout accetta ora anche role=coordinatore, ma solo per queste route.
+// Il singolo permesso granulare (teams/athletes/events/...) è già filtrato lato UI
+// del cruscotto coordinatore (che nasconde le sezioni a cui non ha accesso).
+const COORDINATOR_ALLOWED_PATHS = [
+  '/admin/preseason',
+  '/admin/preseason-responses',
+  '/admin/teams',
+  '/admin/team',            // + segments (dynamic)
+  '/admin/athletes',
+  '/admin/athlete',
+  '/admin/athlete-search',
+  '/admin/attendances',
+  '/admin/matches',
+  '/admin/convocations',
+  '/admin/certificates',
+  '/admin/broadcasts',
+  '/admin/communications',
+  '/admin/notifications',
+  '/admin/trainings',
+  '/admin/training',
+  '/admin/gdpr',
+];
+
+function isCoordAllowed(pathname: string): boolean {
+  return COORDINATOR_ALLOWED_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'));
+}
 
 const TERMS_TEXT = `TERMINI DI UTILIZZO DELLA PIATTAFORMA
 REGISTRATEAM
@@ -109,10 +137,18 @@ function TermsAcceptanceInline({ onAccepted }: { onAccepted: () => void }) {
 
 export default function AdminLayout() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, isLoading, loadAuth } = useAuthStore();
   const [isChecking, setIsChecking] = useState(true);
   const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null);
-  const isAuthenticated = !isChecking && !isLoading && !!user && user.role === 'admin';
+
+  // 🆕 17/07/2026 — Il layout admin accetta ora anche COORDINATORE (per accedere
+  // alle pagine admin specifiche a cui è autorizzato via coordinator_permissions).
+  // Le pagine "riservate all'admin" (compensi, IBAN, sponsor, bilanci) devono
+  // essere ulteriormente protette dentro ogni singola pagina se necessario.
+  const isAdmin = user?.role === 'admin';
+  const isCoord = user?.role === 'coordinatore';
+  const isAuthenticated = !isChecking && !isLoading && !!user && (isAdmin || isCoord);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -124,15 +160,22 @@ export default function AdminLayout() {
 
   useEffect(() => {
     if (!isChecking && !isLoading) {
-      if (!user || user.role !== 'admin') {
+      if (!user || (!isAdmin && !isCoord)) {
         router.replace('/login');
-      } else {
+      } else if (isAdmin) {
         api.get('/societies/terms-status')
           .then(res => setTermsAccepted(res.data.terms_accepted || false))
           .catch(() => setTermsAccepted(false));
+      } else {
+        // Il coordinatore non deve accettare i termini: già fatto dall'admin della società
+        setTermsAccepted(true);
+        // Se navigato su una pagina NON in whitelist, rimbalzo a /coordinatore
+        if (isCoord && !isCoordAllowed(pathname)) {
+          router.replace('/coordinatore');
+        }
       }
     }
-  }, [user, isLoading, isChecking]);
+  }, [user, isLoading, isChecking, isAdmin, isCoord, pathname]);
 
   if (isChecking || isLoading || termsAccepted === null) {
     return (
@@ -142,7 +185,7 @@ export default function AdminLayout() {
     );
   }
 
-  if (!user || user.role !== 'admin') {
+  if (!user || (!isAdmin && !isCoord)) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
@@ -151,7 +194,7 @@ export default function AdminLayout() {
   }
 
   // Society terms acceptance - admin only
-  if (termsAccepted === false) {
+  if (isAdmin && termsAccepted === false) {
     return <TermsAcceptanceInline onAccepted={() => setTermsAccepted(true)} />;
   }
 

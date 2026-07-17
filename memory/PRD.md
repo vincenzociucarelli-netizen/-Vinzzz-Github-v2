@@ -1,6 +1,44 @@
 # RegistraTEAM — PRD & Stato
 
 
+## 🐛 17/07/2026 (v7.18) — Coordinatore rimbalzato al login aprendo un evento ✅
+
+**Sintomo utente (Enrico Ceppitelli, Sirio)**: convertito da Admin a Coordinatore. Apre `/coordinatore` → clicca "Eventi in programma" → viene navigato a `/admin/preseason` → **rimbalzato al login**.
+
+**Root cause**:
+1. Frontend `/admin/_layout.tsx` accettava SOLO `role='admin'`, tutti gli altri redirect a `/login`
+2. Backend endpoint `/preseason/*` restituivano 403 "Solo admin" per i coordinatori
+3. `get_current_user` in projection MongoDB non includeva `coordinator_permissions` → il campo era sempre vuoto quando esposto ad helper di autorizzazione
+
+**Fix a 3 livelli**:
+
+**Backend**
+- Aggiunto helper `_has_admin_or_coord_perm(user, perm)` (server.py ~408): centralizza il controllo "admin OR coordinatore con permesso X"
+- `get_current_user` projection ora include `coordinator_permissions` (server.py ~1264)
+- Sostituito `role != ADMIN` con `_has_admin_or_coord_perm(current_user, "events")` in:
+  - `POST /preseason/campaigns` (crea)
+  - `GET /preseason/campaigns` (lista)
+  - `GET /preseason/campaigns/{id}` (dettaglio) — **quello che apriva Enrico**
+  - `PATCH /preseason/campaigns/{id}` (modifica)
+  - `DELETE /preseason/campaigns/{id}` (elimina)
+  - `GET /preseason/campaigns/{id}/responses` (risposte)
+  - `GET /preseason/campaigns/{id}/export` (CSV)
+  - `POST /preseason/campaigns/{id}/send-notifications`
+
+**Frontend**
+- `/admin/_layout.tsx` ora accetta anche `role='coordinatore'` (con whitelist `COORDINATOR_ALLOWED_PATHS` che copre teams, athletes, preseason, attendances, matches, certificates, communications, gdpr, trainings)
+- Coordinatore navigato su `/admin/*` non whitelisted → redirect `/coordinatore`
+- Coordinatore skippa la accettazione termini (già fatta dall'admin della società)
+- `/admin/index.tsx` redirect immediato a `/coordinatore` se `role='coordinatore'` (dashboard admin proprietaria)
+
+**Verifica live (dev, Lella coord)**:
+- Con permesso `events`: `GET /preseason/campaigns` → 200 ✅ + dettaglio → 200 ✅
+- Senza permesso `events`: 403 "Non autorizzato" (guard correttamente scattante)
+
+**Nota**: pattern esteso ora anche ad altri endpoint quando servirà (broadcasts, presenze, ecc.) — basta sostituire `role != ADMIN` con `_has_admin_or_coord_perm(user, "PERMESSO_GRANULARE")`.
+
+
+
 ## 👨‍👧 17/07/2026 (v7.17) — Dual-role Staff↔Genitore + Cambio email self-service ✅
 
 **Contesto**: Vincenzo (admin Sirio) ha creato la figlia Lisa come atleta ma per gestirla doveva loggarsi con account genitore separato. Anche Enrico (dirigente coordinatore) dovrà registrare sua figlia. Serviva: un solo account, due modalità (specchio Admin↔Dirigente e Coord↔Dirigente).

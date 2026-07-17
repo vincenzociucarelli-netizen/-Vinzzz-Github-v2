@@ -405,6 +405,20 @@ class UserRole:
                                     # users.coordinator_permissions (list of strings).
 
 
+def _has_admin_or_coord_perm(user: Dict[str, Any], perm: str) -> bool:
+    """True se l'utente è admin, OPPURE è coordinatore con `perm` nei permessi granulari.
+    🆕 17/07/2026 — Helper per aprire endpoint admin ai coordinatori autorizzati.
+    """
+    role = user.get("role")
+    if role == UserRole.ADMIN:
+        return True
+    if role == UserRole.COORDINATORE:
+        perms = user.get("coordinator_permissions") or []
+        return perm in perms
+    return False
+
+
+
 # 🆕 27/02/2026 — Chiavi di permesso per il ruolo Coordinatore.
 # Ogni chiave rappresenta una sezione dell'app; il Main Admin sceglie quali abilitare
 # per ogni coordinatore. Il coordinatore vede solo le sezioni con chiave nel suo
@@ -1247,6 +1261,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                 "society_id": 1,
                 "athlete_id": 1,
                 "coach_id": 1,
+                "coordinator_permissions": 1,
             },
         )
         if not user:
@@ -1272,6 +1287,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             "society_id": user.get("society_id"),
             "athlete_id": user.get("athlete_id"),  # For athlete role
             "coach_id": user.get("coach_id"),      # For coach role
+            "coordinator_permissions": user.get("coordinator_permissions") or [],
         }
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
@@ -31517,9 +31533,9 @@ class PreseasonResponse(BaseModel):
 
 @api_router.post("/preseason/campaigns")
 async def create_preseason_campaign(data: PreseasonCampaignCreate, current_user = Depends(get_current_user)):
-    """Admin crea una campagna pre-stagione"""
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin")
+    """Admin (o Coordinatore con permesso 'events') crea una campagna pre-stagione"""
+    if not _has_admin_or_coord_perm(current_user, "events"):
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     
     society_id = current_user.get("society_id", "")
     
@@ -31553,9 +31569,9 @@ async def create_preseason_campaign(data: PreseasonCampaignCreate, current_user 
 
 @api_router.get("/preseason/campaigns")
 async def get_preseason_campaigns(current_user = Depends(get_current_user)):
-    """Admin lista campagne pre-stagione"""
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin")
+    """Admin (o Coordinatore con permesso 'events') lista campagne pre-stagione"""
+    if not _has_admin_or_coord_perm(current_user, "events"):
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     
     society_id = current_user.get("society_id", "")
     campaigns = await db.preseason_campaigns.find(
@@ -31584,9 +31600,9 @@ async def get_preseason_campaigns(current_user = Depends(get_current_user)):
 
 @api_router.get("/preseason/campaigns/{campaign_id}")
 async def get_preseason_campaign(campaign_id: str, current_user = Depends(get_current_user)):
-    """Admin dettaglio campagna"""
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin")
+    """Admin (o Coordinatore con permesso 'events') dettaglio campagna"""
+    if not _has_admin_or_coord_perm(current_user, "events"):
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     
     campaign = await db.preseason_campaigns.find_one({"id": campaign_id}, {"_id": 0})
     if not campaign:
@@ -31600,9 +31616,9 @@ async def get_preseason_campaign(campaign_id: str, current_user = Depends(get_cu
 
 @api_router.patch("/preseason/campaigns/{campaign_id}")
 async def update_preseason_campaign(campaign_id: str, data: PreseasonCampaignUpdate, current_user = Depends(get_current_user)):
-    """Admin modifica campagna"""
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin")
+    """Admin (o Coordinatore con permesso 'events') modifica campagna"""
+    if not _has_admin_or_coord_perm(current_user, "events"):
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     
     # Use exclude_unset so that fields explicitly set to None (e.g. clearing
     # event_info) are persisted as empty, not silently dropped.
@@ -31625,9 +31641,9 @@ async def update_preseason_campaign(campaign_id: str, data: PreseasonCampaignUpd
 
 @api_router.delete("/preseason/campaigns/{campaign_id}")
 async def delete_preseason_campaign(campaign_id: str, current_user = Depends(get_current_user)):
-    """Admin elimina campagna"""
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin")
+    """Admin (o Coordinatore con permesso 'events') elimina campagna"""
+    if not _has_admin_or_coord_perm(current_user, "events"):
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     
     await db.preseason_responses.delete_many({"campaign_id": campaign_id})
     await db.preseason_campaigns.delete_one({"id": campaign_id})
@@ -31636,9 +31652,9 @@ async def delete_preseason_campaign(campaign_id: str, current_user = Depends(get
 
 @api_router.get("/preseason/campaigns/{campaign_id}/responses")
 async def get_preseason_responses(campaign_id: str, current_user = Depends(get_current_user)):
-    """Admin vede le risposte"""
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin")
+    """Admin (o Coordinatore con permesso 'events') vede le risposte"""
+    if not _has_admin_or_coord_perm(current_user, "events"):
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     
     responses = await db.preseason_responses.find(
         {"campaign_id": campaign_id}, {"_id": 0}
@@ -31671,9 +31687,9 @@ async def get_preseason_responses(campaign_id: str, current_user = Depends(get_c
 
 @api_router.get("/preseason/campaigns/{campaign_id}/export")
 async def export_preseason_responses(campaign_id: str, current_user = Depends(get_current_user)):
-    """Admin esporta risposte in CSV"""
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin")
+    """Admin (o Coordinatore con permesso 'events') esporta risposte in CSV"""
+    if not _has_admin_or_coord_perm(current_user, "events"):
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     
     # Multi-tenant: verify campaign belongs to admin's society
     _sid = current_user.get("society_id")
@@ -32322,9 +32338,9 @@ async def get_active_preseason_campaign(current_user = Depends(get_current_user)
 
 @api_router.post("/preseason/campaigns/{campaign_id}/send-notifications")
 async def send_preseason_notifications(campaign_id: str, current_user = Depends(get_current_user)):
-    """Admin invia email + notifiche in-app ai genitori che non hanno ancora risposto"""
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin")
+    """Admin (o Coordinatore con permesso 'events') invia email + notifiche in-app ai genitori che non hanno ancora risposto"""
+    if not _has_admin_or_coord_perm(current_user, "events"):
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     
     campaign = await db.preseason_campaigns.find_one({"id": campaign_id})
     if not campaign:

@@ -85,6 +85,14 @@ interface ExpiringCertificates {
 export default function AdminDashboard() {
   const router = useRouter();
   const { user, logout, refreshUser } = useAuthStore();
+  // 🆕 17/07/2026 — Se un coordinatore atterra sulla dashboard admin, redirect
+  // alla sua dashboard dedicata. Il layout /admin accetta i coord solo per le
+  // sotto-pagine autorizzate (es. preseason), non per l'index.
+  useEffect(() => {
+    if (user?.role === 'coordinatore') {
+      router.replace('/coordinatore');
+    }
+  }, [user?.role]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [pendingCounts, setPendingCounts] = useState<PendingCount>({ dirigenti: 0, coaches: 0, collaboratori: 0, parents: 0 });
   const [pendingStaff, setPendingStaff] = useState<any[]>([]);
