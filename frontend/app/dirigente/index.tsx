@@ -61,6 +61,8 @@ export default function DirigenteIndex() {
     unpaid_payments: { count: number; athletes: any[] };
   } | null>(null);
   const [showStatsModal, setShowStatsModal] = useState<null | 'certificates' | 'payments'>(null);
+  // 🆕 17/07/2026 — Dual-role Dirigente ↔ Genitore
+  const [linkedAthletesCount, setLinkedAthletesCount] = useState<number>(0);
 
   const loadTeams = async () => {
     try {
@@ -83,6 +85,11 @@ export default function DirigenteIndex() {
       } catch {
         setDashStats(null);
       }
+      // 🆕 17/07/2026 — Check parent-of per dual-role Dirigente↔Genitore
+      try {
+        const linkedRes = await api.get('/users/me/parent-of');
+        setLinkedAthletesCount(linkedRes.data?.count || 0);
+      } catch { setLinkedAthletesCount(0); }
     } catch (error) {
       console.error('Error loading teams:', error);
     } finally {
@@ -310,6 +317,26 @@ export default function DirigenteIndex() {
               </Text>
             </View>
             <Ionicons name="arrow-forward-circle" size={28} color="#F9A825" />
+          </TouchableOpacity>
+        )}
+
+        {/* 🆕 17/07/2026 — Genitore Switch Card (dual-role staff+genitore) */}
+        {linkedAthletesCount > 0 && (
+          <TouchableOpacity
+            style={[styles.adminSwitchCard, { borderColor: '#8E24AA', backgroundColor: '#F3E5F5' }]}
+            onPress={() => router.replace('/parent')}
+            data-testid="dirigente-parent-switch-card"
+          >
+            <View style={[styles.adminSwitchIcon, { backgroundColor: '#E1BEE7' }]}>
+              <Ionicons name="people" size={24} color="#8E24AA" />
+            </View>
+            <View style={styles.adminSwitchInfo}>
+              <Text style={[styles.adminSwitchTitle, { color: '#4A148C' }]}>Passa a Modalità Genitore</Text>
+              <Text style={styles.adminSwitchDescription}>
+                {linkedAthletesCount === 1 ? 'Gestisci tuo/a figlio/a atleta' : `Gestisci i tuoi ${linkedAthletesCount} figli atleti`}
+              </Text>
+            </View>
+            <Ionicons name="arrow-forward-circle" size={28} color="#8E24AA" />
           </TouchableOpacity>
         )}
 

@@ -39,11 +39,19 @@ export default function CoordinatorDashboard() {
   const { user, logout } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [perms, setPerms] = useState<string[]>([]);
+  // 🆕 17/07/2026 — Dual-role Coordinatore ↔ Genitore
+  const [linkedAthletesCount, setLinkedAthletesCount] = useState<number>(0);
 
   useEffect(() => {
-    // Legge i permessi dallo user object caricato da /auth/me
     const p = (user as any)?.coordinator_permissions || [];
     setPerms(p);
+    // Check parent-of
+    (async () => {
+      try {
+        const r = await (await import('../../src/services/api')).default.get('/users/me/parent-of');
+        setLinkedAthletesCount(r.data?.count || 0);
+      } catch { setLinkedAthletesCount(0); }
+    })();
   }, [user]);
 
   const handleLogout = async () => {
@@ -80,6 +88,16 @@ export default function CoordinatorDashboard() {
           <Text style={styles.subtitle}>{user?.first_name} {user?.last_name}</Text>
         </View>
         <GuideButton role="coordinatore" compact />
+        {/* 🆕 17/07/2026 — Switch a Genitore se ha figli linkati */}
+        {linkedAthletesCount > 0 && (
+          <TouchableOpacity
+            onPress={() => router.replace('/parent')}
+            style={{ marginLeft: 8, backgroundColor: '#F3E5F5', borderRadius: 20, padding: 8 }}
+            data-testid="coord-switch-to-parent-btn"
+          >
+            <Ionicons name="people" size={20} color="#8E24AA" />
+          </TouchableOpacity>
+        )}
         {/* 🆕 16/07/2026 — Switch to Dirigente per dual-role Coordinatore+Dirigente */}
         <TouchableOpacity
           onPress={() => router.replace('/dirigente')}

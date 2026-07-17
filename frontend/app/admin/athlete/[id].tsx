@@ -2764,6 +2764,45 @@ export default function AdminAthleteDetail() {
                     <Text style={styles.label}>Tel. Padre</Text>
                     <Text style={styles.value}>{athlete.phone_father || '-'}</Text>
                   </View>
+                  {/* 🆕 17/07/2026 — Link "Sono io il genitore" per staff che sono genitori reali dell'atleta */}
+                  {currentUser && ['admin','viewer','dirigente','coordinatore'].includes(currentUser.role) &&
+                    (athlete as any).parent_id !== currentUser.id && (athlete as any).second_parent_id !== currentUser.id && (
+                      <TouchableOpacity
+                        onPress={async () => {
+                          try {
+                            await api.post(`/athletes/${athlete.id}/link-me-as-parent`, { slot: 'primary' });
+                            Alert.alert('Fatto', `Ora sei collegato come genitore di ${athlete.first_name} ${athlete.last_name}. Nella dashboard vedrai la card "Passa a Modalità Genitore".`);
+                            loadData();
+                          } catch (e: any) {
+                            Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile collegare');
+                          }
+                        }}
+                        style={{
+                          marginTop: 8, backgroundColor: '#EDE9FE',
+                          borderRadius: 10, padding: 12,
+                          flexDirection: 'row', alignItems: 'center', gap: 10,
+                          borderWidth: 1, borderColor: '#635BFF',
+                        }}
+                        data-testid="link-me-as-parent-btn"
+                      >
+                        <Ionicons name="person-add" size={20} color="#635BFF" />
+                        <Text style={{ flex: 1, fontSize: 13, color: '#4C1D95', fontWeight: '600' }}>
+                          Sono io il genitore di questo atleta
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  {currentUser && ((athlete as any).parent_id === currentUser.id || (athlete as any).second_parent_id === currentUser.id) && (
+                    <View style={{
+                      marginTop: 8, backgroundColor: '#E8F5E9',
+                      borderRadius: 8, padding: 10,
+                      flexDirection: 'row', alignItems: 'center', gap: 8,
+                    }}>
+                      <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />
+                      <Text style={{ fontSize: 12, color: '#1B5E20', fontWeight: '600' }}>
+                        Sei collegato come genitore di questo atleta
+                      </Text>
+                    </View>
+                  )}
                   {!athlete.parents_detached && (
                     <View style={styles.infoRow}>
                       <Text style={styles.label}>Email 2° Genitore</Text>

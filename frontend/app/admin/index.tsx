@@ -105,6 +105,8 @@ export default function AdminDashboard() {
   const [sendingInvite, setSendingInvite] = useState(false);
   const [inviteForm, setInviteForm] = useState({ email: '', first_name: '', last_name: '' });
   const [proEnabled, setProEnabled] = useState<boolean>(false);
+  // 🆕 17/07/2026 — Dual-role Admin ↔ Genitore: nascondi la card se non ho figli linkati
+  const [linkedAthletesCount, setLinkedAthletesCount] = useState<number>(0);
   const [waCount, setWaCount] = useState<number>(0);
   // 🆕 13/06/2026 — Modal export Riepilogo Compensi Annuale
   const [showCompensationExport, setShowCompensationExport] = useState(false);
@@ -202,6 +204,11 @@ export default function AdminDashboard() {
         const todayRes = await api.get('/athletes/registered-today');
         setTodayAthletes(todayRes.data?.athletes || []);
       } catch { setTodayAthletes([]); }
+      // 🆕 17/07/2026 — Verifica se l'admin è genitore di qualche atleta (dual-role)
+      try {
+        const linkedRes = await api.get('/users/me/parent-of');
+        setLinkedAthletesCount(linkedRes.data?.count || 0);
+      } catch { setLinkedAthletesCount(0); }
       const certsData = certsRes.data || { count_today: 0, count_30_days: 0, expiring_today: [], expiring_soon: [] };
       setExpiringCerts(certsData);
       setInviteCode(inviteRes.data?.invite_code || '');
@@ -458,6 +465,16 @@ export default function AdminDashboard() {
                   style={styles.headerIconBtn}
                 >
                   <Text style={{ fontSize: 18 }}>{Icons.briefcase}</Text>
+                </TouchableOpacity>
+              )}
+              {/* 🆕 17/07/2026 — Switch to Genitore (visibile solo se admin è parent di almeno 1 atleta) */}
+              {linkedAthletesCount > 0 && (
+                <TouchableOpacity
+                  onPress={() => router.replace('/parent')}
+                  style={[styles.headerIconBtn, { backgroundColor: '#F3E5F5' }]}
+                  data-testid="admin-switch-to-parent-btn"
+                >
+                  <Ionicons name="people" size={18} color="#8E24AA" />
                 </TouchableOpacity>
               )}
               {/* Settings button */}

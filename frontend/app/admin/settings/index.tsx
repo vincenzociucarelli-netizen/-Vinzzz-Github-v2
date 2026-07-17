@@ -222,6 +222,24 @@ export default function SettingsIndex() {
           <Ionicons name="chevron-forward" size={24} color="#6772E5" />
         </TouchableOpacity>
 
+        {/* 🆕 17/07/2026 — Cambio email admin self-service */}
+        <TouchableOpacity 
+          style={[styles.card, { borderColor: '#00838F', backgroundColor: '#E0F7FA' }]}
+          onPress={() => router.push('/admin/settings/change-email')}
+          data-testid="settings-change-email-btn"
+        >
+          <View style={[styles.iconContainer, { backgroundColor: '#00838F' }]}>
+            <Ionicons name="mail" size={32} color="#fff" />
+          </View>
+          <View style={styles.cardContent}>
+            <Text style={[styles.cardTitle, { color: '#00838F' }]}>Cambia la mia email</Text>
+            <Text style={styles.cardDescription}>
+              Modifica l&apos;email del tuo account admin
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={24} color="#00838F" />
+        </TouchableOpacity>
+
         {/* Card Periodo di Prova */}
         <TouchableOpacity 
           style={[styles.card, { borderColor: '#FF6F00', backgroundColor: '#FFF8E1' }]}

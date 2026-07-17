@@ -8,6 +8,7 @@ import os
 import logging
 import uuid
 import hashlib
+import re
 from pathlib import Path
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Any, Dict
@@ -4625,6 +4626,94 @@ async def change_password(data: ChangePasswordRequest, current_user = Depends(ge
     
     return {"message": "Password cambiata con successo!"}
 
+
+# 🆕 17/07/2026 — Cambio email utente corrente (self-service)
+class ChangeEmailRequest(BaseModel):
+    current_password: str
+    new_email: str
+
+
+@api_router.post("/auth/change-email")
+async def change_email(data: ChangeEmailRequest, current_user = Depends(get_current_user)):
+    """Cambia l'email dell'utente corrente. Richiede password per sicurezza.
+    Ammesso a tutti i ruoli. Verifica unicità (case-insensitive)."""
+    user = await db.users.find_one({"id": current_user["id"]})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+
+    # Verifica password (skip per athlete che spesso non ne ha una vera)
+    if current_user["role"] != "athlete":
+        if not verify_password(data.current_password, user["password_hash"]):
+            raise HTTPException(status_code=400, detail="Password non corretta")
+
+    new_email = (data.new_email or "").strip().lower()
+    if not new_email or "@" not in new_email or "." not in new_email:
+        raise HTTPException(status_code=400, detail="Email non valida")
+
+    if new_email == user.get("email", "").lower():
+        raise HTTPException(status_code=400, detail="La nuova email è uguale a quella attuale")
+
+    # Unicità case-insensitive
+    exists = await db.users.find_one({"email": {"$regex": f"^{re.escape(new_email)}$", "$options": "i"}})
+    if exists and exists.get("id") != current_user["id"]:
+        raise HTTPException(status_code=400, detail="Questa email è già usata da un altro account")
+
+    await db.users.update_one({"id": current_user["id"]}, {"$set": {"email": new_email}})
+    return {"message": "Email aggiornata con successo!", "email": new_email}
+
+
+# 🆕 17/07/2026 — Collega un atleta all'utente corrente come genitore (per dual-role staff↔genitore)
+class LinkParentRequest(BaseModel):
+    slot: Optional[str] = "primary"  # "primary" (parent_id) o "secondary" (second_parent_id)
+
+
+@api_router.post("/athletes/{athlete_id}/link-me-as-parent")
+async def link_me_as_parent(
+    athlete_id: str,
+    data: LinkParentRequest,
+    current_user = Depends(get_current_user),
+):
+    """Collega l'utente corrente come genitore di un atleta (Opzione A: sostituzione
+    secca del parent_id esistente se slot='primary'). Solo admin/dirigente/coordinatore
+    della stessa società, oppure l'utente stesso se è già un genitore.
+    """
+    ath = await db.athletes.find_one({"id": athlete_id})
+    if not ath:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+
+    # Autorizzazione: staff della stessa società
+    role = current_user.get("role")
+    staff_roles = {"admin", "viewer", "dirigente", "coordinatore", "coach", "collaboratore"}
+    if role not in staff_roles and role != "parent":
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    if current_user.get("society_id") != ath.get("society_id"):
+        raise HTTPException(status_code=403, detail="Atleta di un'altra società")
+
+    slot = "primary" if (data.slot or "primary").lower() != "secondary" else "secondary"
+    field = "parent_id" if slot == "primary" else "second_parent_id"
+
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {field: current_user["id"]}},
+    )
+    return {"message": "Collegamento genitore effettuato", "athlete_id": athlete_id, "slot": slot}
+
+
+@api_router.get("/users/me/parent-of")
+async def get_my_linked_athletes(current_user = Depends(get_current_user)):
+    """Ritorna gli atleti a cui l'utente corrente è collegato come genitore
+    (parent_id o second_parent_id). Serve al frontend per mostrare/nascondere
+    il pulsante 'Passa a Modalità Genitore'."""
+    uid = current_user["id"]
+    athletes = await db.athletes.find({
+        "$or": [{"parent_id": uid}, {"second_parent_id": uid}],
+        "society_id": current_user.get("society_id"),
+    }, {
+        "_id": 0, "id": 1, "first_name": 1, "last_name": 1,
+        "date_of_birth": 1, "team_id": 1, "team_name": 1,
+    }).to_list(50)
+    return {"count": len(athletes), "athletes": athletes}
+
 # ==================== SOCIETY SETTINGS ENDPOINTS ====================
 
 class SocietySettingsUpdate(BaseModel):
@@ -7762,8 +7851,25 @@ async def detach_parents(athlete_id: str, data: DetachParentsRequest, current_us
 
 @api_router.get("/athletes/my")
 async def get_my_athletes(current_user = Depends(get_current_user)):
-    if current_user["role"] == UserRole.PARENT:
-        # Include both primary and second parent
+    # 🆕 17/07/2026 — Dual-role: se staff-user è linkato come parent_id di almeno un
+    # atleta, ritorna SOLO i figli linkati (comportamento identico a parent). Serve per
+    # la modalità genitore accessibile da admin/dirigente/coordinatore/coach.
+    staff_roles = {UserRole.ADMIN, UserRole.VIEWER, "dirigente", UserRole.COORDINATORE, UserRole.COACH, "collaboratore"}
+    is_staff = current_user["role"] in staff_roles
+
+    # Prima verifica se lo user è genitore di qualche atleta
+    linked_count = 0
+    if is_staff:
+        linked_count = await db.athletes.count_documents({
+            "$or": [
+                {"parent_id": current_user["id"]},
+                {"second_parent_id": current_user["id"]},
+            ],
+            "society_id": current_user.get("society_id"),
+        })
+
+    if current_user["role"] == UserRole.PARENT or (is_staff and linked_count > 0):
+        # Modalità genitore: solo figli linkati
         athletes = await db.athletes.find({
             "$or": [
                 {"parent_id": current_user["id"]},
@@ -7771,7 +7877,7 @@ async def get_my_athletes(current_user = Depends(get_current_user)):
             ]
         }).to_list(1000)
     elif current_user["role"] in [UserRole.ADMIN, UserRole.COACH]:
-        # Multi-tenant: scope by society_id to avoid cross-tenant data leak.
+        # Admin/Coach senza figli linkati → visione generale (retrocompatibile)
         _sid = current_user.get("society_id")
         _q = {"society_id": _sid} if _sid else {}
         athletes = await db.athletes.find(_q).to_list(1000)
@@ -7780,8 +7886,8 @@ async def get_my_athletes(current_user = Depends(get_current_user)):
     
     clean_mongo_docs(athletes)
     
-    # For parent role, enrich with other parent info
-    if current_user["role"] == UserRole.PARENT:
+    # Arricchimento "altro genitore" per parent role E per staff-user in modalità genitore
+    if current_user["role"] == UserRole.PARENT or (is_staff and linked_count > 0):
         for athlete in athletes:
             other_parent_id = None
             if athlete.get("parent_id") == current_user["id"]:

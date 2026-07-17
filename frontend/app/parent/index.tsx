@@ -576,6 +576,25 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
             </View>
           </TouchableOpacity>
           <GuideButton role="parent" compact />
+          {/* 🆕 17/07/2026 — Se sei uno staff-user in modalità genitore, torna alla dashboard del tuo ruolo */}
+          {user && user.role !== 'parent' && (
+            <TouchableOpacity
+              onPress={() => {
+                const target = user.role === 'admin' ? '/admin' :
+                               user.role === 'coordinatore' ? '/coordinatore' :
+                               '/dirigente';
+                router.replace(target as any);
+              }}
+              data-testid="parent-back-to-staff-btn"
+              style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 16, padding: 6 }}
+            >
+              <Ionicons
+                name={user.role === 'admin' ? 'shield-checkmark' : user.role === 'coordinatore' ? 'school' : 'briefcase'}
+                size={20}
+                color="#fff"
+              />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={24} color="#fff" />
           </TouchableOpacity>
