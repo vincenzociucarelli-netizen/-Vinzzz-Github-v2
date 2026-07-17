@@ -1,6 +1,40 @@
 # RegistraTEAM — PRD & Stato
 
 
+## 🔐 17/07/2026 (v7.19 REFACTOR) — Dual-role Genitore: riuso infrastruttura "2° genitore" ✅
+
+**Contesto**: la mia prima implementazione (CF-check) era debole perché l'admin conosce già il CF dell'atleta. Vincenzo ha proposto un modello molto più solido riutilizzando il flusso "secondo genitore" già in produzione.
+
+**Nuovo flusso (2 casi)**:
+
+**CASO 1 — Atleta SENZA genitori linkati** (nessun `parent_id` né `second_parent_id`):
+- Auto-verifica: link diretto se
+  - (a) `athlete.created_by == current_user.id` (chi ha registrato è il genitore), OPPURE
+  - (b) il CF di `current_user` combacia con `parent_fiscal_code`/`mother_fiscal_code`/`father_fiscal_code` presenti sulla scheda atleta
+- Se nessun match → 403 "Contatta l'admin per collegarti manualmente"
+
+**CASO 2 — Atleta CON genitore(i) linkato(i)**:
+- Crea request in `parent_link_requests` collection (schema esistente: `{requester_id, requester_name, requester_email, athlete_id, athlete_name, approver_id, society_id, status, source, created_at}`)
+- Crea notifica in-app `type=parent_link_request` per il genitore linkato
+- Il genitore vede la richiesta nella sua dashboard esistente (`GET /parent-link/requests`) e risponde con `POST /parent-link/respond` (accept/reject) — **codice già in produzione**
+- Se accettato → l'utente viene aggiunto come `second_parent_id`
+
+**Sicurezza**:
+- No sovrascrittura mai del genitore principale
+- Se entrambi gli slot già occupati (≠ current_user) → 409
+- Audit log `parent_link_history` per ogni azione
+
+**Frontend**:
+- Bottone "Sono io il genitore" nella scheda atleta admin: singolo click con `window.confirm` (dichiarazione responsabilità), niente più CF prompt
+- Feedback dinamico: "Collegato" se Caso 1 successful, "Richiesta inviata" se Caso 2
+- Pill verde "Sei collegato" + pulsante rosso "Rimuovi collegamento" (già presente)
+
+**Endpoint duplicati rimossi**: no più `/parent-link-requests/incoming/approve/reject` fatti da me — tutto passa dai vecchi `/parent-link/requests` + `/parent-link/respond`.
+
+**Verifica live**: staff→link su atleta con parent → richiesta creata → notifica al parent → visibile via `/parent-link/requests`. Genitore può approvare via UI esistente. Zero regressioni.
+
+
+
 ## 🔐 17/07/2026 (v7.19) — Sicurezza dual-role Genitore: tripla verifica + rimozione ✅
 
 **Sintomo utente (Vincenzo, PPG)**: si è collegato "come genitore" di Prati Federica con un click → collegamento immediato senza verifica → rischio giuridico serio.

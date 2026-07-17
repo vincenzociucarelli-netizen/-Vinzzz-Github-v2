@@ -2764,33 +2764,27 @@ export default function AdminAthleteDetail() {
                     <Text style={styles.label}>Tel. Padre</Text>
                     <Text style={styles.value}>{athlete.phone_father || '-'}</Text>
                   </View>
-                  {/* 🆕 17/07/2026 — Link "Sono io il genitore" per staff che sono genitori reali dell'atleta */}
-                  {/* 🔐 17/07/2026 — TRIPLA SICUREZZA: richiede CF atleta (verifica identità),
-                      audit log su parent_link_history, no sovrascrittura parent_id principale */}
+                  {/* 🔐 17/07/2026 (v3) — Nuovo flusso "Sono io il genitore":
+                      CASO 1 (atleta senza genitori linkati): auto-verify via created_by o CF-match → link diretto
+                      CASO 2 (con genitori linkati): richiesta pending, approvazione obbligatoria dal genitore */}
                   {currentUser && ['admin','viewer','dirigente','coordinatore'].includes(currentUser.role) &&
                     (athlete as any).parent_id !== currentUser.id && (athlete as any).second_parent_id !== currentUser.id && (
                       <TouchableOpacity
                         onPress={() => {
-                          // Web-only: uso window.prompt per chiedere il CF (mobile: cambierei con modale)
-                          if (typeof window === 'undefined' || !(window as any).prompt) {
-                            Alert.alert('Non disponibile', 'Usa la versione web per collegarti come genitore.');
-                            return;
-                          }
-                          const cf = (window as any).prompt(
-                            'SICUREZZA: per collegarti come genitore di ' + (athlete.first_name || '') + ' ' + (athlete.last_name || '') +
-                            ', inserisci il CODICE FISCALE dell\'atleta.\n\nATTENZIONE: dichiaro sotto la mia responsabilità di essere realmente il genitore o esercente la patria potestà. Ogni azione è registrata a scopo di audit.'
-                          );
-                          if (!cf || !cf.trim()) return;
+                          const confirmMsg = 'Confermo di essere il genitore o esercente la patria potestà di ' + (athlete.first_name || '') + ' ' + (athlete.last_name || '') + '.\n\nSe la scheda ha già un genitore registrato, la tua richiesta sarà inviata al genitore attuale per approvazione.';
+                          const ok = typeof window !== 'undefined' && (window as any).confirm ? (window as any).confirm(confirmMsg) : true;
+                          if (!ok) return;
                           (async () => {
                             try {
-                              await api.post(`/athletes/${athlete.id}/link-me-as-parent`, {
-                                slot: 'primary',
-                                athlete_fiscal_code: cf.trim().toUpperCase(),
-                              });
-                              Alert.alert('Fatto', `Sei stato collegato come genitore di ${athlete.first_name} ${athlete.last_name}. Nella dashboard vedrai la card "Passa a Modalità Genitore".`);
+                              const r = await api.post(`/athletes/${athlete.id}/link-me-as-parent`, {});
+                              if (r.data?.status === 'linked') {
+                                Alert.alert('Collegato', 'Sei ora collegato come genitore di questo atleta.');
+                              } else if (r.data?.status === 'pending') {
+                                Alert.alert('Richiesta inviata', r.data?.message || 'Richiesta inviata al genitore attuale. Sarai collegato dopo la sua approvazione.');
+                              }
                               loadData();
                             } catch (e: any) {
-                              Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile collegare');
+                              Alert.alert('Non autorizzato', e?.response?.data?.detail || 'Impossibile collegarti come genitore');
                             }
                           })();
                         }}
@@ -2808,7 +2802,7 @@ export default function AdminAthleteDetail() {
                             Sono io il genitore di questo atleta
                           </Text>
                           <Text style={{ fontSize: 11, color: '#6B46C1', marginTop: 2 }}>
-                            Richiederà il codice fiscale dell&apos;atleta per verifica
+                            Se l&apos;atleta ha già un genitore, la richiesta gli verrà inviata per approvazione
                           </Text>
                         </View>
                       </TouchableOpacity>

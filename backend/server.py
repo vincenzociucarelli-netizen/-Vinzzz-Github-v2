@@ -4680,25 +4680,22 @@ async def change_email(data: ChangeEmailRequest, current_user = Depends(get_curr
 
 # 🆕 17/07/2026 — Collega un atleta all'utente corrente come genitore (per dual-role staff↔genitore)
 class LinkParentRequest(BaseModel):
-    slot: Optional[str] = "primary"  # "primary" (parent_id) o "secondary" (second_parent_id)
-    # 🔐 17/07/2026 (sicurezza): verifica CF atleta prima del collegamento.
-    # Prova che l'utente conosce dati anagrafici sensibili → è verosimilmente
-    # il genitore reale, non un impostore.
-    athlete_fiscal_code: Optional[str] = None
+    slot: Optional[str] = "primary"  # legacy — mantenuto per compatibilità admin unlink
 
 
 @api_router.post("/athletes/{athlete_id}/link-me-as-parent")
 async def link_me_as_parent(
     athlete_id: str,
-    data: LinkParentRequest,
     current_user = Depends(get_current_user),
 ):
-    """Collega l'utente corrente come genitore di un atleta con TRIPLA sicurezza:
-    1. Solo staff/parent della stessa società (multi-tenancy)
-    2. DEVE fornire il codice fiscale dell'atleta (verifica identità)
-    3. NON può sovrascrivere il parent_id principale se già valorizzato ≠ current_user
-       (diventa automaticamente second_parent_id se lo slot primary è occupato)
-    Audit log in `parent_link_history` per tracciabilità giuridica.
+    """🔐 17/07/2026 (v3) — Collegamento genitore con logica anti-frode:
+    - CASO 1 (atleta senza genitori linkati): auto-verifica → link diretto se
+        (a) l'utente ha creato la scheda atleta (created_by == me), OPPURE
+        (b) il CF dell'utente combacia con parent_fiscal_code / mother_fiscal_code / father_fiscal_code dell'atleta
+    - CASO 2 (almeno un genitore linkato): crea richiesta pending, invia email
+        al/i genitore/i linkato/i + notifica in-app. L'utente viene collegato
+        SOLO dopo approvazione esplicita.
+    Sempre: audit log in parent_link_history.
     """
     ath = await db.athletes.find_one({"id": athlete_id})
     if not ath:
@@ -4711,85 +4708,146 @@ async def link_me_as_parent(
     if current_user.get("society_id") != ath.get("society_id"):
         raise HTTPException(status_code=403, detail="Atleta di un'altra società")
 
-    # 🔐 Verifica CF atleta obbligatoria
-    provided_cf = (data.athlete_fiscal_code or "").strip().upper()
-    real_cf = (ath.get("fiscal_code") or "").strip().upper()
-    if not real_cf:
-        raise HTTPException(
-            status_code=400,
-            detail="Impossibile verificare: l'atleta non ha un codice fiscale registrato. Contatta l'admin per procedere.",
-        )
-    if not provided_cf:
-        raise HTTPException(
-            status_code=400,
-            detail="Codice fiscale dell'atleta obbligatorio per collegarti come genitore.",
-        )
-    if provided_cf != real_cf:
-        # Log tentativo fallito per audit
-        try:
-            await db.parent_link_history.insert_one({
-                "action": "link_attempt_failed_cf_mismatch",
-                "athlete_id": athlete_id,
-                "user_id": current_user["id"],
-                "user_email": current_user.get("email"),
-                "provided_cf_last4": provided_cf[-4:] if len(provided_cf) >= 4 else "?",
-                "timestamp": datetime.now(timezone.utc),
-            })
-        except Exception:
-            pass
-        raise HTTPException(
-            status_code=403,
-            detail="Codice fiscale non corrispondente. Se ritieni che ci sia un errore, contatta l'admin della società.",
-        )
-
-    # 🔐 Regole slot
-    requested_slot = (data.slot or "primary").lower()
-    if requested_slot not in ("primary", "secondary"):
-        raise HTTPException(status_code=400, detail="Slot non valido — usa 'primary' o 'secondary'")
-
+    uid = current_user["id"]
     current_primary = ath.get("parent_id")
     current_secondary = ath.get("second_parent_id")
-    uid = current_user["id"]
 
-    if requested_slot == "primary":
-        if current_primary and current_primary != uid:
-            # Non sovrascrivere il genitore principale esistente. Fallback a secondary
-            # se libero, altrimenti errore.
-            if current_secondary and current_secondary != uid:
-                raise HTTPException(
-                    status_code=409,
-                    detail="Questo atleta ha già entrambi i genitori registrati. Chiedi all'admin di scollegare uno slot prima.",
-                )
-            actual_slot = "secondary"
+    if current_primary == uid or current_secondary == uid:
+        raise HTTPException(status_code=400, detail="Sei già collegato a questo atleta")
+
+    # === CASO 1: nessun genitore linkato → verifica automatica ===
+    if not current_primary and not current_secondary:
+        # Recupera CF dell'utente corrente
+        user_doc = await db.users.find_one({"id": uid}, {"fiscal_code": 1, "email": 1})
+        user_cf = (user_doc.get("fiscal_code") or "").strip().upper() if user_doc else ""
+
+        # Match a) creato da me
+        created_by_me = (ath.get("created_by") == uid)
+        # Match b) CF combacia con uno dei genitori registrati sulla scheda
+        athlete_parent_cfs = [
+            (ath.get("parent_fiscal_code") or "").strip().upper(),
+            (ath.get("mother_fiscal_code") or "").strip().upper(),
+            (ath.get("father_fiscal_code") or "").strip().upper(),
+        ]
+        cf_match = bool(user_cf) and user_cf in [x for x in athlete_parent_cfs if x]
+
+        if created_by_me or cf_match:
+            # Auto-link come parent_id
+            await db.athletes.update_one({"id": athlete_id}, {"$set": {"parent_id": uid}})
+            try:
+                await db.parent_link_history.insert_one({
+                    "action": "link_auto_case1",
+                    "athlete_id": athlete_id,
+                    "user_id": uid,
+                    "user_email": current_user.get("email"),
+                    "user_role": role,
+                    "slot": "primary",
+                    "verification": "created_by" if created_by_me else "cf_match",
+                    "timestamp": datetime.now(timezone.utc),
+                })
+            except Exception:
+                pass
+            return {"status": "linked", "slot": "primary", "message": "Collegato come genitore (verifica automatica riuscita)"}
         else:
-            actual_slot = "primary"
-    else:  # requested secondary
-        if current_secondary and current_secondary != uid:
-            if current_primary and current_primary != uid:
-                raise HTTPException(status_code=409, detail="Entrambi gli slot sono già occupati")
-            actual_slot = "primary"
-        else:
-            actual_slot = "secondary"
+            try:
+                await db.parent_link_history.insert_one({
+                    "action": "link_auto_case1_failed",
+                    "athlete_id": athlete_id,
+                    "user_id": uid,
+                    "user_email": current_user.get("email"),
+                    "timestamp": datetime.now(timezone.utc),
+                })
+            except Exception:
+                pass
+            raise HTTPException(
+                status_code=403,
+                detail="Impossibile verificarti come registrante di questo atleta. Contatta l'admin della società per collegarti manualmente.",
+            )
 
-    field = "parent_id" if actual_slot == "primary" else "second_parent_id"
-    await db.athletes.update_one({"id": athlete_id}, {"$set": {field: uid}})
+    # === CASO 2: almeno un genitore linkato → richiesta di approvazione ===
+    # Riuso l'infrastruttura esistente `parent_link_requests` (schema: requester_id, approver_id, ...)
+    # Il genitore già linkato userà la sua dashboard /parent con /parent-link/requests + /parent-link/respond.
+    approver_id = None
+    if current_primary and current_primary != uid:
+        approver_id = current_primary
+    elif current_secondary and current_secondary != uid:
+        approver_id = current_secondary
+    if not approver_id:
+        raise HTTPException(status_code=409, detail="Impossibile determinare il genitore da notificare")
 
-    # 🔐 Audit log
+    # Verifica no duplicati
+    existing = await db.parent_link_requests.find_one({
+        "athlete_id": athlete_id,
+        "requester_id": uid,
+        "status": "pending",
+    })
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail="Hai già una richiesta in sospeso per questo atleta.",
+        )
+
+    if current_primary and current_secondary and current_primary != uid and current_secondary != uid:
+        raise HTTPException(
+            status_code=409,
+            detail="Entrambi gli slot genitore sono già occupati.",
+        )
+
+    now_utc = datetime.now(timezone.utc)
+    athlete_name = f"{ath.get('last_name','')} {ath.get('first_name','')}".strip().upper()
+    request_doc = {
+        "id": str(uuid.uuid4()),
+        "requester_id": uid,
+        "requester_name": current_user.get("full_name", ""),
+        "requester_email": current_user.get("email", ""),
+        "athlete_id": athlete_id,
+        "athlete_name": athlete_name,
+        "approver_id": approver_id,
+        "society_id": ath.get("society_id", ""),
+        "status": "pending",
+        "source": "staff_self_link",  # 🆕 differenzia da athlete_registration
+        "created_at": now_utc.isoformat(),
+    }
+    await db.parent_link_requests.insert_one(request_doc)
+
+    # Notifica in-app (stesso formato del flusso esistente)
+    try:
+        await db.notifications.insert_one({
+            "id": str(uuid.uuid4()),
+            "user_id": approver_id,
+            "type": "parent_link_request",
+            "title": "Richiesta collegamento genitore",
+            "message": f"{current_user.get('full_name','')} chiede di essere collegato/a come co-genitore di {athlete_name}. Accetta o rifiuta dalla tua dashboard.",
+            "read": False,
+            "created_at": now_utc.isoformat(),
+            "data": {
+                "athlete_id": athlete_id,
+                "athlete_name": athlete_name,
+                "requester_name": current_user.get("full_name", ""),
+            },
+        })
+    except Exception as _e:
+        logging.warning(f"[parent_link] notify failed: {_e}")
+
     try:
         await db.parent_link_history.insert_one({
-            "action": "link",
+            "action": "link_request_created",
             "athlete_id": athlete_id,
             "user_id": uid,
             "user_email": current_user.get("email"),
             "user_role": role,
-            "slot": actual_slot,
-            "cf_verified": True,
-            "timestamp": datetime.now(timezone.utc),
+            "approver_id": approver_id,
+            "request_id": request_doc["id"],
+            "timestamp": now_utc,
         })
     except Exception:
         pass
 
-    return {"message": "Collegamento genitore effettuato", "athlete_id": athlete_id, "slot": actual_slot}
+    return {
+        "status": "pending",
+        "message": "Richiesta inviata al genitore attualmente collegato. Sarai collegato solo dopo la sua approvazione.",
+        "request_id": request_doc["id"],
+    }
 
 
 @api_router.delete("/athletes/{athlete_id}/unlink-me-as-parent")
