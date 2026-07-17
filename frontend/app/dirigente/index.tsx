@@ -340,6 +340,26 @@ export default function DirigenteIndex() {
           </TouchableOpacity>
         )}
 
+        {/* 🆕 26/07/2026 — CTA "I miei figli" quando non hai figli linkati */}
+        {linkedAthletesCount === 0 && (
+          <TouchableOpacity
+            style={[styles.adminSwitchCard, { borderColor: '#8E24AA', backgroundColor: '#FAF3FB' }]}
+            onPress={() => router.push('/staff/link-or-register-child')}
+            data-testid="dirigente-link-child-cta"
+          >
+            <View style={[styles.adminSwitchIcon, { backgroundColor: '#E1BEE7' }]}>
+              <Ionicons name="add-circle" size={24} color="#8E24AA" />
+            </View>
+            <View style={styles.adminSwitchInfo}>
+              <Text style={[styles.adminSwitchTitle, { color: '#4A148C' }]}>Sei anche genitore?</Text>
+              <Text style={styles.adminSwitchDescription}>
+                Collega o iscrivi tuo/a figlio/a in questa società
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="#8E24AA" />
+          </TouchableOpacity>
+        )}
+
         {/* 🆕 23/02/2026 — Tab bar spostata FUORI dalla ScrollView (sticky in cima) */}
 
         {/* Impegni del dirigente (riusa AdminCoachCommitments senza userId = current user) */}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../../src/services/api';
@@ -8,12 +8,14 @@ import api from '../../../src/services/api';
  * Pagina di conferma dopo il return dallo Stripe Checkout.
  * Il webhook aggiorna la rata a paid=true; questa pagina fa un doppio-controllo
  * client-side (in caso il webhook tardi) e mostra la conferma.
+ * 🆕 26/07/2026 — Bottone "Scarica scontrino" stile Nexi appena il pagamento è confermato.
  */
 export default function PaymentSuccessPage() {
   const params = useLocalSearchParams<{ session_id?: string; payment_id?: string }>();
   const router = useRouter();
   const [status, setStatus] = useState<'checking' | 'paid' | 'pending' | 'error'>('checking');
   const [attempts, setAttempts] = useState(0);
+  const [openingReceipt, setOpeningReceipt] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,6 +46,39 @@ export default function PaymentSuccessPage() {
     return () => { cancelled = true; };
   }, [params.payment_id, params.session_id, attempts]);
 
+  const openReceipt = async () => {
+    if (!params.payment_id) return;
+    setOpeningReceipt(true);
+    try {
+      // Recupera l'HTML dello scontrino con il token nell'header via api client
+      const res = await api.get(`/payments/${params.payment_id}/receipt`, {
+        responseType: 'text',
+        transformResponse: [(d: any) => d],
+      });
+      const html = typeof res.data === 'string' ? res.data : String(res.data);
+      if (Platform.OS === 'web') {
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const win = window.open(url, '_blank');
+        if (!win) {
+          // Popup bloccato — fallback: download link
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `scontrino_${params.payment_id}.html`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      }
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail || 'Impossibile aprire lo scontrino';
+      if (Platform.OS === 'web') window.alert(msg);
+    } finally {
+      setOpeningReceipt(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.card}>
@@ -60,8 +95,24 @@ export default function PaymentSuccessPage() {
             </View>
             <Text style={styles.title} data-testid="payment-success-title">Pagamento effettuato!</Text>
             <Text style={styles.subtitle}>
-              La tua rata è stata registrata. Riceverai a breve la ricevuta via email.
+              La tua rata è stata registrata. Scarica lo scontrino per il tuo archivio.
             </Text>
+
+            <TouchableOpacity
+              style={[styles.receiptBtn, openingReceipt && { opacity: 0.6 }]}
+              onPress={openReceipt}
+              disabled={openingReceipt}
+              data-testid="download-receipt-btn"
+            >
+              {openingReceipt ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="receipt" size={18} color="#fff" />
+                  <Text style={styles.receiptBtnText}>Scarica scontrino</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </>
         ) : status === 'pending' ? (
           <>
@@ -105,4 +156,9 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, color: '#666', textAlign: 'center', lineHeight: 20 },
   btn: { marginTop: 8, backgroundColor: '#635BFF', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 20 },
   btnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  receiptBtn: {
+    marginTop: 4, backgroundColor: '#2E7D32', borderRadius: 10, paddingVertical: 12, paddingHorizontal: 20,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+  },
+  receiptBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
 });

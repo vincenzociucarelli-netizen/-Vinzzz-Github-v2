@@ -485,6 +485,16 @@ export default function AdminDashboard() {
                   <Ionicons name="people" size={16} color="#8E24AA" />
                 </TouchableOpacity>
               )}
+              {/* 🆕 26/07/2026 — Se admin NON è parent di nessun atleta, mostra bottone "aggiungi figlio" */}
+              {linkedAthletesCount === 0 && (
+                <TouchableOpacity
+                  onPress={() => router.push('/staff/link-or-register-child')}
+                  style={[styles.headerIconBtn, { backgroundColor: '#FAF3FB' }]}
+                  data-testid="admin-link-child-cta-btn"
+                >
+                  <Ionicons name="person-add" size={16} color="#8E24AA" />
+                </TouchableOpacity>
+              )}
               {/* Settings button */}
               <TouchableOpacity onPress={() => router.push('/admin/settings')} style={styles.headerIconBtn}>
                 <Text style={{ fontSize: 17 }}>{Icons.settings}</Text>

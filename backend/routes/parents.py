@@ -283,9 +283,12 @@ async def get_parent_commitments(current_user = Depends(get_current_user)):
 
 @router.post("/parent-link/search")
 async def search_athlete_for_link(data: dict, current_user = Depends(get_current_user)):
-    """Search athlete by name for parent linking. Only for parents."""
-    if current_user["role"] != UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Solo genitori possono cercare atleti da collegare")
+    """🆕 26/07/2026 (v2) — Cerca atleti per collegamento genitore.
+    Aperto a tutti i ruoli autenticati (parent + staff dual-role). Isolato per società."""
+    # Solo utenti con società valida (esclude atleti anonimi/lite)
+    allowed_roles = {"parent", "admin", "viewer", "dirigente", "coordinatore", "coach", "collaboratore"}
+    if current_user["role"] not in allowed_roles:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     
     cognome = (data.get("cognome") or "").strip()
     nome = (data.get("nome") or "").strip()
@@ -352,9 +355,12 @@ async def search_athlete_for_link(data: dict, current_user = Depends(get_current
 
 @router.post("/parent-link/request")
 async def request_parent_link(data: dict, current_user = Depends(get_current_user)):
-    """Request to be linked as second parent to an athlete."""
-    if current_user["role"] != UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Solo genitori")
+    """🆕 26/07/2026 (v2) — Richiesta collegamento come genitore.
+    Aperto a parent + staff (dual-role). L'atleta senza parent_id viene linkato
+    direttamente; se ha già un genitore, viene creata una richiesta di approvazione."""
+    allowed_roles = {"parent", "admin", "viewer", "dirigente", "coordinatore", "coach", "collaboratore"}
+    if current_user["role"] not in allowed_roles:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     
     athlete_id = data.get("athlete_id")
     if not athlete_id:

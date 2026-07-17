@@ -456,3 +456,249 @@ async def get_stripe_public_status(current_user=Depends(get_current_user)):
         return {"stripe_enabled": False}
     s = await db.settings.find_one({"type": "stripe", "society_id": sid})
     return {"stripe_enabled": bool(s and s.get("stripe_enabled"))}
+
+
+# ============================================================================
+# 🆕 26/07/2026 — SCONTRINO STIPE (stile Nexi)
+# ============================================================================
+
+def _build_nexi_style_receipt_html(
+    society: dict,
+    athlete: dict,
+    payment: dict,
+    card_last4: Optional[str] = None,
+    card_brand: Optional[str] = None,
+    receipt_number: str = "",
+) -> str:
+    """Genera HTML della ricevuta pagamento stile Nexi.
+    Aperto in nuova tab dal frontend, l'utente può stampare/salvare come PDF."""
+    society_name = (society.get("ragione_sociale") or society.get("society_name") or society.get("name") or "Società Sportiva").upper()
+    society_logo = society.get("logo") or society.get("company_logo_base64") or ""
+    if society_logo and not society_logo.startswith("data:"):
+        society_logo = f"data:image/png;base64,{society_logo}"
+
+    athlete_name = f"{athlete.get('last_name','')} {athlete.get('first_name','')}".strip()
+
+    amount = float(payment.get("amount", 0) or 0)
+    paid_date = payment.get("paid_date")
+    if isinstance(paid_date, datetime):
+        date_str = paid_date.strftime("%d %B %Y, %H:%M")
+    elif isinstance(paid_date, str):
+        try:
+            dt = datetime.fromisoformat(paid_date.replace("Z", "+00:00"))
+            date_str = dt.strftime("%d %B %Y, %H:%M")
+        except Exception:
+            date_str = paid_date
+    else:
+        date_str = datetime.now(timezone.utc).strftime("%d %B %Y, %H:%M")
+
+    session_id = payment.get("stripe_session_id") or ""
+    payment_intent = payment.get("stripe_payment_intent") or ""
+    codice_aut = payment_intent[-8:].upper() if payment_intent else session_id[-8:].upper() if session_id else "-"
+    card_display = f"**********{card_last4}" if card_last4 else "**********"
+    card_brand_label = (card_brand or "carta").upper()
+
+    # Numero ricevuta: last 6 di payment_id, uppercase
+    if not receipt_number:
+        pid = payment.get("id", "") or ""
+        receipt_number = pid[-6:].upper() if len(pid) >= 6 else pid.upper()
+
+    society_fc = society.get("fiscal_code") or society.get("company_tax_code") or ""
+    society_addr_parts = [society.get("address") or "", society.get("city") or "", (f"({society.get('province')})" if society.get("province") else "")]
+    society_addr = " ".join([p for p in society_addr_parts if p])
+
+    return f"""<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ricevuta pagamento — {society_name}</title>
+  <style>
+    @page {{ size: A4; margin: 20mm; }}
+    * {{ box-sizing: border-box; -webkit-font-smoothing: antialiased; }}
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0; padding: 24px 12px;
+      background: #F5F7FA; color: #333;
+    }}
+    .wrap {{ max-width: 360px; margin: 0 auto; }}
+    .logo-hdr {{
+      text-align: center; margin-bottom: 18px;
+    }}
+    .logo-hdr img {{ max-width: 140px; max-height: 60px; object-fit: contain; }}
+    .logo-hdr .brand {{
+      font-size: 22px; font-weight: 800; color: #1a4b8f; letter-spacing: -0.5px;
+    }}
+    .receipt {{
+      background: #fff; border-radius: 16px; padding: 24px 22px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      border: 1px solid #EAEDF2;
+    }}
+    .intro {{
+      font-size: 13px; color: #666; margin: 0 0 6px 0; line-height: 1.4;
+    }}
+    .society-name {{
+      font-size: 15px; font-weight: 700; color: #222; margin-bottom: 18px; text-transform: uppercase;
+    }}
+    .divider {{ height: 1px; background: #EAEDF2; margin: 14px 0; }}
+    .label-amount {{ font-size: 13px; color: #666; margin-bottom: 4px; }}
+    .amount {{
+      font-size: 30px; font-weight: 800; color: #111; margin: 0 0 6px 0; letter-spacing: -0.5px;
+    }}
+    .date {{ font-size: 12px; color: #999; }}
+    .row {{ margin: 10px 0; }}
+    .row .k {{ font-size: 12px; font-weight: 700; color: #333; margin-bottom: 2px; }}
+    .row .v {{ font-size: 13px; color: #444; font-family: "SF Mono", "Roboto Mono", monospace; letter-spacing: 0.3px; }}
+    .status {{
+      font-size: 13px; font-weight: 700; color: #2E7D32; margin: 10px 0 4px 0;
+    }}
+    .card-line {{
+      font-size: 14px; color: #333; font-family: "SF Mono", "Roboto Mono", monospace; margin-bottom: 8px;
+    }}
+    .aut {{ font-size: 12px; color: #333; }}
+    .aut .k {{ font-weight: 700; }}
+    .footer-note {{
+      font-size: 11px; color: #999; text-align: center; margin-top: 16px; line-height: 1.5;
+    }}
+    .powered {{
+      text-align: center; font-size: 10px; color: #bbb; margin-top: 18px;
+    }}
+    .actions {{ text-align: center; margin: 18px 0 8px 0; }}
+    .btn {{
+      display: inline-block; padding: 10px 18px; border-radius: 8px;
+      background: #635BFF; color: #fff; text-decoration: none; font-weight: 700;
+      font-size: 13px; letter-spacing: 0.3px;
+    }}
+    @media print {{
+      body {{ background: #fff; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
+      .actions {{ display: none; }}
+    }}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo-hdr">
+      {'<img src="' + society_logo + '" alt="logo" />' if society_logo else f'<div class="brand">{society_name}</div>'}
+    </div>
+
+    <div class="receipt">
+      <p class="intro">Questa è la ricevuta del tuo pagamento presso:</p>
+      <div class="society-name">{society_name}</div>
+
+      <div class="divider"></div>
+
+      <div class="label-amount">Importo totale:</div>
+      <div class="amount">€ {amount:,.2f}</div>
+      <div class="date">{date_str}</div>
+
+      <div class="divider"></div>
+
+      <div class="row">
+        <div class="k">Atleta</div>
+        <div class="v">{athlete_name or '-'}</div>
+      </div>
+      <div class="row">
+        <div class="k">Descrizione</div>
+        <div class="v">{payment.get('description') or payment.get('installment_name') or 'Rata iscrizione'}</div>
+      </div>
+      <div class="row">
+        <div class="k">Numero ricevuta</div>
+        <div class="v">{receipt_number or '-'}</div>
+      </div>
+      <div class="row">
+        <div class="k">ID Transazione</div>
+        <div class="v">{(payment_intent or session_id or '-')[:24]}</div>
+      </div>
+      {f'<div class="row"><div class="k">C.F. Società</div><div class="v">{society_fc}</div></div>' if society_fc else ''}
+
+      <div class="divider"></div>
+
+      <div class="status">✓ Transazione autorizzata</div>
+      <div class="card-line">{card_display}{f' — {card_brand_label}' if card_last4 else ''}</div>
+
+      <div class="aut">
+        <span class="k">Codice AUT:</span> {codice_aut}
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="footer-note">
+        Ti consigliamo di conservare nel tuo archivio<br/>
+        una copia della ricevuta.
+      </div>
+    </div>
+
+    <div class="actions">
+      <a href="javascript:window.print()" class="btn">🖨 Stampa / Salva come PDF</a>
+    </div>
+
+    <div class="powered">Pagamento elaborato in sicurezza tramite Stripe · {society_addr or society_name}</div>
+  </div>
+</body>
+</html>
+"""
+
+
+@router.get("/payments/{payment_id}/receipt", include_in_schema=True)
+async def get_payment_receipt_html(payment_id: str, current_user=Depends(get_current_user)):
+    """Ritorna HTML della ricevuta stile Nexi per una rata pagata via Stripe.
+    L'utente può stamparla come PDF tramite il bottone integrato."""
+    from fastapi.responses import HTMLResponse
+
+    payment = await db.payments.find_one({"id": payment_id})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Rata non trovata")
+    if not payment.get("paid"):
+        raise HTTPException(status_code=400, detail="Rata non ancora pagata")
+
+    athlete = await db.athletes.find_one({"id": payment["athlete_id"]})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+
+    society_id = athlete.get("society_id")
+    # Autorizzazione: admin società, o genitore linkato, o atleta stesso
+    role = current_user.get("role")
+    ok = False
+    if role in ("admin", "viewer") and current_user.get("society_id") == society_id:
+        ok = True
+    elif role == "parent" and current_user["id"] in [athlete.get("parent_id"), athlete.get("second_parent_id")]:
+        ok = True
+    elif role == "athlete" and (athlete.get("id") == current_user.get("id") or current_user.get("fiscal_code") == athlete.get("fiscal_code")):
+        ok = True
+    if not ok:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+
+    # Società (settings profilo, non stripe)
+    society_settings = await db.settings.find_one({"type": "society", "society_id": society_id}) or {}
+
+    # Card last4 / brand: prova a recuperare da Stripe se abbiamo il payment_intent
+    card_last4 = None
+    card_brand = None
+    if payment.get("stripe_payment_intent") and payment.get("payment_method") == "stripe":
+        stripe_settings = await db.settings.find_one({"type": "stripe", "society_id": society_id})
+        if stripe_settings and stripe_settings.get("stripe_secret_key"):
+            try:
+                pi = stripe.PaymentIntent.retrieve(
+                    payment["stripe_payment_intent"],
+                    api_key=stripe_settings["stripe_secret_key"],
+                    expand=["latest_charge.payment_method_details"],
+                )
+                charge = pi.get("latest_charge") if isinstance(pi, dict) else pi.latest_charge
+                if charge:
+                    pmd = charge.get("payment_method_details") if isinstance(charge, dict) else charge.payment_method_details
+                    if pmd:
+                        card = pmd.get("card") if isinstance(pmd, dict) else pmd.card
+                        if card:
+                            card_last4 = card.get("last4") if isinstance(card, dict) else card.last4
+                            card_brand = card.get("brand") if isinstance(card, dict) else card.brand
+            except Exception:
+                pass  # non-blocking
+
+    html = _build_nexi_style_receipt_html(
+        society=society_settings,
+        athlete=athlete,
+        payment=payment,
+        card_last4=card_last4,
+        card_brand=card_brand,
+    )
+    return HTMLResponse(content=html, status_code=200)

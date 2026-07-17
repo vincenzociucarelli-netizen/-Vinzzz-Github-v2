@@ -8082,6 +8082,198 @@ async def create_minor_athlete(data: MinorAthleteCreate, current_user = Depends(
         "parent_existed": parent_user is not None if parent_user else False,
     }
 
+
+# ============================================================================
+# 🆕 26/07/2026 — REGISTRA UN MIO FIGLIO (Dual-role Staff → Genitore)
+# ============================================================================
+
+class MyChildCreate(BaseModel):
+    first_name: str
+    last_name: str
+    date_of_birth: str  # YYYY-MM-DD
+    fiscal_code: Optional[str] = None
+    birth_place: Optional[str] = None
+    birth_province: Optional[str] = None
+    country_of_birth: Optional[str] = None
+    gender: Optional[str] = None  # M or F
+    phone: Optional[str] = None
+    email: Optional[str] = None  # per atleta maggiorenne
+    address: Optional[str] = None
+    postal_code: Optional[str] = None
+    city: Optional[str] = None
+    province: Optional[str] = None
+    team_id: Optional[str] = None
+    data_password: Optional[str] = None  # obbligatoria se minore
+    second_parent_email: Optional[str] = None
+    parent_role: Optional[str] = "father"  # "father" | "mother" — dove salvare il tuo CF
+
+
+@api_router.post("/athletes/register-my-child")
+async def register_my_child(data: MyChildCreate, current_user = Depends(get_current_user)):
+    """🆕 26/07/2026 — Endpoint dedicato al dual-role Staff/Genitore.
+    Permette a qualsiasi utente autenticato di registrare un proprio figlio
+    (minore o maggiorenne) collegandolo automaticamente come parent_id = current_user.
+    - created_by = current_user (per CASO 1 auto-verifica futura)
+    - Se già esiste un atleta con lo stesso CF nella società → 409 con hint
+    - Se minore, data_password obbligatoria
+    - Il CF del richiedente viene salvato in father_fiscal_code o mother_fiscal_code
+      in base a `parent_role`, così le future verifiche automatiche lo trovano.
+    """
+    allowed_roles = {"parent", "admin", "viewer", "dirigente", "coordinatore", "coach", "collaboratore"}
+    if current_user["role"] not in allowed_roles:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+
+    user_doc = await db.users.find_one({"id": current_user["id"]})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    society_id = user_doc.get("society_id")
+    if not society_id:
+        raise HTTPException(status_code=400, detail="Nessuna società associata al tuo account")
+
+    # Parse & validate DOB
+    try:
+        dob = datetime.fromisoformat(data.date_of_birth)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Data di nascita non valida (usa YYYY-MM-DD)")
+    age = (datetime.utcnow() - dob).days // 365
+    is_minor = age < 18
+
+    if is_minor and not data.data_password:
+        raise HTTPException(status_code=400, detail="La password di protezione dati è obbligatoria per gli atleti minorenni")
+
+    # Team check (opzionale)
+    team = None
+    if data.team_id:
+        team = await db.teams.find_one({"id": data.team_id})
+        if not team or team.get("society_id") != society_id:
+            raise HTTPException(status_code=404, detail="Squadra non trovata")
+
+    # Duplicate check by fiscal_code
+    if data.fiscal_code:
+        cf_clean = data.fiscal_code.strip().upper()
+        existing = await db.athletes.find_one({
+            "society_id": society_id,
+            "fiscal_code": {"$regex": f"^{cf_clean}$", "$options": "i"},
+            "is_withdrawn": {"$ne": True},
+        })
+        if existing:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Esiste già un atleta con questo CF nella società ({existing.get('first_name','')} {existing.get('last_name','')}). Usa 'Ho già un figlio iscritto' per collegarti.",
+            )
+
+    athlete_id = str(ObjectId())
+    qr_id = await resolve_athlete_code_for_cf(data.fiscal_code)
+    qr_code = generate_qr_code_from_identifier(qr_id)
+
+    # Salva il CF del richiedente nel campo corretto in base a parent_role
+    user_cf = (user_doc.get("fiscal_code") or "").strip().upper()
+    parent_cf_field = "father_fiscal_code" if (data.parent_role or "father").lower() == "father" else "mother_fiscal_code"
+    parent_email_field = "father_email" if parent_cf_field == "father_fiscal_code" else "mother_email"
+
+    athlete_dict = {
+        "id": athlete_id,
+        "parent_id": current_user["id"],  # 🔗 auto-link
+        "created_by": current_user["id"],  # 🔒 per future CASO 1 verifiche
+        "society_id": society_id,
+        "athlete_code": qr_id,
+        "full_name": f"{data.first_name} {data.last_name}",
+        "first_name": data.first_name,
+        "last_name": data.last_name,
+        "date_of_birth": dob,
+        "is_minor": is_minor,
+        "fiscal_code": data.fiscal_code.strip().upper() if data.fiscal_code else None,
+        "birth_place": data.birth_place,
+        "birth_province": data.birth_province,
+        "country_of_birth": data.country_of_birth,
+        "gender": data.gender,
+        "email": (data.email or "").lower().strip() or None,
+        "phone_athlete": data.phone,
+        "address": data.address,
+        "postal_code": data.postal_code,
+        "city": data.city,
+        "province": data.province,
+        "team_id": data.team_id,
+        "qr_code": qr_code,
+        "qr_identifier": qr_id,
+        "status": "active",
+        "athlete_type": "quota",
+        "parents_detached": False,
+        "second_parent_email": data.second_parent_email.lower().strip() if data.second_parent_email else None,
+        "created_at": datetime.utcnow(),
+        "privacy_accepted": False,
+        "is_trial": False,
+    }
+    # CF genitore corrente sulla scheda per audit + future verifiche
+    if user_cf:
+        athlete_dict[parent_cf_field] = user_cf
+    if user_doc.get("email"):
+        athlete_dict[parent_email_field] = (user_doc.get("email") or "").lower()
+    if is_minor and data.data_password:
+        athlete_dict["data_password_hash"] = hash_password(data.data_password)
+
+    await db.athletes.insert_one(athlete_dict)
+
+    # Audit log
+    try:
+        await db.parent_link_history.insert_one({
+            "action": "self_register_child",
+            "athlete_id": athlete_id,
+            "user_id": current_user["id"],
+            "user_email": current_user.get("email"),
+            "user_role": current_user["role"],
+            "slot": "primary",
+            "verification": "self_created",
+            "parent_role": data.parent_role or "father",
+            "timestamp": datetime.now(timezone.utc),
+        })
+    except Exception:
+        pass
+
+    # Crea payments se team ha rate
+    if team and team.get("total_amount", 0) > 0:
+        installments = team.get("installments", [])
+        for i, inst in enumerate(installments):
+            await db.payments.insert_one({
+                "id": str(ObjectId()),
+                "athlete_id": athlete_id,
+                "society_id": society_id,
+                "installment_number": i + 1,
+                "installment_name": inst.get("name", f"Rata {i + 1}"),
+                "amount": inst.get("amount", 0),
+                "due_date": inst.get("due_date"),
+                "paid": False,
+                "paid_date": None,
+                "created_at": datetime.utcnow(),
+            })
+
+    # Notifica admin società
+    try:
+        admins = await db.users.find({
+            "society_id": society_id, "role": {"$in": ["admin", "viewer"]}, "status": "approved"
+        }).to_list(100)
+        for adm in admins:
+            await db.notifications.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": adm["id"],
+                "type": "new_minor_athlete" if is_minor else "new_adult_athlete",
+                "title": "Nuova iscrizione (staff → genitore)",
+                "message": f"{current_user.get('full_name','')} ha iscritto {data.first_name} {data.last_name} come proprio figlio.",
+                "data": {"athlete_id": athlete_id, "athlete_name": f"{data.first_name} {data.last_name}"},
+                "read": False,
+                "created_at": datetime.now(timezone.utc),
+            })
+    except Exception:
+        pass
+
+    return {
+        "message": "Figlio registrato e collegato al tuo account",
+        "athlete_id": athlete_id,
+        "athlete_code": qr_id,
+        "is_minor": is_minor,
+    }
+
+
 @api_router.post("/athletes/{athlete_id}/detach-parents")
 async def detach_parents(athlete_id: str, data: DetachParentsRequest, current_user = Depends(get_current_user)):
     """Detach parents from athlete who turned 18 - creates independent account"""
