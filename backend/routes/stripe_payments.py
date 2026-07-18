@@ -709,24 +709,27 @@ async def get_payment_receipt_html(payment_id: str, current_user=Depends(get_cur
 
     # 🆕 27/07/2026 — Ricostruisci descrizione più esplicita: "Rata X/Y — [Team] — Stagione YYYY/YYYY"
     team_name = None
+    team_installments_count = 0
     if athlete.get("team_id"):
-        team = await db.teams.find_one({"id": athlete["team_id"]}, {"name": 1})
+        team = await db.teams.find_one({"id": athlete["team_id"]}, {"name": 1, "installments": 1})
         if team:
             team_name = team.get("name")
+            # Prendi dalla configurazione squadra: più affidabile del count sui payment
+            installments_cfg = team.get("installments") or []
+            if isinstance(installments_cfg, list):
+                team_installments_count = len(installments_cfg)
 
-    # Conta totale rate della stagione per lo stesso atleta (per "X di Y")
-    total_installments = 0
-    if payment.get("installment_number"):
-        total_installments = await db.payments.count_documents({
-            "athlete_id": athlete["id"],
-            "society_id": society_id,
-            "installment_number": {"$exists": True, "$ne": None},
-            "season": payment.get("season") or {"$exists": True},
-        }) if payment.get("season") else await db.payments.count_documents({
-            "athlete_id": athlete["id"],
-            "society_id": society_id,
-            "installment_number": {"$exists": True, "$ne": None},
-        })
+    # Totale rate: preferisci la config squadra; altrimenti conta i payment con installment_number
+    total_installments = team_installments_count
+    if not total_installments and payment.get("installment_number"):
+        try:
+            total_installments = await db.payments.count_documents({
+                "athlete_id": athlete["id"],
+                "society_id": society_id,
+                "installment_number": {"$exists": True, "$ne": None},
+            })
+        except Exception:
+            total_installments = 0
 
     # Card last4 / brand: prova a recuperare da Stripe se abbiamo il payment_intent
     card_last4 = None
