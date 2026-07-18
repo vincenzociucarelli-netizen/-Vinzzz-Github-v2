@@ -3350,6 +3350,28 @@ export default function AdminAthleteDetail() {
                   <Text style={styles.addPaymentBtnText}>Aggiungi</Text>
                 </TouchableOpacity>
               </View>
+
+              {/* 🆕 27/07/2026 — Bottone piano ricorrente Stripe */}
+              <TouchableOpacity
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 8,
+                  backgroundColor: '#F5F3FF', borderRadius: 8, padding: 12, marginBottom: 10,
+                  borderWidth: 1, borderColor: '#D6D2FF',
+                }}
+                onPress={() => router.push(`/admin/recurring-plan/${id}`)}
+                data-testid="open-recurring-plan-btn"
+              >
+                <Ionicons name="repeat" size={20} color="#635BFF" />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#635BFF' }}>
+                    Piano rate automatiche (Stripe)
+                  </Text>
+                  <Text style={{ fontSize: 11, color: '#666', marginTop: 2 }}>
+                    Crea un link di attivazione da inviare al genitore per addebiti automatici
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#635BFF" />
+              </TouchableOpacity>
               
               {/* Nota esplicativa */}
               <View style={styles.paymentInfoNote}>

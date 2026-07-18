@@ -367,6 +367,21 @@ async def stripe_webhook(society_id: str, request: Request):
 
     event_type = event.get("type")
 
+    # 🆕 27/07/2026 — Delega al modulo recurring_payments se l'evento è di attivazione piano
+    try:
+        from routes.recurring_payments import handle_recurring_activation_webhook, handle_recurring_charge_webhook
+        if event_type == "checkout.session.completed":
+            session = event["data"]["object"]
+            metadata = session.get("metadata") or {}
+            if metadata.get("type") == "recurring_activation":
+                await handle_recurring_activation_webhook(session, society_id)
+                return {"received": True, "type": event_type, "handled": "recurring_activation"}
+        elif event_type in ("payment_intent.succeeded", "payment_intent.payment_failed"):
+            if await handle_recurring_charge_webhook(event, society_id):
+                return {"received": True, "type": event_type, "handled": "recurring_charge"}
+    except Exception as _e:
+        logger.exception(f"[stripe webhook] recurring delegate failed: {_e}")
+
     if event_type == "checkout.session.completed":
         session = event["data"]["object"]
         payment_id = (session.get("metadata") or {}).get("payment_id")

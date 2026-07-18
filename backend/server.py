@@ -12898,8 +12898,10 @@ async def get_athlete_payments(athlete_id: str, current_user = Depends(get_curre
             raise HTTPException(status_code=403, detail="Accesso negato")
     
     # Return ALL payments (both paid and pending)
+    # 🆕 27/07/2026 — Escludi rate classiche sospese da un piano ricorrente
     payments = await db.payments.find({
-        "athlete_id": athlete_id
+        "athlete_id": athlete_id,
+        "superseded_by_plan_id": {"$exists": False},
     }).sort("due_date", 1).to_list(100)
     clean_mongo_docs(payments)
     return [Payment(**payment) for payment in payments]
@@ -33326,6 +33328,7 @@ from routes.training_overrides import router as training_overrides_router
 from routes.import_athletes import router as import_athletes_router  # 🆕 27/02/2026 (P1)
 from routes.coordinator import router as coordinator_router  # 🆕 27/02/2026 (Coordinatore)
 from routes.stripe_payments import router as stripe_payments_router  # 🆕 16/07/2026 (Stripe multi-tenant checkout)
+from routes.recurring_payments import router as recurring_payments_router  # 🆕 27/07/2026 (Piani ricorrenti Stripe off-session)
 api_router.include_router(notifications_router)
 api_router.include_router(settings_router)
 api_router.include_router(seasons_router)
@@ -33336,6 +33339,7 @@ api_router.include_router(training_overrides_router)
 api_router.include_router(import_athletes_router)  # 🆕 27/02/2026 (P1)
 api_router.include_router(coordinator_router)  # 🆕 27/02/2026 (Coordinatore)
 api_router.include_router(stripe_payments_router)  # 🆕 16/07/2026 (Stripe checkout multi-tenant)
+api_router.include_router(recurring_payments_router)  # 🆕 27/07/2026 (Piani ricorrenti)
 
 
 @api_router.post("/admin/compensations/reset-coach-year")
