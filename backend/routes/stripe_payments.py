@@ -537,7 +537,7 @@ def _build_nexi_style_receipt_html(
     context_parts = []
     if team_name:
         context_parts.append(team_name)
-    season = payment.get("season") or athlete.get("season") or ""
+    season = payment.get("_resolved_season") or payment.get("season") or athlete.get("season") or ""
     if season:
         context_parts.append(f"Stagione {season}")
     context_line = " · ".join(context_parts)
@@ -710,14 +710,27 @@ async def get_payment_receipt_html(payment_id: str, current_user=Depends(get_cur
     # 🆕 27/07/2026 — Ricostruisci descrizione più esplicita: "Rata X/Y — [Team] — Stagione YYYY/YYYY"
     team_name = None
     team_installments_count = 0
+    team_season = None
     if athlete.get("team_id"):
-        team = await db.teams.find_one({"id": athlete["team_id"]}, {"name": 1, "installments": 1})
+        team = await db.teams.find_one({"id": athlete["team_id"]}, {"name": 1, "installments": 1, "season": 1})
         if team:
             team_name = team.get("name")
+            team_season = team.get("season")
             # Prendi dalla configurazione squadra: più affidabile del count sui payment
             installments_cfg = team.get("installments") or []
             if isinstance(installments_cfg, list):
                 team_installments_count = len(installments_cfg)
+
+    # Stagione: prova più fonti (payment > team > athlete > stagione corrente società)
+    if not payment.get("season") and not athlete.get("season") and not team_season:
+        try:
+            from utils import get_current_season_for_society
+            fallback_season = await get_current_season_for_society(db, society_id)
+        except Exception:
+            fallback_season = None
+    else:
+        fallback_season = None
+    payment["_resolved_season"] = payment.get("season") or team_season or athlete.get("season") or fallback_season
 
     # Totale rate: preferisci la config squadra; altrimenti conta i payment con installment_number
     total_installments = team_installments_count
