@@ -469,6 +469,8 @@ def _build_nexi_style_receipt_html(
     card_last4: Optional[str] = None,
     card_brand: Optional[str] = None,
     receipt_number: str = "",
+    team_name: Optional[str] = None,
+    total_installments: int = 0,
 ) -> str:
     """Genera HTML della ricevuta pagamento stile Nexi.
     Aperto in nuova tab dal frontend, l'utente può stampare/salvare come PDF."""
@@ -506,6 +508,39 @@ def _build_nexi_style_receipt_html(
     society_fc = society.get("fiscal_code") or society.get("company_tax_code") or ""
     society_addr_parts = [society.get("address") or "", society.get("city") or "", (f"({society.get('province')})" if society.get("province") else "")]
     society_addr = " ".join([p for p in society_addr_parts if p])
+
+    # 🆕 27/07/2026 — Composizione descrizione più esplicita:
+    # Priorità: installment_name > description > "Rata iscrizione"
+    # Aggiunge "X di Y" se installment_number e total_installments disponibili
+    # Aggiunge team_name e stagione come contesto (in una riga separata)
+    inst_name = payment.get("installment_name") or ""
+    inst_num = payment.get("installment_number")
+    inst_desc = payment.get("description") or ""
+    if inst_name:
+        primary_desc = inst_name
+    elif inst_num:
+        primary_desc = f"Rata {inst_num}"
+    else:
+        primary_desc = inst_desc or "Rata iscrizione"
+    # Aggiungi "X di Y" senza duplicare il numero se già presente
+    if inst_num and total_installments and total_installments > 1:
+        already_has_number = str(inst_num) in primary_desc
+        already_has_of_total = f"di {total_installments}" in primary_desc
+        if not already_has_number:
+            # es. "Prima rata Iscrizione" → "Prima rata Iscrizione — 1 di 3"
+            primary_desc = f"{primary_desc} — {inst_num} di {total_installments}"
+        elif not already_has_of_total:
+            # es. "Rata 2" → "Rata 2 di 3"
+            primary_desc = f"{primary_desc} di {total_installments}"
+
+    # Riga contesto: [Squadra] · Stagione YYYY/YYYY
+    context_parts = []
+    if team_name:
+        context_parts.append(team_name)
+    season = payment.get("season") or athlete.get("season") or ""
+    if season:
+        context_parts.append(f"Stagione {season}")
+    context_line = " · ".join(context_parts)
 
     return f"""<!DOCTYPE html>
 <html lang="it">
@@ -599,7 +634,8 @@ def _build_nexi_style_receipt_html(
       </div>
       <div class="row">
         <div class="k">Descrizione</div>
-        <div class="v">{payment.get('description') or payment.get('installment_name') or 'Rata iscrizione'}</div>
+        <div class="v">{primary_desc}</div>
+        {f'<div style="font-size:11px; color:#888; margin-top:2px;">{context_line}</div>' if context_line else ''}
       </div>
       <div class="row">
         <div class="k">Numero ricevuta</div>
@@ -671,6 +707,27 @@ async def get_payment_receipt_html(payment_id: str, current_user=Depends(get_cur
     # Società (settings profilo, non stripe)
     society_settings = await db.settings.find_one({"type": "society", "society_id": society_id}) or {}
 
+    # 🆕 27/07/2026 — Ricostruisci descrizione più esplicita: "Rata X/Y — [Team] — Stagione YYYY/YYYY"
+    team_name = None
+    if athlete.get("team_id"):
+        team = await db.teams.find_one({"id": athlete["team_id"]}, {"name": 1})
+        if team:
+            team_name = team.get("name")
+
+    # Conta totale rate della stagione per lo stesso atleta (per "X di Y")
+    total_installments = 0
+    if payment.get("installment_number"):
+        total_installments = await db.payments.count_documents({
+            "athlete_id": athlete["id"],
+            "society_id": society_id,
+            "installment_number": {"$exists": True, "$ne": None},
+            "season": payment.get("season") or {"$exists": True},
+        }) if payment.get("season") else await db.payments.count_documents({
+            "athlete_id": athlete["id"],
+            "society_id": society_id,
+            "installment_number": {"$exists": True, "$ne": None},
+        })
+
     # Card last4 / brand: prova a recuperare da Stripe se abbiamo il payment_intent
     card_last4 = None
     card_brand = None
@@ -700,5 +757,7 @@ async def get_payment_receipt_html(payment_id: str, current_user=Depends(get_cur
         payment=payment,
         card_last4=card_last4,
         card_brand=card_brand,
+        team_name=team_name,
+        total_installments=total_installments,
     )
     return HTMLResponse(content=html, status_code=200)
