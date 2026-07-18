@@ -654,6 +654,35 @@ export default function AthleteDetail() {
     }
   };
 
+  // 🆕 26/07/2026 — Apri scontrino Stripe stile Nexi per un pagamento paid
+  const openStripeReceipt = async (paymentId: string) => {
+    try {
+      const res = await api.get(`/payments/${paymentId}/receipt`, {
+        responseType: 'text',
+        transformResponse: [(d: any) => d],
+      });
+      const html = typeof res.data === 'string' ? res.data : String(res.data);
+      if (Platform.OS === 'web') {
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const win = window.open(url, '_blank');
+        if (!win) {
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `scontrino_${paymentId}.html`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      }
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail || 'Impossibile aprire lo scontrino';
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Errore', msg);
+    }
+  };
+
   // Logout function
   const handleLogout = async () => {
     if (Platform.OS === 'web') {
@@ -2476,7 +2505,9 @@ export default function AthleteDetail() {
 
                 {paymentsListExpanded && payments.filter(p => p.paid || p.paid_date).length > 0 && (
                   <View style={{ marginBottom: 8 }}>
-                    {payments.filter(p => p.paid || p.paid_date).map((p, idx) => (
+                    {payments.filter(p => p.paid || p.paid_date).map((p, idx) => {
+                      const isStripe = p.payment_method === 'stripe' || !!p.stripe_session_id || !!p.stripe_payment_intent;
+                      return (
                       <View key={p.id || idx} style={styles.manualPaymentRow}>
                         <View style={styles.manualPaymentInfo}>
                           <Text style={{ fontSize: 13, fontWeight: '500', color: '#333' }}>{p.description || `Pagamento ${idx + 1}`}</Text>
@@ -2484,10 +2515,25 @@ export default function AthleteDetail() {
                           <Text style={styles.manualPaymentDate}>
                             {p.paid_date ? new Date(p.paid_date).toLocaleDateString('it-IT') : ''}
                           </Text>
+                          {isStripe && (
+                            <TouchableOpacity
+                              onPress={() => openStripeReceipt(p.id)}
+                              style={{
+                                flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6,
+                                paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,
+                                backgroundColor: '#E8F5E9', alignSelf: 'flex-start',
+                              }}
+                              data-testid={`stripe-receipt-btn-${p.id}`}
+                            >
+                              <Ionicons name="receipt" size={12} color="#2E7D32" />
+                              <Text style={{ fontSize: 11, color: '#2E7D32', fontWeight: '700' }}>Scarica scontrino</Text>
+                            </TouchableOpacity>
+                          )}
                         </View>
                         <Ionicons name="checkmark-circle" size={22} color="#34C759" />
                       </View>
-                    ))}
+                    );
+                    })}
                   </View>
                 )}
                 
@@ -2590,7 +2636,9 @@ export default function AthleteDetail() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Pagamenti Effettuati</Text>
             <View style={styles.manualPaymentsSection}>
-              {payments.filter(p => p.paid || p.paid_date).map((p, idx) => (
+              {payments.filter(p => p.paid || p.paid_date).map((p, idx) => {
+                const isStripe = p.payment_method === 'stripe' || !!p.stripe_session_id || !!p.stripe_payment_intent;
+                return (
                 <View key={p.id || idx} style={styles.manualPaymentRow}>
                   <View style={styles.manualPaymentInfo}>
                     <Text style={{ fontSize: 13, fontWeight: '500' }}>{p.description || `Pagamento ${idx + 1}`}</Text>
@@ -2598,10 +2646,25 @@ export default function AthleteDetail() {
                     <Text style={styles.manualPaymentDate}>
                       {p.paid_date ? new Date(p.paid_date).toLocaleDateString('it-IT') : ''}
                     </Text>
+                    {isStripe && (
+                      <TouchableOpacity
+                        onPress={() => openStripeReceipt(p.id)}
+                        style={{
+                          flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6,
+                          paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,
+                          backgroundColor: '#E8F5E9', alignSelf: 'flex-start',
+                        }}
+                        data-testid={`stripe-receipt-btn2-${p.id}`}
+                      >
+                        <Ionicons name="receipt" size={12} color="#2E7D32" />
+                        <Text style={{ fontSize: 11, color: '#2E7D32', fontWeight: '700' }}>Scarica scontrino</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                   <Ionicons name="checkmark-circle" size={24} color="#34C759" />
                 </View>
-              ))}
+              );
+              })}
             </View>
           </View>
         )}

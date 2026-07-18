@@ -433,9 +433,11 @@ async def request_parent_link(data: dict, current_user = Depends(get_current_use
 
 @router.get("/parent-link/requests")
 async def get_parent_link_requests(current_user = Depends(get_current_user)):
-    """Get pending parent link requests for the current user (as approver or requester)."""
-    if current_user["role"] != UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Solo genitori")
+    """🆕 26/07/2026 (v2) — Aperto a parent + staff dual-role.
+    Ritorna le richieste da approvare (approver_id = me) + le mie richieste inviate."""
+    allowed_roles = {"parent", "admin", "viewer", "dirigente", "coordinatore", "coach", "collaboratore"}
+    if current_user["role"] not in allowed_roles:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     
     to_approve = await db.parent_link_requests.find({
         "approver_id": current_user["id"],
@@ -451,9 +453,11 @@ async def get_parent_link_requests(current_user = Depends(get_current_user)):
 
 @router.post("/parent-link/respond")
 async def respond_parent_link(data: dict, current_user = Depends(get_current_user)):
-    """Accept or reject a parent link request."""
-    if current_user["role"] != UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Solo genitori")
+    """🆕 26/07/2026 (v2) — Aperto a parent + staff dual-role.
+    Approva o rifiuta una richiesta di collegamento come 2° genitore."""
+    allowed_roles = {"parent", "admin", "viewer", "dirigente", "coordinatore", "coach", "collaboratore"}
+    if current_user["role"] not in allowed_roles:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
     
     request_id = data.get("request_id")
     action = data.get("action")
@@ -563,7 +567,57 @@ async def respond_parent_link(data: dict, current_user = Depends(get_current_use
                 # Non blocchiamo la risposta se l'email fallisce (già salvato in notifiche in-app)
                 import logging
                 logging.warning(f"parent_link_accepted email failed for {requester_email}: {e}")
-        
+
+        # 🆕 26/07/2026 — Email di conferma anche al genitore primario (approvatore)
+        # → paper trail: chi ha approvato, quando, per quale figlio.
+        approver_email = current_user.get("email")
+        approver_name = current_user.get("full_name") or approver_email
+        if approver_email:
+            try:
+                from email_service import send_transactional_email
+                subject_approver = f"📎 Hai collegato {requester_display_name} come 2° genitore di {athlete_name} — {society_name}"
+                ts = datetime.now(timezone.utc).strftime("%d/%m/%Y alle %H:%M")
+                html_approver = f"""
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <div style="background: linear-gradient(135deg, #1976D2, #0D47A1); color: white; padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+                        <h1 style="margin: 0; font-size: 22px;">📎 Conferma collegamento</h1>
+                        <p style="margin: 8px 0 0; opacity: 0.9;">{society_name}</p>
+                    </div>
+                    <div style="background: #ffffff; padding: 24px; border: 1px solid #e0e0e0; border-radius: 0 0 12px 12px;">
+                        <p style="font-size: 16px; color: #333;">Ciao <strong>{approver_name}</strong>,</p>
+                        <p style="font-size: 15px; color: #444; line-height: 1.6;">
+                            Ti confermiamo che il {ts} hai <strong style="color: #1976D2;">approvato</strong> il collegamento
+                            di <strong>{requester_display_name}</strong> ({requester_email or '—'}) come
+                            <strong>secondo genitore</strong> di <strong>{athlete_name}</strong>.
+                        </p>
+                        <div style="background: #E3F2FD; padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #1976D2;">
+                            <p style="margin: 0; color: #0D47A1; font-size: 14px; line-height: 1.6;">
+                                Da questo momento, entrambi i genitori possono:
+                                <br/>• visualizzare l'anagrafica dell'atleta
+                                <br/>• consultare pagamenti, presenze e certificati
+                                <br/>• ricevere comunicazioni ufficiali dalla società
+                            </p>
+                        </div>
+                        <p style="font-size: 13px; color: #666; line-height: 1.6;">
+                            <strong>Non l'hai fatto tu?</strong> Contatta immediatamente la segreteria della società per revocare il collegamento.
+                        </p>
+                        <p style="font-size: 13px; color: #999; margin-top: 24px; text-align: center;">
+                            Cordiali saluti,<br>
+                            <strong>{society_name}</strong>
+                        </p>
+                    </div>
+                </div>
+                """
+                await send_transactional_email(
+                    to_email=approver_email,
+                    subject=subject_approver,
+                    html_content=html_approver,
+                    to_name=approver_name,
+                )
+            except Exception as e:
+                import logging
+                logging.warning(f"parent_link_accepted approver-email failed for {approver_email}: {e}")
+
         return {"success": True, "message": f"Collegamento approvato. {requester_name} è ora collegato a {athlete_name}."}
     
     # reject
