@@ -35578,6 +35578,14 @@ async def start_certificate_scheduler():
     _asyncio.create_task(birthday_18_scheduler())
     logger.info("18th birthday GDPR notification scheduler started.")
 
+    # 🆕 27/07/2026 — Piani ricorrenti Stripe: addebiti automatici alla scadenza
+    try:
+        from routes.recurring_payments import recurring_charges_scheduler
+        _asyncio.create_task(recurring_charges_scheduler())
+        logger.info("Recurring charges scheduler started (every 6h).")
+    except Exception as e:
+        logger.exception(f"Failed to start recurring scheduler: {e}")
+
 
 @app.on_event("startup")
 async def ensure_mongodb_indexes():

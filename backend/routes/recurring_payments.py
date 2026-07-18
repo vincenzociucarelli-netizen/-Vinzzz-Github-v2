@@ -302,24 +302,11 @@ async def _execute_next_charge(plan: dict) -> dict:
             "failure_reason": str(e.user_message or e),
             "retry_count": 0,
         })
-        # Notifica admin
+        # 🆕 27/07/2026 — Notifica admin + email al genitore in caso di addebito fallito
         try:
-            admins = await db.users.find({
-                "society_id": plan["society_id"], "role": "admin", "status": "approved"
-            }).to_list(20)
-            for adm in admins:
-                await db.notifications.insert_one({
-                    "id": secrets.token_urlsafe(8),
-                    "user_id": adm["id"],
-                    "type": "recurring_charge_failed",
-                    "title": "Addebito ricorrente fallito",
-                    "message": f"Rata {installment_number} di {plan.get('athlete_name','')}: {e.user_message or e}",
-                    "data": {"plan_id": plan["id"], "athlete_id": plan["athlete_id"]},
-                    "read": False,
-                    "created_at": datetime.now(timezone.utc),
-                })
+            await _notify_charge_failed(plan, installment_number, amount, str(e.user_message or e))
         except Exception:
-            pass
+            logger.exception("[recurring] notify charge failed error")
         raise HTTPException(status_code=402, detail=f"Carta rifiutata: {e.user_message or str(e)}")
     except stripe.error.StripeError as e:
         raise HTTPException(status_code=502, detail=f"Errore Stripe: {str(e)}")
@@ -381,6 +368,12 @@ async def _execute_next_charge(plan: dict) -> dict:
             "status": new_status,
         }},
     )
+
+    # 🆕 27/07/2026 — Email genitore con lo scontrino
+    try:
+        await _notify_charge_succeeded(plan, installment_number, amount, payment_id, new_next_date, is_last)
+    except Exception:
+        logger.exception("[recurring] notify charge success error")
 
     return {
         "message": f"Rata {installment_number} addebitata con successo",
@@ -683,3 +676,266 @@ async def handle_recurring_charge_webhook(event: dict, society_id: str) -> bool:
             upsert=False,
         )
     return True
+
+
+# ============================================================================
+# 🆕 27/07/2026 — NOTIFICHE EMAIL (successo/fallimento addebito automatico)
+# ============================================================================
+
+async def _get_parent_email_and_name(plan: dict) -> tuple:
+    """Recupera email + nome del genitore associato al piano."""
+    if not plan.get("parent_user_id"):
+        return None, None
+    u = await db.users.find_one({"id": plan["parent_user_id"]}, {"email": 1, "full_name": 1})
+    if not u:
+        return None, None
+    return u.get("email"), u.get("full_name")
+
+
+async def _get_society_info(society_id: str) -> tuple:
+    """Recupera nome società + email admin per branding."""
+    s = await db.settings.find_one({"type": "society", "society_id": society_id}) or {}
+    society_name = s.get("ragione_sociale") or s.get("society_name") or s.get("name") or "Società Sportiva"
+    return society_name, s
+
+
+async def _notify_charge_succeeded(plan: dict, installment_number: int, amount: float, payment_id: str, next_date: Optional[datetime], is_last: bool):
+    """Invia email al genitore con conferma addebito + link scontrino."""
+    from email_service import send_transactional_email
+
+    parent_email, parent_name = await _get_parent_email_and_name(plan)
+    if not parent_email:
+        logger.info(f"[recurring notify] plan {plan['id']}: no parent email, skip")
+        return
+    society_name, _ = await _get_society_info(plan["society_id"])
+
+    import os
+    base_url = os.environ.get("PUBLIC_FRONTEND_URL", "")
+    receipt_link = f"{base_url}/api/payments/{payment_id}/receipt" if base_url else ""
+
+    next_line = ""
+    if not is_last and next_date:
+        next_line = f"<p>📅 Prossimo addebito automatico: <strong>{next_date.strftime('%d/%m/%Y')}</strong></p>"
+    elif is_last:
+        next_line = "<p>🎉 Complimenti, hai completato tutte le rate del piano!</p>"
+
+    receipt_line = f'<p><a href="{receipt_link}" style="color: #635BFF; font-weight: 700;">🧾 Scarica lo scontrino</a> (accedi con le tue credenziali)</p>' if receipt_link else ""
+
+    html = f"""
+    <div style="font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+      <div style="background: linear-gradient(135deg, #635BFF, #4A3FDA); color: white; padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="margin: 0; font-size: 22px;">✅ Addebito Effettuato</h1>
+        <p style="margin: 8px 0 0; opacity: 0.9;">{society_name}</p>
+      </div>
+      <div style="background: #fff; padding: 24px; border: 1px solid #e0e0e0; border-radius: 0 0 12px 12px;">
+        <p>Ciao <strong>{parent_name or ''}</strong>,</p>
+        <p>Ti confermiamo l'addebito automatico della <strong>Rata {installment_number} di {plan['installments_count']}</strong> per <strong>{plan.get('athlete_name','')}</strong>.</p>
+        <div style="background: #F5F3FF; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #635BFF;">
+          <p style="margin: 0; font-size: 15px;">Importo addebitato: <strong style="font-size: 20px; color: #635BFF;">€ {amount:.2f}</strong></p>
+          <p style="margin: 6px 0 0; font-size: 13px; color: #666;">Descrizione: {plan.get('description') or 'Iscrizione'}</p>
+        </div>
+        {next_line}
+        {receipt_line}
+        <p style="font-size: 12px; color: #999; margin-top: 24px; text-align: center;">
+          Cordiali saluti,<br><strong>{society_name}</strong>
+        </p>
+      </div>
+    </div>
+    """
+    try:
+        await send_transactional_email(
+            to_email=parent_email,
+            subject=f"✅ Addebito Rata {installment_number}/{plan['installments_count']} — {society_name}",
+            html_content=html,
+            to_name=parent_name,
+        )
+    except Exception as e:
+        logger.warning(f"[recurring notify success] email failed: {e}")
+
+
+async def _notify_charge_failed(plan: dict, installment_number: int, amount: float, reason: str):
+    """Notifica admin + email al genitore in caso di addebito fallito."""
+    from email_service import send_transactional_email
+
+    parent_email, parent_name = await _get_parent_email_and_name(plan)
+    society_name, s = await _get_society_info(plan["society_id"])
+    admin_email = s.get("admin_email") or None
+
+    # Notifica in-app admin (raccolti dinamicamente)
+    admins = await db.users.find({
+        "society_id": plan["society_id"], "role": {"$in": ["admin", "viewer"]}, "status": "approved"
+    }).to_list(20)
+    for adm in admins:
+        await db.notifications.insert_one({
+            "id": secrets.token_urlsafe(8),
+            "user_id": adm["id"],
+            "type": "recurring_charge_failed",
+            "title": "⚠️ Addebito ricorrente fallito",
+            "message": f"Rata {installment_number}/{plan['installments_count']} di {plan.get('athlete_name','')}: € {amount:.2f}. Motivo: {reason}",
+            "data": {"plan_id": plan["id"], "athlete_id": plan["athlete_id"]},
+            "read": False,
+            "created_at": datetime.now(timezone.utc),
+        })
+
+    # Email al genitore
+    if parent_email:
+        html_parent = f"""
+        <div style="font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+          <div style="background: linear-gradient(135deg, #E53935, #B71C1C); color: white; padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+            <h1 style="margin: 0; font-size: 22px;">⚠️ Addebito Non Riuscito</h1>
+            <p style="margin: 8px 0 0; opacity: 0.9;">{society_name}</p>
+          </div>
+          <div style="background: #fff; padding: 24px; border: 1px solid #e0e0e0; border-radius: 0 0 12px 12px;">
+            <p>Ciao <strong>{parent_name or ''}</strong>,</p>
+            <p>Non siamo riusciti ad addebitare la <strong>Rata {installment_number} di {plan['installments_count']}</strong> di € {amount:.2f} per <strong>{plan.get('athlete_name','')}</strong>.</p>
+            <div style="background: #FFEBEE; padding: 16px; border-radius: 8px; margin: 16px 0; border-left: 4px solid #E53935;">
+              <p style="margin: 0; color: #B71C1C;"><strong>Motivo:</strong> {reason}</p>
+            </div>
+            <p><strong>Cosa fare?</strong></p>
+            <ul style="line-height: 1.8;">
+              <li>Verifica che sulla carta ci siano fondi sufficienti</li>
+              <li>Controlla che la carta non sia scaduta</li>
+              <li>Contatta la segreteria della società per riattivare l'addebito o passare al pagamento manuale</li>
+            </ul>
+            <p style="font-size: 12px; color: #999; margin-top: 24px; text-align: center;">
+              Cordiali saluti,<br><strong>{society_name}</strong>
+            </p>
+          </div>
+        </div>
+        """
+        try:
+            await send_transactional_email(
+                to_email=parent_email,
+                subject=f"⚠️ Addebito Rata {installment_number} non riuscito — {society_name}",
+                html_content=html_parent,
+                to_name=parent_name,
+            )
+        except Exception as e:
+            logger.warning(f"[recurring notify failed] parent email failed: {e}")
+
+    # Email all'admin
+    if admin_email:
+        html_admin = f"""
+        <div style="font-family: sans-serif; padding: 20px;">
+          <h2>⚠️ Addebito ricorrente fallito</h2>
+          <p><strong>Società:</strong> {society_name}</p>
+          <p><strong>Atleta:</strong> {plan.get('athlete_name','')}</p>
+          <p><strong>Rata:</strong> {installment_number}/{plan['installments_count']} — € {amount:.2f}</p>
+          <p><strong>Genitore:</strong> {parent_name or '—'} ({parent_email or '—'})</p>
+          <p><strong>Motivo:</strong> {reason}</p>
+          <p><strong>Piano ID:</strong> {plan['id']}</p>
+        </div>
+        """
+        try:
+            await send_transactional_email(
+                to_email=admin_email,
+                subject=f"⚠️ Addebito Rata {installment_number} fallito — {plan.get('athlete_name','')}",
+                html_content=html_admin,
+                to_name="Admin",
+            )
+        except Exception as e:
+            logger.warning(f"[recurring notify failed] admin email failed: {e}")
+
+
+# ============================================================================
+# 🆕 27/07/2026 — SCHEDULER AUTOMATICO
+# ============================================================================
+
+async def process_due_recurring_charges() -> dict:
+    """Trova tutti i piani con next_charge_date <= now e status=active,
+    esegue l'addebito automatico. Ritorna statistiche."""
+    now = datetime.now(timezone.utc)
+    plans_due = await db.recurring_plans.find({
+        "status": "active",
+        "next_charge_date": {"$lte": now, "$ne": None},
+    }).to_list(500)
+
+    stats = {"processed": 0, "succeeded": 0, "failed": 0, "errors": []}
+    for plan in plans_due:
+        stats["processed"] += 1
+        try:
+            result = await _execute_next_charge(plan)
+            if result.get("status") in ("active", "completed"):
+                stats["succeeded"] += 1
+                logger.info(f"[scheduler] plan {plan['id']} rata {plan.get('charges_completed', 0) + 1} charged ok")
+            else:
+                stats["failed"] += 1
+        except HTTPException as e:
+            stats["failed"] += 1
+            stats["errors"].append({"plan_id": plan["id"], "detail": e.detail})
+            logger.warning(f"[scheduler] plan {plan['id']} charge failed: {e.detail}")
+        except Exception as e:
+            stats["failed"] += 1
+            stats["errors"].append({"plan_id": plan["id"], "detail": str(e)})
+            logger.exception(f"[scheduler] plan {plan['id']} unexpected error")
+    return stats
+
+
+async def recurring_charges_scheduler():
+    """Background task che gira ogni 6 ore per addebitare rate in scadenza."""
+    import asyncio as _asyncio
+    await _asyncio.sleep(60)  # attende 60s dopo startup
+    while True:
+        try:
+            stats = await process_due_recurring_charges()
+            if stats["processed"] > 0:
+                logger.info(f"[recurring scheduler] tick: {stats}")
+        except Exception as e:
+            logger.exception(f"[recurring scheduler] error: {e}")
+        await _asyncio.sleep(6 * 3600)  # 6 ore
+
+
+@router.post("/admin/recurring-plans/process-due")
+async def admin_trigger_scheduler(current_user=Depends(get_current_user)):
+    """Admin: forza esecuzione manuale dello scheduler (utile per debug/test in produzione)."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    return await process_due_recurring_charges()
+
+
+# ============================================================================
+# 🆕 27/07/2026 — ENDPOINT PARENT: badge "Piano Attivo"
+# ============================================================================
+
+@router.get("/users/me/recurring-plans-summary")
+async def get_my_recurring_plans(current_user=Depends(get_current_user)):
+    """Ritorna i piani ricorrenti attivi/pending per gli atleti collegati al genitore corrente.
+    Formato: {athlete_id: {status, charges_completed, installments_count, next_charge_date, description}}"""
+    uid = current_user["id"]
+    # Trova atleti collegati (primary o secondary parent)
+    athletes = await db.athletes.find({
+        "$or": [{"parent_id": uid}, {"second_parent_id": uid}],
+    }, {"id": 1}).to_list(50)
+    athlete_ids = [a["id"] for a in athletes]
+    if not athlete_ids:
+        return {}
+
+    plans = await db.recurring_plans.find({
+        "athlete_id": {"$in": athlete_ids},
+        "status": {"$in": ["active", "pending", "paused"]},
+    }, {"_id": 0}).to_list(50)
+
+    result = {}
+    societies_cache = {}
+    for p in plans:
+        # Cache society info per sid
+        sid = p["society_id"]
+        if sid not in societies_cache:
+            s = await db.settings.find_one({"type": "society", "society_id": sid}) or {}
+            societies_cache[sid] = {
+                "society_name": s.get("ragione_sociale") or s.get("society_name") or s.get("name") or "Società",
+                "society_email": s.get("admin_email") or s.get("email"),
+            }
+        result[p["athlete_id"]] = {
+            "plan_id": p["id"],
+            "status": p["status"],
+            "charges_completed": p.get("charges_completed", 0),
+            "installments_count": p["installments_count"],
+            "next_charge_date": p.get("next_charge_date").isoformat() if isinstance(p.get("next_charge_date"), datetime) else p.get("next_charge_date"),
+            "description": p.get("description"),
+            "total_amount": p["total_amount"],
+            "installment_amounts": p["installment_amounts"],
+            "society_name": societies_cache[sid]["society_name"],
+            "society_email": societies_cache[sid]["society_email"],
+        }
+    return result

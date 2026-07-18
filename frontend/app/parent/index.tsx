@@ -41,6 +41,8 @@ export default function ParentDashboard() {
   const { user, logout, updateUser, refreshUser } = useAuthStore();
   const [athletes, setAthletes] = useState<Athlete[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  // 🆕 27/07/2026 — Piani ricorrenti (per badge sulla card atleta)
+  const [recurringPlans, setRecurringPlans] = useState<Record<string, any>>({});
   const [editProfileVisible, setEditProfileVisible] = useState(false);
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
@@ -171,6 +173,13 @@ export default function ParentDashboard() {
       setAthletes(response.data);
     } catch (error) {
       console.error('Error loading athletes:', error);
+    }
+    // 🆕 27/07/2026 — Fetch piani ricorrenti dei miei figli
+    try {
+      const rp = await api.get('/users/me/recurring-plans-summary');
+      setRecurringPlans(rp.data || {});
+    } catch (_e) {
+      // silenzioso — feature opzionale
     }
   };
   
@@ -1176,6 +1185,50 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                       <Text style={{ fontSize: 11, color: '#888', marginLeft: 4 }}>
                         Altro genitore: {athlete.other_parent_name || athlete.other_parent_email}
                       </Text>
+                    </View>
+                  )}
+                  {/* 🆕 27/07/2026 — Badge Piano Ricorrente + Contatta Segreteria */}
+                  {recurringPlans[athlete.id] && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                      <View style={{
+                        flexDirection: 'row', alignItems: 'center',
+                        backgroundColor: '#F5F3FF', paddingHorizontal: 8, paddingVertical: 4,
+                        borderRadius: 6, gap: 4, borderWidth: 1, borderColor: '#D6D2FF',
+                      }} data-testid={`recurring-badge-${athlete.id}`}>
+                        <Ionicons name="repeat" size={12} color="#635BFF" />
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#635BFF' }}>
+                          PIANO {recurringPlans[athlete.id].status === 'active' ? 'ATTIVO' : recurringPlans[athlete.id].status.toUpperCase()}
+                          {' '}({recurringPlans[athlete.id].charges_completed}/{recurringPlans[athlete.id].installments_count})
+                        </Text>
+                        {recurringPlans[athlete.id].next_charge_date && (
+                          <Text style={{ fontSize: 10, color: '#635BFF', marginLeft: 4 }}>
+                            • prossimo {new Date(recurringPlans[athlete.id].next_charge_date).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' })}
+                          </Text>
+                        )}
+                      </View>
+                      {recurringPlans[athlete.id].society_email && (
+                        <TouchableOpacity
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            const em = recurringPlans[athlete.id].society_email;
+                            const subj = `Piano ricorrente ${athlete.full_name}`;
+                            if (Platform.OS === 'web') {
+                              window.location.href = `mailto:${em}?subject=${encodeURIComponent(subj)}`;
+                            }
+                          }}
+                          style={{
+                            flexDirection: 'row', alignItems: 'center', gap: 3,
+                            backgroundColor: '#E3F2FD', paddingHorizontal: 6, paddingVertical: 4,
+                            borderRadius: 6, borderWidth: 1, borderColor: '#BBDEFB',
+                          }}
+                          data-testid={`contact-secretary-${athlete.id}`}
+                        >
+                          <Ionicons name="mail" size={11} color="#1565C0" />
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#1565C0' }}>
+                            Contatta segreteria
+                          </Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   )}
                 </View>
