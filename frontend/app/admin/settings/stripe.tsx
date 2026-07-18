@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '../../../src/components/Icon';
 import InstitutionalBanner from '../../../src/components/InstitutionalBanner';
+import SocietyBranding from '../../../src/components/SocietyBranding';
 import api from '../../../src/services/api';
 
 interface StripeSettings {
@@ -173,11 +174,13 @@ export default function StripeSettings() {
         <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.replace('/admin')} data-testid="header-home-btn" style={{ marginLeft: 8 }}>
+        <View style={{ flex: 1, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10 }}>
+          <SocietyBranding logoSize={32} />
+          <Text style={styles.headerTitle} numberOfLines={1}>Impostazioni Pagamenti</Text>
+        </View>
+        <TouchableOpacity onPress={() => router.replace('/admin')} data-testid="header-home-btn" style={{ marginRight: 4 }}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Impostazioni Pagamenti</Text>
-        <View style={{ width: 40 }} />
       </View>
 
       <InstitutionalBanner detail="L'IBAN/conto della società è qui solo per riferimento. La firma sui pagamenti spetta al Legale Rappresentante." />
