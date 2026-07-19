@@ -33331,6 +33331,7 @@ from routes.import_athletes import router as import_athletes_router  # 🆕 27/0
 from routes.coordinator import router as coordinator_router  # 🆕 27/02/2026 (Coordinatore)
 from routes.stripe_payments import router as stripe_payments_router  # 🆕 16/07/2026 (Stripe multi-tenant checkout)
 from routes.recurring_payments import router as recurring_payments_router  # 🆕 27/07/2026 (Piani ricorrenti Stripe off-session)
+from routes.admin_notes import router as admin_notes_router  # 🆕 19/07/2026 (Bacheca note admin)
 api_router.include_router(notifications_router)
 api_router.include_router(settings_router)
 api_router.include_router(seasons_router)
@@ -33342,6 +33343,7 @@ api_router.include_router(import_athletes_router)  # 🆕 27/02/2026 (P1)
 api_router.include_router(coordinator_router)  # 🆕 27/02/2026 (Coordinatore)
 api_router.include_router(stripe_payments_router)  # 🆕 16/07/2026 (Stripe checkout multi-tenant)
 api_router.include_router(recurring_payments_router)  # 🆕 27/07/2026 (Piani ricorrenti)
+api_router.include_router(admin_notes_router)  # 🆕 19/07/2026 (Bacheca note admin)
 
 
 @api_router.post("/admin/compensations/reset-coach-year")

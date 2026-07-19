@@ -2,6 +2,7 @@
 
 ## Admin (persona fisica - può firmare come LR o autorizzato)
 - Email: vincenzo.ciucarelli@gmail.com
+- Password: Test1234 (resettata 19/07/2026 per test bacheca note admin)
 
 ## Dirigente (LELLA MARZO)
 - Email: lella@dir.com

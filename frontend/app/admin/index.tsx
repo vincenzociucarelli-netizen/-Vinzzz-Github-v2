@@ -20,6 +20,7 @@ import api from '../../src/services/api';
 import InstitutionalBadge from '../../src/components/InstitutionalBadge';
 import InstitutionalBanner from '../../src/components/InstitutionalBanner';
 import { AdminLiveStats } from '../../src/components/AdminLiveStats';
+import { AdminNotesBoard } from '../../src/components/AdminNotesBoard';
 import GuideButton from '../../src/components/GuideButton';
 import { SeasonBadge } from '../../src/services/SeasonBadge';
 import CompensationExportModal from '../../src/components/admin/CompensationExportModal';
@@ -523,6 +524,9 @@ export default function AdminDashboard() {
           </Text>
           <InstitutionalBadge size="md" />
         </View>
+
+        {/* 🆕 19/07/2026 — Bacheca note admin: task list condivisa tra admin */}
+        <AdminNotesBoard />
 
         {/* 🆕 03/07/2026 — Widget live: utenti online / privacy scaduta / ritiri reversibili */}
         <AdminLiveStats />
