@@ -547,7 +547,25 @@ def _build_nexi_style_receipt_html(
 
     athlete_name = f"{athlete.get('last_name','')} {athlete.get('first_name','')}".strip()
 
-    amount = float(payment.get("amount", 0) or 0)
+    total_amount = float(payment.get("amount", 0) or 0)
+    partial_payments = payment.get("partial_payments") or []
+    # 🆕 28/07/2026 — Se ci sono pagamenti parziali, la ricevuta si riferisce all'ULTIMO acconto
+    is_partial_receipt = False
+    displayed_amount = total_amount
+    residual_after = 0.0
+    if partial_payments:
+        # Ordina per data e prendi l'ultimo
+        try:
+            sorted_pp = sorted(partial_payments, key=lambda p: p.get("paid_at") or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+        except Exception:
+            sorted_pp = partial_payments
+        latest = sorted_pp[0]
+        if latest.get("is_partial"):
+            is_partial_receipt = True
+            displayed_amount = float(latest.get("amount") or 0)
+            paid_amount_total = float(payment.get("paid_amount") or 0)
+            residual_after = max(0.0, round(total_amount - paid_amount_total, 2))
+    amount = displayed_amount
     paid_date = payment.get("paid_date")
     if isinstance(paid_date, datetime):
         date_str = paid_date.strftime("%d %B %Y, %H:%M")
@@ -598,6 +616,10 @@ def _build_nexi_style_receipt_html(
         elif not already_has_of_total:
             # es. "Rata 2" → "Rata 2 di 3"
             primary_desc = f"{primary_desc} di {total_installments}"
+
+    # 🆕 28/07/2026 — Prefisso "Acconto" se ricevuta parziale
+    if is_partial_receipt:
+        primary_desc = f"Acconto — {primary_desc}"
 
     # Riga contesto: [Squadra] · Stagione YYYY/YYYY
     context_parts = []
@@ -688,9 +710,10 @@ def _build_nexi_style_receipt_html(
 
       <div class="divider"></div>
 
-      <div class="label-amount">Importo totale:</div>
+      <div class="label-amount">Importo{" pagato ora" if is_partial_receipt else " totale"}:</div>
       <div class="amount">€ {amount:,.2f}</div>
       <div class="date">{date_str}</div>
+      {f'<div style="margin-top:10px; padding:10px 12px; background:#FFF3E0; border-radius:8px; border-left:4px solid #EF6C00;"><div style="font-size:11px; font-weight:700; color:#E65100;">ACCONTO PARZIALE</div><div style="font-size:13px; color:#333; margin-top:2px;">Importo totale rata: € {total_amount:,.2f}</div><div style="font-size:14px; font-weight:800; color:#E65100; margin-top:2px;">Residuo da pagare: € {residual_after:,.2f}</div></div>' if is_partial_receipt else ''}
 
       <div class="divider"></div>
 

@@ -3411,10 +3411,12 @@ export default function AdminAthleteDetail() {
                 const seasonStart = getCurrentSeasonStart(societySettings);
                 const isCurrent = (p: any) => {
                   if (p.is_previous_season) return false;
-                  if (!p.paid_date) return true;
-                  try { return new Date(p.paid_date) >= seasonStart; } catch { return true; }
+                  if (!p.paid_date && !(p.paid_amount > 0)) return true;
+                  const dt = p.paid_date || (p.partial_payments && p.partial_payments[0]?.paid_at);
+                  if (!dt) return true;
+                  try { return new Date(dt) >= seasonStart; } catch { return true; }
                 };
-                const current = payments.filter((p: any) => p.paid_date && isCurrent(p));
+                const current = payments.filter((p: any) => (p.paid_date || p.paid_amount > 0) && isCurrent(p));
                 if (current.length === 0) {
                   return (
                     <View style={styles.emptyPayments}>
@@ -3430,6 +3432,31 @@ export default function AdminAthleteDetail() {
                       <Text style={styles.paymentDate}>
                         {payment.paid_date ? formatDate(payment.paid_date) : '-'}
                       </Text>
+                      {/* 🆕 28/07/2026 — Barra progresso per pagamenti parziali */}
+                      {payment.paid_amount != null && payment.paid_amount < payment.amount && payment.paid_amount > 0 && (() => {
+                        const perc = Math.min(100, Math.round((payment.paid_amount / payment.amount) * 100));
+                        const residuo = (payment.amount - payment.paid_amount);
+                        return (
+                          <View style={{ marginTop: 6 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
+                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#EF6C00' }}>
+                                ACCONTO: {formatCurrency(payment.paid_amount)} / {formatCurrency(payment.amount)} ({perc}%)
+                              </Text>
+                              <Text style={{ fontSize: 11, color: '#C62828', fontWeight: '700' }}>
+                                Residuo {formatCurrency(residuo)}
+                              </Text>
+                            </View>
+                            <View style={{ height: 6, backgroundColor: '#FFE0B2', borderRadius: 3, overflow: 'hidden' }}>
+                              <View style={{ width: `${perc}%`, height: '100%', backgroundColor: '#EF6C00' }} />
+                            </View>
+                            {payment.partial_payments && payment.partial_payments.length > 0 && (
+                              <Text style={{ fontSize: 10, color: '#888', marginTop: 3 }}>
+                                {payment.partial_payments.length} acconto{payment.partial_payments.length > 1 ? 'i' : ''} registrato{payment.partial_payments.length > 1 ? 'i' : ''}
+                              </Text>
+                            )}
+                          </View>
+                        );
+                      })()}
                       {payment.payment_method && (
                         <View style={[styles.cashBadge, { backgroundColor: payment.payment_method === 'Contanti' ? '#FF9500' : '#007AFF' }]}>
                           <Text style={styles.cashBadgeText}>{payment.payment_method.toUpperCase()}</Text>
