@@ -216,6 +216,8 @@ async def complete_note(note_id: str, current_user=Depends(get_current_user)):
     note = await db.admin_notes.find_one({"id": note_id, "society_id": society_id})
     if not note:
         raise HTTPException(status_code=404, detail="Nota non trovata")
+    if note.get("completed"):
+        raise HTTPException(status_code=400, detail="Nota già completata")
 
     await db.admin_notes.update_one(
         {"id": note_id},

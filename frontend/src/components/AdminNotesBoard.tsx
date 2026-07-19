@@ -269,12 +269,12 @@ export const AdminNotesBoard: React.FC = () => {
   if (loading) return null;
 
   return (
-    <View style={styles.container} data-testid="admin-notes-board">
+    <View style={styles.container} testID="admin-notes-board">
       {/* Header */}
       <TouchableOpacity
         style={styles.headerRow}
         onPress={() => setExpanded(!expanded)}
-        data-testid="admin-notes-toggle"
+        testID="admin-notes-toggle"
         activeOpacity={0.7}
       >
         <View style={styles.headerLeft}>
@@ -304,13 +304,13 @@ export const AdminNotesBoard: React.FC = () => {
                 placeholder="Nuova nota / cosa da fare..."
                 placeholderTextColor="#999"
                 onSubmitEditing={onCreate}
-                data-testid="admin-notes-new-title"
+                testID="admin-notes-new-title"
               />
               <TouchableOpacity
                 style={[styles.addBtn, (!newTitle.trim() || creating) && styles.addBtnDisabled]}
                 onPress={onCreate}
                 disabled={!newTitle.trim() || creating}
-                data-testid="admin-notes-new-submit"
+                testID="admin-notes-new-submit"
               >
                 {creating ? (
                   <ActivityIndicator size="small" color="#fff" />
@@ -325,7 +325,7 @@ export const AdminNotesBoard: React.FC = () => {
             <TouchableOpacity
               onPress={() => setShowAdvanced(!showAdvanced)}
               style={styles.advancedToggle}
-              data-testid="admin-notes-advanced-toggle"
+              testID="admin-notes-advanced-toggle"
             >
               <Text style={styles.advancedToggleText}>
                 {showAdvanced ? '− Nascondi opzioni' : '+ Priorità, scadenza, descrizione'}
@@ -343,7 +343,7 @@ export const AdminNotesBoard: React.FC = () => {
                         { backgroundColor: newPriority === p ? PRIORITY_META[p].bg : '#F5F5F5' },
                         newPriority === p && { borderColor: PRIORITY_META[p].color, borderWidth: 1.5 },
                       ]}
-                      data-testid={`admin-notes-priority-${p}`}
+                      testID={`admin-notes-priority-${p}`}
                     >
                       <Text style={{ fontSize: 13, color: newPriority === p ? PRIORITY_META[p].color : '#666', fontWeight: newPriority === p ? '700' : '500' }}>
                         {PRIORITY_META[p].emoji} {PRIORITY_META[p].label}
@@ -359,7 +359,7 @@ export const AdminNotesBoard: React.FC = () => {
                         value={newDueDate}
                         onChange={(e: any) => setNewDueDate(e.target.value)}
                         style={styles.webDateInput as any}
-                        data-testid="admin-notes-new-due"
+                        testID="admin-notes-new-due"
                       />
                     ) : (
                       <TextInput
@@ -397,7 +397,7 @@ export const AdminNotesBoard: React.FC = () => {
                   <View
                     key={n.id}
                     style={[styles.noteCard, { borderLeftColor: PRIORITY_META[n.priority].color }]}
-                    data-testid={`admin-note-${n.id}`}
+                    testID={`admin-note-${n.id}`}
                   >
                     {isEditing ? (
                       <View style={{ gap: 6 }}>
@@ -427,7 +427,7 @@ export const AdminNotesBoard: React.FC = () => {
                           )}
                         </View>
                         <View style={{ flexDirection: 'row', gap: 8 }}>
-                          <TouchableOpacity style={styles.saveBtn} onPress={() => saveEdit(n)} data-testid={`admin-note-save-${n.id}`}>
+                          <TouchableOpacity style={styles.saveBtn} onPress={() => saveEdit(n)} testID={`admin-note-save-${n.id}`}>
                             <Text style={styles.saveBtnText}>Salva</Text>
                           </TouchableOpacity>
                           <TouchableOpacity style={styles.cancelBtn} onPress={cancelEdit}>
@@ -456,7 +456,7 @@ export const AdminNotesBoard: React.FC = () => {
                           <TouchableOpacity
                             style={styles.checkboxItem}
                             onPress={() => onToggleTake(n)}
-                            data-testid={`admin-note-take-${n.id}`}
+                            testID={`admin-note-take-${n.id}`}
                           >
                             <View style={[styles.checkbox, n.taken_by && styles.checkboxOn]}>
                               {n.taken_by && <Ionicons name="checkmark" size={14} color="#fff" />}
@@ -474,7 +474,7 @@ export const AdminNotesBoard: React.FC = () => {
                           <TouchableOpacity
                             style={styles.checkboxItem}
                             onPress={() => onComplete(n)}
-                            data-testid={`admin-note-complete-${n.id}`}
+                            testID={`admin-note-complete-${n.id}`}
                           >
                             <View style={styles.checkbox}>
                               <Ionicons name="checkmark-done-outline" size={14} color="#666" />
@@ -482,10 +482,10 @@ export const AdminNotesBoard: React.FC = () => {
                             <Text style={[styles.checkboxLabel, { fontWeight: '600', color: '#2E7D32' }]}>Fatto</Text>
                           </TouchableOpacity>
                           <View style={{ flex: 1 }} />
-                          <TouchableOpacity style={styles.iconBtn} onPress={() => startEdit(n)} data-testid={`admin-note-edit-${n.id}`}>
+                          <TouchableOpacity style={styles.iconBtn} onPress={() => startEdit(n)} testID={`admin-note-edit-${n.id}`}>
                             <Ionicons name="create-outline" size={17} color="#666" />
                           </TouchableOpacity>
-                          <TouchableOpacity style={styles.iconBtn} onPress={() => onDelete(n)} data-testid={`admin-note-delete-${n.id}`}>
+                          <TouchableOpacity style={styles.iconBtn} onPress={() => onDelete(n)} testID={`admin-note-delete-${n.id}`}>
                             <Ionicons name="trash-outline" size={17} color="#C62828" />
                           </TouchableOpacity>
                         </View>
@@ -501,7 +501,7 @@ export const AdminNotesBoard: React.FC = () => {
           <TouchableOpacity
             style={styles.completedHeader}
             onPress={toggleCompletedSection}
-            data-testid="admin-notes-completed-toggle"
+            testID="admin-notes-completed-toggle"
           >
             <Text style={styles.completedTitle}>
               ✅ Già fatto {completedLoaded ? `(${completedCount})` : ''}
@@ -514,7 +514,7 @@ export const AdminNotesBoard: React.FC = () => {
                 <Text style={styles.emptyText}>Nessuna nota completata.</Text>
               ) : (
                 completed.map((n) => (
-                  <View key={n.id} style={styles.completedCard} data-testid={`admin-note-completed-${n.id}`}>
+                  <View key={n.id} style={styles.completedCard} testID={`admin-note-completed-${n.id}`}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.completedNoteTitle}>
                         {PRIORITY_META[n.priority].emoji} {n.title}
@@ -524,7 +524,7 @@ export const AdminNotesBoard: React.FC = () => {
                         {n.due_date ? ` • Scadenza: ${formatDate(n.due_date)}` : ''}
                       </Text>
                     </View>
-                    <TouchableOpacity style={styles.iconBtn} onPress={() => onReopen(n)} data-testid={`admin-note-reopen-${n.id}`}>
+                    <TouchableOpacity style={styles.iconBtn} onPress={() => onReopen(n)} testID={`admin-note-reopen-${n.id}`}>
                       <Ionicons name="refresh-outline" size={17} color="#1976D2" />
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.iconBtn} onPress={() => onDelete(n)}>
