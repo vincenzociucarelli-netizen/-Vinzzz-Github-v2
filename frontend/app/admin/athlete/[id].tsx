@@ -24,7 +24,7 @@ import DualRoleHubBanner from '../../../src/components/admin/DualRoleHubBanner';
 import { Ionicons } from '../../../src/components/Icon';
 import { Athlete, Team, Payment, Certificate } from '../../../src/types';
 import { format } from 'date-fns';
-import { getCurrentSeasonStart } from '../../../src/utils/season';
+import { getCurrentSeasonStart, getCurrentSeasonName } from '../../../src/utils/season';
 import { it } from 'date-fns/locale';
 import * as ImagePicker from 'expo-image-picker';
 import * as Print from 'expo-print';
@@ -1369,10 +1369,11 @@ export default function AdminAthleteDetail() {
       // Check if athlete is adult (no parent_id means adult)
       const isAdultAthlete = !(athlete as any).parent_id;
       
-      // Get current season
-      const now = new Date();
-      const year = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
-      const season = `${year}/${year + 1}`;
+      // 🐛 19/07/2026 — Fix: usa la stagione configurata dalle impostazioni
+      // della società (season_start_month/day) invece di hardcodarla dal
+      // calendario. Prima mostrava "2025/2026" anche quando l'admin aveva
+      // impostato la stagione 2026/2027 in Impostazioni.
+      const season = getCurrentSeasonName(societySettings).replace('-', '/');
 
       // For adult athletes, use a simple receipt (same as what the athlete sees)
       if (isAdultAthlete) {

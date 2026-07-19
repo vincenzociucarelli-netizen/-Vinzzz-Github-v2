@@ -13265,11 +13265,13 @@ async def get_fiscal_receipt_data(athlete_id: str, current_user = Depends(get_cu
     receipt_count = await db.payments.count_documents({"athlete_id": athlete_id, "paid": True})
     receipt_number = f"RF-{now.year}-{str(receipt_count).zfill(4)}"
     
-    # Determine season (July to June)
-    if now.month >= 7:
-        season = f"{now.year}/{now.year + 1}"
-    else:
-        season = f"{now.year - 1}/{now.year}"
+    # 🐛 19/07/2026 — Fix: usa la stagione configurata dalla società
+    # (season_start_month/day) invece di hardcodare luglio-giugno. Prima
+    # l'attestato mostrava "2025/2026" anche quando l'admin aveva già impostato
+    # la stagione 2026/2027 in Impostazioni.
+    from utils import get_current_season_for_society
+    season_raw = await get_current_season_for_society(db, athlete.get("society_id"))
+    season = season_raw.replace("-", "/")
     
     return {
         "athlete": {
