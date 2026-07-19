@@ -32,6 +32,12 @@ Sports team management app per società di pallavolo italiane. GDPR-compliant, m
 - Fix header icons su mobile.
 - Security refactor "Sono io il genitore" (CF/created_by → approval request in caso di conflitto).
 
+## Implemented (July 2026 — session 19/07)
+- 🆕 **Fix Badge Modalità Stripe (LIVE/TEST)** — `GET /api/settings/stripe` ora calcola `stripe_mode` dinamicamente dal prefisso della chiave pubblicata (`pk_live_` → live, `pk_test_` → test), invece di leggere il campo DB che poteva essere disallineato. Frontend `/admin/settings/stripe.tsx`: URL webhook Stripe reso dinamico (`dashboard.stripe.com/webhooks` in LIVE, `.../test/webhooks` in TEST).
+- 🆕 **Attestato di versamento: stagione dinamica** — sia backend (`GET /payments/{athlete_id}/fiscal-receipt`) sia frontend (`/admin/athlete/[id].tsx`) ora usano rispettivamente `get_current_season_for_society(db, society_id)` e `getCurrentSeasonName(societySettings)` per rispettare `season_start_month/day` configurato dalla società, invece della logica hardcoded calendario.
+- 🆕 **Attestato: styling titolo** — "ATTESTATO DI VERSAMENTO" ora in font Arial 22px blu navy `#1a237e` bold con bordi top/bottom (prima era 13px bianco su banner blu).
+- 🆕 **Bacheca Note Admin** — task list condivisa tra admin (`POST /api/admin/notes` + 7 endpoint CRUD/take/complete/reopen). UI in dashboard admin sopra AdminLiveStats. Priorità 🔴🟡🟢, scadenza opzionale con badge, doppio flag (presa in carico + fatto), sezione collassabile "Già fatto" con riapertura. Testato 100% backend (pytest 11/11) + frontend E2E via testing agent.
+
 ## Implemented (this session, Feb 2026)
 - 🆕 **Verifica email match** in "Sono io il genitore" (`link-me-as-parent` accetta anche match su `second_parent_email`, `parent_email`, `mother_email`, `father_email`).
 - 🆕 **Endpoint admin override** `POST /api/athletes/{id}/admin-link-parent` — admin può collegare qualsiasi utente esistente come genitore (bypassa verifica anti-frode).
