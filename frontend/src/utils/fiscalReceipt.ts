@@ -144,13 +144,15 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
         .header h1 { color: #1a237e; font-size: 16px; margin-bottom: 2px; }
         .header p { color: #666; font-size: 10px; margin: 1px 0; }
         .title-bar {
-          background-color: #1a237e;
-          color: white;
-          padding: 6px;
+          color: #1a237e;
+          padding: 10px 6px 8px;
           text-align: center;
-          font-size: 13px;
+          font-size: 22px;
           font-weight: bold;
-          margin: 8px 0;
+          letter-spacing: 0.5px;
+          margin: 10px 0 8px;
+          border-top: 2px solid #1a237e;
+          border-bottom: 2px solid #1a237e;
         }
         .receipt-info { margin-bottom: 6px; color: #666; font-size: 10px; }
         .box {
