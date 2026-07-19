@@ -21,7 +21,7 @@ Stripe Checkout multi-tenant.
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import logging
 import os
 
@@ -971,3 +971,143 @@ async def admin_refund_payment(
         "is_full_refund": is_full_refund,
         "stripe_status": refund.status,
     }
+
+
+# ============================================================================
+# 🆕 28/07/2026 — REMINDER RESIDUO ACCONTO (dopo 7 giorni)
+# ============================================================================
+
+async def _send_partial_reminder_email(payment: dict, athlete: dict, society_name: str, parent_email: str, parent_name: str):
+    """Manda email al genitore per il residuo da saldare."""
+    from email_service import send_transactional_email
+    total = float(payment.get("amount", 0) or 0)
+    paid_amount = float(payment.get("paid_amount", 0) or 0)
+    residual = round(total - paid_amount, 2)
+    ath_name = f"{athlete.get('first_name','')} {athlete.get('last_name','')}".strip()
+    rata_desc = payment.get("installment_name") or payment.get("description") or "Rata"
+    subject = f"⏰ Promemoria residuo € {residual:.2f} — {society_name}"
+    html = f"""
+    <div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+      <div style="background:linear-gradient(135deg,#F9A825,#EF6C00);color:white;padding:24px;border-radius:12px 12px 0 0;text-align:center;">
+        <h1 style="margin:0;font-size:22px;">⏰ Promemoria pagamento</h1>
+        <p style="margin:8px 0 0;opacity:0.9;">{society_name}</p>
+      </div>
+      <div style="background:#fff;padding:24px;border:1px solid #e0e0e0;border-radius:0 0 12px 12px;">
+        <p>Ciao <strong>{parent_name or ''}</strong>,</p>
+        <p>Ti ricordiamo che sulla rata <strong>{rata_desc}</strong> di <strong>{ath_name}</strong> risulta ancora un residuo da saldare.</p>
+        <div style="background:#FFF3E0;padding:16px;border-radius:8px;margin:16px 0;border-left:4px solid #EF6C00;">
+          <div style="font-size:12px;color:#666;">Importo totale rata</div>
+          <div style="font-size:16px;font-weight:700;color:#333;">€ {total:.2f}</div>
+          <div style="font-size:12px;color:#666;margin-top:8px;">Già versato</div>
+          <div style="font-size:16px;font-weight:700;color:#2E7D32;">€ {paid_amount:.2f}</div>
+          <div style="font-size:12px;color:#666;margin-top:8px;">Residuo da pagare</div>
+          <div style="font-size:22px;font-weight:800;color:#EF6C00;">€ {residual:.2f}</div>
+        </div>
+        <p style="font-size:13px;color:#555;">
+          Puoi completare il pagamento in qualsiasi momento dalla tua area genitore. Se hai difficoltà, contatta la segreteria della società.
+        </p>
+        <p style="font-size:12px;color:#999;margin-top:24px;text-align:center;">
+          Cordiali saluti,<br><strong>{society_name}</strong>
+        </p>
+      </div>
+    </div>
+    """
+    await send_transactional_email(
+        to_email=parent_email,
+        subject=subject,
+        html_content=html,
+        to_name=parent_name,
+    )
+
+
+async def process_partial_payment_reminders() -> dict:
+    """Trova rate parzialmente pagate con acconto risalente a >7gg e nessun reminder inviato negli ultimi 7gg.
+    Manda email al genitore. Aggiorna last_partial_reminder_sent_at."""
+    now = datetime.now(timezone.utc)
+    seven_days_ago = now - timedelta(days=7)
+    partials = await db.payments.find({
+        "paid_amount": {"$gt": 0},
+        "paid": {"$ne": True},
+        "$expr": {"$lt": ["$paid_amount", "$amount"]},
+    }).to_list(2000)
+
+    stats = {"processed": 0, "sent": 0, "skipped": 0, "errors": 0}
+    for p in partials:
+        stats["processed"] += 1
+        # Data dell'ultimo acconto
+        pp = p.get("partial_payments") or []
+        if not pp:
+            stats["skipped"] += 1
+            continue
+        latest_dates = [x.get("paid_at") for x in pp if x.get("paid_at")]
+        if not latest_dates:
+            stats["skipped"] += 1
+            continue
+        try:
+            last_paid_at = max(d for d in latest_dates if isinstance(d, datetime))
+        except ValueError:
+            stats["skipped"] += 1
+            continue
+        if last_paid_at > seven_days_ago:
+            stats["skipped"] += 1
+            continue
+        # Dedup: se abbiamo già mandato un reminder negli ultimi 7 giorni, skippa
+        last_reminder = p.get("last_partial_reminder_sent_at")
+        if isinstance(last_reminder, datetime) and last_reminder > seven_days_ago:
+            stats["skipped"] += 1
+            continue
+
+        athlete = await db.athletes.find_one({"id": p.get("athlete_id")})
+        if not athlete:
+            stats["skipped"] += 1
+            continue
+        # Ricava email genitore (primary o secondary)
+        parent_email = None
+        parent_name = None
+        parent_id = athlete.get("parent_id") or athlete.get("second_parent_id")
+        if parent_id:
+            u = await db.users.find_one({"id": parent_id}, {"email": 1, "full_name": 1})
+            if u:
+                parent_email = u.get("email")
+                parent_name = u.get("full_name")
+        if not parent_email:
+            stats["skipped"] += 1
+            continue
+        # Nome società
+        soc = await db.settings.find_one({"type": "society", "society_id": p.get("society_id")}) or {}
+        society_name = soc.get("ragione_sociale") or soc.get("society_name") or soc.get("name") or "Società"
+
+        try:
+            await _send_partial_reminder_email(p, athlete, society_name, parent_email, parent_name)
+            await db.payments.update_one(
+                {"id": p["id"]},
+                {"$set": {"last_partial_reminder_sent_at": now}, "$inc": {"partial_reminder_count": 1}},
+            )
+            stats["sent"] += 1
+            logger.info(f"[partial reminder] sent to {parent_email} for payment {p['id']}")
+        except Exception as e:
+            stats["errors"] += 1
+            logger.warning(f"[partial reminder] failed for payment {p.get('id')}: {e}")
+    return stats
+
+
+async def partial_reminders_scheduler():
+    """Background task: gira ogni 24h per inviare reminder sui residui > 7gg."""
+    import asyncio as _asyncio
+    await _asyncio.sleep(120)  # attesa 2min dopo startup
+    while True:
+        try:
+            stats = await process_partial_payment_reminders()
+            if stats["processed"] > 0:
+                logger.info(f"[partial reminders scheduler] tick: {stats}")
+        except Exception as e:
+            logger.exception(f"[partial reminders scheduler] error: {e}")
+        await _asyncio.sleep(24 * 3600)  # ogni 24 ore
+
+
+@router.post("/admin/partial-payments/send-reminders")
+async def admin_trigger_partial_reminders(current_user=Depends(get_current_user)):
+    """Admin: trigger manuale dello scheduler dei reminder (per test/debug)."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    return await process_partial_payment_reminders()

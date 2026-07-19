@@ -35586,6 +35586,14 @@ async def start_certificate_scheduler():
     except Exception as e:
         logger.exception(f"Failed to start recurring scheduler: {e}")
 
+    # 🆕 28/07/2026 — Reminder residuo pagamenti parziali (>7gg)
+    try:
+        from routes.stripe_payments import partial_reminders_scheduler
+        _asyncio.create_task(partial_reminders_scheduler())
+        logger.info("Partial payment reminders scheduler started (daily).")
+    except Exception as e:
+        logger.exception(f"Failed to start partial reminders scheduler: {e}")
+
 
 @app.on_event("startup")
 async def ensure_mongodb_indexes():
