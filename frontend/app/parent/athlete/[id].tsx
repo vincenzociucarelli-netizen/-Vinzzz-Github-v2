@@ -490,20 +490,20 @@ export default function AthleteDetail() {
   }, [id]);
 
   // 🆕 16/07/2026 — Stripe Checkout handler
-  const handlePayWithStripe = async (amount: number, description: string) => {
+  const handlePayWithStripe = async (amount: number, description: string, partialAmount?: number) => {
     if (!athlete) return;
     setPayingRateName(description);
     try {
       const origin = typeof window !== 'undefined' ? window.location.origin : '';
       const res = await api.post('/payments/create-checkout', {
         athlete_id: athlete.id,
-        amount,
-        description,
+        amount: partialAmount || amount,
+        description: partialAmount ? `${description} — Acconto € ${partialAmount.toFixed(2)}` : description,
         return_url_base: origin || undefined,
       });
       const url = res.data?.checkout_url;
       if (url && typeof window !== 'undefined') {
-        window.location.href = url;  // redirect Stripe Checkout
+        window.location.href = url;
       } else {
         Alert.alert('Errore', 'Impossibile aprire la pagina di pagamento.');
         setPayingRateName(null);
@@ -512,6 +512,32 @@ export default function AthleteDetail() {
       Alert.alert('Errore', err?.response?.data?.detail || 'Impossibile avviare il pagamento');
       setPayingRateName(null);
     }
+  };
+
+  // 🆕 28/07/2026 — Pagamento parziale (min 50€)
+  const handlePartialPayment = (fullAmount: number, description: string) => {
+    if (typeof window === 'undefined') return;
+    const input = window.prompt(
+      `💡 Pagamento parziale\n\nRata: ${description}\nImporto totale: € ${fullAmount.toFixed(2)}\n\nInserisci l'importo che vuoi pagare adesso (minimo € 50, max € ${fullAmount.toFixed(2)}):`,
+      String(Math.min(50, fullAmount).toFixed(2)),
+    );
+    if (input === null) return;
+    const partial = parseFloat(input.replace(',', '.'));
+    if (isNaN(partial) || partial < 50) {
+      window.alert('❌ L\'importo minimo per un pagamento parziale è 50 €');
+      return;
+    }
+    if (partial > fullAmount + 0.01) {
+      window.alert(`❌ L'importo supera il residuo di € ${fullAmount.toFixed(2)}`);
+      return;
+    }
+    if (partial >= fullAmount - 0.01) {
+      window.alert('ℹ️ L\'importo coincide con il residuo — usa il bottone "Paga con Carta" normale');
+      return;
+    }
+    const residualAfter = fullAmount - partial;
+    if (!window.confirm(`Confermi pagamento parziale?\n\nOra paghi: € ${partial.toFixed(2)}\nResiduo da pagare in seguito: € ${residualAfter.toFixed(2)}\n\nRiceverai lo scontrino per l'acconto.`)) return;
+    handlePayWithStripe(fullAmount, description, partial);
   };
 
   // Auto-scroll to payments section when tab=payments
@@ -2587,6 +2613,22 @@ export default function AthleteDetail() {
                         </Text>
                       </TouchableOpacity>
                     )}
+                    {/* 🆕 28/07/2026 — Link Pagamento Parziale (solo se residuo > 50€ e non c'è piano ricorrente) */}
+                    {stripeEnabled && !recurringPlan && (() => {
+                      const residual = nextDue.status === 'partial' ? (nextDue.amount - nextDue.paidAmount) : nextDue.amount;
+                      if (residual <= 50) return null;
+                      return (
+                        <TouchableOpacity
+                          onPress={() => handlePartialPayment(residual, nextDue.name)}
+                          style={{ marginTop: 8, paddingVertical: 6, alignItems: 'center' }}
+                          data-testid="parent-pay-partial-btn"
+                        >
+                          <Text style={{ fontSize: 12, color: '#635BFF', textDecorationLine: 'underline' }}>
+                            💡 Non riesci a pagare tutto? Paga un importo parziale (min € 50)
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })()}
                   </View>
                 )}
 

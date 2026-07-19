@@ -96,6 +96,7 @@ async def _get_payment_context(payment_id: str, current_user: dict, allow_paid: 
 
 class CheckoutRequest(BaseModel):
     return_url_base: Optional[str] = None  # frontend passa il proprio origin
+    partial_amount: Optional[float] = None  # 🆕 28/07/2026 — importo parziale (min 50€)
 
 
 class NewCheckoutRequest(BaseModel):
@@ -247,12 +248,30 @@ async def create_stripe_checkout(
     cancel_url = f"{base}/parent/payment/cancel?payment_id={payment_id}"
 
     # Importo residuo in centesimi
-    amount_cents = int(round(float(payment.get("amount", 0)) * 100))
+    total_amount = float(payment.get("amount", 0))
+    already_paid = float(payment.get("paid_amount") or 0)
+    residual = round(total_amount - already_paid, 2)
+
+    # 🆕 28/07/2026 — Pagamento parziale (min 50€) — vietato su piani ricorrenti
+    charge_amount = residual
+    is_partial = False
+    if body.partial_amount is not None and body.partial_amount > 0:
+        if payment.get("recurring_plan_id"):
+            raise HTTPException(status_code=400, detail="Il pagamento parziale non è consentito sulle rate di un piano ricorrente")
+        if body.partial_amount < 50:
+            raise HTTPException(status_code=400, detail="L'importo minimo per un pagamento parziale è 50 €")
+        if body.partial_amount > residual + 0.01:
+            raise HTTPException(status_code=400, detail=f"L'importo richiesto (€ {body.partial_amount:.2f}) supera il residuo di € {residual:.2f}")
+        charge_amount = round(body.partial_amount, 2)
+        is_partial = charge_amount < residual - 0.01
+
+    amount_cents = int(round(charge_amount * 100))
     if amount_cents <= 0:
         raise HTTPException(status_code=400, detail="Importo non valido")
 
     athlete_name = f"{athlete.get('first_name','')} {athlete.get('last_name','')}".strip() or "Atleta"
-    desc = payment.get("description") or f"Rata iscrizione — {athlete_name}"
+    base_desc = payment.get("description") or f"Rata iscrizione — {athlete_name}"
+    desc = f"{base_desc} — Acconto € {charge_amount:.2f}" if is_partial else base_desc
 
     try:
         session = stripe.checkout.Session.create(
@@ -277,6 +296,8 @@ async def create_stripe_checkout(
                 "society_id": society_id,
                 "athlete_id": athlete["id"],
                 "payer_user_id": current_user.get("id", ""),
+                "partial": "1" if is_partial else "0",
+                "charge_amount": str(charge_amount),
             },
         )
     except stripe.error.StripeError as e:
@@ -384,30 +405,60 @@ async def stripe_webhook(society_id: str, request: Request):
 
     if event_type == "checkout.session.completed":
         session = event["data"]["object"]
-        payment_id = (session.get("metadata") or {}).get("payment_id")
+        metadata = session.get("metadata") or {}
+        payment_id = metadata.get("payment_id")
         if payment_id:
-            # Idempotente: non riaggiornare se già pagato
-            already = await db.payments.find_one({"id": payment_id, "paid": True})
-            if not already:
-                await db.payments.update_one(
-                    {"id": payment_id},
-                    {"$set": {
-                        "paid": True,
-                        "paid_date": datetime.now(timezone.utc),
+            # 🆕 28/07/2026 — Supporto pagamento parziale
+            is_partial = metadata.get("partial") == "1"
+            try:
+                charge_amount = float(metadata.get("charge_amount") or 0)
+            except (TypeError, ValueError):
+                charge_amount = 0.0
+            payment_doc = await db.payments.find_one({"id": payment_id})
+            if payment_doc:
+                total_amount = float(payment_doc.get("amount", 0) or 0)
+                already_paid = float(payment_doc.get("paid_amount") or 0)
+                new_paid = round(already_paid + (charge_amount if charge_amount > 0 else total_amount - already_paid), 2)
+                is_fully_paid = new_paid >= total_amount - 0.01
+
+                # Se il pagamento è già stato marcato come "paid" senza logic parziale
+                # (webhook duplicato/redundant), non fare nulla
+                already_full = payment_doc.get("paid") and not payment_doc.get("partial_payments")
+                if not already_full:
+                    now = datetime.now(timezone.utc)
+                    set_updates = {
+                        "paid_amount": new_paid,
                         "payment_method": "stripe",
                         "stripe_session_id": session.get("id"),
                         "stripe_payment_intent": session.get("payment_intent"),
-                    }},
-                )
+                    }
+                    if is_fully_paid:
+                        set_updates["paid"] = True
+                        set_updates["paid_date"] = now
+                    await db.payments.update_one(
+                        {"id": payment_id},
+                        {
+                            "$set": set_updates,
+                            "$push": {
+                                "partial_payments": {
+                                    "amount": round(charge_amount if is_partial else total_amount - already_paid, 2),
+                                    "stripe_session_id": session.get("id"),
+                                    "stripe_payment_intent": session.get("payment_intent"),
+                                    "paid_at": now,
+                                    "is_partial": is_partial,
+                                }
+                            } if is_partial else {},
+                        } if is_partial else {"$set": set_updates},
+                    )
             # Aggiorna anche il log tentativo
             try:
                 await db.stripe_payment_attempts.update_one(
                     {"id": session.get("id")},
-                    {"$set": {"status": "paid", "paid_at": datetime.now(timezone.utc)}},
+                    {"$set": {"status": "paid", "paid_at": datetime.now(timezone.utc), "partial": is_partial, "charge_amount": charge_amount}},
                 )
             except Exception:
                 pass
-            logger.info(f"[stripe webhook] payment {payment_id} paid via Stripe (society={society_id})")
+            logger.info(f"[stripe webhook] payment {payment_id} paid via Stripe (society={society_id}, partial={is_partial}, amount={charge_amount})")
 
     elif event_type == "checkout.session.expired":
         session = event["data"]["object"]
