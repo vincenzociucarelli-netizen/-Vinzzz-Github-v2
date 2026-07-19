@@ -374,7 +374,7 @@ export default function StripeSettings() {
                 {webhookUrl || 'Caricamento...'}
               </Text>
               <Text style={{ fontSize: 11, color: '#4C1D95', lineHeight: 15 }}>
-                2️⃣ Incollalo su <Text style={{ fontWeight: '700' }}>dashboard.stripe.com/test/webhooks</Text> → &quot;Aggiungi endpoint&quot;.
+                2️⃣ Incollalo su <Text style={{ fontWeight: '700' }}>{isTestMode ? 'dashboard.stripe.com/test/webhooks' : 'dashboard.stripe.com/webhooks'}</Text> → &quot;Aggiungi endpoint&quot;.
                 {'\n'}Eventi da sottoscrivere: <Text style={{ fontWeight: '700' }}>checkout.session.completed</Text> e <Text style={{ fontWeight: '700' }}>checkout.session.expired</Text>.
                 {'\n'}3️⃣ Stripe ti darà un &quot;Signing secret&quot; che inizia con <Text style={{ fontWeight: '700' }}>whsec_...</Text> → incollalo qui sotto.
               </Text>

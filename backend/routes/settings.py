@@ -592,9 +592,21 @@ async def get_stripe_settings(current_user = Depends(get_current_user)):
             return ""
         return f"{key[:7]}...{key[-4:]}"
     
+    # Compute stripe_mode dynamically from the actual saved publishable key.
+    # This guarantees UI badge and webhook link always match the real keys,
+    # even if the stored stripe_mode field is stale (e.g. keys were migrated
+    # or inserted without going through the PATCH endpoint that recomputes it).
+    pk = settings.get("stripe_publishable_key", "") or ""
+    if pk.startswith("pk_live_"):
+        computed_mode = "live"
+    elif pk.startswith("pk_test_"):
+        computed_mode = "test"
+    else:
+        computed_mode = settings.get("stripe_mode", "test")
+    
     return {
         "stripe_enabled": settings.get("stripe_enabled", False),
-        "stripe_mode": settings.get("stripe_mode", "test"),
+        "stripe_mode": computed_mode,
         "stripe_publishable_key_masked": mask_key(settings.get("stripe_publishable_key", "")),
         "stripe_secret_key_masked": mask_key(settings.get("stripe_secret_key", "")),
         "stripe_webhook_secret_masked": mask_key(settings.get("stripe_webhook_secret", "")),
