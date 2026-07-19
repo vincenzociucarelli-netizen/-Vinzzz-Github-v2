@@ -792,3 +792,108 @@ async def get_payment_receipt_html(payment_id: str, current_user=Depends(get_cur
         total_installments=total_installments,
     )
     return HTMLResponse(content=html, status_code=200)
+
+
+# ============================================================================
+# 🆕 27/07/2026 — RIMBORSO STRIPE (admin)
+# ============================================================================
+
+class RefundRequest(BaseModel):
+    reason: str  # obbligatorio: motivo del rimborso
+    amount: Optional[float] = None  # se None → rimborso totale
+
+
+@router.post("/admin/payments/{payment_id}/refund")
+async def admin_refund_payment(
+    payment_id: str,
+    data: RefundRequest,
+    current_user=Depends(get_current_user),
+):
+    """Admin: rimborsa un pagamento Stripe (totale o parziale).
+    Salva motivo, importo, admin autore e timestamp nel documento payment."""
+    if current_user.get("role") not in ("admin", "viewer"):
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    payment = await db.payments.find_one({"id": payment_id})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Pagamento non trovato")
+    if payment.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Pagamento di un'altra società")
+    if not payment.get("paid"):
+        raise HTTPException(status_code=400, detail="Il pagamento non risulta ancora incassato")
+    if not payment.get("stripe_payment_intent"):
+        raise HTTPException(status_code=400, detail="Solo pagamenti Stripe possono essere rimborsati da qui")
+    if payment.get("refunded"):
+        raise HTTPException(status_code=409, detail="Pagamento già completamente rimborsato")
+    if not (data.reason or "").strip():
+        raise HTTPException(status_code=400, detail="Il motivo è obbligatorio")
+
+    settings = await _get_society_stripe_settings(payment["society_id"])
+    sk = settings["stripe_secret_key"]
+
+    # Calcola importo rimborso
+    total_amount = float(payment.get("amount", 0))
+    already_refunded = float(payment.get("refund_amount") or 0)
+    remaining = total_amount - already_refunded
+    if remaining <= 0:
+        raise HTTPException(status_code=409, detail="Nessun importo residuo da rimborsare")
+
+    refund_amount = data.amount if data.amount and data.amount > 0 else remaining
+    if refund_amount > remaining + 0.001:
+        raise HTTPException(status_code=400, detail=f"Importo richiesto (€ {refund_amount:.2f}) supera il residuo rimborsabile (€ {remaining:.2f})")
+
+    try:
+        refund = stripe.Refund.create(
+            api_key=sk,
+            payment_intent=payment["stripe_payment_intent"],
+            amount=int(round(refund_amount * 100)),
+            reason="requested_by_customer",
+            metadata={
+                "internal_reason": data.reason[:500],
+                "admin_user_id": current_user["id"],
+                "admin_email": current_user.get("email") or "",
+                "payment_id": payment_id,
+                "athlete_id": payment.get("athlete_id") or "",
+            },
+        )
+    except stripe.error.StripeError as e:
+        logger.exception("[refund] Stripe error")
+        raise HTTPException(status_code=502, detail=f"Errore Stripe: {str(e)}")
+
+    new_refund_amount = already_refunded + refund_amount
+    is_full_refund = new_refund_amount >= total_amount - 0.001
+
+    now = datetime.now(timezone.utc)
+    update = {
+        "refund_amount": round(new_refund_amount, 2),
+        "last_refund_at": now,
+        "last_refund_reason": data.reason,
+        "last_refund_admin_id": current_user["id"],
+        "last_refund_admin_email": current_user.get("email"),
+        "last_refund_id": refund.id,
+    }
+    # Storico rimborsi
+    await db.payments.update_one(
+        {"id": payment_id},
+        {
+            "$set": {**update, "refunded": is_full_refund, "paid": False if is_full_refund else True},
+            "$push": {
+                "refunds_log": {
+                    "stripe_refund_id": refund.id,
+                    "amount": refund_amount,
+                    "reason": data.reason,
+                    "created_at": now,
+                    "admin_id": current_user["id"],
+                    "admin_email": current_user.get("email"),
+                }
+            },
+        },
+    )
+
+    return {
+        "message": f"Rimborso di € {refund_amount:.2f} effettuato",
+        "refund_id": refund.id,
+        "total_refunded_now": round(new_refund_amount, 2),
+        "is_full_refund": is_full_refund,
+        "stripe_status": refund.status,
+    }

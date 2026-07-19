@@ -199,6 +199,8 @@ export default function AthleteDetail() {
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [paymentSettings, setPaymentSettings] = useState<any>(null);
+  // 🆕 27/07/2026 — Piano ricorrente attivo per questo atleta
+  const [recurringPlan, setRecurringPlan] = useState<any>(null);
   const [teamSchedule, setTeamSchedule] = useState<{
     training_sessions: any[];
     match_day: any;
@@ -352,6 +354,14 @@ export default function AthleteDetail() {
       setAthlete(athleteRes.data);
       setPayments(paymentsRes.data);
       setTeams(teamsRes.data);
+
+      // 🆕 27/07/2026 — Piano ricorrente per questo atleta
+      try {
+        const rpRes = await api.get('/users/me/recurring-plans-summary');
+        setRecurringPlan(rpRes.data?.[id as string] || null);
+      } catch (_e) {
+        // silenzioso
+      }
       
       // Load athlete photo
       setAthletePhoto(athleteRes.data.athlete_photo || null);
@@ -2361,6 +2371,102 @@ export default function AthleteDetail() {
             </View>
           );
         })()}
+
+        {/* 🆕 27/07/2026 — Card Piano Ricorrente Attivo (se presente per questo atleta) */}
+        {recurringPlan && (
+          <View style={[styles.card, { borderLeftWidth: 4, borderLeftColor: '#635BFF' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+              <Ionicons name="repeat" size={22} color="#635BFF" />
+              <Text style={[styles.cardTitle, { flex: 1 }]}>Piano rate automatiche</Text>
+              <View style={{
+                backgroundColor: recurringPlan.status === 'active' ? '#E8F5E9' : recurringPlan.status === 'completed' ? '#E3F2FD' : '#FFF3E0',
+                paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12,
+              }}>
+                <Text style={{
+                  fontSize: 10, fontWeight: '800',
+                  color: recurringPlan.status === 'active' ? '#2E7D32' : recurringPlan.status === 'completed' ? '#1565C0' : '#EF6C00',
+                }}>
+                  {recurringPlan.status.toUpperCase()}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>
+              {recurringPlan.description || 'Iscrizione'}
+            </Text>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+              <View>
+                <Text style={{ fontSize: 11, color: '#888' }}>Totale piano</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: '#333' }}>€ {(recurringPlan.total_amount || 0).toFixed(2)}</Text>
+              </View>
+              <View>
+                <Text style={{ fontSize: 11, color: '#888' }}>Progresso</Text>
+                <Text style={{ fontSize: 18, fontWeight: '700', color: '#635BFF' }}>
+                  {recurringPlan.charges_completed}/{recurringPlan.installments_count}
+                </Text>
+              </View>
+              {recurringPlan.next_charge_date && (
+                <View>
+                  <Text style={{ fontSize: 11, color: '#888' }}>Prossimo addebito</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginTop: 4 }}>
+                    {new Date(recurringPlan.next_charge_date).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: '2-digit' })}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Storico rate */}
+            <View style={{ marginTop: 8, borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingTop: 12 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#555', marginBottom: 8 }}>Rate del piano</Text>
+              {(recurringPlan.installment_amounts || []).map((amount: number, i: number) => {
+                const n = i + 1;
+                const isDone = n <= recurringPlan.charges_completed;
+                const isNext = n === recurringPlan.charges_completed + 1 && recurringPlan.status === 'active';
+                return (
+                  <View key={i} style={{
+                    flexDirection: 'row', alignItems: 'center', paddingVertical: 6,
+                    borderBottomWidth: i < recurringPlan.installment_amounts.length - 1 ? 1 : 0,
+                    borderBottomColor: '#F5F5F5',
+                  }}>
+                    <Ionicons
+                      name={isDone ? 'checkmark-circle' : isNext ? 'time' : 'ellipse-outline'}
+                      size={18}
+                      color={isDone ? '#2E7D32' : isNext ? '#F9A825' : '#CCC'}
+                    />
+                    <Text style={{ marginLeft: 8, fontSize: 13, color: '#333', flex: 1 }}>
+                      Rata {n}
+                    </Text>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: isDone ? '#2E7D32' : '#666' }}>
+                      € {amount.toFixed(2)}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+
+            {/* Contatta segreteria */}
+            {recurringPlan.society_email && (
+              <TouchableOpacity
+                onPress={() => {
+                  if (Platform.OS === 'web') {
+                    window.location.href = `mailto:${recurringPlan.society_email}?subject=${encodeURIComponent(`Piano ricorrente ${athlete?.full_name || ''}`)}`;
+                  }
+                }}
+                style={{
+                  marginTop: 14, backgroundColor: '#E3F2FD', borderRadius: 8, paddingVertical: 10,
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}
+                data-testid="contact-secretary-btn"
+              >
+                <Ionicons name="mail" size={16} color="#1565C0" />
+                <Text style={{ color: '#1565C0', fontWeight: '700', fontSize: 13 }}>
+                  Contatta la segreteria
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {/* Payments Card - Dynamic Installments with Cumulative Logic */}
         <View style={styles.card} ref={paymentsRef}>

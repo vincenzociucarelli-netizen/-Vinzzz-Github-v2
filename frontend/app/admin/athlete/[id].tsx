@@ -3449,6 +3449,52 @@ export default function AdminAthleteDetail() {
                       >
                         <Ionicons name="pencil" size={18} color="#007AFF" />
                       </TouchableOpacity>
+                      {/* 🆕 27/07/2026 — Bottone Rimborsa (solo per pagamenti Stripe non ancora rimborsati completamente) */}
+                      {payment.stripe_payment_intent && !payment.refunded && (
+                        <TouchableOpacity
+                          onPress={async () => {
+                            if (Platform.OS !== 'web') return;
+                            const totAmt = parseFloat(payment.amount) || 0;
+                            const alreadyRef = parseFloat(payment.refund_amount || 0);
+                            const remaining = totAmt - alreadyRef;
+                            const amtInput = window.prompt(
+                              `Rimborso pagamento Stripe\n\nImporto originale: € ${totAmt.toFixed(2)}\n${alreadyRef > 0 ? `Già rimborsato: € ${alreadyRef.toFixed(2)}\nResiduo rimborsabile: € ${remaining.toFixed(2)}\n\n` : ''}Importo da rimborsare (invio = tutto il residuo):`,
+                              String(remaining.toFixed(2))
+                            );
+                            if (amtInput === null) return;
+                            const amt = parseFloat(amtInput);
+                            if (isNaN(amt) || amt <= 0 || amt > remaining + 0.01) {
+                              window.alert('Importo non valido');
+                              return;
+                            }
+                            const reason = window.prompt('Motivo del rimborso (obbligatorio):');
+                            if (!reason || !reason.trim()) {
+                              window.alert('Motivo obbligatorio');
+                              return;
+                            }
+                            if (!window.confirm(`Confermi rimborso di € ${amt.toFixed(2)}?\n\nMotivo: ${reason}\n\nIl rimborso arriverà sulla carta del genitore in 5-10 giorni lavorativi.`)) return;
+                            try {
+                              const r = await api.post(`/admin/payments/${payment.id}/refund`, { amount: amt, reason: reason.trim() });
+                              window.alert(`✅ ${r.data?.message}\n\nRefund ID: ${r.data?.refund_id}\nStato Stripe: ${r.data?.stripe_status}`);
+                              await loadData();
+                            } catch (e: any) {
+                              window.alert(`Errore: ${e?.response?.data?.detail || 'Rimborso fallito'}`);
+                            }
+                          }}
+                          style={{ marginHorizontal: 4 }}
+                          data-testid={`refund-btn-${payment.id}`}
+                        >
+                          <Ionicons name="return-down-back" size={20} color="#EF6C00" />
+                        </TouchableOpacity>
+                      )}
+                      {payment.refunded && (
+                        <View style={{
+                          paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4,
+                          backgroundColor: '#FFEBEE', marginHorizontal: 4,
+                        }}>
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#C62828' }}>RIMB</Text>
+                        </View>
+                      )}
                       <TouchableOpacity onPress={() => handleDeletePayment(payment.id)}>
                         <Ionicons name="trash-outline" size={20} color="#FF3B30" />
                       </TouchableOpacity>

@@ -251,6 +251,35 @@ async def charge_now(plan_id: str, current_user=Depends(get_current_user)):
     return await _execute_next_charge(plan)
 
 
+@router.post("/admin/recurring-plans/{plan_id}/charges/{charge_id}/retry")
+async def retry_failed_charge(plan_id: str, charge_id: str, current_user=Depends(get_current_user)):
+    """Admin: ritenta un addebito precedentemente fallito.
+    Rimuove il log del charge fallito e riesegue _execute_next_charge (che tenterà
+    lo stesso installment_number visto che charges_completed non è avanzato)."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    plan = await db.recurring_plans.find_one({"id": plan_id})
+    if not plan or plan.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=404, detail="Piano non trovato")
+    charge = await db.recurring_charges.find_one({"id": charge_id, "plan_id": plan_id})
+    if not charge:
+        raise HTTPException(status_code=404, detail="Charge non trovato")
+    if charge.get("status") != "failed":
+        raise HTTPException(status_code=400, detail="Solo i charge falliti possono essere ritentati")
+
+    # Rimuovi il vecchio log failed prima di ritentare
+    await db.recurring_charges.delete_one({"id": charge_id})
+    if plan["status"] not in ("active", "paused"):
+        # Riporta il piano ad active se era stato messo in altro stato
+        await db.recurring_plans.update_one(
+            {"id": plan_id},
+            {"$set": {"status": "active"}},
+        )
+        plan["status"] = "active"
+
+    return await _execute_next_charge(plan)
+
+
 async def _execute_next_charge(plan: dict) -> dict:
     """Esegue il prossimo addebito off-session del piano."""
     next_installment_idx = plan.get("charges_completed", 0)

@@ -219,10 +219,41 @@ export default function AdminRecurringPlanPage() {
                           size={16}
                           color={c.status === 'succeeded' ? '#2E7D32' : c.status === 'failed' ? '#C62828' : '#F9A825'}
                         />
-                        <Text style={styles.chargeTxt}>
-                          Rata {c.installment_number}: € {c.amount.toFixed(2)} — {c.status}
-                          {c.succeeded_at && ` (${new Date(c.succeeded_at).toLocaleDateString('it-IT')})`}
-                        </Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.chargeTxt}>
+                            Rata {c.installment_number}: € {c.amount.toFixed(2)} — {c.status}
+                            {c.succeeded_at && ` (${new Date(c.succeeded_at).toLocaleDateString('it-IT')})`}
+                          </Text>
+                          {c.status === 'failed' && c.failure_reason && (
+                            <Text style={{ fontSize: 10, color: '#C62828', marginTop: 2 }}>
+                              {c.failure_reason}
+                            </Text>
+                          )}
+                        </View>
+                        {c.status === 'failed' && (
+                          <TouchableOpacity
+                            onPress={async () => {
+                              if (Platform.OS === 'web' && !window.confirm('Ritentare questo addebito ora?')) return;
+                              try {
+                                const r = await api.post(`/admin/recurring-plans/${p.id}/charges/${c.id}/retry`);
+                                showAlert('Ritentato', r.data?.message || 'OK');
+                                const pRes = await api.get(`/admin/recurring-plans/athlete/${athleteId}`);
+                                setPlans(pRes.data || []);
+                              } catch (e: any) {
+                                showAlert('Errore', e?.response?.data?.detail || 'Retry fallito');
+                              }
+                            }}
+                            style={{
+                              flexDirection: 'row', alignItems: 'center', gap: 3,
+                              backgroundColor: '#FFF3E0', paddingHorizontal: 8, paddingVertical: 4,
+                              borderRadius: 6,
+                            }}
+                            data-testid={`retry-charge-${c.id}`}
+                          >
+                            <Ionicons name="refresh" size={12} color="#EF6C00" />
+                            <Text style={{ fontSize: 10, fontWeight: '700', color: '#EF6C00' }}>Ritenta</Text>
+                          </TouchableOpacity>
+                        )}
                       </View>
                     ))}
                   </View>
