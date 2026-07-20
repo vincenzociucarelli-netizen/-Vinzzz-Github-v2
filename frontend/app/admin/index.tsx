@@ -434,8 +434,6 @@ export default function AdminDashboard() {
           >
             {society.name}
           </Text>
-          {/* 🆕 05/07/2026 — Badge stagione corrente sempre visibile nella dashboard */}
-          <SeasonBadge />
         </View>
         <View style={styles.headerMainRow}>
           {/* Society logo on the LEFT, scaled to fit blue band (abbassato leggermente) */}
@@ -449,64 +447,72 @@ export default function AdminDashboard() {
           ) : (
             <View style={styles.headerBigLogo} />
           )}
-          
-          {/* Right column: 4 action icons */}
+
+          {/* Right column: stagione sopra, icone in fondo (confine blu/bianco) */}
           <View style={styles.headerRightCol}>
-            <View style={styles.headerButtons}>
-              {/* Notifications Bell */}
-              <TouchableOpacity 
-                onPress={() => router.push('/admin/notifications')} 
+            {/* 🆕 20/07/2026 — Stagione spostata sopra le icone, allineata a destra */}
+            <View style={styles.seasonBadgeRow}>
+              <SeasonBadge />
+            </View>
+          </View>
+        </View>
+
+        {/* 🆕 20/07/2026 — Icone azioni spostate al confine blu/bianco (fondo dell'header) */}
+        <View style={styles.headerBottomIconsRow}>
+          <View style={styles.headerButtons}>
+            {/* Notifications Bell */}
+            <TouchableOpacity
+              onPress={() => router.push('/admin/notifications')}
+              style={styles.headerIconBtn}
+            >
+              <Text style={{ fontSize: 17 }}>🔔</Text>
+              {unreadNotifications > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            {/* Switch to Dirigente button — nascosto per account istituzionali */}
+            {!(user as any)?.is_institutional_account && (
+              <TouchableOpacity
+                onPress={() => router.replace('/dirigente')}
                 style={styles.headerIconBtn}
               >
-                <Text style={{ fontSize: 17 }}>🔔</Text>
-                {unreadNotifications > 0 && (
-                  <View style={styles.notificationBadge}>
-                    <Text style={styles.notificationBadgeText}>
-                      {unreadNotifications > 9 ? '9+' : unreadNotifications}
-                    </Text>
-                  </View>
-                )}
+                <Text style={{ fontSize: 15 }}>{Icons.briefcase}</Text>
               </TouchableOpacity>
-              {/* Switch to Dirigente button — nascosto per account istituzionali */}
-              {!(user as any)?.is_institutional_account && (
-                <TouchableOpacity 
-                  onPress={() => router.replace('/dirigente')} 
-                  style={styles.headerIconBtn}
-                >
-                  <Text style={{ fontSize: 15 }}>{Icons.briefcase}</Text>
-                </TouchableOpacity>
-              )}
-              {/* 🆕 17/07/2026 — Switch to Genitore (visibile solo se admin è parent di almeno 1 atleta) */}
-              {linkedAthletesCount > 0 && (
-                <TouchableOpacity
-                  onPress={() => router.replace('/parent')}
-                  style={[styles.headerIconBtn, { backgroundColor: '#F3E5F5' }]}
-                  data-testid="admin-switch-to-parent-btn"
-                >
-                  <Ionicons name="people" size={16} color="#8E24AA" />
-                </TouchableOpacity>
-              )}
-              {/* 🆕 26/07/2026 — Se admin NON è parent di nessun atleta, mostra bottone "aggiungi figlio" */}
-              {linkedAthletesCount === 0 && (
-                <TouchableOpacity
-                  onPress={() => router.push('/staff/link-or-register-child')}
-                  style={[styles.headerIconBtn, { backgroundColor: '#FAF3FB' }]}
-                  data-testid="admin-link-child-cta-btn"
-                >
-                  <Ionicons name="person-add" size={16} color="#8E24AA" />
-                </TouchableOpacity>
-              )}
-              {/* Settings button */}
-              <TouchableOpacity onPress={() => router.push('/admin/settings')} style={styles.headerIconBtn}>
-                <Text style={{ fontSize: 17 }}>{Icons.settings}</Text>
+            )}
+            {/* 🆕 17/07/2026 — Switch to Genitore (visibile solo se admin è parent di almeno 1 atleta) */}
+            {linkedAthletesCount > 0 && (
+              <TouchableOpacity
+                onPress={() => router.replace('/parent')}
+                style={[styles.headerIconBtn, { backgroundColor: '#F3E5F5' }]}
+                data-testid="admin-switch-to-parent-btn"
+              >
+                <Ionicons name="people" size={16} color="#8E24AA" />
               </TouchableOpacity>
-              {/* 📖 Guida ruolo Admin */}
-              <GuideButton role="admin" compact />
-              {/* Logout button */}
-              <TouchableOpacity onPress={handleLogout} style={styles.headerIconBtn}>
-                <Text style={{ fontSize: 17 }}>{Icons.logout}</Text>
+            )}
+            {/* 🆕 26/07/2026 — Se admin NON è parent di nessun atleta, mostra bottone "aggiungi figlio" */}
+            {linkedAthletesCount === 0 && (
+              <TouchableOpacity
+                onPress={() => router.push('/staff/link-or-register-child')}
+                style={[styles.headerIconBtn, { backgroundColor: '#FAF3FB' }]}
+                data-testid="admin-link-child-cta-btn"
+              >
+                <Ionicons name="person-add" size={16} color="#8E24AA" />
               </TouchableOpacity>
-            </View>
+            )}
+            {/* Settings button */}
+            <TouchableOpacity onPress={() => router.push('/admin/settings')} style={styles.headerIconBtn}>
+              <Text style={{ fontSize: 17 }}>{Icons.settings}</Text>
+            </TouchableOpacity>
+            {/* 📖 Guida ruolo Admin */}
+            <GuideButton role="admin" compact />
+            {/* Logout button */}
+            <TouchableOpacity onPress={handleLogout} style={styles.headerIconBtn}>
+              <Text style={{ fontSize: 17 }}>{Icons.logout}</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -1624,7 +1630,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#007AFF',
     paddingTop: 30,
-    paddingBottom: 16,
+    paddingBottom: 10,
     paddingHorizontal: 16,
   },
   headerMainRow: {
@@ -1641,10 +1647,23 @@ const styles = StyleSheet.create({
   },
   headerRightCol: {
     flex: 1,
-    minWidth: 220,  // 🐛 17/07/2026 — Se meno di 220px disponibili, la col va a nuova riga (wrap)
+    minWidth: 160,
     alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    paddingTop: 12,
+  },
+  // 🆕 20/07/2026 — Riga stagione allineata a destra sopra le icone
+  seasonBadgeRow: {
+    flexDirection: 'row',
     justifyContent: 'flex-end',
-    paddingTop: 8,
+    alignItems: 'center',
+  },
+  // 🆕 20/07/2026 — Riga icone al confine blu/bianco (fondo dell'header)
+  headerBottomIconsRow: {
+    marginTop: 12,
+    marginBottom: -22,  // sporge leggermente sul bianco per effetto floating
+    paddingHorizontal: 4,
+    zIndex: 10,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -1742,6 +1761,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    paddingTop: 26,  // 🆕 20/07/2026 — spazio per icone che sporgono sul bianco
   },
   welcomeText: {
     fontSize: 24,
