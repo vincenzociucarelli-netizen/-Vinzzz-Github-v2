@@ -18,6 +18,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Platform, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
+import { useAuthStore } from '../store/authStore';
 
 type Priority = 'high' | 'medium' | 'low';
 
@@ -98,6 +99,7 @@ function dueDateStatus(due?: string | null): { label: string; color: string; bg:
 }
 
 export const AdminNotesBoard: React.FC = () => {
+  const currentUserId = useAuthStore((s) => s.user?.id) || '';
   const [expanded, setExpanded] = useState(true);
   const [notes, setNotes] = useState<AdminNote[]>([]);
   const [completed, setCompleted] = useState<AdminNote[]>([]);
@@ -172,6 +174,14 @@ export const AdminNotesBoard: React.FC = () => {
   };
 
   const onToggleTake = async (note: AdminNote) => {
+    // 🐛 20/07/2026 — Blocca sul frontend la deselezione di note prese da altri.
+    // Solo chi ha preso in carico può rilasciare, altri admin possono solo vedere.
+    if (note.taken_by && note.taken_by !== currentUserId) {
+      const msg = `Solo ${note.taken_by_name || 'chi ha preso in carico'} può rilasciare questa nota`;
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Non autorizzato', msg);
+      return;
+    }
     try {
       const path = note.taken_by ? 'untake' : 'take';
       await api.post(`/admin/notes/${note.id}/${path}`);
@@ -453,24 +463,31 @@ export const AdminNotesBoard: React.FC = () => {
                           Aggiunta da <Text style={{ fontWeight: '600' }}>{n.created_by_name}</Text> il {formatDateTime(n.created_at)}
                         </Text>
                         <View style={styles.checkboxRow}>
-                          <TouchableOpacity
-                            style={styles.checkboxItem}
-                            onPress={() => onToggleTake(n)}
-                            testID={`admin-note-take-${n.id}`}
-                          >
-                            <View style={[styles.checkbox, n.taken_by && styles.checkboxOn]}>
-                              {n.taken_by && <Ionicons name="checkmark" size={14} color="#fff" />}
-                            </View>
-                            <Text style={styles.checkboxLabel}>
-                              {n.taken_by ? (
-                                <>
-                                  Presa in carico da <Text style={{ fontWeight: '700' }}>{n.taken_by_name}</Text>
-                                </>
-                              ) : (
-                                'Presa in carico'
-                              )}
-                            </Text>
-                          </TouchableOpacity>
+                          {(() => {
+                            const takenByOther = !!n.taken_by && n.taken_by !== currentUserId;
+                            return (
+                              <TouchableOpacity
+                                style={styles.checkboxItem}
+                                onPress={() => onToggleTake(n)}
+                                testID={`admin-note-take-${n.id}`}
+                                activeOpacity={takenByOther ? 1 : 0.7}
+                              >
+                                <View style={[styles.checkbox, n.taken_by && styles.checkboxOn, takenByOther && { opacity: 0.7 }]}>
+                                  {n.taken_by && <Ionicons name={takenByOther ? 'lock-closed' : 'checkmark'} size={14} color="#fff" />}
+                                </View>
+                                <Text style={styles.checkboxLabel}>
+                                  {n.taken_by ? (
+                                    <>
+                                      Presa in carico da <Text style={{ fontWeight: '700' }}>{n.taken_by_name}</Text>
+                                      {takenByOther && <Text style={{ color: '#888', fontSize: 11 }}> (solo lui può rilasciare)</Text>}
+                                    </>
+                                  ) : (
+                                    'Presa in carico'
+                                  )}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })()}
                           <TouchableOpacity
                             style={styles.checkboxItem}
                             onPress={() => onComplete(n)}

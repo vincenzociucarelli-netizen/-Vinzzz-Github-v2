@@ -180,6 +180,14 @@ async def take_note(note_id: str, current_user=Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="Nota non trovata")
     if note.get("completed"):
         raise HTTPException(status_code=400, detail="Nota già completata")
+    # 🐛 20/07/2026 — Non permettere di sovrascrivere una presa in carico di
+    # un altro admin. Solo chi non l'ha ancora presa può assegnarsela.
+    current_taker = note.get("taken_by")
+    if current_taker and current_taker != current_user["id"]:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Nota già presa in carico da {note.get('taken_by_name') or 'un altro admin'}",
+        )
 
     await db.admin_notes.update_one(
         {"id": note_id},
@@ -200,6 +208,13 @@ async def untake_note(note_id: str, current_user=Depends(get_current_user)):
     note = await db.admin_notes.find_one({"id": note_id, "society_id": society_id})
     if not note:
         raise HTTPException(status_code=404, detail="Nota non trovata")
+    # 🐛 20/07/2026 — Solo chi ha preso in carico può deselezionarsi.
+    current_taker = note.get("taken_by")
+    if current_taker and current_taker != current_user["id"]:
+        raise HTTPException(
+            status_code=403,
+            detail=f"Solo {note.get('taken_by_name') or 'chi ha preso in carico'} può rilasciare questa nota",
+        )
 
     await db.admin_notes.update_one(
         {"id": note_id},

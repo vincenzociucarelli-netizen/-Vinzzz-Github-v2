@@ -5109,9 +5109,17 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
     
     society_id = current_user.get("society_id")
     
-    # Get society to find owner_id (society admin account to exclude)
+    # Get society to find owner_id (society admin account to exclude ONLY if istituzionale)
     society = await db.societies.find_one({"id": society_id})
     society_owner_id = society.get("owner_id") if society else None
+    # 🐛 20/07/2026 — L'admin persona fisica che è owner della società NON deve
+    # sparire dai dirigenti (altrimenti gli altri dirigenti non lo vedono).
+    # Escludiamo solo se l'owner è un account istituzionale (es. Sirio ASD stessa).
+    exclude_owner_id = None
+    if society_owner_id:
+        owner = await db.users.find_one({"id": society_owner_id})
+        if owner and owner.get("is_institutional_account"):
+            exclude_owner_id = society_owner_id
     
     # 🆕 01/07/2026 — Filtro clean-slate: solo dirigenti della stagione corrente.
     # 🐛 16/07/2026 — HOTFIX "Admin/Dirigenti invisibili dopo rollover stagione":
@@ -5133,9 +5141,9 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
             {"rollover_decision_season": {"$ne": _current_season}},
         ],
     }
-    # Exclude the society owner account from the dirigenti list
-    if society_owner_id:
-        query["id"] = {"$ne": society_owner_id}
+    # Exclude the society owner account from the dirigenti list SOLO se istituzionale
+    if exclude_owner_id:
+        query["id"] = {"$ne": exclude_owner_id}
     
     dirigenti = await db.users.find(query).to_list(1000)
 
