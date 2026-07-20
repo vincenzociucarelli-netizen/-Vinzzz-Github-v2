@@ -35054,6 +35054,29 @@ async def check_certificate_expiry_notifications():
         "status": {"$in": ["active", "trial"]}
     }).to_list(5000)
     
+    # 🆕 20/07/2026 — Filtro proattivo "solo stagione corrente".
+    # Vogliamo notificare unicamente gli atleti effettivamente iscritti nella
+    # stagione corrente della propria società (evita notifiche a fantasmi che
+    # sono rimasti in DB da stagioni passate). Caching per non ricalcolare la
+    # season per ogni atleta.
+    from utils import get_current_season_for_society as _get_cs
+    current_season_by_society: dict[str, str] = {}
+    filtered_athletes = []
+    for a in athletes:
+        soc_id = a.get("society_id")
+        if not soc_id:
+            continue
+        cs = current_season_by_society.get(soc_id)
+        if cs is None:
+            try:
+                cs = await _get_cs(db, soc_id)
+            except Exception:
+                cs = ""
+            current_season_by_society[soc_id] = cs or ""
+        if cs and cs in (a.get("active_seasons") or []):
+            filtered_athletes.append(a)
+    athletes = filtered_athletes
+    
     sent_count = 0
     
     for athlete in athletes:
