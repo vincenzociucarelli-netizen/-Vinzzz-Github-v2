@@ -2303,6 +2303,25 @@ export default function AthleteDetail() {
           
           {/* Form inserimento date certificato */}
           <CertificateDateForm athleteId={athlete?.id} certificate={certificate} onSaved={loadData} />
+
+          {/* 🆕 20/07/2026 — Richiesta Visita Medico-Sportiva integrata nella card certificato */}
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#E0F2F1', borderRadius: 8, padding: 10, marginTop: 10,
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+              borderWidth: 1, borderColor: '#4DB6AC',
+            }}
+            onPress={generateMedicalVisitRequest}
+            testID="parent-medical-visit-request-btn-inline"
+          >
+            <Ionicons name="document-text-outline" size={16} color="#00695C" />
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#00695C' }}>
+              📄 Richiesta Visita Medico-Sportiva
+            </Text>
+          </TouchableOpacity>
+          <Text style={{ fontSize: 10, color: '#888', textAlign: 'center', marginTop: 4, fontStyle: 'italic' }}>
+            Modulo D.M. 18.2.82 pre-compilato da consegnare all'ASL per il rinnovo
+          </Text>
         </View>
 
         </>)}
@@ -2796,18 +2815,6 @@ export default function AthleteDetail() {
               </Text>
             </TouchableOpacity>
           )}
-
-          {/* 🆕 19/07/2026 — Richiesta Visita Medico-Sportiva (D.M. 18.2.82) */}
-          <TouchableOpacity
-            style={[styles.downloadReceiptBtn, { backgroundColor: '#00695C', marginTop: 8 }]}
-            onPress={generateMedicalVisitRequest}
-            testID="medical-visit-request-btn"
-          >
-            <Ionicons name="fitness" size={20} color="#fff" />
-            <Text style={styles.downloadReceiptBtnText}>
-              Richiesta Visita Medico-Sportiva
-            </Text>
-          </TouchableOpacity>
         </View>
 
         {/* Show payments even without payment settings */}

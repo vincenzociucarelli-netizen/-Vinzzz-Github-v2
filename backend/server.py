@@ -10516,16 +10516,24 @@ async def get_parents_info(athlete_id: str, current_user = Depends(get_current_u
                 "has_data_password": bool(athlete.get("second_parent_data_password_hash")),
             })
     elif athlete.get("second_parent_email"):
-        # Second parent email set but not yet registered
-        parents.append({
-            "type": "second",
-            "id": None,
-            "full_name": "(non ancora registrato)",
-            "email": athlete.get("second_parent_email", ""),
-            "phone": "",
-            "has_data_password": False,
-            "not_registered": True,
-        })
+        # 🐛 20/07/2026 — Non duplicare la card "non ancora registrato" se
+        # l'email del "secondo genitore" coincide con quella del genitore
+        # primario (caso classico: admin ha collegato il genitore che è già
+        # registrato ma lo ritrova come "secondo genitore email" del vecchio
+        # flusso di preiscrizione).
+        second_email = (athlete.get("second_parent_email") or "").strip().lower()
+        primary_email = parents[0]["email"].strip().lower() if parents else ""
+        if second_email and second_email != primary_email:
+            # Second parent email set but not yet registered
+            parents.append({
+                "type": "second",
+                "id": None,
+                "full_name": "(non ancora registrato)",
+                "email": athlete.get("second_parent_email", ""),
+                "phone": "",
+                "has_data_password": False,
+                "not_registered": True,
+            })
     
     return parents
 

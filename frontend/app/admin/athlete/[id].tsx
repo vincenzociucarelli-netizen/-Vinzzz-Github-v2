@@ -2398,17 +2398,17 @@ export default function AdminAthleteDetail() {
                   <Text style={styles.warningText}>Nessun certificato</Text>
                 </View>
               )}
-              {/* Admin: sempre visibile - Modifica date + Verifica */}
+              {/* Admin: sempre visibile - Modifica date + Verifica (font ridotto 20/07/2026) */}
               <TouchableOpacity
                 style={{
-                  backgroundColor: '#EDE7F6', borderRadius: 10, padding: 12, marginTop: 12,
-                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  backgroundColor: '#EDE7F6', borderRadius: 8, padding: 8, marginTop: 10,
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
                   borderWidth: 1, borderColor: '#CE93D8',
                 }}
                 onPress={() => setCertModalVisible(true)}
               >
-                <Ionicons name={certificate ? "create-outline" : "calendar-outline"} size={18} color="#7B1FA2" />
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#7B1FA2' }}>
+                <Ionicons name={certificate ? "create-outline" : "calendar-outline"} size={15} color="#7B1FA2" />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#7B1FA2' }}>
                   {certificate ? 'Modifica date certificato' : 'Inserisci dati certificato'}
                 </Text>
               </TouchableOpacity>
@@ -2416,59 +2416,40 @@ export default function AdminAthleteDetail() {
                 <TouchableOpacity
                   style={{
                     backgroundColor: athlete?.medical_certificate_verified ? '#E8F5E9' : '#FFF8E1',
-                    borderRadius: 10, padding: 12, marginTop: 8,
-                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    borderRadius: 8, padding: 8, marginTop: 6,
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
                     borderWidth: 1, borderColor: athlete?.medical_certificate_verified ? '#66BB6A' : '#FFB74D',
                   }}
                   onPress={handleVerifyCertificate}
                 >
-                  <Ionicons name={athlete?.medical_certificate_verified ? "shield-checkmark" : "shield-outline"} size={18} color={athlete?.medical_certificate_verified ? '#2E7D32' : '#E65100'} />
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: athlete?.medical_certificate_verified ? '#2E7D32' : '#E65100' }}>
+                  <Ionicons name={athlete?.medical_certificate_verified ? "shield-checkmark" : "shield-outline"} size={15} color={athlete?.medical_certificate_verified ? '#2E7D32' : '#E65100'} />
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: athlete?.medical_certificate_verified ? '#2E7D32' : '#E65100' }}>
                     {athlete?.medical_certificate_verified ? 'Certificato verificato ✓' : 'Segna come verificato'}
                   </Text>
                 </TouchableOpacity>
               )}
+              {/* 🆕 20/07/2026 — Richiesta Visita Medico-Sportiva integrata nella card certificato */}
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#E0F2F1', borderRadius: 8, padding: 10, marginTop: 10,
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  borderWidth: 1, borderColor: '#4DB6AC',
+                }}
+                onPress={generateMedicalVisitRequestPdf}
+                testID="medical-visit-request-btn-inline"
+              >
+                <Ionicons name="document-text-outline" size={16} color="#00695C" />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#00695C' }}>
+                  📄 Richiesta Visita Medico-Sportiva
+                </Text>
+              </TouchableOpacity>
+              <Text style={{ fontSize: 10, color: '#888', textAlign: 'center', marginTop: 4, fontStyle: 'italic' }}>
+                Modulo D.M. 18.2.82 (USL Umbria 1) pre-compilato con firma e timbro del Presidente
+              </Text>
             </View>
 
             {/* 🗑️ 22/02/2026 — Card Squadra spostata nel tab Presenze */}
-
-            {/* Tesseramento */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>🏅 Tesseramento</Text>
-              {editing ? (
-                <>
-                  <Text style={styles.inputLabel}>Codice Federale</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={editData.federal_code}
-                    onChangeText={(t) => setEditData({...editData, federal_code: t.toUpperCase()})}
-                    placeholder="Inserisci codice federale"
-                    placeholderTextColor="#999"
-                    autoCapitalize="characters"
-                  />
-                  <View style={styles.switchRow}>
-                    <Text style={styles.switchLabel}>Tesserato</Text>
-                    <Switch
-                      value={editData.is_registered}
-                      onValueChange={(v) => setEditData({...editData, is_registered: v})}
-                    />
-                  </View>
-                </>
-              ) : (
-                <>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.label}>Codice Federale</Text>
-                    <Text style={styles.valueCode}>{athlete.federal_code || '-'}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.label}>Tesserato</Text>
-                    <View style={[styles.badge, athlete.is_registered ? styles.badgeGreen : styles.badgeRed]}>
-                      <Text style={styles.badgeText}>{athlete.is_registered ? 'SÌ' : 'NO'}</Text>
-                    </View>
-                  </View>
-                </>
-              )}
-            </View>
+            {/* 🔀 20/07/2026 — Card Tesseramento spostata DOPO Anagrafica */}
 
             {/* Anagrafica */}
             <View style={styles.card}>
@@ -2962,6 +2943,44 @@ export default function AdminAthleteDetail() {
                   <View style={styles.infoRow}>
                     <Text style={styles.label}>Provincia</Text>
                     <Text style={styles.value}>{athlete.province || '-'}</Text>
+                  </View>
+                </>
+              )}
+            </View>
+
+            {/* 🔀 20/07/2026 — Tesseramento spostato QUI, subito dopo Anagrafica */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>🏅 Tesseramento</Text>
+              {editing ? (
+                <>
+                  <Text style={styles.inputLabel}>Codice Federale</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editData.federal_code}
+                    onChangeText={(t) => setEditData({...editData, federal_code: t.toUpperCase()})}
+                    placeholder="Inserisci codice federale"
+                    placeholderTextColor="#999"
+                    autoCapitalize="characters"
+                  />
+                  <View style={styles.switchRow}>
+                    <Text style={styles.switchLabel}>Tesserato</Text>
+                    <Switch
+                      value={editData.is_registered}
+                      onValueChange={(v) => setEditData({...editData, is_registered: v})}
+                    />
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Codice Federale</Text>
+                    <Text style={styles.valueCode}>{athlete.federal_code || '-'}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Tesserato</Text>
+                    <View style={[styles.badge, athlete.is_registered ? styles.badgeGreen : styles.badgeRed]}>
+                      <Text style={styles.badgeText}>{athlete.is_registered ? 'SÌ' : 'NO'}</Text>
+                    </View>
                   </View>
                 </>
               )}
@@ -3597,24 +3616,6 @@ export default function AdminAthleteDetail() {
                 {payments.length > 0 
                   ? 'Documento con riepilogo pagamenti, dati società e firma del presidente'
                   : 'Nessun pagamento registrato - l\'attestato mostrerà importo versato: € 0,00'}
-              </Text>
-            </View>
-
-            {/* 🆕 19/07/2026 — Richiesta Visita Medico-Sportiva (D.M. 18.2.82, template USL Umbria 1) */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>🩺 Richiesta Visita Medico-Sportiva</Text>
-              <View style={styles.attestatoButtonsRow}>
-                <TouchableOpacity
-                  style={[styles.attestatoButton, styles.attestatoPrintBtn]}
-                  onPress={generateMedicalVisitRequestPdf}
-                  testID="medical-visit-request-btn"
-                >
-                  <Ionicons name="document-text-outline" size={20} color="#fff" />
-                  <Text style={styles.attestatoButtonText}>Genera modulo</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.attestatoHint}>
-                Modulo D.M. 18.2.82 (USL Umbria 1) pre-compilato con dati atleta, società, FIPAV/CSEN/CSI e firma+timbro del Presidente. Le caselle &quot;prima affiliazione&quot; / &quot;rinnovo&quot; vanno crocettate a mano.
               </Text>
             </View>
               </>
