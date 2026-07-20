@@ -235,31 +235,19 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
     }
     .cb { display: inline-block; width: 12px; height: 12px; border: 1px solid #000; vertical-align: middle; margin-right: 6px; }
     .president-block {
-      text-align: center;
       margin-top: 30px;
       display: flex;
       justify-content: flex-end;
-      align-items: flex-end;
-      gap: 10px;
+      align-items: center;
+      padding-right: 20px;
     }
-    .president-block .lbl { padding-bottom: 6px; }
-    .president-line {
-      border-bottom: 1px solid #000;
-      min-width: 320px;
+    .stamp-only {
+      max-width: 220px;
       text-align: center;
-      padding-bottom: 2px;
-      position: relative;
     }
-    .president-line .stamp {
-      position: absolute;
-      right: 0;
-      bottom: -6px;
-    }
-    .president-line .caption {
-      font-size: 10px;
-      font-style: italic;
-      color: #444;
-      margin-top: 3px;
+    .president-line {
+      /* legacy — non più usato dopo semplificazione 20/07/2026 */
+      display: none;
     }
     .allegato {
       font-size: 10.5px;
@@ -370,12 +358,7 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
   </div>
 
   <div class="president-block">
-    <div class="lbl">Il Presidente</div>
-    <div class="president-line">
-      ${escapeHtml(presidentName)}
-      <div class="stamp">${stampSignatureHtml}</div>
-      <div class="caption">firma e timbro</div>
-    </div>
+    <div class="stamp-only">${stampSignatureHtml}</div>
   </div>
 
   <div class="allegato">
