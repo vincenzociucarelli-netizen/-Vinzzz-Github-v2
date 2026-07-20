@@ -1758,6 +1758,46 @@ export default function AdminAthleteDetail() {
     }
   };
 
+  // 🆕 19/07/2026 — Genera la Richiesta di Visita Medico-Sportiva (D.M. 18.2.82)
+  // Template USL Umbria 1 pre-compilato con dati atleta + società + firma/timbro
+  // digitali del Presidente. Le checkbox "prima affiliazione / rinnovo" restano
+  // vuote, l'admin le crocetta a mano sul foglio stampato.
+  const generateMedicalVisitRequestPdf = async () => {
+    if (!athlete) {
+      showAlert('Attenzione', 'Dati atleta non disponibili');
+      return;
+    }
+    try {
+      const { downloadMedicalVisitRequest } = await import('../../../src/utils/medicalVisitRequest');
+      await downloadMedicalVisitRequest({
+        athlete: {
+          first_name: (athlete as any).first_name || '',
+          last_name: (athlete as any).last_name || '',
+          address: (athlete as any).address || '',
+          city: (athlete as any).city || '',
+          province: (athlete as any).province || '',
+          postal_code: (athlete as any).postal_code || '',
+          date_of_birth: (athlete as any).date_of_birth || '',
+          birth_place: (athlete as any).birth_place || '',
+          birth_province: (athlete as any).birth_province || '',
+        },
+        society: {
+          name: societyData?.ragione_sociale || societyData?.society_name || societyData?.name || '',
+          address: societyData?.address || societyData?.company_address || '',
+          city: societyData?.city || societyData?.company_city || '',
+          postal_code: societyData?.postal_code || societyData?.company_zip_code || '',
+          province: societyData?.province || societyData?.company_province || '',
+          president_name: societyData?.president_name || '',
+          stamp_signature: societyData?.stamp_signature || societyData?.stamp_signature_base64 || '',
+          region: societyData?.region || '',
+        },
+      });
+    } catch (error) {
+      console.error('Error generating medical visit request:', error);
+      showAlert('Errore', 'Impossibile generare la richiesta di visita medico-sportiva');
+    }
+  };
+
   // Print QR Code function
   const printQRCode = async () => {
     if (!athlete?.qr_code) {
@@ -3557,6 +3597,24 @@ export default function AdminAthleteDetail() {
                 {payments.length > 0 
                   ? 'Documento con riepilogo pagamenti, dati società e firma del presidente'
                   : 'Nessun pagamento registrato - l\'attestato mostrerà importo versato: € 0,00'}
+              </Text>
+            </View>
+
+            {/* 🆕 19/07/2026 — Richiesta Visita Medico-Sportiva (D.M. 18.2.82, template USL Umbria 1) */}
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>🩺 Richiesta Visita Medico-Sportiva</Text>
+              <View style={styles.attestatoButtonsRow}>
+                <TouchableOpacity
+                  style={[styles.attestatoButton, styles.attestatoPrintBtn]}
+                  onPress={generateMedicalVisitRequestPdf}
+                  testID="medical-visit-request-btn"
+                >
+                  <Ionicons name="document-text-outline" size={20} color="#fff" />
+                  <Text style={styles.attestatoButtonText}>Genera modulo</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.attestatoHint}>
+                Modulo D.M. 18.2.82 (USL Umbria 1) pre-compilato con dati atleta, società, FIPAV/CSEN/CSI e firma+timbro del Presidente. Le caselle &quot;prima affiliazione&quot; / &quot;rinnovo&quot; vanno crocettate a mano.
               </Text>
             </View>
               </>

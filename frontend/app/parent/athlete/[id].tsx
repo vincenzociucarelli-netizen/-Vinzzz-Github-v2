@@ -690,6 +690,25 @@ export default function AthleteDetail() {
     }
   };
 
+  // 🆕 19/07/2026 — Genera Richiesta Visita Medico-Sportiva (template USL Umbria 1)
+  // Riusa endpoint /fiscal-receipt che restituisce già athlete + society + firma/timbro
+  const generateMedicalVisitRequest = async () => {
+    try {
+      const response = await api.get(`/payments/${id}/fiscal-receipt`);
+      const data = response.data;
+      const { downloadMedicalVisitRequest } = await import('../../../src/utils/medicalVisitRequest');
+      await downloadMedicalVisitRequest({
+        athlete: data.athlete,
+        society: data.society,
+      });
+    } catch (error: any) {
+      console.error('Error generating medical visit request:', error);
+      const msg = error?.response?.data?.detail || 'Errore durante la generazione del modulo';
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Errore', msg);
+    }
+  };
+
   // 🆕 26/07/2026 — Apri scontrino Stripe stile Nexi per un pagamento paid
   const openStripeReceipt = async (paymentId: string) => {
     try {
@@ -2777,6 +2796,18 @@ export default function AthleteDetail() {
               </Text>
             </TouchableOpacity>
           )}
+
+          {/* 🆕 19/07/2026 — Richiesta Visita Medico-Sportiva (D.M. 18.2.82) */}
+          <TouchableOpacity
+            style={[styles.downloadReceiptBtn, { backgroundColor: '#00695C', marginTop: 8 }]}
+            onPress={generateMedicalVisitRequest}
+            testID="medical-visit-request-btn"
+          >
+            <Ionicons name="fitness" size={20} color="#fff" />
+            <Text style={styles.downloadReceiptBtnText}>
+              Richiesta Visita Medico-Sportiva
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Show payments even without payment settings */}
