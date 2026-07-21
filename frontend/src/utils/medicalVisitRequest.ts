@@ -162,23 +162,23 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
   <meta name="viewport" content="width=794">
   <title>Richiesta Visita Medico-Sportiva</title>
   <style>
-    @page { margin: 8mm; size: A4 portrait; }
+    @page { margin: 5mm 8mm 6mm; size: A4 portrait; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; }
     body {
       font-family: 'Times New Roman', Times, serif;
-      padding: 4mm 10mm;
+      padding: 1mm 10mm 2mm;
       font-size: 13px;
       color: #000;
       line-height: 2;
       max-width: 210mm;
       margin: 0 auto;
     }
-    /* 🐛 21/07/2026 v3 — Font +2pt, interlinea aumentata a 2.0 per rispecchiare
-       l'originale USL Umbria 1. Padding maggiorato per riempire meglio A4. */
+    /* 🐛 21/07/2026 v5 — Ridotto padding-top e @page margin-top per non spingere
+       il footer sulla seconda pagina. */
     @media print {
       html, body { width: 210mm !important; max-width: 210mm !important; }
-      body { padding: 6mm 14mm !important; font-size: 14px !important; line-height: 2 !important; }
+      body { padding: 1mm 14mm 3mm !important; font-size: 14px !important; line-height: 2 !important; }
     }
     /* Blocco per forzare tutto su una sola pagina */
     .page-wrapper {
@@ -307,7 +307,7 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
       font-size: 10px;
       font-style: italic;
       color: #333;
-      margin-top: 18px;
+      margin-top: 10px;
       padding-top: 6px;
       border-top: 1px solid #999;
       line-height: 1.4;
@@ -317,8 +317,8 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
       justify-content: space-between;
       font-size: 9px;
       color: #333;
-      margin-top: 14px;
-      padding-top: 8px;
+      margin-top: 8px;
+      padding-top: 6px;
       border-top: 2px solid #000;
     }
     .footer .col { flex: 1; padding: 0 6px; }
