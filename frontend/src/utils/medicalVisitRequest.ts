@@ -232,8 +232,8 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
       font-size: 11px;
       margin-bottom: 12px;
     }
-    .row { margin: 6px 0; display: flex; align-items: baseline; gap: 4px; }
-    .row .label { white-space: nowrap; }
+    .row { margin: 6px 0; display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
+    .row .label { white-space: normal; }  /* 🐛 21/07/2026 — Permette wrap su label lunghe (es. "Una visita medico-sportiva...") per non tagliare l'ultima parola */
     .filled {
       flex: 1;
       border-bottom: 1px solid #000;
