@@ -298,8 +298,8 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
       padding-left: 12px;
     }
     .stamp-side img {
-      max-height: 105px;
-      max-width: 255px;
+      max-height: 160px;
+      max-width: 380px;
       object-fit: contain;
       display: block;
     }
