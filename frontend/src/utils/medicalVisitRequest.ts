@@ -145,7 +145,6 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
   const societyFullAddress = societyAddrParts.join(' ');
 
   const societyName = (society.name || '').toUpperCase();
-  const presidentName = society.president_name || '';
 
   // Firma + timbro digitale (identico pattern fiscalReceipt)
   let stampSignatureHtml = '';
@@ -175,46 +174,57 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
     .header {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
+      align-items: center;
       padding-bottom: 8px;
-      border-bottom: 1px solid #000;
+      gap: 20px;
     }
-    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-left { display: flex; align-items: center; gap: 14px; }
     .usl-logo {
-      width: 60px; height: 60px;
-      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60"><rect width="60" height="60" fill="none"/><path d="M15 8 L15 45 Q15 52 22 52 L38 52 Q45 52 45 45 L45 8 Z" fill="%23444" stroke="none"/><rect x="20" y="15" width="20" height="4" fill="white"/><rect x="20" y="24" width="20" height="4" fill="white"/><rect x="20" y="33" width="20" height="4" fill="white"/></svg>') center center no-repeat;
+      width: 78px;
+      height: 78px;
+      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g fill="none" stroke="%23222" stroke-width="0.8" stroke-dasharray="1.6,1.6"><path d="M32 8 C 22 12 18 22 20 32 C 12 38 10 50 18 56 C 12 64 18 76 30 78 C 44 84 56 78 62 68 C 72 62 74 50 68 42 C 74 34 68 22 56 18 C 50 8 42 6 32 8 Z"/></g><path d="M32 8 C 22 12 18 22 20 32 C 12 38 10 50 18 56 C 12 64 18 76 30 78 C 44 84 56 78 62 68 C 72 62 74 50 68 42 C 74 34 68 22 56 18 C 50 8 42 6 32 8 Z" fill="%234a4a4a"/><path d="M32 8 C 26 10 22 16 22 24 C 20 30 24 40 32 42 C 40 40 46 34 48 26 C 50 18 44 10 32 8 Z" fill="%23222"/><path d="M50 20 C 46 22 46 28 50 30 C 54 32 58 28 56 22 C 55 19 52 19 50 20 Z" fill="%23333"/></svg>') center center no-repeat;
       background-size: contain;
     }
-    .usl-text { font-family: Arial, sans-serif; font-size: 22px; font-weight: bold; color: #333; }
-    .usl-text .num { color: #E30613; }
+    .usl-text {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 26px;
+      font-weight: bold;
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+    .usl-text .part1 { color: #333; }
+    .usl-text .part2 { color: #7EC8E3; font-weight: 400; }
     .header-right {
       text-align: right;
-      font-family: Arial, sans-serif;
-      font-size: 14px;
-      color: #666;
-      padding-top: 8px;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 15px;
+      color: #6b6b6b;
+      font-weight: 400;
     }
-    .header-right .site { font-size: 9px; color: #888; margin-top: 2px; }
+    .header-right .site { font-size: 9.5px; color: #999; margin-top: 3px; font-style: normal; }
     .sub-header {
+      font-family: 'Times New Roman', Times, serif;
       font-style: italic;
-      font-size: 10.5px;
-      color: #444;
-      padding-top: 6px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #eee;
-      margin-bottom: 20px;
+      font-size: 11px;
+      color: #333;
+      padding-top: 10px;
+      padding-bottom: 4px;
+      line-height: 1.35;
+      margin-bottom: 12px;
     }
-    .sub-header strong { font-style: normal; font-weight: bold; }
+    .sub-header .strong-name { font-style: italic; font-weight: bold; }
     h1.title {
       text-align: center;
-      font-size: 15px;
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 14px;
       font-weight: bold;
-      margin: 18px 0 4px;
+      margin: 22px 0 2px;
       letter-spacing: 0.3px;
     }
     .subtitle {
       text-align: center;
-      font-size: 11px;
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 11.5px;
       margin-bottom: 22px;
     }
     .row { margin: 10px 0; display: flex; align-items: baseline; gap: 4px; }
@@ -276,7 +286,7 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
   <div class="header">
     <div class="header-left">
       <div class="usl-logo"></div>
-      <div class="usl-text">USL<span class="num">Umbria1</span></div>
+      <div class="usl-text"><span class="part1">USL</span><span class="part2">Umbria1</span></div>
     </div>
     <div class="header-right">
       Azienda Unità Sanitaria Locale Umbria 1
@@ -285,11 +295,11 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
   </div>
 
   <div class="sub-header">
-    <strong>Struttura Complessa Medicina dello Sport</strong><br/>
+    <span class="strong-name">Struttura Complessa Medicina dello Sport</span><br/>
     Direttore: Dr. Luigi Repace<br/>
     Via della Pallotta n° 42 (CS Grocco) – 06126 Perugia<br/>
-    Tel. 075 5412956 – Fax. 075 5412957 – E-mail: medsport.pg@uslumbria1.it<br/>
-    <span style="font-size:9.5px">Sedi distaccate: Bastia – Castiglione del Lago – Città di Castello – Gualdo Tadino – Gubbio – Magione – Marsciano – Umbertide</span>
+    Tel. 075 5412956 – Fax. 075 5412957 / E-mail: medsport.pg@uslumbria1.it<br/>
+    <span style="font-size:10px">Sedi distaccate: Bastia – Castiglione del Lago – Città di Castello – Gualdo Tadino – Gubbio – Magione – Marsciano – Umbertide</span>
   </div>
 
   <h1 class="title">RICHIESTA DI VISITA MEDICO-SPORTIVA<br/>PER L'IDONEITÀ ALLA PRATICA AGONISTICA</h1>
