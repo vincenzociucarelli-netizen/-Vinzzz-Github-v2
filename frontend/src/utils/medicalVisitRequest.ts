@@ -168,18 +168,17 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
     body {
       font-family: 'Times New Roman', Times, serif;
       padding: 4mm 10mm;
-      font-size: 11.5px;
+      font-size: 13px;
       color: #000;
-      line-height: 1.7;
+      line-height: 2;
       max-width: 210mm;
       margin: 0 auto;
     }
-    /* 🐛 21/07/2026 v2 — Padding maggiorato per riempire meglio il foglio A4
-       ed evitare l'effetto "colonna stretta al centro con margini vuoti" quando
-       si stampa da mobile Chrome. Interlinea aumentata per leggibilità. */
+    /* 🐛 21/07/2026 v3 — Font +2pt, interlinea aumentata a 2.0 per rispecchiare
+       l'originale USL Umbria 1. Padding maggiorato per riempire meglio A4. */
     @media print {
       html, body { width: 210mm !important; max-width: 210mm !important; }
-      body { padding: 6mm 14mm !important; font-size: 12px !important; line-height: 1.7 !important; }
+      body { padding: 6mm 14mm !important; font-size: 14px !important; line-height: 2 !important; }
     }
     /* Blocco per forzare tutto su una sola pagina */
     .page-wrapper {
@@ -194,17 +193,17 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
       gap: 12px;
       width: 100%;
     }
-    .header-left { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+    .header-left { display: flex; align-items: center; gap: 14px; flex: 0 0 auto; }
     .usl-logo {
-      width: 60px;
-      height: 60px;
-      flex: 0 0 60px;
-      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M32 8 C 22 12 18 22 20 32 C 12 38 10 50 18 56 C 12 64 18 76 30 78 C 44 84 56 78 62 68 C 72 62 74 50 68 42 C 74 34 68 22 56 18 C 50 8 42 6 32 8 Z" fill="%234a4a4a" stroke="%23222" stroke-width="0.8" stroke-dasharray="1.6,1.6"/><path d="M32 8 C 26 10 22 16 22 24 C 20 30 24 40 32 42 C 40 40 46 34 48 26 C 50 18 44 10 32 8 Z" fill="%23222"/><path d="M50 20 C 46 22 46 28 50 30 C 54 32 58 28 56 22 C 55 19 52 19 50 20 Z" fill="%23333"/></svg>') center center no-repeat;
+      width: 85px;
+      height: 85px;
+      flex: 0 0 85px;
+      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M45 6 C 35 8 27 14 22 24 C 16 32 12 42 15 52 C 10 58 8 68 14 74 C 18 82 28 86 38 84 C 46 88 58 86 64 78 C 74 74 80 62 76 52 C 82 46 82 34 74 28 C 72 18 60 10 50 8 C 48 6 46 6 45 6 Z" fill="%23888"/><path d="M40 8 C 32 12 26 20 24 30 C 22 38 26 48 34 48 C 42 46 48 38 50 30 C 50 22 46 14 42 10 Z" fill="%23222"/><path d="M56 16 C 52 18 50 22 52 26 C 54 30 60 30 62 26 C 62 20 58 16 56 16 Z" fill="%23333"/></svg>') center center no-repeat;
       background-size: contain;
     }
     .usl-text {
       font-family: Arial, Helvetica, sans-serif;
-      font-size: 20px;
+      font-size: 28px;
       font-weight: bold;
       letter-spacing: -0.5px;
       line-height: 1;
@@ -215,38 +214,38 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
     .header-right {
       text-align: right;
       font-family: Arial, Helvetica, sans-serif;
-      font-size: 11px;
+      font-size: 14px;
       color: #6b6b6b;
       font-weight: 400;
       flex: 1 1 auto;
       min-width: 0;
-      line-height: 1.3;
+      line-height: 1.35;
     }
-    .header-right .site { font-size: 9px; color: #999; margin-top: 2px; font-style: normal; }
+    .header-right .site { font-size: 10.5px; color: #999; margin-top: 3px; font-style: normal; }
     .sub-header {
       font-family: 'Times New Roman', Times, serif;
       font-style: italic;
-      font-size: 10.5px;
+      font-size: 12px;
       color: #333;
-      padding-top: 6px;
-      padding-bottom: 2px;
-      line-height: 1.3;
-      margin-bottom: 6px;
+      padding-top: 8px;
+      padding-bottom: 4px;
+      line-height: 1.5;
+      margin-bottom: 8px;
     }
     .sub-header .strong-name { font-style: italic; font-weight: bold; }
     h1.title {
       text-align: center;
       font-family: 'Times New Roman', Times, serif;
-      font-size: 13px;
+      font-size: 15px;
       font-weight: bold;
-      margin: 12px 0 2px;
+      margin: 16px 0 3px;
       letter-spacing: 0.3px;
     }
     .subtitle {
       text-align: center;
       font-family: 'Times New Roman', Times, serif;
-      font-size: 11px;
-      margin-bottom: 12px;
+      font-size: 12.5px;
+      margin-bottom: 14px;
     }
     .row { margin: 12px 0; display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
     .row .label { white-space: normal; }
@@ -299,8 +298,8 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
       padding-left: 12px;
     }
     .stamp-side img {
-      max-height: 70px;
-      max-width: 170px;
+      max-height: 105px;
+      max-width: 255px;
       object-fit: contain;
       display: block;
     }
