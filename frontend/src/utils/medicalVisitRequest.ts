@@ -159,25 +159,27 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=794">
   <title>Richiesta Visita Medico-Sportiva</title>
   <style>
-    @page { margin: 10mm; size: A4; }
+    @page { margin: 8mm; size: A4 portrait; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; }
     body {
       font-family: 'Times New Roman', Times, serif;
-      padding: 2mm 4mm;
-      font-size: 11px;
+      padding: 4mm 10mm;
+      font-size: 11.5px;
       color: #000;
-      line-height: 1.35;
+      line-height: 1.4;
       max-width: 210mm;
       margin: 0 auto;
     }
-    /* 🐛 21/07/2026 — Forza dimensione A4 anche quando stampato da mobile
-       per evitare che l'header USL venga compresso su viewport strette. */
+    /* 🐛 21/07/2026 v2 — Padding maggiorato per riempire meglio il foglio A4
+       ed evitare l'effetto "colonna stretta al centro con margini vuoti" quando
+       si stampa da mobile Chrome. */
     @media print {
-      html, body { width: 210mm !important; }
-      body { padding: 4mm 6mm !important; }
+      html, body { width: 210mm !important; max-width: 210mm !important; }
+      body { padding: 6mm 14mm !important; font-size: 12px !important; }
     }
     /* Blocco per forzare tutto su una sola pagina */
     .page-wrapper {
