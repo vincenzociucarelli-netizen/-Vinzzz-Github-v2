@@ -161,15 +161,20 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
   <meta charset="utf-8">
   <title>Richiesta Visita Medico-Sportiva</title>
   <style>
-    @page { margin: 12mm; size: A4; }
+    @page { margin: 10mm; size: A4; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { height: 100%; width: 100%; }
+    html, body { width: 100%; }
     body {
       font-family: 'Times New Roman', Times, serif;
-      padding: 4mm 8mm;
-      font-size: 12px;
+      padding: 2mm 4mm;
+      font-size: 11px;
       color: #000;
-      line-height: 1.45;
+      line-height: 1.35;
+    }
+    /* Blocco per forzare tutto su una sola pagina */
+    .page-wrapper {
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
     .header {
       display: flex;
@@ -205,80 +210,101 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
     .sub-header {
       font-family: 'Times New Roman', Times, serif;
       font-style: italic;
-      font-size: 11px;
+      font-size: 10.5px;
       color: #333;
-      padding-top: 10px;
-      padding-bottom: 4px;
-      line-height: 1.35;
-      margin-bottom: 12px;
+      padding-top: 6px;
+      padding-bottom: 2px;
+      line-height: 1.3;
+      margin-bottom: 6px;
     }
     .sub-header .strong-name { font-style: italic; font-weight: bold; }
     h1.title {
       text-align: center;
       font-family: 'Times New Roman', Times, serif;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: bold;
-      margin: 22px 0 2px;
+      margin: 12px 0 2px;
       letter-spacing: 0.3px;
     }
     .subtitle {
       text-align: center;
       font-family: 'Times New Roman', Times, serif;
-      font-size: 11.5px;
-      margin-bottom: 22px;
+      font-size: 11px;
+      margin-bottom: 12px;
     }
-    .row { margin: 10px 0; display: flex; align-items: baseline; gap: 4px; }
+    .row { margin: 6px 0; display: flex; align-items: baseline; gap: 4px; }
     .row .label { white-space: nowrap; }
     .filled {
       flex: 1;
       border-bottom: 1px solid #000;
-      padding: 0 4px 2px;
-      min-height: 18px;
+      padding: 0 4px 1px;
+      min-height: 15px;
       font-weight: 600;
     }
-    .filled.small { flex: 0 0 auto; min-width: 130px; max-width: 220px; }
+    .filled.small { flex: 0 0 auto; min-width: 120px; max-width: 200px; }
     .checkboxes {
       display: flex;
       justify-content: space-around;
-      margin: 26px 40px;
-      font-size: 12px;
+      margin: 14px 40px 12px;
+      font-size: 11.5px;
     }
-    .cb { display: inline-block; width: 12px; height: 12px; border: 1px solid #000; vertical-align: middle; margin-right: 6px; }
-    .president-block {
-      margin-top: 30px;
+    .cb { display: inline-block; width: 11px; height: 11px; border: 1px solid #000; vertical-align: middle; margin-right: 6px; }
+    /* 🔄 21/07/2026 — Ripristinata sezione firma come originale: "Il Presidente ____ firma e timbro ____" su unica riga */
+    .president-row {
+      margin-top: 14px;
       display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      padding-right: 20px;
+      align-items: flex-end;
+      gap: 8px;
+      font-size: 11.5px;
     }
-    .stamp-only {
-      max-width: 220px;
-      text-align: center;
-    }
+    .president-row .lbl { padding-bottom: 3px; white-space: nowrap; }
     .president-line {
-      /* legacy — non più usato dopo semplificazione 20/07/2026 */
-      display: none;
+      flex: 1;
+      border-bottom: 1px solid #000;
+      min-height: 15px;
+      position: relative;
+    }
+    .president-line .stamp-inline {
+      position: absolute;
+      right: 6px;
+      bottom: -2px;
+    }
+    .stamp-only { display: none; }
+    .stamp-inline img { max-height: 40px; max-width: 140px; object-fit: contain; }
+    /* 🔄 21/07/2026 — Timbro Sirio allineato a destra accanto a "Il Presidente ______" */
+    .stamp-side {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-left: 12px;
+    }
+    .stamp-side img {
+      max-height: 70px;
+      max-width: 170px;
+      object-fit: contain;
+      display: block;
     }
     .allegato {
-      font-size: 10.5px;
+      font-size: 10px;
       font-style: italic;
       color: #333;
-      margin-top: 40px;
-      padding-top: 10px;
+      margin-top: 18px;
+      padding-top: 6px;
       border-top: 1px solid #999;
-      line-height: 1.5;
+      line-height: 1.4;
     }
     .footer {
       display: flex;
       justify-content: space-between;
-      font-size: 9.5px;
+      font-size: 9px;
       color: #333;
-      margin-top: 22px;
-      padding-top: 10px;
+      margin-top: 14px;
+      padding-top: 8px;
       border-top: 2px solid #000;
     }
     .footer .col { flex: 1; padding: 0 6px; }
-    .footer .col strong { display: block; font-size: 10px; margin-bottom: 2px; }
+    .footer .col strong { display: block; font-size: 9.5px; margin-bottom: 2px; }
   </style>
 </head>
 <body>
@@ -333,7 +359,7 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
     <span class="filled">CSEN e CSI</span>
   </div>
 
-  <div style="margin: 6px 0 12px;">riconosciuta dal CONI,</div>
+  <div style="margin: 4px 0 6px;">riconosciuta dal CONI,</div>
 
   <div class="row">
     <span class="label">chiede per il proprio atleta</span>
@@ -367,8 +393,10 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
     <div><span class="cb"></span>rinnovo</div>
   </div>
 
-  <div class="president-block">
-    <div class="stamp-only">${stampSignatureHtml}</div>
+  <div class="president-row">
+    <span class="lbl">Il Presidente</span>
+    <div class="president-line"></div>
+    <div class="stamp-side">${stampSignatureHtml}</div>
   </div>
 
   <div class="allegato">
