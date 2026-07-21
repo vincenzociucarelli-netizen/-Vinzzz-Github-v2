@@ -170,6 +170,14 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
       font-size: 11px;
       color: #000;
       line-height: 1.35;
+      max-width: 210mm;
+      margin: 0 auto;
+    }
+    /* 🐛 21/07/2026 — Forza dimensione A4 anche quando stampato da mobile
+       per evitare che l'header USL venga compresso su viewport strette. */
+    @media print {
+      html, body { width: 210mm !important; }
+      body { padding: 4mm 6mm !important; }
     }
     /* Blocco per forzare tutto su una sola pagina */
     .page-wrapper {
@@ -181,32 +189,38 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
       justify-content: space-between;
       align-items: center;
       padding-bottom: 8px;
-      gap: 20px;
+      gap: 12px;
+      width: 100%;
     }
-    .header-left { display: flex; align-items: center; gap: 14px; }
+    .header-left { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
     .usl-logo {
-      width: 78px;
-      height: 78px;
-      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><g fill="none" stroke="%23222" stroke-width="0.8" stroke-dasharray="1.6,1.6"><path d="M32 8 C 22 12 18 22 20 32 C 12 38 10 50 18 56 C 12 64 18 76 30 78 C 44 84 56 78 62 68 C 72 62 74 50 68 42 C 74 34 68 22 56 18 C 50 8 42 6 32 8 Z"/></g><path d="M32 8 C 22 12 18 22 20 32 C 12 38 10 50 18 56 C 12 64 18 76 30 78 C 44 84 56 78 62 68 C 72 62 74 50 68 42 C 74 34 68 22 56 18 C 50 8 42 6 32 8 Z" fill="%234a4a4a"/><path d="M32 8 C 26 10 22 16 22 24 C 20 30 24 40 32 42 C 40 40 46 34 48 26 C 50 18 44 10 32 8 Z" fill="%23222"/><path d="M50 20 C 46 22 46 28 50 30 C 54 32 58 28 56 22 C 55 19 52 19 50 20 Z" fill="%23333"/></svg>') center center no-repeat;
+      width: 60px;
+      height: 60px;
+      flex: 0 0 60px;
+      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M32 8 C 22 12 18 22 20 32 C 12 38 10 50 18 56 C 12 64 18 76 30 78 C 44 84 56 78 62 68 C 72 62 74 50 68 42 C 74 34 68 22 56 18 C 50 8 42 6 32 8 Z" fill="%234a4a4a" stroke="%23222" stroke-width="0.8" stroke-dasharray="1.6,1.6"/><path d="M32 8 C 26 10 22 16 22 24 C 20 30 24 40 32 42 C 40 40 46 34 48 26 C 50 18 44 10 32 8 Z" fill="%23222"/><path d="M50 20 C 46 22 46 28 50 30 C 54 32 58 28 56 22 C 55 19 52 19 50 20 Z" fill="%23333"/></svg>') center center no-repeat;
       background-size: contain;
     }
     .usl-text {
       font-family: Arial, Helvetica, sans-serif;
-      font-size: 26px;
+      font-size: 20px;
       font-weight: bold;
       letter-spacing: -0.5px;
       line-height: 1;
+      white-space: nowrap;
     }
     .usl-text .part1 { color: #333; }
     .usl-text .part2 { color: #7EC8E3; font-weight: 400; }
     .header-right {
       text-align: right;
       font-family: Arial, Helvetica, sans-serif;
-      font-size: 15px;
+      font-size: 11px;
       color: #6b6b6b;
       font-weight: 400;
+      flex: 1 1 auto;
+      min-width: 0;
+      line-height: 1.3;
     }
-    .header-right .site { font-size: 9.5px; color: #999; margin-top: 3px; font-style: normal; }
+    .header-right .site { font-size: 9px; color: #999; margin-top: 2px; font-style: normal; }
     .sub-header {
       font-family: 'Times New Roman', Times, serif;
       font-style: italic;
