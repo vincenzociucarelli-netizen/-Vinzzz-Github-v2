@@ -170,16 +170,16 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
       padding: 4mm 10mm;
       font-size: 11.5px;
       color: #000;
-      line-height: 1.4;
+      line-height: 1.7;
       max-width: 210mm;
       margin: 0 auto;
     }
     /* 🐛 21/07/2026 v2 — Padding maggiorato per riempire meglio il foglio A4
        ed evitare l'effetto "colonna stretta al centro con margini vuoti" quando
-       si stampa da mobile Chrome. */
+       si stampa da mobile Chrome. Interlinea aumentata per leggibilità. */
     @media print {
       html, body { width: 210mm !important; max-width: 210mm !important; }
-      body { padding: 6mm 14mm !important; font-size: 12px !important; }
+      body { padding: 6mm 14mm !important; font-size: 12px !important; line-height: 1.7 !important; }
     }
     /* Blocco per forzare tutto su una sola pagina */
     .page-wrapper {
@@ -248,8 +248,8 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
       font-size: 11px;
       margin-bottom: 12px;
     }
-    .row { margin: 6px 0; display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
-    .row .label { white-space: normal; }  /* 🐛 21/07/2026 — Permette wrap su label lunghe (es. "Una visita medico-sportiva...") per non tagliare l'ultima parola */
+    .row { margin: 12px 0; display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
+    .row .label { white-space: normal; }
     .filled {
       flex: 1;
       border-bottom: 1px solid #000;
@@ -258,7 +258,6 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
       font-weight: 600;
     }
     .filled.small { flex: 0 0 auto; min-width: 120px; max-width: 200px; }
-    /* 🆕 21/07/2026 — Variante inline per la riga "sport" che deve stare insieme alla parola precedente */
     .filled.inline-fld {
       display: inline-block;
       border-bottom: 1px solid #000;
@@ -270,30 +269,25 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
     .checkboxes {
       display: flex;
       justify-content: space-around;
-      margin: 14px 40px 12px;
+      margin: 22px 40px 18px;
       font-size: 11.5px;
     }
     .cb { display: inline-block; width: 11px; height: 11px; border: 1px solid #000; vertical-align: middle; margin-right: 6px; }
-    /* 🔄 21/07/2026 — Ripristinata sezione firma come originale: "Il Presidente ____ firma e timbro ____" su unica riga */
+    /* 🔄 21/07/2026 — Sezione firma semplificata: "Il Presidente [TIMBRO SIRIO]"
+       senza linea intermedia. Il timbro sostituisce visivamente firma+timbro. */
     .president-row {
-      margin-top: 14px;
+      margin-top: 22px;
       display: flex;
-      align-items: flex-end;
-      gap: 8px;
-      font-size: 11.5px;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      font-size: 12px;
     }
-    .president-row .lbl { padding-bottom: 3px; white-space: nowrap; }
-    .president-line {
-      flex: 1;
-      border-bottom: 1px solid #000;
-      min-height: 15px;
-      position: relative;
+    .president-row .lbl {
+      font-weight: 500;
+      white-space: nowrap;
     }
-    .president-line .stamp-inline {
-      position: absolute;
-      right: 6px;
-      bottom: -2px;
-    }
+    .president-line { display: none; }
     .stamp-only { display: none; }
     .stamp-inline img { max-height: 40px; max-width: 140px; object-fit: contain; }
     /* 🔄 21/07/2026 — Timbro Sirio allineato a destra accanto a "Il Presidente ______" */
@@ -419,7 +413,6 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
 
   <div class="president-row">
     <span class="lbl">Il Presidente</span>
-    <div class="president-line"></div>
     <div class="stamp-side">${stampSignatureHtml}</div>
   </div>
 
