@@ -245,7 +245,7 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
       text-align: center;
       font-family: 'Times New Roman', Times, serif;
       font-size: 12.5px;
-      margin-bottom: 14px;
+      margin-bottom: 42px;  /* 🐛 21/07/2026 v4 — 2 interlinee extra prima della riga "Data" */
     }
     .row { margin: 12px 0; display: flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
     .row .label { white-space: normal; }
