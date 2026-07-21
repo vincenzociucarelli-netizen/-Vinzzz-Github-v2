@@ -242,6 +242,15 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
       font-weight: 600;
     }
     .filled.small { flex: 0 0 auto; min-width: 120px; max-width: 200px; }
+    /* 🆕 21/07/2026 — Variante inline per la riga "sport" che deve stare insieme alla parola precedente */
+    .filled.inline-fld {
+      display: inline-block;
+      border-bottom: 1px solid #000;
+      min-width: 140px;
+      padding: 0 4px;
+      font-weight: 600;
+      vertical-align: baseline;
+    }
     .checkboxes {
       display: flex;
       justify-content: space-around;
@@ -383,9 +392,8 @@ export const generateMedicalVisitRequestHTML = (data: MedicalVisitRequestData): 
     <span class="filled">${escapeHtml(residenceStreet)}</span>
   </div>
 
-  <div class="row" style="margin-top:10px;">
-    <span class="label">Una visita medico-sportiva per l'idoneità alla pratica agonistica dello sport</span>
-    <span class="filled">PALLAVOLO</span>
+  <div class="row inline-sport" style="display:block; margin-top:6px;">
+    Una visita medico-sportiva per l'idoneità alla pratica agonistica <span style="white-space:nowrap;">dello sport <span class="filled inline-fld">PALLAVOLO</span></span>
   </div>
 
   <div class="checkboxes">
