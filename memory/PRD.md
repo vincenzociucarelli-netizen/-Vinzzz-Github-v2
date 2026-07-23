@@ -1,109 +1,116 @@
-# RegistraTEAM — PRD
+# RegistraTEAM - Product Requirements Document
 
 ## Original Problem Statement
-Sports team management app per società di pallavolo italiane. GDPR-compliant, multi-tenant, con onboarding role-specific, gestione soglie Riforma Sport (5k/15k EUR), dual-role Zaino Coach/Genitore, sistema pagamenti Stripe multi-tenant.
+RegistraTEAM è un'applicazione full-stack per la gestione delle società sportive di pallavolo italiane. Focus:
+- Compliance GDPR rigorosa (documenti dinamici, consenso, minori)
+- Multi-tenancy con isolamento dati per società
+- Gestione soglie Riforma Sport per ruoli duali (Zaino Coach)
+- Sistema Pre-iscrizioni + Import graduale utenti tra stagioni
+- Smart Login "Lite" per minorenni (nome_lite + PIN)
+- Athlete Code persistente legato al Codice Fiscale
+- Pagamenti Stripe multi-tenant + Rate + Parziali
+- Bacheca Note Admin con notifiche urgenti
+- Auto-generazione Richieste Visita ASL Umbria 1 (PDF A4)
+- Email transazionali via Brevo con dominio verificato centralizzato
 
-## Personas
-- **Admin/Dirigente**: Gestisce società, atleti, staff, pagamenti, GDPR.
-- **Coordinatore**: Gestisce eventi/organizzativi con permessi specifici.
-- **Coach/Collaboratore**: Vede solo il proprio zaino (compensi, allenamenti, atleti).
-- **Genitore**: Iscrive figli, paga rate, firma GDPR, accede dati sensibili.
-- **Atleta 18+ / Minore**: Login "lite" via nome+PIN o email+password.
-
-## Core Requirements
-- GDPR PDF dinamici (firma primaria/secondaria).
-- Multi-tenancy: TUTTE le query filtrano `society_id`.
-- Riforma Sport thresholds cumulativi 5k/15k EUR (dual-role coach+atleta compensato).
-- Season rollover senza data loss (attivo `active_seasons`).
-- Persistent `athlete_code` legato a CF.
-- Pre-registrazione con approval admin.
-- Stripe multi-tenant (webhook per società).
-- Dual-role UI: Admin ↔ Coordinatore ↔ Dirigente ↔ Genitore.
-
-## Implemented (last session)
-- Fix filtri stagione per staff/atleti (`active_seasons`).
-- Layout compatto "Eventi in programma".
-- Badge "COORDINATORE" nell'header.
-- Bidirectional role switch admin/coord/dirig.
-- Stripe Checkout multi-tenant + webhook `/api/webhooks/stripe/{society_id}`.
-- Dual-role Staff ↔ Genitore (endpoint + UI).
-- Self-service change email (`/admin/settings/change-email`).
-- Fix Coordinatore 403 su Eventi Preseason.
-- Fix header icons su mobile.
-- Security refactor "Sono io il genitore" (CF/created_by → approval request in caso di conflitto).
-
-## Implemented (July 2026 — session 19/07)
-- 🆕 **Fix Badge Modalità Stripe (LIVE/TEST)** — `GET /api/settings/stripe` ora calcola `stripe_mode` dinamicamente dal prefisso della chiave pubblicata (`pk_live_` → live, `pk_test_` → test), invece di leggere il campo DB che poteva essere disallineato. Frontend `/admin/settings/stripe.tsx`: URL webhook Stripe reso dinamico (`dashboard.stripe.com/webhooks` in LIVE, `.../test/webhooks` in TEST).
-- 🆕 **Attestato di versamento: stagione dinamica** — sia backend (`GET /payments/{athlete_id}/fiscal-receipt`) sia frontend (`/admin/athlete/[id].tsx`) ora usano rispettivamente `get_current_season_for_society(db, society_id)` e `getCurrentSeasonName(societySettings)` per rispettare `season_start_month/day` configurato dalla società, invece della logica hardcoded calendario.
-- 🆕 **Attestato: styling titolo** — "ATTESTATO DI VERSAMENTO" ora in font Arial 22px blu navy `#1a237e` bold con bordi top/bottom (prima era 13px bianco su banner blu).
-- 🆕 **Bacheca Note Admin** — task list condivisa tra admin (`POST /api/admin/notes` + 7 endpoint CRUD/take/complete/reopen). UI in dashboard admin sopra AdminLiveStats. Priorità 🔴🟡🟢, scadenza opzionale con badge, doppio flag (presa in carico + fatto), sezione collassabile "Già fatto" con riapertura. Testato 100% backend (pytest 11/11) + frontend E2E via testing agent.
-
-## Implemented (this session, Feb 2026)
-- 🆕 **Verifica email match** in "Sono io il genitore" (`link-me-as-parent` accetta anche match su `second_parent_email`, `parent_email`, `mother_email`, `father_email`).
-- 🆕 **Endpoint admin override** `POST /api/athletes/{id}/admin-link-parent` — admin può collegare qualsiasi utente esistente come genitore (bypassa verifica anti-frode).
-- 🆕 **Pulsante "Collega manualmente un genitore"** nella scheda atleta admin (visibile quando "Nessun genitore collegato").
-- 🆕 **Zaino Genitore per Staff** — nuova sezione `/staff/link-or-register-child` con 2 flussi:
-  - A) Ho un figlio già iscritto → riusa `/parent/link-athlete` (endpoint `/parent-link/search` + `/parent-link/request` ora aperti a tutti gli staff)
-  - B) Iscrivi un figlio nuovo → wizard completo `/staff/register-child` che crea l'atleta e lo linka come parent_id = current user
-- 🆕 **CTA "Sei anche genitore?"** su dashboard dirigente + icona header admin (visibile quando `linkedAthletesCount === 0`).
-- 🆕 **Nuovo endpoint** `POST /api/athletes/register-my-child` — staff self-service child registration.
-- 🆕 **Scontrino stile Nexi** — nuovo endpoint `GET /api/payments/{id}/receipt` che genera HTML della ricevuta stile Nexi con logo società, transazione autorizzata, codice AUT, card mascherata (last4 recuperato da Stripe se disponibile).
-- 🆕 Bottone **"Scarica scontrino"** su `/parent/payment/success` dopo pagamento riuscito.
-
-## Prioritized Backlog
-
-### 🔴 P0 (blockers/business-critical)
-- Guidare l'utente al consolidamento email su Sirio (Produzione) usando i tool già costruiti: cambia email admin + Sono io il genitore.
-
-### 🟠 P1 (rilevanti)
-- Notifica email al genitore primario quando richiesta 2° genitore approvata.
-- Pulsante "Scarica scontrino" anche sulla scheda atleta genitore (per pagamenti Stripe passati).
-
-### 🟡 P2 (utility)
-- Pagina Sponsor (`/admin/sponsor`): loghi vettoriali, contratti, scadenze pagamento, promemoria email, storico.
-- Estendere card "I miei figli" anche a `coach` e `collaboratore` (attualmente solo dirigente/admin).
-
-### 🟢 P3 (nice-to-have)
-- Panel Admin "Igiene Dati": read-only lista atleti/utenti con anomalie (CF mancante, orfani, duplicati).
-- Rimborso Stripe da admin (button "Rimborsa" nel pannello pagamenti).
-- Storico pagamenti Stripe con filtri (data/stato/atleta) + export CSV.
-- Ottimizzazioni RAM Render (blocked in attesa credits).
+## Language / Communication
+- **Comunicazione utente: SEMPRE in ITALIANO**
+- Utente principale: Vincenzo Ciucarelli
 
 ## Architecture
+
+### Stack
+- **Frontend**: React/Expo Web (in /app/frontend)
+- **Backend**: FastAPI (in /app/backend/server.py + /app/backend/routes/*.py)
+- **Database**: MongoDB
+- **Email**: Brevo (transazionali)
+- **Payments**: Stripe (Checkout Sessions, Refunds, Webhooks)
+- **Scheduler**: APScheduler (background jobs)
+- **PDF**: HTML-to-PDF via browser print engine + `@media print` CSS
+- **Deploy**: Render (backend) + Vercel (frontend registrateam.it)
+
+### Key DB Collections
+- `societies` (id, name, email, owner_id, ...)
+- `users` (id, society_id, email, role, ...)
+- `athletes`, `parents`, `settings`
+- `admin_notes` (id, society_id, title, content, priority, expiry_date, status, taken_by, ...)
+- `payments`, `recurring_payments`, `stripe_refunds`
+
+## Email System (aggiornato 23/07/2026)
+
+### Architettura centralizzata
+- **Mittente fisico:** `info@registrateam.it` (dominio autenticato su Brevo)
+- **From Name:** dinamico = `society.name` (es. "Sirio Volley Perugia", "Pallavolo Perugia SSD")
+- **Reply-To:** dinamico = `society.email` (o admin owner email come fallback)
+- **Vantaggio:** logo RegistraTEAM in Gmail + separazione SaaS/società
+
+### Helper disponibili in `/app/backend/email_service.py`
+- `send_transactional_email(to_email, subject, html_content, reply_to_email=, sender_name=, ...)` — invio email semplice
+- `send_email_with_pdf(...)` — invio email con allegato PDF
+- `send_society_email(society_dict, to_email, ...)` — auto-applica branding società
+- `send_society_email_with_pdf(society_dict, ...)` — invio con PDF + branding
+
+### Env vars (backend + Render)
 ```
-/app
-├── backend/
-│   ├── server.py                     # ~35k lines, refactoring pendente
-│   ├── routes/
-│   │   ├── stripe_payments.py        # Checkout + webhook + scontrino Nexi
-│   │   ├── parents.py                # Parent link requests (aperto a staff)
-│   │   ├── coordinator.py
-│   ├── tests/                        # pytest regression
-├── frontend/app/
-│   ├── staff/                        # 🆕 Zaino Genitore per staff
-│   │   ├── _layout.tsx
-│   │   ├── link-or-register-child.tsx
-│   │   └── register-child.tsx
-│   ├── admin/settings/change-email.tsx
-│   ├── admin/athlete/[id].tsx        # pulsante "Collega manualmente"
-│   ├── parent/payment/success.tsx    # bottone Scarica scontrino
+BREVO_API_KEY=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
+SENDER_EMAIL=info@registrateam.it
+SENDER_NAME=RegistraTEAM
 ```
 
-## Key API endpoints
-- `POST /api/athletes/{id}/link-me-as-parent` (v3 — email match)
-- `POST /api/athletes/{id}/admin-link-parent` (admin override) 🆕
-- `POST /api/athletes/register-my-child` (staff self-service) 🆕
-- `POST /api/parent-link/search` (aperto staff+parent) 🆕
-- `POST /api/parent-link/request` (aperto staff+parent) 🆕
-- `GET /api/payments/{id}/receipt` (HTML Nexi-style) 🆕
-- `POST /api/payments/{id}/checkout`
-- `POST /api/webhooks/stripe/{society_id}`
+## Status - Completed
 
-## 3rd party
-- Brevo (email)
-- Stripe (BYOK multi-tenant, keys per società in `db.settings`)
+### 23/07/2026 - Migrazione Brevo centralizzato
+- Nuovo account Brevo dedicato RegistraTEAM
+- Dominio `registrateam.it` autenticato su Aruba DNS: em CNAME, brevo1/brevo2._domainkey CNAME, img.em CNAME, r.em CNAME, TXT brevo-code, TXT _dmarc
+- Sottodominio di tracking custom: `em` (invece del default `mail` che confliggeva con la webmail Aruba)
+- Mittente `info@registrateam.it` verificato
+- Backend `email_service.py` esteso con `reply_to_email`, `reply_to_name`, `sender_name` (override)
+- Nuovo helper `apply_society_branding()` + `send_society_email()`
+- Env vars aggiornate su Render (BREVO_API_KEY + SENDER_EMAIL)
+- Test invio in locale: OK ✅ (multi-tenant separation verificato per 2 società)
 
-## Testing status
-- Feature testate manualmente via curl + smoke screenshot.
-- Lint OK.
-- No regressioni note.
+### Precedente (fork)
+- Fix Render 403 deploy error
+- Fix Stripe test-mode label
+- Season dinamica su Nexi receipts
+- Bacheca Note Admin (isolata + urgent animation + priority + expiry)
+- Fix rendering duplicato genitori
+- ASL Umbria 1 PDF (Richiesta Visita Medico-Sportiva, A4 print)
+- Riorganizzato header Admin Dashboard
+- Filtro "current season" su scheduler certificati
+
+## Backlog (in ordine di priorità)
+
+### P2
+- **Pagina Sponsor** `/admin/sponsor` protetta da password admin (loghi vettoriali, contratti, fatture, promemoria)
+- **GitHub Branch Cleanup**: eliminare ~255 branch `conflict_*` stale
+
+### P3
+- **Stripe Payments History**: pannello admin con filtri (data/status/atleta) + CSV export
+- **Report Rimborsi**: pannello dedicato con motivo + admin che ha effettuato rimborso
+- **Admin "Igiene Dati"**: pannello read-only per anomalie (CF mancanti, orfani, CF duplicati)
+- **Render Cold Starts & RAM**: cursor pagination, projections, lazy imports in `server.py`
+- **DKIM Brandizzato**: verificare che dopo 24h Brevo passi da "Predefinito" a `registrateam.it`
+
+### Refactoring
+- Spezzare `/app/backend/server.py` (~35k righe) in `routes/`
+
+## Known Issues / Recurring
+- Multi-tenancy query leakage: verificare `society_id` in ogni query
+- Season Rollover: hardcoded season checks che nascondono utenti/atleti in transizione
+- Render RAM 502 Bad Gateway: cold start + memoria limitata
+
+## Testing Credentials
+Vedi `/app/memory/test_credentials.md`
+
+## Files of Reference
+- `/app/backend/email_service.py` (aggiornato 23/07/2026)
+- `/app/backend/routes/admin_notes.py`
+- `/app/backend/routes/stripe_payments.py`
+- `/app/backend/routes/recurring_payments.py`
+- `/app/backend/routes/parents.py`
+- `/app/backend/server.py`
+- `/app/frontend/app/admin/notes.tsx`
+- `/app/frontend/src/components/AdminNotesButton.tsx`
+- `/app/frontend/src/utils/medicalVisitRequest.ts`
+- `/app/frontend/src/utils/fiscalReceipt.ts`
