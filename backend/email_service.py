@@ -324,7 +324,7 @@ def apply_society_branding(society: Optional[Dict[str, Any]], kwargs: Dict[str, 
     """
     Popola i parametri sender_name/reply_to a partire dal dict society.
     - sender_name = society.name (visualizzato come mittente)
-    - reply_to_email = society.email (destinazione dei "Rispondi")
+    - reply_to_email = society.email SE compilato, altrimenti society.admin_email (fallback)
     Se society è None/vuoto, non modifica nulla (usa i default globali).
     Non sovrascrive parametri già passati esplicitamente.
     """
@@ -335,9 +335,10 @@ def apply_society_branding(society: Optional[Dict[str, Any]], kwargs: Dict[str, 
         if soc_name:
             kwargs["sender_name"] = soc_name
     if "reply_to_email" not in kwargs or not kwargs.get("reply_to_email"):
-        soc_email = (society.get("email") or "").strip()
-        if soc_email:
-            kwargs["reply_to_email"] = soc_email
+        # Priorità: society.email → society.admin_email (fallback pratico se society.email è vuoto)
+        reply_email = (society.get("email") or "").strip() or (society.get("admin_email") or "").strip()
+        if reply_email:
+            kwargs["reply_to_email"] = reply_email
             if "reply_to_name" not in kwargs or not kwargs.get("reply_to_name"):
                 kwargs["reply_to_name"] = (society.get("name") or "").strip() or None
     return kwargs
