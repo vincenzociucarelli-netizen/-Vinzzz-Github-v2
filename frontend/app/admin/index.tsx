@@ -1659,9 +1659,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   // 🆕 20/07/2026 — Riga icone al confine blu/bianco (fondo dell'header)
+  // 21/07/2026 — Aumentato marginBottom negativo così le icone sono a METÀ sul blu, metà sul bianco
   headerBottomIconsRow: {
     marginTop: 12,
-    marginBottom: -22,  // sporge leggermente sul bianco per effetto floating
+    marginBottom: -32,
     paddingHorizontal: 4,
     zIndex: 10,
   },
