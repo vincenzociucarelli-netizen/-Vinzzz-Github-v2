@@ -4420,11 +4420,32 @@ async def transform_user_photo(data: ImageTransformRequest, current_user = Depen
     """DISABILITATO - Foto profilo rimosse per privacy"""
     raise HTTPException(status_code=410, detail="Funzionalità foto profilo rimossa per privacy")
 
-async def send_password_reset_email(to_email: str, reset_token: str, user_name: str):
-    """Send password reset email via Brevo/SendGrid"""
-    # Get society name for branding - use ragione_sociale for official documents
-    settings = await db.settings.find_one({"type": "society"})  # noqa: multitenancy-ok — password reset (utente non autenticato, society_id ignoto)
-    society_name = (settings.get("ragione_sociale") if settings else None) or (settings.get("name", "Gestione Società") if settings else "Gestione Società")
+async def send_password_reset_email(to_email: str, reset_token: str, user_name: str, society_id: Optional[str] = None):
+    """Send password reset email via Brevo/SendGrid (branded per società se society_id fornito)"""
+    # Recupera società corrente dell'utente (per branding From Name + Reply-To)
+    society_doc = None
+    settings = None
+    if society_id:
+        society_doc = await db.societies.find_one({"id": society_id})
+        settings = await db.settings.find_one({"society_id": society_id, "type": "society"})
+    # Fallback (legacy): primo settings disponibile
+    if not settings:
+        settings = await db.settings.find_one({"type": "society"})  # noqa: multitenancy-ok — utente non trovato o senza società
+    
+    society_name = (
+        (settings.get("ragione_sociale") if settings else None)
+        or (society_doc.get("name") if society_doc else None)
+        or (settings.get("name", "Gestione Società") if settings else "Gestione Società")
+    )
+    
+    # Reply-To: società.email → altrimenti admin owner
+    reply_to_email = None
+    if society_doc:
+        reply_to_email = (society_doc.get("email") or "").strip() or None
+        if not reply_to_email and society_doc.get("owner_id"):
+            owner = await db.users.find_one({"id": society_doc["owner_id"]}, {"_id": 0, "email": 1})
+            if owner:
+                reply_to_email = owner.get("email")
     
     # Create reset code (first 8 chars of token for easier communication)
     reset_code = reset_token[:8].upper()
@@ -4499,7 +4520,10 @@ async def send_password_reset_email(to_email: str, reset_token: str, user_name: 
             to_email=to_email,
             subject=f"🔐 Reset Password - {society_name}",
             html_content=html_content,
-            to_name=user_name
+            to_name=user_name,
+            sender_name=society_name,
+            reply_to_email=reply_to_email,
+            reply_to_name=society_name if reply_to_email else None,
         )
         if result.get("success"):
             logging.info(f"Password reset email sent to {to_email} via {result.get('provider', 'unknown')}")
@@ -4553,7 +4577,8 @@ async def forgot_password(data: ForgotPasswordRequest):
         await send_password_reset_email(
             to_email=user["email"],
             reset_token=reset_token,
-            user_name=user.get("full_name", "Utente")
+            user_name=user.get("full_name", "Utente"),
+            society_id=user.get("society_id"),
         )
     except Exception as e:
         logging.error(f"Failed to send reset email: {str(e)}")
