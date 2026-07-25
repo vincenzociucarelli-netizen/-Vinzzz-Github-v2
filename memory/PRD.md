@@ -59,6 +59,20 @@ SENDER_NAME=RegistraTEAM
 
 ## Status - Completed
 
+### 25/07/2026 - Fix Password Reset branding + Endpoint Test Email + Sensibilità Icone
+- Aggiornato `send_password_reset_email` (server.py:4423) per accettare `society_id` opzionale
+  - Ora usa `society.name` come From Name (invece del default "RegistraTEAM")
+  - Reply-To dinamico: `society.email` OR admin owner email come fallback
+- Chiamante `forgot_password` (server.py:4576) ora passa `user.society_id`
+- Nuovo endpoint `POST /api/admin/test-email` (auth admin required) per verificare config Brevo con branding completo
+  - Ritorna: success/provider/message_id + sender_email_configured + sender_name_used + reply_to_used
+- Fix sensibilità pulsanti icone header Admin Dashboard (`/app/frontend/app/admin/index.tsx`):
+  - Aggiunto `position:relative` + `zIndex:5` a `styles.header`
+  - Aumentato zIndex da 10 a 20 su `styles.headerBottomIconsRow`
+  - Aggiunto `cursor:pointer` su Web nel `styles.headerIconBtn`
+  - Aggiunto `hitSlop={{top:10,bottom:10,left:6,right:6}}` + `activeOpacity={0.6}` alle 6 TouchableOpacity delle icone header
+- DA DEPLOYARE: Save & Deploy su Render + Save su Vercel
+
 ### 23/07/2026 - Migrazione Brevo centralizzato
 - Nuovo account Brevo dedicato RegistraTEAM
 - Dominio `registrateam.it` autenticato su Aruba DNS: em CNAME, brevo1/brevo2._domainkey CNAME, img.em CNAME, r.em CNAME, TXT brevo-code, TXT _dmarc
@@ -80,6 +94,25 @@ SENDER_NAME=RegistraTEAM
 - Filtro "current season" su scheduler certificati
 
 ## Backlog (in ordine di priorità)
+
+### P1 - Regolamenti FIPAV Minorenni (RICHIESTO 25/07/2026 da Vincenzo)
+
+#### Feature A - Campionati di categoria (max 2)
+- Un atleta minorenne può disputare AL MASSIMO 2 campionati di categoria
+- Camp3 (categoria 3): la semplice presenza è sufficiente (non serve entrata effettiva in campo)
+- UI: sull'atleta minorenne, permettere selezione manuale dei campionati di categoria a cui partecipa (max 2)
+- Contatore "presenze Camp3" per ogni atleta
+- Blocco/alert se si prova ad aggiungere un 3° campionato di categoria
+- Persistenza: campi nuovi sul model Athlete (es. `category_championships: List[str]`, `camp3_presences: int`)
+
+#### Feature B - Limite 10 gare in serie superiore (categoria inferiore bloccata)
+- Regola: atleta minorenne di categoria inferiore (es. 1ª Divisione) chiamato in categoria superiore (es. Serie C) può fare MAX 10 gare (entrata effettiva in campo)
+- Alla 10ª gara scatta il blocco automatico: NON può più giocare nella categoria inferiore
+- UI: contatore manuale "gare in serie superiore" (0-10) modificabile dall'admin sul profilo atleta
+- Flag `blocked_from_lower_division: bool` che si attiva automaticamente al raggiungimento di 10 gare
+- Badge visivo sul profilo atleta: "🚫 Non può più giocare in [categoria inferiore]"
+- Warning quando l'admin prova a schierarlo di nuovo in categoria inferiore
+- Persistenza: `upper_division_games_count: int`, `upper_division_name: str`, `lower_division_name: str`, `blocked_from_lower_division: bool`
 
 ### P2
 - **Pagina Sponsor** `/admin/sponsor` protetta da password admin (loghi vettoriali, contratti, fatture, promemoria)
