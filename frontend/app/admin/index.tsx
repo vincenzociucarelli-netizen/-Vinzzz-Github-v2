@@ -86,6 +86,8 @@ interface ExpiringCertificates {
 export default function AdminDashboard() {
   const router = useRouter();
   const { user, logout, refreshUser } = useAuthStore();
+  // 🐛 25/07/2026 — hitSlop condiviso per le icone header (allarga area di tocco senza modificare aspetto)
+  const HEADER_ICON_HIT_SLOP = { top: 10, bottom: 10, left: 6, right: 6 };
   // 🆕 17/07/2026 — Se un coordinatore atterra sulla dashboard admin, redirect
   // alla sua dashboard dedicata. Il layout /admin accetta i coord solo per le
   // sotto-pagine autorizzate (es. preseason), non per l'index.
@@ -464,6 +466,8 @@ export default function AdminDashboard() {
             <TouchableOpacity
               onPress={() => router.push('/admin/notifications')}
               style={styles.headerIconBtn}
+              hitSlop={HEADER_ICON_HIT_SLOP}
+              activeOpacity={0.6}
             >
               <Text style={{ fontSize: 17 }}>🔔</Text>
               {unreadNotifications > 0 && (
@@ -479,6 +483,8 @@ export default function AdminDashboard() {
               <TouchableOpacity
                 onPress={() => router.replace('/dirigente')}
                 style={styles.headerIconBtn}
+                hitSlop={HEADER_ICON_HIT_SLOP}
+                activeOpacity={0.6}
               >
                 <Text style={{ fontSize: 15 }}>{Icons.briefcase}</Text>
               </TouchableOpacity>
@@ -488,6 +494,8 @@ export default function AdminDashboard() {
               <TouchableOpacity
                 onPress={() => router.replace('/parent')}
                 style={[styles.headerIconBtn, { backgroundColor: '#F3E5F5' }]}
+                hitSlop={HEADER_ICON_HIT_SLOP}
+                activeOpacity={0.6}
                 data-testid="admin-switch-to-parent-btn"
               >
                 <Ionicons name="people" size={16} color="#8E24AA" />
@@ -498,19 +506,31 @@ export default function AdminDashboard() {
               <TouchableOpacity
                 onPress={() => router.push('/staff/link-or-register-child')}
                 style={[styles.headerIconBtn, { backgroundColor: '#FAF3FB' }]}
+                hitSlop={HEADER_ICON_HIT_SLOP}
+                activeOpacity={0.6}
                 data-testid="admin-link-child-cta-btn"
               >
                 <Ionicons name="person-add" size={16} color="#8E24AA" />
               </TouchableOpacity>
             )}
             {/* Settings button */}
-            <TouchableOpacity onPress={() => router.push('/admin/settings')} style={styles.headerIconBtn}>
+            <TouchableOpacity
+              onPress={() => router.push('/admin/settings')}
+              style={styles.headerIconBtn}
+              hitSlop={HEADER_ICON_HIT_SLOP}
+              activeOpacity={0.6}
+            >
               <Text style={{ fontSize: 17 }}>{Icons.settings}</Text>
             </TouchableOpacity>
             {/* 📖 Guida ruolo Admin */}
             <GuideButton role="admin" compact />
             {/* Logout button */}
-            <TouchableOpacity onPress={handleLogout} style={styles.headerIconBtn}>
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={styles.headerIconBtn}
+              hitSlop={HEADER_ICON_HIT_SLOP}
+              activeOpacity={0.6}
+            >
               <Text style={{ fontSize: 17 }}>{Icons.logout}</Text>
             </TouchableOpacity>
           </View>
@@ -1632,6 +1652,8 @@ const styles = StyleSheet.create({
     paddingTop: 30,
     paddingBottom: 10,
     paddingHorizontal: 16,
+    position: 'relative' as any,
+    zIndex: 5,
   },
   headerMainRow: {
     flexDirection: 'row',
@@ -1660,11 +1682,14 @@ const styles = StyleSheet.create({
   },
   // 🆕 20/07/2026 — Riga icone al confine blu/bianco (fondo dell'header)
   // 21/07/2026 — Aumentato marginBottom negativo così le icone sono a METÀ sul blu, metà sul bianco
+  // 🐛 25/07/2026 — Aggiunto position:relative + zIndex più alto per fissare i touch events su Web
+  //                 (il ScrollView sottostante rubava i click sulle icone a causa del marginBottom negativo)
   headerBottomIconsRow: {
     marginTop: 12,
     marginBottom: -32,
     paddingHorizontal: 4,
-    zIndex: 10,
+    position: 'relative' as any,
+    zIndex: 20,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -1712,6 +1737,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 4,
+    // 🐛 25/07/2026 — cursor:pointer su Web + posizionamento esplicito per priorità touch
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' as any } : {}),
   },
   dirigenteSwitchBtn: {
     backgroundColor: '#fff',
