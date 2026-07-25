@@ -4540,6 +4540,73 @@ async def send_password_reset_email(to_email: str, reset_token: str, user_name: 
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
+# ============================================================================
+# ENDPOINT DI TEST EMAIL (admin only) - Verifica config Brevo multi-tenant
+# ============================================================================
+class TestEmailRequest(BaseModel):
+    to_email: EmailStr
+
+@api_router.post("/admin/test-email")
+async def admin_test_email(data: TestEmailRequest, current_user = Depends(get_current_user)):
+    """
+    Invia un'email di test all'indirizzo indicato usando il branding della società
+    dell'admin autenticato (nome società come From Name + reply-to = society.email o admin owner).
+    Solo per verifica configurazione Brevo.
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    society_id = current_user.get("society_id")
+    if not society_id:
+        raise HTTPException(status_code=400, detail="Admin senza società")
+    society = await db.societies.find_one({"id": society_id})
+    if not society:
+        raise HTTPException(status_code=404, detail="Società non trovata")
+    # Fallback reply_to su admin owner se society.email vuoto
+    if not (society.get("email") or "").strip() and society.get("owner_id"):
+        owner = await db.users.find_one({"id": society["owner_id"]}, {"_id": 0, "email": 1})
+        if owner:
+            society["admin_email"] = owner.get("email")
+    from email_service import send_society_email, SENDER_EMAIL, SENDER_NAME, USE_BREVO
+    subject = f"🧪 Test Email RegistraTEAM - {society.get('name')}"
+    html = f"""
+    <div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:24px;">
+      <div style="background:linear-gradient(135deg,#1E40AF,#3B82F6);color:white;padding:24px;border-radius:12px 12px 0 0;text-align:center;">
+        <h1 style="margin:0;font-size:22px;">✅ Configurazione Brevo OK</h1>
+        <p style="margin:8px 0 0;opacity:0.9;">Test multi-tenant</p>
+      </div>
+      <div style="background:white;padding:24px;border:1px solid #e5e7eb;border-radius:0 0 12px 12px;">
+        <p>Ciao <strong>{current_user.get('full_name','Admin')}</strong>! 👋</p>
+        <p>Email di test inviata dal backend RegistraTEAM.</p>
+        <table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;">
+          <tr><td style="padding:6px 0;color:#6B7280;">Da (fisico):</td><td style="padding:6px 0;font-weight:600;">{SENDER_EMAIL}</td></tr>
+          <tr><td style="padding:6px 0;color:#6B7280;">From Name:</td><td style="padding:6px 0;font-weight:600;">{society.get('name')}</td></tr>
+          <tr><td style="padding:6px 0;color:#6B7280;">Reply-To:</td><td style="padding:6px 0;font-weight:600;">{(society.get('email') or society.get('admin_email') or '—')}</td></tr>
+          <tr><td style="padding:6px 0;color:#6B7280;">Provider:</td><td style="padding:6px 0;font-weight:600;">{'Brevo' if USE_BREVO else 'SendGrid'}</td></tr>
+        </table>
+        <p style="font-size:12px;color:#9CA3AF;text-align:center;margin-top:24px;">
+          RegistraTEAM · Sistema email centralizzato
+        </p>
+      </div>
+    </div>
+    """
+    result = await send_society_email(
+        society=society,
+        to_email=data.to_email,
+        subject=subject,
+        html_content=html,
+        to_name=current_user.get('full_name'),
+    )
+    return {
+        "success": result.get("success", False),
+        "provider": result.get("provider"),
+        "message_id": result.get("message_id"),
+        "error": result.get("error"),
+        "sender_email_configured": SENDER_EMAIL,
+        "sender_name_used": society.get("name"),
+        "reply_to_used": (society.get("email") or society.get("admin_email") or None),
+    }
+
+
 class ResetPasswordRequest(BaseModel):
     email: EmailStr
     reset_code: str
