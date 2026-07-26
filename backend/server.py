@@ -9070,6 +9070,224 @@ async def sign_athlete_compensation_receipt(athlete_id: str, data: dict, current
     return {"message": "Quietanza aggiornata"}
 
 
+# ============================================================================
+# 🆕 27/07/2026 — DICHIARAZIONE PREGRESSO CON FIRMA DIGITALE (Riforma Sport)
+# ----------------------------------------------------------------------------
+# L'utente (atleta/coach/dirigente/collaboratore) prima di poter accettare un
+# compenso deve dichiarare quanto ha percepito da ALTRE ASD/SSD nell'anno
+# fiscale corrente, firmando digitalmente. Solo l'admin può modificare dopo.
+# Reset automatico al season rollover.
+# ============================================================================
+FISCAL_YEAR_FIELDS = [
+    "other_annual_compensation",           # importo dichiarato (usato dal calcolo soglie)
+    "other_annual_compensation_signed",    # True quando l'utente ha firmato
+    "other_annual_compensation_signature", # base64 signature image
+    "other_annual_compensation_signed_at", # datetime firma
+    "other_annual_compensation_signed_year", # anno fiscale della firma
+    "other_annual_compensation_ip",
+    "other_annual_compensation_user_agent",
+    "other_annual_compensation_admin_history",  # log modifiche admin
+]
+
+def _current_fiscal_year() -> int:
+    """Anno fiscale corrente (Riforma Sport = anno solare gen-dic)."""
+    return datetime.utcnow().year
+
+
+async def _get_user_or_athlete(user_id: str) -> tuple:
+    """Restituisce (doc, collection_name). Cerca prima in users poi in athletes."""
+    doc = await db.users.find_one({"id": user_id})
+    if doc:
+        return doc, "users"
+    doc = await db.athletes.find_one({"id": user_id})
+    if doc:
+        return doc, "athletes"
+    return None, None
+
+
+def _prior_compensation_status_from_doc(doc: dict) -> dict:
+    """Estrae lo stato della dichiarazione pregresso da un doc user/athlete."""
+    signed = bool(doc.get("other_annual_compensation_signed") or False)
+    signed_year = doc.get("other_annual_compensation_signed_year")
+    current_year = _current_fiscal_year()
+    # Se firma per anno fiscale diverso da corrente → considerata non valida
+    valid_signature = signed and signed_year == current_year
+    return {
+        "signed": valid_signature,
+        "amount": float(doc.get("other_annual_compensation") or 0),
+        "signed_at": (doc.get("other_annual_compensation_signed_at").isoformat()
+                      if isinstance(doc.get("other_annual_compensation_signed_at"), datetime)
+                      else doc.get("other_annual_compensation_signed_at")),
+        "signed_year": signed_year,
+        "current_fiscal_year": current_year,
+        "has_signature_image": bool(doc.get("other_annual_compensation_signature")),
+        "requires_renewal": signed and signed_year != current_year,
+    }
+
+
+async def _require_prior_compensation_declared(user_id: str) -> None:
+    """Raise HTTPException 403 se l'utente non ha dichiarato il pregresso
+    per l'anno fiscale corrente. Da chiamare prima di ogni accept-compensation."""
+    doc, _ = await _get_user_or_athlete(user_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    status = _prior_compensation_status_from_doc(doc)
+    if not status["signed"]:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "code": "PRIOR_COMPENSATION_REQUIRED",
+                "message": "Devi dichiarare i compensi già percepiti da altre società prima di accettare questo compenso.",
+                "current_fiscal_year": status["current_fiscal_year"],
+                "requires_renewal": status["requires_renewal"],
+            }
+        )
+
+
+@api_router.get("/me/prior-compensation/status")
+async def get_my_prior_compensation_status(current_user = Depends(get_current_user)):
+    """Ritorna lo stato della dichiarazione pregresso dell'utente corrente."""
+    doc, _ = await _get_user_or_athlete(current_user["id"])
+    if not doc:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    return _prior_compensation_status_from_doc(doc)
+
+
+class PriorCompensationDeclareRequest(BaseModel):
+    amount: float = Field(..., ge=0, description="Importo pregresso dichiarato (€, >= 0)")
+    signature_base64: str = Field(..., min_length=50, description="Firma digitale (base64 PNG)")
+
+
+@api_router.post("/me/prior-compensation/declare")
+async def declare_my_prior_compensation(
+    data: PriorCompensationDeclareRequest,
+    request: Request,
+    current_user = Depends(get_current_user),
+):
+    """L'utente firma la dichiarazione di pregresso per l'anno fiscale corrente.
+    Solo l'utente stesso può farlo. Se già firmato per l'anno corrente, non permette
+    di rifirmare (deve passare da admin per modifiche)."""
+    doc, coll_name = await _get_user_or_athlete(current_user["id"])
+    if not doc:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    current_year = _current_fiscal_year()
+    existing_signed = bool(doc.get("other_annual_compensation_signed"))
+    existing_year = doc.get("other_annual_compensation_signed_year")
+    if existing_signed and existing_year == current_year:
+        raise HTTPException(
+            status_code=400,
+            detail="Hai già firmato la dichiarazione per l'anno fiscale corrente. Modifiche solo tramite admin."
+        )
+    
+    # Metadati richiesta (per compliance)
+    client_host = request.client.host if request.client else None
+    forwarded_for = request.headers.get("x-forwarded-for", "")
+    ip_addr = (forwarded_for.split(",")[0].strip() if forwarded_for else client_host) or "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    
+    now = datetime.utcnow()
+    update_dict = {
+        "other_annual_compensation": round(float(data.amount), 2),
+        "other_annual_compensation_signed": True,
+        "other_annual_compensation_signature": data.signature_base64,
+        "other_annual_compensation_signed_at": now,
+        "other_annual_compensation_signed_year": current_year,
+        "other_annual_compensation_ip": ip_addr,
+        "other_annual_compensation_user_agent": user_agent,
+    }
+    coll = db.users if coll_name == "users" else db.athletes
+    await coll.update_one({"id": current_user["id"]}, {"$set": update_dict})
+    
+    return {
+        "success": True,
+        "message": "Dichiarazione firmata correttamente",
+        "amount": update_dict["other_annual_compensation"],
+        "signed_at": now.isoformat(),
+        "signed_year": current_year,
+    }
+
+
+class AdminEditPriorCompensationRequest(BaseModel):
+    amount: float = Field(..., ge=0)
+    note: Optional[str] = Field(None, max_length=500, description="Motivo della modifica")
+
+
+@api_router.patch("/admin/users/{user_id}/prior-compensation")
+async def admin_edit_prior_compensation(
+    user_id: str,
+    data: AdminEditPriorCompensationRequest,
+    current_user = Depends(get_current_user),
+):
+    """Solo l'admin può modificare l'importo pregresso dichiarato.
+    Registra nella history: chi ha modificato, quando, da quale importo a quale, con nota."""
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    doc, coll_name = await _get_user_or_athlete(user_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Utente/atleta non trovato")
+    # Multi-tenancy: admin può modificare solo utenti della propria società
+    if doc.get("society_id") and doc.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Utente non appartiene alla tua società")
+    
+    old_amount = float(doc.get("other_annual_compensation") or 0)
+    new_amount = round(float(data.amount), 2)
+    
+    history_entry = {
+        "changed_at": datetime.utcnow().isoformat(),
+        "changed_by_id": current_user["id"],
+        "changed_by_name": current_user.get("full_name"),
+        "changed_by_email": current_user.get("email"),
+        "old_amount": old_amount,
+        "new_amount": new_amount,
+        "note": (data.note or "").strip() or None,
+    }
+    history = list(doc.get("other_annual_compensation_admin_history") or [])
+    history.append(history_entry)
+    
+    coll = db.users if coll_name == "users" else db.athletes
+    await coll.update_one(
+        {"id": user_id},
+        {"$set": {
+            "other_annual_compensation": new_amount,
+            "other_annual_compensation_admin_history": history,
+        }}
+    )
+    return {
+        "success": True,
+        "old_amount": old_amount,
+        "new_amount": new_amount,
+        "history_entry": history_entry,
+    }
+
+
+@api_router.get("/admin/users/{user_id}/prior-compensation")
+async def admin_get_prior_compensation(
+    user_id: str,
+    current_user = Depends(get_current_user),
+):
+    """Admin visualizza la dichiarazione pregresso + storia modifiche di un utente."""
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    doc, _ = await _get_user_or_athlete(user_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Utente/atleta non trovato")
+    if doc.get("society_id") and doc.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Utente non appartiene alla tua società")
+    
+    status = _prior_compensation_status_from_doc(doc)
+    return {
+        **status,
+        "signature_base64": doc.get("other_annual_compensation_signature"),
+        "ip": doc.get("other_annual_compensation_ip"),
+        "user_agent": doc.get("other_annual_compensation_user_agent"),
+        "admin_history": doc.get("other_annual_compensation_admin_history") or [],
+        "user_full_name": doc.get("full_name") or f"{doc.get('first_name','')} {doc.get('last_name','')}".strip(),
+        "user_email": doc.get("email"),
+        "user_role": doc.get("role"),
+    }
+
+
 @api_router.post("/athletes/{athlete_id}/accept-compensation")
 async def accept_athlete_compensation(athlete_id: str, current_user = Depends(get_current_user)):
     """Athlete accepts the compensation offer - can be called by athlete themselves or admin"""
@@ -9088,6 +9306,10 @@ async def accept_athlete_compensation(athlete_id: str, current_user = Depends(ge
     # Check if already accepted
     if athlete.get("compensation_accepted"):
         return {"message": "Compenso già accettato", "already_accepted": True}
+    
+    # 🆕 27/07/2026 — Blocca se pregresso non dichiarato (Riforma Sport)
+    if not is_admin:
+        await _require_prior_compensation_declared(athlete_id)
     
     # Update athlete record
     now = datetime.utcnow()
@@ -15430,6 +15652,9 @@ async def accept_coach_compensation(coach_id: str, current_user = Depends(get_cu
     """Coach accepts the compensation offer"""
     if current_user["role"] != UserRole.COACH or current_user["id"] != coach_id:
         raise HTTPException(status_code=403, detail="Solo il coach può accettare il proprio compenso")
+    
+    # 🆕 27/07/2026 — Blocca se pregresso non dichiarato (Riforma Sport)
+    await _require_prior_compensation_declared(coach_id)
     
     # Update coach record
     now = datetime.utcnow()
@@ -23326,6 +23551,9 @@ async def accept_dirigente_compensation(dirigente_id: str, current_user = Depend
         raise HTTPException(status_code=403, detail="Solo il dirigente può accettare il proprio compenso")
     if current_user["role"] not in [UserRole.VIEWER, UserRole.ADMIN, UserRole.DIRIGENTE]:
         raise HTTPException(status_code=403, detail="Accesso negato")
+    
+    # 🆕 27/07/2026 — Blocca se pregresso non dichiarato (Riforma Sport)
+    await _require_prior_compensation_declared(dirigente_id)
     
     # Update dirigente record
     now = datetime.utcnow()

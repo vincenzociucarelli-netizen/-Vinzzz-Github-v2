@@ -629,6 +629,8 @@ async def reconfirm_bulk(
                 # 🆕 06/07/2026 — Reset ESTESO al momento della riconferma per
                 # Coach/Collab/Dir: azzera compenso, contratto, pregresso, onboarding
                 # (prima veniva fatto solo dal backfill retroattivo).
+                # 🆕 27/07/2026 — Reset anche i campi di firma della dichiarazione pregresso
+                #                 (deve essere rifirmata all'inizio della nuova stagione)
                 update["$set"].update({
                     "pro_data_pending_review": True,
                     "pro_data_pending_review_season": current_season,
@@ -641,11 +643,17 @@ async def reconfirm_bulk(
                     "monthly_compensation": 0,
                     "other_annual_compensation": 0,
                     "prior_compensation": 0,
+                    "other_annual_compensation_signed": False,
+                    "other_annual_compensation_signed_year": None,
                 })
                 update["$unset"].update({
                     "compensation_accepted_date": "",
                     "contract_start_date": "",
                     "contract_end_date": "",
+                    "other_annual_compensation_signature": "",
+                    "other_annual_compensation_signed_at": "",
+                    "other_annual_compensation_ip": "",
+                    "other_annual_compensation_user_agent": "",
                 })
                 usr_pro_flagged += 1
             if not update["$unset"]:

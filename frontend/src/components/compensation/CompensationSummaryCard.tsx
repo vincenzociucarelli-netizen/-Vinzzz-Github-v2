@@ -9,9 +9,11 @@
  * Replica grafica del Dirigente user e si usa in tutte le viste compenso
  * (user collaboratore/coach/atleta-pro + admin dirigente/collaboratore/coach/atleta-pro).
  */
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import api from '../../services/api';
+import PriorCompensationDeclarationModal from '../PriorCompensationDeclarationModal';
 
 interface Props {
   fullName: string;
@@ -76,6 +78,37 @@ export default function CompensationSummaryCard({
     ? pregressoLabelSuffix
     : computePregressoSuffix(contractStartDate);
 
+  // 🆕 27/07/2026 — Gestione dichiarazione pregresso (obbligatoria prima di accettare)
+  const [showPriorModal, setShowPriorModal] = useState(false);
+  const [checkingPrior, setCheckingPrior] = useState(false);
+
+  const handleAcceptClick = async () => {
+    if (!onAcceptCompensation) return;
+    // Prima di accettare, verifica lo status della dichiarazione pregresso
+    try {
+      setCheckingPrior(true);
+      const res = await api.get('/me/prior-compensation/status');
+      if (res.data?.signed) {
+        // Già firmato → procede direttamente con l'accettazione
+        onAcceptCompensation();
+      } else {
+        // Non firmato → apre il modal
+        setShowPriorModal(true);
+      }
+    } catch (_e) {
+      // In caso di errore di rete, prova direttamente l'accettazione (il backend bloccherà comunque)
+      onAcceptCompensation();
+    } finally {
+      setCheckingPrior(false);
+    }
+  };
+
+  const handleDeclared = () => {
+    setShowPriorModal(false);
+    // Dopo la firma, procede automaticamente con l'accettazione
+    onAcceptCompensation?.();
+  };
+
   return (
     <View style={{ marginBottom: 16, backgroundColor: '#fff', borderRadius: 12, padding: 16 }} data-testid="compensation-summary-card">
       {/* Profilo + nome */}
@@ -123,11 +156,11 @@ export default function CompensationSummaryCard({
             </View>
             <TouchableOpacity
               style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#34C759', padding: 12, borderRadius: 8 }}
-              onPress={onAcceptCompensation}
-              disabled={acceptingComp}
+              onPress={handleAcceptClick}
+              disabled={acceptingComp || checkingPrior}
               data-testid="accept-compensation-btn"
             >
-              {acceptingComp ? (
+              {(acceptingComp || checkingPrior) ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
                 <>
@@ -197,6 +230,14 @@ export default function CompensationSummaryCard({
           </View>
         </View>
       </View>
+
+      {/* 🆕 27/07/2026 — Modal dichiarazione pregresso (obbligatoria prima di accettare) */}
+      <PriorCompensationDeclarationModal
+        visible={showPriorModal}
+        userFullName={fullName}
+        onClose={() => setShowPriorModal(false)}
+        onDeclared={handleDeclared}
+      />
     </View>
   );
 }
