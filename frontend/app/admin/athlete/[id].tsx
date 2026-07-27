@@ -2430,23 +2430,39 @@ export default function AdminAthleteDetail() {
                 </TouchableOpacity>
               )}
               {/* 🆕 20/07/2026 — Richiesta Visita Medico-Sportiva integrata nella card certificato */}
-              <TouchableOpacity
-                style={{
-                  backgroundColor: '#E0F2F1', borderRadius: 8, padding: 10, marginTop: 10,
-                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  borderWidth: 1, borderColor: '#4DB6AC',
-                }}
-                onPress={generateMedicalVisitRequestPdf}
-                testID="medical-visit-request-btn-inline"
-              >
-                <Ionicons name="document-text-outline" size={16} color="#00695C" />
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#00695C' }}>
-                  📄 Richiesta Visita Medico-Sportiva
-                </Text>
-              </TouchableOpacity>
-              <Text style={{ fontSize: 10, color: '#888', textAlign: 'center', marginTop: 4, fontStyle: 'italic' }}>
-                Modulo D.M. 18.2.82 (USL Umbria 1) pre-compilato con firma e timbro del Presidente
-              </Text>
+              {/* 🐛 27/07/2026 — Nascosta per atleti 18+ (adulti): non serve il modulo ASL per minori */}
+              {(() => {
+                const dob = (athlete as any)?.date_of_birth;
+                if (!dob) return null;
+                const d = new Date(dob);
+                if (isNaN(d.getTime())) return null;
+                const now = new Date();
+                let age = now.getFullYear() - d.getFullYear();
+                const m = now.getMonth() - d.getMonth();
+                if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--;
+                if (age >= 18) return null;
+                return (
+                  <>
+                    <TouchableOpacity
+                      style={{
+                        backgroundColor: '#E0F2F1', borderRadius: 8, padding: 10, marginTop: 10,
+                        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        borderWidth: 1, borderColor: '#4DB6AC',
+                      }}
+                      onPress={generateMedicalVisitRequestPdf}
+                      testID="medical-visit-request-btn-inline"
+                    >
+                      <Ionicons name="document-text-outline" size={16} color="#00695C" />
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#00695C' }}>
+                        📄 Richiesta Visita Medico-Sportiva
+                      </Text>
+                    </TouchableOpacity>
+                    <Text style={{ fontSize: 10, color: '#888', textAlign: 'center', marginTop: 4, fontStyle: 'italic' }}>
+                      Modulo D.M. 18.2.82 (USL Umbria 1) pre-compilato con firma e timbro del Presidente
+                    </Text>
+                  </>
+                );
+              })()}
             </View>
 
             {/* 🗑️ 22/02/2026 — Card Squadra spostata nel tab Presenze */}
