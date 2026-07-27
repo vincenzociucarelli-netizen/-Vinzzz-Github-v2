@@ -32027,7 +32027,7 @@ async def get_promo_flyer():
 async def get_doc(doc_name: str):
     """Serve documentation HTML files"""
     import os
-    allowed = ["presentazione", "manuale-admin", "manuale-coach", "manuale-dirigente", "manuale-collaboratore", "manuale-genitore", "manuale-atleta-minorenne", "manuale-atleta-18plus"]
+    allowed = ["presentazione", "manuale-admin", "manuale-coach", "manuale-dirigente", "manuale-collaboratore", "manuale-genitore", "manuale-atleta-minorenne", "manuale-atleta-18plus", "manuale-atleta-18plus-paganti"]
     if doc_name not in allowed:
         raise HTTPException(status_code=404, detail="Documento non trovato")
     doc_path = os.path.join(os.path.dirname(__file__), "docs", f"{doc_name}.html")
