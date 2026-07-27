@@ -124,22 +124,44 @@ SENDER_NAME=RegistraTEAM
 
 ### P1 - Regolamenti FIPAV Minorenni (RICHIESTO 25/07/2026 da Vincenzo)
 
-#### Feature A - Campionati di categoria (max 2)
-- Un atleta minorenne può disputare AL MASSIMO 2 campionati di categoria
-- Camp3 (categoria 3): la semplice presenza è sufficiente (non serve entrata effettiva in campo)
-- UI: sull'atleta minorenne, permettere selezione manuale dei campionati di categoria a cui partecipa (max 2)
-- Contatore "presenze Camp3" per ogni atleta
-- Blocco/alert se si prova ad aggiungere un 3° campionato di categoria
-- Persistenza: campi nuovi sul model Athlete (es. `category_championships: List[str]`, `camp3_presences: int`)
+#### 🆕 27/07/2026 - Necessità architettura multi-sport
+Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e forse regionali Umbria). Per un SaaS multi-sport serve un'architettura "Sport-aware":
+- Nuovo campo `Society.sport` (default "pallavolo") + `Society.federation` (default "FIPAV") + `Society.region` (opzionale)
+- Ogni feature specifica dichiara precondizioni sport/federation/region
+- Helper `is_feature_enabled(society, feature_name)` centralizzato
+- Migration: società esistenti → `sport="pallavolo"` di default
+- UI settings società: dropdown Sport + Federazione + Regione (opzionale)
 
-#### Feature B - Limite 10 gare in serie superiore (categoria inferiore bloccata)
-- Regola: atleta minorenne di categoria inferiore (es. 1ª Divisione) chiamato in categoria superiore (es. Serie C) può fare MAX 10 gare (entrata effettiva in campo)
-- Alla 10ª gara scatta il blocco automatico: NON può più giocare nella categoria inferiore
-- UI: contatore manuale "gare in serie superiore" (0-10) modificabile dall'admin sul profilo atleta
-- Flag `blocked_from_lower_division: bool` che si attiva automaticamente al raggiungimento di 10 gare
-- Badge visivo sul profilo atleta: "🚫 Non può più giocare in [categoria inferiore]"
-- Warning quando l'admin prova a schierarlo di nuovo in categoria inferiore
-- Persistenza: `upper_division_games_count: int`, `upper_division_name: str`, `lower_division_name: str`, `blocked_from_lower_division: bool`
+#### Feature A - Max 2 campionati di categoria (fino a U17)
+**Norme Generali FIPAV:**
+> "Nelle fasce d'età fino alla categoria Under 17 compresa, ogni atleta può giocare al massimo in 2 campionati di categoria e ogni atleta può giocare complessivamente al massimo 3 gare nell'arco della settimana (comprensive della gara del campionato di serie). Il riferimento per definire il numero di gare quotidiane o settimanali giocate è la presenza nel camp3."
+
+**Definizione U17:** stagione 2026/2027 → 2027-17 = **nati 2010+**. Formula: `secondo anno stagione - 17`.
+
+**Implementazione:**
+- Solo atleti nati dopo (secondo_anno_stagione - 17)
+- Selezione multipla campionati di categoria (max 2) — blocco al 3° tentativo
+- Contatore camp3_presences_count (aggiornabile manualmente dall'admin)
+- Contatore weekly_games_count max 3 (opzionale)
+
+#### Feature B - Max 10 presenze in campionati superiori (Serie C/D/1^Div)
+**Estensione Normativa 2026/2027:**
+> Maschi nati 2006+: max 10 presenze in Serie C, dopo l'11ª non possono più giocare in Serie inferiore.
+> Femmine nate 2008+: max 10 presenze in Serie C/D/1^Div, dopo l'11ª non possono più giocare in Serie inferiore.
+> Estensione valida fino a domenica 28/03/2027 → dopo questa data l'ingresso nel campionato superiore inibisce automaticamente quello inferiore, indipendentemente dagli ingressi.
+
+**Implementazione:**
+- Campi su atleta: `upper_league_name` (Serie C/D/1^Div F), `upper_league_presences` (0-11, contatore manuale admin), `blocked_from_lower_league: bool` (True se >=11 O post-killswitch con 1+ presenza)
+- Contatore manuale +1/-1 dall'admin sul profilo atleta
+- Badge visivo (arancione a 10, rosso a 11)
+- Cron/check killswitch 28/03/2027: marca `blocked_from_lower_league=true` per tutti gli atleti con ≥1 presenza in Serie superiore
+- Reset dei contatori al season rollover (30/06)
+- Banner globale post-28/03/2027 con warning killswitch
+
+#### Piano d'implementazione a fasi (deciso 27/07/2026)
+- **Fase 1** – Multi-sport base: Sport/Federation/Region su Society + UI settings + helper is_feature_enabled
+- **Fase 2** – Regole FIPAV: nuovi campi atleta + pannello UI + cron killswitch
+- **Fase 3** – Futuro: regole basket (FIP), regole regionali (Umbria vs altre)
 
 ### P2
 - **Pagina Sponsor** `/admin/sponsor` protetta da password admin (loghi vettoriali, contratti, fatture, promemoria)
