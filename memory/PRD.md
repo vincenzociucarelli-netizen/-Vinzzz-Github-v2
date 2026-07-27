@@ -59,6 +59,35 @@ SENDER_NAME=RegistraTEAM
 
 ## Status - Completed
 
+### 27/07/2026 (parte 2) - Multi-sport Architecture + Regole FIPAV Minorenni IMPLEMENTATE
+
+**Architettura Multi-Sport (Fase 1):**
+- Nuovi campi su Society: `sport`, `federation`, `region` (con default "pallavolo"/"FIPAV")
+- 12 sport di squadra supportati: pallavolo, basket, calcio, calcio_a_5, pallamano, rugby, pallanuoto, hockey, baseball, softball, football_americano, altro
+- Federazioni auto-associate: FIPAV, FIP, FIGC, FIGH, FIR, FIN, FIH, FIBS, FIDAF
+- Helper `is_feature_enabled(society, feature_name)` in server.py con dict `FEATURE_PRECONDITIONS`
+- Migration eseguita: società esistenti → pallavolo/FIPAV
+- Endpoint: `GET /societies/sports/available`, `PATCH /societies/my/sport-config`, `GET /me/feature-flags`
+- Frontend: `SportConfigCard.tsx` integrato in `/admin/settings/society.tsx`
+
+**Regole FIPAV Minorenni (Fase 2):**
+- Nuovi campi su Athlete:
+  - Feature A (U17): `category_championships: List[str]` (max 2), `camp3_presences_count`, `weekly_games_count`
+  - Feature B (M≥2006/F≥2008): `upper_league_name`, `upper_league_presences`, `blocked_from_lower_league`
+- Killswitch hardcoded `FIPAV_KILLSWITCH_DATE = "2027-03-28"` — verifica automatica lato server
+- Validazioni:
+  - Max 2 campionati categoria → HTTPException 400 con messaggio FIPAV
+  - `upper_league_presences >= 11` → auto-blocco `blocked_from_lower_league = True`
+  - Post-killswitch + ≥1 presenza → auto-blocco automatico
+- Endpoint: `GET /admin/athletes/{id}/fipav-rules`, `PATCH /admin/athletes/{id}/fipav-rules`
+- Protezione: entrambi tornano 400 se society non ha `sport="pallavolo" + federation="FIPAV"`
+- Frontend: `FipavAthleteRulesPanel.tsx` integrato in `/admin/athlete/[id].tsx`
+  - Nascosto se feature flag OFF (basket/calcio/etc → pannello scompare)
+  - Filtro età visualizzato per non-eligibili (es. "atleta non soggetto a questa regola")
+  - Contatori manuali +/- per presenze serie superiore, camp3, gare settimanali
+  - Banner "killswitch attivo" post-28/03/2027
+- Test backend end-to-end 8/8 OK (feature flags, cambio sport, blocco 2 campionati, auto-blocco 11 presenze)
+
 ### 27/07/2026 - Dichiarazione Pregresso con Firma + Fix icone + Fix crop social
 
 #### Feature: Prior Compensation Declaration (Riforma Sport)

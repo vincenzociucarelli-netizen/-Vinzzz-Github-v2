@@ -20,6 +20,7 @@ import api from '../../../src/services/api';
 import * as ImagePicker from 'expo-image-picker';
 import Slider from '@react-native-community/slider';
 import { SportIcon, clearSportIconCache } from '../../../src/components/SportIcon';
+import SportConfigCard from '../../../src/components/SportConfigCard';
 
 const showAlert = (title: string, message: string) => {
   if (Platform.OS === 'web') {
@@ -744,6 +745,11 @@ export default function SocietySettings() {
               </View>
             </View>
           )}
+        </View>
+
+        {/* 🆕 27/07/2026 — Configurazione Sport (per feature multi-sport) */}
+        <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
+          <SportConfigCard />
         </View>
 
         {/* Spacer */}

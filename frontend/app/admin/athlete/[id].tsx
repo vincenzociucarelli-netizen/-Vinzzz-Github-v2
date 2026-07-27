@@ -19,6 +19,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import CompensationSummaryCard from '../../../src/components/compensation/CompensationSummaryCard';
+import FipavAthleteRulesPanel from '../../../src/components/FipavAthleteRulesPanel';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import DualRoleHubBanner from '../../../src/components/admin/DualRoleHubBanner';
 import { Ionicons } from '../../../src/components/Icon';
@@ -3687,6 +3688,8 @@ export default function AdminAthleteDetail() {
                         readOnly
                         adminUserId={athlete?.id}
                       />
+                      {/* 🆕 27/07/2026 — Pannello Regole FIPAV Minorenni (visibile solo se sport=pallavolo+FIPAV) */}
+                      {athlete?.id && <FipavAthleteRulesPanel athleteId={athlete.id} />}
                     </View>
                   );
                 })()}

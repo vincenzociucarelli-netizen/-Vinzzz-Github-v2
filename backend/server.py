@@ -1627,6 +1627,240 @@ async def get_my_society(current_user = Depends(get_current_user)):
     clean_mongo_doc(society)
     return society
 
+
+# ============================================================================
+# 🆕 27/07/2026 — MULTI-SPORT ARCHITECTURE
+# ----------------------------------------------------------------------------
+# Ogni società ha uno "sport" (pallavolo, basket, calcio ecc.) + federazione
+# + regione (opzionale). Le feature specifiche di uno sport/federazione (es.
+# regole FIPAV pallavolo) sono visibili solo quando le precondizioni sono
+# soddisfatte via il helper is_feature_enabled().
+# ============================================================================
+
+# Sport di squadra supportati (Vincenzo 27/07/2026: solo sport di squadra)
+SUPPORTED_SPORTS = {
+    "pallavolo":         {"label": "Pallavolo",         "default_federation": "FIPAV"},
+    "basket":            {"label": "Basket",            "default_federation": "FIP"},
+    "calcio":            {"label": "Calcio",            "default_federation": "FIGC"},
+    "calcio_a_5":        {"label": "Calcio a 5",        "default_federation": "FIGC"},
+    "pallamano":         {"label": "Pallamano",         "default_federation": "FIGH"},
+    "rugby":             {"label": "Rugby",             "default_federation": "FIR"},
+    "pallanuoto":        {"label": "Pallanuoto",        "default_federation": "FIN"},
+    "hockey":            {"label": "Hockey",            "default_federation": "FIH"},
+    "baseball":          {"label": "Baseball",          "default_federation": "FIBS"},
+    "softball":          {"label": "Softball",          "default_federation": "FIBS"},
+    "football_americano":{"label": "Football americano","default_federation": "FIDAF"},
+    "altro":             {"label": "Altro",             "default_federation": None},
+}
+
+# Feature flags condizionali per sport/federazione
+FEATURE_PRECONDITIONS = {
+    # Regole minorenni FIPAV pallavolo (Under 17 - 2 campionati categoria + 10 presenze superiore)
+    "fipav_minor_rules": {
+        "sport": "pallavolo",
+        "federation": "FIPAV",
+    },
+    # Killswitch stagionale (data specifica FIPAV) — se un giorno cambia federazione, non si applica
+    "fipav_killswitch_2027": {
+        "sport": "pallavolo",
+        "federation": "FIPAV",
+    },
+}
+
+
+def is_feature_enabled(society: dict, feature_name: str) -> bool:
+    """Verifica se una feature condizionata a sport/federation è abilitata per la società."""
+    if not society:
+        return False
+    precond = FEATURE_PRECONDITIONS.get(feature_name)
+    if not precond:
+        return True  # Nessuna precondizione = feature sempre abilitata
+    # Controlla ogni condizione
+    for key, expected in precond.items():
+        if society.get(key) != expected:
+            return False
+    return True
+
+
+@api_router.get("/societies/sports/available")
+async def list_available_sports():
+    """Elenco sport supportati e federazioni suggerite (per dropdown UI)."""
+    return {
+        "sports": [
+            {"key": k, "label": v["label"], "default_federation": v["default_federation"]}
+            for k, v in SUPPORTED_SPORTS.items()
+        ]
+    }
+
+
+class SportConfigUpdate(BaseModel):
+    sport: str = Field(..., description="Chiave sport (es. 'pallavolo')")
+    federation: Optional[str] = Field(None, description="Federazione (es. 'FIPAV'). Se null usa default sport")
+    region: Optional[str] = Field(None, description="Regione italiana (opzionale, per varianti regionali)")
+
+
+@api_router.patch("/societies/my/sport-config")
+async def update_my_society_sport(data: SportConfigUpdate, current_user = Depends(get_current_user)):
+    """Admin aggiorna sport/federazione/regione della propria società."""
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    if not current_user.get("society_id"):
+        raise HTTPException(status_code=404, detail="Non sei associato a nessuna società")
+    if data.sport not in SUPPORTED_SPORTS:
+        raise HTTPException(status_code=400, detail=f"Sport non supportato. Opzioni: {list(SUPPORTED_SPORTS.keys())}")
+    # Se federation non specificata usa default per lo sport
+    fed = data.federation if data.federation is not None else SUPPORTED_SPORTS[data.sport]["default_federation"]
+    await db.societies.update_one(
+        {"id": current_user["society_id"]},
+        {"$set": {
+            "sport": data.sport,
+            "federation": fed,
+            "region": (data.region or None),
+        }}
+    )
+    return {"success": True, "sport": data.sport, "federation": fed, "region": data.region or None}
+
+
+@api_router.get("/me/feature-flags")
+async def get_my_feature_flags(current_user = Depends(get_current_user)):
+    """Ritorna le feature flag abilitate per la società dell'utente corrente.
+    Frontend usa questo per mostrare/nascondere sezioni condizionali."""
+    society = None
+    if current_user.get("society_id"):
+        society = await db.societies.find_one({"id": current_user["society_id"]})
+    # Default (retrocompatibilità): società esistenti senza campo sport → pallavolo/FIPAV
+    if society and not society.get("sport"):
+        society = {**society, "sport": "pallavolo", "federation": "FIPAV"}
+    flags = {name: is_feature_enabled(society or {}, name) for name in FEATURE_PRECONDITIONS.keys()}
+    return {
+        "sport": (society or {}).get("sport", "pallavolo"),
+        "federation": (society or {}).get("federation", "FIPAV"),
+        "region": (society or {}).get("region"),
+        "flags": flags,
+    }
+
+
+# ============================================================================
+# 🆕 27/07/2026 — REGOLE FIPAV MINORENNI (Under 17 + max 10 presenze serie sup.)
+# Vedere PRD.md sezione "Regolamenti FIPAV Minorenni" per le norme testuali.
+# ============================================================================
+FIPAV_KILLSWITCH_DATE = "2027-03-28"  # domenica 28/03/2027
+
+
+def _fipav_under_17_cutoff_year(current_season: str) -> Optional[int]:
+    """Dato una stagione '2026/2027', ritorna l'anno di nascita minimo per essere U17.
+    Formula: secondo_anno_stagione - 17. Es. 2027 - 17 = 2010 → U17 = nati 2010+.
+    """
+    try:
+        parts = current_season.split("/")
+        if len(parts) == 2:
+            return int(parts[1]) - 17
+    except Exception:
+        pass
+    return None
+
+
+class FipavAthleteRulesUpdate(BaseModel):
+    """Update dei contatori FIPAV per un atleta (manuale da admin)."""
+    upper_league_name: Optional[str] = None  # es. "Serie C", "Serie D", "1^ Div F"
+    upper_league_presences: Optional[int] = Field(None, ge=0, le=99)
+    category_championships: Optional[List[str]] = None  # max 2
+    camp3_presences_count: Optional[int] = Field(None, ge=0, le=999)
+    weekly_games_count: Optional[int] = Field(None, ge=0, le=10)
+
+
+@api_router.get("/admin/athletes/{athlete_id}/fipav-rules")
+async def get_athlete_fipav_rules(athlete_id: str, current_user = Depends(get_current_user)):
+    """Ritorna lo stato dei contatori FIPAV per un atleta (visibile solo se sport=pallavolo+FIPAV)."""
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    society = await db.societies.find_one({"id": current_user.get("society_id")})
+    if not is_feature_enabled(society or {}, "fipav_minor_rules"):
+        raise HTTPException(status_code=400, detail="Feature FIPAV non abilitata per questa società")
+    ath = await db.athletes.find_one({"id": athlete_id})
+    if not ath:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    if ath.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Atleta non appartiene alla tua società")
+    
+    upper_pres = int(ath.get("upper_league_presences") or 0)
+    blocked = bool(ath.get("blocked_from_lower_league") or False)
+    # Auto-blocco se ha raggiunto 11 presenze
+    if upper_pres >= 11:
+        blocked = True
+    # Auto-blocco post-killswitch (28/03/2027) con almeno 1 presenza
+    from datetime import date
+    try:
+        today = date.today()
+        killswitch = date.fromisoformat(FIPAV_KILLSWITCH_DATE)
+        if today >= killswitch and upper_pres >= 1:
+            blocked = True
+    except Exception:
+        pass
+    
+    return {
+        "athlete_id": athlete_id,
+        "athlete_name": ath.get("full_name") or f"{ath.get('first_name','')} {ath.get('last_name','')}".strip(),
+        "birth_year": (ath.get("birth_date") or "")[:4] if ath.get("birth_date") else None,
+        "gender": ath.get("gender") or ath.get("sex"),
+        # Feature A - campionati di categoria (U17)
+        "category_championships": list(ath.get("category_championships") or []),
+        "camp3_presences_count": int(ath.get("camp3_presences_count") or 0),
+        "weekly_games_count": int(ath.get("weekly_games_count") or 0),
+        # Feature B - presenze serie superiore
+        "upper_league_name": ath.get("upper_league_name") or "",
+        "upper_league_presences": upper_pres,
+        "blocked_from_lower_league": blocked,
+        "killswitch_date": FIPAV_KILLSWITCH_DATE,
+    }
+
+
+@api_router.patch("/admin/athletes/{athlete_id}/fipav-rules")
+async def update_athlete_fipav_rules(
+    athlete_id: str,
+    data: FipavAthleteRulesUpdate,
+    current_user = Depends(get_current_user),
+):
+    """Admin aggiorna contatori FIPAV dell'atleta.
+    - category_championships: max 2 selezioni (validato)
+    - upper_league_presences: aggiornamento manuale +/- (validato 0-99)
+    """
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    society = await db.societies.find_one({"id": current_user.get("society_id")})
+    if not is_feature_enabled(society or {}, "fipav_minor_rules"):
+        raise HTTPException(status_code=400, detail="Feature FIPAV non abilitata per questa società")
+    ath = await db.athletes.find_one({"id": athlete_id})
+    if not ath:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    if ath.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Atleta non appartiene alla tua società")
+    
+    # Validazione max 2 campionati categoria
+    if data.category_championships is not None:
+        clean_list = [c.strip() for c in data.category_championships if c and c.strip()]
+        if len(clean_list) > 2:
+            raise HTTPException(status_code=400, detail="Massimo 2 campionati di categoria consentiti (norma FIPAV U17)")
+        data.category_championships = clean_list
+    
+    update_dict = {}
+    for field in ["upper_league_name", "upper_league_presences", "category_championships",
+                  "camp3_presences_count", "weekly_games_count"]:
+        val = getattr(data, field)
+        if val is not None:
+            update_dict[field] = val
+    
+    # Auto-flag blocked_from_lower_league quando >= 11 presenze
+    if data.upper_league_presences is not None and data.upper_league_presences >= 11:
+        update_dict["blocked_from_lower_league"] = True
+    
+    if update_dict:
+        await db.athletes.update_one({"id": athlete_id}, {"$set": update_dict})
+    
+    # Ritorna lo stato aggiornato
+    return await get_athlete_fipav_rules(athlete_id, current_user)
+
+
 @api_router.get("/societies/invite-code")
 async def get_invite_code(current_user = Depends(get_current_user)):
     """Get society invite code - admin only"""
