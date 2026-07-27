@@ -32,6 +32,11 @@ import api from '../services/api';
 interface Props {
   visible: boolean;
   userFullName: string;
+  /** Data inizio contratto (ISO o "YYYY-MM-DD"). Se presente, è usata come data
+   *  di riferimento nella dichiarazione ("ha percepito fino al giorno X") invece
+   *  della data odierna. Serve a garantire che eventuali arretrati ricevuti il
+   *  giorno di inizio contratto siano gestiti separatamente in quietanza. */
+  contractStartDate?: string | null;
   onClose: () => void;
   onDeclared: () => void; // Callback dopo firma andata a buon fine
 }
@@ -45,6 +50,7 @@ const formatDateIT = (d: Date) => {
 export default function PriorCompensationDeclarationModal({
   visible,
   userFullName,
+  contractStartDate,
   onClose,
   onDeclared,
 }: Props) {
@@ -55,6 +61,18 @@ export default function PriorCompensationDeclarationModal({
   const [submitting, setSubmitting] = useState(false);
   const today = new Date();
   const currentFiscalYear = today.getFullYear();
+  // 🆕 27/07/2026 — Vincenzo: usare data inizio contratto invece di "oggi" per la dichiarazione,
+  //                 così eventuali arretrati ricevuti lo stesso giorno di inizio non sono ambigui
+  //                 (li dichiara comunque nella prima quietanza mensile).
+  const referenceDate = (() => {
+    if (contractStartDate) {
+      try {
+        const d = new Date(contractStartDate);
+        if (!isNaN(d.getTime())) return d;
+      } catch { /* fallback */ }
+    }
+    return today;
+  })();
 
   const parsedAmount = parseFloat((amountStr || '').replace(',', '.'));
   const isAmountValid = amountStr !== '' && !isNaN(parsedAmount) && parsedAmount >= 0;
@@ -146,7 +164,7 @@ export default function PriorCompensationDeclarationModal({
               <Text style={[styles.legalText, { marginTop: 8 }]}>
                 <Text style={{ fontWeight: '700' }}>DICHIARA</Text> sotto la propria responsabilità,
                 ai fini del calcolo delle soglie previste dalla Riforma dello Sport (D.Lgs.
-                36/2021), che al giorno <Text style={{ fontWeight: '700' }}>{formatDateIT(today)}</Text>{' '}
+                36/2021), che al giorno <Text style={{ fontWeight: '700' }}>{formatDateIT(referenceDate)}</Text>{' '}
                 ha percepito da <Text style={{ fontWeight: '700' }}>altre ASD/SSD</Text> (diverse
                 da quella cui presenta questa dichiarazione), per l&apos;anno fiscale{' '}
                 <Text style={{ fontWeight: '700' }}>{currentFiscalYear}</Text>, la somma di:

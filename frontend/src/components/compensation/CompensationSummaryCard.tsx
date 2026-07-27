@@ -112,6 +112,12 @@ export default function CompensationSummaryCard({
     setShowPriorModal(false);
     // Dopo la firma, procede automaticamente con l'accettazione
     onAcceptCompensation?.();
+    // 🆕 27/07/2026 — Forza refresh su Web così la pagina padre ricarica il pregresso
+    //                 aggiornato (evita mostrare €0 nel box "Pregresso dichiarato" dopo firma).
+    //                 Il reload avviene solo se il caller non gestisce la propagazione.
+    if (typeof window !== 'undefined' && (window as any)?.location?.reload) {
+      setTimeout(() => { try { (window as any).location.reload(); } catch { /* noop */ } }, 900);
+    }
   };
 
   return (
@@ -202,10 +208,6 @@ export default function CompensationSummaryCard({
               <Text style={{ fontSize: 14, color: '#333', fontWeight: '500', flex: 1 }}>
                 Pregresso dichiarato {pregressoSuffix}
               </Text>
-              <View style={{ paddingHorizontal: 8, paddingVertical: 3, backgroundColor: '#F3F4F6', borderRadius: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Ionicons name="lock-closed" size={12} color="#6B7280" />
-                <Text style={{ fontSize: 11, color: '#6B7280', fontWeight: '500' }}>Solo admin</Text>
-              </View>
             </View>
             {pregressoNotice ? (
               <View
@@ -247,6 +249,7 @@ export default function CompensationSummaryCard({
       <PriorCompensationDeclarationModal
         visible={showPriorModal}
         userFullName={fullName}
+        contractStartDate={contractStartDate}
         onClose={() => setShowPriorModal(false)}
         onDeclared={handleDeclared}
       />
