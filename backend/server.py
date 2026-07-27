@@ -33088,9 +33088,11 @@ async def get_preseason_share_page(campaign_id: str, request: Request):
     <meta name="twitter:title" content="{e_title}" />
     <meta name="twitter:description" content="{e_desc}" />
 
-    <!-- Redirect human visitors to the SPA landing page -->
-    <meta http-equiv="refresh" content="0; url={e_redirect}" />
-    <link rel="canonical" href="{e_share}" />
+    <!-- 🐛 27/07/2026 (parte 5) — RIMOSSO <meta http-equiv="refresh"> perché Facebook/WhatsApp/Telegram
+         crawler seguivano il redirect e finivano sulla SPA Vercel senza og:image specifico dell'evento
+         (mostravano og della homepage). Ora il redirect avviene SOLO via JavaScript (i crawler non
+         eseguono JS quindi restano su questa pagina e leggono gli og:tag corretti).
+         Rimosso anche <link rel="canonical"> verso Vercel per lo stesso motivo. -->
 </head>
 <body>
     <script>window.location.replace({e_redirect!r});</script>
