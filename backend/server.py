@@ -32883,16 +32883,13 @@ async def get_public_campaign_info(campaign_id: str):
 # come immagine binaria (per uso in og:image, che richiede URL assoluto raggiungibile
 # dai crawler social senza autenticazione).
 @api_router.get("/preseason/public/{campaign_id}/cover.jpg")
-async def get_preseason_cover_image(campaign_id: str, raw: int = 0):
-    """Serve la cover image di una campagna come immagine binaria.
+async def get_preseason_cover_image(campaign_id: str):
+    """Serve la cover image di una campagna come immagine binaria (originale, no padding).
     
-    Comportamento di default (raw=0):
-      - Centra la locandina originale su un canvas 1200×1200 con sfondo bianco,
-        così WhatsApp/Facebook/Telegram mostrano SEMPRE l'anteprima grande
-        (indipendentemente dall'aspect ratio del volantino originale).
-    
-    Con ?raw=1 restituisce l'immagine originale senza padding (per usi diretti).
-    
+    🐛 27/07/2026 (bis) — RIMOSSO il padding 1200×1200 che rovinava il preview WhatsApp
+                          (mostrava un quadratone bianco enorme con la locandina piccola).
+                          Il preview "piccolo" di WhatsApp mostra la locandina INTERA
+                          ed è visivamente più bello. Meglio così.
     Fallback: se la campagna non ha cover_image → 404 (il chiamante userà il logo società).
     """
     campaign = await db.preseason_campaigns.find_one(
@@ -32912,45 +32909,7 @@ async def get_preseason_cover_image(campaign_id: str, raw: int = 0):
     except Exception:
         raise HTTPException(status_code=404, detail="Cover image non decodificabile")
     from fastapi.responses import Response
-    
-    # raw=1 → immagine originale senza padding
-    if raw == 1:
-        return Response(content=img_bytes, media_type=media_type, headers={"Cache-Control": "public, max-age=300"})
-    
-    # 🆕 27/07/2026 — Padding a 1200×1200 (quadrato) per anteprima grande social
-    try:
-        from PIL import Image as _PILImage
-        from io import BytesIO as _BIO
-        src = _PILImage.open(_BIO(img_bytes))
-        # Converti in RGB per supportare JPEG output (drop alpha se PNG con trasparenza)
-        if src.mode in ("RGBA", "LA"):
-            bg = _PILImage.new("RGB", src.size, (255, 255, 255))
-            bg.paste(src, mask=src.split()[-1])
-            src = bg
-        elif src.mode != "RGB":
-            src = src.convert("RGB")
-        
-        TARGET = 1200
-        # Scala mantenendo aspect ratio dentro un box TARGET×TARGET
-        src.thumbnail((TARGET, TARGET), _PILImage.LANCZOS)
-        # Canvas bianco 1200×1200 con locandina centrata
-        canvas = _PILImage.new("RGB", (TARGET, TARGET), (255, 255, 255))
-        x = (TARGET - src.width) // 2
-        y = (TARGET - src.height) // 2
-        canvas.paste(src, (x, y))
-        # Encode JPEG (più leggero e universalmente supportato dai crawler social)
-        out = _BIO()
-        canvas.save(out, format="JPEG", quality=88, optimize=True)
-        out.seek(0)
-        return Response(
-            content=out.read(),
-            media_type="image/jpeg",
-            headers={"Cache-Control": "public, max-age=3600"}
-        )
-    except Exception as e:
-        # In caso di errore PIL, fallback all'immagine originale
-        logging.warning(f"Padding cover.jpg fallback for campaign {campaign_id}: {e}")
-        return Response(content=img_bytes, media_type=media_type, headers={"Cache-Control": "public, max-age=300"})
+    return Response(content=img_bytes, media_type=media_type, headers={"Cache-Control": "public, max-age=300"})
 
 
 def _convert_date_to_italian(date_str: str) -> str:
@@ -33021,30 +32980,39 @@ async def get_preseason_share_page(campaign_id: str, request: Request):
     host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
     backend_url = f"{scheme}://{host}" if host else ""
     # 🆕 27/02/2026 — Priorità immagine OG:
-    #   1. cover_image della campagna (custom banner) — se presente
+    #   1. cover_image della campagna — se presente
     #   2. logo società (fallback)
-    # 🐛 27/07/2026 — Vincenzo: le dimensioni 512×512 hardcoded causavano crop
-    #                 errato su WhatsApp/Facebook con locandine rettangolari (Canva ecc.).
-    # 🎯 27/07/2026 (bis) — Vincenzo: alcuni eventi mostravano preview PICCOLO su WhatsApp.
-    #                 Soluzione: il backend ora restituisce SEMPRE cover.jpg come quadrato
-    #                 1200×1200 (padding su canvas bianco). Dichiariamo dimensioni fisse
-    #                 così WhatsApp/FB/Telegram mostrano SEMPRE anteprima grande.
+    # 🐛 27/07/2026 — Padding 1200×1200 rimosso: peggiorava l'anteprima WhatsApp.
+    #                 Ora torniamo a dichiarare le dimensioni reali dell'immagine
+    #                 (il preview "piccolo" di WhatsApp mostra la locandina intera
+    #                 ed è visivamente più bello del quadratone bianco).
     logo_url = ""
     og_img_width = 512
     og_img_height = 512
-    og_img_type = "image/jpeg"
+    og_img_type = "image/png"
     has_cover = bool(campaign.get("cover_image"))
     if has_cover and backend_url:
         logo_url = f"{backend_url}/api/preseason/public/{campaign_id}/cover.jpg"
-        og_img_width = 1200
-        og_img_height = 1200
-        og_img_type = "image/jpeg"
+        # Estrai dimensioni reali dall'immagine cover (data URI base64)
+        try:
+            cover_uri = campaign["cover_image"]
+            if cover_uri.startswith("data:"):
+                header, b64 = cover_uri.split(",", 1)
+                mime = header.split(";")[0].replace("data:", "") or "image/jpeg"
+                import base64 as _b64_og
+                from io import BytesIO as _BIO_og
+                from PIL import Image as _PILImg
+                _img = _PILImg.open(_BIO_og(_b64_og.b64decode(b64)))
+                og_img_width = int(_img.width)
+                og_img_height = int(_img.height)
+                og_img_type = mime
+        except Exception:
+            pass
     elif has_logo and backend_url:
         if society_id:
             logo_url = f"{backend_url}/api/settings/society/logo.png?society_id={society_id}"
         else:
             logo_url = f"{backend_url}/api/settings/society/logo.png"
-        og_img_type = "image/png"
 
     # Frontend (SPA) base URL — used for the human redirect target and og:url.
     # Falls back to backend host only if FRONTEND_URL is not configured.

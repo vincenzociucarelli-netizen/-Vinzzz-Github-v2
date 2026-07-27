@@ -78,6 +78,9 @@ export default function PublicPreseasonForm() {
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // 🐛 27/07/2026 — aspect ratio dinamico della cover_image per evitare crop laterali
+  //                 (locandine Canva verticali venivano tagliate con aspectRatio 1200/630).
+  const [coverAspect, setCoverAspect] = useState<number>(1200 / 630);
 
   // Form fields
   const [firstName, setFirstName] = useState('');
@@ -105,6 +108,15 @@ export default function PublicPreseasonForm() {
     try {
       const res = await axios.get(`${API_URL}/api/preseason/public/${id}`);
       setCampaign(res.data);
+      // 🐛 27/07/2026 — Leggi dimensioni reali della cover per calcolare aspect ratio corretto
+      const cover = res.data?.cover_image;
+      if (cover) {
+        Image.getSize(
+          cover,
+          (w, h) => { if (w > 0 && h > 0) setCoverAspect(w / h); },
+          () => { /* mantieni default 1200/630 in caso di errore */ }
+        );
+      }
     } catch (err: any) {
       if (err.response?.status === 410) {
         setError('Questa campagna non e piu attiva o e scaduta.');
@@ -197,14 +209,16 @@ export default function PublicPreseasonForm() {
       <ScrollView style={{ flex: 1, backgroundColor: '#F5F7FA' }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         {/* Header */}
         <View style={{ alignItems: 'center', marginBottom: 28, marginTop: 16 }}>
-          {/* 🆕 27/02/2026 — Se c'è cover_image, la mostriamo AL POSTO del logo società
-              (banner 1200×630). In fallback: logo società oppure icona trofeo. */}
+          {/* 🆕 27/02/2026 — Se c'è cover_image, la mostriamo AL POSTO del logo società.
+              🐛 27/07/2026 — Ora l'aspect ratio è DINAMICO (letto dalla vera dimensione
+                              dell'immagine) e resizeMode="contain" così la locandina
+                              viene mostrata INTERA senza crop laterali/verticali. */}
           {campaign?.cover_image ? (
-            <View style={{ width: '100%', maxWidth: 500, marginBottom: 16, borderRadius: 12, overflow: 'hidden', backgroundColor: '#eee' }}>
+            <View style={{ width: '100%', maxWidth: 500, marginBottom: 16, borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff' }}>
               <Image
                 source={{ uri: campaign.cover_image }}
-                style={{ width: '100%', aspectRatio: 1200 / 630, backgroundColor: '#f0f0f0' }}
-                resizeMode="cover"
+                style={{ width: '100%', aspectRatio: coverAspect, backgroundColor: '#fff' }}
+                resizeMode="contain"
                 data-testid="campaign-cover-image"
               />
             </View>
