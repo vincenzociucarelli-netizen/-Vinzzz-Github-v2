@@ -14,6 +14,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
 import PriorCompensationDeclarationModal from '../PriorCompensationDeclarationModal';
+import AdminPriorCompensationPanel from '../AdminPriorCompensationPanel';
 
 interface Props {
   fullName: string;
@@ -37,6 +38,9 @@ interface Props {
    *  (es. "Conteggiato sull'anagrafica Atleta"). Usato sulla scheda Coach quando
    *  l'utente è anche Atleta PRO, per evitare doppio conteggio del pregresso. */
   pregressoNotice?: string;
+  /** 🆕 27/07/2026 — Se presente (vista admin), mostra il pannello con dichiarazione
+   *  pregresso firmata + storia modifiche admin per il dato utente. */
+  adminUserId?: string;
 }
 
 const formatContractDate = (dateStr: string) => {
@@ -73,6 +77,7 @@ export default function CompensationSummaryCard({
   pregressoLabelSuffix,
   pregressoNotice,
   compensationLabel,
+  adminUserId,
 }: Props) {
   const pregressoSuffix = pregressoLabelSuffix !== undefined
     ? pregressoLabelSuffix
@@ -230,6 +235,13 @@ export default function CompensationSummaryCard({
           </View>
         </View>
       </View>
+
+      {/* 🆕 27/07/2026 — Pannello admin: dichiarazione pregresso firmata + storia (solo se adminUserId presente) */}
+      {adminUserId && (
+        <View style={{ marginTop: 12 }}>
+          <AdminPriorCompensationPanel userId={adminUserId} />
+        </View>
+      )}
 
       {/* 🆕 27/07/2026 — Modal dichiarazione pregresso (obbligatoria prima di accettare) */}
       <PriorCompensationDeclarationModal

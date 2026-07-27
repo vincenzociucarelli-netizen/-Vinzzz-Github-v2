@@ -1151,6 +1151,7 @@ export default function AdminCollaboratoreDetail() {
                 priorCompensation={Number(collaboratore?.other_annual_compensation || 0)}
                 formatCurrency={formatCurrency}
                 readOnly
+                adminUserId={collaboratore?.id}
               />
               
               {/* Totale già percepito (quietanze firmate) - Cliccabile - sempre visibile se contratto definito */}

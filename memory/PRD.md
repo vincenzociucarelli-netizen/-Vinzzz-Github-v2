@@ -59,6 +59,33 @@ SENDER_NAME=RegistraTEAM
 
 ## Status - Completed
 
+### 27/07/2026 - Dichiarazione Pregresso con Firma + Fix icone + Fix crop social
+
+#### Feature: Prior Compensation Declaration (Riforma Sport)
+- **Concetto:** L'utente (atleta/coach/dirigente/collaboratore) deve dichiarare l'importo percepito da altre ASD/SSD nell'anno fiscale corrente PRIMA di accettare qualunque compenso. Firma digitale + metadati (IP/UA/timestamp). Solo admin può modificare successivamente (con storia)
+- **Opzione Y:** una dichiarazione per stagione (reset al season rollover)
+- Backend - 4 nuovi endpoint in `server.py`:
+  - `GET /api/me/prior-compensation/status` → status dichiarazione utente
+  - `POST /api/me/prior-compensation/declare` → firma dell'utente
+  - `GET /api/admin/users/{user_id}/prior-compensation` → admin visualizza firma + history
+  - `PATCH /api/admin/users/{user_id}/prior-compensation` → admin modifica con log storico
+- Backend - Blocco 403 `PRIOR_COMPENSATION_REQUIRED` sui 3 accept-compensation endpoint (athletes, coach, dirigente)
+- Backend - Helper `_require_prior_compensation_declared()` + `_get_user_or_athlete()` + `_prior_compensation_status_from_doc()`
+- Backend - Reset campi firma al season rollover in `routes/seasons.py`
+- Frontend - Nuovo `/app/frontend/src/components/PriorCompensationDeclarationModal.tsx` con SignaturePad + input importo + testo legale + checkbox conferma
+- Frontend - Nuovo `/app/frontend/src/components/AdminPriorCompensationPanel.tsx` per admin: mostra status, firma-image, metadati IP/UA, storia modifiche + form edit con nota
+- Frontend - Integrati entrambi in `CompensationSummaryCard` (prop `adminUserId` opzionale)
+- Frontend - 4 pagine admin aggiornate (coach/collaboratore/dirigente/athlete)
+- Nuovi campi utente: `other_annual_compensation_signed`, `_signature`, `_signed_at`, `_signed_year`, `_ip`, `_user_agent`, `_admin_history[]`
+- Test backend end-to-end: 6/6 OK (status pre/post firma, 403 senza firma, declare, blocco rifirma, accept post-firma, admin edit + history)
+
+#### Fix icone header dashboard admin
+- `marginBottom: -32` → `marginBottom: 4` sulla row icone → ora interamente sopra bordo blu (non più a cavallo)
+
+#### Fix crop immagine social preseason (WhatsApp/Facebook/Telegram)
+- Problema: `og:image:width/height` hardcoded a 512×512 → crawler social croppavano male locandine rettangolari (Canva verticali)
+- Fix in `server.py:32744-32775` (funzione `get_preseason_share_page`): lettura dinamica dimensioni reali con PIL, aggiunto `og:image:alt`
+
 ### 25/07/2026 - Fix Password Reset branding + Endpoint Test Email + Sensibilità Icone
 - Aggiornato `send_password_reset_email` (server.py:4423) per accettare `society_id` opzionale
   - Ora usa `society.name` come From Name (invece del default "RegistraTEAM")

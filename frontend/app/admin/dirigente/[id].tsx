@@ -1306,6 +1306,7 @@ export default function AdminDirigenteDetail() {
                 priorCompensation={Number((dirigente as any)?.other_annual_compensation || 0)}
                 formatCurrency={formatCurrency}
                 readOnly
+                adminUserId={dirigente?.id}
               />
               
               {/* Calcolo per Anno Solare - Enhanced UI */}

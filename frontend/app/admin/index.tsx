@@ -1684,9 +1684,10 @@ const styles = StyleSheet.create({
   // 21/07/2026 — Aumentato marginBottom negativo così le icone sono a METÀ sul blu, metà sul bianco
   // 🐛 25/07/2026 — Aggiunto position:relative + zIndex più alto per fissare i touch events su Web
   //                 (il ScrollView sottostante rubava i click sulle icone a causa del marginBottom negativo)
+  // 🆕 27/07/2026 — Vincenzo: icone spostate SOPRA il bordo azzurro (interamente dentro il blu)
   headerBottomIconsRow: {
     marginTop: 12,
-    marginBottom: -32,
+    marginBottom: 4,
     paddingHorizontal: 4,
     position: 'relative' as any,
     zIndex: 20,

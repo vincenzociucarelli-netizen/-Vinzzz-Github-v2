@@ -1729,6 +1729,7 @@ export default function AdminCoachDetail() {
                 formatCurrency={formatCurrency}
                 readOnly
                 pregressoNotice={isDualRole ? "Conteggiato sull'anagrafica Atleta (evita doppio conteggio)" : undefined}
+                adminUserId={coach?.id}
               />
               
               {/* 🔧 22/06/2026 — Calcolo per Anno Solare RIATTIVATO: l'utente ha bisogno del breakdown

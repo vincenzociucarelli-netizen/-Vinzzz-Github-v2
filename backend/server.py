@@ -32742,12 +32742,34 @@ async def get_preseason_share_page(campaign_id: str, request: Request):
     host = request.headers.get("x-forwarded-host") or request.headers.get("host") or request.url.netloc
     backend_url = f"{scheme}://{host}" if host else ""
     # 🆕 27/02/2026 — Priorità immagine OG:
-    #   1. cover_image della campagna (custom banner 1200×630) — se presente
+    #   1. cover_image della campagna (custom banner) — se presente
     #   2. logo società (fallback)
+    # 🐛 27/07/2026 — Vincenzo: le dimensioni 512×512 hardcoded causavano crop
+    #                 errato su WhatsApp/Facebook con locandine rettangolari (Canva ecc.).
+    #                 Ora leggiamo le dimensioni REALI dall'immagine cover.
     logo_url = ""
+    og_img_width = 512
+    og_img_height = 512
+    og_img_type = "image/png"
     has_cover = bool(campaign.get("cover_image"))
     if has_cover and backend_url:
         logo_url = f"{backend_url}/api/preseason/public/{campaign_id}/cover.jpg"
+        # Estrai dimensioni reali dall'immagine cover (data URI base64)
+        try:
+            cover_uri = campaign["cover_image"]
+            if cover_uri.startswith("data:"):
+                header, b64 = cover_uri.split(",", 1)
+                mime = header.split(";")[0].replace("data:", "") or "image/jpeg"
+                import base64 as _b64_og
+                from io import BytesIO as _BIO_og
+                from PIL import Image as _PILImg
+                _img = _PILImg.open(_BIO_og(_b64_og.b64decode(b64)))
+                og_img_width = int(_img.width)
+                og_img_height = int(_img.height)
+                og_img_type = mime
+        except Exception:
+            # In caso di errore, mantieni i default (512×512) — meglio che rompere la pagina
+            pass
     elif has_logo and backend_url:
         if society_id:
             logo_url = f"{backend_url}/api/settings/society/logo.png?society_id={society_id}"
@@ -32799,9 +32821,10 @@ async def get_preseason_share_page(campaign_id: str, request: Request):
     og_image_block = (
         f'<meta property="og:image" content="{e_logo}" />\n'
         f'    <meta property="og:image:secure_url" content="{e_logo}" />\n'
-        f'    <meta property="og:image:type" content="image/png" />\n'
-        f'    <meta property="og:image:width" content="512" />\n'
-        f'    <meta property="og:image:height" content="512" />\n'
+        f'    <meta property="og:image:type" content="{og_img_type}" />\n'
+        f'    <meta property="og:image:width" content="{og_img_width}" />\n'
+        f'    <meta property="og:image:height" content="{og_img_height}" />\n'
+        f'    <meta property="og:image:alt" content="{e_title}" />\n'
         f'    <meta name="twitter:image" content="{e_logo}" />\n'
         if logo_url else ""
     )

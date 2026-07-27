@@ -3685,6 +3685,7 @@ export default function AdminAthleteDetail() {
                         priorCompensation={Number((athlete as any)?.other_annual_compensation || 0)}
                         formatCurrency={formatCurrency}
                         readOnly
+                        adminUserId={athlete?.id}
                       />
                     </View>
                   );
