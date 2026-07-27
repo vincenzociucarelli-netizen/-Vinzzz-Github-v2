@@ -5,6 +5,7 @@ Bacheca Note Admin — task list condivisa per amministratori.
 Tutti gli admin della società vedono TUTTE le note e chiunque può:
 - Creare una nota (con titolo, descrizione, priorità, scadenza opzionale)
 - Prendere in carico una nota (flag "presa in carico")
+- Marcare come "in corso" (flag "in corso" — lavoro iniziato)
 - Marcarla come completata (flag "fatto") → sposta in sezione "Già fatto"
 - Riaprire una nota completata (torna alle note attive)
 - Modificare/eliminare una nota (solo il creatore o qualsiasi admin)
@@ -16,6 +17,7 @@ Endpoint (prefix /api):
 - PATCH  /admin/notes/{id}               → modifica title/description/priority/due_date
 - POST   /admin/notes/{id}/take          → prende in carico (self-assign)
 - POST   /admin/notes/{id}/untake        → rilascia la presa in carico
+- POST   /admin/notes/{id}/in-progress   → segna come "in corso" (toggle)
 - POST   /admin/notes/{id}/complete      → marca come completata
 - POST   /admin/notes/{id}/reopen        → riapre nota completata
 - DELETE /admin/notes/{id}               → elimina nota
@@ -57,10 +59,15 @@ def _display_name(user: dict) -> str:
 def _serialize(note: dict) -> dict:
     """Serializza una nota rimuovendo _id di Mongo e normalizzando i datetime."""
     out = {k: v for k, v in note.items() if k != "_id"}
-    for k in ("created_at", "taken_at", "completed_at"):
+    for k in ("created_at", "taken_at", "in_progress_at", "completed_at"):
         v = out.get(k)
         if isinstance(v, datetime):
             out[k] = v.isoformat()
+    # 🆕 27/07/2026 — Default per note legacy senza campo in_progress
+    out.setdefault("in_progress", False)
+    out.setdefault("in_progress_by", None)
+    out.setdefault("in_progress_by_name", None)
+    out.setdefault("in_progress_at", None)
     return out
 
 
@@ -224,6 +231,38 @@ async def untake_note(note_id: str, current_user=Depends(get_current_user)):
     return _serialize(updated)
 
 
+@router.post("/admin/notes/{note_id}/in-progress")
+async def toggle_in_progress(note_id: str, current_user=Depends(get_current_user)):
+    """🆕 27/07/2026 — Toggle del flag 'in corso'. Segnala che il lavoro è iniziato
+    ma non è ancora completato. Chiunque può attivarlo/disattivarlo (stato condiviso)."""
+    _require_admin(current_user)
+    society_id = current_user.get("society_id")
+    note = await db.admin_notes.find_one({"id": note_id, "society_id": society_id})
+    if not note:
+        raise HTTPException(status_code=404, detail="Nota non trovata")
+    if note.get("completed"):
+        raise HTTPException(status_code=400, detail="Nota già completata")
+
+    already = bool(note.get("in_progress"))
+    if already:
+        updates = {
+            "in_progress": False,
+            "in_progress_by": None,
+            "in_progress_by_name": None,
+            "in_progress_at": None,
+        }
+    else:
+        updates = {
+            "in_progress": True,
+            "in_progress_by": current_user["id"],
+            "in_progress_by_name": _display_name(current_user),
+            "in_progress_at": datetime.now(timezone.utc),
+        }
+    await db.admin_notes.update_one({"id": note_id}, {"$set": updates})
+    updated = await db.admin_notes.find_one({"id": note_id})
+    return _serialize(updated)
+
+
 @router.post("/admin/notes/{note_id}/complete")
 async def complete_note(note_id: str, current_user=Depends(get_current_user)):
     _require_admin(current_user)
@@ -241,6 +280,11 @@ async def complete_note(note_id: str, current_user=Depends(get_current_user)):
             "completed_by": current_user["id"],
             "completed_by_name": _display_name(current_user),
             "completed_at": datetime.now(timezone.utc),
+            # 🆕 27/07/2026 — Alla chiusura, resettiamo il flag 'in corso'
+            "in_progress": False,
+            "in_progress_by": None,
+            "in_progress_by_name": None,
+            "in_progress_at": None,
         }},
     )
     updated = await db.admin_notes.find_one({"id": note_id})

@@ -34,6 +34,10 @@ interface AdminNote {
   taken_by?: string | null;
   taken_by_name?: string | null;
   taken_at?: string | null;
+  in_progress?: boolean;
+  in_progress_by?: string | null;
+  in_progress_by_name?: string | null;
+  in_progress_at?: string | null;
   completed: boolean;
   completed_by?: string | null;
   completed_by_name?: string | null;
@@ -199,6 +203,16 @@ export const AdminNotesBoard: React.FC = () => {
       if (completedLoaded) await loadCompleted();
     } catch (e: any) {
       const msg = e?.response?.data?.detail || 'Errore completamento';
+      if (Platform.OS === 'web') window.alert(msg);
+    }
+  };
+
+  const onToggleInProgress = async (note: AdminNote) => {
+    try {
+      await api.post(`/admin/notes/${note.id}/in-progress`);
+      await loadActive();
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail || 'Errore aggiornamento';
       if (Platform.OS === 'web') window.alert(msg);
     }
   };
@@ -490,6 +504,24 @@ export const AdminNotesBoard: React.FC = () => {
                           })()}
                           <TouchableOpacity
                             style={styles.checkboxItem}
+                            onPress={() => onToggleInProgress(n)}
+                            testID={`admin-note-in-progress-${n.id}`}
+                          >
+                            <View style={[styles.checkbox, n.in_progress && styles.checkboxInProgress]}>
+                              {n.in_progress && <Ionicons name="time-outline" size={14} color="#fff" />}
+                            </View>
+                            <Text style={styles.checkboxLabel}>
+                              {n.in_progress ? (
+                                <>
+                                  In corso{n.in_progress_by_name ? <> — <Text style={{ fontWeight: '700' }}>{n.in_progress_by_name}</Text></> : null}
+                                </>
+                              ) : (
+                                'In corso'
+                              )}
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.checkboxItem}
                             onPress={() => onComplete(n)}
                             testID={`admin-note-complete-${n.id}`}
                           >
@@ -667,6 +699,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   checkboxOn: { backgroundColor: '#2E7D32', borderColor: '#2E7D32' },
+  checkboxInProgress: { backgroundColor: '#F57C00', borderColor: '#F57C00' },
   checkboxLabel: { fontSize: 12, color: '#333' },
   iconBtn: { padding: 5 },
   saveBtn: { backgroundColor: '#1a237e', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 6 },
