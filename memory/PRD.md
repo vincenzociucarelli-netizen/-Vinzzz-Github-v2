@@ -234,6 +234,13 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
 - Season Rollover: hardcoded season checks che nascondono utenti/atleti in transizione
 - Render RAM 502 Bad Gateway: cold start + memoria limitata
 
+## Changelog recente
+- **27/07/2026** — Fix PDF/QR nome società mancante:
+  - Aggiunto `society_id` + `signer_name` alle scritture `signed_documents` per Coach, Dirigente, Collaboratore, Threshold Declaration (coach) e signed document generico. Prima erano solo su Athlete Pro (fix 27/07) e GDPR/trial.
+  - QR verify `/api/documents/verify/{id}`: widening projection a `dirigente_name`/`collaboratore_name`/`athlete_name` e fallback multi-id lookup (`signer_id → coach_id → dirigente_id → collaboratore_id → athlete_id`) su `users`/`athletes` per risalire alla società anche su documenti legacy senza `society_id`. Nessun fallback cross-tenant globale (evita leak Pallavolo Perugia).
+  - Query settings ora legge anche il campo `name` (era solo `ragione_sociale`/`society_name`).
+
+
 ## Testing Credentials
 Vedi `/app/memory/test_credentials.md`
 

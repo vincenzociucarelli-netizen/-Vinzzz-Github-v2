@@ -18579,7 +18579,12 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
         "id": receipt_id,
         "document_type": doc_type,
         "document_title": doc_title,
+        # 🐛 27/07/2026 — Fix multi-tenancy: persistere society_id sul documento
+        # firmato così la pagina QR verify riesce a mostrare la società corretta
+        # (prima era None → la pagina di verifica mostrava "—" alla voce Società).
+        "society_id": coach_society_id,
         "signer_id": coach_id,
+        "signer_name": coach.get('full_name', ''),
         "coach_id": coach_id,
         "coach_name": coach.get('full_name', ''),
         "coach_email": coach.get('email', ''),
@@ -19258,6 +19263,11 @@ Luogo e data: _________________, {now.strftime('%d/%m/%Y')}
         "id": declaration_id,
         "document_type": f"threshold_declaration_{request.threshold_type}",
         "document_title": f"Dichiarazione Superamento {title_suffix}",
+        # 🐛 27/07/2026 — Fix multi-tenancy: persistere society_id sul documento
+        # firmato così la pagina QR verify mostra la società corretta.
+        "society_id": coach_society_id,
+        "signer_id": coach_id,
+        "signer_name": coach.get('full_name', ''),
         "coach_id": coach_id,
         "coach_name": coach.get('full_name', ''),
         "year": request.year,
@@ -24056,6 +24066,11 @@ async def sign_dirigente_compensation_receipt(
         "id": receipt_id,
         "document_type": doc_type,
         "document_title": doc_title,
+        # 🐛 27/07/2026 — Fix multi-tenancy: persistere society_id sul documento
+        # firmato così la pagina QR verify mostra la società corretta.
+        "society_id": dir_society_id,
+        "signer_id": dirigente_id,
+        "signer_name": dirigente.get('full_name', ''),
         "dirigente_id": dirigente_id,
         "dirigente_name": dirigente.get('full_name', ''),
         "dirigente_email": dirigente.get('email', ''),
@@ -24863,7 +24878,11 @@ async def sign_collaboratore_compensation_receipt(
         "id": receipt_id,
         "document_type": doc_type,
         "document_title": doc_title,
+        # 🐛 27/07/2026 — Fix multi-tenancy: persistere society_id sul documento
+        # firmato così la pagina QR verify mostra la società corretta.
+        "society_id": collab_society_id,
         "signer_id": collaboratore_id,
+        "signer_name": collaboratore.get("full_name", ""),
         "collaboratore_id": collaboratore_id,
         "collaboratore_name": collaboratore.get("full_name", ""),
         "month": request.month,
@@ -34900,8 +34919,11 @@ async def public_document_verify(document_id: str, format: str = "html"):
     doc = await db.signed_documents.find_one(
         {"id": document_id},
         {"_id": 0, "id": 1, "document_type": 1, "signer_name": 1, "coach_name": 1,
+         "dirigente_name": 1, "collaboratore_name": 1, "athlete_name": 1,
          "signed_at": 1, "month": 1, "year": 1, "amount_gross": 1, "threshold_metadata": 1,
-         "society_id": 1, "signature_hash": 1, "gdpr_metadata": 1},
+         "society_id": 1, "athlete_id": 1, "coach_id": 1, "dirigente_id": 1,
+         "collaboratore_id": 1, "signer_id": 1,
+         "signature_hash": 1, "gdpr_metadata": 1},
     )
     if not doc:
         if format == "json":
@@ -34987,21 +35009,49 @@ async def public_document_verify(document_id: str, format: str = "html"):
     # il codice faceva find_one({"type": "society"}) SENZA filtro tenant, prendendo la
     # PRIMA società del DB (Pallavolo Perugia SSD in ordine di creazione) e mostrandola
     # a utenti di altre società (leak visibile in QR verification pagina pubblica).
-    # ADESSO: se society_id manca → non fare mai fallback cross-tenant, mostra "—".
-    # Se presente, cerca prima in settings, poi come fallback in societies collection.
+    # ADESSO: se society_id manca → risalire dal firmatario (utente/atleta) via il
+    # rispettivo id_field. Nessun fallback cross-tenant globale.
     society_name = ""
     try:
         sid = doc.get("society_id")
+        # 🐛 27/07/2026 — Legacy docs (dirigente/coach/collaboratore/atleta) creati
+        # prima del fix del 27/07 non hanno society_id. Deduciamolo dal firmatario
+        # partendo dagli id specifici (senza mai fare query globali).
+        if not sid:
+            candidate_ids = [
+                doc.get("signer_id"),
+                doc.get("coach_id"),
+                doc.get("dirigente_id"),
+                doc.get("collaboratore_id"),
+                doc.get("athlete_id"),
+            ]
+            for cid in candidate_ids:
+                if not cid:
+                    continue
+                u = await db.users.find_one({"id": cid}, {"_id": 0, "society_id": 1})
+                if u and u.get("society_id"):
+                    sid = u["society_id"]
+                    break
+                a = await db.athletes.find_one({"id": cid}, {"_id": 0, "society_id": 1})
+                if a and a.get("society_id"):
+                    sid = a["society_id"]
+                    break
         if sid:
             s = await db.settings.find_one(
                 {"type": "society", "society_id": sid},
-                {"_id": 0, "ragione_sociale": 1, "society_name": 1},
+                {"_id": 0, "ragione_sociale": 1, "society_name": 1, "name": 1},
             )
-            society_name = (s or {}).get("ragione_sociale") or (s or {}).get("society_name") or ""
+            # 🐛 27/07/2026 — Il campo in settings è `name` (non `society_name`).
+            society_name = (
+                (s or {}).get("ragione_sociale")
+                or (s or {}).get("name")
+                or (s or {}).get("society_name")
+                or ""
+            )
             if not society_name:
                 # Fallback: cerca in societies collection (tipicamente ha "name")
-                soc = await db.societies.find_one({"id": sid}, {"_id": 0, "name": 1})
-                society_name = (soc or {}).get("name") or ""
+                soc = await db.societies.find_one({"id": sid}, {"_id": 0, "name": 1, "ragione_sociale": 1})
+                society_name = (soc or {}).get("ragione_sociale") or (soc or {}).get("name") or ""
     except Exception:
         pass
 
