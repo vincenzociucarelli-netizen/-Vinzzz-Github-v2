@@ -9844,6 +9844,10 @@ async def sign_athlete_compensation_receipt_with_signature(
         "id": receipt_id,
         "document_type": doc_type,
         "document_title": doc_title_str,
+        # 🐛 27/07/2026 — Fix multi-tenancy: persistere society_id sul documento
+        # firmato così la pagina QR verify riesce a mostrare la società corretta
+        # (prima era None → il codice di fallback prendeva la prima società del DB).
+        "society_id": athlete.get("society_id"),
         "athlete_id": athlete_id,
         "athlete_name": athlete.get('full_name', ''),
         "month": month,
@@ -34979,14 +34983,25 @@ async def public_document_verify(document_id: str, format: str = "html"):
         <div class="row"><span class="lbl">Importo lordo</span><span class="val">{amt_str}</span></div>"""
 
     # Society name
+    # 🐛 27/07/2026 (bug multi-tenancy) — PRIMA: se document.society_id era None/vuoto,
+    # il codice faceva find_one({"type": "society"}) SENZA filtro tenant, prendendo la
+    # PRIMA società del DB (Pallavolo Perugia SSD in ordine di creazione) e mostrandola
+    # a utenti di altre società (leak visibile in QR verification pagina pubblica).
+    # ADESSO: se society_id manca → non fare mai fallback cross-tenant, mostra "—".
+    # Se presente, cerca prima in settings, poi come fallback in societies collection.
     society_name = ""
     try:
         sid = doc.get("society_id")
-        s = await db.settings.find_one(
-            {"type": "society", "society_id": sid} if sid else {"type": "society"},
-            {"_id": 0, "ragione_sociale": 1, "society_name": 1},
-        )
-        society_name = (s or {}).get("ragione_sociale") or (s or {}).get("society_name") or ""
+        if sid:
+            s = await db.settings.find_one(
+                {"type": "society", "society_id": sid},
+                {"_id": 0, "ragione_sociale": 1, "society_name": 1},
+            )
+            society_name = (s or {}).get("ragione_sociale") or (s or {}).get("society_name") or ""
+            if not society_name:
+                # Fallback: cerca in societies collection (tipicamente ha "name")
+                soc = await db.societies.find_one({"id": sid}, {"_id": 0, "name": 1})
+                society_name = (soc or {}).get("name") or ""
     except Exception:
         pass
 
