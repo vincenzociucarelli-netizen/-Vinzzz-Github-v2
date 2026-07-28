@@ -22874,10 +22874,23 @@ async def get_guide_pdf(role: str, current_user = Depends(get_current_user)):
     # riferimenti a quietanze/soglie, e viceversa.
     if guide_key == "athlete":
         user_athlete_type = (current_user.get("athlete_type") or "").lower().strip()
+        # 🐛 28/07/2026 — Per gli atleti 18+ il doc `users` e il doc `athletes` sono
+        # SEPARATI (id diversi). Il link è athlete.user_id = user.id. La query
+        # precedente su `{"id": current_user.id}` non matchava mai e serviva
+        # sempre la guida paganti anche ai PRO. Fix: query per user_id, fallback email.
         if user_athlete_type != "compensated":
-            # controlla anche nel record atleta (fonte-di-verità storica)
             try:
-                a = await db.athletes.find_one({"id": current_user.get("id")}, {"_id": 0, "athlete_type": 1})
+                uid = current_user.get("id")
+                a = None
+                if uid:
+                    a = await db.athletes.find_one(
+                        {"user_id": uid}, {"_id": 0, "athlete_type": 1}
+                    )
+                if not a and current_user.get("email"):
+                    a = await db.athletes.find_one(
+                        {"email": (current_user.get("email") or "").lower()},
+                        {"_id": 0, "athlete_type": 1},
+                    )
                 if a and (a.get("athlete_type") or "").lower().strip() == "compensated":
                     user_athlete_type = "compensated"
             except Exception:
