@@ -2316,7 +2316,10 @@ export default function AdminAthleteDetail() {
                   </View>
                 )}
 
-                {athlete.status === 'pending_certificate' && !certificate?.verified && (
+                {/* 🐛 28/07/2026 — Fix controsenso: mostravamo "In attesa validazione" anche
+                    quando l'admin aveva già validato il certificato. Il flag corretto è
+                    `athlete.medical_certificate_verified` (non `certificate.verified`). */}
+                {athlete.status === 'pending_certificate' && !athlete?.medical_certificate_verified && (
                   <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
                     <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', marginBottom: 4 }}>Validazione Certificato</Text>
                     <Text style={{ fontSize: 13, color: '#666' }}>Privacy firmata. In attesa della validazione del certificato medico da parte dell&apos;admin.</Text>
