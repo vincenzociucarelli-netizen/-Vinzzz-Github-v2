@@ -2,24 +2,30 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
-<title>RegistraTEAM - Manuale Atleta 18+ PRO</title>
+<title>RegistraTEAM - Guida pratica Atleta 18+ PRO</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta property="og:title" content="RegistraTEAM · Manuale Atleta 18+ PRO">
-<meta property="og:description" content="Guida passo passo per atleti maggiorenni retribuiti (Riforma Sport).">
+<meta property="og:title" content="RegistraTEAM · Guida pratica Atleta 18+ PRO">
+<meta property="og:description" content="Guida completa passo passo per atleti maggiorenni retribuiti (Riforma Sport).">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
   *{margin:0;padding:0;box-sizing:border-box}
-  @page{size:A4;margin:16mm 14mm}
+  @page{size:A4;margin:14mm 12mm}
   body{font-family:'Poppins',sans-serif;color:#1a1a2e;max-width:820px;margin:0 auto;padding:0 14px 40px;font-size:13px;line-height:1.6;background:#fafafa}
-  :root{--blue:#1A4B9C;--blue-dk:#0F3270;--blue-lt:#E8EFF9;--red:#E53935;--red-lt:#FFEBEE;--gold:#F57C00;--gold-lt:#FFF3E0;--green:#2E7D32;--green-lt:#E8F5E9}
+  :root{--blue:#1A4B9C;--blue-dk:#0F3270;--blue-lt:#E8EFF9;--red:#E53935;--red-lt:#FFEBEE;--gold:#F57C00;--gold-lt:#FFF3E0;--green:#2E7D32;--green-lt:#E8F5E9;--purple:#8E44AD;--purple-lt:#F3E5F5}
   .header{background:linear-gradient(135deg,var(--blue-dk),var(--blue));color:#fff;padding:22px 26px;display:flex;align-items:center;gap:16px;border-radius:0 0 12px 12px;margin-bottom:24px;flex-wrap:wrap}
   .header img{height:38px}
   .header h1{font-size:22px;font-weight:700;letter-spacing:.2px}
   .header .role-badge{background:var(--gold);padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;margin-left:auto;letter-spacing:.3px}
   .lead{background:#fff;border-left:4px solid var(--gold);padding:14px 18px;border-radius:0 8px 8px 0;margin:0 0 22px;box-shadow:0 1px 3px rgba(0,0,0,.05);font-size:13px}
-  h2{font-size:17px;font-weight:700;color:var(--blue);margin:28px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--gold);display:flex;align-items:center;gap:8px}
+  .toc{background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:14px 18px;margin:0 0 24px;font-size:12.5px}
+  .toc h4{font-size:13px;color:var(--blue-dk);margin-bottom:6px;font-weight:700}
+  .toc ol{padding-left:20px;margin:0}
+  .toc li{margin-bottom:2px}
+  .toc a{color:#333;font-weight:500;text-decoration:none}
+  .toc a:hover{color:var(--blue);text-decoration:underline}
+  h2{font-size:17px;font-weight:700;color:var(--blue);margin:28px 0 10px;padding-bottom:6px;border-bottom:2px solid var(--gold);display:flex;align-items:center;gap:8px;scroll-margin-top:20px}
   h2 .n{background:var(--gold);color:#fff;border-radius:50%;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
-  h3{font-size:13px;font-weight:700;color:var(--blue-dk);margin:16px 0 6px}
+  h3{font-size:13.5px;font-weight:700;color:var(--blue-dk);margin:16px 0 6px}
   p{margin-bottom:8px}
   ul,ol{padding-left:22px;margin:6px 0 12px}
   li{margin-bottom:5px}
@@ -31,9 +37,11 @@
   .info{background:var(--blue-lt);border-left:3px solid var(--blue);padding:10px 14px;border-radius:0 6px 6px 0;margin:12px 0;font-size:12px}
   .warn{background:var(--red-lt);border-left:3px solid var(--red);padding:10px 14px;border-radius:0 6px 6px 0;margin:12px 0;font-size:12px}
   .success{background:var(--green-lt);border-left:3px solid var(--green);padding:10px 14px;border-radius:0 6px 6px 0;margin:12px 0;font-size:12px}
+  .purple{background:var(--purple-lt);border-left:3px solid var(--purple);padding:10px 14px;border-radius:0 6px 6px 0;margin:12px 0;font-size:12px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   @media (max-width:600px){.grid2{grid-template-columns:1fr}}
   code{background:#f0f0f5;padding:2px 6px;border-radius:4px;font-size:12px;font-family:Menlo,monospace}
+  kbd{background:#333;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-family:Menlo,monospace}
   .footer{text-align:center;font-size:11px;color:#888;margin-top:36px;padding-top:14px;border-top:1px solid #eee}
   a{color:var(--blue);text-decoration:none;font-weight:600}
   a:hover{text-decoration:underline}
@@ -43,136 +51,227 @@
 <body>
 <div class="header">
   <img src="https://customer-assets.emergentagent.com/job_81c992fa-a01b-413c-9ecc-c8b7592a946d/artifacts/9yjcy9vx_Logo%20in%20linea.png" alt="RegistraTEAM">
-  <h1>Manuale d'Uso</h1>
+  <h1>Guida pratica</h1>
   <span class="role-badge">🏆 ATLETA 18+ PRO</span>
 </div>
 
 <div class="lead">
-  <strong>Sei un atleta maggiorenne retribuito</strong> ai sensi della Riforma dello Sport (D.Lgs. 36/2021). Percepisci un compenso mensile dalla società e devi gestire firme, quietanze e soglie previdenziali. Questo manuale ti accompagna passo passo in ogni fase, dalla registrazione alla firma delle quietanze mensili.
+  <strong>Sei un atleta maggiorenne retribuito</strong> ai sensi della Riforma dello Sport (D.Lgs. 36/2021). Percepisci un compenso mensile dalla società e devi gestire firme, quietanze e soglie previdenziali <strong>€5.000 / €15.000</strong>. Questa guida ti accompagna passo passo in ogni fase, dalla registrazione fino alla lettura dei documenti firmati e delle tue statistiche di presenza.
 </div>
 
-<h2><span class="n">1</span>Registrazione all'app</h2>
-<div class="step"><div class="step-n">1</div><div class="step-t"><h4>Ricevi l'invito dalla società</h4><p>La società ti fornisce il <strong>codice società</strong> (invite code) via email o WhatsApp. Senza questo codice non puoi registrarti.</p></div></div>
-<div class="step"><div class="step-n">2</div><div class="step-t"><h4>Vai su app.registrateam.it</h4><p>Clicca su <strong>Registrati</strong> → seleziona <strong>Atleta 18+</strong>.</p></div></div>
-<div class="step"><div class="step-n">3</div><div class="step-t"><h4>Inserisci il codice società</h4><p>Digita il codice ricevuto. Il sistema riconosce automaticamente la tua società di appartenenza.</p></div></div>
-<div class="step"><div class="step-n">4</div><div class="step-t"><h4>Compila i tuoi dati</h4><p>Nome, cognome, codice fiscale, data e luogo di nascita, email, telefono e password.</p></div></div>
-<div class="step"><div class="step-n">5</div><div class="step-t"><h4>Accetta i consensi obbligatori</h4><p>Termini di utilizzo e informativa cookie.</p></div></div>
+<div class="toc">
+  <h4>📚 Indice</h4>
+  <ol>
+    <li><a href="#s1">Registrazione all'app</a></li>
+    <li><a href="#s2">Primo accesso e Anagrafica completa</a></li>
+    <li><a href="#s3">Certificato medico — l'iter corretto</a></li>
+    <li><a href="#s4">Firma dei documenti (GDPR + contratto)</a></li>
+    <li><a href="#s5">Accettazione del compenso e dichiarazione pregressi</a></li>
+    <li><a href="#s6">Ogni mese: firma della quietanza + compensi esterni</a></li>
+    <li><a href="#s7">Soglie previdenziali €5.000 / €15.000</a></li>
+    <li><a href="#s8">La pagina "Da fare": allenamenti, gare e attività</a></li>
+    <li><a href="#s9">QR code presenze e "Ingresso Lite"</a></li>
+    <li><a href="#s10">Documenti firmati — dove trovarli</a></li>
+    <li><a href="#s11">Statistiche presenze</a></li>
+    <li><a href="#s12">Notifiche, sicurezza e supporto</a></li>
+  </ol>
+</div>
+
+<h2 id="s1"><span class="n">1</span>Registrazione all'app</h2>
+<div class="step"><div class="step-n">1</div><div class="step-t"><h4>Ricevi il codice società</h4><p>La società ti fornisce il <strong>codice società</strong> via email o WhatsApp. Senza questo codice non puoi registrarti.</p></div></div>
+<div class="step"><div class="step-n">2</div><div class="step-t"><h4>Vai su app.registrateam.it</h4><p>Clicca <strong>Registrati</strong> → seleziona <strong>Atleta 18+</strong>.</p></div></div>
+<div class="step"><div class="step-n">3</div><div class="step-t"><h4>Inserisci il codice società e i tuoi dati</h4><p>Nome, cognome, codice fiscale, data e luogo di nascita, email, telefono, password.</p></div></div>
+<div class="step"><div class="step-n">4</div><div class="step-t"><h4>Accetta i consensi obbligatori</h4><p>Termini di utilizzo e informativa cookie.</p></div></div>
 
 <div class="warn">
-  <strong>⚠️ Attenzione:</strong> il tuo account resta in <strong>attesa di autorizzazione</strong>. Sarà l'admin della società a verificare i tuoi dati e abilitarti come <em>atleta compensated</em>. Solo dopo questa abilitazione potrai accedere alle sezioni compensi e firmare le quietanze.
+  <strong>⚠️ Attesa autorizzazione:</strong> il tuo account resta in <strong>attesa di abilitazione dell'admin</strong>. È lui a "promuoverti" ad atleta PRO (<em>compensated</em>). Solo dopo questa abilitazione potrai accedere alle sezioni Compensi e firmare le quietanze.
 </div>
 
-<h2><span class="n">2</span>Primo accesso dopo l'autorizzazione</h2>
-<p>Quando ricevi la notifica di attivazione, effettua il login e completa il profilo. Vai su <strong>Anagrafica</strong> dalla dashboard.</p>
+<h2 id="s2"><span class="n">2</span>Primo accesso e Anagrafica completa</h2>
+<p>Al primo login la piattaforma ti chiede di completare il profilo. <strong>Tienilo sempre aggiornato</strong>: la Società ne ha bisogno per gli adempimenti amministrativi, i tesseramenti e le comunicazioni ufficiali.</p>
 
-<h3>Dati da completare</h3>
+<h3>Cosa completare nella tua Anagrafica</h3>
 <ul>
-  <li><strong>Residenza:</strong> indirizzo, città, CAP, provincia (necessari per le quietanze)</li>
-  <li><strong>Codice fiscale:</strong> deve corrispondere ai tuoi dati anagrafici (verifica automatica)</li>
-  <li><strong>IBAN:</strong> <strong>obbligatorio</strong> — è dove riceverai i compensi mensili</li>
-  <li><strong>Certificato medico agonistico:</strong> carica il PDF e inserisci la data di scadenza</li>
+  <li><strong>Dati anagrafici:</strong> nome, cognome, codice fiscale, sesso, data e luogo di nascita, cittadinanza</li>
+  <li><strong>Residenza:</strong> via, città, CAP, provincia</li>
+  <li><strong>Contatti:</strong> email, telefono cellulare</li>
+  <li><strong>IBAN:</strong> <strong>obbligatorio</strong> — è dove riceverai i compensi mensili. Se cambi banca aggiornalo prima della quietanza successiva.</li>
+  <li><strong>Documento d'identità</strong> (se richiesto dalla società): carta d'identità o passaporto in PDF</li>
+  <li><strong>Foto profilo</strong> (opzionale, utile per riconoscimento in società e in tesserino)</li>
 </ul>
 
 <div class="info">
-  <strong>💡 Contratto:</strong> nella sezione <strong>Compensi</strong> troverai il tuo contratto pre-caricato dall'admin con date inizio/fine e importo mensile. <strong>Verifica che tutto sia corretto</strong> prima di firmare — se qualcosa non torna contatta l'admin PRIMA di accettare.
+  <strong>💡 Perché è importante:</strong> ogni volta che una quietanza viene generata, la piattaforma copia i tuoi dati anagrafici in un PDF ufficiale. Dati incompleti = documento con campi vuoti che potrebbero non essere validi ai fini fiscali.
 </div>
 
-<h2><span class="n">3</span>Firma dei documenti</h2>
-<p>Dalla dashboard vai su <strong>Da fare</strong> oppure <strong>Documenti</strong>. Trovi elencati tutti i documenti da firmare.</p>
+<h2 id="s3"><span class="n">3</span>Certificato medico — l'iter corretto</h2>
+<p>Il certificato di <strong>idoneità agonistica</strong> è il documento più importante per la tua attività. Senza un certificato valido non puoi allenarti né gareggiare.</p>
 
-<h3>Documenti da firmare (in ordine)</h3>
-<div class="step"><div class="step-n">1</div><div class="step-t"><h4>Informativa Privacy GDPR</h4><p>Con i consensi per trattamento dati, immagini interne e (opzionale) immagini promozionali.</p></div></div>
-<div class="step"><div class="step-n">2</div><div class="step-t"><h4>Consenso trattamento dati sanitari</h4><p>Obbligatorio per la gestione del certificato medico.</p></div></div>
-<div class="step"><div class="step-n">3</div><div class="step-t"><h4>Contratto Riforma Sport</h4><p>Il contratto di collaborazione sportiva con date, importo mensile e clausole. Leggi tutto prima di firmare.</p></div></div>
-<div class="step"><div class="step-n">4</div><div class="step-t"><h4>Dichiarazione compensi pregressi (se applicabile)</h4><p>Se nel corso dell'anno solare hai già percepito compensi sportivi da <strong>altre società</strong>, dichiara l'importo con firma digitale. Serve per il calcolo cumulativo delle soglie €5.000/€15.000.</p></div></div>
-
-<div class="tip">
-  <strong>💡 Come firmare:</strong> clicca sul documento in stato "Da firmare" → leggi tutto → spunta le voci obbligatorie → firma nel riquadro con il dito o il mouse → conferma. Il PDF firmato è immediatamente scaricabile.
-</div>
-
-<h2><span class="n">4</span>Accettazione del compenso mensile</h2>
-<p>Prima di poter firmare le quietanze devi <strong>accettare formalmente il compenso mensile</strong> indicato nel contratto.</p>
-<div class="step"><div class="step-n">1</div><div class="step-t"><h4>Vai su "Compensi Sportivi"</h4><p>Dalla dashboard, tab <strong>Compensi</strong>.</p></div></div>
-<div class="step"><div class="step-n">2</div><div class="step-t"><h4>Verifica l'importo mensile</h4><p>Confronta con il contratto. Verifica anche il compenso pregresso (se dichiarato dall'admin).</p></div></div>
-<div class="step"><div class="step-n">3</div><div class="step-t"><h4>Clicca "Accetta Compenso € XXX"</h4><p>Confermi di aver preso visione dell'importo. Da quel momento potrai firmare le quietanze mensili.</p></div></div>
-
-<h2><span class="n">5</span>Firma delle quietanze mensili</h2>
-<p>Ogni mese la società ti mette a disposizione la quietanza del compenso. La quietanza è la ricevuta con cui attesti di aver percepito il compenso.</p>
-
-<h3>Come firmare la quietanza</h3>
-<div class="step"><div class="step-n">1</div><div class="step-t"><h4>Ricevi la notifica</h4><p>Via email + campanella sulla dashboard.</p></div></div>
-<div class="step"><div class="step-n">2</div><div class="step-t"><h4>Vai su Compensi → seleziona il mese</h4><p>I mesi seguono un <strong>ordine cronologico</strong>: prima devi firmare i mesi precedenti.</p></div></div>
-<div class="step"><div class="step-n">3</div><div class="step-t"><h4>Verifica lordo e netto</h4><p>Il sistema mostra: importo lordo, eventuali trattenute previdenziali (INPS gestione separata), netto.</p></div></div>
-<div class="step"><div class="step-n">4</div><div class="step-t"><h4>Firma nel riquadro</h4><p>Firma con il dito (mobile) o il mouse (desktop). Conferma.</p></div></div>
-<div class="step"><div class="step-n">5</div><div class="step-t"><h4>Scarica il PDF firmato</h4><p>La quietanza in PDF ti arriva anche via email. Sempre disponibile in <strong>Documenti firmati</strong>.</p></div></div>
+<h3>Iter previsto</h3>
+<div class="step"><div class="step-n">1</div><div class="step-t"><h4>Fai la visita medico-sportiva</h4><p>Presso ASL o centro medico accreditato. Ti verrà rilasciato un certificato cartaceo con firma del medico sportivo, timbro e <strong>data di emissione</strong>.</p></div></div>
+<div class="step"><div class="step-n">2</div><div class="step-t"><h4>Compila la data di emissione in Anagrafica</h4><p>Vai su <strong>Anagrafica → Certificato medico</strong> e <strong>inserisci prima la data di emissione</strong> stampata sul certificato. Il sistema calcola automaticamente la scadenza (di norma 12 mesi).</p></div></div>
+<div class="step"><div class="step-n">3</div><div class="step-t"><h4>Carica la copia scannerizzata (PDF/foto)</h4><p>Serve alla Società per un primo controllo digitale.</p></div></div>
+<div class="step"><div class="step-n">4</div><div class="step-t"><h4>Consegna il CARTACEO alla Società al più presto</h4><p>La Società <strong>autentica la data di emissione</strong> e conserva la <strong>copia cartacea negli archivi</strong> come richiesto dalla normativa. Solo dopo la consegna del cartaceo il tuo certificato è considerato "verificato".</p></div></div>
 
 <div class="warn">
-  <strong>⚠️ Ordine cronologico:</strong> non puoi saltare mesi. Se hai un mese pendente, il sistema ti chiederà di firmarlo prima di procedere con quelli successivi.
+  <strong>⚠️ Blocco allenamenti:</strong> finché il certificato non è caricato E autenticato dalla Società, il tuo QR può essere <strong>bloccato</strong> all'ingresso in palestra. Fai la visita in anticipo e consegna subito il cartaceo.
 </div>
 
-<h2><span class="n">6</span>Soglie previdenziali €5.000 / €15.000</h2>
-<p>La Riforma dello Sport prevede due soglie cumulative annuali che generano obblighi previdenziali diversi:</p>
+<div class="tip">
+  <strong>💡 Promemoria automatico:</strong> 30 giorni prima della scadenza ricevi una notifica per programmare la nuova visita.
+</div>
+
+<h2 id="s4"><span class="n">4</span>Firma dei documenti (GDPR + contratto)</h2>
+<p>Dalla dashboard vai su <strong>Da fare</strong> oppure <strong>Documenti</strong>. Trovi elencati tutti i documenti da firmare in ordine.</p>
+
+<div class="step"><div class="step-n">1</div><div class="step-t"><h4>Informativa Privacy GDPR</h4><p>Contiene consensi obbligatori (trattamento dati per l'attività sportiva) e opzionali (uso immagini interne + promozionali).</p></div></div>
+<div class="step"><div class="step-n">2</div><div class="step-t"><h4>Consenso trattamento dati sanitari</h4><p>Obbligatorio per la gestione del certificato medico.</p></div></div>
+<div class="step"><div class="step-n">3</div><div class="step-t"><h4>Contratto Riforma Sport</h4><p>Il contratto di collaborazione sportiva con data inizio, data fine e importo mensile. <strong>Leggi tutto</strong> prima di firmare: se qualcosa non corrisponde a quanto pattuito, <strong>non firmare</strong> e contatta la Società.</p></div></div>
+
+<div class="tip">
+  <strong>💡 Come si firma digitalmente:</strong> apri il documento → leggi → spunta le voci obbligatorie → firma nel riquadro con il dito (mobile) o il mouse (desktop) → conferma. Il PDF firmato è subito disponibile in <em>Documenti</em>.
+</div>
+
+<h2 id="s5"><span class="n">5</span>Accettazione del compenso e dichiarazione pregressi</h2>
+<p>Prima di poter firmare le quietanze mensili devi <strong>accettare formalmente</strong> il compenso pattuito con la Società e <strong>dichiarare eventuali compensi già percepiti</strong> da altre società sportive nell'anno solare in corso.</p>
+
+<div class="step"><div class="step-n">1</div><div class="step-t"><h4>Vai su "Compensi Sportivi"</h4><p>Dalla dashboard, tab <strong>Compensi</strong>.</p></div></div>
+<div class="step"><div class="step-n">2</div><div class="step-t"><h4>Verifica l'importo mensile</h4><p>Confrontalo con il contratto: se corrisponde, procedi. Altrimenti fermati e contatta la Società.</p></div></div>
+<div class="step"><div class="step-n">3</div><div class="step-t"><h4>Clicca "Accetta compenso € XXX"</h4><p>Confermi di aver preso visione dell'importo mensile.</p></div></div>
+<div class="step"><div class="step-n">4</div><div class="step-t"><h4>Firma la Dichiarazione Compensi Pregressi</h4><p>Se nel <strong>corso dell'anno solare</strong> hai già percepito compensi sportivi da <strong>altre società</strong>, dichiara qui l'importo totale con firma digitale. Se non hai percepito nulla altrove, seleziona "Nessun pregresso" e firma comunque. La dichiarazione è <strong>obbligatoria</strong> per procedere: serve al calcolo cumulativo delle soglie €5.000/€15.000.</p></div></div>
+
+<div class="purple">
+  <strong>🎯 Perché è così importante:</strong> le soglie previdenziali della Riforma Sport si calcolano <strong>sul totale annuo cumulato</strong> ricevuto da tutte le società/enti sportivi. Dichiarare i pregressi permette al sistema di segnalarti il momento esatto in cui superi €5.000 o €15.000 e di generare i documenti RAS necessari.
+</div>
+
+<h2 id="s6"><span class="n">6</span>Ogni mese: firma della quietanza + compensi esterni</h2>
+<p>Ogni mese la Società ti mette a disposizione la quietanza. La quietanza è la ricevuta con cui attesti di aver percepito il compenso e serve alla Società per la RAS (Registro Attività Sportive).</p>
+
+<div class="step"><div class="step-n">1</div><div class="step-t"><h4>Ricevi la notifica</h4><p>Via email + campanella 🔔 sulla dashboard.</p></div></div>
+<div class="step"><div class="step-n">2</div><div class="step-t"><h4>Vai su Compensi → seleziona il mese</h4><p>I mesi seguono un <strong>ordine cronologico</strong>: prima devi firmare i mesi precedenti, non puoi saltarne.</p></div></div>
+<div class="step"><div class="step-n">3</div><div class="step-t"><h4>Verifica lordo e netto</h4><p>Il sistema mostra: importo lordo, eventuali trattenute previdenziali (INPS gestione separata al superamento €5.000), netto in busta.</p></div></div>
+<div class="step"><div class="step-n">4</div><div class="step-t"><h4>Dichiara i compensi da ALTRE società di quel mese</h4><p>Prima di firmare ti viene chiesto se, oltre al compenso della nostra Società, in questo <strong>stesso mese</strong> hai ricevuto altri compensi sportivi. Rispondi onestamente (0 se nulla, altrimenti l'importo esatto). <strong>È il dato che permette al sistema di calcolare correttamente il superamento delle soglie €5.000 / €15.000</strong> a livello personale e non solo per la nostra Società.</p></div></div>
+<div class="step"><div class="step-n">5</div><div class="step-t"><h4>Firma nel riquadro e conferma</h4><p>Il PDF firmato ti arriva anche via email e resta sempre disponibile in Documenti firmati.</p></div></div>
+
+<div class="warn">
+  <strong>⚠️ Ordine cronologico:</strong> se hai un mese arretrato pendente, il sistema ti chiederà di firmarlo prima di procedere con quelli successivi.
+</div>
+
+<h2 id="s7"><span class="n">7</span>Soglie previdenziali €5.000 / €15.000</h2>
+<p>La Riforma dello Sport prevede due soglie cumulative annuali che generano obblighi previdenziali/fiscali diversi:</p>
 
 <div class="grid2">
-  <div class="info"><strong>Soglia €5.000/anno</strong><br>Sotto: esente da contributi INPS.<br>Sopra: iscrizione INPS Gestione Separata.</div>
-  <div class="info"><strong>Soglia €15.000/anno</strong><br>Sotto: nessuna tassazione IRPEF sui compensi.<br>Sopra: tassazione IRPEF sull'eccedenza.</div>
+  <div class="info"><strong>Soglia €5.000/anno</strong><br>Sotto: esente contributi INPS.<br>Sopra: iscrizione INPS Gestione Separata (contributi sull'eccedenza).</div>
+  <div class="info"><strong>Soglia €15.000/anno</strong><br>Sotto: nessuna tassazione IRPEF sui compensi sportivi.<br>Sopra: tassazione IRPEF sull'eccedenza.</div>
 </div>
 
 <h3>Cosa succede quando superi una soglia</h3>
-<div class="step"><div class="step-n">1</div><div class="step-t"><h4>Il sistema rileva il superamento</h4><p>Al momento della firma della quietanza che porta il totale annuo oltre soglia (calcolato includendo eventuali pregressi da altre società).</p></div></div>
-<div class="step"><div class="step-n">2</div><div class="step-t"><h4>Firma la Comunicazione di Superamento</h4><p>Documento aggiuntivo che ti viene proposto automaticamente. È obbligatorio per gli adempimenti RAS (Registro Attività Sportive).</p></div></div>
-<div class="step"><div class="step-n">3</div><div class="step-t"><h4>Ricevi il PDF firmato</h4><p>Via email + salvato in Documenti firmati per i tuoi adempimenti.</p></div></div>
+<div class="step"><div class="step-n">1</div><div class="step-t"><h4>Il sistema rileva il superamento</h4><p>Automaticamente al momento della firma della quietanza che porta il totale annuo cumulato (nostra società + tutti gli altri compensi dichiarati) oltre soglia.</p></div></div>
+<div class="step"><div class="step-n">2</div><div class="step-t"><h4>Firma la "Comunicazione di Superamento"</h4><p>Documento aggiuntivo proposto in automatico, con la tua firma digitale. È il documento ufficiale per gli adempimenti RAS.</p></div></div>
+<div class="step"><div class="step-n">3</div><div class="step-t"><h4>Il PDF resta in Documenti firmati</h4><p>Ne ricevi copia via email + salvato in Documenti firmati.</p></div></div>
 
-<h2><span class="n">7</span>Presenze e QR code</h2>
-<div class="step"><div class="step-n">1</div><div class="step-t"><h4>Il tuo QR personale</h4><p>Visibile nella dashboard: tocca <strong>Il mio QR</strong>. Puoi salvarlo come immagine o aggiungerlo alla home del telefono.</p></div></div>
-<div class="step"><div class="step-n">2</div><div class="step-t"><h4>A ogni allenamento</h4><p>Mostra il QR al coach o all'admin: la presenza viene registrata con data e ora.</p></div></div>
-<div class="step"><div class="step-n">3</div><div class="step-t"><h4>Storico</h4><p>Consulta lo storico completo nella sezione <strong>Presenze</strong>.</p></div></div>
+<h2 id="s8"><span class="n">8</span>La pagina "Da fare": allenamenti, gare e attività</h2>
+<p>La pagina <strong>Da fare</strong> è il tuo diario operativo: qui trovi tutto quello che riguarda la tua attività quotidiana in squadra.</p>
 
-<h2><span class="n">8</span>Rinnovo certificato medico</h2>
-<p>Ogni anno devi rinnovare il certificato di idoneità agonistica.</p>
 <ul>
-  <li>Riceverai una notifica <strong>30 giorni prima</strong> della scadenza</li>
-  <li>Vai su <strong>Anagrafica</strong> → sezione Certificato Medico → carica il nuovo PDF e aggiorna la scadenza</li>
+  <li><strong>Programma allenamenti:</strong> giorno, orario, luogo di ogni sessione della tua squadra</li>
+  <li><strong>Calendario gare:</strong> partite in programma, avversario, orario di ritrovo</li>
+  <li><strong>Convocazioni:</strong> se il coach ti convoca per una gara, la trovi qui evidenziata</li>
+  <li><strong>Annullamenti / variazioni:</strong> comunicazioni last-minute su orari o luoghi</li>
+  <li><strong>Documenti da firmare in scadenza:</strong> il sistema ti ricorda ogni firma pendente</li>
+  <li><strong>Certificato medico in scadenza:</strong> promemoria 30 giorni prima</li>
 </ul>
 
-<div class="warn">
-  <strong>⚠️ Blocco allenamenti:</strong> a certificato scaduto la scansione QR viene bloccata dal coach — non potrai partecipare agli allenamenti finché non lo aggiorni.
+<div class="tip">
+  <strong>💡 Consiglio:</strong> apri "Da fare" ogni giorno prima di uscire di casa — sai subito cosa fare e dove essere.
 </div>
 
-<h2><span class="n">9</span>Notifiche e comunicazioni</h2>
+<h2 id="s9"><span class="n">9</span>QR code presenze e "Ingresso Lite"</h2>
+<p>Ad ogni allenamento la tua presenza va registrata dal coach tramite <strong>QR code personale</strong>.</p>
+
+<h3>Come funziona la registrazione</h3>
+<div class="step"><div class="step-n">1</div><div class="step-t"><h4>Apri "Il mio QR" sulla dashboard</h4><p>Trovi il tuo codice personale in alto sulla dashboard.</p></div></div>
+<div class="step"><div class="step-n">2</div><div class="step-t"><h4>Mostra il QR al coach</h4><p>Il coach lo scansiona con il proprio telefono: la tua presenza viene registrata con data, ora, palestra.</p></div></div>
+<div class="step"><div class="step-n">3</div><div class="step-t"><h4>Vedi conferma immediata</h4><p>Sul tuo telefono compare "✓ Presenza registrata".</p></div></div>
+
+<h3>Ingresso Lite — ideale per l'uso quotidiano</h3>
+<p>Per non fare login ogni volta puoi attivare la modalità <strong>Ingresso Lite</strong>.</p>
+<ul>
+  <li>Vai su <strong>Profilo → Ingresso Lite</strong></li>
+  <li>Imposta un <strong>PIN di 4 cifre</strong> personale</li>
+  <li>Da quel momento potrai aprire l'app e mostrare il QR con il solo PIN, senza email/password</li>
+  <li>Puoi disattivarlo o cambiare PIN in qualsiasi momento</li>
+</ul>
+
+<div class="info">
+  <strong>💡 Sicuro sul tuo telefono:</strong> il PIN funziona solo sul dispositivo che lo ha attivato. Se cambi telefono o lo perdi, l'accesso lite viene revocato: dovrai fare login completo con email/password e re-attivare l'Ingresso Lite.
+</div>
+
+<h2 id="s10"><span class="n">10</span>Documenti firmati — dove trovarli</h2>
+<p>Tutti i PDF che hai firmato digitalmente sono <strong>sempre a tua disposizione</strong>.</p>
+
+<div class="step"><div class="step-n">1</div><div class="step-t"><h4>Vai su Anagrafica</h4><p>Scorri fino in fondo alla pagina.</p></div></div>
+<div class="step"><div class="step-n">2</div><div class="step-t"><h4>Apri la sezione "Documenti"</h4><p>Trovi elencati: privacy GDPR firmata, contratto Riforma Sport, dichiarazione compensi pregressi, tutte le quietanze mensili, eventuali comunicazioni di superamento soglia.</p></div></div>
+<div class="step"><div class="step-n">3</div><div class="step-t"><h4>Scarica il PDF o condividilo</h4><p>Ogni documento è scaricabile in PDF originale con firma e hash di autenticità.</p></div></div>
+
+<div class="success">
+  <strong>✅ Validità legale:</strong> i PDF firmati contengono un QR di verifica pubblica + hash SHA-256. Chiunque può verificare l'autenticità del documento scansionando il QR.
+</div>
+
+<h2 id="s11"><span class="n">11</span>Statistiche presenze</h2>
+<p>Nella sezione <strong>Presenze</strong> trovi il quadro completo della tua attività.</p>
+
+<ul>
+  <li><strong>Storico completo</strong> di ogni allenamento e gara con data, ora, palestra</li>
+  <li><strong>Contatore mensile</strong>: numero di allenamenti nel mese in corso</li>
+  <li><strong>Percentuale di presenza</strong> sul totale delle sessioni della squadra</li>
+  <li><strong>Assenze giustificate/non giustificate</strong> (se il coach ha attivato la giustifica)</li>
+  <li><strong>Filtri per periodo</strong> (settimana, mese, stagione)</li>
+</ul>
+
+<div class="tip">
+  <strong>💡 Perché guardarle:</strong> molti coach usano la % di presenza come indicatore per convocazioni e minuti in campo. Sono <em>i tuoi numeri</em>: monitorali.
+</div>
+
+<h2 id="s12"><span class="n">12</span>Notifiche, sicurezza e supporto</h2>
+
+<h3>Notifiche</h3>
 <p>Dalla campanella 🔔 in alto a destra ricevi notifiche su:</p>
 <ul>
   <li>Nuove quietanze da firmare</li>
-  <li>Contratti o documenti in attesa di firma</li>
-  <li>Superamento soglie previdenziali</li>
+  <li>Contratti / documenti in attesa di firma</li>
+  <li>Superamento soglie €5.000 / €15.000</li>
   <li>Scadenza certificato medico</li>
-  <li>Comunicazioni dalla società</li>
+  <li>Convocazioni gare / annullamenti allenamenti</li>
+  <li>Comunicazioni ufficiali dalla Società</li>
 </ul>
 
-<h2><span class="n">10</span>Domande frequenti</h2>
-<h3>Ho dimenticato la password. Come faccio?</h3>
-<p>Nella pagina di login clicca su <strong>Password dimenticata?</strong>. Riceverai un link via email per impostarne una nuova. Se non arriva entro 5 minuti controlla lo Spam.</p>
+<h3>Sicurezza account</h3>
+<ul>
+  <li><strong>Password sicura:</strong> almeno 8 caratteri con lettere, numeri, simboli</li>
+  <li><strong>Password dimenticata:</strong> dalla pagina di login → "Password dimenticata?" → riceverai un link via email</li>
+  <li><strong>Cambio email o telefono:</strong> chiedi alla Società di aggiornarli (per motivi di sicurezza è l'admin a farlo)</li>
+  <li><strong>Cifratura:</strong> HTTPS end-to-end, dati su server europei, conformità GDPR</li>
+</ul>
 
-<h3>Posso rifiutare una quietanza?</h3>
-<p>Sì: se l'importo non corrisponde a quanto pattuito, <strong>non firmare</strong> e contatta subito l'admin della società per correggere il record.</p>
+<h3>Domande frequenti</h3>
+<h4 style="font-size:12px;color:#333;margin-top:10px">Posso rifiutare una quietanza?</h4>
+<p>Sì. Se l'importo non corrisponde, <strong>non firmare</strong> e contatta l'admin: correggerà il record.</p>
 
-<h3>I miei compensi da altre società contano?</h3>
-<p>Sì. Se hai percepito compensi sportivi da altre società nell'anno solare corrente, devi dichiararli firmando la <strong>Dichiarazione Compensi Pregressi</strong>. Il sistema li usa per calcolare correttamente il cumulo verso le soglie €5.000/€15.000.</p>
+<h4 style="font-size:12px;color:#333;margin-top:10px">Ho cambiato IBAN, cosa faccio?</h4>
+<p>Aggiornalo in <strong>Anagrafica</strong> <em>prima</em> di firmare la quietanza del mese successivo.</p>
 
-<h3>Posso scaricare tutte le mie quietanze?</h3>
-<p>Sì. Vai su <strong>Documenti firmati</strong>: trovi tutte le quietanze mensili in PDF, sempre disponibili per il download.</p>
+<h4 style="font-size:12px;color:#333;margin-top:10px">Posso scaricare tutte le mie quietanze insieme?</h4>
+<p>Sì. In <strong>Documenti firmati</strong> puoi filtrare per tipologia e scaricarle una a una in PDF originale.</p>
 
-<h3>Cosa succede se non aggiorno il codice IBAN?</h3>
-<p>Senza IBAN valido la società non può accreditarti il compenso. Aggiorna sempre l'IBAN prima di firmare la quietanza del mese.</p>
-
-<h3>I miei dati sono al sicuro?</h3>
-<p>Sì. Cifratura HTTPS end-to-end, server europei, conformità GDPR. L'informativa completa la firmi nei documenti privacy.</p>
+<h4 style="font-size:12px;color:#333;margin-top:10px">L'app funziona su smartphone?</h4>
+<p>Sì. È ottimizzata per smartphone/tablet. Aggiungi il sito alla home del telefono per accesso rapido.</p>
 
 <h2>Supporto</h2>
 <p>Per assistenza tecnica o segnalazione bug: <a href="mailto:assistenza@registrateam.it">assistenza@registrateam.it</a></p>
 <p>Per informazioni commerciali: <a href="mailto:info@registrateam.it">info@registrateam.it</a></p>
 <p>Sito ufficiale: <a href="https://www.registrateam.it">www.registrateam.it</a></p>
 
-<div class="footer">RegistraTEAM &copy; 2026 · Manuale Atleta 18+ PRO · info@registrateam.it · assistenza@registrateam.it</div>
+<div class="footer">RegistraTEAM &copy; 2026 · Guida pratica Atleta 18+ PRO · info@registrateam.it · assistenza@registrateam.it</div>
 </body>
 </html>

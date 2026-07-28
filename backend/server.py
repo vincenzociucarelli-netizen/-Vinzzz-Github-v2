@@ -22868,9 +22868,26 @@ async def get_guide_pdf(role: str, current_user = Depends(get_current_user)):
     if not guide_key:
         raise HTTPException(status_code=404, detail=f"Guida non disponibile per il ruolo: {role}")
 
+    # 🐛 27/07/2026 — Atleta 18+: contenuti separati PRO (compensated) vs paganti.
+    # Se l'utente è athlete_type=compensated serviamo la guida `athlete_pro`,
+    # altrimenti la guida `athlete` (paganti). Un pagante NON deve mai vedere
+    # riferimenti a quietanze/soglie, e viceversa.
+    if guide_key == "athlete":
+        user_athlete_type = (current_user.get("athlete_type") or "").lower().strip()
+        if user_athlete_type != "compensated":
+            # controlla anche nel record atleta (fonte-di-verità storica)
+            try:
+                a = await db.athletes.find_one({"id": current_user.get("id")}, {"_id": 0, "athlete_type": 1})
+                if a and (a.get("athlete_type") or "").lower().strip() == "compensated":
+                    user_athlete_type = "compensated"
+            except Exception:
+                pass
+        if user_athlete_type == "compensated":
+            guide_key = "athlete_pro"
+
     # Solo admin può scaricare guide di ruoli diversi dal proprio
     user_role = current_user.get("role", "").lower()
-    if user_role != "admin" and _ROLE_TO_GUIDE_KEY.get(user_role) != guide_key:
+    if user_role != "admin" and _ROLE_TO_GUIDE_KEY.get(user_role) != "athlete" and _ROLE_TO_GUIDE_KEY.get(user_role) != guide_key:
         raise HTTPException(status_code=403, detail="Puoi scaricare solo la guida del tuo ruolo")
 
     # Recupera i dati della società dalle settings (source-of-truth)
