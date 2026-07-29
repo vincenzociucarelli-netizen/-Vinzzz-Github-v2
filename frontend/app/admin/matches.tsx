@@ -889,6 +889,13 @@ export default function AdminMatches() {
                 placeholderTextColor="#999"
                 keyboardType="numeric"
                 maxLength={10}
+                // 🐛 28/07/2026 — Chrome mobile riconosceva il pattern "gg/mm/aaaa" come
+                // scadenza carta di credito e apriva l'autofill delle carte. Disabilitiamo
+                // esplicitamente l'autocomplete e diamo un name/data-form-type non-cc.
+                autoComplete="off"
+                autoCorrect={false}
+                dataDetectorTypes="none"
+                {...({ name: 'match_date_field', 'data-form-type': 'other', 'data-lpignore': 'true', inputMode: 'numeric' } as any)}
               />
 
               <Text style={styles.label}>Ora</Text>
@@ -907,6 +914,9 @@ export default function AdminMatches() {
                 placeholderTextColor="#999"
                 keyboardType="numeric"
                 maxLength={5}
+                autoComplete="off"
+                autoCorrect={false}
+                {...({ name: 'match_time_field', 'data-form-type': 'other', inputMode: 'numeric' } as any)}
               />
 
               <Text style={styles.label}>Avversario *</Text>
