@@ -3298,11 +3298,6 @@ export default function AdminAthleteDetail() {
               <Ionicons name="trash" size={20} color="#fff" />
               <Text style={styles.deleteButtonText}>Elimina Atleta Definitivamente</Text>
             </TouchableOpacity>
-
-            {/* 🐛 28/07/2026 — Regole FIPAV Minorenni: spostate dalla tab Compensi (che
-                era visibile solo per adulti compensated) alla tab Anagrafica, così i
-                MINORI a cui la regola si applica sono finalmente coperti. */}
-            {athlete?.id && <FipavAthleteRulesPanel athleteId={athlete.id} />}
           </>
         )}
 
@@ -4243,6 +4238,11 @@ export default function AdminAthleteDetail() {
         {/* PRESENZE TAB */}
         {activeTab === 'presenze' && (
           <>
+          {/* 🐛 28/07/2026 — Regole FIPAV Minorenni: qui i contatori (presenze
+              Serie Superiore max 10, campionati categoria max 2, gare settimanali
+              max 3) sono nel loro contesto naturale. Si nasconde da solo se la
+              feature FIPAV non è abilitata per la società. */}
+          {athlete?.id && <FipavAthleteRulesPanel athleteId={athlete.id} />}
           {/* 🆕 22/02/2026 — Card "Periodo di Prova" (solo atleti quota in trial) — spostata da Anagrafica */}
           {athlete.status === 'trial' && athleteType === 'quota' && (() => {
             // 🆕 05/07/2026 — La prova è ATTIVA solo se:
