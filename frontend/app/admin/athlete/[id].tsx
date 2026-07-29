@@ -3298,6 +3298,11 @@ export default function AdminAthleteDetail() {
               <Ionicons name="trash" size={20} color="#fff" />
               <Text style={styles.deleteButtonText}>Elimina Atleta Definitivamente</Text>
             </TouchableOpacity>
+
+            {/* 🐛 28/07/2026 — Regole FIPAV Minorenni: spostate dalla tab Compensi (che
+                era visibile solo per adulti compensated) alla tab Anagrafica, così i
+                MINORI a cui la regola si applica sono finalmente coperti. */}
+            {athlete?.id && <FipavAthleteRulesPanel athleteId={athlete.id} />}
           </>
         )}
 
@@ -3723,8 +3728,9 @@ export default function AdminAthleteDetail() {
                         readOnly
                         adminUserId={athlete?.id}
                       />
-                      {/* 🆕 27/07/2026 — Pannello Regole FIPAV Minorenni (visibile solo se sport=pallavolo+FIPAV) */}
-                      {athlete?.id && <FipavAthleteRulesPanel athleteId={athlete.id} />}
+                      {/* 🐛 28/07/2026 — Regole FIPAV rimosse da qui (tab Compensi) e
+                          spostate nella tab Anagrafica per essere visibili anche per i
+                          minori a cui la regola si applica realmente. */}
                     </View>
                   );
                 })()}

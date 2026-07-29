@@ -18,6 +18,9 @@ import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../../../src/services/api';
 import { SportIcon } from '../../../src/components/SportIcon';
+// 🐛 28/07/2026 — Read-only panel per il coach: vede i contatori FIPAV ma non
+// può modificarli (l'edit resta sull'admin).
+import FipavAthleteRulesPanel from '../../../src/components/FipavAthleteRulesPanel';
 
 interface TechnicalData {
   id: string;
@@ -435,6 +438,14 @@ export default function CoachAthleteDetail() {
             textAlignVertical="top"
           />
         </View>
+
+        {/* 🐛 28/07/2026 — Regole FIPAV Minorenni in sola lettura per il coach.
+            Serve per essere informato senza poter modificare i contatori (che
+            restano prerogativa dell'admin). Il pannello si nasconde da solo se
+            la feature FIPAV non è abilitata per questa società. */}
+        {id && typeof id === 'string' && (
+          <FipavAthleteRulesPanel athleteId={id} readOnly />
+        )}
 
         {/* Privacy Notice */}
         <View style={styles.privacyNotice}>

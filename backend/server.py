@@ -1772,8 +1772,10 @@ class FipavAthleteRulesUpdate(BaseModel):
 @api_router.get("/admin/athletes/{athlete_id}/fipav-rules")
 async def get_athlete_fipav_rules(athlete_id: str, current_user = Depends(get_current_user)):
     """Ritorna lo stato dei contatori FIPAV per un atleta (visibile solo se sport=pallavolo+FIPAV)."""
-    if current_user.get("role") != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin")
+    # 🐛 28/07/2026 — Ora anche i COACH possono LEGGERE (read-only). La PATCH resta admin-only.
+    role = current_user.get("role")
+    if role not in (UserRole.ADMIN, UserRole.COACH):
+        raise HTTPException(status_code=403, detail="Solo admin/coach")
     society = await db.societies.find_one({"id": current_user.get("society_id")})
     if not is_feature_enabled(society or {}, "fipav_minor_rules"):
         raise HTTPException(status_code=400, detail="Feature FIPAV non abilitata per questa società")

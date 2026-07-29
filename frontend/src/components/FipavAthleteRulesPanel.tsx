@@ -29,6 +29,13 @@ import api from '../services/api';
 
 interface Props {
   athleteId: string;
+  /**
+   * 🐛 28/07/2026 — Modalità sola lettura per il ruolo COACH.
+   * Se true, nasconde/disabilita tutti i controlli di modifica (contatori +/-,
+   * chip selezione lega, aggiunta/rimozione campionati). L'admin resta con
+   * la piena editabilità.
+   */
+  readOnly?: boolean;
 }
 
 interface FipavState {
@@ -52,7 +59,7 @@ const showAlert = (title: string, msg: string) => {
 
 const UPPER_LEAGUE_OPTIONS = ['—', 'Serie C', 'Serie D', '1^ Divisione'];
 
-export default function FipavAthleteRulesPanel({ athleteId }: Props) {
+export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: Props) {
   const [loading, setLoading] = useState(true);
   const [enabled, setEnabled] = useState(false);
   const [state, setState] = useState<FipavState | null>(null);
@@ -150,9 +157,17 @@ export default function FipavAthleteRulesPanel({ athleteId }: Props) {
       <View style={styles.header}>
         <Ionicons name="shield-checkmark" size={20} color="#1E3A8A" />
         <Text style={styles.title}>Regole FIPAV — {state.athlete_name}</Text>
+        {readOnly && (
+          <View style={styles.readOnlyBadge}>
+            <Ionicons name="eye-outline" size={11} color="#6B7280" />
+            <Text style={styles.readOnlyBadgeText}>Sola lettura</Text>
+          </View>
+        )}
       </View>
       <Text style={styles.subtitle}>
-        Contatori manuali gestiti dall&apos;admin. Al superamento delle soglie scatta il blocco automatico.
+        {readOnly
+          ? 'Solo l\u2019admin può modificare questi contatori.'
+          : 'Contatori manuali gestiti dall\u2019admin. Al superamento delle soglie scatta il blocco automatico.'}
       </Text>
 
       {postKillswitch && (
@@ -183,9 +198,10 @@ export default function FipavAthleteRulesPanel({ athleteId }: Props) {
                   style={[
                     styles.chip,
                     (state.upper_league_name || '—') === opt && styles.chipActive,
+                    readOnly && styles.readOnlyDim,
                   ]}
-                  onPress={() => patch({ upper_league_name: opt === '—' ? '' : opt })}
-                  disabled={saving}
+                  onPress={() => { if (!readOnly) patch({ upper_league_name: opt === '—' ? '' : opt }); }}
+                  disabled={saving || readOnly}
                   data-testid={`fipav-upper-league-${opt}`}
                 >
                   <Text style={(state.upper_league_name || '—') === opt ? styles.chipActiveText : styles.chipText}>
@@ -197,25 +213,29 @@ export default function FipavAthleteRulesPanel({ athleteId }: Props) {
 
             <Text style={styles.label}>Presenze effettive (entrate in campo)</Text>
             <View style={styles.counterRow}>
-              <TouchableOpacity
-                style={styles.counterBtn}
-                onPress={() => incrementUpper(-1)}
-                disabled={saving || upperCount === 0}
-                data-testid="fipav-upper-decrement"
-              >
-                <Ionicons name="remove" size={20} color="#fff" />
-              </TouchableOpacity>
+              {!readOnly && (
+                <TouchableOpacity
+                  style={styles.counterBtn}
+                  onPress={() => incrementUpper(-1)}
+                  disabled={saving || upperCount === 0}
+                  data-testid="fipav-upper-decrement"
+                >
+                  <Ionicons name="remove" size={20} color="#fff" />
+                </TouchableOpacity>
+              )}
               <View style={[styles.counterValue, { backgroundColor: upperBadgeColor }]}>
                 <Text style={styles.counterValueText}>{upperBadgeLabel}</Text>
               </View>
-              <TouchableOpacity
-                style={styles.counterBtn}
-                onPress={() => incrementUpper(1)}
-                disabled={saving}
-                data-testid="fipav-upper-increment"
-              >
-                <Ionicons name="add" size={20} color="#fff" />
-              </TouchableOpacity>
+              {!readOnly && (
+                <TouchableOpacity
+                  style={styles.counterBtn}
+                  onPress={() => incrementUpper(1)}
+                  disabled={saving}
+                  data-testid="fipav-upper-increment"
+                >
+                  <Ionicons name="add" size={20} color="#fff" />
+                </TouchableOpacity>
+              )}
             </View>
 
             {state.blocked_from_lower_league && (
@@ -244,16 +264,18 @@ export default function FipavAthleteRulesPanel({ athleteId }: Props) {
             {(state.category_championships || []).map((c, i) => (
               <View key={i} style={styles.champRow}>
                 <Text style={styles.champText}>• {c}</Text>
-                <TouchableOpacity
-                  onPress={() => removeCategoryChampionship(i)}
-                  disabled={saving}
-                  data-testid={`fipav-cat-remove-${i}`}
-                >
-                  <Ionicons name="trash" size={14} color="#DC2626" />
-                </TouchableOpacity>
+                {!readOnly && (
+                  <TouchableOpacity
+                    onPress={() => removeCategoryChampionship(i)}
+                    disabled={saving}
+                    data-testid={`fipav-cat-remove-${i}`}
+                  >
+                    <Ionicons name="trash" size={14} color="#DC2626" />
+                  </TouchableOpacity>
+                )}
               </View>
             ))}
-            {catCount < 2 && (
+            {!readOnly && catCount < 2 && (
               <View style={styles.addChampRow}>
                 <TextInput
                   value={newChampionship}
@@ -279,37 +301,43 @@ export default function FipavAthleteRulesPanel({ athleteId }: Props) {
 
             <Text style={styles.label}>Presenze Camp3 (contatore)</Text>
             <View style={styles.counterRow}>
-              <TouchableOpacity
-                style={styles.counterBtn}
-                onPress={() => patch({ camp3_presences_count: Math.max(0, state.camp3_presences_count - 1) })}
-                disabled={saving || state.camp3_presences_count === 0}
-                data-testid="fipav-camp3-decrement"
-              >
-                <Ionicons name="remove" size={20} color="#fff" />
-              </TouchableOpacity>
+              {!readOnly && (
+                <TouchableOpacity
+                  style={styles.counterBtn}
+                  onPress={() => patch({ camp3_presences_count: Math.max(0, state.camp3_presences_count - 1) })}
+                  disabled={saving || state.camp3_presences_count === 0}
+                  data-testid="fipav-camp3-decrement"
+                >
+                  <Ionicons name="remove" size={20} color="#fff" />
+                </TouchableOpacity>
+              )}
               <View style={[styles.counterValue, { backgroundColor: '#1E3A8A' }]}>
                 <Text style={styles.counterValueText}>{state.camp3_presences_count}</Text>
               </View>
-              <TouchableOpacity
-                style={styles.counterBtn}
-                onPress={() => patch({ camp3_presences_count: state.camp3_presences_count + 1 })}
-                disabled={saving}
-                data-testid="fipav-camp3-increment"
-              >
-                <Ionicons name="add" size={20} color="#fff" />
-              </TouchableOpacity>
+              {!readOnly && (
+                <TouchableOpacity
+                  style={styles.counterBtn}
+                  onPress={() => patch({ camp3_presences_count: state.camp3_presences_count + 1 })}
+                  disabled={saving}
+                  data-testid="fipav-camp3-increment"
+                >
+                  <Ionicons name="add" size={20} color="#fff" />
+                </TouchableOpacity>
+              )}
             </View>
 
             <Text style={styles.label}>Gare settimana in corso (max 3)</Text>
             <View style={styles.counterRow}>
-              <TouchableOpacity
-                style={styles.counterBtn}
-                onPress={() => patch({ weekly_games_count: Math.max(0, state.weekly_games_count - 1) })}
-                disabled={saving || state.weekly_games_count === 0}
-                data-testid="fipav-weekly-decrement"
-              >
-                <Ionicons name="remove" size={20} color="#fff" />
-              </TouchableOpacity>
+              {!readOnly && (
+                <TouchableOpacity
+                  style={styles.counterBtn}
+                  onPress={() => patch({ weekly_games_count: Math.max(0, state.weekly_games_count - 1) })}
+                  disabled={saving || state.weekly_games_count === 0}
+                  data-testid="fipav-weekly-decrement"
+                >
+                  <Ionicons name="remove" size={20} color="#fff" />
+                </TouchableOpacity>
+              )}
               <View style={[styles.counterValue, {
                 backgroundColor: state.weekly_games_count > 3 ? '#DC2626' : (state.weekly_games_count === 3 ? '#EA580C' : '#059669')
               }]}>
@@ -317,14 +345,16 @@ export default function FipavAthleteRulesPanel({ athleteId }: Props) {
                   {state.weekly_games_count > 3 ? `⛔ ${state.weekly_games_count}/3` : `${state.weekly_games_count}/3`}
                 </Text>
               </View>
-              <TouchableOpacity
-                style={styles.counterBtn}
-                onPress={() => patch({ weekly_games_count: state.weekly_games_count + 1 })}
-                disabled={saving}
-                data-testid="fipav-weekly-increment"
-              >
-                <Ionicons name="add" size={20} color="#fff" />
-              </TouchableOpacity>
+              {!readOnly && (
+                <TouchableOpacity
+                  style={styles.counterBtn}
+                  onPress={() => patch({ weekly_games_count: state.weekly_games_count + 1 })}
+                  disabled={saving}
+                  data-testid="fipav-weekly-increment"
+                >
+                  <Ionicons name="add" size={20} color="#fff" />
+                </TouchableOpacity>
+              )}
             </View>
           </>
         )}
@@ -399,6 +429,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   limitHit: { fontSize: 11, color: '#EA580C', fontStyle: 'italic', marginTop: 4 },
+  readOnlyBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: '#F3F4F6', paddingHorizontal: 6, paddingVertical: 2,
+    borderRadius: 4, marginLeft: 'auto',
+  },
+  readOnlyBadgeText: { fontSize: 10, color: '#6B7280', fontWeight: '600' },
+  readOnlyDim: { opacity: 0.75 },
   savingOverlay: {
     position: 'absolute', top: 10, right: 10, flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#fff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,
