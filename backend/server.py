@@ -27744,14 +27744,20 @@ async def admin_request_delete_signed_document(document_id: str, current_user = 
     if not doc:
         # Document not found: check if there's an orphaned compensation row
         # referencing this missing document_id, and unlock it directly.
+        # 🐛 29/07/2026 — Aggiunta la collection `athlete_compensation_receipts`
+        # (Atleta 18+ PRO) che usa il campo `document_id` invece di
+        # `receipt_document_id`. Senza questo, la cancellazione di quietanze
+        # orfane atleta falliva con "Documento non trovato" (bug segnalato
+        # per BACCO LUCIA — Giugno "LA TUA SOCIETÀ" demo).
         orphan_collections = [
-            ("coach_compensations", "coach_id"),
-            ("collaboratore_compensations", "collaboratore_id"),
-            ("dirigente_compensations", "dirigente_id"),
-            ("atleta_pro_compensations", "atleta_id"),
-            ("compensations", "coach_id"),
+            ("coach_compensations", "coach_id", "receipt_document_id"),
+            ("collaboratore_compensations", "collaboratore_id", "receipt_document_id"),
+            ("dirigente_compensations", "dirigente_id", "receipt_document_id"),
+            ("atleta_pro_compensations", "atleta_id", "receipt_document_id"),
+            ("compensations", "coach_id", "receipt_document_id"),
+            ("athlete_compensation_receipts", "athlete_id", "document_id"),
         ]
-        unlock_patch = {"$set": {
+        unlock_patch_generic = {"$set": {
             "receipt_signed": False,
             "receipt_signed_date": None,
             "receipt_document_id": None,
@@ -27759,11 +27765,20 @@ async def admin_request_delete_signed_document(document_id: str, current_user = 
             "received": False,
             "received_date": None,
         }}
+        unlock_patch_athlete = {"$set": {
+            "receipt_signed": False,
+            "receipt_signed_date": None,
+            "document_id": None,
+            "signature_base64": None,
+            "signed": False,
+            "signed_date": None,
+        }}
         total_unlocked = 0
-        for coll_name, _ in orphan_collections:
+        for coll_name, _, doc_field in orphan_collections:
+            patch = unlock_patch_athlete if coll_name == "athlete_compensation_receipts" else unlock_patch_generic
             res = await db[coll_name].update_many(
-                {"receipt_document_id": document_id},
-                unlock_patch,
+                {doc_field: document_id},
+                patch,
             )
             total_unlocked += res.modified_count
         if total_unlocked > 0:
