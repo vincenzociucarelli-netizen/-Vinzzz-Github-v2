@@ -23180,6 +23180,37 @@ async def sign_gdpr_privacy_document(
                     signer_surname = parts[0] if parts else ""
                     signer_name = ""
             
+            # 🐛 29/07/2026 — Fallback su full_user.date_of_birth (allineato agli altri
+            # campi come signer_birth_place). Prima restava vuoto se il frontend non
+            # passava esplicitamente signer_birth_date → "Nato/a a ROMA il ________"
+            # senza data effettiva. Ora la peschiamo dal DB e formattiamo in gg/mm/aaaa.
+            def _format_birth_date_for_pdf(v) -> str:
+                if not v:
+                    return ""
+                if hasattr(v, 'strftime'):
+                    try:
+                        return v.strftime("%d/%m/%Y")
+                    except Exception:
+                        return str(v)
+                s = str(v)
+                if 'T' in s:
+                    try:
+                        return datetime.fromisoformat(s.replace('Z', '+00:00')).strftime("%d/%m/%Y")
+                    except Exception:
+                        pass
+                if '-' in s and len(s) >= 10:
+                    try:
+                        parts = s[:10].split('-')
+                        if len(parts) == 3:
+                            return f"{parts[2]}/{parts[1]}/{parts[0]}"
+                    except Exception:
+                        pass
+                return s
+
+            resolved_birth_date = request.signer_birth_date or _format_birth_date_for_pdf(
+                (full_user or {}).get("date_of_birth") or (full_user or {}).get("birth_date")
+            )
+
             pdf_bytes = generate_gdpr_adult_privacy_pdf(
                 society_name=society_name,
                 ragione_sociale=society_settings.get("ragione_sociale", "") if society_settings else "",
@@ -23189,7 +23220,7 @@ async def sign_gdpr_privacy_document(
                 signer_name=signer_name,
                 signer_surname=signer_surname,
                 signer_fiscal_code=request.signer_fiscal_code or (full_user.get("fiscal_code", "") if full_user else ""),
-                signer_birth_date=request.signer_birth_date or "",
+                signer_birth_date=resolved_birth_date,
                 signer_birth_place=request.signer_birth_place or (full_user.get("place_of_birth", "") if full_user else ""),
                 signer_address=request.signer_address or (full_user.get("address", "") if full_user else ""),
                 signer_city=request.signer_city or (full_user.get("city", "") if full_user else ""),
@@ -23265,6 +23296,14 @@ async def sign_gdpr_privacy_document(
                 try:
                     minor_birth_date = datetime.fromisoformat(minor_birth_date.replace('Z', '+00:00')).strftime("%d/%m/%Y")
                 except:
+                    pass
+            elif minor_birth_date and isinstance(minor_birth_date, str) and '-' in minor_birth_date and len(minor_birth_date) >= 10:
+                # 🐛 29/07/2026 — Anche il formato "YYYY-MM-DD" (senza T) va convertito in gg/mm/aaaa
+                try:
+                    parts = minor_birth_date[:10].split('-')
+                    if len(parts) == 3:
+                        minor_birth_date = f"{parts[2]}/{parts[1]}/{parts[0]}"
+                except Exception:
                     pass
             
             pdf_bytes = generate_gdpr_minor_privacy_pdf(
