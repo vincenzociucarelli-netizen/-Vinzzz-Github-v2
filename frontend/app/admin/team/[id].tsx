@@ -112,9 +112,17 @@ export default function TeamDetail() {
   
   // Form fields - payments
   const [totalAmount, setTotalAmount] = useState('');
+  // 🐛 28/07/2026 — Nome canonico basato sulla POSIZIONE.
+  // • Posizione 0 → "Iscrizione - Rata 1" (richiesta admin del 28/07)
+  // • Posizione N (N>0) → "Rata N+1"
+  // La rinumerazione avviene su ogni add / delete / load / save così i nomi
+  // salvati in DB restano sempre coerenti anche dopo eliminazioni intermedie
+  // (prima si sovrapponevano generando duplicati come "Rata 2" bis).
+  const installmentNameByIndex = (i: number) =>
+    i === 0 ? 'Iscrizione - Rata 1' : `Rata ${i + 1}`;
   // New dynamic installments array: [{name, amount, due_date}]
   const [installments, setInstallments] = useState<{name: string, amount: string, due_date: string}[]>([
-    { name: 'Quota iscrizione', amount: '', due_date: '' },
+    { name: installmentNameByIndex(0), amount: '', due_date: '' },
   ]);
   // Legacy fields for backward compatibility display
   const [installment1, setInstallment1] = useState('');
@@ -182,9 +190,11 @@ export default function TeamDetail() {
       
       // Load installments - check for new format first, then legacy
       if (teamData.installments && teamData.installments.length > 0) {
-        // New format
-        setInstallments(teamData.installments.map((inst: any) => ({
-          name: inst.name || '',
+        // New format — 🐛 28/07/2026: normalizziamo sempre i nomi in base alla
+        // posizione, così se il DB ha ancora vecchie etichette ("Rata 2" bis o
+        // "Quota iscrizione") vengono ripulite al primo caricamento.
+        setInstallments(teamData.installments.map((inst: any, idx: number) => ({
+          name: installmentNameByIndex(idx),
           amount: inst.amount?.toString() || '',
           due_date: formatDateToItalian(inst.due_date),
         })));
@@ -193,21 +203,21 @@ export default function TeamDetail() {
         const legacyInstallments: {name: string, amount: string, due_date: string}[] = [];
         if (teamData.installment_1_amount) {
           legacyInstallments.push({
-            name: 'Quota iscrizione',
+            name: installmentNameByIndex(0),
             amount: teamData.installment_1_amount?.toString() || '',
             due_date: '',
           });
         }
         if (teamData.installment_2_amount) {
           legacyInstallments.push({
-            name: 'Rata 1',
+            name: installmentNameByIndex(1),
             amount: teamData.installment_2_amount?.toString() || '',
             due_date: formatDateToItalian(teamData.installment_2_due_date),
           });
         }
         if (teamData.installment_3_amount) {
           legacyInstallments.push({
-            name: 'Rata 2',
+            name: installmentNameByIndex(2),
             amount: teamData.installment_3_amount?.toString() || '',
             due_date: formatDateToItalian(teamData.installment_3_due_date),
           });
@@ -215,7 +225,7 @@ export default function TeamDetail() {
         if (legacyInstallments.length > 0) {
           setInstallments(legacyInstallments);
         } else {
-          setInstallments([{ name: 'Quota iscrizione', amount: '', due_date: '' }]);
+          setInstallments([{ name: installmentNameByIndex(0), amount: '', due_date: '' }]);
         }
       }
       
@@ -404,10 +414,13 @@ export default function TeamDetail() {
         if (totalAmount) updateData.total_amount = parseFloat(totalAmount);
       
         // Convert installments to proper format for saving (convert dates to ISO)
+        // 🐛 28/07/2026 — Normalizziamo i nomi POSIZIONALMENTE (Iscrizione - Rata 1,
+        // Rata 2, Rata 3, ...) prima di salvare, così anche gli utenti che hanno
+        // creato le rate saltando/eliminando in mezzo trovano numerazione pulita.
         const validInstallments = installments
           .filter(inst => inst.amount && parseFloat(inst.amount) > 0)
-          .map(inst => ({
-            name: inst.name,
+          .map((inst, idx) => ({
+            name: installmentNameByIndex(idx),
             amount: parseFloat(inst.amount),
             due_date: formatDateToISO(inst.due_date),
           }));
@@ -702,20 +715,26 @@ export default function TeamDetail() {
 
               <Text style={styles.inputLabel}>Rate di Pagamento (max 12)</Text>
               <Text style={styles.helperText}>
-                Definisci le rate. La prima è la "Quota iscrizione", le successive sono numerate.
+                Definisci le rate di pagamento. La prima è etichettata "Iscrizione - Rata 1", le successive "Rata 2", "Rata 3"...
               </Text>
               
               {installments.map((installment, index) => (
                 <View key={index} style={styles.installmentRow}>
                   <View style={styles.installmentHeader}>
                     <Text style={styles.installmentLabel}>
-                      {index === 0 ? 'Quota iscrizione' : `Rata ${index}`}
+                      {installmentNameByIndex(index)}
                     </Text>
                     {index > 0 && (
                       <TouchableOpacity
                         onPress={() => {
-                          const newInstallments = installments.filter((_, i) => i !== index);
-                          setInstallments(newInstallments);
+                          // 🐛 28/07/2026 — dopo il delete, rinumera tutte le
+                          // rate secondo la posizione così non compaiono duplicati
+                          const filtered = installments.filter((_, i) => i !== index);
+                          const renumbered = filtered.map((inst, i) => ({
+                            ...inst,
+                            name: installmentNameByIndex(i),
+                          }));
+                          setInstallments(renumbered);
                         }}
                         style={styles.removeInstallmentBtn}
                       >
@@ -768,7 +787,7 @@ export default function TeamDetail() {
                     const newIndex = installments.length;
                     setInstallments([
                       ...installments,
-                      { name: `Rata ${newIndex}`, amount: '', due_date: '' }
+                      { name: installmentNameByIndex(newIndex), amount: '', due_date: '' }
                     ]);
                   }}
                 >
@@ -1224,7 +1243,7 @@ export default function TeamDetail() {
                   return (
                     <View key={index} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6, borderBottomWidth: index < team.installments.length - 1 ? 1 : 0, borderBottomColor: '#f0f0f0' }}>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.label}>{inst.name || `Rata ${index + 1}`}</Text>
+                        <Text style={styles.label}>{installmentNameByIndex(index)}</Text>
                         {inst.due_date && (
                           <Text style={{ fontSize: 11, color: '#888' }}>Scad. {new Date(inst.due_date).toLocaleDateString('it-IT')}</Text>
                         )}

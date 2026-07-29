@@ -3315,19 +3315,35 @@ export default function AdminAthleteDetail() {
                       <View style={styles.infoRow}>
                         <Text style={styles.label}>Quota Totale</Text>
                         <Text style={styles.value}>{formatCurrency(paymentSummary.total_due)}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.label}>1ª Rata</Text>
-                    <Text style={styles.value}>{formatCurrency(paymentSummary.installments.first)}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.label}>2ª Rata</Text>
-                    <Text style={styles.value}>{formatCurrency(paymentSummary.installments.second)}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.label}>3ª Rata (con sconto)</Text>
-                    <Text style={styles.value}>{formatCurrency(paymentSummary.installments.third)}</Text>
-                  </View>
+                      </View>
+                      {/* 🐛 28/07/2026 — Rendering DINAMICO di tutte le rate (max 12) dal
+                          backend `installments_list`. Prima erano cablate solo 3 righe
+                          (first/second/third) e chi aveva 4+ rate ne vedeva mancare almeno una. */}
+                      {(paymentSummary as any).installments_list && (paymentSummary as any).installments_list.length > 0 ? (
+                        (paymentSummary as any).installments_list.map((inst: any, idx: number) => (
+                          <View key={idx} style={styles.infoRow}>
+                            <Text style={styles.label}>
+                              {inst.name}{inst.discounted ? ' (con sconto)' : ''}
+                            </Text>
+                            <Text style={styles.value}>{formatCurrency(inst.amount)}</Text>
+                          </View>
+                        ))
+                      ) : (
+                        <>
+                          <View style={styles.infoRow}>
+                            <Text style={styles.label}>1ª Rata</Text>
+                            <Text style={styles.value}>{formatCurrency(paymentSummary.installments.first)}</Text>
+                          </View>
+                          <View style={styles.infoRow}>
+                            <Text style={styles.label}>2ª Rata</Text>
+                            <Text style={styles.value}>{formatCurrency(paymentSummary.installments.second)}</Text>
+                          </View>
+                          <View style={styles.infoRow}>
+                            <Text style={styles.label}>3ª Rata (con sconto)</Text>
+                            <Text style={styles.value}>{formatCurrency(paymentSummary.installments.third)}</Text>
+                          </View>
+                        </>
+                      )}
                 </>
               )}
             </View>

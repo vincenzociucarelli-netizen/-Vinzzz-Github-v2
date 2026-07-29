@@ -13606,6 +13606,52 @@ async def get_payment_summary(athlete_id: str, current_user = Depends(get_curren
     
     # Calculate residual - can be negative if overpaid
     residual = total_after_discount - total_paid
+
+    # 🐛 28/07/2026 — Ritorno anche l'array dinamico di rate (fino a 12).
+    # Il vecchio dict `installments.{first,second,third}` mostrava solo 3 rate,
+    # quindi genitori/admin non vedevano dalla 4ª in su. Rinominiamo i nomi
+    # in base alla POSIZIONE per consistenza con l'admin form.
+    def _label(idx: int) -> str:
+        return "Iscrizione - Rata 1" if idx == 0 else f"Rata {idx + 1}"
+
+    dynamic_installments = team.get("installments") or []
+    installments_list = []
+    for idx, inst in enumerate(dynamic_installments):
+        try:
+            amt = float(inst.get("amount") or 0)
+        except (TypeError, ValueError):
+            amt = 0
+        if amt <= 0:
+            continue
+        # Sconto applicato SEMPRE sull'ultima rata > 0
+        installments_list.append({
+            "name": _label(len(installments_list)),
+            "amount": amt,
+            "due_date": inst.get("due_date"),
+        })
+    # Se non c'è l'array dinamico, ricostruisci dai campi legacy
+    if not installments_list:
+        legacy = [
+            ("installment_1_amount", None),
+            ("installment_2_amount", "installment_2_due_date"),
+            ("installment_3_amount", "installment_3_due_date"),
+        ]
+        for a_key, d_key in legacy:
+            amt = team.get(a_key) or 0
+            if amt <= 0:
+                continue
+            installments_list.append({
+                "name": _label(len(installments_list)),
+                "amount": amt,
+                "due_date": team.get(d_key) if d_key else None,
+            })
+    # Applica lo sconto sull'ultima rata (comportamento storico)
+    if installments_list and discount:
+        installments_list[-1] = {
+            **installments_list[-1],
+            "amount": max(0, installments_list[-1]["amount"] - discount),
+            "discounted": True,
+        }
     
     return {
         "total_due": total_due,
@@ -13614,6 +13660,9 @@ async def get_payment_summary(athlete_id: str, current_user = Depends(get_curren
         "total_after_discount": total_after_discount,
         "total_paid": total_paid,
         "residual": residual,
+        # 🆕 Dinamico — usare questo lato client
+        "installments_list": installments_list,
+        # Legacy 3-fisso — mantenuto per retrocompatibilità
         "installments": {
             "first": team.get("installment_1_amount", 0),
             "second": team.get("installment_2_amount", 0),

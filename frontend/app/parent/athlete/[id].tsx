@@ -2580,17 +2580,21 @@ export default function AthleteDetail() {
           
           {/* Dynamic Installments with Cumulative Logic */}
           {paymentSettings && (() => {
+            // 🐛 28/07/2026 — Nome canonico basato sulla posizione così
+            // documenti legacy con nomi duplicati (es. due "Rata 2" dopo delete)
+            // vengono ripuliti anche in visualizzazione.
+            const nameByIdx = (i: number) => i === 0 ? 'Iscrizione - Rata 1' : `Rata ${i + 1}`;
             // Build installments array: prefer dynamic, fallback to legacy
             const installments = (paymentSettings.installments && paymentSettings.installments.length > 0) 
-              ? paymentSettings.installments.filter((i: any) => parseFloat(i.amount) > 0).map((i: any) => ({
-                  name: i.name,
+              ? paymentSettings.installments.filter((i: any) => parseFloat(i.amount) > 0).map((i: any, idx: number) => ({
+                  name: nameByIdx(idx),
                   amount: parseFloat(i.amount),
                   due_date: i.due_date,
                 }))
               : [
-                  { name: 'Quota iscrizione', amount: paymentSettings.installment_1_amount || 0, due_date: null },
-                  { name: 'Rata 1', amount: paymentSettings.installment_2_amount || 0, due_date: paymentSettings.installment_2_due_date },
-                  { name: 'Rata 2', amount: paymentSettings.installment_3_amount || 0, due_date: paymentSettings.installment_3_due_date },
+                  { name: nameByIdx(0), amount: paymentSettings.installment_1_amount || 0, due_date: null },
+                  { name: nameByIdx(1), amount: paymentSettings.installment_2_amount || 0, due_date: paymentSettings.installment_2_due_date },
+                  { name: nameByIdx(2), amount: paymentSettings.installment_3_amount || 0, due_date: paymentSettings.installment_3_due_date },
                 ].filter(i => i.amount > 0);
             
             // Cumulative: sum all paid payments
