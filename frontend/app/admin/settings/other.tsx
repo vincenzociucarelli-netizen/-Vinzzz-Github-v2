@@ -16,6 +16,10 @@ import { Ionicons } from '../../../src/components/Icon';
 import InstitutionalBanner from '../../../src/components/InstitutionalBanner';
 import api from '../../../src/services/api';
 import { SportIcon } from '../../../src/components/SportIcon';
+// 🐛 29/07/2026 — Config Sport/Federazione era ospitata solo in
+// admin/settings/society.tsx, pagina non raggiungibile dall'indice
+// Impostazioni. Ora la esponiamo qui in "Altre Impostazioni".
+import SportConfigCard from '../../../src/components/SportConfigCard';
 import * as ImagePicker from 'expo-image-picker';
 
 const showAlert = (title: string, message: string) => {
@@ -376,6 +380,10 @@ export default function OtherSettings() {
             </Text>
           </View>
         </View>
+
+        {/* 🐛 29/07/2026 — Configurazione Sport e Federazione (chiavi tecniche).
+            Serve per abilitare feature flags come `fipav_minor_rules`. */}
+        <SportConfigCard />
 
         {/* Immagine e Nome Sport */}
         <View style={styles.section}>
