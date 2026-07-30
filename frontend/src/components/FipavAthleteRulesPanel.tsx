@@ -183,6 +183,11 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
       {/* ====== FEATURE B — Presenze Serie Superiore (10 max) ====== */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Feature B — Presenze in Serie Superiore</Text>
+        {!eligibleUpperLeague && birthYear === null && (
+          <Text style={styles.notEligible}>
+            ⚠️ Data di nascita mancante sull&apos;atleta. Aggiornala nel tab Anagrafica per attivare i contatori.
+          </Text>
+        )}
         {!eligibleUpperLeague && birthYear !== null && (
           <Text style={styles.notEligible}>
             Atleta non soggetto a questa regola (nato {birthYear}, richiede M≥2006 o F≥2008).
@@ -253,6 +258,11 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
       {/* ====== FEATURE A — Campionati Categoria U17 ====== */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Feature A — Campionati di Categoria (U17)</Text>
+        {!eligibleU17 && birthYear === null && (
+          <Text style={styles.notEligible}>
+            ⚠️ Data di nascita mancante sull&apos;atleta. Aggiornala nel tab Anagrafica per attivare i contatori U17.
+          </Text>
+        )}
         {!eligibleU17 && birthYear !== null && (
           <Text style={styles.notEligible}>
             Atleta non soggetto a questa regola (nato {birthYear}, richiede U17 = nati 2010+).

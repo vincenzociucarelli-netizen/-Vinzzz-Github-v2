@@ -1800,11 +1800,18 @@ async def get_athlete_fipav_rules(athlete_id: str, current_user = Depends(get_cu
     except Exception:
         pass
     
+    # 🐛 29/07/2026 — Il campo canonico è `date_of_birth`; `birth_date` è stato usato
+    # solo in poche righe legacy. Senza questo fallback l'UI riceveva birthYear=null e
+    # non renderizzava NÉ i contatori NÉ il messaggio "non eligibile" → sezioni vuote.
+    _dob_raw = ath.get("date_of_birth") or ath.get("birth_date") or ""
+    _dob_str = _dob_raw.isoformat() if hasattr(_dob_raw, "isoformat") else str(_dob_raw)
+    _birth_year = _dob_str[:4] if _dob_str and len(_dob_str) >= 4 and _dob_str[:4].isdigit() else None
+
     return {
         "athlete_id": athlete_id,
         "athlete_name": ath.get("full_name") or f"{ath.get('first_name','')} {ath.get('last_name','')}".strip(),
-        "birth_year": (ath.get("birth_date") or "")[:4] if ath.get("birth_date") else None,
-        "gender": ath.get("gender") or ath.get("sex"),
+        "birth_year": _birth_year,
+        "gender": ath.get("gender") or ath.get("sex") or "",
         # Feature A - campionati di categoria (U17)
         "category_championships": list(ath.get("category_championships") or []),
         "camp3_presences_count": int(ath.get("camp3_presences_count") or 0),
