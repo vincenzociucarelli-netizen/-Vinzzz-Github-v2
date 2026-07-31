@@ -7093,6 +7093,10 @@ async def get_federation_regions(federation: str = "fipav"):
     """Get available regions for a federation"""
     if federation.lower() == "fipav":
         regions = [
+            # 🐛 29/07/2026 — Aggiunto "Nazionale" per campionati Serie A/B/B1/B2
+            # (girone unico nazionale). Manteniamo prima nell'elenco così l'admin
+            # lo trova facilmente per squadre di serie superiori.
+            {"id": "nazionale", "name": "Nazionale (Serie A/B)"},
             {"id": "umbria", "name": "Umbria"},
             {"id": "lazio", "name": "Lazio"},
             {"id": "toscana", "name": "Toscana"},
