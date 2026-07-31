@@ -6618,17 +6618,76 @@ async def update_user(user_id: str, data: dict, current_user = Depends(get_curre
 # Pianificato per estrazione → routers/matches.py
 # ═══════════════════════════════════════════════════════════════════════════════
 @api_router.get("/matches")
-async def get_matches(current_user = Depends(get_current_user)):
-    """Get all matches for admin"""
+async def get_matches(format: str = "json", current_user = Depends(get_current_user)):
+    """Get all matches for admin. `?format=ics` esporta un file .ics con TUTTE le gare
+    della società (nazionali + regionali + caricate manualmente)."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere tutte le gare")
     
     society_id = current_user.get("society_id")
     query = {"society_id": society_id} if society_id else {}
-    matches = await db.matches.find(query).sort("date", 1).to_list(500)
+    matches = await db.matches.find(query).sort("date", 1).to_list(1000)
     for m in matches:
         clean_mongo_doc(m)
-    return matches
+
+    if format.lower() != "ics":
+        return matches
+
+    # 🆕 29/07/2026 — Esportazione ICS globale (tutte le squadre della società)
+    def _esc(s: str) -> str:
+        return (s or "").replace("\\", "\\\\").replace(",", "\\,").replace(";", "\\;").replace("\n", "\\n")
+
+    def _fmt(dt) -> str:
+        if isinstance(dt, str):
+            try:
+                dt = datetime.fromisoformat(dt.replace("Z", "+00:00"))
+            except Exception:
+                return ""
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+    society_name = ""
+    try:
+        if society_id:
+            s = await db.settings.find_one({"type": "society", "society_id": society_id}, {"_id": 0, "name": 1, "ragione_sociale": 1})
+            society_name = (s or {}).get("ragione_sociale") or (s or {}).get("name") or ""
+    except Exception:
+        pass
+
+    lines = [
+        "BEGIN:VCALENDAR", "VERSION:2.0",
+        "PRODID:-//RegistraTEAM//Society Matches//IT",
+        "CALSCALE:GREGORIAN",
+        f"X-WR-CALNAME:{_esc('Gare ' + society_name if society_name else 'Gare società')}",
+    ]
+    now_utc = _fmt(datetime.now(timezone.utc))
+    for m in matches:
+        uid = f"match-{m.get('id') or ''}@registrateam.it"
+        start = _fmt(m.get("date"))
+        if not start:
+            continue
+        home_away = (m.get("home_away") or "").lower()
+        opponent = m.get("opponent") or "Avversario"
+        team_name = m.get("team_name") or ""
+        summary = f"{team_name} vs {opponent}" if home_away == "home" else f"{opponent} vs {team_name}"
+        location = ", ".join([x for x in [m.get("venue") or "", m.get("address") or m.get("city") or ""] if x])
+        desc_parts = []
+        if m.get("meeting_time"): desc_parts.append(f"Ritrovo: {m['meeting_time']}")
+        if m.get("notes"): desc_parts.append(m["notes"])
+        if m.get("result"): desc_parts.append(f"Risultato: {m['result']}")
+        lines += ["BEGIN:VEVENT", f"UID:{uid}", f"DTSTAMP:{now_utc}", f"DTSTART:{start}", f"SUMMARY:{_esc(summary)}"]
+        if location: lines.append(f"LOCATION:{_esc(location)}")
+        if desc_parts: lines.append(f"DESCRIPTION:{_esc(' | '.join(desc_parts))}")
+        lines.append("END:VEVENT")
+    lines.append("END:VCALENDAR")
+    ics = "\r\n".join(lines) + "\r\n"
+    fname = f"gare_societa_{society_id or 'export'}.ics"
+    return Response(
+        content=ics,
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+    )
 
 @api_router.get("/matches/upcoming")
 async def get_upcoming_matches(days: int = 7, current_user = Depends(get_current_user)):

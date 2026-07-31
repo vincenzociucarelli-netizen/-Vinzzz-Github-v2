@@ -168,6 +168,27 @@ export default function AdminMatches() {
     }
   };
 
+  // 🆕 29/07/2026 — Esporta calendario completo società in .ics
+  const handleExportIcs = async () => {
+    try {
+      const res = await api.get('/matches', { params: { format: 'ics' }, responseType: 'blob' });
+      const blob = new Blob([res.data], { type: 'text/calendar' });
+      if (Platform.OS === 'web') {
+        // @ts-ignore
+        const url = URL.createObjectURL(blob);
+        // @ts-ignore
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'gare_societa.ics';
+        // @ts-ignore
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+      }
+    } catch (e: any) {
+      Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile esportare il calendario');
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       team_id: '',
@@ -698,6 +719,14 @@ export default function AdminMatches() {
         </TouchableOpacity>
         <TouchableOpacity onPress={handleImportExcel} style={styles.importBtn}>
           <Ionicons name="cloud-upload-outline" size={20} color="#fff" />
+        </TouchableOpacity>
+        {/* 🆕 29/07/2026 — Esporta calendario società completo (.ics) */}
+        <TouchableOpacity
+          onPress={handleExportIcs}
+          style={[styles.importBtn, { backgroundColor: '#059669' }]}
+          data-testid="export-matches-ics-btn"
+        >
+          <Ionicons name="download-outline" size={20} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity onPress={openAddModal} style={styles.addBtn}>
           <Ionicons name="add" size={22} color="#fff" />

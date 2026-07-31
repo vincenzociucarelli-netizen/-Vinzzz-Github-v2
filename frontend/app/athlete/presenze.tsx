@@ -16,6 +16,9 @@ import { Ionicons } from '../../src/components/Icon';
 import { useAuthStore } from '../../src/store/authStore';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+// 🆕 29/07/2026 — Card Calendario Gare per l'atleta 18+: consente
+// export .ics del proprio calendario personale.
+import AthleteMatchesCard from '../../src/components/AthleteMatchesCard';
 
 interface Attendance {
   id: string;
@@ -150,6 +153,14 @@ export default function AthletePresenze() {
           </View>
           <Ionicons name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
+
+        {/* 🆕 29/07/2026 — Calendario Gare con export .ics per uso personale */}
+        {profile?.athlete_id && (
+          <AthleteMatchesCard
+            athleteId={profile.athlete_id}
+            athleteName={profile?.full_name || profile?.name}
+          />
+        )}
 
         {/* Statistics Section */}
         <Text style={styles.sectionTitle}>Le Tue Statistiche</Text>
