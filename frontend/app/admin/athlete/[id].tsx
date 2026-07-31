@@ -3713,7 +3713,10 @@ export default function AdminAthleteDetail() {
                         </View>
                       </View>
 
-                      {/* 🆕 24/02/2026 — CompensationSummaryCard riusabile (replica grafica user Dirigente) */}
+                      {/* 🆕 24/02/2026 — CompensationSummaryCard riusabile (replica grafica user Dirigente)
+                          🆕 30/07/2026 — allowZeroCompensation=true perché la sezione è già
+                          renderizzata per athlete_type='compensated' (18+ PRO): anche a 0€
+                          vogliamo mostrare lo stato "Accettato ✓ / ✗ No". */}
                       <CompensationSummaryCard
                         fullName={athlete?.full_name || 'Atleta'}
                         monthlyCompensation={monthly}
@@ -3723,6 +3726,7 @@ export default function AdminAthleteDetail() {
                         priorCompensation={Number((athlete as any)?.other_annual_compensation || 0)}
                         formatCurrency={formatCurrency}
                         readOnly
+                        allowZeroCompensation
                         adminUserId={athlete?.id}
                       />
                       {/* 🐛 28/07/2026 — Regole FIPAV rimosse da qui (tab Compensi) e

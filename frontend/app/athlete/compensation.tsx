@@ -1363,8 +1363,11 @@ export default function AthleteCompensation() {
       <AthleteTabBar />
 
       <ScrollView style={styles.content}>
-        {/* 🆕 24/02/2026 — CompensationSummaryCard riusabile (replica grafica user Dirigente) */}
-        {(profile?.monthly_compensation || 0) > 0 && (
+        {/* 🆕 24/02/2026 — CompensationSummaryCard riusabile (replica grafica user Dirigente)
+            🆕 30/07/2026 — Mostrata anche per atleti 18+ PRO con compenso 0€: devono
+            comunque poter accettare per dichiarare pregresso da altre società
+            (obbligo Riforma Sport). */}
+        {((profile?.monthly_compensation || 0) > 0 || (profile as any)?.athlete_type === 'compensated' || (profile as any)?.is_compensated) && (
           <CompensationSummaryCard
             fullName={profile?.full_name || 'Atleta'}
             monthlyCompensation={profile?.monthly_compensation || 0}
@@ -1373,6 +1376,10 @@ export default function AthleteCompensation() {
             contractEndDate={profile?.contract_end_date}
             priorCompensation={Number(profile?.other_annual_compensation || 0)}
             formatCurrency={formatCurrency}
+            allowZeroCompensation={
+              (profile?.monthly_compensation || 0) === 0 &&
+              ((profile as any)?.athlete_type === 'compensated' || !!(profile as any)?.is_compensated)
+            }
             onAcceptCompensation={(profile as any)?.compensation_accepted ? undefined : async () => {
               try {
                 await api.patch('/auth/me', { compensation_accepted: true });

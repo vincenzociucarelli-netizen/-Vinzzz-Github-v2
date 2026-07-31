@@ -41,6 +41,11 @@ interface Props {
   /** 🆕 27/07/2026 — Se presente (vista admin), mostra il pannello con dichiarazione
    *  pregresso firmata + storia modifiche admin per il dato utente. */
   adminUserId?: string;
+  /** 🆕 30/07/2026 — Consente di mostrare la sezione "Accetta Compenso" anche quando
+   *  il compenso mensile è 0€. Utile per atleti 18+ PRO che NON percepiscono compenso
+   *  dalla società attuale ma devono comunque poter accettare per dichiarare il
+   *  pregresso (compensi già percepiti da altre ASD/SSD) — obbligo Riforma Sport. */
+  allowZeroCompensation?: boolean;
 }
 
 const formatContractDate = (dateStr: string) => {
@@ -78,6 +83,7 @@ export default function CompensationSummaryCard({
   pregressoNotice,
   compensationLabel,
   adminUserId,
+  allowZeroCompensation = false,
 }: Props) {
   const pregressoSuffix = pregressoLabelSuffix !== undefined
     ? pregressoLabelSuffix
@@ -144,7 +150,7 @@ export default function CompensationSummaryCard({
       )}
 
       {/* Compenso Accettato */}
-      {monthlyCompensation > 0 && (
+      {(monthlyCompensation > 0 || allowZeroCompensation) && (
         compensationAccepted ? (
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#E8F5E9', padding: 12, borderRadius: 8, marginBottom: 12, borderLeftWidth: 3, borderLeftColor: '#34C759' }} data-testid="compensation-accepted-row">
             <Text style={{ fontSize: 14, color: '#1B5E20', fontWeight: '500' }}>Compenso Accettato:</Text>
@@ -162,7 +168,9 @@ export default function CompensationSummaryCard({
           <View style={{ marginBottom: 12 }}>
             <View style={{ backgroundColor: '#FFF3CD', padding: 12, borderRadius: 8, marginBottom: 8, borderLeftWidth: 3, borderLeftColor: '#FF9500' }}>
               <Text style={{ color: '#856404', fontSize: 13, fontWeight: '500' }}>
-                ⏳ Il tuo compenso mensile richiede accettazione. Clicca qui sotto per confermare.
+                {monthlyCompensation > 0
+                  ? '⏳ Il tuo compenso mensile richiede accettazione. Clicca qui sotto per confermare.'
+                  : '⏳ Anche senza compenso dalla società attuale, devi confermare per poter dichiarare i compensi già percepiti da altre ASD/SSD (obbligo Riforma Sport).'}
               </Text>
             </View>
             <TouchableOpacity
@@ -177,7 +185,9 @@ export default function CompensationSummaryCard({
                 <>
                   <Ionicons name="checkmark-circle" size={18} color="#fff" />
                   <Text style={{ color: '#fff', fontWeight: 'bold', marginLeft: 8 }}>
-                    Accetta Compenso {formatCurrency(monthlyCompensation)}
+                    {monthlyCompensation > 0
+                      ? `Accetta Compenso ${formatCurrency(monthlyCompensation)}`
+                      : 'Conferma e Dichiara Pregresso'}
                   </Text>
                 </>
               )}
