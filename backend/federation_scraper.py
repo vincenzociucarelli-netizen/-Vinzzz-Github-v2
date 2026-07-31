@@ -32,6 +32,11 @@ class FIPAVScraper:
     
     # Region codes and their ComitatoId
     REGIONS = {
+        # 🐛 29/07/2026 — Aggiunto supporto pseudo-regione "nazionale" per
+        # Serie A/B. federvolley.it è una SPA hash-routed (non scrapabile via HTML),
+        # quindi per il "nazionale" restituiamo campionati hardcoded e nessun match:
+        # l'admin userà la card "Calendario Federazione" (link manuale) sulla squadra.
+        "nazionale": {"id": "nazionale", "comitato_id": None, "national": True},
         "umbria": {"id": "umbria", "comitato_id": "30"},
         "lazio": {"id": "lazio", "comitato_id": "12"},
         "toscana": {"id": "toscana", "comitato_id": "29"},
@@ -50,6 +55,24 @@ class FIPAVScraper:
         "friuli": {"id": "friuli", "comitato_id": "10"},
         "trentino": {"id": "trentino", "comitato_id": "28"},
     }
+
+    # 🆕 29/07/2026 — Lista fissa di campionati nazionali FIPAV (Serie A/B).
+    # Ogni voce ha un `federvolley_slug` che il frontend può usare per generare
+    # il link diretto alla pagina federvolley.it/campionati/serie-a-b.
+    NATIONAL_CHAMPIONSHIPS = [
+        # Femminile
+        {"id": "nat-A1F", "name": "Serie A1 Femminile", "gender": "F", "level": "A1"},
+        {"id": "nat-A2F", "name": "Serie A2 Femminile", "gender": "F", "level": "A2"},
+        {"id": "nat-A3F", "name": "Serie A3 Femminile", "gender": "F", "level": "A3"},
+        {"id": "nat-B1F", "name": "Serie B1 Femminile", "gender": "F", "level": "B1"},
+        {"id": "nat-B2F", "name": "Serie B2 Femminile", "gender": "F", "level": "B2"},
+        # Maschile
+        {"id": "nat-A1M", "name": "Serie A1 Maschile (SuperLega)", "gender": "M", "level": "A1"},
+        {"id": "nat-A2M", "name": "Serie A2 Maschile", "gender": "M", "level": "A2"},
+        {"id": "nat-A3M", "name": "Serie A3 Maschile", "gender": "M", "level": "A3"},
+        {"id": "nat-BM", "name": "Serie B Maschile", "gender": "M", "level": "B"},
+        {"id": "nat-BinterM", "name": "Serie B Interregionale Maschile", "gender": "M", "level": "B-inter"},
+    ]
     
     HEADERS = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -57,12 +80,36 @@ class FIPAVScraper:
     
     def __init__(self, region: str = "umbria"):
         self.region = region.lower()
-        self.base_url = self.BASE_URL.format(region=self.region)
         region_data = self.REGIONS.get(self.region, {"comitato_id": "30"})
-        self.comitato_id = region_data.get("comitato_id", "30")
-    
+        # 🆕 29/07/2026 — Modalità nazionale: non hitta il portale regionale.
+        self.is_national = bool(region_data.get("national"))
+        if self.is_national:
+            self.base_url = "https://www.federvolley.it/campionati/serie-a-b"
+            self.comitato_id = None
+        else:
+            self.base_url = self.BASE_URL.format(region=self.region)
+            self.comitato_id = region_data.get("comitato_id", "30")
+
+    def _current_national_seasons(self) -> List[Dict]:
+        """Genera dinamicamente le ultime 3 stagioni sportive per il nazionale."""
+        from datetime import date
+        y = date.today().year
+        # Stagione sportiva inizia a settembre; agosto è ancora "quella vecchia"
+        if date.today().month >= 9:
+            start = y
+        else:
+            start = y - 1
+        seasons = []
+        for i in range(3):
+            s = start - i
+            seasons.append({"id": f"{s}-{s+1}", "name": f"Stagione {s}/{s+1}"})
+        return seasons
+
     async def get_seasons(self) -> List[Dict]:
         """Get available seasons from the dropdown"""
+        # 🆕 29/07/2026 — Nazionale: seasons hardcoded (federvolley è una SPA non scrapabile).
+        if self.is_national:
+            return self._current_national_seasons()
         async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
             params = {'ComitatoId': self.comitato_id}
             response = await client.get(self.base_url, params=params, headers=self.HEADERS)
@@ -85,6 +132,9 @@ class FIPAVScraper:
     
     async def get_championships(self, season_id: Optional[str] = None) -> List[Dict]:
         """Get available championships for a season"""
+        # 🆕 29/07/2026 — Nazionale: lista hardcoded (Serie A/B non cambia di anno in anno).
+        if self.is_national:
+            return list(self.NATIONAL_CHAMPIONSHIPS)
         async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
             params = {'ComitatoId': self.comitato_id}
             if season_id:
@@ -109,6 +159,9 @@ class FIPAVScraper:
     
     async def get_societies(self, season_id: Optional[str] = None) -> List[Dict]:
         """Get available societies/teams for a season"""
+        # 🆕 29/07/2026 — Nazionale: nessuna lista disponibile (SPA), ritorna vuoto.
+        if self.is_national:
+            return []
         async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
             params = {'ComitatoId': self.comitato_id}
             if season_id:
@@ -148,7 +201,14 @@ class FIPAVScraper:
             society_name: Name of society to match (for filtering results)
         """
         matches = []
-        
+
+        # 🆕 29/07/2026 — Nazionale: federvolley.it è una SPA hash-routed non
+        # scrapabile via HTML. Restituiamo lista vuota: l'admin inserirà il
+        # link del calendario direttamente sulla squadra.
+        if self.is_national:
+            logging.info("FIPAV national mode: automatic scraping not available for Serie A/B")
+            return []
+
         async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
             # Build URL with parameters
             params = {'ComitatoId': self.comitato_id}
@@ -538,6 +598,9 @@ async def test_fipav_scraper():
     return matches
 
 
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(test_fipav_scraper())
 if __name__ == "__main__":
     import asyncio
     asyncio.run(test_fipav_scraper())
