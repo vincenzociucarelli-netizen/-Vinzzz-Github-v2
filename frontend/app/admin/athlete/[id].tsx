@@ -20,6 +20,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import CompensationSummaryCard from '../../../src/components/compensation/CompensationSummaryCard';
 import FipavAthleteRulesPanel from '../../../src/components/FipavAthleteRulesPanel';
+// 🆕 29/07/2026 — Card Calendario Gare (con export .ics)
+import AthleteMatchesCard from '../../../src/components/AthleteMatchesCard';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import DualRoleHubBanner from '../../../src/components/admin/DualRoleHubBanner';
 import { Ionicons } from '../../../src/components/Icon';
@@ -4243,6 +4245,8 @@ export default function AdminAthleteDetail() {
               max 3) sono nel loro contesto naturale. Si nasconde da solo se la
               feature FIPAV non è abilitata per la società. */}
           {athlete?.id && <FipavAthleteRulesPanel athleteId={athlete.id} />}
+          {/* 🆕 29/07/2026 — Calendario Gare con export .ics */}
+          {athlete?.id && <AthleteMatchesCard athleteId={athlete.id} athleteName={athlete?.full_name} />}
           {/* 🆕 22/02/2026 — Card "Periodo di Prova" (solo atleti quota in trial) — spostata da Anagrafica */}
           {athlete.status === 'trial' && athleteType === 'quota' && (() => {
             // 🆕 05/07/2026 — La prova è ATTIVA solo se:

@@ -6658,6 +6658,129 @@ async def get_team_matches(team_id: str, current_user = Depends(get_current_user
         clean_mongo_doc(m)
     return matches
 
+
+@api_router.get("/athletes/{athlete_id}/matches")
+async def get_athlete_matches(
+    athlete_id: str,
+    format: str = "json",
+    only_upcoming: bool = False,
+    current_user = Depends(get_current_user),
+):
+    """
+    🆕 29/07/2026 — Calendario completo delle gare di tutte le squadre in cui gioca
+    l'atleta. `format=ics` restituisce un file .ics importabile in Google Calendar /
+    Apple Calendar / Outlook.
+    """
+    ath = await db.athletes.find_one({"id": athlete_id})
+    if not ath:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    society_id = current_user.get("society_id")
+    if society_id and ath.get("society_id") != society_id:
+        raise HTTPException(status_code=403, detail="Atleta non appartiene alla tua società")
+
+    # Autorizzazioni: admin / coach / dirigente della società; l'atleta stesso;
+    # il genitore linkato all'atleta.
+    role = current_user.get("role")
+    user_id = current_user.get("id")
+    allowed = False
+    if role in (UserRole.ADMIN, UserRole.COACH, UserRole.DIRIGENTE, UserRole.COLLABORATORE):
+        allowed = True
+    elif role == UserRole.ATHLETE and ath.get("user_id") == user_id:
+        allowed = True
+    elif role == UserRole.PARENT and ath.get("parent_id") == user_id:
+        allowed = True
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Non autorizzato a vedere le gare di questo atleta")
+
+    # Raccogli TUTTI i team_ids in cui l'atleta gioca (canonico + legacy)
+    team_ids = list(set(
+        (ath.get("team_ids") or [])
+        + ([ath.get("team_id")] if ath.get("team_id") else [])
+    ))
+    team_ids = [t for t in team_ids if t]
+    if not team_ids:
+        matches: List[Dict] = []
+    else:
+        q: Dict = {"team_id": {"$in": team_ids}}
+        if society_id:
+            q["society_id"] = society_id
+        if only_upcoming:
+            q["date"] = {"$gte": datetime.now(timezone.utc)}
+        raw = await db.matches.find(q).sort("date", 1).to_list(500)
+        matches = []
+        for m in raw:
+            clean_mongo_doc(m)
+            matches.append(m)
+
+    if format.lower() != "ics":
+        return {
+            "athlete_id": athlete_id,
+            "athlete_name": ath.get("full_name") or "",
+            "team_ids": team_ids,
+            "matches": matches,
+            "count": len(matches),
+        }
+
+    # Genera ICS
+    def _ics_escape(s: str) -> str:
+        return (s or "").replace("\\", "\\\\").replace(",", "\\,").replace(";", "\\;").replace("\n", "\\n")
+
+    def _fmt(dt) -> str:
+        if isinstance(dt, str):
+            try:
+                dt = datetime.fromisoformat(dt.replace("Z", "+00:00"))
+            except Exception:
+                return ""
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//RegistraTEAM//Athlete Calendar//IT",
+        "CALSCALE:GREGORIAN",
+        f"X-WR-CALNAME:Gare {_ics_escape(ath.get('full_name', ''))}",
+    ]
+    now_utc = _fmt(datetime.now(timezone.utc))
+    for m in matches:
+        uid = f"match-{m.get('id') or m.get('_id') or ''}@registrateam.it"
+        start = _fmt(m.get("date"))
+        if not start:
+            continue
+        home_away = (m.get("home_away") or "").lower()
+        opponent = m.get("opponent") or "Avversario"
+        team_name = m.get("team_name") or ""
+        summary = f"{team_name} vs {opponent}" if home_away == "home" else f"{opponent} vs {team_name}"
+        venue = m.get("venue") or ""
+        addr = m.get("address") or m.get("city") or ""
+        location = ", ".join([x for x in [venue, addr] if x])
+        desc_parts = []
+        if m.get("meeting_time"):
+            desc_parts.append(f"Ritrovo: {m['meeting_time']}")
+        if m.get("notes"):
+            desc_parts.append(m["notes"])
+        lines += [
+            "BEGIN:VEVENT",
+            f"UID:{uid}",
+            f"DTSTAMP:{now_utc}",
+            f"DTSTART:{start}",
+            f"SUMMARY:{_ics_escape(summary)}",
+        ]
+        if location:
+            lines.append(f"LOCATION:{_ics_escape(location)}")
+        if desc_parts:
+            lines.append(f"DESCRIPTION:{_ics_escape(' | '.join(desc_parts))}")
+        lines.append("END:VEVENT")
+    lines.append("END:VCALENDAR")
+    ics = "\r\n".join(lines) + "\r\n"
+    filename = f"gare_{(ath.get('full_name') or 'atleta').replace(' ', '_')}.ics"
+    return Response(
+        content=ics,
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
 @api_router.post("/matches")
 async def create_match(match_data: MatchCreate, current_user = Depends(get_current_user)):
     """Create a new match"""

@@ -34,6 +34,8 @@ import CodiceFiscale from 'codice-fiscale-js';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../../src/constants/countries';
 
 import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
+// 🆕 29/07/2026 — Card Calendario Gare (con export .ics) per il genitore
+import AthleteMatchesCard from '../../../src/components/AthleteMatchesCard';
 
 // --- Certificate Date Form Component ---
 function CertificateDateForm({ athleteId, certificate, onSaved }: { athleteId?: string, certificate: any, onSaved: () => void }) {
@@ -2345,6 +2347,10 @@ export default function AthleteDetail() {
 
         {/* === PRESENZE TAB === */}
         {activeTab === 'presenze' && (<>
+        {/* 🆕 29/07/2026 — Calendario Gare (con export .ics) */}
+        {id && typeof id === 'string' && (
+          <AthleteMatchesCard athleteId={id} athleteName={athlete?.full_name} />
+        )}
         {/* Team Schedule Card - Allenamenti e Gare Interne */}
         {teamSchedule && (
           <View style={styles.card}>
