@@ -26,6 +26,8 @@ import { SportIcon } from '../../src/components/SportIcon';
 import { OnboardingTutorial, ATHLETE_STEPS } from '../../src/components/OnboardingTutorial';
 import SignaturePadInline, { SignaturePadInlineRef } from '../../src/components/SignaturePadInline';
 import SwitchAccountButton from '../../src/components/SwitchAccountButton';
+// 🆕 31/07/2026 — Calendario Gare (export .ics) esposto direttamente sulla dashboard atleta
+import AthleteMatchesCard from '../../src/components/AthleteMatchesCard';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 const MONTH_NAMES = [
@@ -1322,6 +1324,17 @@ export default function AthleteScreen() {
               </View>
             );
           })}
+        </View>
+      )}
+
+      {/* 🆕 31/07/2026 — Calendario Gare + export .ics direttamente sulla dashboard atleta
+          (visibile anche se non ci sono ancora gare importate: mostra "Nessuna gara programmata"). */}
+      {profile?.athlete_id && (
+        <View style={{ paddingHorizontal: 16, marginBottom: 16 }} data-testid="athlete-matches-card-wrapper">
+          <AthleteMatchesCard
+            athleteId={profile.athlete_id}
+            athleteName={profile.full_name}
+          />
         </View>
       )}
 

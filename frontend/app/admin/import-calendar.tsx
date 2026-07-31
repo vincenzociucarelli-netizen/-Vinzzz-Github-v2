@@ -726,8 +726,29 @@ export default function ImportCalendarScreen() {
       <Text style={styles.stepTitle}>3. Seleziona Partite da Importare</Text>
       
       <Text style={styles.previewCount}>
-        Trovate {previewMatches.length} partite per "{selectedSocietyName}"
+        Trovate {previewMatches.length} partite per &quot;{selectedSocietyName}&quot;
       </Text>
+
+      {/* 🆕 31/07/2026 — Nazionale: se 0 partite mostriamo istruzioni chiare.
+          federvolley.it è una SPA hash-routed non scrapabile, quindi le gare vanno
+          aggiunte manualmente o linkando il calendario federale sulla scheda team. */}
+      {isNational && previewMatches.length === 0 && (
+        <View style={{ backgroundColor: '#FFF3CD', borderLeftWidth: 4, borderLeftColor: '#F59E0B', padding: 14, borderRadius: 8, marginBottom: 16 }} data-testid="national-empty-hint">
+          <Text style={{ fontWeight: '700', color: '#92400E', marginBottom: 6, fontSize: 14 }}>
+            ⚠️ Import automatico non disponibile per il Nazionale
+          </Text>
+          <Text style={{ fontSize: 13, color: '#78350F', lineHeight: 18, marginBottom: 8 }}>
+            Il portale federvolley.it (Serie A/B) è dinamico e non consente lo scraping automatico.
+            Per <Text style={{ fontWeight: '700' }}>{selectedSocietyName || 'la tua società'}</Text>
+            {selectedGirone ? ` (Girone ${selectedGirone})` : ''} puoi:
+          </Text>
+          <Text style={{ fontSize: 13, color: '#78350F', lineHeight: 20, marginLeft: 4 }}>
+            {'\u2022'} Aggiungere manualmente le partite dalla scheda della squadra{'\n'}
+            {'\u2022'} Incollare il link del calendario federale nella card &quot;Calendario Federazione&quot; della squadra{'\n'}
+            {'\u2022'} Consultare federvolley.it/campionati/serie-a-b per gli orari ufficiali
+          </Text>
+        </View>
+      )}
 
       {/* Date Filter */}
       <View style={styles.dateFilterContainer}>
