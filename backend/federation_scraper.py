@@ -91,17 +91,24 @@ class FIPAVScraper:
             self.comitato_id = region_data.get("comitato_id", "30")
 
     def _current_national_seasons(self) -> List[Dict]:
-        """Genera dinamicamente le ultime 3 stagioni sportive per il nazionale."""
+        """Genera dinamicamente le stagioni sportive disponibili per il nazionale.
+
+        🆕 31/07/2026 — Aggiunta la stagione IMMEDIATAMENTE SUCCESSIVA a quella
+        corrente così l'admin può preparare le squadre prima dell'inizio del
+        campionato (es. a Luglio 2026 vede già "Stagione 2026/2027" per il pre-import).
+        Genera 4 stagioni: [prossima, corrente, precedente, ante-precedente].
+        """
         from datetime import date
         y = date.today().year
         # Stagione sportiva inizia a settembre; agosto è ancora "quella vecchia"
         if date.today().month >= 9:
-            start = y
+            current_start = y
         else:
-            start = y - 1
+            current_start = y - 1
+        # Include la prossima stagione in cima (start = current+1)
+        next_start = current_start + 1
         seasons = []
-        for i in range(3):
-            s = start - i
+        for s in [next_start, current_start, current_start - 1, current_start - 2]:
             seasons.append({"id": f"{s}-{s+1}", "name": f"Stagione {s}/{s+1}"})
         return seasons
 

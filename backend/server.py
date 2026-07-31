@@ -7864,6 +7864,9 @@ async def save_federation_preferences(data: dict, current_user = Depends(get_cur
         "federation": data.get("federation"),
         "region": data.get("region"),
         "season_id": data.get("season_id"),
+        # 🆕 31/07/2026 — Nazionale: memorizza Società (testo libero) + Girone selezionati
+        "national_society_name": data.get("national_society_name"),
+        "girone": data.get("girone"),
         "updated_at": datetime.utcnow().isoformat()
     }
     

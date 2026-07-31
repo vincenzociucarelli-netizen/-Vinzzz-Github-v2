@@ -85,6 +85,12 @@ export default function ImportCalendarScreen() {
   const [societies, setSocieties] = useState<SelectOption[]>([]);
   const [selectedSociety, setSelectedSociety] = useState('');
   const [selectedSocietyName, setSelectedSocietyName] = useState('');
+
+  // 🆕 31/07/2026 — Nazionale (Serie A/B): federvolley.it è una SPA non scrapabile,
+  // quindi l'admin inserisce Società (testo libero) + Girone manualmente.
+  const [nationalSocietyName, setNationalSocietyName] = useState('');
+  const [selectedGirone, setSelectedGirone] = useState('');
+  const isNational = selectedRegion === 'nazionale';
   
   // Local teams
   const [localTeams, setLocalTeams] = useState<Team[]>([]);
@@ -131,6 +137,15 @@ export default function ImportCalendarScreen() {
           // Store temporarily to apply after seasons load
           (window as any).__savedSeasonId = prefs.season_id;
         }
+        // 🆕 31/07/2026 — Ripristina Società (testo libero) + Girone per Nazionale
+        if (prefs && prefs.national_society_name) {
+          setNationalSocietyName(prefs.national_society_name);
+          setSelectedSociety(`national-manual:${prefs.national_society_name}`);
+          setSelectedSocietyName(prefs.national_society_name);
+        }
+        if (prefs && prefs.girone) {
+          setSelectedGirone(prefs.girone);
+        }
       } catch (e) {
         // No saved prefs, use defaults
       } finally {
@@ -172,13 +187,16 @@ export default function ImportCalendarScreen() {
           federation,
           region: selectedRegion,
           season_id: selectedSeason,
+          // 🆕 31/07/2026 — Nazionale: persiste Società (testo libero) + Girone
+          national_society_name: isNational ? nationalSocietyName : null,
+          girone: isNational ? selectedGirone : null,
         });
       } catch (e) {
         // Silent fail
       }
     };
     savePrefs();
-  }, [federation, selectedRegion, selectedSeason]);
+  }, [federation, selectedRegion, selectedSeason, nationalSocietyName, selectedGirone, isNational, prefsLoaded]);
 
   const loadRegions = async () => {
     setLoadingRegions(true);
@@ -324,7 +342,9 @@ export default function ImportCalendarScreen() {
         society_name: searchName,
         federation_society_id: selectedSociety,
         season_id: selectedSeason,
-        championship_id: selectedChampionships.length > 0 ? selectedChampionships[0] : null
+        championship_id: selectedChampionships.length > 0 ? selectedChampionships[0] : null,
+        // 🆕 31/07/2026 — Nazionale: passa il girone selezionato manualmente
+        girone: isNational ? selectedGirone : null,
       });
       const matches = response.data.matches || [];
       setPreviewMatches(matches);
@@ -365,7 +385,9 @@ export default function ImportCalendarScreen() {
       const response = await api.post('/federation/import-selected', {
         matches: matchesToImport,
         society_name: searchName,
-        team_mappings: teamMappings.filter(m => m.local_team_id)
+        team_mappings: teamMappings.filter(m => m.local_team_id),
+        // 🆕 31/07/2026 — Nazionale: propaga il girone anche in import
+        girone: isNational ? selectedGirone : null,
       });
       setImportResult(response.data);
       setStep(4);
@@ -459,25 +481,76 @@ export default function ImportCalendarScreen() {
     <View style={styles.stepContainer}>
       <Text style={styles.stepTitle}>2. Seleziona Società e Campionati</Text>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>La tua Società sulla federazione</Text>
-        {loadingSocieties ? (
-          <ActivityIndicator size="small" color="#007AFF" />
-        ) : (
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={selectedSociety}
-              onValueChange={handleSocietySelect}
-              style={styles.picker}
-            >
-              <Picker.Item label="-- Seleziona società --" value="" />
-              {societies.map(society => (
-                <Picker.Item key={society.id} label={society.name} value={society.id} />
-              ))}
-            </Picker>
+      {isNational ? (
+        <>
+          {/* 🆕 31/07/2026 — Modalità Nazionale (Serie A/B): non scrapabile.
+              L'admin inserisce Società (testo libero) + Girone manualmente. */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>La tua Società (Nazionale)</Text>
+            <Text style={styles.hint}>
+              federvolley.it non è scrapabile automaticamente. Inserisci il nome esatto della tua società come appare sul portale nazionale.
+            </Text>
+            <TextInput
+              style={[styles.mappingInput, { width: '100%' }]}
+              value={nationalSocietyName}
+              onChangeText={(text) => {
+                setNationalSocietyName(text);
+                setSelectedSociety(text.trim() ? `national-manual:${text.trim()}` : '');
+                setSelectedSocietyName(text.trim());
+              }}
+              placeholder="Es. Sir Susa Vim Perugia"
+              placeholderTextColor="#999"
+              data-testid="national-society-input"
+            />
           </View>
-        )}
-      </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Girone</Text>
+            <Text style={styles.hint}>
+              Serie A1/A2/A3: seleziona &quot;Girone Unico&quot;. Serie B / B Interregionale: scegli la lettera del tuo girone.
+            </Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={selectedGirone}
+                onValueChange={(value) => setSelectedGirone(value)}
+                style={styles.picker}
+                data-testid="national-girone-picker"
+              >
+                <Picker.Item label="-- Seleziona girone --" value="" />
+                <Picker.Item label="Girone Unico" value="Unico" />
+                <Picker.Item label="Girone A" value="A" />
+                <Picker.Item label="Girone B" value="B" />
+                <Picker.Item label="Girone C" value="C" />
+                <Picker.Item label="Girone D" value="D" />
+                <Picker.Item label="Girone E" value="E" />
+                <Picker.Item label="Girone F" value="F" />
+                <Picker.Item label="Girone G" value="G" />
+                <Picker.Item label="Girone H" value="H" />
+              </Picker>
+            </View>
+          </View>
+        </>
+      ) : (
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>La tua Società sulla federazione</Text>
+          {loadingSocieties ? (
+            <ActivityIndicator size="small" color="#007AFF" />
+          ) : (
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={selectedSociety}
+                onValueChange={handleSocietySelect}
+                style={styles.picker}
+              >
+                <Picker.Item label="-- Seleziona società --" value="" />
+                {societies.map(society => (
+                  <Picker.Item key={society.id} label={society.name} value={society.id} />
+                ))}
+              </Picker>
+            </View>
+          )}
+        </View>
+      )}
 
       {selectedSociety && (
         <>
@@ -560,9 +633,9 @@ export default function ImportCalendarScreen() {
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.button, (!selectedSociety || previewLoading) && styles.buttonDisabled]}
+          style={[styles.button, (!selectedSociety || (isNational && !selectedGirone) || previewLoading) && styles.buttonDisabled]}
           onPress={loadPreview}
-          disabled={!selectedSociety || previewLoading}
+          disabled={!selectedSociety || (isNational && !selectedGirone) || previewLoading}
           data-testid="load-preview-btn"
         >
           {previewLoading ? (
