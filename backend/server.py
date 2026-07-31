@@ -12541,7 +12541,36 @@ async def create_certificate_simple(
     activated = False
     if verified_value and athlete.get("end_trial_requested"):
         activated = await check_and_activate_if_ready(data.athlete_id)
-    
+
+    # 🆕 31/07/2026 — Auto-attivazione atleti 18+ PRO:
+    # Gli atleti compensati (athlete_type='compensated') sono già stati "scelti"
+    # e acquistati per la stagione, quindi NON hanno periodo di prova.
+    # Quando l'Admin valida il loro certificato medico li portiamo direttamente
+    # a status='active' (skippando pending/trial).
+    if (
+        verified_value
+        and not activated
+        and current_user["role"] == UserRole.ADMIN
+        and athlete.get("athlete_type") == "compensated"
+        and athlete.get("status") not in (AthleteStatus.ACTIVE, AthleteStatus.BLOCKED)
+    ):
+        await db.athletes.update_one(
+            {"id": data.athlete_id},
+            {"$set": {
+                "status": AthleteStatus.ACTIVE,
+                "is_trial": False,
+                "activated_at": now.isoformat(),
+                "activated_by": current_user["id"],
+                "activated_by_name": current_user.get("full_name", current_user.get("email", "")),
+            }},
+        )
+        activated = True
+        logging.info(
+            f"[AUTO-ACTIVATE-PRO] athlete_id={data.athlete_id} attivato automaticamente "
+            f"da admin={current_user.get('email')} dopo validazione certificato medico "
+            f"(athlete_type=compensated, previous_status={athlete.get('status')})"
+        )
+
     return {
         "id": certificate.id,
         "athlete_id": certificate.athlete_id,

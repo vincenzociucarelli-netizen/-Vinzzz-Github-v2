@@ -1244,14 +1244,21 @@ export default function AdminAthleteDetail() {
     if (!certificate) return;
     const newVerified = !athlete?.medical_certificate_verified;
     try {
-      await api.post('/certificates/simple', {
+      const resp = await api.post('/certificates/simple', {
         athlete_id: id,
         issue_date: certificate.issue_date || athlete?.medical_certificate_date,
         expiry_date: certificate.expiry_date,
         verified: newVerified,
       });
       setAthlete((prev: any) => prev ? { ...prev, medical_certificate_verified: newVerified } : prev);
-      showAlert('Successo', newVerified ? 'Certificato verificato' : 'Verifica rimossa');
+      // 🆕 31/07/2026 — Se il backend ha auto-attivato un atleta 18+ PRO (no periodo di prova),
+      // avvisiamo l'admin con un messaggio dedicato.
+      const activated = !!resp?.data?.athlete_activated;
+      if (newVerified && activated) {
+        showAlert('Atleta attivato', 'Certificato verificato. Atleta 18+ PRO attivato automaticamente (nessun periodo di prova).');
+      } else {
+        showAlert('Successo', newVerified ? 'Certificato verificato' : 'Verifica rimossa');
+      }
       loadData();
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante la verifica');
@@ -1300,7 +1307,13 @@ export default function AdminAthleteDetail() {
       setCertModalVisible(false);
       setCertIssueDate('');
       setCertVerified(false);
-      showAlert('Successo', 'Certificato medico salvato');
+      // 🆕 31/07/2026 — Messaggio dedicato se atleta 18+ PRO auto-attivato
+      if (response?.data?.athlete_activated) {
+        showAlert('Atleta attivato', 'Certificato salvato. Atleta 18+ PRO attivato automaticamente (nessun periodo di prova).');
+      } else {
+        showAlert('Successo', 'Certificato medico salvato');
+      }
+      loadData();
     } catch (error: any) {
       console.error('Error saving certificate:', error);
       showAlert('Errore', error.response?.data?.detail || 'Errore nel salvataggio');
