@@ -58,21 +58,19 @@ export default function ImportCalendarScreen() {
   const [selectedChampionships, setSelectedChampionships] = useState<string[]>([]);
   
   // Date filter
-  const [dateFrom, setDateFrom] = useState('__/__/____');
-  const [dateTo, setDateTo] = useState('__/__/____');
+  // 🆕 31/07/2026 — Date input: fix "impossibile scrivere" — l'inizializzazione a
+  // "__/__/____" + maxLength=10 riempiva il campo e bloccava l'input. Ora
+  // partiamo da stringa vuota; il placeholder mostra la maschera.
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const handleDateMask = (text: string, setter: (val: string) => void) => {
-    // Strip everything except digits
-    const digits = text.replace(/\D/g, '');
+    // Strip everything except digits (rimuove anche eventuali "_" residui)
+    const digits = text.replace(/\D/g, '').slice(0, 8);
     let masked = '';
-    for (let i = 0; i < Math.min(digits.length, 8); i++) {
+    for (let i = 0; i < digits.length; i++) {
       if (i === 2 || i === 4) masked += '/';
       masked += digits[i];
-    }
-    // Pad with mask placeholders
-    const template = '__/__/____';
-    if (masked.length < template.length) {
-      masked += template.slice(masked.length);
     }
     setter(masked);
   };
@@ -678,11 +676,12 @@ export default function ImportCalendarScreen() {
   const getFilteredMatches = () => {
     return previewMatches.filter(match => {
       const matchDate = new Date(match.date);
-      if (dateFrom && !dateFrom.includes('_')) {
+      // 🆕 31/07/2026 — valida solo quando la data è completa (10 caratteri gg/mm/aaaa)
+      if (dateFrom && dateFrom.length === 10) {
         const from = parseItalianDate(dateFrom);
         if (from && matchDate < from) return false;
       }
-      if (dateTo && !dateTo.includes('_')) {
+      if (dateTo && dateTo.length === 10) {
         const to = parseItalianDate(dateTo);
         if (to) {
           to.setHours(23, 59, 59);

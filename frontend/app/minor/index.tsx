@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
+import AthleteMatchesCard from '../../src/components/AthleteMatchesCard';
 
 const DAYS_IT: { [key: string]: string } = {
   'monday': 'Lunedi',
@@ -594,6 +595,16 @@ export default function MinorDashboard() {
               </View>
             </View>
           ))}
+        </View>
+      )}
+
+      {/* 🆕 31/07/2026 — Calendario completo + export ICS anche per minorenne (login Lite) */}
+      {data.athlete?.id && (
+        <View style={{ paddingHorizontal: 16, marginTop: 16 }} data-testid="minor-matches-export-card">
+          <AthleteMatchesCard
+            athleteId={data.athlete.id}
+            athleteName={data.athlete.full_name || data.athlete.first_name}
+          />
         </View>
       )}
 

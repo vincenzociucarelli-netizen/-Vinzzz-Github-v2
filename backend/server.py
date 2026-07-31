@@ -6738,7 +6738,7 @@ async def get_athlete_matches(
         raise HTTPException(status_code=403, detail="Atleta non appartiene alla tua società")
 
     # Autorizzazioni: admin / coach / dirigente della società; l'atleta stesso;
-    # il genitore linkato all'atleta.
+    # il genitore linkato all'atleta; il minorenne autenticato in Lite mode.
     role = current_user.get("role")
     user_id = current_user.get("id")
     allowed = False
@@ -6747,6 +6747,10 @@ async def get_athlete_matches(
     elif role == UserRole.ATHLETE and ath.get("user_id") == user_id:
         allowed = True
     elif role == UserRole.PARENT and ath.get("parent_id") == user_id:
+        allowed = True
+    # 🆕 31/07/2026 — Consenti al minorenne (login Lite) di vedere/esportare
+    # SOLO il proprio calendario. Nel token minor: user_id == athlete_id.
+    elif role == "minor" and (current_user.get("athlete_id") == athlete_id or user_id == athlete_id):
         allowed = True
     if not allowed:
         raise HTTPException(status_code=403, detail="Non autorizzato a vedere le gare di questo atleta")
