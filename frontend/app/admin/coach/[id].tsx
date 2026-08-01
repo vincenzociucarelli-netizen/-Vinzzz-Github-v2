@@ -749,7 +749,7 @@ export default function AdminCoachDetail() {
           <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))}>
             <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
           </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.replace('/admin')} data-testid="header-home-btn" style={{ marginLeft: 8 }}>
+        <TouchableOpacity onPress={() => router.replace('/admin')} testID="header-home-btn" style={{ marginLeft: 8 }}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
         </TouchableOpacity>
           <Text style={styles.headerTitle}>Caricamento...</Text>
@@ -769,7 +769,7 @@ export default function AdminCoachDetail() {
           <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))}>
             <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
           </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.replace('/admin')} data-testid="header-home-btn" style={{ marginLeft: 8 }}>
+        <TouchableOpacity onPress={() => router.replace('/admin')} testID="header-home-btn" style={{ marginLeft: 8 }}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
         </TouchableOpacity>
           <Text style={styles.headerTitle}>Errore</Text>
@@ -788,7 +788,7 @@ export default function AdminCoachDetail() {
         <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))} style={styles.backButton}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.replace('/admin')} data-testid="header-home-btn" style={{ marginLeft: 8 }}>
+        <TouchableOpacity onPress={() => router.replace('/admin')} testID="header-home-btn" style={{ marginLeft: 8 }}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{coach.full_name}</Text>
@@ -819,7 +819,7 @@ export default function AdminCoachDetail() {
             </Text>
             <TouchableOpacity
               onPress={() => router.replace(`/admin/athlete/${(coach as any).linked_athlete_id}` as any)}
-              data-testid="admin-coach-go-to-athlete-btn"
+              testID="admin-coach-go-to-athlete-btn"
               style={{ backgroundColor: '#1565C0', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
             >
               <Ionicons name="person" size={16} color="#fff" />
@@ -895,7 +895,7 @@ export default function AdminCoachDetail() {
                 }
               }}
               style={{ backgroundColor: '#2E7D32', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6 }}
-              data-testid="confirm-pro-data-btn"
+              testID="confirm-pro-data-btn"
             >
               <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>Conferma</Text>
             </TouchableOpacity>
@@ -923,7 +923,7 @@ export default function AdminCoachDetail() {
               }
             }}
             style={{ marginHorizontal: 12, marginBottom: 4, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: '#F57C00', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-            data-testid="reset-coach-compensation-btn"
+            testID="reset-coach-compensation-btn"
           >
             <Ionicons name="refresh-circle" size={16} color="#fff" />
             <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>🔄 Reset dati compenso/contratto stagione</Text>
@@ -1034,7 +1034,7 @@ export default function AdminCoachDetail() {
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <Text style={[styles.cardTitle, { marginTop: 0 }]}>🏆 Stagione</Text>
-              <TouchableOpacity onPress={() => setEditingTeams(!editingTeams)} data-testid="admin-coach-teams-edit-btn">
+              <TouchableOpacity onPress={() => setEditingTeams(!editingTeams)} testID="admin-coach-teams-edit-btn">
                 <Ionicons name={editingTeams ? "close" : "create"} size={22} color="#007AFF" />
               </TouchableOpacity>
             </View>
@@ -1193,7 +1193,7 @@ export default function AdminCoachDetail() {
                     setEditingLicenseNumber(true);
                   }
                 }}
-                data-testid="admin-coach-license-number-edit-btn"
+                testID="admin-coach-license-number-edit-btn"
               >
                 <Ionicons name={editingLicenseNumber ? 'close' : 'create'} size={20} color="#007AFF" />
               </TouchableOpacity>
@@ -1213,7 +1213,7 @@ export default function AdminCoachDetail() {
                 style={[styles.saveTeamsBtn, savingLicenseNumber && styles.saveBtnDisabled, { marginTop: 8 }]}
                 onPress={handleSaveLicenseNumber}
                 disabled={savingLicenseNumber}
-                data-testid="admin-coach-license-number-save-btn"
+                testID="admin-coach-license-number-save-btn"
               >
                 <Text style={styles.saveTeamsBtnText}>
                   {savingLicenseNumber ? 'Salvataggio...' : 'Salva N° Tesserino'}
@@ -1236,7 +1236,7 @@ export default function AdminCoachDetail() {
                     setEditingLevel(true);
                   }
                 }}
-                data-testid="admin-coach-level-edit-btn"
+                testID="admin-coach-level-edit-btn"
               >
                 <Ionicons name={editingLevel ? 'close' : 'create'} size={20} color="#007AFF" />
               </TouchableOpacity>
@@ -1279,7 +1279,7 @@ export default function AdminCoachDetail() {
                               borderColor: selected ? '#1E88E5' : '#CBD5E1',
                               backgroundColor: selected ? '#1E88E5' : '#fff',
                             }}
-                            data-testid={`admin-coach-level-pill-${lvl}`}
+                            testID={`admin-coach-level-pill-${lvl}`}
                           >
                             <Text style={{ color: selected ? '#fff' : '#1F2937', fontWeight: selected ? '700' : '500', fontSize: 13 }}>
                               {lvl}
@@ -1303,7 +1303,7 @@ export default function AdminCoachDetail() {
                 style={[styles.saveTeamsBtn, savingLevel && styles.saveBtnDisabled, { marginTop: 8 }]}
                 onPress={handleSaveLevel}
                 disabled={savingLevel}
-                data-testid="admin-coach-level-save-btn"
+                testID="admin-coach-level-save-btn"
               >
                 <Text style={styles.saveTeamsBtnText}>
                   {savingLevel ? 'Salvataggio...' : 'Salva Livello/Grado'}
@@ -1337,7 +1337,7 @@ export default function AdminCoachDetail() {
                   </View>
                 ) : null;
               })()}
-              <TouchableOpacity onPress={() => setEditing(!editing)}>
+              <TouchableOpacity onPress={() => setEditing(!editing)} testID="admin-coach-compensi-edit-btn">
                 <Text style={{ fontSize: 22 }}>{editing ? '✕' : '✏️'}</Text>
               </TouchableOpacity>
             </View>
@@ -1437,7 +1437,7 @@ export default function AdminCoachDetail() {
               {!(coach as any)?.linked_athlete_id && (
                 <>
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>📋 Compensi Pregressi Dichiarati (€)</Text>
-              <View style={{ backgroundColor: '#F3F4F6', borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB', paddingHorizontal: 12, paddingVertical: 12 }} data-testid="coach-prior-comp-readonly">
+              <View style={{ backgroundColor: '#F3F4F6', borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB', paddingHorizontal: 12, paddingVertical: 12 }} testID="coach-prior-comp-readonly">
                 <Text style={{ fontSize: 16, color: '#111827', fontWeight: '600' }}>
                   {`€ ${((parseFloat((otherAnnualCompensation || '0').replace(',', '.')) || 0)).toFixed(2).replace('.', ',')}`}
                 </Text>
@@ -1475,7 +1475,7 @@ export default function AdminCoachDetail() {
                     placeholder="gg/mm/aaaa"
                     placeholderTextColor="#999"
                     keyboardType="numeric"
-                    data-testid="coach-contract-start-input"
+                    testID="coach-contract-start-input"
                   />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -1498,7 +1498,7 @@ export default function AdminCoachDetail() {
                     placeholder="gg/mm/aaaa"
                     placeholderTextColor="#999"
                     keyboardType="numeric"
-                    data-testid="coach-contract-end-input"
+                    testID="coach-contract-end-input"
                   />
                 </View>
               </View>
@@ -1895,7 +1895,7 @@ export default function AdminCoachDetail() {
               style={{ marginTop: 12, padding: 12, backgroundColor: '#E3F2FD', borderRadius: 8, borderWidth: 1, borderColor: '#90CAF9' }}
               onPress={() => setReceiptsModalVisible(true)}
               activeOpacity={0.7}
-              data-testid="admin-coach-gia-percepito-btn"
+              testID="admin-coach-gia-percepito-btn"
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -1966,7 +1966,7 @@ export default function AdminCoachDetail() {
                 if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Errore', msg);
               }
             }}
-            data-testid="admin-coach-normalize-receipts-btn"
+            testID="admin-coach-normalize-receipts-btn"
           >
             <Ionicons name="construct-outline" size={16} color="#fff" />
             <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>🩺 Diagnostica quietanze (legacy fix)</Text>

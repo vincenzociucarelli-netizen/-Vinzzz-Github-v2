@@ -242,7 +242,7 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
   const showRegistry = eligibleUpperLeague || eligibleU17;
 
   return (
-    <View style={styles.card} data-testid="fipav-athlete-rules-panel">
+    <View style={styles.card} testID="fipav-athlete-rules-panel">
       <View style={styles.header}>
         <Ionicons name="shield-checkmark" size={20} color="#1E3A8A" />
         <Text style={styles.title}>Regole FIPAV — {state.athlete_name}</Text>
@@ -267,7 +267,7 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
       </View>
 
       {postKillswitch && (
-        <View style={styles.killswitchBanner} data-testid="fipav-killswitch-banner">
+        <View style={styles.killswitchBanner} testID="fipav-killswitch-banner">
           <Ionicons name="warning" size={16} color="#7C2D12" />
           <Text style={styles.killswitchText}>
             ⚠ Killswitch attivo (post {state.killswitch_date}): un ingresso in Serie superiore inibisce
@@ -295,7 +295,7 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
         {eligibleUpperLeague && (
           <>
             <Text style={styles.label}>Presenze in Serie Superiore (Serie C / D / 1ª Div)</Text>
-            <View style={[styles.counterValue, { backgroundColor: upperBadgeColor, alignSelf: 'flex-start', paddingHorizontal: 18 }]} data-testid="fipav-upper-count">
+            <View style={[styles.counterValue, { backgroundColor: upperBadgeColor, alignSelf: 'flex-start', paddingHorizontal: 18 }]} testID="fipav-upper-count">
               <Text style={styles.counterValueText}>{upperBadgeLabel} / 10</Text>
             </View>
             <Text style={styles.hintSmall}>
@@ -340,7 +340,7 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
                   <TouchableOpacity
                     onPress={() => removeCategoryChampionship(i)}
                     disabled={saving}
-                    data-testid={`fipav-cat-remove-${i}`}
+                    testID={`fipav-cat-remove-${i}`}
                   >
                     <Ionicons name="trash" size={14} color="#DC2626" />
                   </TouchableOpacity>
@@ -355,13 +355,13 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
                   placeholder="Es. Under 14, Under 16..."
                   style={styles.champInput}
                   editable={!saving}
-                  data-testid="fipav-cat-input"
+                  testID="fipav-cat-input"
                 />
                 <TouchableOpacity
                   style={styles.addChampBtn}
                   onPress={addCategoryChampionship}
                   disabled={saving || !newChampionship.trim()}
-                  data-testid="fipav-cat-add"
+                  testID="fipav-cat-add"
                 >
                   <Ionicons name="add" size={16} color="#fff" />
                 </TouchableOpacity>
@@ -372,11 +372,11 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
             )}
 
             <Text style={styles.label}>Gare nella settimana (max 3 — Lun→Dom)</Text>
-            <View style={[styles.counterValue, { backgroundColor: weeklyColor, alignSelf: 'flex-start', paddingHorizontal: 18 }]} data-testid="fipav-weekly-max">
+            <View style={[styles.counterValue, { backgroundColor: weeklyColor, alignSelf: 'flex-start', paddingHorizontal: 18 }]} testID="fipav-weekly-max">
               <Text style={styles.counterValueText}>Max in una settimana: {maxWeek}/3</Text>
             </View>
             {violationWeeks.length > 0 && (
-              <View style={styles.blockedNotice} data-testid="fipav-weekly-violation">
+              <View style={styles.blockedNotice} testID="fipav-weekly-violation">
                 <Ionicons name="warning" size={14} color="#7F1D1D" />
                 <Text style={styles.blockedText}>
                   ⚠ Limite 3 gare superato in {violationWeeks.length} settiman{violationWeeks.length > 1 ? 'e' : 'a'}:{' '}
@@ -391,7 +391,7 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
 
       {/* ====== REGISTRO PRESENZE GARA (datato) ====== */}
       {showRegistry && (
-        <View style={styles.section} data-testid="fipav-registry-section">
+        <View style={styles.section} testID="fipav-registry-section">
           <Text style={styles.sectionTitle}>Registro Presenze Gara (camp3)</Text>
           <Text style={styles.hintSmall}>
             Registra ogni ingresso con data + campionato. Max 1 gara al giorno. Alimenta i conteggi Serie superiore e gare settimanali.
@@ -411,7 +411,7 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
                     maxLength={10}
                     style={styles.champInput}
                     editable={!saving}
-                    data-testid="fipav-presence-date"
+                    testID="fipav-presence-date"
                   />
                 </View>
                 <View style={{ flex: 1.3 }}>
@@ -422,7 +422,7 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
                       onValueChange={(v) => setNewPresenceChamp(v)}
                       enabled={!saving}
                       style={{ height: 40 }}
-                      data-testid="fipav-presence-champ"
+                      testID="fipav-presence-champ"
                     >
                       <Picker.Item label="-- Seleziona --" value="" />
                       {presenceOptions.map((opt) => (
@@ -436,7 +436,7 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
                 style={[styles.addPresenceBtn, (saving || !newDate || !newPresenceChamp) && styles.readOnlyDim]}
                 onPress={addPresence}
                 disabled={saving || !newDate || !newPresenceChamp}
-                data-testid="fipav-presence-add"
+                testID="fipav-presence-add"
               >
                 <Ionicons name="add-circle" size={16} color="#fff" />
                 <Text style={styles.addPresenceBtnText}>Aggiungi ingresso</Text>
@@ -448,7 +448,7 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
             <Text style={styles.notEligible}>Nessun ingresso registrato.</Text>
           ) : (
             presences.map((p) => (
-              <View key={p.id} style={styles.presenceRow} data-testid={`fipav-presence-${p.id}`}>
+              <View key={p.id} style={styles.presenceRow} testID={`fipav-presence-${p.id}`}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.presenceDate}>{fmtIt(p.date)}</Text>
                   <Text style={styles.presenceChamp}>{p.championship}</Text>
@@ -457,7 +457,7 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
                   <Text style={styles.levelBadgeText}>{p.level === 'upper' ? 'SERIE SUP.' : 'CATEGORIA'}</Text>
                 </View>
                 {!readOnly && (
-                  <TouchableOpacity onPress={() => removePresence(p.id)} disabled={saving} data-testid={`fipav-presence-remove-${p.id}`}>
+                  <TouchableOpacity onPress={() => removePresence(p.id)} disabled={saving} testID={`fipav-presence-remove-${p.id}`}>
                     <Ionicons name="trash" size={16} color="#DC2626" />
                   </TouchableOpacity>
                 )}

@@ -379,7 +379,7 @@ export default function CoachesScreen() {
             {(item as any).pro_data_pending_review && (
               <View
                 style={{ backgroundColor: '#FFEBEE', borderColor: '#C62828', borderWidth: 1, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, flexDirection: 'row', alignItems: 'center', gap: 3 }}
-                data-testid={`coach-pro-pending-review-${item.id}`}
+                testID={`coach-pro-pending-review-${item.id}`}
               >
                 <Ionicons name="warning" size={11} color="#C62828" />
                 <Text style={{ fontSize: 10, color: '#C62828', fontWeight: '700' }}>
@@ -395,7 +395,7 @@ export default function CoachesScreen() {
           {/* 🆕 04/07/2026 — Snapshot squadre/palestre precedenti (post-riconferma bulk) */}
           {(item as any).assignment_pending_review && (
             <Text style={{ fontSize: 11, color: '#9E9E9E', fontStyle: 'italic', marginTop: 2 }} numberOfLines={2}
-              data-testid={`coach-prev-teams-${item.id}`}>
+              testID={`coach-prev-teams-${item.id}`}>
               Prec.: {getTeamNames((item as any).assigned_teams_previous_season) || '—'} · da riconfermare
             </Text>
           )}
@@ -427,7 +427,7 @@ export default function CoachesScreen() {
         <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.replace('/admin')} data-testid="header-home-btn" style={{ marginLeft: 8 }}>
+        <TouchableOpacity onPress={() => router.replace('/admin')} testID="header-home-btn" style={{ marginLeft: 8 }}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Coach</Text>
