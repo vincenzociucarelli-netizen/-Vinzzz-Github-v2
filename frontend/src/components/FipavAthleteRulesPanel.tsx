@@ -248,6 +248,11 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
   // Feature A (U17): stagione 2026/2027 → nati >= 2010
   const eligibleU17 = birthYear !== null && birthYear >= 2010;
 
+  // 🆕 01/08/2026 — Nella vista coach (readOnly) nascondi del tutto il pannello se
+  // l'atleta non è soggetto ad alcuna regola FIPAV (es. bimbi del minivolley),
+  // così i coach del minivolley non vedono regole irrilevanti.
+  if (readOnly && !eligibleUpperLeague && !eligibleU17) return null;
+
   const upperCount = state.upper_league_presences;
   const upperBadgeColor = upperCount >= 11 ? '#DC2626' : (upperCount >= 10 ? '#EA580C' : '#059669');
   const upperBadgeLabel = upperCount >= 11 ? `⛔ ${upperCount} — Bloccato` : (upperCount >= 10 ? `⚠ ${upperCount} — Ultima possibile` : `${upperCount}`);
@@ -255,9 +260,12 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
 
   // 🆕 01/08/2026 — Registro datato
   const presences = state.game_presences || [];
-  const upperOptions = state.upper_league_options || ['Serie C', 'Serie D', '1^ Divisione'];
+  // Menu a tendina raggruppato: Campionati di Serie / Campionati di Categoria
+  const SERIE_OPTIONS = ['Serie C', 'Serie D', '1^ Divisione', '2^ Divisione'];
+  const CATEGORIA_OPTIONS = ['Under 12', 'Under 13', 'Under 14', 'Under 15', 'Under 17', 'Under 19'];
   const matchChamps = Array.from(new Set(matchOptions.map(o => o.championship).filter(Boolean)));
-  const presenceOptions = Array.from(new Set([...upperOptions, ...(state.category_championships || []), ...matchChamps]));
+  const extraChamps = Array.from(new Set([...matchChamps, ...(state.category_championships || [])]))
+    .filter(c => c && !SERIE_OPTIONS.includes(c) && !CATEGORIA_OPTIONS.includes(c));
   const violationWeeks = state.weekly_summary?.violation_weeks || [];
   const maxWeek = state.weekly_summary?.max_in_any_week || 0;
   const weeklyColor = maxWeek > 3 ? '#DC2626' : (maxWeek === 3 ? '#EA580C' : '#059669');
@@ -493,13 +501,24 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
                   <View style={styles.presencePicker}>
                     <Picker
                       selectedValue={newPresenceChamp}
-                      onValueChange={(v) => setNewPresenceChamp(v)}
+                      onValueChange={(v) => { if (String(v).startsWith('__hdr')) return; setNewPresenceChamp(v); }}
                       enabled={!saving}
                       style={{ height: 40 }}
                       testID="fipav-presence-champ"
                     >
                       <Picker.Item label="-- Seleziona --" value="" />
-                      {presenceOptions.map((opt) => (
+                      <Picker.Item label="── Campionati di Serie ──" value="__hdr_serie" color="#9CA3AF" />
+                      {SERIE_OPTIONS.map((opt) => (
+                        <Picker.Item key={opt} label={opt} value={opt} />
+                      ))}
+                      <Picker.Item label="── Campionati di Categoria ──" value="__hdr_cat" color="#9CA3AF" />
+                      {CATEGORIA_OPTIONS.map((opt) => (
+                        <Picker.Item key={opt} label={opt} value={opt} />
+                      ))}
+                      {extraChamps.length > 0 && (
+                        <Picker.Item label="── Altri (da calendario) ──" value="__hdr_extra" color="#9CA3AF" />
+                      )}
+                      {extraChamps.map((opt) => (
                         <Picker.Item key={opt} label={opt} value={opt} />
                       ))}
                     </Picker>

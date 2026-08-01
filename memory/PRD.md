@@ -59,6 +59,13 @@ SENDER_NAME=RegistraTEAM
 
 ## Status - Completed
 
+### 01/08/2026 (parte 8) - Menu campionati raggruppato + nascondi FIPAV per coach minivolley
+- **Menu a tendina raggruppato (`FipavAthleteRulesPanel.tsx`)**: nel Registro Presenze il selettore campionato ora mostra due gruppi con intestazioni: "── Campionati di Serie ──" (Serie C, Serie D, 1^ Divisione, **2^ Divisione**) e "── Campionati di Categoria ──" (Under 12/13/14/15/17/19). Le intestazioni (value `__hdr_*`) non sono selezionabili. Eventuali campionati extra dal calendario compaiono sotto "── Altri (da calendario) ──". Classificazione invariata: solo Serie C/D/1^ Divisione contano come Serie Superiore; 2^ Divisione e Under → categoria (contano solo per le 3 gare settimanali).
+- **Nascondi FIPAV per coach minivolley**: nella vista coach (`coach/athlete/[id].tsx`, readOnly) il pannello Regole FIPAV ora si nasconde del tutto se l'atleta non è soggetto ad alcuna regola (`!eligibleUpperLeague && !eligibleU17`) — così i coach del minivolley (bimbi troppo piccoli, sempre non soggetti) non vedono regole irrilevanti. In vista admin resta visibile (con "non soggetto") per supervisione.
+- **VERIFICATO**: screenshot del menu raggruppato (13 voci corrette). Guard minivolley = conditional a basso rischio in readOnly.
+- **DA FARE (in attesa conferma utente)**: regola "max 2 campionati di categoria" con blocco automatico quando un atleta più piccolo gioca in una categoria superiore (es. U13 che gioca U17 → U13+U17 diventano i suoi 2 campionati, bloccando U14/U15). Da definire comportamento (blocco vs avviso) prima di implementare.
+- **NOTA DEPLOY**: "Save to Github" → Vercel (solo frontend).
+
 ### 01/08/2026 (parte 7 + REVERT) - Classificazione Serie Superiore: modifica ANNULLATA
 - Avevo modificato la classificazione per far contare "Prima Divisione Femminile" come Serie Superiore. **ERRORE di dominio**: per Ametista Giulia la 1ª Divisione è il SUO campionato (categoria), non una serie superiore. Contarla come superiore era sbagliato.
 - **REVERT**: ripristinata la classificazione originale a corrispondenza esatta (`championship in {"Serie C","Serie D","1^ Divisione"}`). Rimosse `classify_fipav_level` e `_recompute_levels` (0 riferimenti residui).
