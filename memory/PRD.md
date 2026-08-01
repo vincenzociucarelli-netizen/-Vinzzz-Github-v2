@@ -59,6 +59,15 @@ SENDER_NAME=RegistraTEAM
 
 ## Status - Completed
 
+### 01/08/2026 (parte 7) - FIX classificazione Serie Superiore ("Prima Divisione Femminile")
+- **BUG (Vincenzo)**: registrando una gara di "Prima Divisione Femminile" (= 1ª Divisione, Serie Superiore per le femmine), si aggiornava solo il contatore gare settimanali ma NON "Presenze in Serie Superiore" (restava 0/10). L'ingresso veniva marcato CATEGORIA invece che Serie Superiore.
+- **Root cause**: la classificazione confrontava il nome esatto con `{"Serie C","Serie D","1^ Divisione"}` → "Prima Divisione Femminile" (e altre varianti) non combaciava.
+- **Fix (`server.py`)**: nuova funzione `classify_fipav_level()` che normalizza (unicode, minuscole, rimuove ^/°/ª) e riconosce le varianti: "serie c"/"serie d" e "divisione" + ("prima" oppure 1/1a) → upper; il resto (Under NN, Seconda Divisione) → category. Applicata in add/persist/get + `_recompute_levels()` per il self-heal degli ingressi già salvati (si correggono alla prossima lettura/scrittura).
+- **Comportamento**: gli ingressi upper contano SIA in "Presenze in Serie Superiore" SIA nel conteggio settimanale; i category solo nel settimanale.
+- **VERIFICATO testing agent (iteration_91): 6/6 backend PASS** (test file `/app/backend/tests/test_fipav_classify_level.py`).
+- **Chiarimento parte 6**: nella Foto della parte 7 il pannello "Regole FIPAV" per Ametista Giulia È visibile in cima alla tab Presenze (quindi la parte 6 collassabile ha risolto l'ingombro; il pannello c'era già).
+- **NOTA DEPLOY**: deploy Render (backend). Nessuna modifica frontend in questa parte.
+
 ### 01/08/2026 (parte 6) - Calendario Gare collassabile + filtro 3-vie
 - **Richiesta**: la lista gare nella card "Calendario Gare" diventava troppo lunga e copriva le altre info (spingendo in basso il pannello Regole FIPAV, Squadra, Statistiche).
 - **Fix (`AthleteMatchesCard.tsx`)**: la card è ora **collassabile** (collassata di default, header con pill del conteggio + chevron toggle, testID `athlete-matches-toggle`) e ha un **filtro a 3 vie**: "Da giocare" (gare future), "Giocate" (gare passate, più recenti prima), "Totale" (tutte). La sezione link "Calendario Federazione" resta sempre visibile anche a card collassata. Export .ics invariato. Vale per vista atleta (`/athlete/presenze`) e vista admin (tab Presenze).
