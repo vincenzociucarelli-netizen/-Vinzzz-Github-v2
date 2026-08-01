@@ -59,6 +59,13 @@ SENDER_NAME=RegistraTEAM
 
 ## Status - Completed
 
+### 01/08/2026 (parte 6) - Calendario Gare collassabile + filtro 3-vie
+- **Richiesta**: la lista gare nella card "Calendario Gare" diventava troppo lunga e copriva le altre info (spingendo in basso il pannello Regole FIPAV, Squadra, Statistiche).
+- **Fix (`AthleteMatchesCard.tsx`)**: la card è ora **collassabile** (collassata di default, header con pill del conteggio + chevron toggle, testID `athlete-matches-toggle`) e ha un **filtro a 3 vie**: "Da giocare" (gare future), "Giocate" (gare passate, più recenti prima), "Totale" (tutte). La sezione link "Calendario Federazione" resta sempre visibile anche a card collassata. Export .ics invariato. Vale per vista atleta (`/athlete/presenze`) e vista admin (tab Presenze).
+- **Chiarimento posizione info FIPAV**: nella vista admin il pannello "Regole FIPAV" (con "Presenze in Serie Superiore X/10" e "Gare nella settimana max 3") è IN CIMA alla tab Presenze, sopra il Calendario Gare (verificato: index 70 vs 969). Le info non sono sparite; erano solo spinte in basso dalla lista gare lunga. Il pannello si nasconde (return null) solo se la feature `fipav_minor_rules` è disattivata per la società o se l'atleta non è caricato.
+- **VERIFICATO testing agent (iteration_90): 5/5 PASS** su vista atleta e admin.
+- **NOTA DEPLOY**: "Save to Github" → Vercel (solo frontend).
+
 ### 01/08/2026 (parte 5) - Link calendario federazione per atleta + rimozione duplicazione
 - **Atleta nazionale (Serie A/B) — link calendario FIPAV**: gli atleti dei campionati nazionali non hanno gare importabili automaticamente, quindi la card "Calendario Gare" restava vuota. Ora la card mostra una sezione "📅 Calendario ufficiale FIPAV" con un pulsante "Calendario Federazione — <squadra>" che apre il `calendar_link` della squadra (lo stesso link che l'admin imposta sulla scheda squadra). Backend: `GET /athletes/{id}/matches` ora restituisce anche `teams: [{id, name, calendar_link}]`. Frontend: `AthleteMatchesCard` mostra i bottoni per i team con `calendar_link`.
 - **Rimozione duplicazione "Calendario Gare"**: la card era presente sia in "Da fare" (`app/athlete/index.tsx`, aggiunta il 31/07) sia in "Presenze" (`app/athlete/presenze.tsx`). Rimossa da "Da fare"; resta solo in "Presenze" (sede naturale accanto a Orari Allenamenti e Statistiche). "Da fare" mantiene "Prossimi Impegni" e "Mappa Palestre".
