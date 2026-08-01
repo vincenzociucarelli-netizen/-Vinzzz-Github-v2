@@ -36,6 +36,9 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
   const [teams, setTeams] = useState<TeamInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
+  // 🆕 01/08/2026 — Card collassabile + filtro Da giocare/Giocate/Totale
+  const [collapsed, setCollapsed] = useState(true);
+  const [filter, setFilter] = useState<'upcoming' | 'played' | 'all'>('upcoming');
 
   useEffect(() => {
     let mounted = true;
@@ -93,13 +96,14 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
     );
   }
 
-  // 🐛 01/08/2026 — In bassa stagione (nessuna gara futura) mostravamo card vuota
-  // pur avendo l'intera stagione a calendario. Ora: se ci sono gare future le
-  // mostriamo; altrimenti mostriamo il calendario completo (più recenti prima).
+  // 🆕 01/08/2026 — Filtro gare: Da giocare / Giocate / Totale
   const now = Date.now();
-  const upcoming = matches.filter((m) => new Date(m.date).getTime() >= now);
-  const seasonOver = upcoming.length === 0;
-  const baseList = seasonOver ? [...matches].reverse() : upcoming;
+  const upcoming = matches.filter((m) => new Date(m.date).getTime() >= now)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const played = matches.filter((m) => new Date(m.date).getTime() < now)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const allSorted = [...matches].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const baseList = filter === 'upcoming' ? upcoming : (filter === 'played' ? played : allSorted);
   const shown = expanded ? baseList : baseList.slice(0, 5);
   const fmtDate = (iso: string) => {
     try {
@@ -110,57 +114,86 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
 
   const federationTeams = teams.filter((t) => t.calendar_link);
 
+  const FilterTab = ({ id, label, count }: { id: 'upcoming' | 'played' | 'all'; label: string; count: number }) => (
+    <TouchableOpacity
+      style={[styles.filterTab, filter === id && styles.filterTabActive]}
+      onPress={() => { setFilter(id); setExpanded(false); }}
+      testID={`athlete-matches-filter-${id}`}
+    >
+      <Text style={[styles.filterTabText, filter === id && styles.filterTabTextActive]}>{label} ({count})</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <View style={styles.card} testID="athlete-matches-card">
-      <View style={styles.header}>
+      <TouchableOpacity
+        style={styles.header}
+        activeOpacity={0.7}
+        onPress={() => setCollapsed(!collapsed)}
+        testID="athlete-matches-toggle"
+      >
         <Ionicons name="calendar" size={20} color="#1E3A8A" />
         <Text style={styles.title}>Calendario Gare</Text>
-        {matches.length > 0 && (
-          <TouchableOpacity onPress={exportICS} style={styles.exportBtn} testID="athlete-matches-export-ics">
-            <Ionicons name="download" size={14} color="#fff" />
-            <Text style={styles.exportBtnText}>Esporta .ics</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-      <Text style={styles.subtitle}>
-        {seasonOver
-          ? 'Calendario completo delle gare della stagione.'
-          : 'Prossime gare da tutte le squadre in cui l\u2019atleta gioca.'}
-      </Text>
-      {matches.length === 0 ? (
-        <Text style={styles.empty}>Nessuna gara caricata a calendario.</Text>
-      ) : (
+        <View style={styles.countPill}><Text style={styles.countPillText}>{matches.length}</Text></View>
+        <View style={{ flex: 1 }} />
+        <Ionicons name={collapsed ? 'chevron-down' : 'chevron-up'} size={20} color="#1E3A8A" />
+      </TouchableOpacity>
+
+      {!collapsed && (
         <>
-          {shown.map((m) => {
-            const isHome = (m.home_away || '').toLowerCase() === 'home';
-            return (
-              <View key={m.id} style={styles.row} testID={`athlete-match-${m.id}`}>
-                <View style={styles.rowMain}>
-                  <Text style={styles.rowDate}>{fmtDate(m.date)}</Text>
-                  <Text style={styles.rowTeams} numberOfLines={1}>
-                    {isHome ? `${m.team_name || 'Casa'} vs ${m.opponent}` : `${m.opponent} vs ${m.team_name || 'Trasferta'}`}
-                  </Text>
-                  {m.venue && <Text style={styles.rowVenue}>📍 {m.venue}</Text>}
-                </View>
-                <View style={[styles.badge, isHome ? styles.badgeHome : styles.badgeAway]}>
-                  <Text style={styles.badgeText}>{isHome ? 'CASA' : 'FUORI'}</Text>
-                </View>
-              </View>
-            );
-          })}
-          {baseList.length > 5 && (
-            <TouchableOpacity onPress={() => setExpanded(!expanded)} style={styles.showMore}>
-              <Text style={styles.showMoreText}>
-                {expanded ? 'Mostra meno' : `Vedi tutte (${baseList.length})`}
-              </Text>
+          {matches.length > 0 && (
+            <TouchableOpacity onPress={exportICS} style={[styles.exportBtn, { alignSelf: 'flex-start', marginBottom: 10 }]} testID="athlete-matches-export-ics">
+              <Ionicons name="download" size={14} color="#fff" />
+              <Text style={styles.exportBtnText}>Esporta .ics</Text>
             </TouchableOpacity>
+          )}
+          {matches.length > 0 && (
+            <View style={styles.filterRow}>
+              <FilterTab id="upcoming" label="Da giocare" count={upcoming.length} />
+              <FilterTab id="played" label="Giocate" count={played.length} />
+              <FilterTab id="all" label="Totale" count={matches.length} />
+            </View>
+          )}
+          {matches.length === 0 ? (
+            <Text style={styles.empty}>Nessuna gara caricata a calendario.</Text>
+          ) : baseList.length === 0 ? (
+            <Text style={styles.empty}>
+              {filter === 'upcoming' ? 'Nessuna gara da giocare.' : 'Nessuna gara in questa vista.'}
+            </Text>
+          ) : (
+            <>
+              {shown.map((m) => {
+                const isHome = (m.home_away || '').toLowerCase() === 'home';
+                return (
+                  <View key={m.id} style={styles.row} testID={`athlete-match-${m.id}`}>
+                    <View style={styles.rowMain}>
+                      <Text style={styles.rowDate}>{fmtDate(m.date)}</Text>
+                      <Text style={styles.rowTeams} numberOfLines={1}>
+                        {isHome ? `${m.team_name || 'Casa'} vs ${m.opponent}` : `${m.opponent} vs ${m.team_name || 'Trasferta'}`}
+                      </Text>
+                      {m.venue && <Text style={styles.rowVenue}>📍 {m.venue}</Text>}
+                    </View>
+                    <View style={[styles.badge, isHome ? styles.badgeHome : styles.badgeAway]}>
+                      <Text style={styles.badgeText}>{isHome ? 'CASA' : 'FUORI'}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+              {baseList.length > 5 && (
+                <TouchableOpacity onPress={() => setExpanded(!expanded)} style={styles.showMore}>
+                  <Text style={styles.showMoreText}>
+                    {expanded ? 'Mostra meno' : `Vedi tutte (${baseList.length})`}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </>
       )}
 
       {/* 🆕 01/08/2026 — Link al calendario ufficiale FIPAV della squadra.
-          Fondamentale per gli atleti dei campionati nazionali (Serie A/B) che
-          non hanno gare importabili automaticamente. */}
+          Sempre visibile (anche a card collassata): fondamentale per gli atleti
+          dei campionati nazionali (Serie A/B) senza gare importabili. */}
       {federationTeams.length > 0 && (
         <View style={styles.fedSection} testID="athlete-federation-links">
           <Text style={styles.fedTitle}>📅 Calendario ufficiale FIPAV</Text>
@@ -184,8 +217,15 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
 
 const styles = StyleSheet.create({
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 16, marginTop: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  title: { fontSize: 16, fontWeight: '700', color: '#1E3A8A', flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  title: { fontSize: 16, fontWeight: '700', color: '#1E3A8A' },
+  countPill: { backgroundColor: '#EEF2FF', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
+  countPillText: { color: '#1E3A8A', fontSize: 12, fontWeight: '700' },
+  filterRow: { flexDirection: 'row', gap: 6, marginBottom: 10 },
+  filterTab: { flex: 1, paddingVertical: 7, borderRadius: 8, backgroundColor: '#F3F4F6', alignItems: 'center' },
+  filterTabActive: { backgroundColor: '#1E3A8A' },
+  filterTabText: { fontSize: 11.5, fontWeight: '600', color: '#4B5563' },
+  filterTabTextActive: { color: '#fff' },
   exportBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#059669', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
   exportBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   subtitle: { fontSize: 12, color: '#6B7280', marginBottom: 10 },
