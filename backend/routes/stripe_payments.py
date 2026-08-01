@@ -169,7 +169,7 @@ async def create_pending_payment_and_checkout(
         if forwarded_host:
             base = f"{forwarded_proto}://{forwarded_host}"
     if not base:
-        base = "https://registrateam-vol.preview.emergentagent.com"
+        base = "https://zaino-coach.preview.emergentagent.com"
     success_url = f"{base}/parent/payment/success?session_id={{CHECKOUT_SESSION_ID}}&payment_id={payment_id}"
     cancel_url = f"{base}/parent/payment/cancel?payment_id={payment_id}"
 
@@ -243,7 +243,7 @@ async def create_stripe_checkout(
         if forwarded_host:
             base = f"{forwarded_proto}://{forwarded_host}"
     if not base:
-        base = "https://registrateam-vol.preview.emergentagent.com"
+        base = "https://zaino-coach.preview.emergentagent.com"
     success_url = f"{base}/parent/payment/success?session_id={{CHECKOUT_SESSION_ID}}&payment_id={payment_id}"
     cancel_url = f"{base}/parent/payment/cancel?payment_id={payment_id}"
 

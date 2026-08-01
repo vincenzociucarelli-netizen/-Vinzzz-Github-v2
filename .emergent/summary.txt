@@ -1,245 +1,152 @@
 <analysis>**original_problem_statement**: 
-The user is building a comprehensive sports team management application for Italian volleyball societies (RegistraTEAM). The primary focus is on strict GDPR compliance, role-specific onboarding flows, manual parent-athlete linking workflows with approval steps, dynamic legal document generation (PDFs), and automated calendar/match syncing with the official FIPAV regional website.
+The user is building RegistraTEAM, a comprehensive sports team management application for Italian volleyball societies. Focuses include strict GDPR compliance, manual parent-athlete linking, role-specific onboarding, multi-tenancy data isolation, Riforma Sport threshold tracking, a dual-role unified hub (Zaino Coach), and a Pre-registration system. 
+PRODUCT REQUIREMENTS: 
+* GDPR Document Generation: Dynamic PDFs.
+* Threshold Management (Riforma Sport): Cumulative threshold calculations for dual-roles.
+* Gradual Registry Import Tool: Admins import users one by one into the new season.
+* Smart Lite login for minors using  e PIN.
+* Persistent  tied to Fiscal Code.
+* Multi-tenant Stripe Payments and Checkout.
+* Admin Notes Board for internal tasks.
+* Transactional Emails via Brevo using a centralized verified domain ().
+* Pregresso Compensation Declarations: Digital signatures for prior compensation from other societies.
+* Multi-sport Architecture & FIPAV Rules: specific rules for minors in volleyball.
 
-**PRODUCT REQUIREMENTS**:
-*   **GDPR Document Generation**: Dynamic, multi-page PDFs with very specific legal wording for adults vs. minors.
-*   **Multi-Parent Linking**: Strict approval flow required. The approver must be set as the .
-*   **Calendar Syncing**: The system must allow updating match dates/times either by re-importing an Excel file (updating only differences) or via a web scraper that pulls live data from the FIPAV Umbria portal.
-*   **Frontend Stability**: Due to Expo tunnel issues, the app is tested exclusively via static web builds.
-
-**User's preferred language**: italiano
-*(INSTRUCT NEXT AGENT: You MUST automatically detect the user's primary language from their messages inside the <trajectory> tag and INSTRUCT next agent to respond in the user's preferred language only. For this job: **Rispondi sempre e solo in Italiano**).*
+**User's preferred language**: INSTRUCT NEXT AGENT: You MUST automatically detect the user's primary language from their messages inside the <trajectory> tag and INSTRUCT next agent to respond in the user's preferred language only. For this job: **Rispondi sempre e solo in Italiano**.
 
 **what currently exists?** 
-A full-stack sports team management app (React/Expo frontend + FastAPI backend + MongoDB). Features highly dynamic PDF generation for GDPR consents, a complex multi-parent approval system, role-based dashboards, and a newly integrated FIPAV web scraper to automatically synchronize match schedules. The frontend is served strictly as a static build (env: load .env
-env: export EXPO_TUNNEL_SUBDOMAIN EXPO_PACKAGER_HOSTNAME EXPO_PUBLIC_BACKEND_URL EXPO_USE_FAST_RESOLVER METRO_CACHE_ROOT EXPO_DEVTOOLS_LISTEN_ADDRESS REACT_NATIVE_PACKAGER_HOSTNAME EXPO_PACKAGER_PROXY_URL
-Fast resolver is enabled.
-Starting Metro Bundler
-Web node_modules/expo-router/entry.js ▓▓▓▓▓▓░░░░░░░░░░ 40.2% ( 933/1575)
-Web Bundling failed 4084ms node_modules/expo-router/entry.js (1861 modules) && ).
+A live full-stack app (React/Expo Web frontend + FastAPI backend + MongoDB). Centralized Brevo email integration is deployed. Complex logic is in place for multi-tenancy, dynamic document generation (GDPR, Receipts, Declarations), Stripe payments, FIPAV scraping for matches, specialized dashboards for Admins, Coaches, Parents, and Athletes. Export functionalities for matches (.ics format) exist for multiple user roles.
 
 **Last working item**:
-- **Last item agent was working**: The agent implemented a Richiedi rimozione mie immagini (Request image removal) button in the Parent Profile's Consent section. Clicking this button triggers an internal notification to the admin. The user then ended the session for the day (è tardi, ci sentiamo domani).
-- **Status**: USER VERIFICATION PENDING
-- **Agent Testing Done**: Y
-- **Which testing method agent to use?**: manual testing by curl / bash scripts for backend notification verification.
-- **User Testing Done**: N
+    - Last item agent was working: Fixing the National League (Serie A/B) calendar import from the Admin panel and adding the ICS Calendar export () directly onto the 18+ PRO athlete dashboard (). 
+    - Status: USER VERIFICATION PENDING
+    - Agent Testing Done: Y
+    - Which testing method agent to use? screenshot tool / manual testing by curl.
+    - User Testing Done: N
 
 **All Pending/In progress Issue list**:
-  - Issue 1: Attend User's QA Feedback (P0)
-     - Attempted fixes: A large amount of updates were made to the GDPR flow, invite codes, and match times. The user went to sleep and will test these changes tomorrow.
-     - Next debug checklist: Await user instructions or bug reports from their manual testing.
-     - Why fix this issue and what will be achieved with the fix?: Ensures all recent sweeping changes to registration and privacy logic are stable.
-     - Status: USER VERIFICATION PENDING
-     - Is recurring issue? N
+  - Issue 1: Admin Nazionale Calendar Import Validation (P0)
+     - Attempted fixes: The agent added the Girone selection, the 2026/2027 season, fixed date input masking, and implemented partial search. However, the user's last message stated: *Il nazionale visto da admin non funziona Foto 1/2/2b/3* (images removed). The agent made some final edits to , but did not fully verify if the exact edge case causing the failure was resolved.
+     - Next debug checklist: Check  and . Verify the UI flow for National leagues (Region = Nazionale). Ensure the preview API correctly parses the matches when Girone and a custom Society name are provided.
+     - Why fix this issue and what will be achieved with the fix?: Admins must be able to import National league calendars smoothly without UI blockers.
+     - Status: TESTING PENDING / USER VERIFICATION PENDING
+     - Is recurring issue? Y
      - Should Test frontend/backend/both after fix?: Both
-     - Blocked on other issue: None
+     - Blocked on other issue: None.
 
-**In progress Task List**:
-*None*
+  - Issue 2: GitHub Branch Cleanup (P2)
+     - Attempted fixes: Agent previously provided instructions.
+     - Next debug checklist: Remind user to safely delete the stale  branches generated by Emergent.
+     - Why fix this issue and what will be achieved with the fix?: Keeps repository clean.
+     - Status: NOT STARTED
+     - Is recurring issue? Y
+     - Should Test frontend/backend/both after fix?: NA
+     - Blocked on other issue: None.
+
+**In progress Task List**: 
+  None currently, as the agent technically completed the requested implementations, but they await bug-fixing/user confirmation.
 
 **Upcoming and Future Tasks**
-  - (P1) Implementare opzione per re-importare file Excel del calendario per aggiornare le date delle partite (aggiornamento differenziale / hybrid scraper approach).
-  - (P1) UI per atleti con contratti formali (pianificato post-lancio).
-  - (P2) Refactoring del file monolitico  (>23,000 righe) in routers/models separati. (CRITICAL TECH DEBT)
-  - (P2) Re-implementazione Stripe per pagamenti.
-  - (P2) Assistenza pubblicazione dominio e App Store.
-  - (P3) Aggiungere la possibilità per i genitori di caricare uno screenshot quando richiedono la rimozione di una foto all'admin.
+  - (P2) **Sponsor Page**: Create  protected by admin password. Include vector logos, contracts, invoices, payment reminders.
+  - (P3) **Stripe Payments History**: Admin panel with filters (date/status/athlete) and CSV export for end-of-year accounting.
+  - (P3) **Report Rimborsi**: Add a dedicated panel to see all Stripe refunds with reasons and the admin who processed them.
+  - (P3) **Admin Dashboard Igiene Dati**: A read-only panel showing athletes/users with anomalies (missing CF, orphans, duplicate CF, etc.).
+  - (P3) **Render Cold Starts & RAM Optimization**: Cursor pagination, projections, and lazy imports in  to prevent OOM errors.
 
 **Completed work in this session**
-- Sincronizzazione automatica Calendario Gare FIPAV con scraper backend e pulsante UI (DONE)
-- Aggiunti Tab Filtro (Da disputare, Giocate, Tutte) nel calendario admin (DONE)
-- Salvataggio persistente delle preferenze di importazione FIPAV (Federazione, Regione, Stagione) nel DB per ogni società (DONE)
-- Risolto bug orari partite (+2h): forzato  nel frontend per compensare le date salvate come locali ma taggate UTC nel DB (DONE)
-- Sostituito ovunque C.F./P.IVA con solo Codice Fiscale o C.F., rimossi i riferimenti a P.IVA nei PDF (DONE)
-- Risolto bug per cui il secondo genitore (es. Stefy Graff) vedeva l'avviso Password protezione dati mancante perché il sistema non controllava la password condivisa (DONE)
-- Rimosso il consenso Immagini uso interno per i genitori (rimane solo per i minori), mantenuto Immagini promozionali come facoltativo (DONE)
-- Aggiunta clausola Riprese di contesto nei testi dell'informativa privacy GDPR per gli adulti (DONE)
-- Rimossa la richiesta della Password Dati durante la registrazione del Genitore (viene chiesta solo per l'inserimento dell'atleta) (DONE)
-- Reso il **Codice Invito Società** obbligatorio per TUTTI i ruoli durante la registrazione (inclusi i genitori) (DONE)
-- Aggiunto tasto Richiesta rimozione foto nel profilo Genitore che invia notifica all'Admin (DONE)
+- Fixed 0€ Compensation Acceptance for 18+ PRO athletes (so they can declare prior pregresso earnings) (DONE)
+- Implemented Auto-Activation for 18+ PRO athletes when their medical certificate is verified by Admin (DONE)
+- Expanded National League Calendar Import (added 26-27 season, Girone text input, partial society name search) (DONE)
+- Fixed date input masking logic () in  (DONE)
+- Added  (Calendar + ICS export) to the Minor dashboard () and authorized JWT for minors in backend (DONE)
+- Added  to the main Athlete dashboard () for 18+ / 18+ PRO users (DONE)
 
 **Earlier issues found/mentioned but not fixed**
-*None observed. Agent cleared all reported bugs.*
+   - Issue 1: Render backend RAM limits causing 502 Bad Gateway / Blank pages.
+   - Debug checklist: Implement cursor pagination, projections, and lazy imports in .
+   - Why to solve this issue and what will be achieved with this?: App stability as DB grows.
+   - Should Test frontend/backend/both after fix: Backend
+   - Is recurring issue? Y
 
 **Known issue recurrence from previous fork**
-  - Issue recurrence in previous fork: Expo Tunnel Instability ([00:06:21] Starting project at /app/frontend throws errors and fails).
-  - Recurrence count: 12+
-  - Status: BLOCKED (Workaround obbligatorio).
-  - Note: MANDATORY WORKAROUND. DEVI generare una build statica (env: load .env
-env: export EXPO_TUNNEL_SUBDOMAIN EXPO_PACKAGER_HOSTNAME EXPO_PUBLIC_BACKEND_URL EXPO_USE_FAST_RESOLVER METRO_CACHE_ROOT EXPO_DEVTOOLS_LISTEN_ADDRESS REACT_NATIVE_PACKAGER_HOSTNAME EXPO_PACKAGER_PROXY_URL
-Fast resolver is enabled.
-Starting Metro Bundler
-Web node_modules/expo-router/entry.js ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░ 99.9% (1882/1882)
-Web Bundled 2635ms node_modules/expo-router/entry.js (1882 modules)
-
-› Assets (38):
-assets/fonts/Ionicons.b4eb097d35f44ed943676fd56f6bdc51.ttf (390 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/AntDesign.3f78af31cca60105799838a1a7a59fbd.ttf (130 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Entypo.31b5ffea3daddc69dd01a1f3d6cf63c5.ttf (66.2 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/EvilIcons.140c53a7643ea949007aa9a282153849.ttf (13.5 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ca4b48e04dc1ce10bfbddb262c8b835f.ttf (55.6 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome.b06871f281fee6b241d60582ae9369b9.ttf (166 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Brands.3b89dd103490708d19a95adcae52210e.ttf (134 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Regular.1f77739ca9ff2188b539c36f30ffa2be.ttf (33.7 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Solid.605ed7926cf39a2ad5ec2d1f9d391d3d.ttf (203 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Brands.56c8d80832e37783f12c05db7c8849e2.ttf (209 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Regular.370dd5af19f8364907b6e2c41f45dbbf.ttf (68 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Solid.adec7d6f310bc577f05e8fe06a5daccf.ttf (424 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Fontisto.b49ae8ab2dbccb02c4d11caaacf09eab.ttf (314 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Foundation.e20945d7c929279ef7a6f1db184a4470.ttf (57 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.b4eb097d35f44ed943676fd56f6bdc51.ttf (390 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.6e435534bd35da5fef04168860a9b8fa.ttf (1.31 MB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf (357 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Octicons.871378c6eab492a3e689a9385dc45a12.ttf (69.4 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/SimpleLineIcons.d2285965fe34b05465047401b8595dd0.ttf (54.1 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Zocial.1681f34aaca71b8dfb70756bca331eb2.ttf (25.8 kB)
-node_modules/@react-navigation/elements/lib/module/assets/back-icon-mask.0a328cd9c1afd0afe8e3b1ec5165b1b4.png (653 B)
-node_modules/@react-navigation/elements/lib/module/assets/back-icon.35ba0eaec5a4f5ed12ca16fabeae451d.png (207 B)
-node_modules/@react-navigation/elements/lib/module/assets/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55.png (4 variations | 425 B)
-node_modules/@react-navigation/elements/lib/module/assets/close-icon.808e1b1b9b53114ec2838071a7e6daa7.png (4 variations | 235 B)
-node_modules/@react-navigation/elements/lib/module/assets/search-icon.286d67d3f74808a60a78d3ebf1a5fb57.png (928 B)
-node_modules/expo-router/assets/arrow_down.017bc6ba3fc25503e5eb5e53826d48a8.png (9.46 kB)
-node_modules/expo-router/assets/error.d1ea1496f9057eb392d5bbf3732a61b7.png (469 B)
-node_modules/expo-router/assets/file.19eeb73b9593a38f8e9f418337fc7d10.png (138 B)
-node_modules/expo-router/assets/forward.d8b800c443b8972542883e0b9de2bdc6.png (188 B)
-node_modules/expo-router/assets/pkg.ab19f4cbc543357183a20571f68380a3.png (364 B)
-node_modules/expo-router/assets/sitemap.412dd9275b6b48ad28f5e3d81bb1f626.png (465 B)
-node_modules/expo-router/assets/unmatched.20e71bdf79e3a97bf55fd9e164041578.png (4.75 kB)
-
-› web bundles (2):
-_expo/static/js/web/entry-1b340ef8268c0f8173d4fe8327d82fd4.js (6.04 MB)
-_expo/static/js/web/fiscalReceipt-7cafd36ac0cb5f6226531bd5cfd6e07a.js (9.96 kB)
-
-› Files (3):
-favicon.ico (14.5 kB)
-index.html (1.21 kB)
-metadata.json (49 B)
-
-Exported: dist) e servirla con . Qualsiasi modifica frontend richiede il rebuild tramite  per essere visibile!
+  - Stale  branches piling up on GitHub.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Date/Timezone Logic for Matches**: Matches scraped from FIPAV are saved to the DB as local Italian times, but marked with UTC  (e.g., ). To prevent the browser from automatically adding +2h (Rome timezone) and shifting matches to 21:00, the frontend MUST use  inside  /  functions when displaying match times.
-- **GDPR Logic**: Parents now only have a single optional checkbox for Immagini promozionali. Immagini interne is explicitly omitted for them, but kept for minors.
-- **Data Protection Password Fallback**: When checking  or verifying passwords for an athlete, the backend checks  AND falls back to . This ensures the 2nd parent doesn't get missing password banners.
+- React/Expo Web frontend. FastAPI backend. MongoDB.
+- Multi-tenancy isolation via .
+- JWT authentication (Minors use a simplified token matching their  rather than a standard  doc).
+- ICS () generation for exporting matches.
+- BeautifulSoup Web Scraping for FIPAV calendars.
 
 **key DB schema**
-- : Saves , , ,  to persist scraper dropdown choices.
-- : Contains scraped FIPAV matches. Lookups are done by .
-- :  dict (no longer stores  for adults).
+  -  / : , , , 
+  - : Track payments and pregresso logic
+  - : Medical certificates.
 
 **changes in tech stack**
-- None.
+  - None this session.
 
 **All files of reference**
-- 
-- 
-- 
-- 
-- 
-- 
+-  (Updated to handle JWT for minor role and auto-activation)
+-  (Updated seasons mapping)
+-  (Heavily modified to support Girone, date masks, and partial search)
+-  (Updated to display calendar)
+-  (Updated to display calendar)
 
 **Areas that need refactoring**:
--  is critically bloated (>23,000 lines). Needs to be broken down.
+-  is critically overloaded (>36k lines). It manages all routes.
 
 **key api endpoints**
-- : Scrapes FIPAV and updates deltas.
-- : Saves society-level FIPAV dropdown defaults.
-- : Handles adult and minor PDF signing workflows.
+-  (Now supports minor JWT token)
+- 
+- 
 
 **Critical Info for New Agent**
-- **LINGUA**: Rispondi *esclusivamente* in Italiano.
-- The user is doing intense manual E2E testing of the application. Wait for their instructions before coding anything new. 
-- ALWAYS remember to execute env: load .env
-env: export EXPO_TUNNEL_SUBDOMAIN EXPO_PACKAGER_HOSTNAME EXPO_PUBLIC_BACKEND_URL EXPO_USE_FAST_RESOLVER METRO_CACHE_ROOT EXPO_DEVTOOLS_LISTEN_ADDRESS REACT_NATIVE_PACKAGER_HOSTNAME EXPO_PACKAGER_PROXY_URL
-Fast resolver is enabled.
-Starting Metro Bundler
-Web Bundled 933ms node_modules/expo-router/entry.js (1882 modules)
-
-› Assets (38):
-assets/fonts/Ionicons.b4eb097d35f44ed943676fd56f6bdc51.ttf (390 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/AntDesign.3f78af31cca60105799838a1a7a59fbd.ttf (130 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Entypo.31b5ffea3daddc69dd01a1f3d6cf63c5.ttf (66.2 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/EvilIcons.140c53a7643ea949007aa9a282153849.ttf (13.5 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ca4b48e04dc1ce10bfbddb262c8b835f.ttf (55.6 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome.b06871f281fee6b241d60582ae9369b9.ttf (166 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Brands.3b89dd103490708d19a95adcae52210e.ttf (134 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Regular.1f77739ca9ff2188b539c36f30ffa2be.ttf (33.7 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome5_Solid.605ed7926cf39a2ad5ec2d1f9d391d3d.ttf (203 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Brands.56c8d80832e37783f12c05db7c8849e2.ttf (209 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Regular.370dd5af19f8364907b6e2c41f45dbbf.ttf (68 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome6_Solid.adec7d6f310bc577f05e8fe06a5daccf.ttf (424 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Fontisto.b49ae8ab2dbccb02c4d11caaacf09eab.ttf (314 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Foundation.e20945d7c929279ef7a6f1db184a4470.ttf (57 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.b4eb097d35f44ed943676fd56f6bdc51.ttf (390 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialCommunityIcons.6e435534bd35da5fef04168860a9b8fa.ttf (1.31 MB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/MaterialIcons.4e85bc9ebe07e0340c9c4fc2f6c38908.ttf (357 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Octicons.871378c6eab492a3e689a9385dc45a12.ttf (69.4 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/SimpleLineIcons.d2285965fe34b05465047401b8595dd0.ttf (54.1 kB)
-node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Zocial.1681f34aaca71b8dfb70756bca331eb2.ttf (25.8 kB)
-node_modules/@react-navigation/elements/lib/module/assets/back-icon-mask.0a328cd9c1afd0afe8e3b1ec5165b1b4.png (653 B)
-node_modules/@react-navigation/elements/lib/module/assets/back-icon.35ba0eaec5a4f5ed12ca16fabeae451d.png (207 B)
-node_modules/@react-navigation/elements/lib/module/assets/clear-icon.c94f6478e7ae0cdd9f15de1fcb9e5e55.png (4 variations | 425 B)
-node_modules/@react-navigation/elements/lib/module/assets/close-icon.808e1b1b9b53114ec2838071a7e6daa7.png (4 variations | 235 B)
-node_modules/@react-navigation/elements/lib/module/assets/search-icon.286d67d3f74808a60a78d3ebf1a5fb57.png (928 B)
-node_modules/expo-router/assets/arrow_down.017bc6ba3fc25503e5eb5e53826d48a8.png (9.46 kB)
-node_modules/expo-router/assets/error.d1ea1496f9057eb392d5bbf3732a61b7.png (469 B)
-node_modules/expo-router/assets/file.19eeb73b9593a38f8e9f418337fc7d10.png (138 B)
-node_modules/expo-router/assets/forward.d8b800c443b8972542883e0b9de2bdc6.png (188 B)
-node_modules/expo-router/assets/pkg.ab19f4cbc543357183a20571f68380a3.png (364 B)
-node_modules/expo-router/assets/sitemap.412dd9275b6b48ad28f5e3d81bb1f626.png (465 B)
-node_modules/expo-router/assets/unmatched.20e71bdf79e3a97bf55fd9e164041578.png (4.75 kB)
-
-› web bundles (2):
-_expo/static/js/web/entry-1b340ef8268c0f8173d4fe8327d82fd4.js (6.04 MB)
-_expo/static/js/web/fiscalReceipt-7cafd36ac0cb5f6226531bd5cfd6e07a.js (9.96 kB)
-
-› Files (3):
-favicon.ico (14.5 kB)
-index.html (1.21 kB)
-metadata.json (49 B)
-
-Exported: dist after modifying frontend files, otherwise your changes will not reflect in the live  environment.
+- Render auto-deploy is ON.
+- **Pay special attention to the Admin Calendar Import**: The user supplied screenshots (now removed) stating that the National league import from Admin is *still broken*. Validate the flow in  thoroughly to ensure no UI state is blocking the preview/import submission.
+- **Minors JWT**: Minors don't have a  document. Their token payload has  and maps  to their .  has custom logic to extract this.
 
 **documents and test reports created in this job**
--  (Updated)
--  (Testing agent results for FIPAV scraper endpoint - 100% Passed)
+  -  (Updated with completion notes)
 
 **Last 10 User Messages and any pending HUMAN messages** 
-1. **User**: Asked to format the Date inputs on the FIPAV import screen with pre-filled slashes . (RESOLVED)
-2. **User**: Asked to persist FIPAV selections (Federation, Region, Season) so the society doesn't have to pick them every time. (RESOLVED)
-3. **User**: Pointed out a Timezone bug. Match 3272 showed as 21:00 instead of 19:00. (RESOLVED)
-4. **User**: Asked to remove P.IVA from all PDFs and UI, keeping only Codice Fiscale. (RESOLVED)
-5. **User**: Reported Stefy Graff (2nd parent) was still being prompted for the data protection password even though she set it. (RESOLVED)
-6. **User**: Shared advice from ChatGPT/Gemini recommending the removal of the Immagini uso interno consent for Parents, and adding riprese di contesto clauses. (RESOLVED)
-7. **User**: Asked to make the Immagini a scopo promozionale checkbox larger and highly visible. (RESOLVED)
-8. **User**: Pointed out the Data Password was being asked twice (at Parent registration AND at Athlete registration) and asked to remove it from Parent registration. (RESOLVED)
-9. **User**: Asked to force Society Invite Code to be mandatory for all roles, including parents. (RESOLVED)
-10. **User**: Asked to remove the Consensi Privacy visualization of internal images from the parent profile, and to add a Request Image Removal button. (RESOLVED) -> **User then said Goodnight. (PENDING: Wait for their new instructions).**
+ - *User*: Auto-avanzamento Stato: Fai passare in automatico latleta a stato attivo quando ladmin valida il certificato medico SI PER I SOLI ATLETI 18+PRO...
+ - *Agent*: Implemented auto-activation for 18+ PRO upon cert verification.
+ - *User*: Sul Nazionale vedi foto uno: manca la stagione 26-27. Inoltre a pagina due metterei anche la scelta del girone oltre che quella della società
+ - *Agent*: Added 26/27 season and Girone selection.
+ - *User*: Fai in modo che si possa fare ricerca anche con nome parte del nome. Linserimento delle date non funziona.. non si riesce a scrivere nulla"
+ - *Agent*: Fixed date regex mask and partial search in `import-calendar.tsx`.
+ - *User*: "Ma anche fra le atlete under 18 non vedo la possibilità di vedere ed esportare il calendario che ti avevo richiesto"
+ - *Agent*: Added `AthleteMatchesCard` to the minor dashboard and fixed minor JWT endpoints.
+ - *User (PENDING)*: **"Il nazionale visto da admin non funziona Foto 1/2/2b/3. Inanto vedo dal lato atleta 18+pro.. Ecco .. dal lato atleta non cè nessuna possibilità di avere il calendario** -> Start here. The agent *just* added the calendar to the 18+ PRO dashboard in the final step, but you must ask the user to verify it. More importantly, verify and fix the National Calendar Import for Admins, which the user says is still broken.
 
 **Project Health Check:**
-- Broken: Expo Tunnel
-- Mocked: None
+Broken: FIPAV National Calendar Import from Admin dashboard may be throwing errors or freezing in the UI.
+Mocked: None.
 
-**3rd Party Integrations**
-- Brevo (Transactional Email) - requires User API Key
-- ReportLab (PDFs)
-- BeautifulSoup (FIPAV Scraping)
+**3rd Party Integrations** 
+- Brevo (Emails) - Live, REST API.
+- Stripe (Payments) - Requires User API Key.
 
 **Testing status**
-- Testing agent used after significant changes: YES (iteration_67.json for FIPAV Sync feature)
-- Troubleshoot agent used after agent stuck in loop: NO
-- Test files created: None
-- Known regressions: None.
+  - Testing agent used after significant changes: NO (Self-tested via bash/screenshot)
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: ,  (Temporary bash scripts, deleted)
+  - Known regressions: National Calendar import UI flow might be broken.
 
 **Credentials to test flow:**
-- Admin:  / 
-- Stefy Graff (Parent):  /  (2nd Parent)
-- Renzo Repi (Parent):  /  (1st Parent)
-- Rina Passe (Parent):  / 
+Refer to .
 
 **What agent forgot to execute**
-The agent resolved every requested feature and bug perfectly. The user voluntarily ended the session to sleep and continue testing the next day. The backlog features (Excel diff import, Server.py refactor) remain untouched pending user approval.</analysis>
+Nothing explicitly forgotten, but the final complaint about the Nazionale Admin import failing needs rigorous manual validation because the agent pushed edits without a full functional E2E validation of the specific broken state the user highlighted in their removed photos.
+
+**Debugging checklist for current issue**
+    Issue: Il nazionale visto da admin non funziona (National calendar import from admin is failing).
+    Frontend files to check: 
+    - : Check  and . Are  and the manually typed  being passed correctly to the backend? Check if any UI disabled flags (e.g. ) are incorrectly evaluating to  and blocking the user.
+    Backend files to check:
+    - : 
+    - : Ensure  handles the  and  correctly for national leagues.</analysis>
