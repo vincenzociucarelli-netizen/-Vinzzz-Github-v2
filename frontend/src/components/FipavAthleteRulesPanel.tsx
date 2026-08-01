@@ -278,7 +278,10 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
 
       {/* ====== FEATURE B — Presenze Serie Superiore (10 max) ====== */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Feature B — Presenze in Serie Superiore</Text>
+        <Text style={styles.sectionTitle}>Regola Serie Superiore (Serie C / D / 1ª Div)</Text>
+        <Text style={styles.ruleDesc}>
+          Max 10 presenze in Serie superiore: dall&apos;11ª l&apos;atleta non può più giocare in serie inferiore. Riguarda i maschi nati dal 2006 e le femmine dal 2008 (blocco automatico oltre soglia e dopo il killswitch 28/03/2027).
+        </Text>
         {!eligibleUpperLeague && birthYear === null && (
           <Text style={styles.notEligible}>
             ⚠️ Data di nascita mancante sull&apos;atleta. Aggiornala nel tab Anagrafica per attivare i contatori.
@@ -313,7 +316,10 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
 
       {/* ====== FEATURE A — Campionati Categoria U17 ====== */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Feature A — Campionati di Categoria (U17)</Text>
+        <Text style={styles.sectionTitle}>Regola Campionati di Categoria (fino a U17)</Text>
+        <Text style={styles.ruleDesc}>
+          Max 2 campionati di categoria e max 3 gare a settimana (riferimento: presenza a camp3). Riguarda gli atleti Under 17, cioè nati dal 2010 per la stagione 2026/2027.
+        </Text>
         {!eligibleU17 && birthYear === null && (
           <Text style={styles.notEligible}>
             ⚠️ Data di nascita mancante sull&apos;atleta. Aggiornala nel tab Anagrafica per attivare i contatori U17.
@@ -544,6 +550,7 @@ const styles = StyleSheet.create({
   },
   sanctionText: { fontSize: 10.5, color: '#7C2D12', flex: 1, lineHeight: 14 },
   hintSmall: { fontSize: 10.5, color: '#6B7280', marginTop: 6, lineHeight: 14, fontStyle: 'italic' },
+  ruleDesc: { fontSize: 11, color: '#4B5563', marginTop: 2, marginBottom: 6, lineHeight: 15 },
   miniLabel: { fontSize: 11, fontWeight: '600', color: '#374151', marginBottom: 4 },
   addPresenceBox: {
     backgroundColor: '#F8FAFC', borderRadius: 8, padding: 10, marginTop: 8, marginBottom: 10,

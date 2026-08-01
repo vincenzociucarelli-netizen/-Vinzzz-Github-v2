@@ -561,7 +561,6 @@ export default function AdminDirigenteDetail() {
       
       await api.patch(`/users/${id}/compensation`, {
         monthly_compensation: parseFloat(monthlyCompensation.replace(',', '.')) || 0,
-        other_annual_compensation: parseFloat(otherAnnualCompensation.replace(',', '.')) || 0,
         contract_start_date: isoStartDate,
         contract_end_date: isoEndDate,
         assigned_teams: selectedTeamIds,
@@ -1154,24 +1153,13 @@ export default function AdminDirigenteDetail() {
               />
               
               <Text style={[styles.inputLabel, { marginTop: 16 }]}>Compensi Pregressi (€) - Da altre ASD/SSD nell'anno</Text>
-              <TextInput
-                style={styles.input}
-                value={otherAnnualCompensation}
-                onChangeText={(text) => {
-                  // Allow numbers and comma for decimals (Italian format)
-                  const cleaned = text.replace(/[^0-9,]/g, '');
-                  const parts = cleaned.split(',');
-                  const formatted = parts.length > 2 ? parts[0] + ',' + parts.slice(1).join('') : cleaned;
-                  setOtherAnnualCompensation(formatted);
-                }}
-                onFocus={() => { if (otherAnnualCompensation === '0' || otherAnnualCompensation === '') setOtherAnnualCompensation(''); }}
-                keyboardType="decimal-pad"
-                placeholder="€ 0,00"
-                placeholderTextColor="#999"
-                selectTextOnFocus={true}
-              />
+              <View style={{ backgroundColor: '#F3F4F6', borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB', paddingHorizontal: 12, paddingVertical: 12 }} data-testid="dirigente-prior-comp-readonly">
+                <Text style={{ fontSize: 16, color: '#111827', fontWeight: '600' }}>
+                  {`€ ${((parseFloat((otherAnnualCompensation || '0').replace(',', '.')) || 0)).toFixed(2).replace('.', ',')}`}
+                </Text>
+              </View>
               <Text style={{ fontSize: 12, color: '#666', marginTop: 4, marginBottom: 12 }}>
-                Compensi già percepiti da altre società sportive nell'anno solare corrente
+                🔒 Dichiarato e firmato dal dirigente nel proprio profilo. L&apos;admin può solo visualizzarlo, non inserirlo.
               </Text>
               
               {/* Date Contratto - Una riga */}

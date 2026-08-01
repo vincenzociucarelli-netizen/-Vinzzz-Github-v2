@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
   TextInput,
   Image,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '../../src/components/Icon';
 import api from '../../src/services/api';
 import { Team } from '../../src/types';
@@ -116,9 +116,13 @@ export default function CoachesScreen() {
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // 🐛 01/08/2026 — Ricarica quando la schermata torna in focus (es. dopo aver
+  // assegnato le squadre dal profilo del coach) così l'elenco non resta stale.
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
