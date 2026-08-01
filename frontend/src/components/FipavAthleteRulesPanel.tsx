@@ -25,6 +25,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 import api from '../services/api';
 
 interface Props {
@@ -36,6 +37,20 @@ interface Props {
    * la piena editabilità.
    */
   readOnly?: boolean;
+}
+
+interface GamePresence {
+  id: string;
+  date: string; // YYYY-MM-DD
+  championship: string;
+  level: 'upper' | 'category';
+  added_by_name?: string;
+}
+
+interface WeekViolation {
+  week_start: string;
+  week_end: string;
+  count: number;
 }
 
 interface FipavState {
@@ -50,6 +65,9 @@ interface FipavState {
   upper_league_presences: number;
   blocked_from_lower_league: boolean;
   killswitch_date: string;
+  game_presences: GamePresence[];
+  upper_league_options: string[];
+  weekly_summary: { max_in_any_week: number; violation_weeks: WeekViolation[] };
 }
 
 const showAlert = (title: string, msg: string) => {
@@ -66,6 +84,30 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
   const [saving, setSaving] = useState(false);
   const [newChampionship, setNewChampionship] = useState('');
   const [postKillswitch, setPostKillswitch] = useState(false);
+  // 🆕 01/08/2026 — Registro presenze datato
+  const [newDate, setNewDate] = useState('');
+  const [newPresenceChamp, setNewPresenceChamp] = useState('');
+
+  const handleDateMask = (text: string) => {
+    const digits = text.replace(/\D/g, '').slice(0, 8);
+    let masked = '';
+    for (let i = 0; i < digits.length; i++) {
+      if (i === 2 || i === 4) masked += '/';
+      masked += digits[i];
+    }
+    setNewDate(masked);
+  };
+
+  // gg/mm/aaaa -> YYYY-MM-DD
+  const toIsoDate = (masked: string): string | null => {
+    const parts = masked.split('/');
+    if (parts.length !== 3 || parts[2].length !== 4) return null;
+    const [d, m, y] = parts;
+    const iso = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    const parsed = new Date(iso);
+    if (isNaN(parsed.getTime())) return null;
+    return iso;
+  };
 
   const load = useCallback(async () => {
     try {
@@ -104,10 +146,45 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
     }
   };
 
-  const incrementUpper = (delta: number) => {
+  const addPresence = async () => {
     if (!state) return;
-    const next = Math.max(0, state.upper_league_presences + delta);
-    patch({ upper_league_presences: next });
+    const iso = toIsoDate(newDate);
+    if (!iso) {
+      showAlert('Data non valida', 'Inserisci la data della gara nel formato GG/MM/AAAA.');
+      return;
+    }
+    if (!newPresenceChamp) {
+      showAlert('Campionato mancante', 'Seleziona il campionato/gara dell\u2019ingresso.');
+      return;
+    }
+    try {
+      setSaving(true);
+      const res = await api.post(`/admin/athletes/${athleteId}/fipav-presences`, {
+        date: iso,
+        championship: newPresenceChamp,
+      });
+      setState(res.data);
+      setNewDate('');
+      setNewPresenceChamp('');
+    } catch (e: any) {
+      const detail = e?.response?.data?.detail || 'Aggiunta fallita';
+      showAlert('Errore', typeof detail === 'string' ? detail : 'Errore');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removePresence = async (entryId: string) => {
+    try {
+      setSaving(true);
+      const res = await api.delete(`/admin/athletes/${athleteId}/fipav-presences/${entryId}`);
+      setState(res.data);
+    } catch (e: any) {
+      const detail = e?.response?.data?.detail || 'Rimozione fallita';
+      showAlert('Errore', typeof detail === 'string' ? detail : 'Errore');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const addCategoryChampionship = () => {
@@ -152,6 +229,18 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
   const upperBadgeLabel = upperCount >= 11 ? `⛔ ${upperCount} — Bloccato` : (upperCount >= 10 ? `⚠ ${upperCount} — Ultima possibile` : `${upperCount}`);
   const catCount = (state.category_championships || []).length;
 
+  // 🆕 01/08/2026 — Registro datato
+  const presences = state.game_presences || [];
+  const upperOptions = state.upper_league_options || ['Serie C', 'Serie D', '1^ Divisione'];
+  const presenceOptions = [...upperOptions, ...(state.category_championships || [])];
+  const violationWeeks = state.weekly_summary?.violation_weeks || [];
+  const maxWeek = state.weekly_summary?.max_in_any_week || 0;
+  const weeklyColor = maxWeek > 3 ? '#DC2626' : (maxWeek === 3 ? '#EA580C' : '#059669');
+  const fmtIt = (iso: string) => {
+    try { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; } catch { return iso; }
+  };
+  const showRegistry = eligibleUpperLeague || eligibleU17;
+
   return (
     <View style={styles.card} data-testid="fipav-athlete-rules-panel">
       <View style={styles.header}>
@@ -166,9 +255,16 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
       </View>
       <Text style={styles.subtitle}>
         {readOnly
-          ? 'Solo l\u2019admin può modificare questi contatori.'
-          : 'Contatori manuali gestiti dall\u2019admin. Al superamento delle soglie scatta il blocco automatico.'}
+          ? 'Solo l\u2019admin può gestire il registro presenze.'
+          : 'Registra ogni ingresso con la data: i conteggi di Serie superiore e gare settimanali si aggiornano da soli.'}
       </Text>
+
+      <View style={styles.sanctionBanner}>
+        <Ionicons name="alert-circle" size={14} color="#7C2D12" />
+        <Text style={styles.sanctionText}>
+          Sanzioni FIPAV per violazione: perdita gara (0-3), sospensione 7gg del Presidente e multa € 100. Il registro datato evita doppi conteggi.
+        </Text>
+      </View>
 
       {postKillswitch && (
         <View style={styles.killswitchBanner} data-testid="fipav-killswitch-banner">
@@ -195,53 +291,13 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
         )}
         {eligibleUpperLeague && (
           <>
-            <Text style={styles.label}>Campionato Superiore</Text>
-            <View style={styles.optionsRow}>
-              {UPPER_LEAGUE_OPTIONS.map(opt => (
-                <TouchableOpacity
-                  key={opt}
-                  style={[
-                    styles.chip,
-                    (state.upper_league_name || '—') === opt && styles.chipActive,
-                    readOnly && styles.readOnlyDim,
-                  ]}
-                  onPress={() => { if (!readOnly) patch({ upper_league_name: opt === '—' ? '' : opt }); }}
-                  disabled={saving || readOnly}
-                  data-testid={`fipav-upper-league-${opt}`}
-                >
-                  <Text style={(state.upper_league_name || '—') === opt ? styles.chipActiveText : styles.chipText}>
-                    {opt}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <Text style={styles.label}>Presenze in Serie Superiore (Serie C / D / 1ª Div)</Text>
+            <View style={[styles.counterValue, { backgroundColor: upperBadgeColor, alignSelf: 'flex-start', paddingHorizontal: 18 }]} data-testid="fipav-upper-count">
+              <Text style={styles.counterValueText}>{upperBadgeLabel} / 10</Text>
             </View>
-
-            <Text style={styles.label}>Presenze effettive (entrate in campo)</Text>
-            <View style={styles.counterRow}>
-              {!readOnly && (
-                <TouchableOpacity
-                  style={styles.counterBtn}
-                  onPress={() => incrementUpper(-1)}
-                  disabled={saving || upperCount === 0}
-                  data-testid="fipav-upper-decrement"
-                >
-                  <Ionicons name="remove" size={20} color="#fff" />
-                </TouchableOpacity>
-              )}
-              <View style={[styles.counterValue, { backgroundColor: upperBadgeColor }]}>
-                <Text style={styles.counterValueText}>{upperBadgeLabel}</Text>
-              </View>
-              {!readOnly && (
-                <TouchableOpacity
-                  style={styles.counterBtn}
-                  onPress={() => incrementUpper(1)}
-                  disabled={saving}
-                  data-testid="fipav-upper-increment"
-                >
-                  <Ionicons name="add" size={20} color="#fff" />
-                </TouchableOpacity>
-              )}
-            </View>
+            <Text style={styles.hintSmall}>
+              Conteggio automatico dagli ingressi di livello &quot;Serie superiore&quot; nel registro qui sotto. Blocco automatico dall&apos;11ª presenza.
+            </Text>
 
             {state.blocked_from_lower_league && (
               <View style={styles.blockedNotice}>
@@ -309,66 +365,101 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
               <Text style={styles.limitHit}>✋ Limite raggiunto (max 2 campionati categoria)</Text>
             )}
 
-            <Text style={styles.label}>Presenze Camp3 (contatore)</Text>
-            <View style={styles.counterRow}>
-              {!readOnly && (
-                <TouchableOpacity
-                  style={styles.counterBtn}
-                  onPress={() => patch({ camp3_presences_count: Math.max(0, state.camp3_presences_count - 1) })}
-                  disabled={saving || state.camp3_presences_count === 0}
-                  data-testid="fipav-camp3-decrement"
-                >
-                  <Ionicons name="remove" size={20} color="#fff" />
-                </TouchableOpacity>
-              )}
-              <View style={[styles.counterValue, { backgroundColor: '#1E3A8A' }]}>
-                <Text style={styles.counterValueText}>{state.camp3_presences_count}</Text>
-              </View>
-              {!readOnly && (
-                <TouchableOpacity
-                  style={styles.counterBtn}
-                  onPress={() => patch({ camp3_presences_count: state.camp3_presences_count + 1 })}
-                  disabled={saving}
-                  data-testid="fipav-camp3-increment"
-                >
-                  <Ionicons name="add" size={20} color="#fff" />
-                </TouchableOpacity>
-              )}
+            <Text style={styles.label}>Gare nella settimana (max 3 — Lun→Dom)</Text>
+            <View style={[styles.counterValue, { backgroundColor: weeklyColor, alignSelf: 'flex-start', paddingHorizontal: 18 }]} data-testid="fipav-weekly-max">
+              <Text style={styles.counterValueText}>Max in una settimana: {maxWeek}/3</Text>
             </View>
-
-            <Text style={styles.label}>Gare settimana in corso (max 3)</Text>
-            <View style={styles.counterRow}>
-              {!readOnly && (
-                <TouchableOpacity
-                  style={styles.counterBtn}
-                  onPress={() => patch({ weekly_games_count: Math.max(0, state.weekly_games_count - 1) })}
-                  disabled={saving || state.weekly_games_count === 0}
-                  data-testid="fipav-weekly-decrement"
-                >
-                  <Ionicons name="remove" size={20} color="#fff" />
-                </TouchableOpacity>
-              )}
-              <View style={[styles.counterValue, {
-                backgroundColor: state.weekly_games_count > 3 ? '#DC2626' : (state.weekly_games_count === 3 ? '#EA580C' : '#059669')
-              }]}>
-                <Text style={styles.counterValueText}>
-                  {state.weekly_games_count > 3 ? `⛔ ${state.weekly_games_count}/3` : `${state.weekly_games_count}/3`}
+            {violationWeeks.length > 0 && (
+              <View style={styles.blockedNotice} data-testid="fipav-weekly-violation">
+                <Ionicons name="warning" size={14} color="#7F1D1D" />
+                <Text style={styles.blockedText}>
+                  ⚠ Limite 3 gare superato in {violationWeeks.length} settiman{violationWeeks.length > 1 ? 'e' : 'a'}:{' '}
+                  {violationWeeks.map(w => `${fmtIt(w.week_start)}–${fmtIt(w.week_end)} (${w.count})`).join(', ')}
                 </Text>
               </View>
-              {!readOnly && (
-                <TouchableOpacity
-                  style={styles.counterBtn}
-                  onPress={() => patch({ weekly_games_count: state.weekly_games_count + 1 })}
-                  disabled={saving}
-                  data-testid="fipav-weekly-increment"
-                >
-                  <Ionicons name="add" size={20} color="#fff" />
-                </TouchableOpacity>
-              )}
-            </View>
+            )}
+            <Text style={styles.hintSmall}>Camp3: {state.camp3_presences_count} presenze totali registrate.</Text>
           </>
         )}
       </View>
+
+      {/* ====== REGISTRO PRESENZE GARA (datato) ====== */}
+      {showRegistry && (
+        <View style={styles.section} data-testid="fipav-registry-section">
+          <Text style={styles.sectionTitle}>Registro Presenze Gara (camp3)</Text>
+          <Text style={styles.hintSmall}>
+            Registra ogni ingresso con data + campionato. Max 1 gara al giorno. Alimenta i conteggi Serie superiore e gare settimanali.
+          </Text>
+
+          {!readOnly && (
+            <View style={styles.addPresenceBox}>
+              <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.miniLabel}>Data gara</Text>
+                  <TextInput
+                    value={newDate}
+                    onChangeText={handleDateMask}
+                    placeholder="GG/MM/AAAA"
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="numeric"
+                    maxLength={10}
+                    style={styles.champInput}
+                    editable={!saving}
+                    data-testid="fipav-presence-date"
+                  />
+                </View>
+                <View style={{ flex: 1.3 }}>
+                  <Text style={styles.miniLabel}>Campionato / gara</Text>
+                  <View style={styles.presencePicker}>
+                    <Picker
+                      selectedValue={newPresenceChamp}
+                      onValueChange={(v) => setNewPresenceChamp(v)}
+                      enabled={!saving}
+                      style={{ height: 40 }}
+                      data-testid="fipav-presence-champ"
+                    >
+                      <Picker.Item label="-- Seleziona --" value="" />
+                      {presenceOptions.map((opt) => (
+                        <Picker.Item key={opt} label={opt} value={opt} />
+                      ))}
+                    </Picker>
+                  </View>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={[styles.addPresenceBtn, (saving || !newDate || !newPresenceChamp) && styles.readOnlyDim]}
+                onPress={addPresence}
+                disabled={saving || !newDate || !newPresenceChamp}
+                data-testid="fipav-presence-add"
+              >
+                <Ionicons name="add-circle" size={16} color="#fff" />
+                <Text style={styles.addPresenceBtnText}>Aggiungi ingresso</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {presences.length === 0 ? (
+            <Text style={styles.notEligible}>Nessun ingresso registrato.</Text>
+          ) : (
+            presences.map((p) => (
+              <View key={p.id} style={styles.presenceRow} data-testid={`fipav-presence-${p.id}`}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.presenceDate}>{fmtIt(p.date)}</Text>
+                  <Text style={styles.presenceChamp}>{p.championship}</Text>
+                </View>
+                <View style={[styles.levelBadge, p.level === 'upper' ? styles.levelUpper : styles.levelCat]}>
+                  <Text style={styles.levelBadgeText}>{p.level === 'upper' ? 'SERIE SUP.' : 'CATEGORIA'}</Text>
+                </View>
+                {!readOnly && (
+                  <TouchableOpacity onPress={() => removePresence(p.id)} disabled={saving} data-testid={`fipav-presence-remove-${p.id}`}>
+                    <Ionicons name="trash" size={16} color="#DC2626" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))
+          )}
+        </View>
+      )}
 
       {saving && (
         <View style={styles.savingOverlay}>
@@ -446,6 +537,36 @@ const styles = StyleSheet.create({
   },
   readOnlyBadgeText: { fontSize: 10, color: '#6B7280', fontWeight: '600' },
   readOnlyDim: { opacity: 0.75 },
+  sanctionBanner: {
+    flexDirection: 'row', gap: 6, backgroundColor: '#FEF3C7',
+    padding: 8, borderRadius: 8, marginBottom: 10, alignItems: 'flex-start',
+    borderWidth: 1, borderColor: '#FCD34D',
+  },
+  sanctionText: { fontSize: 10.5, color: '#7C2D12', flex: 1, lineHeight: 14 },
+  hintSmall: { fontSize: 10.5, color: '#6B7280', marginTop: 6, lineHeight: 14, fontStyle: 'italic' },
+  miniLabel: { fontSize: 11, fontWeight: '600', color: '#374151', marginBottom: 4 },
+  addPresenceBox: {
+    backgroundColor: '#F8FAFC', borderRadius: 8, padding: 10, marginTop: 8, marginBottom: 10,
+    borderWidth: 1, borderColor: '#E2E8F0',
+  },
+  presencePicker: {
+    backgroundColor: '#fff', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, overflow: 'hidden',
+  },
+  addPresenceBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: '#059669', paddingVertical: 10, borderRadius: 8, marginTop: 10,
+  },
+  addPresenceBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  presenceRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8,
+    borderTopWidth: 1, borderTopColor: '#F3F4F6',
+  },
+  presenceDate: { fontSize: 13, fontWeight: '700', color: '#1E3A8A' },
+  presenceChamp: { fontSize: 12, color: '#374151', marginTop: 1 },
+  levelBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
+  levelUpper: { backgroundColor: '#FEE2E2' },
+  levelCat: { backgroundColor: '#DBEAFE' },
+  levelBadgeText: { fontSize: 9, fontWeight: '800', color: '#374151' },
   savingOverlay: {
     position: 'absolute', top: 10, right: 10, flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#fff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,

@@ -1785,8 +1785,35 @@ async def get_athlete_fipav_rules(athlete_id: str, current_user = Depends(get_cu
     if ath.get("society_id") != current_user.get("society_id"):
         raise HTTPException(status_code=403, detail="Atleta non appartiene alla tua società")
     
-    upper_pres = int(ath.get("upper_league_presences") or 0)
-    blocked = bool(ath.get("blocked_from_lower_league") or False)
+    # 🆕 01/08/2026 — Registro presenze-gara DATATO (unico registro, alimenta sia
+    # gli ingressi in Serie Superiore che il conteggio gare/settimana). I vecchi
+    # contatori scalari NON vengono più usati (scelta utente: azzera e riparti pulito).
+    from datetime import date as _date, timedelta
+    entries = list(ath.get("game_presences") or [])
+    entries.sort(key=lambda e: (e.get("date") or ""), reverse=True)
+    upper_pres = len([e for e in entries if e.get("level") == "upper"])
+    total_pres = len(entries)
+
+    # Conteggio gare per settimana (Lunedì→Domenica) per verifica soglia max 3
+    week_counts: Dict[str, int] = {}
+    for e in entries:
+        try:
+            d = _date.fromisoformat((e.get("date") or "")[:10])
+        except Exception:
+            continue
+        monday = d - timedelta(days=d.weekday())
+        week_counts[monday.isoformat()] = week_counts.get(monday.isoformat(), 0) + 1
+    violation_weeks = [
+        {
+            "week_start": k,
+            "week_end": (_date.fromisoformat(k) + timedelta(days=6)).isoformat(),
+            "count": v,
+        }
+        for k, v in sorted(week_counts.items()) if v > 3
+    ]
+    max_week = max(week_counts.values()) if week_counts else 0
+
+    blocked = False
     # Auto-blocco se ha raggiunto 11 presenze
     if upper_pres >= 11:
         blocked = True
@@ -1814,13 +1841,17 @@ async def get_athlete_fipav_rules(athlete_id: str, current_user = Depends(get_cu
         "gender": ath.get("gender") or ath.get("sex") or "",
         # Feature A - campionati di categoria (U17)
         "category_championships": list(ath.get("category_championships") or []),
-        "camp3_presences_count": int(ath.get("camp3_presences_count") or 0),
-        "weekly_games_count": int(ath.get("weekly_games_count") or 0),
+        "camp3_presences_count": total_pres,
+        "weekly_games_count": max_week,
         # Feature B - presenze serie superiore
         "upper_league_name": ath.get("upper_league_name") or "",
         "upper_league_presences": upper_pres,
         "blocked_from_lower_league": blocked,
         "killswitch_date": FIPAV_KILLSWITCH_DATE,
+        # 🆕 01/08/2026 — Registro datato + verifica soglia settimanale
+        "game_presences": entries,
+        "upper_league_options": ["Serie C", "Serie D", "1^ Divisione"],
+        "weekly_summary": {"max_in_any_week": max_week, "violation_weeks": violation_weeks},
     }
 
 
@@ -1868,6 +1899,113 @@ async def update_athlete_fipav_rules(
     
     # Ritorna lo stato aggiornato
     return await get_athlete_fipav_rules(athlete_id, current_user)
+
+
+UPPER_LEAGUE_SET = {"Serie C", "Serie D", "1^ Divisione"}
+
+
+class FipavPresenceAdd(BaseModel):
+    """🆕 01/08/2026 — Aggiunta di un ingresso/gara al registro datato FIPAV."""
+    date: str  # formato YYYY-MM-DD
+    championship: str  # es. "Serie C" (superiore) oppure "Under 14" (categoria)
+
+
+async def _fipav_guard(athlete_id: str, current_user, require_admin: bool = True):
+    """Guardia comune: ruolo, feature flag, appartenenza società. Ritorna (society, ath)."""
+    if require_admin and current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    society = await db.societies.find_one({"id": current_user.get("society_id")})
+    if not is_feature_enabled(society or {}, "fipav_minor_rules"):
+        raise HTTPException(status_code=400, detail="Feature FIPAV non abilitata per questa società")
+    ath = await db.athletes.find_one({"id": athlete_id})
+    if not ath:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    if ath.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Atleta non appartiene alla tua società")
+    return society, ath
+
+
+async def _persist_fipav_derived(athlete_id: str, entries: list):
+    """Ricalcola e persiste i contatori derivati dal registro datato."""
+    from datetime import date as _date
+    upper_pres = len([e for e in entries if e.get("level") == "upper"])
+    blocked = upper_pres >= 11
+    try:
+        if _date.today() >= _date.fromisoformat(FIPAV_KILLSWITCH_DATE) and upper_pres >= 1:
+            blocked = True
+    except Exception:
+        pass
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {
+            "game_presences": entries,
+            "upper_league_presences": upper_pres,
+            "camp3_presences_count": len(entries),
+            "blocked_from_lower_league": blocked,
+        }},
+    )
+
+
+@api_router.post("/admin/athletes/{athlete_id}/fipav-presences")
+async def add_athlete_fipav_presence(
+    athlete_id: str,
+    data: FipavPresenceAdd,
+    current_user = Depends(get_current_user),
+):
+    """Aggiunge un ingresso datato al registro presenze-gara dell'atleta.
+    - Blocco doppio inserimento: max 1 gara per data (scelta utente).
+    - Il livello (superiore/categoria) è dedotto dal campionato scelto.
+    """
+    from datetime import date as _date
+    society, ath = await _fipav_guard(athlete_id, current_user)
+
+    # Validazione data
+    try:
+        _date.fromisoformat((data.date or "")[:10])
+    except Exception:
+        raise HTTPException(status_code=400, detail="Data non valida (formato richiesto: AAAA-MM-GG)")
+    championship = (data.championship or "").strip()
+    if not championship:
+        raise HTTPException(status_code=400, detail="Seleziona il campionato/gara dell'ingresso")
+
+    entries = list(ath.get("game_presences") or [])
+    # Blocco duplicato sulla stessa data (max 1 gara/giorno)
+    if any((e.get("date") or "")[:10] == data.date[:10] for e in entries):
+        raise HTTPException(
+            status_code=400,
+            detail="Esiste già una gara registrata in questa data (max 1 gara al giorno).",
+        )
+
+    level = "upper" if championship in UPPER_LEAGUE_SET else "category"
+    entry = {
+        "id": str(uuid.uuid4()),
+        "date": data.date[:10],
+        "championship": championship,
+        "level": level,
+        "added_by": current_user.get("id"),
+        "added_by_name": current_user.get("full_name") or current_user.get("email") or "admin",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    entries.append(entry)
+    await _persist_fipav_derived(athlete_id, entries)
+    return await get_athlete_fipav_rules(athlete_id, current_user)
+
+
+@api_router.delete("/admin/athletes/{athlete_id}/fipav-presences/{entry_id}")
+async def delete_athlete_fipav_presence(
+    athlete_id: str,
+    entry_id: str,
+    current_user = Depends(get_current_user),
+):
+    """Rimuove un ingresso dal registro presenze-gara dell'atleta."""
+    society, ath = await _fipav_guard(athlete_id, current_user)
+    entries = list(ath.get("game_presences") or [])
+    new_entries = [e for e in entries if e.get("id") != entry_id]
+    if len(new_entries) == len(entries):
+        raise HTTPException(status_code=404, detail="Ingresso non trovato")
+    await _persist_fipav_derived(athlete_id, new_entries)
+    return await get_athlete_fipav_rules(athlete_id, current_user)
+
 
 
 @api_router.get("/societies/invite-code")
