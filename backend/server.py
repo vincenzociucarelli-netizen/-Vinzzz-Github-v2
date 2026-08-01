@@ -6920,11 +6920,27 @@ async def get_athlete_matches(
             clean_mongo_doc(m)
             matches.append(m)
 
+    # 🆕 01/08/2026 — Info squadre (con link calendario federazione) per permettere
+    # anche all'atleta di aprire il calendario ufficiale FIPAV (utile per le squadre
+    # nazionali Serie A/B, non importabili automaticamente).
+    team_docs: List[Dict] = []
+    if team_ids:
+        async for t in db.teams.find(
+            {"id": {"$in": team_ids}},
+            {"_id": 0, "id": 1, "name": 1, "calendar_link": 1},
+        ):
+            team_docs.append({
+                "id": t.get("id"),
+                "name": t.get("name") or "",
+                "calendar_link": t.get("calendar_link") or None,
+            })
+
     if format.lower() != "ics":
         return {
             "athlete_id": athlete_id,
             "athlete_name": ath.get("full_name") or "",
             "team_ids": team_ids,
+            "teams": team_docs,
             "matches": matches,
             "count": len(matches),
         }

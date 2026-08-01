@@ -5,7 +5,7 @@
  *   Google Calendar / Apple Calendar / Outlook
  */
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, Linking } from 'react-native';
 import { Ionicons } from './Icon';
 import api from '../services/api';
 
@@ -20,6 +20,12 @@ interface Match {
   meeting_time?: string;
 }
 
+interface TeamInfo {
+  id: string;
+  name: string;
+  calendar_link?: string | null;
+}
+
 interface Props {
   athleteId: string;
   athleteName?: string;
@@ -27,6 +33,7 @@ interface Props {
 
 export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
   const [matches, setMatches] = useState<Match[]>([]);
+  const [teams, setTeams] = useState<TeamInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
 
@@ -35,15 +42,22 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
     (async () => {
       try {
         const res = await api.get(`/athletes/${athleteId}/matches`);
-        if (mounted) setMatches(res.data?.matches || []);
+        if (mounted) {
+          setMatches(res.data?.matches || []);
+          setTeams(res.data?.teams || []);
+        }
       } catch {
-        if (mounted) setMatches([]);
+        if (mounted) { setMatches([]); setTeams([]); }
       } finally {
         if (mounted) setLoading(false);
       }
     })();
     return () => { mounted = false; };
   }, [athleteId]);
+
+  const openFederation = (url: string) => {
+    try { Linking.openURL(url); } catch (e) { console.error('open federation link failed', e); }
+  };
 
   const exportICS = async () => {
     try {
@@ -94,13 +108,15 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
     } catch { return iso; }
   };
 
+  const federationTeams = teams.filter((t) => t.calendar_link);
+
   return (
-    <View style={styles.card} data-testid="athlete-matches-card">
+    <View style={styles.card} testID="athlete-matches-card">
       <View style={styles.header}>
         <Ionicons name="calendar" size={20} color="#1E3A8A" />
         <Text style={styles.title}>Calendario Gare</Text>
         {matches.length > 0 && (
-          <TouchableOpacity onPress={exportICS} style={styles.exportBtn} data-testid="athlete-matches-export-ics">
+          <TouchableOpacity onPress={exportICS} style={styles.exportBtn} testID="athlete-matches-export-ics">
             <Ionicons name="download" size={14} color="#fff" />
             <Text style={styles.exportBtnText}>Esporta .ics</Text>
           </TouchableOpacity>
@@ -112,13 +128,13 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
           : 'Prossime gare da tutte le squadre in cui l\u2019atleta gioca.'}
       </Text>
       {matches.length === 0 ? (
-        <Text style={styles.empty}>Nessuna gara programmata.</Text>
+        <Text style={styles.empty}>Nessuna gara caricata a calendario.</Text>
       ) : (
         <>
           {shown.map((m) => {
             const isHome = (m.home_away || '').toLowerCase() === 'home';
             return (
-              <View key={m.id} style={styles.row} data-testid={`athlete-match-${m.id}`}>
+              <View key={m.id} style={styles.row} testID={`athlete-match-${m.id}`}>
                 <View style={styles.rowMain}>
                   <Text style={styles.rowDate}>{fmtDate(m.date)}</Text>
                   <Text style={styles.rowTeams} numberOfLines={1}>
@@ -140,6 +156,27 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
             </TouchableOpacity>
           )}
         </>
+      )}
+
+      {/* 🆕 01/08/2026 — Link al calendario ufficiale FIPAV della squadra.
+          Fondamentale per gli atleti dei campionati nazionali (Serie A/B) che
+          non hanno gare importabili automaticamente. */}
+      {federationTeams.length > 0 && (
+        <View style={styles.fedSection} testID="athlete-federation-links">
+          <Text style={styles.fedTitle}>📅 Calendario ufficiale FIPAV</Text>
+          <Text style={styles.fedHint}>Apri il calendario federale della tua squadra (es. Serie A/B nazionale).</Text>
+          {federationTeams.map((t) => (
+            <TouchableOpacity
+              key={t.id}
+              style={styles.fedBtn}
+              onPress={() => openFederation(t.calendar_link as string)}
+              testID={`athlete-federation-link-${t.id}`}
+            >
+              <Ionicons name="open-outline" size={15} color="#1E3A8A" />
+              <Text style={styles.fedBtnText} numberOfLines={1}>Calendario Federazione — {t.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       )}
     </View>
   );
@@ -164,4 +201,9 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 10, fontWeight: '700', color: '#1E3A8A' },
   showMore: { paddingVertical: 8, alignItems: 'center' },
   showMoreText: { color: '#007AFF', fontSize: 13, fontWeight: '600' },
+  fedSection: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E5E7EB' },
+  fedTitle: { fontSize: 13, fontWeight: '700', color: '#1E3A8A' },
+  fedHint: { fontSize: 11, color: '#6B7280', marginTop: 2, marginBottom: 8 },
+  fedBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#EEF2FF', borderWidth: 1, borderColor: '#C7D2FE', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8, marginTop: 6 },
+  fedBtnText: { color: '#1E3A8A', fontSize: 13, fontWeight: '600', flex: 1 },
 });

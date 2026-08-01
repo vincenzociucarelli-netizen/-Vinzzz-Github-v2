@@ -32,8 +32,9 @@
 
 ## Atleta 18+ (Marco - TEST)
 - Email: marcob@test.com
-- Password: Test123
-- Stato: in_trial (ma il frontend potrebbe non riconoscerlo correttamente)
+- Password: Test1234 (resettata 01/08/2026 per test calendario/federazione; era Test123)
+- athlete_id: c0555a97927f4054ae84b1c9, team Under 14 (calendar_link di test impostato per verifica link federazione)
+- Stato: in_trial, is_approved=true
 
 ## Atleta 18+ (Viola Rossi - TEST utente fittizio Pallavolo Perugia)
 - Email: viola@test.com

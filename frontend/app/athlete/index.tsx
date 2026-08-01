@@ -26,8 +26,7 @@ import { SportIcon } from '../../src/components/SportIcon';
 import { OnboardingTutorial, ATHLETE_STEPS } from '../../src/components/OnboardingTutorial';
 import SignaturePadInline, { SignaturePadInlineRef } from '../../src/components/SignaturePadInline';
 import SwitchAccountButton from '../../src/components/SwitchAccountButton';
-// 🆕 31/07/2026 — Calendario Gare (export .ics) esposto direttamente sulla dashboard atleta
-import AthleteMatchesCard from '../../src/components/AthleteMatchesCard';
+// 🐛 01/08/2026 — AthleteMatchesCard rimosso da "Da fare" (duplicava la tab Presenze)
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 const MONTH_NAMES = [
@@ -1327,16 +1326,9 @@ export default function AthleteScreen() {
         </View>
       )}
 
-      {/* 🆕 31/07/2026 — Calendario Gare + export .ics direttamente sulla dashboard atleta
-          (visibile anche se non ci sono ancora gare importate: mostra "Nessuna gara programmata"). */}
-      {profile?.athlete_id && (
-        <View style={{ paddingHorizontal: 16, marginBottom: 16 }} data-testid="athlete-matches-card-wrapper">
-          <AthleteMatchesCard
-            athleteId={profile.athlete_id}
-            athleteName={profile.full_name}
-          />
-        </View>
-      )}
+      {/* 🐛 01/08/2026 — Calendario Gare RIMOSSO dalla tab "Da fare": duplicava
+          la card già presente nella tab "Presenze" (/athlete/presenze). I "Prossimi
+          Impegni" qui sopra coprono già le gare imminenti. */}
 
 
       {/* Squadra Card (ex "Dati Iscrizione") */}
