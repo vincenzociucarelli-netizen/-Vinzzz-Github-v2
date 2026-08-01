@@ -1551,6 +1551,22 @@ export default function AdminDashboard() {
             </View>
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
+
+          {/* 🆕 01/08/2026 — Storico Pagamenti (Stripe/contabilità con filtri + CSV) */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/payments-history')}
+            data-testid="payments-history-menu-card"
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#E3F2FD' }]}>
+              <Text style={{ fontSize: 26 }}>💳</Text>
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Storico Pagamenti</Text>
+              <Text style={styles.menuCardSubtitle}>Filtri per data/stato/atleta ed export CSV</Text>
+            </View>
+            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Rigenera Codice - A fondo pagina */}
