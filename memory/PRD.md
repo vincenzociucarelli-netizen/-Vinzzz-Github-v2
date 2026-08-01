@@ -344,6 +344,11 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - Query settings ora legge anche il campo `name` (era solo `ragione_sociale`/`society_name`).
 
 
+- **01/08/2026** — Fix UI da segnalazioni utente (3 foto), testato al 100% (iteration_92):
+  - Rimosso testo segnaposto "In arrivo: riepilogo lavoro stagione (obiettivi, statistiche, ruolo)" dalle schede admin Coach/Collaboratore/Dirigente (`app/admin/coach/[id].tsx`, `collaboratore/[id].tsx`, `dirigente/[id].tsx`).
+  - `AdminCoachCommitments.tsx`: aggiunto pulsante "Riprova" (testid `retry-commitments-btn`) + retry automatico (1 tentativo, gestisce cold start Render) per l'errore "Impossibile caricare gli impegni"; aggiunti badge ATL/COACH anche nella sezione "Successivi".
+  - `CompensationSummaryCard.tsx`: box base "Pregresso dichiarato" (`pregresso-dichiarato-box`) ora nascosto in vista admin (`adminUserId` presente) — resta solo il pannello firmato `AdminPriorCompensationPanel` per evitare l'informazione doppia.
+
 ## Testing Credentials
 Vedi `/app/memory/test_credentials.md`
 
