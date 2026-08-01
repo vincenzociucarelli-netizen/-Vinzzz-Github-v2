@@ -27,6 +27,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import api from '../services/api';
+import { downloadFipavPresencesReport } from '../utils/fipavPresencesReport';
 
 interface Props {
   athleteId: string;
@@ -87,6 +88,9 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
   // 🆕 01/08/2026 — Registro presenze datato
   const [newDate, setNewDate] = useState('');
   const [newPresenceChamp, setNewPresenceChamp] = useState('');
+  // 🆕 01/08/2026 — Scelta gara dal calendario reale dell'atleta
+  const [matchOptions, setMatchOptions] = useState<{ id: string; dateIso: string; championship: string; label: string }[]>([]);
+  const [selectedMatchIdx, setSelectedMatchIdx] = useState('');
 
   const handleDateMask = (text: string) => {
     const digits = text.replace(/\D/g, '').slice(0, 8);
@@ -119,6 +123,25 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
       if (!isEnabled) return;
       const res = await api.get(`/admin/athletes/${athleteId}/fipav-rules`);
       setState(res.data);
+      // 🆕 Carica le gare reali dell'atleta dal calendario per la scelta rapida della data
+      try {
+        const [matchesRes, teamsRes] = await Promise.all([
+          api.get(`/athletes/${athleteId}/matches`),
+          api.get('/teams'),
+        ]);
+        const teamMap: Record<string, string> = {};
+        (teamsRes.data || []).forEach((t: any) => { if (t?.id) teamMap[t.id] = t.name; });
+        const opts = (matchesRes.data?.matches || []).map((m: any) => {
+          const iso = String(m.date || '').slice(0, 10);
+          const champ = teamMap[m.team_id] || m.team_name || '';
+          const opp = m.opponent || '';
+          const p = iso.split('-');
+          const itd = p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : iso;
+          return { id: m.id, dateIso: iso, championship: champ, label: `${itd}${champ ? ' · ' + champ : ''}${opp ? ' vs ' + opp : ''}` };
+        }).filter((o: any) => o.dateIso);
+        opts.sort((a: any, b: any) => b.dateIso.localeCompare(a.dateIso));
+        setMatchOptions(opts);
+      } catch { setMatchOptions([]); }
       // Check killswitch
       try {
         const kd = new Date(res.data.killswitch_date);
@@ -166,6 +189,7 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
       setState(res.data);
       setNewDate('');
       setNewPresenceChamp('');
+      setSelectedMatchIdx('');
     } catch (e: any) {
       const detail = e?.response?.data?.detail || 'Aggiunta fallita';
       showAlert('Errore', typeof detail === 'string' ? detail : 'Errore');
@@ -232,7 +256,8 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
   // 🆕 01/08/2026 — Registro datato
   const presences = state.game_presences || [];
   const upperOptions = state.upper_league_options || ['Serie C', 'Serie D', '1^ Divisione'];
-  const presenceOptions = [...upperOptions, ...(state.category_championships || [])];
+  const matchChamps = Array.from(new Set(matchOptions.map(o => o.championship).filter(Boolean)));
+  const presenceOptions = Array.from(new Set([...upperOptions, ...(state.category_championships || []), ...matchChamps]));
   const violationWeeks = state.weekly_summary?.violation_weeks || [];
   const maxWeek = state.weekly_summary?.max_in_any_week || 0;
   const weeklyColor = maxWeek > 3 ? '#DC2626' : (maxWeek === 3 ? '#EA580C' : '#059669');
@@ -240,6 +265,21 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
     try { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; } catch { return iso; }
   };
   const showRegistry = eligibleUpperLeague || eligibleU17;
+
+  const handlePrintReport = () => {
+    downloadFipavPresencesReport({
+      athleteName: state.athlete_name,
+      birthYear: state.birth_year,
+      gender: state.gender,
+      upperPresences: state.upper_league_presences,
+      weeklyMax: maxWeek,
+      violationWeeks,
+      presences: presences.map(p => ({ date: p.date, championship: p.championship, level: p.level })),
+      categoryChampionships: state.category_championships || [],
+      killswitchDate: state.killswitch_date,
+      blocked: state.blocked_from_lower_league,
+    });
+  };
 
   return (
     <View style={styles.card} testID="fipav-athlete-rules-panel">
@@ -392,13 +432,47 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
       {/* ====== REGISTRO PRESENZE GARA (datato) ====== */}
       {showRegistry && (
         <View style={styles.section} testID="fipav-registry-section">
-          <Text style={styles.sectionTitle}>Registro Presenze Gara (camp3)</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+            <Text style={[styles.sectionTitle, { flex: 1 }]}>Registro Presenze Gara (camp3)</Text>
+            <TouchableOpacity style={styles.printBtn} onPress={handlePrintReport} testID="fipav-print-report-btn">
+              <Ionicons name="print" size={14} color="#1E3A8A" />
+              <Text style={styles.printBtnText}>Stampa PDF</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.hintSmall}>
             Registra ogni ingresso con data + campionato. Max 1 gara al giorno. Alimenta i conteggi Serie superiore e gare settimanali.
           </Text>
 
           {!readOnly && (
             <View style={styles.addPresenceBox}>
+              {matchOptions.length > 0 && (
+                <View style={{ marginBottom: 10 }}>
+                  <Text style={styles.miniLabel}>Scegli dal calendario (compila la data in automatico)</Text>
+                  <View style={styles.presencePicker}>
+                    <Picker
+                      selectedValue={selectedMatchIdx}
+                      enabled={!saving}
+                      style={{ height: 40 }}
+                      testID="fipav-presence-match"
+                      onValueChange={(idx) => {
+                        setSelectedMatchIdx(idx);
+                        if (idx === '') return;
+                        const o = matchOptions[Number(idx)];
+                        if (o) {
+                          const p = o.dateIso.split('-');
+                          if (p.length === 3) setNewDate(`${p[2]}/${p[1]}/${p[0]}`);
+                          if (o.championship) setNewPresenceChamp(o.championship);
+                        }
+                      }}
+                    >
+                      <Picker.Item label="-- Scegli una gara dal calendario --" value="" />
+                      {matchOptions.map((o, i) => (
+                        <Picker.Item key={o.id || i} label={o.label} value={String(i)} />
+                      ))}
+                    </Picker>
+                  </View>
+                </View>
+              )}
               <View style={{ flexDirection: 'row', gap: 8, alignItems: 'flex-end' }}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.miniLabel}>Data gara</Text>
@@ -550,6 +624,11 @@ const styles = StyleSheet.create({
   },
   sanctionText: { fontSize: 10.5, color: '#7C2D12', flex: 1, lineHeight: 14 },
   hintSmall: { fontSize: 10.5, color: '#6B7280', marginTop: 6, lineHeight: 14, fontStyle: 'italic' },
+  printBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#EEF2FF',
+    borderWidth: 1, borderColor: '#C7D2FE', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6,
+  },
+  printBtnText: { color: '#1E3A8A', fontWeight: '700', fontSize: 12 },
   ruleDesc: { fontSize: 11, color: '#4B5563', marginTop: 2, marginBottom: 6, lineHeight: 15 },
   miniLabel: { fontSize: 11, fontWeight: '600', color: '#374151', marginBottom: 4 },
   addPresenceBox: {
