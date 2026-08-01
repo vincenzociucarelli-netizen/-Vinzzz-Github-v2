@@ -349,6 +349,12 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - `AdminCoachCommitments.tsx`: aggiunto pulsante "Riprova" (testid `retry-commitments-btn`) + retry automatico (1 tentativo, gestisce cold start Render) per l'errore "Impossibile caricare gli impegni"; aggiunti badge ATL/COACH anche nella sezione "Successivi".
   - `CompensationSummaryCard.tsx`: box base "Pregresso dichiarato" (`pregresso-dichiarato-box`) ora nascosto in vista admin (`adminUserId` presente) — resta solo il pannello firmato `AdminPriorCompensationPanel` per evitare l'informazione doppia.
 
+- **01/08/2026** — Storico Pagamenti Admin (contabilità), testato al 100% (iteration_93):
+  - Nuovo router `routes/payments_history.py` → `GET /api/admin/payments/history` con filtri `date_from`/`date_to`/`status`/`method` e totali (movimenti, incassato, rimborsato). Stato derivato: paid/partial/pending/unpaid/refunded. Isolamento multi-tenant per `society_id` + atleti della società.
+  - Nuova pagina `app/admin/payments-history.tsx`: filtri stato/metodo (chip), preset periodo (Tutto/Anno/Questo mese), date manuali, ricerca atleta client-side, riepilogo e **export CSV** (separatore `;`, BOM per Excel IT) dei movimenti filtrati.
+  - Card di navigazione "Storico Pagamenti" nella dashboard admin (`app/admin/index.tsx`).
+  - NB: il preview è servito come **build statico** (`npx serve -s dist`) → dopo modifiche frontend serve `npx expo export -p web --clear` + `sudo supervisorctl restart expo`.
+
 ## Testing Credentials
 Vedi `/app/memory/test_credentials.md`
 

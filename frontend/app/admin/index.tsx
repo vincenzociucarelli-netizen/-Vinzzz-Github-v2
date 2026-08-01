@@ -1556,7 +1556,7 @@ export default function AdminDashboard() {
           <TouchableOpacity
             style={styles.menuCard}
             onPress={() => router.push('/admin/payments-history')}
-            data-testid="payments-history-menu-card"
+            testID="payments-history-menu-card"
           >
             <View style={[styles.menuIcon, { backgroundColor: '#E3F2FD' }]}>
               <Text style={{ fontSize: 26 }}>💳</Text>

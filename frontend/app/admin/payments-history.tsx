@@ -290,15 +290,15 @@ export default function PaymentsHistoryPage() {
         {/* Riepilogo */}
         <View style={styles.summaryRow}>
           <View style={[styles.summaryBox, { backgroundColor: '#E3F2FD' }]}>
-            <Text style={styles.summaryValue} data-testid="summary-count">{clientTotals.count}</Text>
+            <Text style={styles.summaryValue} testID="summary-count">{clientTotals.count}</Text>
             <Text style={styles.summaryLabel}>Movimenti</Text>
           </View>
           <View style={[styles.summaryBox, { backgroundColor: '#E8F5E9' }]}>
-            <Text style={styles.summaryValue} data-testid="summary-paid">{formatCurrency(clientTotals.total_paid)}</Text>
+            <Text style={styles.summaryValue} testID="summary-paid">{formatCurrency(clientTotals.total_paid)}</Text>
             <Text style={styles.summaryLabel}>Incassato</Text>
           </View>
           <View style={[styles.summaryBox, { backgroundColor: '#F3E5F5' }]}>
-            <Text style={styles.summaryValue} data-testid="summary-refunded">{formatCurrency(clientTotals.total_refunded)}</Text>
+            <Text style={styles.summaryValue} testID="summary-refunded">{formatCurrency(clientTotals.total_refunded)}</Text>
             <Text style={styles.summaryLabel}>Rimborsato</Text>
           </View>
         </View>
@@ -327,7 +327,7 @@ export default function PaymentsHistoryPage() {
           filteredRows.map((r) => {
             const meta = STATUS_META[r.status] || STATUS_META.unpaid;
             return (
-              <View key={r.id} style={styles.rowCard} data-testid={`payment-row-${r.id}`}>
+              <View key={r.id} style={styles.rowCard} testID={`payment-row-${r.id}`}>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
                     <Text style={styles.rowAthlete}>{r.athlete_name}</Text>
