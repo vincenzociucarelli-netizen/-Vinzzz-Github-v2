@@ -209,7 +209,9 @@ export default function CompensationSummaryCard({
         </View>
       )}
 
-      {/* Pregresso dichiarato */}
+      {/* Pregresso dichiarato — 🆕 nascosto in vista admin (adminUserId): lì mostriamo
+          solo il pannello firmato dall'utente (AdminPriorCompensationPanel) per evitare doppioni */}
+      {!adminUserId && (
       <View style={{ backgroundColor: '#E8F4FD', padding: 12, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: '#007AFF' }} data-testid="pregresso-dichiarato-box">
         <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
           <Text style={{ fontSize: 14, marginRight: 6 }}>📋</Text>
@@ -247,6 +249,7 @@ export default function CompensationSummaryCard({
           </View>
         </View>
       </View>
+      )}
 
       {/* 🆕 27/07/2026 — Pannello admin: dichiarazione pregresso firmata + storia (solo se adminUserId presente) */}
       {adminUserId && (

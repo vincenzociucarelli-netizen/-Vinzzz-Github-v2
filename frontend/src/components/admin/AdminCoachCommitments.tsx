@@ -121,8 +121,10 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, athleteId, role
   const [error, setError] = useState<string | null>(null);
   // 🆕 22/06/2026 — "Prossimi giorni" collassabile (default chiuso)
   const [upcomingOpen, setUpcomingOpen] = useState(false);
+  // 🆕 Retry automatico (una volta) + pulsante "Riprova" per errori transitori (cold start)
+  const retriedRef = React.useRef(false);
 
-  useEffect(() => {
+  const load = React.useCallback(() => {
     setLoading(true);
     setError(null);
     // 🆕 01/07/2026 — Dual-role: se entrambi userId+athleteId, faccio 2 fetch e mergio.
@@ -148,13 +150,28 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, athleteId, role
         })
       : fetchOne(athleteId ? { athlete_id: athleteId } : { user_id: userId });
     promise
-      .then((res: any) => setData(res))
+      .then((res: any) => { retriedRef.current = false; setData(res); })
       .catch((err) => {
         console.error('Errore caricamento impegni admin:', err);
-        setError('Impossibile caricare gli impegni');
+        // 🆕 Un solo retry automatico dopo 1.5s (gestisce il cold start del backend)
+        if (!retriedRef.current) {
+          retriedRef.current = true;
+          setTimeout(() => load(), 1500);
+        } else {
+          setError('Impossibile caricare gli impegni');
+        }
       })
       .finally(() => setLoading(false));
   }, [userId, athleteId]);
+
+  const handleRetry = () => {
+    retriedRef.current = false;
+    load();
+  };
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   if (loading) {
     return (
@@ -167,7 +184,16 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, athleteId, role
   if (error) {
     return (
       <View style={styles.card}>
-        <Text style={[styles.emptyText, { color: '#C0392B' }]}>{error}</Text>
+        <Text style={[styles.emptyText, { color: '#C0392B', textAlign: 'center', marginBottom: 10 }]}>{error}</Text>
+        <TouchableOpacity
+          onPress={handleRetry}
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1565C0', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, alignSelf: 'center' }}
+          testID="retry-commitments-btn"
+          data-testid="retry-commitments-btn"
+        >
+          <Ionicons name="refresh" size={16} color="#fff" style={{ marginRight: 6 }} />
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Riprova</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -215,10 +241,13 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, athleteId, role
                         style={{ marginRight: 6 }}
                       />
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.itemTitle}>
-                          {it.team_name || 'Squadra'} {it.type === 'match' ? `vs ${it.opponent || '?'}` : ''}
-                          {it.cancelled ? ' (ANNULLATO)' : ''}
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <RoleBadge role={it.as_role} />
+                          <Text style={styles.itemTitle}>
+                            {it.team_name || 'Squadra'} {it.type === 'match' ? `vs ${it.opponent || '?'}` : ''}
+                            {it.cancelled ? ' (ANNULLATO)' : ''}
+                          </Text>
+                        </View>
                         <Text style={styles.itemSubtitle}>
                           {/* 🆕 Giorno della settimana + data */}
                           {(it as any).day_name ? `${(it as any).day_name} ` : ''}

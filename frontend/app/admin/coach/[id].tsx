@@ -1098,9 +1098,6 @@ export default function AdminCoachDetail() {
                     Nessuna squadra assegnata in questa stagione.
                   </Text>
                 )}
-                <Text style={{ color: '#666', fontSize: 12, lineHeight: 18, marginTop: 12, fontStyle: 'italic' }}>
-                  <Text style={{ fontWeight: '600', color: '#F57C00' }}>In arrivo:</Text> riepilogo lavoro stagione (obiettivi, statistiche, ruolo).
-                </Text>
               </>
             )}
           </View>
