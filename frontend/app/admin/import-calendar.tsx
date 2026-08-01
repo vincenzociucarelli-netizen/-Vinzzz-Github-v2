@@ -480,54 +480,30 @@ export default function ImportCalendarScreen() {
       <Text style={styles.stepTitle}>2. Seleziona Società e Campionati</Text>
 
       {isNational ? (
-        <>
-          {/* 🆕 31/07/2026 — Modalità Nazionale (Serie A/B): non scrapabile.
-              L'admin inserisce Società (testo libero) + Girone manualmente. */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>La tua Società (Nazionale)</Text>
-            <Text style={styles.hint}>
-              federvolley.it non è scrapabile automaticamente. Inserisci il nome esatto della tua società come appare sul portale nazionale.
-            </Text>
-            <TextInput
-              style={[styles.mappingInput, { width: '100%' }]}
-              value={nationalSocietyName}
-              onChangeText={(text) => {
-                setNationalSocietyName(text);
-                setSelectedSociety(text.trim() ? `national-manual:${text.trim()}` : '');
-                setSelectedSocietyName(text.trim());
-              }}
-              placeholder="Es. Sir Susa Vim Perugia"
-              placeholderTextColor="#999"
-              data-testid="national-society-input"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Girone</Text>
-            <Text style={styles.hint}>
-              Serie A1/A2/A3: seleziona &quot;Girone Unico&quot;. Serie B / B Interregionale: scegli la lettera del tuo girone.
-            </Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={selectedGirone}
-                onValueChange={(value) => setSelectedGirone(value)}
-                style={styles.picker}
-                data-testid="national-girone-picker"
-              >
-                <Picker.Item label="-- Seleziona girone --" value="" />
-                <Picker.Item label="Girone Unico" value="Unico" />
-                <Picker.Item label="Girone A" value="A" />
-                <Picker.Item label="Girone B" value="B" />
-                <Picker.Item label="Girone C" value="C" />
-                <Picker.Item label="Girone D" value="D" />
-                <Picker.Item label="Girone E" value="E" />
-                <Picker.Item label="Girone F" value="F" />
-                <Picker.Item label="Girone G" value="G" />
-                <Picker.Item label="Girone H" value="H" />
-              </Picker>
-            </View>
-          </View>
-        </>
+        <View style={{ backgroundColor: '#EFF6FF', borderLeftWidth: 4, borderLeftColor: '#2563EB', padding: 16, borderRadius: 8 }} data-testid="national-info-card">
+          <Text style={{ fontWeight: '700', color: '#1E3A8A', fontSize: 15, marginBottom: 8 }}>
+            Calendario Serie A / B (Nazionale)
+          </Text>
+          <Text style={{ fontSize: 13, color: '#1E40AF', lineHeight: 20, marginBottom: 12 }}>
+            Il portale ufficiale federvolley.it (Serie A/B) è dinamico e non consente l&apos;import automatico delle gare.
+          </Text>
+          <Text style={{ fontSize: 13, color: '#1E40AF', lineHeight: 20, marginBottom: 6, fontWeight: '700' }}>
+            Come rendere visibile il calendario agli atleti:
+          </Text>
+          <Text style={{ fontSize: 13, color: '#1E40AF', lineHeight: 22 }}>
+            {'\u2022'} Apri la scheda della squadra di Serie A/B{'\n'}
+            {'\u2022'} Incolla il link del calendario ufficiale nel campo &quot;Link Calendario Federazione&quot;{'\n'}
+            {'\u2022'} Gli atleti troveranno il pulsante per aprire il calendario federale
+          </Text>
+          <TouchableOpacity
+            style={[styles.button, { marginTop: 16 }]}
+            onPress={() => router.push('/admin/teams')}
+            data-testid="national-go-teams-btn"
+          >
+            <Ionicons name="people" size={20} color="#fff" />
+            <Text style={styles.buttonText}>Vai alle Squadre</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <View style={styles.inputGroup}>
           <Text style={styles.label}>La tua Società sulla federazione</Text>
@@ -630,21 +606,23 @@ export default function ImportCalendarScreen() {
           <Text style={styles.buttonSecondaryText}>Indietro</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity
-          style={[styles.button, (!selectedSociety || (isNational && !selectedGirone) || previewLoading) && styles.buttonDisabled]}
-          onPress={loadPreview}
-          disabled={!selectedSociety || (isNational && !selectedGirone) || previewLoading}
-          data-testid="load-preview-btn"
-        >
-          {previewLoading ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <>
-              <Text style={styles.buttonText}>Anteprima</Text>
-              <Ionicons name="eye" size={20} color="#fff" />
-            </>
-          )}
-        </TouchableOpacity>
+        {!isNational && (
+          <TouchableOpacity
+            style={[styles.button, (!selectedSociety || previewLoading) && styles.buttonDisabled]}
+            onPress={loadPreview}
+            disabled={!selectedSociety || previewLoading}
+            data-testid="load-preview-btn"
+          >
+            {previewLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <>
+                <Text style={styles.buttonText}>Anteprima</Text>
+                <Ionicons name="eye" size={20} color="#fff" />
+              </>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );

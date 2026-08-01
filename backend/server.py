@@ -6766,7 +6766,14 @@ async def get_athlete_matches(
     else:
         q: Dict = {"team_id": {"$in": team_ids}}
         if society_id:
-            q["society_id"] = society_id
+            # 🐛 01/08/2026 — Includi anche le gare legacy senza society_id (import
+            # prima del tracking society_id). team_id è già scoped per società,
+            # quindi è sicuro non escludere quelle con society_id nullo/mancante.
+            q["$or"] = [
+                {"society_id": society_id},
+                {"society_id": {"$in": [None, ""]}},
+                {"society_id": {"$exists": False}},
+            ]
         if only_upcoming:
             q["date"] = {"$gte": datetime.now(timezone.utc)}
         raw = await db.matches.find(q).sort("date", 1).to_list(500)

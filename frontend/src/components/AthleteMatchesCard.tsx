@@ -34,7 +34,7 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
     let mounted = true;
     (async () => {
       try {
-        const res = await api.get(`/athletes/${athleteId}/matches`, { params: { only_upcoming: true } });
+        const res = await api.get(`/athletes/${athleteId}/matches`);
         if (mounted) setMatches(res.data?.matches || []);
       } catch {
         if (mounted) setMatches([]);
@@ -79,7 +79,14 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
     );
   }
 
-  const shown = expanded ? matches : matches.slice(0, 5);
+  // 🐛 01/08/2026 — In bassa stagione (nessuna gara futura) mostravamo card vuota
+  // pur avendo l'intera stagione a calendario. Ora: se ci sono gare future le
+  // mostriamo; altrimenti mostriamo il calendario completo (più recenti prima).
+  const now = Date.now();
+  const upcoming = matches.filter((m) => new Date(m.date).getTime() >= now);
+  const seasonOver = upcoming.length === 0;
+  const baseList = seasonOver ? [...matches].reverse() : upcoming;
+  const shown = expanded ? baseList : baseList.slice(0, 5);
   const fmtDate = (iso: string) => {
     try {
       const d = new Date(iso);
@@ -100,7 +107,9 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
         )}
       </View>
       <Text style={styles.subtitle}>
-        Prossime gare da tutte le squadre in cui l&apos;atleta gioca.
+        {seasonOver
+          ? 'Calendario completo delle gare della stagione.'
+          : 'Prossime gare da tutte le squadre in cui l\u2019atleta gioca.'}
       </Text>
       {matches.length === 0 ? (
         <Text style={styles.empty}>Nessuna gara programmata.</Text>
@@ -123,10 +132,10 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
               </View>
             );
           })}
-          {matches.length > 5 && (
+          {baseList.length > 5 && (
             <TouchableOpacity onPress={() => setExpanded(!expanded)} style={styles.showMore}>
               <Text style={styles.showMoreText}>
-                {expanded ? 'Mostra meno' : `Vedi tutte (${matches.length})`}
+                {expanded ? 'Mostra meno' : `Vedi tutte (${baseList.length})`}
               </Text>
             </TouchableOpacity>
           )}
