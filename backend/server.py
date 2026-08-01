@@ -1790,6 +1790,7 @@ async def get_athlete_fipav_rules(athlete_id: str, current_user = Depends(get_cu
     # contatori scalari NON vengono più usati (scelta utente: azzera e riparti pulito).
     from datetime import date as _date, timedelta
     entries = list(ath.get("game_presences") or [])
+    entries = _recompute_levels(entries)  # 🐛 self-heal classificazione livello
     entries.sort(key=lambda e: (e.get("date") or ""), reverse=True)
     upper_pres = len([e for e in entries if e.get("level") == "upper"])
     total_pres = len(entries)
@@ -1904,6 +1905,30 @@ async def update_athlete_fipav_rules(
 UPPER_LEAGUE_SET = {"Serie C", "Serie D", "1^ Divisione"}
 
 
+def classify_fipav_level(name: str) -> str:
+    """🐛 01/08/2026 — Classifica una gara come 'upper' (Serie Superiore: Serie C/D/
+    1ª Divisione) o 'category'. Riconosce le varianti testuali dei nomi squadra/
+    campionato (es. 'Prima Divisione Femminile', '1^ Divisione', 'Serie D Maschile')."""
+    import re, unicodedata
+    n = (name or "").lower().strip()
+    n = "".join(c for c in unicodedata.normalize("NFKD", n) if not unicodedata.combining(c))
+    n = n.replace("^", " ").replace("°", " ").replace("ª", "a")
+    n = re.sub(r"\s+", " ", n)
+    if "serie c" in n or "serie d" in n:
+        return "upper"
+    # 1ª Divisione / Prima Divisione / 1 Divisione / 1a Divisione
+    if "divisione" in n and ("prima" in n or re.search(r"\b1a?\b", n)):
+        return "upper"
+    return "category"
+
+
+def _recompute_levels(entries: list) -> list:
+    """Ricalcola il campo 'level' di ogni ingresso dal nome campionato (self-heal)."""
+    for e in entries:
+        e["level"] = classify_fipav_level(e.get("championship") or "")
+    return entries
+
+
 class FipavPresenceAdd(BaseModel):
     """🆕 01/08/2026 — Aggiunta di un ingresso/gara al registro datato FIPAV."""
     date: str  # formato YYYY-MM-DD
@@ -1928,6 +1953,7 @@ async def _fipav_guard(athlete_id: str, current_user, require_admin: bool = True
 async def _persist_fipav_derived(athlete_id: str, entries: list):
     """Ricalcola e persiste i contatori derivati dal registro datato."""
     from datetime import date as _date
+    entries = _recompute_levels(entries)
     upper_pres = len([e for e in entries if e.get("level") == "upper"])
     blocked = upper_pres >= 11
     try:
@@ -1976,7 +2002,7 @@ async def add_athlete_fipav_presence(
             detail="Esiste già una gara registrata in questa data (max 1 gara al giorno).",
         )
 
-    level = "upper" if championship in UPPER_LEAGUE_SET else "category"
+    level = classify_fipav_level(championship)
     entry = {
         "id": str(uuid.uuid4()),
         "date": data.date[:10],
