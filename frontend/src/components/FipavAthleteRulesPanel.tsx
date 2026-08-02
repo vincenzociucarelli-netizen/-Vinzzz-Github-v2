@@ -248,10 +248,10 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
   // Feature A (U17): stagione 2026/2027 → nati >= 2010
   const eligibleU17 = birthYear !== null && birthYear >= 2010;
 
-  // 🆕 01/08/2026 — Nella vista coach (readOnly) nascondi del tutto il pannello se
-  // l'atleta non è soggetto ad alcuna regola FIPAV (es. bimbi del minivolley),
-  // così i coach del minivolley non vedono regole irrilevanti.
-  if (readOnly && !eligibleUpperLeague && !eligibleU17) return null;
+  // 🆕 01/08/2026 — Nascondi del tutto il pannello (in QUALSIASI vista: admin e coach)
+  // se l'atleta non è soggetto ad alcuna regola FIPAV (es. bimbi del minivolley o
+  // adulti come atleti nati prima delle soglie): non ha senso mostrare regole irrilevanti.
+  if (!eligibleUpperLeague && !eligibleU17) return null;
 
   const upperCount = state.upper_league_presences;
   const upperBadgeColor = upperCount >= 11 ? '#DC2626' : (upperCount >= 10 ? '#EA580C' : '#059669');

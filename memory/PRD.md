@@ -355,6 +355,9 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - Card di navigazione "Storico Pagamenti" nella dashboard admin (`app/admin/index.tsx`).
   - NB: il preview è servito come **build statico** (`npx serve -s dist`) → dopo modifiche frontend serve `npx expo export -p web --clear` + `sudo supervisorctl restart expo`.
 
+- **01/08/2026 (b)** — Fix visibilità pannello Regole FIPAV (`FipavAthleteRulesPanel.tsx`):
+  - Prima il pannello si nascondeva solo in vista coach (`readOnly`) per atleti non soggetti a regole FIPAV; l'admin lo vedeva comunque. Ora la condizione `if (!eligibleUpperLeague && !eligibleU17) return null;` vale in TUTTE le viste. Così l'admin non vede più il regolamento per atleti non soggetti (es. GUARINO GIADA nata 2000 atleta B1 + coach Minivolley; bimbi minivolley). Gli atleti idonei (minori nelle fasce M≥2006/F≥2008 o U17 nati≥2010) continuano a vedere il pannello.
+
 ## Testing Credentials
 Vedi `/app/memory/test_credentials.md`
 
