@@ -4781,19 +4781,33 @@ async def send_document_email(
     document_title: str,
     signer_name: str,
     pdf_bytes: bytes,
-    filename: str
+    filename: str,
+    to_name: Optional[str] = None,
+    is_admin_copy: bool = False,
 ):
-    """Send a signed document PDF via email"""
+    """Send a signed document PDF via email.
+
+    🐛 01/08/2026 — `to_name` ora è distinto da `signer_name`: per la copia admin
+    il nome del destinatario deve essere l'admin (non il firmatario), altrimenti
+    l'email dell'admin risulta indirizzata al nome del firmatario. `is_admin_copy`
+    cambia anche il testo (notifica invece che 'Gentile <firmatario>')."""
     try:
         import base64
         pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
-        
+
+        recipient_name = to_name or signer_name
+        if is_admin_copy:
+            intro = f"""<p>È stato firmato un nuovo documento da <strong>{signer_name}</strong>.</p>
+            <p>In allegato trovi la copia del documento firmato digitalmente.</p>"""
+        else:
+            intro = f"""<p>Gentile {signer_name},</p>
+            <p>In allegato trova il documento firmato digitalmente.</p>"""
+
         html_content = f"""
         <html>
         <body style="font-family: Arial, sans-serif; padding: 20px;">
             <h2 style="color: #8E44AD;">{document_title}</h2>
-            <p>Gentile {signer_name},</p>
-            <p>In allegato trova il documento firmato digitalmente.</p>
+            {intro}
             <p>Questo documento è stato generato automaticamente e contiene i metadati 
             di firma per garantirne la validità legale (timestamp, IP, hash del documento).</p>
             <br>
@@ -4811,7 +4825,7 @@ async def send_document_email(
             html_content=html_content,
             pdf_base64=pdf_base64,
             pdf_filename=filename,
-            to_name=signer_name
+            to_name=recipient_name
         )
         
         if result and not result.get('success', True):
@@ -23968,7 +23982,9 @@ async def sign_gdpr_privacy_document(
                     document_title=doc_title,
                     signer_name=document_record["signer_name"],
                     pdf_bytes=pdf_bytes,
-                    filename=filename
+                    filename=filename,
+                    to_name=admin.get("full_name") or "Amministratore",
+                    is_admin_copy=True,
                 )
     except Exception as e:
         logging.warning(f"Could not send email to admins: {e}")

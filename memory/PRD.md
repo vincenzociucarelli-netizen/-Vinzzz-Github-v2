@@ -369,6 +369,10 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
 
 - **01/08/2026 (e)** — Vista tecnica coach (`app/coach/athlete/[id].tsx`): aggiunta **data di nascita** sotto il nome (🎂 gg/mm/aaaa · N anni) e nuova card **📊 Statistiche Presenze** (totali/mese/settimana con %, + gare giocate). Backend `GET /athletes/{id}/technical-data` ora ritorna `date_of_birth` (già c'era) e un oggetto `stats` (presenze da `attendances` + `game_presences`), riusando la logica di `my-stats`. Verificato via curl.
 
+- **02/08/2026** — Fix email documento GDPR firmato (`send_document_email` in `server.py`):
+  - Bug: la copia di notifica all'admin mostrava come nome destinatario il FIRMATARIO (es. "GUARINO GIADA ANGELA") pur andando all'email dell'admin, perché `to_name` era sempre = `signer_name`.
+  - Fix: aggiunti parametri `to_name` e `is_admin_copy`. La copia admin ora usa il nome dell'admin come destinatario e il testo "È stato firmato un nuovo documento da <firmatario>". La copia al firmatario resta invariata (al suo indirizzo, con il suo nome). Verificato: syntax OK + backend reload pulito.
+
 ## Testing Credentials
 Vedi `/app/memory/test_credentials.md`
 
