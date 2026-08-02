@@ -160,3 +160,89 @@ async def get_payments_history(
             "total_refunded": round(total_refunded, 2),
         },
     }
+
+
+
+@router.get("/admin/payments/refunds")
+async def get_refunds_report(
+    date_from: Optional[str] = Query(None, description="YYYY-MM-DD (inclusivo)"),
+    date_to: Optional[str] = Query(None, description="YYYY-MM-DD (inclusivo)"),
+    current_user=Depends(get_current_user),
+):
+    """Report Rimborsi Stripe della società: elenca ogni rimborso con atleta,
+    importo, data, motivo e admin che l'ha gestito (sola lettura, admin/dirigente)."""
+    if current_user.get("role") not in ("admin", "viewer"):
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    society_id = current_user.get("society_id")
+    if not society_id:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+
+    athletes = await db.athletes.find(
+        {"society_id": society_id},
+        {"id": 1, "first_name": 1, "last_name": 1, "team_id": 1},
+    ).to_list(20000)
+    athlete_map = {a["id"]: a for a in athletes}
+    athlete_ids = list(athlete_map.keys())
+
+    teams = await db.teams.find({"society_id": society_id}, {"id": 1, "name": 1}).to_list(500)
+    team_map = {t["id"]: t.get("name", "") for t in teams}
+
+    # Solo pagamenti con almeno un rimborso
+    query = {
+        "$and": [
+            {"$or": [{"society_id": society_id}, {"athlete_id": {"$in": athlete_ids}}]},
+            {"$or": [{"refunds_log": {"$exists": True, "$ne": []}}, {"refund_amount": {"$gt": 0}}]},
+        ]
+    }
+    payments = await db.payments.find(query).to_list(100000)
+
+    d_from = _to_date(date_from)
+    d_to = _to_date(date_to)
+
+    rows = []
+    total_refunded = 0.0
+
+    for p in payments:
+        athlete = athlete_map.get(p.get("athlete_id"), {})
+        athlete_name = f"{athlete.get('last_name','')} {athlete.get('first_name','')}".strip() or "—"
+        team_name = team_map.get(athlete.get("team_id"), "")
+        description = p.get("installment_name") or p.get("description") or ""
+
+        log = p.get("refunds_log") or []
+        # Fallback legacy: rimborso presente ma senza log dettagliato
+        if not log and float(p.get("refund_amount") or 0) > 0:
+            log = [{
+                "stripe_refund_id": p.get("last_refund_id") or "",
+                "amount": float(p.get("refund_amount") or 0),
+                "reason": p.get("last_refund_reason") or "",
+                "created_at": p.get("last_refund_at"),
+                "admin_email": p.get("last_refund_admin_email") or "",
+            }]
+
+        for entry in log:
+            ed = _to_date(entry.get("created_at"))
+            if d_from and (ed is None or ed < d_from):
+                continue
+            if d_to and (ed is None or ed > d_to):
+                continue
+            amount = float(entry.get("amount") or 0)
+            total_refunded += amount
+            rows.append({
+                "id": entry.get("stripe_refund_id") or f"{p.get('id')}",
+                "payment_id": p.get("id"),
+                "date": _to_iso(entry.get("created_at")),
+                "athlete_name": athlete_name,
+                "team_name": team_name,
+                "description": description,
+                "amount": round(amount, 2),
+                "reason": entry.get("reason") or "",
+                "admin_email": entry.get("admin_email") or "",
+            })
+
+    rows.sort(key=lambda r: r.get("date") or "", reverse=True)
+
+    return {
+        "rows": rows,
+        "totals": {"count": len(rows), "total_refunded": round(total_refunded, 2)},
+    }
