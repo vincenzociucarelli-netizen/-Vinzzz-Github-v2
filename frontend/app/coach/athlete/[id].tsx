@@ -41,6 +41,16 @@ interface TechnicalData {
   parent_name?: string;
   parent_phone?: string;
   emergency_phone?: string;
+  // 🆕 01/08/2026 — Statistiche presenze
+  stats?: {
+    total_attendances: number;
+    weekly_attendances: number;
+    monthly_attendances: number;
+    weekly_percentage: number;
+    monthly_percentage: number;
+    total_percentage: number;
+    games_played: number;
+  } | null;
 }
 
 interface SocietySettings {
@@ -272,7 +282,11 @@ export default function CoachAthleteDetail() {
         <View style={styles.athleteCard}>
           <View style={styles.athleteInfo}>
             <Text style={styles.athleteName}>{athlete.full_name}</Text>
-            {age && <Text style={styles.athleteAge}>{age} anni</Text>}
+            {athlete.date_of_birth ? (
+              <Text style={styles.athleteAge}>
+                🎂 {formatDate(athlete.date_of_birth)}{age !== null ? ` · ${age} anni` : ''}
+              </Text>
+            ) : (age !== null && <Text style={styles.athleteAge}>{age} anni</Text>)}
           </View>
         </View>
 
@@ -423,6 +437,38 @@ export default function CoachAthleteDetail() {
             </View>
           </View>
         </View>
+
+        {/* 🆕 01/08/2026 — Statistiche Presenze (per coach) */}
+        {athlete.stats && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>📊 Statistiche Presenze</Text>
+            <View style={styles.statsGrid}>
+              <View style={[styles.statBox, { backgroundColor: '#E8F5E9' }]}>
+                <Text style={[styles.statValue, { color: '#2E7D32' }]}>{athlete.stats.total_attendances}</Text>
+                <Text style={styles.statLabel}>Totali</Text>
+                <Text style={styles.statPct}>{athlete.stats.total_percentage}%</Text>
+              </View>
+              <View style={[styles.statBox, { backgroundColor: '#E3F2FD' }]}>
+                <Text style={[styles.statValue, { color: '#1565C0' }]}>{athlete.stats.monthly_attendances}</Text>
+                <Text style={styles.statLabel}>Questo mese</Text>
+                <Text style={styles.statPct}>{athlete.stats.monthly_percentage}%</Text>
+              </View>
+              <View style={[styles.statBox, { backgroundColor: '#FFF3E0' }]}>
+                <Text style={[styles.statValue, { color: '#E65100' }]}>{athlete.stats.weekly_attendances}</Text>
+                <Text style={styles.statLabel}>Questa settimana</Text>
+                <Text style={styles.statPct}>{athlete.stats.weekly_percentage}%</Text>
+              </View>
+              <View style={[styles.statBox, { backgroundColor: '#F3E5F5' }]}>
+                <Text style={[styles.statValue, { color: '#7B1FA2' }]}>{athlete.stats.games_played}</Text>
+                <Text style={styles.statLabel}>Gare giocate</Text>
+                <Text style={styles.statPct}> </Text>
+              </View>
+            </View>
+            <Text style={styles.statsHint}>
+              Presenze agli allenamenti registrate via QR/check-in. Le percentuali sono calcolate sugli allenamenti previsti dalla squadra.
+            </Text>
+          </View>
+        )}
 
         {/* Notes Section */}
         <View style={styles.section}>
@@ -673,6 +719,41 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 12,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  statBox: {
+    flexGrow: 1,
+    flexBasis: '47%',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#555',
+    marginTop: 2,
+  },
+  statPct: {
+    fontSize: 11,
+    color: '#888',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  statsHint: {
+    fontSize: 11,
+    color: '#999',
+    fontStyle: 'italic',
+    marginTop: 10,
+    lineHeight: 15,
   },
   pickerContainer: {
     backgroundColor: '#f5f5f5',

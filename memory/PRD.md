@@ -367,6 +367,8 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - `GET /api/admin/payments/refunds` (in `routes/payments_history.py`): appiattisce `refunds_log` di tutti i pagamenti della società in righe {data, atleta, squadra, descrizione, importo, motivo, admin}. Fallback legacy da `last_refund_*`. Filtro `date_from`/`date_to`. Totali (conteggio + totale rimborsato).
   - Nuova pagina `app/admin/refunds-report.tsx`: preset periodo, ricerca atleta client-side, riepilogo ed **export CSV**. Card di navigazione "Report Rimborsi" in dashboard admin.
 
+- **01/08/2026 (e)** — Vista tecnica coach (`app/coach/athlete/[id].tsx`): aggiunta **data di nascita** sotto il nome (🎂 gg/mm/aaaa · N anni) e nuova card **📊 Statistiche Presenze** (totali/mese/settimana con %, + gare giocate). Backend `GET /athletes/{id}/technical-data` ora ritorna `date_of_birth` (già c'era) e un oggetto `stats` (presenze da `attendances` + `game_presences`), riusando la logica di `my-stats`. Verificato via curl.
+
 ## Testing Credentials
 Vedi `/app/memory/test_credentials.md`
 

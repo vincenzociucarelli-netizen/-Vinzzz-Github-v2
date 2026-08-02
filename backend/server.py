@@ -10979,7 +10979,47 @@ async def get_athlete_technical_data(athlete_id: str, current_user = Depends(get
     
     # Also get emergency phone from athlete record
     emergency_phone = athlete.get("emergency_phone")
-    
+
+    # 🆕 01/08/2026 — Statistiche presenze per la vista tecnica del coach.
+    # Riusa la stessa logica di /athletes/{id}/my-stats (che è però riservato
+    # ad atleta/admin): qui le esponiamo anche al coach per la sua squadra.
+    stats = None
+    try:
+        team_id_stats = athlete.get("team_id")
+        training_sessions = []
+        if team_id_stats:
+            team_doc = await db.teams.find_one({"id": team_id_stats})
+            if team_doc:
+                training_sessions = team_doc.get("training_sessions", [])
+        trainings_per_week = len(training_sessions) if training_sessions else 3
+        now_s = datetime.now()
+        today_end_s = now_s.replace(hour=23, minute=59, second=59, microsecond=999999)
+        week_start_s = (now_s - timedelta(days=now_s.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+        month_start_s = now_s.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        expected_weekly = count_training_days_in_period(training_sessions, week_start_s, today_end_s) if training_sessions else trainings_per_week
+        expected_monthly = count_training_days_in_period(training_sessions, month_start_s, today_end_s) if training_sessions else trainings_per_week * 4
+        reg_date_s = athlete.get("registration_date") or athlete.get("created_at") or now_s
+        if isinstance(reg_date_s, str):
+            reg_date_s = datetime.fromisoformat(reg_date_s.replace('Z', '+00:00')).replace(tzinfo=None)
+        expected_total = count_training_days_in_period(training_sessions, reg_date_s, today_end_s) if training_sessions else 10
+        expected_total = max(expected_total, 1)
+        all_att = await db.attendances.count_documents({"athlete_id": athlete_id})
+        week_att = await db.attendances.count_documents({"athlete_id": athlete_id, "check_in_time": {"$gte": week_start_s}})
+        month_att = await db.attendances.count_documents({"athlete_id": athlete_id, "check_in_time": {"$gte": month_start_s}})
+        games_played = len(athlete.get("game_presences") or [])
+        stats = {
+            "total_attendances": all_att,
+            "weekly_attendances": week_att,
+            "monthly_attendances": month_att,
+            "weekly_percentage": min(100, round((week_att / max(expected_weekly, 1)) * 100)),
+            "monthly_percentage": min(100, round((month_att / max(expected_monthly, 1)) * 100)),
+            "total_percentage": min(100, round((all_att / expected_total) * 100)),
+            "games_played": games_played,
+        }
+    except Exception as _stats_err:
+        logging.getLogger(__name__).warning(f"[technical-data] stats calc failed for {athlete_id}: {_stats_err}")
+        stats = None
+
     # Return technical data + certificate status + emergency contacts
     return {
         "id": athlete["id"],
@@ -11008,6 +11048,8 @@ async def get_athlete_technical_data(athlete_id: str, current_user = Depends(get
         "parent_name": parent_name,
         "parent_phone": parent_phone,
         "emergency_phone": emergency_phone,
+        # 🆕 01/08/2026 — Statistiche presenze (per coach)
+        "stats": stats,
     }
 
 @api_router.patch("/athletes/{athlete_id}/technical-data")
