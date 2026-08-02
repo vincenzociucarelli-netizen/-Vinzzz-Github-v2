@@ -1834,6 +1834,30 @@ async def get_athlete_fipav_rules(athlete_id: str, current_user = Depends(get_cu
     _dob_str = _dob_raw.isoformat() if hasattr(_dob_raw, "isoformat") else str(_dob_raw)
     _birth_year = _dob_str[:4] if _dob_str and len(_dob_str) >= 4 and _dob_str[:4].isdigit() else None
 
+    # 🆕 01/08/2026 — Soglie anni-di-nascita RELATIVE ALLA STAGIONE (non più hardcoded).
+    # Le norme FIPAV scalano di +1 anno ogni stagione. Formula sul 2° anno stagione:
+    #   U17 (categoria)          = anno2 - 17   → 2026/2027 = 2010
+    #   Serie superiore maschi   = anno2 - 21   → 2026/2027 = 2006
+    #   Serie superiore femmine  = anno2 - 19   → 2026/2027 = 2008
+    from utils import get_current_season_for_society as _get_cs_fipav
+    _season = await _get_cs_fipav(db, current_user.get("society_id"))
+    try:
+        _season_year2 = int(_season.replace("/", "-").split("-")[1])
+    except Exception:
+        _season_year2 = datetime.utcnow().year + (1 if datetime.utcnow().month >= 7 else 0)
+    _u17_min = _season_year2 - 17
+    _upper_male_min = _season_year2 - 21
+    _upper_female_min = _season_year2 - 19
+    _by_int = int(_birth_year) if _birth_year else None
+    _gender_l = (ath.get("gender") or ath.get("sex") or "").lower()
+    _is_male = _gender_l.startswith("m")
+    _is_female = _gender_l.startswith("f")
+    _elig_upper = _by_int is not None and (
+        (_is_male and _by_int >= _upper_male_min) or (_is_female and _by_int >= _upper_female_min)
+    )
+    _elig_u17 = _by_int is not None and _by_int >= _u17_min
+    _season_label = _season.replace("-", "/")
+
     return {
         "athlete_id": athlete_id,
         "athlete_name": ath.get("full_name") or f"{ath.get('first_name','')} {ath.get('last_name','')}".strip(),
@@ -1852,6 +1876,16 @@ async def get_athlete_fipav_rules(athlete_id: str, current_user = Depends(get_cu
         "game_presences": entries,
         "upper_league_options": ["Serie C", "Serie D", "1^ Divisione"],
         "weekly_summary": {"max_in_any_week": max_week, "violation_weeks": violation_weeks},
+        # 🆕 01/08/2026 — Stagione + soglie eleggibilità relative alla stagione
+        "season": _season_label,
+        "eligibility": {
+            "season": _season_label,
+            "upper_league_min_year_male": _upper_male_min,
+            "upper_league_min_year_female": _upper_female_min,
+            "u17_min_year": _u17_min,
+            "is_eligible_upper_league": _elig_upper,
+            "is_eligible_u17": _elig_u17,
+        },
     }
 
 

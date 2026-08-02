@@ -358,6 +358,11 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
 - **01/08/2026 (b)** — Fix visibilità pannello Regole FIPAV (`FipavAthleteRulesPanel.tsx`):
   - Prima il pannello si nascondeva solo in vista coach (`readOnly`) per atleti non soggetti a regole FIPAV; l'admin lo vedeva comunque. Ora la condizione `if (!eligibleUpperLeague && !eligibleU17) return null;` vale in TUTTE le viste. Così l'admin non vede più il regolamento per atleti non soggetti (es. GUARINO GIADA nata 2000 atleta B1 + coach Minivolley; bimbi minivolley). Gli atleti idonei (minori nelle fasce M≥2006/F≥2008 o U17 nati≥2010) continuano a vedere il pannello.
 
+- **01/08/2026 (c)** — Soglie FIPAV rese RELATIVE ALLA STAGIONE (non più hardcoded):
+  - Backend `GET /api/admin/athletes/{id}/fipav-rules` ora calcola e ritorna `season` + oggetto `eligibility` con `upper_league_min_year_male` (=anno2 stagione −21), `upper_league_min_year_female` (−19), `u17_min_year` (−17) e i flag `is_eligible_upper_league`/`is_eligible_u17`. Per 2026/2027 → M≥2006, F≥2008, U17≥2010; scalano automaticamente ogni stagione (fonte stagione: `get_current_season_for_society`). Verificato via curl.
+  - `FipavAthleteRulesPanel.tsx` ora usa questi valori/flag dal backend (con fallback ai valori 2026/2027) sia per l'eleggibilità sia per i testi descrittivi (anni e stagione dinamici). Il pannello resta nascosto per atleti non soggetti in tutte le viste.
+  - Nota: `killswitch_date` (28/03/2027) resta un valore backend specifico della norma di questa stagione; il testo UI ora lo legge da `state.killswitch_date`.
+
 ## Testing Credentials
 Vedi `/app/memory/test_credentials.md`
 

@@ -69,6 +69,16 @@ interface FipavState {
   game_presences: GamePresence[];
   upper_league_options: string[];
   weekly_summary: { max_in_any_week: number; violation_weeks: WeekViolation[] };
+  // 🆕 01/08/2026 — Stagione + soglie eleggibilità relative alla stagione (dal backend)
+  season?: string;
+  eligibility?: {
+    season: string;
+    upper_league_min_year_male: number;
+    upper_league_min_year_female: number;
+    u17_min_year: number;
+    is_eligible_upper_league: boolean;
+    is_eligible_u17: boolean;
+  };
 }
 
 const showAlert = (title: string, msg: string) => {
@@ -241,12 +251,19 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
   const gender = (state.gender || '').toLowerCase();
   const isMale = gender.startsWith('m');
   const isFemale = gender.startsWith('f');
-  // Feature B: maschi >= 2006, femmine >= 2008
-  const eligibleUpperLeague = birthYear !== null && (
-    (isMale && birthYear >= 2006) || (isFemale && birthYear >= 2008)
-  );
-  // Feature A (U17): stagione 2026/2027 → nati >= 2010
-  const eligibleU17 = birthYear !== null && birthYear >= 2010;
+  // 🆕 01/08/2026 — Soglie RELATIVE ALLA STAGIONE dal backend (scalano ogni anno).
+  // Fallback ai valori 2026/2027 solo se il backend non le fornisce (retrocompat).
+  const elig = state.eligibility;
+  const seasonLabel = state.season || elig?.season || '2026/2027';
+  const upperMaleMin = elig?.upper_league_min_year_male ?? 2006;
+  const upperFemaleMin = elig?.upper_league_min_year_female ?? 2008;
+  const u17Min = elig?.u17_min_year ?? 2010;
+  const eligibleUpperLeague = elig
+    ? elig.is_eligible_upper_league
+    : (birthYear !== null && ((isMale && birthYear >= upperMaleMin) || (isFemale && birthYear >= upperFemaleMin)));
+  const eligibleU17 = elig
+    ? elig.is_eligible_u17
+    : (birthYear !== null && birthYear >= u17Min);
 
   // 🆕 01/08/2026 — Nascondi del tutto il pannello (in QUALSIASI vista: admin e coach)
   // se l'atleta non è soggetto ad alcuna regola FIPAV (es. bimbi del minivolley o
@@ -328,7 +345,7 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Regola Serie Superiore (Serie C / D / 1ª Div)</Text>
         <Text style={styles.ruleDesc}>
-          Max 10 presenze in Serie superiore: dall&apos;11ª l&apos;atleta non può più giocare in serie inferiore. Riguarda i maschi nati dal 2006 e le femmine dal 2008 (blocco automatico oltre soglia e dopo il killswitch 28/03/2027).
+          Max 10 presenze in Serie superiore: dall&apos;11ª l&apos;atleta non può più giocare in serie inferiore. Riguarda i maschi nati dal {upperMaleMin} e le femmine dal {upperFemaleMin} (stagione {seasonLabel}; blocco automatico oltre soglia e dopo il killswitch {state.killswitch_date}).
         </Text>
         {!eligibleUpperLeague && birthYear === null && (
           <Text style={styles.notEligible}>
@@ -337,7 +354,7 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
         )}
         {!eligibleUpperLeague && birthYear !== null && (
           <Text style={styles.notEligible}>
-            Atleta non soggetto a questa regola (nato {birthYear}, richiede M≥2006 o F≥2008).
+            Atleta non soggetto a questa regola (nato {birthYear}, richiede M≥{upperMaleMin} o F≥{upperFemaleMin}).
           </Text>
         )}
         {eligibleUpperLeague && (
@@ -366,7 +383,7 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Regola Campionati di Categoria (fino a U17)</Text>
         <Text style={styles.ruleDesc}>
-          Max 2 campionati di categoria e max 3 gare a settimana (riferimento: presenza a camp3). Riguarda gli atleti Under 17, cioè nati dal 2010 per la stagione 2026/2027.
+          Max 2 campionati di categoria e max 3 gare a settimana (riferimento: presenza a camp3). Riguarda gli atleti Under 17, cioè nati dal {u17Min} per la stagione {seasonLabel}.
         </Text>
         {!eligibleU17 && birthYear === null && (
           <Text style={styles.notEligible}>
@@ -375,7 +392,7 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
         )}
         {!eligibleU17 && birthYear !== null && (
           <Text style={styles.notEligible}>
-            Atleta non soggetto a questa regola (nato {birthYear}, richiede U17 = nati 2010+).
+            Atleta non soggetto a questa regola (nato {birthYear}, richiede U17 = nati {u17Min}+).
           </Text>
         )}
         {eligibleU17 && (
