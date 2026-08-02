@@ -22872,6 +22872,61 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
         "message": f"Documento firmato con successo. Una copia è stata inviata a {request.signer_email}"
     }
 
+@api_router.post("/documents/{document_id}/resend-email")
+async def resend_signed_document_email(document_id: str, current_user = Depends(get_current_user)):
+    """🆕 02/08/2026 — Reinvia via email la copia di un documento GIÀ firmato al
+    firmatario (solo admin/dirigente). Riusa il PDF archiviato (pdf_base64/pdf_path)."""
+    if current_user.get("role") not in (UserRole.ADMIN, "viewer"):
+        raise HTTPException(status_code=403, detail="Solo admin")
+    document = await db.signed_documents.find_one({"id": document_id})
+    if not document:
+        raise HTTPException(status_code=404, detail="Documento non trovato")
+    if document.get("society_id") and document.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Documento di un'altra società")
+
+    # Recupera i byte del PDF archiviato
+    pdf_bytes = None
+    if document.get("pdf_base64"):
+        try:
+            pdf_bytes = base64.b64decode(document["pdf_base64"])
+        except Exception:
+            pdf_bytes = None
+    if not pdf_bytes and document.get("pdf_path"):
+        try:
+            with open(document["pdf_path"], "rb") as f:
+                pdf_bytes = f.read()
+        except Exception:
+            pdf_bytes = None
+    if not pdf_bytes:
+        raise HTTPException(status_code=400, detail="PDF non disponibile per il reinvio. Apri il documento per rigenerarlo, poi riprova.")
+
+    # Indirizzo del firmatario
+    to_email = document.get("signer_email")
+    if not to_email and document.get("signer_id"):
+        u = await db.users.find_one({"id": document["signer_id"]}, {"email": 1})
+        if u:
+            to_email = u.get("email")
+    if not to_email:
+        raise HTTPException(status_code=400, detail="Nessun indirizzo email disponibile per il firmatario")
+
+    doc_title = document.get("document_title") or "Documento firmato"
+    signer_name = document.get("signer_name") or ""
+    filename = document.get("pdf_filename") or f"{document_id}.pdf"
+
+    result = await send_document_email(
+        to_email=to_email,
+        subject=f"Documento firmato: {doc_title}",
+        document_title=doc_title,
+        signer_name=signer_name,
+        pdf_bytes=pdf_bytes,
+        filename=filename,
+    )
+    if result and not result.get("success", True):
+        raise HTTPException(status_code=502, detail=f"Errore invio email: {result.get('error', 'sconosciuto')}")
+    return {"message": f"Copia del documento inviata a {to_email}", "to_email": to_email}
+
+
+
 @api_router.get("/documents/signed/{document_id}/pdf")
 async def get_signed_document_pdf(document_id: str, current_user = Depends(get_current_user)):
     """Download a signed document PDF"""
