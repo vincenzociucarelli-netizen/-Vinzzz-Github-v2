@@ -379,6 +379,11 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   3. **Collaboratori nelle squadre**: nuovo `GET /users/collaboratori`, `POST /teams/{id}/assign-collaboratori`, `collaboratori_info` in team detail. Frontend `team/[id].tsx`: sezione selezione (edit) e visualizzazione (view) collaboratori, in aggiunta a coach e dirigenti.
   - Rimosso endpoint "resend-email" abbandonato (feature scartata dall'utente).
 
+- **03/08/2026 (bugfix)** — Fix registrazione atleti: privacy MAI accettata alla registrazione per i MINORENNI (verrà firmata a fine prova); maggiorenni invariati. Testato al 100% (iteration_94, backend 2/2 + frontend).
+  - Backend `create_athlete` (POST /api/athletes): branch `is_minor` forza `privacy_accepted=False`, `consent_privacy_viewed=False`, consensi immagine `None`, status `pending_trial`. Maggiorenni: valori dal client (comportamento originale).
+  - Frontend `register-athlete.tsx`: rendering condizionale su `isMinorAthlete` (da data nascita GG/MM/AAAA) — minore→box "periodo di prova" senza checkbox privacy; maggiorenne→sezione consensi con "presa visione" obbligatoria.
+  - Backlog confermato (opzione B, rimandata): macchina a 6 stati completa (IN ATTESA → IN ATTESA D'INIZIO PROVA solo dopo validazione certificato admin + gate QR → IN PROVA → ATTIVO dopo firma privacy).
+
 ## Testing Credentials
 Vedi `/app/memory/test_credentials.md`
 

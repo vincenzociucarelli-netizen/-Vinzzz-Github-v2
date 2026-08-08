@@ -4,6 +4,11 @@
 - Email: vincenzo.ciucarelli@gmail.com
 - Password: Test1234 (resettata 19/07/2026 per test bacheca note admin)
 
+## Genitore (ARMIDA RASCHI) - per test registrazione atleti
+- Email: armida.raschi@gmail.com
+- Password: Test1234 (resettata 03/08/2026 per test fix privacy minorenni in registrazione)
+- Società: Pallavolo Perugia
+
 ## Dirigente (LELLA MARZO)
 - Email: lella@dir.com
 - Password: Test1234 (impostata 27/02/2026 per test libricino istruzioni)
