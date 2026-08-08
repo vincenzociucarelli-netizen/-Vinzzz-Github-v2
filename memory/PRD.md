@@ -419,6 +419,9 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - **Gate 2 (tesseramento)**: `POST /api/trial/accept-privacy/{id}` blocca con HTTP 400 se manca cert valido convalidato e la squadra lo richiede.
 - Verificato: 10/10 pytest `backend/tests/test_certificate_gate_onboarding.py`.
 
+### Già implementato (NON riproporre nel backlog)
+- Promemoria automatico via email al genitore/atleta 30 e 15 giorni prima della scadenza del certificato medico (scheduler "Certificate expiry notification" attivo all'avvio backend). Confermato dall'utente 08/08/2026.
+
 ### Note tecniche
 - RN Web propaga solo `testID` (non `data-testid` grezzo) su TouchableOpacity/View/Text.
 - Preview = build statico Expo: dopo modifiche frontend `cd /app/frontend && rm -rf dist && npx expo export -p web && sudo supervisorctl restart expo`.
