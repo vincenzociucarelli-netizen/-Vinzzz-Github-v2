@@ -2945,6 +2945,22 @@ class AdultAthleteRegister(BaseModel):
     gender: Optional[str] = None  # 'M' or 'F'
     consents: Optional[dict] = None  # {privacy_viewed: bool, images_promo: bool}
 
+
+# 🐛 03/08/2026 — Validazione formato email: un'email non valida (es. dominio "18+.com"
+# con il "+") veniva accettata, il record creato, e un passaggio successivo falliva →
+# errore generico + iscrizione "fantasma". Blocchiamo subito con messaggio chiaro.
+import re as _re_email
+_EMAIL_RE = _re_email.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$")
+
+def is_valid_email(email: str) -> bool:
+    if not email or not isinstance(email, str):
+        return False
+    email = email.strip()
+    if len(email) > 254 or ".." in email:
+        return False
+    return bool(_EMAIL_RE.match(email))
+
+
 @api_router.post("/auth/register-adult-athlete")
 async def register_adult_athlete(data: AdultAthleteRegister):
     """
