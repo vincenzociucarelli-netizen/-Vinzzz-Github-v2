@@ -774,6 +774,8 @@ class Team(BaseModel):
     # Championships
     championships: Optional[str] = None
     calendar_link: Optional[str] = None
+    # 🆕 Certificato medico richiesto per la categoria: 'none' | 'buona_salute' | 'agonistico'
+    certificate_type_required: str = "agonistico"
 
 class TeamCreate(BaseModel):
     name: str
@@ -796,6 +798,7 @@ class TeamCreate(BaseModel):
     rifinitura: Optional[dict] = None
     championships: Optional[str] = None
     calendar_link: Optional[str] = None
+    certificate_type_required: Optional[str] = None
 
 class TeamUpdate(BaseModel):
     name: Optional[str] = None
@@ -820,12 +823,51 @@ class TeamUpdate(BaseModel):
     rifinitura: Optional[dict] = None
     championships: Optional[str] = None
     calendar_link: Optional[str] = None
+    certificate_type_required: Optional[str] = None
 
 class AthleteStatus:
     PENDING = "pending"      # In attesa di approvazione admin
     TRIAL = "trial"          # In periodo di prova
     ACTIVE = "active"        # Attivo
     BLOCKED = "blocked"      # Bloccato
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# 🆕 Certificato medico — logica di blocco onboarding (Riforma/FIPAV)
+#   • Adulti (18+): certificato SEMPRE obbligatorio (salvo squadra 'none').
+#   • Minorenni: obbligatorio solo se "già tesserato/gioca già" (already_registered).
+#   • Tipo (agonistico/buona_salute/none) dipende dalla CATEGORIA (squadra).
+# ─────────────────────────────────────────────────────────────────────────
+def cert_type_for_team(team) -> str:
+    """Ritorna 'none' | 'buona_salute' | 'agonistico' (default agonistico)."""
+    if not team:
+        return "agonistico"
+    return team.get("certificate_type_required") or "agonistico"
+
+def has_valid_verified_cert(athlete: dict) -> bool:
+    """True se l'atleta ha un certificato medico CONVALIDATO e non scaduto."""
+    if not athlete.get("medical_certificate_verified"):
+        return False
+    exp = athlete.get("medical_certificate_expiry")
+    if not exp:
+        return False
+    try:
+        d = datetime.fromisoformat(str(exp).replace('Z', '+00:00')).replace(tzinfo=None)
+        return d >= datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    except Exception:
+        return False
+
+def cert_required_for_trial(is_minor: bool, already_registered, cert_type: str) -> bool:
+    """Il certificato serve PRIMA di iniziare la prova?"""
+    if cert_type == "none":
+        return False
+    if not is_minor:
+        return True  # adulti: sempre
+    return bool(already_registered)  # minori: solo se già tesserati/giocano già
+
+def cert_required_for_active(cert_type: str) -> bool:
+    """Il certificato serve per il tesseramento definitivo (diventare ATTIVO)?"""
+    return cert_type != "none"
 
 class Athlete(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
@@ -992,6 +1034,8 @@ class AthleteCreate(BaseModel):
     consent_privacy_viewed: bool = False
     data_password: Optional[str] = None  # Password protezione dati sensibili
     second_parent_email: Optional[str] = None  # Email del secondo genitore (per-atleta)
+    # 🆕 Solo minorenni: "Ha già giocato a livello agonistico / è già tesserato?"
+    already_registered: Optional[bool] = None
     
 class AthleteUpdate(BaseModel):
     # Tesseramento (gestito da Admin)
@@ -8311,6 +8355,15 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
     dob = datetime.fromisoformat(athlete_data.date_of_birth)
     age = (datetime.utcnow() - dob).days // 365
     is_minor = age < 18
+
+    # 🆕 Certificato medico — determina lo stato di onboarding del minore:
+    #   pending_certificate (ATTESA: serve cert convalidato) oppure
+    #   pending_trial (ATTESA INIZIO PROVA: può provare senza cert).
+    _team_for_cert = team if athlete_data.team_id else None
+    _cert_type = cert_type_for_team(_team_for_cert)
+    _already_reg = getattr(athlete_data, 'already_registered', None)
+    _req_trial = cert_required_for_trial(is_minor, _already_reg, _cert_type)
+    minor_onboarding_status = "pending_certificate" if _req_trial else "pending_trial"
     
     # Create athlete
     athlete_id = str(ObjectId())
@@ -8380,13 +8433,14 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
             "is_withdrawn": False,
             "withdrawn_date": None,
             "withdrawn_reason": None,
-            "status": ("pending_trial" if is_minor else AthleteStatus.PENDING),
+            "status": (minor_onboarding_status if is_minor else AthleteStatus.PENDING),
             # trial_end_date stays None until the FIRST QR scan (first training).
             # See QR scan handler around line 11195 which converts pending_trial -> trial
             # and only at that moment sets trial_start_date / trial_end_date.
             "trial_end_date": None,
             "is_minor": is_minor,
             "team_id": athlete_data.team_id,
+            "already_registered": _already_reg,
             "privacy_accepted": privacy_accepted,
             "privacy_accepted_date": datetime.utcnow() if privacy_accepted else None,
             "consent_images_internal": consent_img_internal,
@@ -8457,7 +8511,7 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
         qr_code=qr_code,
         qr_identifier=qr_id,
         trial_end_date=None,  # Set on first QR scan (see line ~11195)
-        status=("pending_trial" if is_minor else AthleteStatus.PENDING),  # Minors: trial starts at first QR scan
+        status=(minor_onboarding_status if is_minor else AthleteStatus.PENDING),  # Minors: trial starts at first QR scan
         privacy_accepted=privacy_accepted,
         privacy_accepted_date=datetime.utcnow() if privacy_accepted else None,
         consent_images_internal=consent_img_internal,
@@ -8469,6 +8523,7 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
     
     athlete_dict = athlete.dict()
     athlete_dict["created_at"] = datetime.utcnow()
+    athlete_dict["already_registered"] = _already_reg
     await db.athletes.insert_one(athlete_dict)
     
     
@@ -10642,6 +10697,21 @@ async def update_athlete_approval(athlete_id: str, data: AthleteApprovalUpdate, 
     # If approving to trial, set trial end date from now
     if data.status == AthleteStatus.TRIAL:
         update_data["trial_end_date"] = datetime.utcnow() + timedelta(days=7)
+
+    # 🆕 Certificato medico (blocco onboarding) — quando l'admin approva per la PROVA,
+    # l'atleta va in ATTESA INIZIO PROVA (pending_trial). Ma se serve il certificato
+    # (adulti: sempre; salvo squadra 'none') e non è ancora convalidato, resta in
+    # ATTESA (pending_certificate) finché l'admin non convalida il certificato.
+    if data.status == AthleteStatus.TRIAL:
+        _team = await db.teams.find_one({"id": athlete.get("team_id")}) if athlete.get("team_id") else None
+        _cert_type = cert_type_for_team(_team)
+        _is_minor = athlete.get("is_minor", False)
+        _already_reg = athlete.get("already_registered")
+        _req_trial = cert_required_for_trial(_is_minor, _already_reg, _cert_type)
+        if _req_trial and not has_valid_verified_cert(athlete):
+            update_data["status"] = "pending_certificate"
+        else:
+            update_data["status"] = "pending_trial"
     
     await db.athletes.update_one(
         {"id": athlete_id},
@@ -12830,8 +12900,20 @@ async def create_certificate_simple(
         {"id": data.athlete_id},
         {"$set": update_data}
     )
+
+    # 🆕 Avanzamento onboarding: se il certificato è stato CONVALIDATO (verified) e
+    # l'atleta era in ATTESA per il certificato (pending_certificate), passa a
+    # ATTESA INIZIO PROVA (pending_trial): la prova partirà alla 1ª scansione QR.
+    if verified_value and athlete.get("status") == "pending_certificate":
+        exp_ok = expiry_dt >= datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        if exp_ok:
+            await db.athletes.update_one(
+                {"id": data.athlete_id, "status": "pending_certificate"},
+                {"$set": {"status": "pending_trial"}}
+            )
+            if athlete.get("user_id"):
+                await db.users.update_one({"id": athlete["user_id"]}, {"$set": {"status": "pending_trial"}})
     
-    # Store change history in a dedicated collection
     history_entry = {
         "athlete_id": data.athlete_id,
         "athlete_name": athlete.get("full_name"),
@@ -20327,7 +20409,18 @@ async def accept_privacy_and_continue(athlete_id: str, req: Request, data: dict 
             "images_promo": images_promo,
         }
     }]
-    
+
+    # 🆕 Certificato medico — GATE tesseramento: per diventare ATTIVO serve un
+    # certificato medico CONVALIDATO (salvo squadra 'none'). Vale anche per chi ha
+    # svolto la prova senza certificato (primo approccio). Se manca, blocca.
+    _team = await db.teams.find_one({"id": athlete.get("team_id")}) if athlete.get("team_id") else None
+    _cert_type = cert_type_for_team(_team)
+    if cert_required_for_active(_cert_type) and not has_valid_verified_cert(athlete):
+        raise HTTPException(
+            status_code=400,
+            detail="Per completare il tesseramento è necessario un certificato medico valido e convalidato dalla società. Inserisci/aggiorna il certificato medico prima di accettare.",
+        )
+
     # Update athlete with privacy accepted + consents
     await db.athletes.update_one(
         {"id": athlete_id},

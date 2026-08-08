@@ -83,6 +83,7 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
         rifinitura=team_data.rifinitura if team_data.rifinitura else None,
         championships=team_data.championships if team_data.championships else None,
         calendar_link=team_data.calendar_link if team_data.calendar_link else None,
+        certificate_type_required=team_data.certificate_type_required or "agonistico",
     )
     await db.teams.insert_one(team.dict())
     return team

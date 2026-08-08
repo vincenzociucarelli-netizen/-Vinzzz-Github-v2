@@ -47,6 +47,7 @@ export default function TeamsScreen() {
   const [paypalEmail, setPaypalEmail] = useState('');
   const [championships, setChampionships] = useState('');
   const [calendarLink, setCalendarLink] = useState('');
+  const [certificateTypeRequired, setCertificateTypeRequired] = useState<'none' | 'buona_salute' | 'agonistico'>('agonistico');
   
   // Training schedule - structured format
   const [trainings, setTrainings] = useState([
@@ -276,6 +277,7 @@ export default function TeamsScreen() {
     setRifinitura({ enabled: false, timeStart: '', timeEnd: '', venue: '' });
     setChampionships('');
     setCalendarLink('');
+    setCertificateTypeRequired('agonistico');
   };
 
   const showAlert = (title: string, message?: string) => {
@@ -394,6 +396,7 @@ export default function TeamsScreen() {
         rifinitura: hasRifinitura ? { timeStart: rifinitura.timeStart, timeEnd: rifinitura.timeEnd, venue: rifinitura.venue } : null,
         championships: championships || null,
         calendar_link: calendarLink || null,
+        certificate_type_required: certificateTypeRequired,
       };
 
       // Legacy compatibility fields
@@ -883,6 +886,37 @@ export default function TeamsScreen() {
                 keyboardType="url"
                 autoCapitalize="none"
               />
+
+              <Text style={styles.sectionTitle}>🩺 Certificato medico richiesto</Text>
+              <Text style={[styles.label, { marginBottom: 8 }]}>
+                Blocca inizio prova/tesseramento se il certificato manca o non è convalidato.
+              </Text>
+              {([
+                { key: 'agonistico', label: '🏐 Agonistico', desc: 'Campionati ufficiali (Under 12 e superiori)' },
+                { key: 'buona_salute', label: '🙂 Buona salute', desc: 'Attività promozionale S3 (6-11 anni)' },
+                { key: 'none', label: '🚫 Nessuno', desc: 'Es. Under 6 / attività senza obbligo' },
+              ] as const).map(opt => (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 10,
+                    borderWidth: 1.5, marginBottom: 8,
+                    borderColor: certificateTypeRequired === opt.key ? '#1565C0' : '#E0E0E0',
+                    backgroundColor: certificateTypeRequired === opt.key ? '#E3F2FD' : '#fff',
+                  }}
+                  onPress={() => setCertificateTypeRequired(opt.key)}
+                  data-testid={`create-cert-type-${opt.key}`}
+                >
+                  <Ionicons
+                    name={certificateTypeRequired === opt.key ? 'radio-button-on' : 'radio-button-off'}
+                    size={20} color={certificateTypeRequired === opt.key ? '#1565C0' : '#999'}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#333' }}>{opt.label}</Text>
+                    <Text style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{opt.desc}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
 
               {/* Sezione Pagamenti - solo per squadre non Prime Squadre */}
               {!isPrimaSquadra && (

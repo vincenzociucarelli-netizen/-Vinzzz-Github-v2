@@ -60,6 +60,8 @@ export default function RegisterAthlete() {
   
   // Periodo di prova
   const [isTrialPeriod, setIsTrialPeriod] = useState(true);  // Default: periodo di prova
+  // 🆕 Solo minorenni: già tesserato / gioca già a livello agonistico?
+  const [alreadyRegistered, setAlreadyRegistered] = useState<null | boolean>(null);
   
   // Password protezione dati sensibili
   const [dataPassword, setDataPassword] = useState('');
@@ -245,6 +247,13 @@ export default function RegisterAthlete() {
       return;
     }
 
+    // 🆕 Minorenni: risposta obbligatoria alla domanda sul tesseramento (determina se
+    // serve subito il certificato medico agonistico per iniziare la prova).
+    if (isMinor && alreadyRegistered === null) {
+      showAlert('Errore', 'Rispondi alla domanda: l\'atleta ha già giocato a livello agonistico o è già tesserato/a?');
+      return;
+    }
+
     setLoading(true);
     try {
       const fullName = `${lastName} ${firstName}`;
@@ -275,6 +284,8 @@ export default function RegisterAthlete() {
         team_id_2: null,
         is_trial: isMinor ? true : false,
         second_parent_email: secondParentEmail || null,
+        // 🆕 Solo minorenni: già tesserato/gioca già → serve certificato medico subito
+        already_registered: isMinor ? alreadyRegistered : null,
         // 🐛 03/08/2026 — SOLO minorenni: nessuna privacy alla registrazione (si firma a fine prova).
         // Maggiorenni: comportamento originale (accettano privacy e consensi immagine ora).
         privacy_accepted: isMinor ? false : consentPrivacyViewed,
@@ -687,6 +698,7 @@ export default function RegisterAthlete() {
 
           {isMinorAthlete ? (
             /* 🐛 03/08/2026 — MINORENNE: sempre periodo di prova, nessuna privacy ora */
+            <>
             <View style={styles.trialInfoBox}>
               <Ionicons name="information-circle" size={22} color="#7B1FA2" />
               <View style={{ flex: 1, marginLeft: 10 }}>
@@ -699,6 +711,39 @@ export default function RegisterAthlete() {
                 </Text>
               </View>
             </View>
+
+            {/* 🆕 Domanda tesseramento (solo minorenni) → determina obbligo certificato medico */}
+            <View style={styles.alreadyRegBox} data-testid="already-registered-question">
+              <Text style={styles.alreadyRegQuestion}>
+                Ha già giocato a livello agonistico o è già tesserato/a con questa o un'altra società?
+              </Text>
+              <View style={styles.alreadyRegOptions}>
+                <TouchableOpacity
+                  style={[styles.alreadyRegOption, alreadyRegistered === true && styles.alreadyRegOptionActive]}
+                  onPress={() => setAlreadyRegistered(true)}
+                  data-testid="already-registered-yes"
+                >
+                  <Ionicons name={alreadyRegistered === true ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={alreadyRegistered === true ? '#7B1FA2' : '#999'} />
+                  <Text style={[styles.alreadyRegOptionText, alreadyRegistered === true && styles.alreadyRegOptionTextActive]}>Sì</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.alreadyRegOption, alreadyRegistered === false && styles.alreadyRegOptionActive]}
+                  onPress={() => setAlreadyRegistered(false)}
+                  data-testid="already-registered-no"
+                >
+                  <Ionicons name={alreadyRegistered === false ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={alreadyRegistered === false ? '#7B1FA2' : '#999'} />
+                  <Text style={[styles.alreadyRegOptionText, alreadyRegistered === false && styles.alreadyRegOptionTextActive]}>No, prima volta</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.alreadyRegHint}>
+                {alreadyRegistered === true
+                  ? 'Essendo già tesserato/a, il certificato medico dovrà essere inserito e convalidato prima di iniziare la prova.'
+                  : alreadyRegistered === false
+                    ? 'Prima esperienza: potrà iniziare la prova senza certificato. Il certificato sarà richiesto per il tesseramento definitivo.'
+                    : 'Seleziona un\'opzione.'}
+              </Text>
+            </View>
+            </>
           ) : (
             /* MAGGIORENNE: accetta la privacy in fase di registrazione */
             <View style={{ marginTop: 8 }}>
@@ -898,6 +943,55 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#555',
     lineHeight: 18,
+  },
+  alreadyRegBox: {
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#E1BEE7',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 8,
+  },
+  alreadyRegQuestion: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 10,
+    lineHeight: 20,
+  },
+  alreadyRegOptions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  alreadyRegOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#FAFAFA',
+  },
+  alreadyRegOptionActive: {
+    borderColor: '#7B1FA2',
+    backgroundColor: '#F3E5F5',
+  },
+  alreadyRegOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#777',
+  },
+  alreadyRegOptionTextActive: {
+    color: '#6A1B9A',
+  },
+  alreadyRegHint: {
+    fontSize: 11,
+    color: '#888',
+    marginTop: 8,
+    lineHeight: 16,
   },
   label: {
     fontSize: 14,

@@ -114,6 +114,7 @@ export default function TeamDetail() {
   const [isPrimaSquadra, setIsPrimaSquadra] = useState(false);
   const [championships, setChampionships] = useState('');
   const [calendarLink, setCalendarLink] = useState('');
+  const [certificateTypeRequired, setCertificateTypeRequired] = useState<'none' | 'buona_salute' | 'agonistico'>('agonistico');
   
   // Form fields - payments
   const [totalAmount, setTotalAmount] = useState('');
@@ -249,6 +250,7 @@ export default function TeamDetail() {
       setPaypalEmail(teamData.paypal_email || '');
       setChampionships(teamData.championships || '');
       setCalendarLink(teamData.calendar_link || '');
+      setCertificateTypeRequired((teamData as any).certificate_type_required || 'agonistico');
       
       // Load training sessions
       if (teamData.training_sessions && teamData.training_sessions.length > 0) {
@@ -413,6 +415,7 @@ export default function TeamDetail() {
         is_prima_squadra: isPrimaSquadra,
         championships: championships || null,
         calendar_link: calendarLink || null,
+        certificate_type_required: certificateTypeRequired,
         training_sessions: trainingSessions,
         match_day: matchDay,
         rifinitura: rifinitura.enabled ? { timeStart: rifinitura.timeStart, timeEnd: rifinitura.timeEnd, venue: rifinitura.venue } : null,
@@ -1133,6 +1136,39 @@ export default function TeamDetail() {
                 placeholder="https://..."
                 placeholderTextColor="#999"
               />
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🩺 Certificato medico richiesto</Text>
+              <Text style={[styles.inputLabel, { marginBottom: 8 }]}>
+                Indica il certificato necessario per questa categoria (blocca l'inizio prova/tesseramento se mancante).
+              </Text>
+              {([
+                { key: 'agonistico', label: '🏐 Agonistico', desc: 'Campionati ufficiali (Under 12 e superiori)' },
+                { key: 'buona_salute', label: '🙂 Buona salute', desc: 'Attività promozionale S3 (6-11 anni)' },
+                { key: 'none', label: '🚫 Nessuno', desc: 'Es. Under 6 / attività senza obbligo' },
+              ] as const).map(opt => (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 10,
+                    borderWidth: 1.5, marginBottom: 8,
+                    borderColor: certificateTypeRequired === opt.key ? '#1565C0' : '#E0E0E0',
+                    backgroundColor: certificateTypeRequired === opt.key ? '#E3F2FD' : '#fff',
+                  }}
+                  onPress={() => setCertificateTypeRequired(opt.key)}
+                  data-testid={`cert-type-${opt.key}`}
+                >
+                  <Ionicons
+                    name={certificateTypeRequired === opt.key ? 'radio-button-on' : 'radio-button-off'}
+                    size={20} color={certificateTypeRequired === opt.key ? '#1565C0' : '#999'}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#333' }}>{opt.label}</Text>
+                    <Text style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{opt.desc}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
         ) : (
