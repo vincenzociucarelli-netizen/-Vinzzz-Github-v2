@@ -8289,6 +8289,8 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
             "team_id_previous_season": a.get("team_id_previous_season"),
             "status_previous_season": a.get("status_previous_season"),
             "privacy_pending_renewal": a.get("privacy_pending_renewal", False),
+            # 🆕 Flag "già controllato" per la sezione admin "Da controllare"
+            "review_dismissed_season": a.get("review_dismissed_season"),
         })
     
     return result
@@ -10766,6 +10768,49 @@ async def update_athlete_approval(athlete_id: str, data: AthleteApprovalUpdate, 
     }
     
     return {"message": f"Atleta {status_text.get(data.status, data.status)} con successo"}
+
+
+@api_router.patch("/athletes/{athlete_id}/dismiss-review")
+async def dismiss_athlete_review(athlete_id: str, current_user = Depends(get_current_user)):
+    """Segna un atleta come 'già controllato' per la stagione corrente, così esce
+    dalla sezione admin 'Da controllare' (nuove iscrizioni + riconferme)."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può controllare gli atleti")
+
+    society_id = current_user.get("society_id")
+    athlete = await db.athletes.find_one({"id": athlete_id, "society_id": society_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+
+    from utils import get_current_season_for_society as _get_cs
+    current_season = await _get_cs(db, society_id)
+
+    await db.athletes.update_one(
+        {"id": athlete_id, "society_id": society_id},
+        {"$set": {
+            "review_dismissed_season": current_season,
+            "review_dismissed_at": datetime.utcnow(),
+            "review_dismissed_by": current_user["id"],
+        }},
+    )
+    return {"message": "Atleta segnato come controllato", "review_dismissed_season": current_season}
+
+@api_router.patch("/athletes/{athlete_id}/restore-review")
+async def restore_athlete_review(athlete_id: str, current_user = Depends(get_current_user)):
+    """Annulla il flag 'già controllato', riportando l'atleta in 'Da controllare'."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può controllare gli atleti")
+
+    society_id = current_user.get("society_id")
+    athlete = await db.athletes.find_one({"id": athlete_id, "society_id": society_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+
+    await db.athletes.update_one(
+        {"id": athlete_id, "society_id": society_id},
+        {"$unset": {"review_dismissed_season": "", "review_dismissed_at": "", "review_dismissed_by": ""}},
+    )
+    return {"message": "Atleta riportato in 'Da controllare'"}
 
 @api_router.get("/athletes/deletion-requests")
 async def get_deletion_requests(current_user = Depends(get_current_user)):

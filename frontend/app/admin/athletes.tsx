@@ -455,7 +455,8 @@ export default function AdminAthletes() {
       const st = (a as any).status;
       const hasPrev = !!(a as any).team_id_previous_season;
       const isPending = st === 'pending' || st === 'pending_email' || st === 'pending_privacy' || st === 'pending_certificate' || st === 'pending_trial';
-      if (isPending || hasPrev) toReview.push(a);
+      const dismissed = currentSeason && (a as any).review_dismissed_season === currentSeason;
+      if ((isPending || hasPrev) && !dismissed) toReview.push(a);
       else others.push(a);
     });
 
@@ -483,7 +484,7 @@ export default function AdminAthletes() {
       ] as any;
     }
     return alphaSections;
-  }, [processedAthletes]);
+  }, [processedAthletes, currentSeason]);
 
   // Get available letters for sidebar
   const availableLetters = useMemo(() => {
@@ -545,7 +546,18 @@ export default function AdminAthletes() {
     return '#34C759';
   };
 
-  const renderAthleteItem = ({ item }: { item: Athlete }) => (
+  const handleDismissReview = async (athleteId: string, name: string) => {
+    try {
+      await api.patch(`/athletes/${athleteId}/dismiss-review`);
+      setAthletes(prev => prev.map(a => a.id === athleteId
+        ? ({ ...a, review_dismissed_season: currentSeason } as any)
+        : a));
+    } catch (e) {
+      showAlert('Errore', 'Impossibile segnare come controllato');
+    }
+  };
+
+  const renderAthleteItem = ({ item, section }: { item: Athlete; section?: { isReview?: boolean } }) => (
     <TouchableOpacity 
       style={[
         styles.athleteCard,
@@ -625,6 +637,16 @@ export default function AdminAthletes() {
           {getStatusText(item)}
         </Text>
       </View>
+      {section?.isReview && (
+        <TouchableOpacity
+          onPress={(e: any) => { e.stopPropagation?.(); handleDismissReview(item.id, formatAthleteNameForDisplay(item)); }}
+          style={styles.dismissReviewBtn}
+          data-testid={`dismiss-review-${item.id}`}
+        >
+          <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
+          <Text style={styles.dismissReviewBtnText}>Controllato</Text>
+        </TouchableOpacity>
+      )}
       <Text style={{ fontSize: 18, color: '#ccc' }}>›</Text>
     </TouchableOpacity>
   );
@@ -1385,6 +1407,23 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 11,
     fontWeight: '600',
+  },
+  dismissReviewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#E8F5E9',
+    borderColor: '#A5D6A7',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginRight: 6,
+  },
+  dismissReviewBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#2E7D32',
   },
   alphabetSidebar: {
     position: 'absolute',
