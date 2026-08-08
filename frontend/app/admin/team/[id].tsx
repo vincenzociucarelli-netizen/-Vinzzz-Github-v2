@@ -99,6 +99,11 @@ export default function TeamDetail() {
   const [availableDirigenti, setAvailableDirigenti] = useState<CoachInfo[]>([]);
   const [selectedDirigenteIds, setSelectedDirigenteIds] = useState<string[]>([]);
 
+  // Collaboratori info (🆕 03/08/2026)
+  const [collaboratoriInfo, setCollaboratoriInfo] = useState<CoachInfo[]>([]);
+  const [availableCollaboratori, setAvailableCollaboratori] = useState<CoachInfo[]>([]);
+  const [selectedCollaboratoreIds, setSelectedCollaboratoreIds] = useState<string[]>([]);
+
   // Team photo
   const [teamPhoto, setTeamPhoto] = useState<string | null>(null);
   const [teamPhotoModal, setTeamPhotoModal] = useState(false);
@@ -176,6 +181,11 @@ export default function TeamDetail() {
       const dirigenti = teamData.dirigenti_info || [];
       setDirigentiInfo(dirigenti);
       setSelectedDirigenteIds(dirigenti.map((d: CoachInfo) => d.id).filter(Boolean));
+
+      // Set collaboratori info (🆕 03/08/2026)
+      const collaboratori = teamData.collaboratori_info || [];
+      setCollaboratoriInfo(collaboratori);
+      setSelectedCollaboratoreIds(collaboratori.map((c: CoachInfo) => c.id).filter(Boolean));
 
       // Set team photo
       if (teamData.team_photo) {
@@ -283,6 +293,15 @@ export default function TeamDetail() {
     }
   };
 
+  const loadAvailableCollaboratori = async () => {
+    try {
+      const response = await api.get('/users/collaboratori');
+      setAvailableCollaboratori(response.data);
+    } catch (error) {
+      console.error('Error loading collaboratori:', error);
+    }
+  };
+
   const loadAvailableVenues = async () => {
     try {
       const response = await api.get('/settings/society');
@@ -296,6 +315,7 @@ export default function TeamDetail() {
     loadTeam();
     loadAvailableCoaches();
     loadAvailableDirigenti();
+    loadAvailableCollaboratori();
     loadAvailableVenues();
   }, [id]);
 
@@ -471,6 +491,15 @@ export default function TeamDetail() {
         });
       } catch (dirigenteError) {
         console.error('Error assigning dirigenti:', dirigenteError);
+      }
+
+      // Assign collaboratori to team (🆕 03/08/2026)
+      try {
+        await api.post(`/teams/${id}/assign-collaboratori`, { ids: selectedCollaboratoreIds }, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (collaboratoreError) {
+        console.error('Error assigning collaboratori:', collaboratoreError);
       }
       
       setEditing(false);
@@ -669,6 +698,49 @@ export default function TeamDetail() {
               )}
               <Text style={styles.helperText}>
                 Seleziona uno o più dirigenti da assegnare a questa squadra
+              </Text>
+            </View>
+
+            {/* Collaboratori Assignment Section (🆕 03/08/2026) */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🤝 Assegna Collaboratori</Text>
+              {availableCollaboratori.length > 0 ? (
+                <View style={styles.coachSelectionList}>
+                  {availableCollaboratori.map((collab) => (
+                    <TouchableOpacity
+                      key={collab.id}
+                      style={[
+                        styles.coachSelectionItem,
+                        selectedCollaboratoreIds.includes(collab.id) && styles.coachSelectionItemSelected
+                      ]}
+                      onPress={() => {
+                        if (selectedCollaboratoreIds.includes(collab.id)) {
+                          setSelectedCollaboratoreIds(selectedCollaboratoreIds.filter(cId => cId !== collab.id));
+                        } else {
+                          setSelectedCollaboratoreIds([...selectedCollaboratoreIds, collab.id]);
+                        }
+                      }}
+                    >
+                      <View style={[styles.coachSelectionPhotoPlaceholder, {backgroundColor: '#00A896'}]}>
+                        <Text style={{color: '#fff', fontSize: 12, fontWeight: '700'}}>{getInitials(collab.full_name)}</Text>
+                      </View>
+                      <Text style={[
+                        styles.coachSelectionName,
+                        selectedCollaboratoreIds.includes(collab.id) && styles.coachSelectionNameSelected
+                      ]}>
+                        {collab.full_name}
+                      </Text>
+                      {selectedCollaboratoreIds.includes(collab.id) && (
+                        <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.noCoachText}>Nessun collaboratore disponibile nel sistema</Text>
+              )}
+              <Text style={styles.helperText}>
+                Seleziona uno o più collaboratori da assegnare a questa squadra
               </Text>
             </View>
 
@@ -1163,6 +1235,41 @@ export default function TeamDetail() {
                 ))
               ) : (
                 <Text style={styles.noCoachText}>Nessun dirigente assegnato a questa squadra</Text>
+              )}
+            </View>
+
+            {/* Collaboratori Section (🆕 03/08/2026) */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🤝 Collaboratori</Text>
+              {collaboratoriInfo.length > 0 ? (
+                collaboratoriInfo.map((collab, index) => (
+                  <View key={collab.id || index} style={styles.coachCard}>
+                    <View style={[styles.coachPhotoPlaceholderWithText, {backgroundColor: '#00A896'}]}>
+                      <Text style={{color: '#fff', fontSize: 18, fontWeight: '700'}}>{getInitials(collab.full_name)}</Text>
+                    </View>
+                    <View style={styles.coachInfo}>
+                      <Text style={styles.coachName}>{collab.full_name}</Text>
+                      {collab.phone && (
+                        <TouchableOpacity
+                          style={styles.coachContactRow}
+                          onPress={() => {
+                            let phone = collab.phone.replace(/\s+/g, '').replace(/^0/, '39');
+                            if (!phone.startsWith('+') && !phone.startsWith('39')) {
+                              phone = '39' + phone;
+                            }
+                            phone = phone.replace('+', '');
+                            Linking.openURL(`https://wa.me/${phone}`);
+                          }}
+                        >
+                          <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
+                          <Text style={styles.coachPhone}>{collab.phone}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.noCoachText}>Nessun collaboratore assegnato a questa squadra</Text>
               )}
             </View>
 

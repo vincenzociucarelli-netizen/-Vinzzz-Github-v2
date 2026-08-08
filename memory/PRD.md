@@ -373,6 +373,12 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - Bug: la copia di notifica all'admin mostrava come nome destinatario il FIRMATARIO (es. "GUARINO GIADA ANGELA") pur andando all'email dell'admin, perché `to_name` era sempre = `signer_name`.
   - Fix: aggiunti parametri `to_name` e `is_admin_copy`. La copia admin ora usa il nome dell'admin come destinatario e il testo "È stato firmato un nuovo documento da <firmatario>". La copia al firmatario resta invariata (al suo indirizzo, con il suo nome). Verificato: syntax OK + backend reload pulito.
 
+- **03/08/2026** — Tre aggiustamenti richiesti dall'utente (backend verificati via curl):
+  1. **Email GDPR firmate → email società anagrafica**: nel flusso post-firma (`server.py`), la copia istituzionale ora va a `settings.email` (email società in anagrafica, es. siriovolley@gmail.com) invece che alle email personali degli admin. La copia al firmatario resta al proprio indirizzo. Fallback: `settings.society_email` → `societies.email`.
+  2. **Consensi immagine → anche staff**: `GET /admin/athletes/image-consents` ora aggiunge gruppi "Staff · Coach / Dirigenti / Collaboratori" (consensi da `users.consents`), oltre agli atleti. Frontend `image-consents.tsx`: navigazione corretta per staff (`/admin/coach|dirigente|collaboratore/{id}`) e pulsante "notifica coach" nascosto per gruppi staff.
+  3. **Collaboratori nelle squadre**: nuovo `GET /users/collaboratori`, `POST /teams/{id}/assign-collaboratori`, `collaboratori_info` in team detail. Frontend `team/[id].tsx`: sezione selezione (edit) e visualizzazione (view) collaboratori, in aggiunta a coach e dirigenti.
+  - Rimosso endpoint "resend-email" abbandonato (feature scartata dall'utente).
+
 ## Testing Credentials
 Vedi `/app/memory/test_credentials.md`
 

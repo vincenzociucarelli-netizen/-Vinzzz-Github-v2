@@ -156,11 +156,28 @@ async def get_team(team_id: str, current_user = Depends(get_current_user)):
             "qualification": dirigente.get("qualification", ""),
             "qualifications": dirigente.get("qualifications", []),
         })
-    
+
+    # 🆕 03/08/2026 — Collaboratori assegnati alla squadra
+    collaboratori = await db.users.find({
+        "role": "collaboratore",
+        "assigned_teams": team_id
+    }).to_list(10)
+    collaboratori_info = []
+    for collab in collaboratori:
+        collaboratori_info.append({
+            "id": collab.get("id"),
+            "full_name": collab.get("full_name", ""),
+            "email": collab.get("email", ""),
+            "phone": collab.get("phone", ""),
+            "profile_photo": collab.get("profile_photo", ""),
+            "profile_photo_artistic": collab.get("profile_photo_artistic", ""),
+        })
+
     team_obj = Team(**team)
     team_dict = team_obj.dict()
     team_dict["coach_info"] = coach_info
     team_dict["dirigenti_info"] = dirigenti_info
+    team_dict["collaboratori_info"] = collaboratori_info
     return team_dict
 
 
@@ -246,6 +263,29 @@ async def assign_dirigenti_to_team(team_id: str, request: AssignmentRequest, cur
             {"$addToSet": {"assigned_teams": team_id}}
         )
     return {"success": True, "message": f"Dirigenti assegnati alla squadra {team.get('name')}"}
+
+
+@router.post("/teams/{team_id}/assign-collaboratori")
+async def assign_collaboratori_to_team(team_id: str, request: AssignmentRequest, current_user = Depends(get_current_user)):
+    """🆕 03/08/2026 — Assign collaboratori to a team."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può assegnare collaboratori")
+
+    team = await db.teams.find_one({"id": team_id})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+
+    collaboratore_ids = request.ids
+    await db.users.update_many(
+        {"role": UserRole.COLLABORATORE, "assigned_teams": team_id},
+        {"$pull": {"assigned_teams": team_id}}
+    )
+    if collaboratore_ids:
+        await db.users.update_many(
+            {"id": {"$in": collaboratore_ids}, "role": UserRole.COLLABORATORE},
+            {"$addToSet": {"assigned_teams": team_id}}
+        )
+    return {"success": True, "message": f"Collaboratori assegnati alla squadra {team.get('name')}"}
 
 
 @router.get("/teams/{team_id}/payment-info")

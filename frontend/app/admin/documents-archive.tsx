@@ -66,7 +66,6 @@ const MONTH_NAMES = [
 export default function DocumentsArchive() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [resendingId, setResendingId] = useState<string | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);

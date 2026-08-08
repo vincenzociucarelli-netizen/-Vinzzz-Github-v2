@@ -5810,6 +5810,50 @@ async def get_coaches(current_user = Depends(get_current_user)):
     
     return result
 
+@api_router.get("/users/collaboratori")
+async def get_collaboratori(current_user = Depends(get_current_user)):
+    """🆕 03/08/2026 — Elenco collaboratori della società (per assegnazione squadre)."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può vedere i collaboratori")
+
+    society_id = current_user.get("society_id")
+    from utils import get_current_season_for_society as _get_cs
+    _current_season = await _get_cs(db, society_id)
+    collaboratori = await db.users.find({
+        "role": UserRole.COLLABORATORE,
+        "society_id": society_id,
+        "$or": [
+            {"rollover_decision": {"$ne": "removed"}},
+            {"rollover_decision_season": {"$ne": _current_season}},
+        ],
+    }).to_list(1000)
+
+    _needing_heal = [c["id"] for c in collaboratori if _current_season not in (c.get("active_seasons") or [])]
+    if _needing_heal:
+        try:
+            await db.users.update_many(
+                {"id": {"$in": _needing_heal}, "society_id": society_id, "role": UserRole.COLLABORATORE},
+                {"$addToSet": {"active_seasons": _current_season}},
+            )
+        except Exception as _e:
+            logging.warning(f"[users/collaboratori] self-heal active_seasons failed: {_e}")
+
+    result = []
+    for c in collaboratori:
+        result.append({
+            "id": c["id"],
+            "email": c.get("email", ""),
+            "full_name": c.get("full_name", ""),
+            "role": c["role"],
+            "status": c.get("status", UserStatus.APPROVED),
+            "assigned_teams": c.get("assigned_teams", []),
+            "profile_photo": c.get("profile_photo"),
+            "profile_photo_artistic": c.get("profile_photo_artistic"),
+            "linked_athlete_id": c.get("linked_athlete_id"),
+        })
+    return result
+
+
 @api_router.get("/users/fellow-coaches")
 async def get_fellow_coaches(current_user = Depends(get_current_user)):
     """Get all coaches in the same society - accessible by coaches, collaboratori e atleti."""
@@ -22872,61 +22916,6 @@ async def sign_document(request: SignatureDocumentRequest, current_user = Depend
         "message": f"Documento firmato con successo. Una copia è stata inviata a {request.signer_email}"
     }
 
-@api_router.post("/documents/{document_id}/resend-email")
-async def resend_signed_document_email(document_id: str, current_user = Depends(get_current_user)):
-    """🆕 02/08/2026 — Reinvia via email la copia di un documento GIÀ firmato al
-    firmatario (solo admin/dirigente). Riusa il PDF archiviato (pdf_base64/pdf_path)."""
-    if current_user.get("role") not in (UserRole.ADMIN, "viewer"):
-        raise HTTPException(status_code=403, detail="Solo admin")
-    document = await db.signed_documents.find_one({"id": document_id})
-    if not document:
-        raise HTTPException(status_code=404, detail="Documento non trovato")
-    if document.get("society_id") and document.get("society_id") != current_user.get("society_id"):
-        raise HTTPException(status_code=403, detail="Documento di un'altra società")
-
-    # Recupera i byte del PDF archiviato
-    pdf_bytes = None
-    if document.get("pdf_base64"):
-        try:
-            pdf_bytes = base64.b64decode(document["pdf_base64"])
-        except Exception:
-            pdf_bytes = None
-    if not pdf_bytes and document.get("pdf_path"):
-        try:
-            with open(document["pdf_path"], "rb") as f:
-                pdf_bytes = f.read()
-        except Exception:
-            pdf_bytes = None
-    if not pdf_bytes:
-        raise HTTPException(status_code=400, detail="PDF non disponibile per il reinvio. Apri il documento per rigenerarlo, poi riprova.")
-
-    # Indirizzo del firmatario
-    to_email = document.get("signer_email")
-    if not to_email and document.get("signer_id"):
-        u = await db.users.find_one({"id": document["signer_id"]}, {"email": 1})
-        if u:
-            to_email = u.get("email")
-    if not to_email:
-        raise HTTPException(status_code=400, detail="Nessun indirizzo email disponibile per il firmatario")
-
-    doc_title = document.get("document_title") or "Documento firmato"
-    signer_name = document.get("signer_name") or ""
-    filename = document.get("pdf_filename") or f"{document_id}.pdf"
-
-    result = await send_document_email(
-        to_email=to_email,
-        subject=f"Documento firmato: {doc_title}",
-        document_title=doc_title,
-        signer_name=signer_name,
-        pdf_bytes=pdf_bytes,
-        filename=filename,
-    )
-    if result and not result.get("success", True):
-        raise HTTPException(status_code=502, detail=f"Errore invio email: {result.get('error', 'sconosciuto')}")
-    return {"message": f"Copia del documento inviata a {to_email}", "to_email": to_email}
-
-
-
 @api_router.get("/documents/signed/{document_id}/pdf")
 async def get_signed_document_pdf(document_id: str, current_user = Depends(get_current_user)):
     """Download a signed document PDF"""
@@ -24015,34 +24004,45 @@ async def sign_gdpr_privacy_document(
     
     # Send email to signer
     try:
-        await send_document_email(
-            to_email=current_user.get("email", ""),
-            subject=f"Documento firmato: {doc_title}",
-            document_title=doc_title,
-            signer_name=document_record["signer_name"],
-            pdf_bytes=pdf_bytes,
-            filename=filename
-        )
+        signer_to = current_user.get("email", "") or document_record.get("signer_email", "")
+        if signer_to:
+            await send_document_email(
+                to_email=signer_to,
+                subject=f"Documento firmato: {doc_title}",
+                document_title=doc_title,
+                signer_name=document_record["signer_name"],
+                pdf_bytes=pdf_bytes,
+                filename=filename
+            )
     except Exception as e:
         logging.warning(f"Could not send email to signer: {e}")
-    
-    # Send email to admin(s)
+
+    # 🆕 03/08/2026 — Copia alla SOCIETÀ: deve arrivare all'email istituzionale in
+    # anagrafica (settings.society_email, es. siriovolley@gmail.com), NON alle email
+    # personali degli admin (che prima ricevevano tutto sul proprio Gmail).
     try:
-        admins = await db.users.find({"role": "admin", "society_id": society_id}).to_list(10)
-        for admin in admins:
-            if admin.get("email"):
-                await send_document_email(
-                    to_email=admin["email"],
-                    subject=f"Nuovo documento firmato: {doc_title}",
-                    document_title=doc_title,
-                    signer_name=document_record["signer_name"],
-                    pdf_bytes=pdf_bytes,
-                    filename=filename,
-                    to_name=admin.get("full_name") or "Amministratore",
-                    is_admin_copy=True,
-                )
+        society_settings = await db.settings.find_one({"type": "society", "society_id": society_id})
+        # L'email dell'anagrafica società è salvata in settings.email (fallback su society_email / societies.email)
+        society_email = (society_settings or {}).get("email") or (society_settings or {}).get("society_email")
+        # Fallback: se manca nei settings, leggi dall'anagrafica società (collezione societies)
+        if not society_email:
+            soc = await db.societies.find_one({"id": society_id}, {"email": 1})
+            society_email = (soc or {}).get("email")
+        if society_email:
+            await send_document_email(
+                to_email=society_email,
+                subject=f"Nuovo documento firmato: {doc_title}",
+                document_title=doc_title,
+                signer_name=document_record["signer_name"],
+                pdf_bytes=pdf_bytes,
+                filename=filename,
+                to_name=(society_settings or {}).get("name") or "Società",
+                is_admin_copy=True,
+            )
+        else:
+            logging.warning(f"[document_signed] society_email mancante per society_id={society_id}: copia istituzionale non inviata")
     except Exception as e:
-        logging.warning(f"Could not send email to admins: {e}")
+        logging.warning(f"Could not send email to society address: {e}")
     
     # Log audit event
     await db.audit_logs.insert_one({
@@ -35516,6 +35516,7 @@ async def admin_list_image_consents(
         full_name = f"{a.get('last_name','')} {a.get('first_name','')}".strip() or a.get("full_name", "—")
         result_athletes.append({
             "athlete_id": a.get("id"),
+            "entity_type": "athlete",
             "full_name": full_name,
             "team_id": a.get("team_id"),
             "team_name": team_names.get(a.get("team_id"), "Senza squadra"),
@@ -35535,6 +35536,7 @@ async def admin_list_image_consents(
             by_team[tid] = {
                 "team_id": r["team_id"],
                 "team_name": r["team_name"],
+                "is_staff": False,
                 "athletes": [],
             }
         by_team[tid]["athletes"].append(r)
@@ -35545,13 +35547,73 @@ async def admin_list_image_consents(
         g["athletes"].sort(key=lambda x: (x["full_name"] or "").lower())
         g["count"] = len(g["athletes"])
 
+    # 🆕 03/08/2026 — Includere anche lo STAFF (coach, dirigenti, collaboratori):
+    # i loro consensi immagine sono salvati sul record utente (users.consents).
+    # Vengono raggruppati per ruolo e mostrati SOLO quando non c'è un filtro squadra
+    # e non è attivo minors_only (lo staff è adulto).
+    staff_groups_out = []
+    if not team_id and not minors_only:
+        STAFF_ROLES = ["coach", "dirigente", "collaboratore", "admin"]
+        role_label = {
+            "coach": "Staff · Coach",
+            "dirigente": "Staff · Dirigenti",
+            "admin": "Staff · Dirigenti",
+            "collaboratore": "Staff · Collaboratori",
+        }
+        nav_prefix = {"coach": "coach", "dirigente": "dirigente", "admin": "dirigente", "collaboratore": "collaboratore"}
+        staff_users = await db.users.find(
+            {"society_id": society_id, "role": {"$in": STAFF_ROLES}},
+            {"_id": 0, "id": 1, "full_name": 1, "email": 1, "role": 1, "consents": 1, "is_institutional": 1},
+        ).to_list(5000)
+        staff_by_label: dict = {}
+        for u in staff_users:
+            if u.get("is_institutional"):
+                continue  # l'account istituzionale non firma consensi immagine
+            consents = u.get("consents") or {}
+            raw = consents.get(consent_type)
+            final_value = _extract(raw) if raw is not None else False
+            has_record = raw is not None
+            if only_denied and final_value:
+                continue
+            privacy_raw = consents.get("privacy_viewed")
+            label = role_label.get(u.get("role"), "Staff")
+            entry = {
+                "athlete_id": u.get("id"),
+                "entity_type": "staff",
+                "role": u.get("role"),
+                "nav_path": f"/admin/{nav_prefix.get(u.get('role'), 'coach')}/{u.get('id')}",
+                "full_name": u.get("full_name") or u.get("email") or "—",
+                "team_id": None,
+                "team_name": label,
+                "birth_date": None,
+                "is_minor": False,
+                "consent_given": final_value,
+                "denied_by_parents": [],
+                "has_signed": has_record,
+                "privacy_accepted": _extract(privacy_raw) if privacy_raw is not None else False,
+            }
+            staff_by_label.setdefault(label, {
+                "team_id": f"_staff_{label}",
+                "team_name": label,
+                "is_staff": True,
+                "athletes": [],
+            })
+            staff_by_label[label]["athletes"].append(entry)
+        staff_groups_out = sorted(staff_by_label.values(), key=lambda g: (g["team_name"] or "").lower())
+        for g in staff_groups_out:
+            g["athletes"].sort(key=lambda x: (x["full_name"] or "").lower())
+            g["count"] = len(g["athletes"])
+
+    all_groups = groups + staff_groups_out
+    total_all = len(result_athletes) + sum(g["count"] for g in staff_groups_out)
+
     return {
         "consent_type": consent_type,
         "only_denied": only_denied,
         "minors_only": minors_only,
         "team_id_filter": team_id,
-        "total": len(result_athletes),
-        "groups": groups,
+        "total": total_all,
+        "groups": all_groups,
     }
 
 

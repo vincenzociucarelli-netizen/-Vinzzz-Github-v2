@@ -24,6 +24,9 @@ interface AthleteRow {
   denied_by_parents: string[];
   has_signed: boolean;
   privacy_accepted: boolean;
+  entity_type?: 'athlete' | 'staff';
+  role?: string;
+  nav_path?: string;
 }
 
 interface TeamGroup {
@@ -31,6 +34,7 @@ interface TeamGroup {
   team_name: string;
   athletes: AthleteRow[];
   count: number;
+  is_staff?: boolean;
 }
 
 interface TeamOption {
@@ -348,7 +352,7 @@ export default function ImageConsentsPage() {
                     <Text style={styles.countBadgeText}>{g.count}</Text>
                   </View>
                 </TouchableOpacity>
-                {isOpen && g.team_id && onlyDenied && (
+                {isOpen && g.team_id && !g.is_staff && onlyDenied && (
                   <TouchableOpacity
                     style={[
                       styles.notifyBtn,
@@ -402,7 +406,11 @@ export default function ImageConsentsPage() {
                         <TouchableOpacity
                           style={styles.viewBtn}
                           onPress={() =>
-                            router.push(`/admin/athlete/${a.athlete_id}` as any)
+                            router.push(
+                              (a.entity_type === 'staff' && a.nav_path
+                                ? a.nav_path
+                                : `/admin/athlete/${a.athlete_id}`) as any
+                            )
                           }
                           data-testid={`view-athlete-${a.athlete_id}`}
                         >
