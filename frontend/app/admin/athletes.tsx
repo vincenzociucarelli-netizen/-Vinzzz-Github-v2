@@ -451,12 +451,24 @@ export default function AdminAthletes() {
     //   e atleti riconfermati dall'archivio (hanno team_id_previous_season).
     const toReview: Athlete[] = [];
     const others: Athlete[] = [];
+    // 🆕 Un atleta resta "Da controllare" finché non è pienamente ATTIVO
+    //   (onboarding: senza squadra / privacy / certificato) oppure è una
+    //   riconferma dalla stagione precedente. Esce quando diventa Attivo,
+    //   quando è Ritirato, o quando l'admin lo segna manualmente "Controllato".
+    const needsReview = (a: any): boolean => {
+      if (a.is_withdrawn) return false;
+      if (!!a.team_id_previous_season) return true;   // riconferma da riassegnare
+      if (!a.team_id) return true;                    // accettato ma senza squadra → "In attesa"
+      const st = a.status;
+      if (st === 'pending' || st === 'pending_email' || st === 'pending_trial') return true;
+      if (st === 'pending_privacy') return true;
+      if (st === 'pending_certificate') return true;
+      if (st === 'trial') return !a.trial_start_date; // "In attesa" finché la prova non parte (QR)
+      return false;                                    // Attivo / In prova → fuori
+    };
     processedAthletes.forEach(a => {
-      const st = (a as any).status;
-      const hasPrev = !!(a as any).team_id_previous_season;
-      const isPending = st === 'pending' || st === 'pending_email' || st === 'pending_privacy' || st === 'pending_certificate' || st === 'pending_trial';
       const dismissed = currentSeason && (a as any).review_dismissed_season === currentSeason;
-      if ((isPending || hasPrev) && !dismissed) toReview.push(a);
+      if (needsReview(a) && !dismissed) toReview.push(a);
       else others.push(a);
     });
 
@@ -479,7 +491,7 @@ export default function AdminAthletes() {
 
     if (toReview.length > 0) {
       return [
-        { title: `🗂️ Da controllare (${toReview.length}) · riconferme + nuove iscrizioni`, data: toReview, isReview: true },
+        { title: `🗂️ Da controllare (${toReview.length}) · iscrizioni e onboarding da completare`, data: toReview, isReview: true },
         ...alphaSections,
       ] as any;
     }
