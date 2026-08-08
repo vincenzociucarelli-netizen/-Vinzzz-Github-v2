@@ -239,12 +239,10 @@ export default function RegisterAthlete() {
       return;
     }
 
-    // Validazione consensi obbligatori (solo se non periodo di prova)
-    if (!isTrialPeriod) {
-      if (!consentPrivacyViewed) {
-        showAlert('Errore', 'Devi confermare la presa visione dell\'informativa sulla privacy');
-        return;
-      }
+    // 🐛 03/08/2026 — Maggiorenni: presa visione privacy obbligatoria alla registrazione
+    if (!isMinor && !consentPrivacyViewed) {
+      showAlert('Errore', 'Devi confermare la presa visione dell\'informativa sulla privacy');
+      return;
     }
 
     setLoading(true);
@@ -275,17 +273,19 @@ export default function RegisterAthlete() {
         tax_payer_fiscal_code: taxPayerFiscalCode || null,
         team_id: null,
         team_id_2: null,
-        is_trial: isTrialPeriod,
+        is_trial: isMinor ? true : false,
         second_parent_email: secondParentEmail || null,
-        privacy_accepted: !isTrialPeriod,  // Se non è prova, accetta privacy
-        consent_privacy_viewed: !isTrialPeriod ? consentPrivacyViewed : false,
-        consent_images_internal: !isTrialPeriod ? consentImagesInternal : null,
-        consent_images_promo: !isTrialPeriod ? consentImagesPromo : null,
+        // 🐛 03/08/2026 — SOLO minorenni: nessuna privacy alla registrazione (si firma a fine prova).
+        // Maggiorenni: comportamento originale (accettano privacy e consensi immagine ora).
+        privacy_accepted: isMinor ? false : consentPrivacyViewed,
+        consent_privacy_viewed: isMinor ? false : consentPrivacyViewed,
+        consent_images_internal: isMinor ? null : consentImagesInternal,
+        consent_images_promo: isMinor ? null : consentImagesPromo,
         data_password: dataPassword || null,
       });
       
-      const successMsg = isTrialPeriod 
-        ? 'Atleta registrato per il periodo di prova! Troverai il nuovo atleta nella tua area personale.'
+      const successMsg = isMinor
+        ? 'Atleta registrato per il periodo di prova! Ora carica il certificato medico e firma la dichiarazione di inizio prova dalla sua scheda.'
         : 'Atleta registrato con successo! Troverai il nuovo atleta nella tua area personale.';
       
       showAlert('Successo', successMsg, () => router.replace('/parent'));
@@ -295,6 +295,18 @@ export default function RegisterAthlete() {
       setLoading(false);
     }
   };
+
+  // 🐛 03/08/2026 — Calcolo minorenne (render): pilota UI prova vs privacy alla registrazione.
+  // Default: minorenne (flusso prova) finché la data non è valida.
+  const computeIsMinorAthlete = (): boolean => {
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dateOfBirth || '');
+    if (!m) return true;
+    const bd = new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
+    if (isNaN(bd.getTime())) return true;
+    const age = Math.floor((Date.now() - bd.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+    return age < 18;
+  };
+  const isMinorAthlete = computeIsMinorAthlete();
 
   return (
     <View style={styles.container}>
@@ -672,43 +684,37 @@ export default function RegisterAthlete() {
           />
 
           <Text style={styles.sectionTitle}>📝 Tipo Iscrizione</Text>
-          
-          <TouchableOpacity 
-            style={styles.checkboxRow}
-            onPress={() => setIsTrialPeriod(!isTrialPeriod)}
-          >
-            <View style={[styles.checkbox, isTrialPeriod && styles.checkboxChecked]}>
-              {isTrialPeriod && <Ionicons name="checkmark" size={16} color="#fff" />}
-            </View>
-            <View style={styles.checkboxTextContainer}>
-              <Text style={styles.checkboxLabel}>Richiedo periodo di prova (7 giorni)</Text>
-              <Text style={styles.checkboxSubtext}>
-                {isTrialPeriod 
-                  ? 'Non è richiesta la firma sulla privacy durante la prova'
-                  : 'Confermo e accetto la privacy e la liberatoria'}
-              </Text>
-            </View>
-          </TouchableOpacity>
-          
-          {!isTrialPeriod && (
-            <TouchableOpacity 
-              style={styles.privacyLink}
-              onPress={() => setPrivacyModalVisible(true)}
-            >
-              <Ionicons name="document-text-outline" size={18} color="#007AFF" />
-              <Text style={styles.privacyLinkText}>Leggi l'informativa sulla privacy</Text>
-            </TouchableOpacity>
-          )}
 
-          {/* Consensi granulari GDPR */}
-          {!isTrialPeriod && (
-            <View style={{marginTop: 8}}>
-              <Text style={{fontSize: 15, fontWeight: '700', color: '#333', marginBottom: 12}}>
+          {isMinorAthlete ? (
+            /* 🐛 03/08/2026 — MINORENNE: sempre periodo di prova, nessuna privacy ora */
+            <View style={styles.trialInfoBox}>
+              <Ionicons name="information-circle" size={22} color="#7B1FA2" />
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={styles.trialInfoTitle}>Iscrizione con periodo di prova (7 giorni)</Text>
+                <Text style={styles.trialInfoText}>
+                  Dopo la registrazione: carica il certificato medico e firma la
+                  dichiarazione di inizio prova. La prova parte alla prima scansione del
+                  QR da parte del coach. Al termine potrai firmare la privacy per confermare
+                  l'iscrizione. Nessuna firma privacy è richiesta ora.
+                </Text>
+              </View>
+            </View>
+          ) : (
+            /* MAGGIORENNE: accetta la privacy in fase di registrazione */
+            <View style={{ marginTop: 8 }}>
+              <TouchableOpacity
+                style={styles.privacyLink}
+                onPress={() => setPrivacyModalVisible(true)}
+              >
+                <Ionicons name="document-text-outline" size={18} color="#007AFF" />
+                <Text style={styles.privacyLinkText}>Leggi l'informativa sulla privacy</Text>
+              </TouchableOpacity>
+
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#333', marginBottom: 12, marginTop: 8 }}>
                 Consensi Privacy (GDPR)
               </Text>
 
-              {/* 1. Presa visione informativa - OBBLIGATORIA */}
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.checkboxRow}
                 onPress={() => setConsentPrivacyViewed(!consentPrivacyViewed)}
               >
@@ -721,13 +727,12 @@ export default function RegisterAthlete() {
                 </View>
               </TouchableOpacity>
 
-              <View style={{height: 1, backgroundColor: '#e0e0e0', marginVertical: 12}} />
-              <Text style={{fontSize: 13, color: '#666', marginBottom: 8, fontStyle: 'italic'}}>
+              <View style={{ height: 1, backgroundColor: '#e0e0e0', marginVertical: 12 }} />
+              <Text style={{ fontSize: 13, color: '#666', marginBottom: 8, fontStyle: 'italic' }}>
                 Consensi facoltativi - utilizzo immagini/video
               </Text>
 
-              {/* 3. Immagini uso interno - FACOLTATIVA */}
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.checkboxRow}
                 onPress={() => setConsentImagesInternal(!consentImagesInternal)}
               >
@@ -740,8 +745,7 @@ export default function RegisterAthlete() {
                 </View>
               </TouchableOpacity>
 
-              {/* 4. Immagini uso promozionale - FACOLTATIVA */}
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.checkboxRow}
                 onPress={() => setConsentImagesPromo(!consentImagesPromo)}
               >
@@ -873,6 +877,27 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+  },
+  trialInfoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F3E5F5',
+    borderRadius: 10,
+    padding: 14,
+    borderLeftWidth: 4,
+    borderLeftColor: '#7B1FA2',
+    marginBottom: 8,
+  },
+  trialInfoTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6A1B9A',
+    marginBottom: 4,
+  },
+  trialInfoText: {
+    fontSize: 12,
+    color: '#555',
+    lineHeight: 18,
   },
   label: {
     fontSize: 14,

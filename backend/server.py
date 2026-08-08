@@ -8301,14 +8301,21 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
     # All athletes start as PENDING and need Admin approval
     # EXCEPT: minors registered by their parent go directly to trial
     is_trial = getattr(athlete_data, 'is_trial', True)
-    privacy_accepted = getattr(athlete_data, 'privacy_accepted', False)
-    
-    # Build granular consent tracking (GDPR compliant)
+    # 🐛 03/08/2026 — SOLO PER I MINORENNI: la privacy NON si accetta MAI alla registrazione
+    # (verrà firmata dal genitore a fine prova). Per i MAGGIORENNI resta il comportamento
+    # originale (accettano la privacy in fase di registrazione).
     now = datetime.utcnow()
     document_version = "1.0-2026"
-    consent_privacy_viewed = getattr(athlete_data, 'consent_privacy_viewed', False)
-    consent_img_internal = getattr(athlete_data, 'consent_images_internal', None)
-    consent_img_promo = getattr(athlete_data, 'consent_images_promo', None)
+    if is_minor:
+        privacy_accepted = False
+        consent_privacy_viewed = False
+        consent_img_internal = None
+        consent_img_promo = None
+    else:
+        privacy_accepted = getattr(athlete_data, 'privacy_accepted', False)
+        consent_privacy_viewed = getattr(athlete_data, 'consent_privacy_viewed', False)
+        consent_img_internal = getattr(athlete_data, 'consent_images_internal', None)
+        consent_img_promo = getattr(athlete_data, 'consent_images_promo', None)
     
     # Get client IP
     client_ip = request_obj.headers.get("x-forwarded-for", request_obj.client.host if request_obj.client else "unknown")
