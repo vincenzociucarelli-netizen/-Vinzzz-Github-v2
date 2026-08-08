@@ -45,6 +45,7 @@ class Team(BaseModel):
     training_schedule: Optional[str] = None
     championships: Optional[str] = None
     calendar_link: Optional[str] = None
+    certificate_type_required: str = "agonistico"
 
 
 class TeamCreate(BaseModel):
@@ -68,6 +69,7 @@ class TeamCreate(BaseModel):
     rifinitura: Optional[dict] = None
     championships: Optional[str] = None
     calendar_link: Optional[str] = None
+    certificate_type_required: Optional[str] = None
 
 
 class TeamUpdate(BaseModel):
@@ -91,6 +93,7 @@ class TeamUpdate(BaseModel):
     rifinitura: Optional[dict] = None
     championships: Optional[str] = None
     calendar_link: Optional[str] = None
+    certificate_type_required: Optional[str] = None
 
 
 class AssignmentRequest(BaseModel):

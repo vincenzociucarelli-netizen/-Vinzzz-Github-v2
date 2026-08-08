@@ -398,3 +398,27 @@ Vedi `/app/memory/test_credentials.md`
 - `/app/frontend/src/components/AdminNotesButton.tsx`
 - `/app/frontend/src/utils/medicalVisitRequest.ts`
 - `/app/frontend/src/utils/fiscalReceipt.ts`
+
+
+## Changelog — 08/08/2026 (fork continuazione)
+### 1) Certificati in scadenza (dashboard) — mostra i NOMI
+- `admin/index.tsx`: il task "Certificati in scadenza" (Da fare oggi) ora apre un popup con i nomi atleti + giorni alla scadenza (prima apriva solo la lista atleti).
+
+### 2) Sezione "Da controllare" (admin/athletes) — pulsante "✓ Controllato" + logica onboarding
+- Nuova logica `needsReview`: un atleta resta in "Da controllare" per tutto l'onboarding (senza squadra / pending* / trial non ancora avviato); esce solo quando è pienamente ATTIVO o Ritirato.
+- Risolto: atleta 18+ accettato (status trial senza squadra) prima finiva nell'elenco alfabetico e "spariva"; ora è correttamente in "Da controllare".
+- Pulsante "✓ Controllato" per squadra corrente: `PATCH /api/athletes/{id}/dismiss-review` (+ `restore-review`). Campo `review_dismissed_season`.
+
+### 3) CERTIFICATO MEDICO — blocco onboarding (Riforma/FIPAV)
+Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato SEMPRE obbligatorio; blocco VERO; tipo per squadra.
+- **Squadra**: nuovo campo `certificate_type_required` ∈ {`none`,`buona_salute`,`agonistico`} (default agonistico). Modelli in `backend/models/team_models.py` (Team/TeamCreate/TeamUpdate) — NB: i router usano QUESTI modelli, non i duplicati in server.py. UI selettore in `admin/teams.tsx` (creazione) e `admin/team/[id].tsx` (modifica).
+- **Registrazione minore** (`parent/register-athlete.tsx` → `POST /api/athletes`): domanda obbligatoria "Ha già giocato a livello agonistico o è già tesserato/a?" → campo `already_registered`.
+- **Helper** (`server.py` ~riga 834): `cert_type_for_team`, `has_valid_verified_cert`, `cert_required_for_trial`, `cert_required_for_active`.
+- **Gate 1 (inizio prova)**: alla registrazione minore / approvazione adulto, se serve il cert e non è convalidato → status `pending_certificate` (ATTESA). QR scan blocca finché non è `pending_trial`.
+- **Avanzamento**: `POST /api/certificates/simple` con verified=true su `pending_certificate` (expiry futura) → `pending_trial`.
+- **Gate 2 (tesseramento)**: `POST /api/trial/accept-privacy/{id}` blocca con HTTP 400 se manca cert valido convalidato e la squadra lo richiede.
+- Verificato: 10/10 pytest `backend/tests/test_certificate_gate_onboarding.py`.
+
+### Note tecniche
+- RN Web propaga solo `testID` (non `data-testid` grezzo) su TouchableOpacity/View/Text.
+- Preview = build statico Expo: dopo modifiche frontend `cd /app/frontend && rm -rf dist && npx expo export -p web && sudo supervisorctl restart expo`.

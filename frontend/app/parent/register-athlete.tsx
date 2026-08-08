@@ -713,7 +713,7 @@ export default function RegisterAthlete() {
             </View>
 
             {/* 🆕 Domanda tesseramento (solo minorenni) → determina obbligo certificato medico */}
-            <View style={styles.alreadyRegBox} data-testid="already-registered-question">
+            <View style={styles.alreadyRegBox} testID="already-registered-question">
               <Text style={styles.alreadyRegQuestion}>
                 Ha già giocato a livello agonistico o è già tesserato/a con questa o un'altra società?
               </Text>
@@ -721,7 +721,7 @@ export default function RegisterAthlete() {
                 <TouchableOpacity
                   style={[styles.alreadyRegOption, alreadyRegistered === true && styles.alreadyRegOptionActive]}
                   onPress={() => setAlreadyRegistered(true)}
-                  data-testid="already-registered-yes"
+                  testID="already-registered-yes"
                 >
                   <Ionicons name={alreadyRegistered === true ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={alreadyRegistered === true ? '#7B1FA2' : '#999'} />
                   <Text style={[styles.alreadyRegOptionText, alreadyRegistered === true && styles.alreadyRegOptionTextActive]}>Sì</Text>
@@ -729,7 +729,7 @@ export default function RegisterAthlete() {
                 <TouchableOpacity
                   style={[styles.alreadyRegOption, alreadyRegistered === false && styles.alreadyRegOptionActive]}
                   onPress={() => setAlreadyRegistered(false)}
-                  data-testid="already-registered-no"
+                  testID="already-registered-no"
                 >
                   <Ionicons name={alreadyRegistered === false ? 'checkmark-circle' : 'ellipse-outline'} size={18} color={alreadyRegistered === false ? '#7B1FA2' : '#999'} />
                   <Text style={[styles.alreadyRegOptionText, alreadyRegistered === false && styles.alreadyRegOptionTextActive]}>No, prima volta</Text>

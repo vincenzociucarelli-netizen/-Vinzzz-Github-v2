@@ -1157,7 +1157,7 @@ export default function TeamDetail() {
                     backgroundColor: certificateTypeRequired === opt.key ? '#E3F2FD' : '#fff',
                   }}
                   onPress={() => setCertificateTypeRequired(opt.key)}
-                  data-testid={`cert-type-${opt.key}`}
+                  testID={`cert-type-${opt.key}`}
                 >
                   <Ionicons
                     name={certificateTypeRequired === opt.key ? 'radio-button-on' : 'radio-button-off'}

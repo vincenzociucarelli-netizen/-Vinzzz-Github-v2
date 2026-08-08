@@ -653,7 +653,7 @@ export default function AdminAthletes() {
         <TouchableOpacity
           onPress={(e: any) => { e.stopPropagation?.(); handleDismissReview(item.id, formatAthleteNameForDisplay(item)); }}
           style={styles.dismissReviewBtn}
-          data-testid={`dismiss-review-${item.id}`}
+          testID={`dismiss-review-${item.id}`}
         >
           <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
           <Text style={styles.dismissReviewBtnText}>Controllato</Text>

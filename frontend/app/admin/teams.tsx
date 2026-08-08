@@ -905,7 +905,7 @@ export default function TeamsScreen() {
                     backgroundColor: certificateTypeRequired === opt.key ? '#E3F2FD' : '#fff',
                   }}
                   onPress={() => setCertificateTypeRequired(opt.key)}
-                  data-testid={`create-cert-type-${opt.key}`}
+                  testID={`create-cert-type-${opt.key}`}
                 >
                   <Ionicons
                     name={certificateTypeRequired === opt.key ? 'radio-button-on' : 'radio-button-off'}
