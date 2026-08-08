@@ -676,7 +676,23 @@ export default function AdminDashboard() {
               label: 'Certificati in scadenza',
               icon: '📄',
               color: '#EF6C00',
-              onPress: () => router.push('/admin/athletes'),
+              onPress: () => {
+                let message = '';
+                if ((expiringCerts?.count_today || 0) > 0) {
+                  message += `⚠️ SCADUTI/OGGI: ${expiringCerts.count_today}\n`;
+                  (expiringCerts.expiring_today || []).forEach((c: any) => {
+                    message += `• ${c.athlete_name}\n`;
+                  });
+                  message += '\n';
+                }
+                if ((expiringCerts?.count_30_days || 0) > 0) {
+                  message += `📋 Prossimi 30 giorni: ${expiringCerts.count_30_days}\n`;
+                  (expiringCerts.expiring_soon || []).forEach((c: any) => {
+                    message += `• ${c.athlete_name}${c.days_until_expiry != null ? ` (tra ${c.days_until_expiry}g)` : ''}\n`;
+                  });
+                }
+                showInfo('📄 Certificati in Scadenza', message.trim() || 'Nessun certificato in scadenza.');
+              },
               testId: 'task-expiring-certs',
             },
             {
