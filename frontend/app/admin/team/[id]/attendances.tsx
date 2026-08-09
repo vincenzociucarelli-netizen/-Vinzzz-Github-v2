@@ -24,6 +24,7 @@ interface AthleteStats {
   total_percentage: number;
   monthly_percentage: number;
   weekly_percentage: number;
+  status?: string;
 }
 
 interface TeamAttendanceStats {
@@ -220,7 +221,24 @@ export default function TeamAttendances() {
             return (
               <View key={athlete.athlete_id} style={styles.athleteCard}>
                 <View style={styles.athleteInfo}>
-                  <Text style={styles.athleteName}>{athlete.athlete_name}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                    <Text style={styles.athleteName}>{athlete.athlete_name}</Text>
+                    {athlete.status && athlete.status !== 'active' && (() => {
+                      const map: Record<string, { label: string; bg: string; fg: string }> = {
+                        trial: { label: 'In prova', bg: '#E3F2FD', fg: '#1565C0' },
+                        pending_trial: { label: 'Attesa inizio prova', bg: '#FFF3E0', fg: '#E65100' },
+                        pending_certificate: { label: 'Attesa certificato', bg: '#FCE4EC', fg: '#AD1457' },
+                        pending_privacy: { label: 'Attesa firma privacy', bg: '#F3E5F5', fg: '#6A1B9A' },
+                        pending: { label: 'In attesa', bg: '#ECEFF1', fg: '#546E7A' },
+                      };
+                      const s = map[athlete.status] || { label: athlete.status, bg: '#ECEFF1', fg: '#546E7A' };
+                      return (
+                        <View style={{ backgroundColor: s.bg, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }} testID={`att-status-${athlete.athlete_id}`}>
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: s.fg }}>{s.label}</Text>
+                        </View>
+                      );
+                    })()}
+                  </View>
                   <View style={styles.attendanceInfo}>
                     <Ionicons 
                       name={getPercentageIcon(percentage)} 

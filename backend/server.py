@@ -13471,14 +13471,19 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
     if not team:
         raise HTTPException(status_code=404, detail="Squadra non trovata")
     
-    # Get all athletes in the team (including trial athletes) — scoped by society
+    # Get all athletes in the team — scoped by society.
+    # 🐛 08/08/2026 — Mostrare TUTTI gli atleti assegnati alla squadra (per team_id
+    # o team_id_2), esclusi solo ritirati e rifiutati/rimossi. Prima il filtro era
+    # status ∈ ["active","trial"] e nascondeva gli atleti in onboarding
+    # (pending / pending_trial / pending_certificate / pending_privacy) — dopo il
+    # rollover di stagione o le nuove iscrizioni il Registro Presenze mostrava "0 atleti".
     _sid = current_user.get("society_id")
     _q = {
         "$or": [
             {"team_id": team_id},
             {"team_id_2": team_id}
         ],
-        "status": {"$in": ["active", "trial"]},
+        "status": {"$nin": ["rejected", "withdrawn", "removed", "deleted"]},
         "is_withdrawn": {"$ne": True}
     }
     if _sid:
