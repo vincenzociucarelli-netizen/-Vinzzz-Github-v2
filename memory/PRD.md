@@ -458,6 +458,10 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - **VERIFICATO** (preview): image-consents non mostra più falsi "Negato"; pannello read-only presente e corretto su atleta (MAURI LENA) e coach (FARO REMO); deep-link apre il tab giusto.
 - **NOTA DEPLOY**: frontend → Save to Github/Vercel; backend → Render. In produzione anche i toggle "bloccati" della mamma di Ludovica dipendono dal fix per-genitore 09/08 non ancora online.
 
+### Chiarimento 09/08/2026 (parte 3) — Staff firma privacy a fine anagrafica (no periodo di prova)
+- Coach/dirigenti/collaboratori NON hanno periodo di prova: firmano la privacy al termine della compilazione dell'anagrafica. Il flusso esisteva già (`profile.tsx` → su Salva, se privacy non accettata, salva anagrafica e apre `GDPRPrivacyModal`; `POST /documents/sign-gdpr-privacy` con `gdpr_adult` imposta `users.privacy_accepted=True` + `consents.privacy_viewed=True`).
+- Corrette solo le DICITURE che dicevano erroneamente "a fine prova" per lo staff: ora "a fine compilazione anagrafica" in `image-consents.tsx` (righe staff), `ConsentManager.tsx` (stato privacy + hint) e `AdminConsentView.tsx` (hint), condizionate a `entity_type/entityType` (athlete→prova, staff/user→anagrafica). Verificato in preview.
+
 ### Note tecniche
 - RN Web propaga solo `testID` (non `data-testid` grezzo) su TouchableOpacity/View/Text.
 - Preview = build statico Expo: dopo modifiche frontend `cd /app/frontend && rm -rf dist && npx expo export -p web && sudo supervisorctl restart expo`.

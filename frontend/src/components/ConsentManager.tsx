@@ -247,7 +247,9 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
                 )}
                 {value === null && (
                   <Text style={s.consentDate}>
-                    {type === 'privacy_viewed' ? 'In attesa di firma (a fine prova)' : 'Non ancora espresso'}
+                    {type === 'privacy_viewed'
+                      ? (entityType === 'athlete' ? 'In attesa di firma (a fine prova)' : 'In attesa di firma (a fine compilazione anagrafica)')
+                      : 'Non ancora espresso'}
                   </Text>
                 )}
               </View>
@@ -282,7 +284,9 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
       <Text style={s.consentHint}>
         {privacySigned 
           ? 'Solo i consensi relativi alle immagini sono modificabili. I consensi obbligatori non possono essere revocati.'
-          : 'Per attivare i consensi è necessario prima firmare la privacy, a fine o ad interruzione anticipata del periodo di prova.'}
+          : (entityType === 'athlete'
+              ? 'Per attivare i consensi è necessario prima firmare la privacy, a fine o ad interruzione anticipata del periodo di prova.'
+              : 'Per attivare i consensi è necessario prima firmare la privacy al termine della compilazione dell\'anagrafica.')}
       </Text>
 
       {/* Photo removal request button - only for users (parents/staff) */}

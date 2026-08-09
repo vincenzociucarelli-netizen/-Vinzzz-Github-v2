@@ -155,8 +155,9 @@ export const AdminConsentView: React.FC<AdminConsentViewProps> = ({
 
               {!privacySigned && (
                 <Text style={s.hint}>
-                  La privacy non è ancora stata firmata (verrà firmata a fine periodo di prova).
-                  Finché non è firmata i consensi immagine non sono espressi.
+                  {entityType === 'athlete'
+                    ? 'La privacy non è ancora stata firmata (verrà firmata a fine periodo di prova). Finché non è firmata i consensi immagine non sono espressi.'
+                    : 'La privacy non è ancora stata firmata (va firmata al termine della compilazione dell\'anagrafica). Finché non è firmata i consensi immagine non sono espressi.'}
                 </Text>
               )}
 

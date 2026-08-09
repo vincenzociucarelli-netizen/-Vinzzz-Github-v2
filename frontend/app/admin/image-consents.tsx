@@ -407,7 +407,9 @@ export default function ImageConsentsPage() {
                               </Text>
                             ) : isPendingPrivacy ? (
                               <Text style={styles.pendingText}>
-                                In attesa di firma privacy (a fine prova)
+                                {a.entity_type === 'staff'
+                                  ? 'In attesa di firma privacy (a fine compilazione anagrafica)'
+                                  : 'In attesa di firma privacy (a fine prova)'}
                               </Text>
                             ) : !a.has_signed ? (
                               <Text style={styles.notSignedText}>
