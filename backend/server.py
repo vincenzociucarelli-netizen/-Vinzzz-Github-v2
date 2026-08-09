@@ -34589,8 +34589,22 @@ async def update_athlete_consents(
     if current_user["role"] not in ["admin"] and not is_parent and not is_self:
         raise HTTPException(status_code=403, detail="Non autorizzato")
     
-    # Block image consent changes if privacy has not been signed for this athlete
-    if not athlete.get("privacy_accepted") and current_user["role"] != "admin":
+    # Block image consent changes if privacy has not been signed for this athlete.
+    # 🐛 08/08/2026 — Per i MINORI 'athlete.privacy_accepted' resta False (la privacy è
+    # per-genitore): consideriamo firmata anche se il genitore che agisce (o uno dei
+    # genitori) ha dato la 'presa visione' (consents.privacy_viewed[__parentId].value == True).
+    _privacy_ok = bool(athlete.get("privacy_accepted"))
+    if not _privacy_ok:
+        _cons_pv = athlete.get("consents") or {}
+        _pid = current_user["id"]
+        for _pv_key in ("privacy_viewed", f"privacy_viewed__{_pid}",
+                        f"privacy_viewed__{athlete.get('parent_id')}",
+                        f"privacy_viewed__{athlete.get('second_parent_id')}"):
+            _pv = _cons_pv.get(_pv_key)
+            if _pv is True or (isinstance(_pv, dict) and _pv.get("value") is True):
+                _privacy_ok = True
+                break
+    if not _privacy_ok and current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Per modificare i consensi è necessario prima firmare la privacy.")
     
     now = datetime.now(timezone.utc)

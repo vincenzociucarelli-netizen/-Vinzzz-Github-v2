@@ -137,9 +137,10 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
   const editableTypes = entityType === 'user'
     ? ['images_promo']
     : ['images_internal', 'images_promo'];
-  const privacySigned = privacySignedOverride !== undefined
-    ? privacySignedOverride
-    : (consents?.privacy_viewed?.value === true);
+  const privacySigned = privacySignedOverride === true
+    ? true
+    : (consents?.privacy_viewed?.value === true
+        || (perParentId ? (consents?.[`privacy_viewed__${perParentId}`]?.value === true) : false));
 
   const handlePhotoRemovalRequest = () => {
     // Apre il modal invece di inviare subito

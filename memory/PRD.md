@@ -441,6 +441,13 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - **Staff (coach/dirigente/collaboratore)**: la sezione "Consensi Privacy" era avvolta in `{privacyAccepted && (...)}` e restava NASCOSTA finché non si firmava la privacy. Rimosso il gate → sempre visibile (coerente con il profilo atleta adulto). Il backend continua a bloccare la MODIFICA prima della firma (comportamento voluto).
 - Verificato: testing_agent iteration_98 → 4/4 profili mostrano la sezione. Vista minore verificata via codice + coerenza backend (endpoint `/athletes/{id}/consents` scrive/legge chiave per-genitore).
 
+### Bugfix 09/08/2026 — Consensi immagini MINORI non modificabili (toggle attivi ma bloccati)
+- **Causa radice (backend)**: `PATCH /api/athletes/{id}/consents` bloccava con 403 se `athlete.privacy_accepted` era False. Per i MINORI questo flag resta False (la privacy è per-genitore, salvata come `consents.privacy_viewed[__parentId]`), quindi genitori e minori non potevano MAI modificare i consensi. Fix (server.py ~34592): ora considera la privacy firmata anche se il genitore che agisce ha dato la presa visione (`privacy_viewed` diretta o `privacy_viewed__{parentId}`).
+- **Frontend `ConsentManager.tsx`**: `privacySigned` ora considera anche `privacy_viewed__{perParentId}`; la lettura del valore usa la chiave per-genitore `type__{parentId}` con fallback alla chiave diretta (risolve il mismatch "toggle mostrato ON ma cronologia = No").
+- **Vista genitore** `parent/athlete/[id].tsx`: passa `perParentId={user.id}` al ConsentManager.
+- **Staff** (`/users/me/consents`): nessun gate backend → possono sempre modificare i propri consensi (sezione ora sempre visibile dal fix parte 3).
+- Verificato via curl: genitore con presa visione ora fa PATCH consenso minore → 200, scritta chiave per-genitore `images_promo__{parentId}`, `final_consents` coerente (prima 403).
+
 ### Note tecniche
 - RN Web propaga solo `testID` (non `data-testid` grezzo) su TouchableOpacity/View/Text.
 - Preview = build statico Expo: dopo modifiche frontend `cd /app/frontend && rm -rf dist && npx expo export -p web && sudo supervisorctl restart expo`.
