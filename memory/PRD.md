@@ -429,6 +429,12 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 ### Deployment
 - L'utente pubblica in produzione (registrateam.it) tramite il deploy della piattaforma (opzione A). Le modifiche di sessione sono in anteprima finché non viene fatto il deploy.
 
+### Bugfix 08/08/2026 (parte 2) — Vista atleta + lista Atleti admin
+- **Tab bar atleta a quota mancante**: `athlete/index.tsx` — la `<AthleteTabBar />` era solo nel ramo "compensati". Aggiunta anche nel ramo "quota" (bug preesistente da 90+ commit): senza di essa l'atleta non raggiungeva Anagrafica/Pagamenti/Presenze né i "Consensi Privacy". Aggiunti anche badge/banner per stato `pending_certificate`.
+- **AthleteTabBar testID**: `src/components/athlete/AthleteTabBar.tsx` ora usa `testID` (RN Web) invece di `data-testid`.
+- **Lista Atleti admin caricava solo ~10 elementi**: `admin/athletes.tsx` — la `SectionList` su RN Web mostrava solo il primo blocco al mount (serviva reload). Fix: `initialNumToRender=1000`, `maxToRenderPerBatch=1000`, `windowSize=999`, `removeClippedSubviews=false`.
+- Verificato: testing_agent iteration_97 → 100% PASS (lista completa al primo mount, tab bar OK).
+
 ### Note tecniche
 - RN Web propaga solo `testID` (non `data-testid` grezzo) su TouchableOpacity/View/Text.
 - Preview = build statico Expo: dopo modifiche frontend `cd /app/frontend && rm -rf dist && npx expo export -p web && sudo supervisorctl restart expo`.
