@@ -1253,8 +1253,8 @@ Società sportiva: ${societyName}
 
         <View style={{ height: 100 }} />
 
-        {/* Consensi Privacy e Immagini - solo dopo firma privacy (DENTRO lo ScrollView per non coprire il Salva floating) */}
-        {privacyAccepted && (
+        {/* Consensi Privacy e Immagini - sempre visibile (come per l'atleta) */}
+        {(
           <View style={{ marginHorizontal: 16, marginTop: 16, marginBottom: 24 }}>
             <TouchableOpacity 
               onPress={() => setShowConsents(!showConsents)}

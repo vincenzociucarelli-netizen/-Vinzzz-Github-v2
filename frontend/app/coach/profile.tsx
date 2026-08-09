@@ -1529,8 +1529,8 @@ Società sportiva: ${societyName}
         </View>
         )}
 
-          {/* Privacy Consent Management - solo dopo firma privacy */}
-          {privacyAccepted && (
+          {/* Privacy Consent Management - sempre visibile (come per l'atleta) */}
+          {(
             <View style={{ marginHorizontal: 16, marginTop: 16, marginBottom: 8 }}>
               <TouchableOpacity 
                 onPress={() => setShowConsents(!showConsents)}

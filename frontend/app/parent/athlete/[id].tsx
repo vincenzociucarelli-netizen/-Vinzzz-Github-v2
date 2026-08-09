@@ -24,6 +24,7 @@ import { Picker } from '@react-native-picker/picker';
 import api from '../../../src/services/api';
 import { Ionicons } from '../../../src/components/Icon';
 import { GDPRPrivacyModal } from '../../../src/components/GDPRPrivacyModal';
+import { ConsentManager } from '../../../src/components/ConsentManager';
 import SignaturePadInline, { SignaturePadInlineRef } from '../../../src/components/SignaturePadInline';
 import { Athlete, Certificate, Payment, PaymentSettings, Team } from '../../../src/types';
 import { format, differenceInDays, addMonths, subDays } from 'date-fns';
@@ -210,6 +211,7 @@ export default function AthleteDetail() {
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
   const [privacyConfirmed, setPrivacyConfirmed] = useState(false);
+  const [showConsents, setShowConsents] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [uploadingCert, setUploadingCert] = useState(false);
   const [togglingStatus, setTogglingStatus] = useState(false);
@@ -2886,6 +2888,29 @@ export default function AthleteDetail() {
 
         {/* === ANAGRAFICA TAB (parte 2 - Accesso Lite) === */}
         {activeTab === 'anagrafica' && (<>
+
+        {/* 🆕 08/08/2026 — Consensi Privacy (autorizzazioni immagini) anche per i MINORI:
+            il genitore può concedere/revocare i consensi immagine dalla scheda del figlio. */}
+        <View style={[styles.card, { marginTop: 12 }]} data-testid="minor-privacy-consents-section">
+          <TouchableOpacity 
+            onPress={() => setShowConsents(!showConsents)}
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+            data-testid="minor-consents-toggle"
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons name="shield-checkmark" size={20} color="#2E7D32" />
+              <Text style={[styles.cardTitle, { marginBottom: 0 }]}>Consensi Privacy</Text>
+            </View>
+            <Ionicons name={showConsents ? "chevron-up" : "chevron-down"} size={20} color="#2E7D32" />
+          </TouchableOpacity>
+          {!showConsents && (
+            <Text style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
+              Concedi o revoca le autorizzazioni all'uso delle immagini di {athlete?.first_name || 'tuo figlio/a'}.
+            </Text>
+          )}
+          {showConsents && <ConsentManager entityType="athlete" entityId={id as string} accentColor="#4CAF50" perParentId={user?.id} privacySignedOverride={athlete?.privacy_accepted === true} />}
+        </View>
+
         {/* Minor Access Control Section */}
         <View style={[styles.card, { marginTop: 12 }]} data-testid="minor-access-section">
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>

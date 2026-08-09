@@ -16,10 +16,16 @@ import api from '../services/api';
 import { Ionicons } from './Icon';
 
 interface ConsentManagerProps {
-  entityType: 'user' | 'athlete';
+  entityType: 'user' | 'athlete' | 'staff';
   entityId?: string;
   entityName?: string;
   accentColor?: string;
+  // 🆕 Minori: id del genitore corrente (i consensi sono salvati per-genitore:
+  // es. images_promo__{parentId}). Se assente si usano le chiavi dirette (adulti/staff).
+  perParentId?: string;
+  // 🆕 Override per sapere se la privacy è già firmata (utile per i minori dove
+  // privacy_viewed è salvato per-genitore): sblocca gli interruttori.
+  privacySignedOverride?: boolean;
 }
 
 const CONSENT_LABELS: Record<string, string> = {
@@ -49,6 +55,8 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
   entityId,
   entityName,
   accentColor = '#E91E63',
+  perParentId,
+  privacySignedOverride,
 }) => {
   const [consents, setConsents] = useState<Record<string, any> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -129,7 +137,9 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
   const editableTypes = entityType === 'user'
     ? ['images_promo']
     : ['images_internal', 'images_promo'];
-  const privacySigned = consents?.privacy_viewed?.value === true;
+  const privacySigned = privacySignedOverride !== undefined
+    ? privacySignedOverride
+    : (consents?.privacy_viewed?.value === true);
 
   const handlePhotoRemovalRequest = () => {
     // Apre il modal invece di inviare subito
@@ -205,7 +215,10 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
       </Text>
 
       {consentTypes.map((type) => {
-        const c = consents?.[type];
+        // 🆕 Minori: leggi la chiave per-genitore (type__parentId) se presente,
+        // altrimenti la chiave diretta (adulti/staff).
+        const perKey = perParentId ? `${type}__${perParentId}` : null;
+        const c = (perKey && consents?.[perKey] !== undefined) ? consents[perKey] : consents?.[type];
         const isEditable = editableTypes.includes(type);
         // Handle both boolean (legacy) and object {value, timestamp} formats
         const value = typeof c === 'boolean' ? c : (c?.value ?? null);
