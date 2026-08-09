@@ -562,6 +562,12 @@ export default function AthleteScreen() {
           </TouchableOpacity>
         </View>
         
+        {/* 🐛 08/08/2026 — Tab bar mancante nella home degli atleti a QUOTA: quando la
+            navigazione fu spostata "nelle tab" (24/02) la AthleteTabBar fu aggiunta solo
+            al ramo compensati. Senza di essa l'atleta a quota non poteva raggiungere
+            Anagrafica / Pagamenti / Presenze (né i consensi privacy). Ripristinata qui. */}
+        <AthleteTabBar />
+        
         {/* 🆕 Switch dual-role: Atleta ↔ Coach (visibile solo se atleta promosso) */}
         <SwitchAccountButton />
         
@@ -590,17 +596,17 @@ export default function AthleteScreen() {
               )}
             </View>
             <View style={{ 
-              backgroundColor: isMinor ? '#FFF3E0' : profile?.status === 'trial' ? '#FFF3E0' : profile?.status === 'pending_trial' ? '#F3E5F5' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#E3F2FD' : '#E8F5E9', 
+              backgroundColor: isMinor ? '#FFF3E0' : profile?.status === 'trial' ? '#FFF3E0' : profile?.status === 'pending_trial' ? '#F3E5F5' : profile?.status === 'pending_certificate' ? '#FCE4EC' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#E3F2FD' : '#E8F5E9', 
               paddingHorizontal: 10, 
               paddingVertical: 5, 
               borderRadius: 12
             }}>
               <Text style={{ 
-                color: isMinor ? '#FF9800' : profile?.status === 'trial' ? '#FF9800' : profile?.status === 'pending_trial' ? '#7B1FA2' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#1976D2' : '#4CAF50',
+                color: isMinor ? '#FF9800' : profile?.status === 'trial' ? '#FF9800' : profile?.status === 'pending_trial' ? '#7B1FA2' : profile?.status === 'pending_certificate' ? '#AD1457' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? '#1976D2' : '#4CAF50',
                 fontWeight: '600',
                 fontSize: 12
               }} data-testid="athlete-status">
-                {isMinor ? 'Minorenne' : profile?.status === 'trial' ? 'Periodo di Prova' : profile?.status === 'pending_trial' ? 'In Attesa Prova' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? 'Firma Privacy' : 'Attivo'}
+                {isMinor ? 'Minorenne' : profile?.status === 'trial' ? 'Periodo di Prova' : profile?.status === 'pending_trial' ? 'In Attesa Prova' : profile?.status === 'pending_certificate' ? 'Attesa Certificato' : (profile?.status === 'pending_privacy' && !profile?.privacy_accepted) ? 'Firma Privacy' : 'Attivo'}
               </Text>
             </View>
           </View>
@@ -622,6 +628,23 @@ export default function AthleteScreen() {
             >
               <Text style={{ color: '#1976D2', fontWeight: '600', fontSize: 13, textAlign: 'center' }}>
                 Devi accettare la Privacy per continuare - Clicca qui
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* 🆕 08/08/2026 — Banner "Attesa Certificato": l'atleta deve caricare/aggiornare
+              il certificato medico nella tab Anagrafica prima di poter iniziare la prova. */}
+          {!isMinor && profile?.status === 'pending_certificate' && (
+            <TouchableOpacity 
+              style={{ backgroundColor: '#FCE4EC', padding: 12, borderRadius: 8, marginTop: 10, borderWidth: 1, borderColor: '#AD1457' }}
+              onPress={() => router.push('/athlete/profile')}
+              data-testid="pending-certificate-banner"
+            >
+              <Text style={{ color: '#AD1457', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>
+                🩺 Certificato medico richiesto
+              </Text>
+              <Text style={{ color: '#AD1457', fontSize: 12, textAlign: 'center', marginTop: 2 }}>
+                Vai in Anagrafica per inserire il certificato. La prova potrà iniziare solo dopo la convalida della società.
               </Text>
             </TouchableOpacity>
           )}
