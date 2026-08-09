@@ -422,6 +422,13 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 ### Già implementato (NON riproporre nel backlog)
 - Promemoria automatico via email al genitore/atleta 30 e 15 giorni prima della scadenza del certificato medico (scheduler "Certificate expiry notification" attivo all'avvio backend). Confermato dall'utente 08/08/2026.
 
+### Bugfix 08/08/2026 — Registro Presenze mostrava troppi pochi atleti
+- `GET /api/teams/{id}/attendance-stats` (server.py ~13474): il filtro era `status ∈ ["active","trial"]` e nascondeva gli atleti in onboarding (pending/pending_trial/pending_certificate/pending_privacy). Ora mostra TUTTI gli atleti assegnati (team_id/team_id_2) tranne rejected/withdrawn/removed/deleted.
+- Frontend `admin/team/[id]/attendances.tsx`: aggiunto badge di stato accanto al nome (In prova / Attesa certificato / Attesa inizio prova / Attesa firma privacy / In attesa).
+
+### Deployment
+- L'utente pubblica in produzione (registrateam.it) tramite il deploy della piattaforma (opzione A). Le modifiche di sessione sono in anteprima finché non viene fatto il deploy.
+
 ### Note tecniche
 - RN Web propaga solo `testID` (non `data-testid` grezzo) su TouchableOpacity/View/Text.
 - Preview = build statico Expo: dopo modifiche frontend `cd /app/frontend && rm -rf dist && npx expo export -p web && sudo supervisorctl restart expo`.
