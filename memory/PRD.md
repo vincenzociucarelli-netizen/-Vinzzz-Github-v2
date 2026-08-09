@@ -435,6 +435,12 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - **Lista Atleti admin caricava solo ~10 elementi**: `admin/athletes.tsx` — la `SectionList` su RN Web mostrava solo il primo blocco al mount (serviva reload). Fix: `initialNumToRender=1000`, `maxToRenderPerBatch=1000`, `windowSize=999`, `removeClippedSubviews=false`.
 - Verificato: testing_agent iteration_97 → 100% PASS (lista completa al primo mount, tab bar OK).
 
+### Bugfix 08/08/2026 (parte 3) — Sezione "Consensi Privacy" mancante in più ruoli
+- **Minore (vista genitore)** `parent/athlete/[id].tsx`: aggiunta sezione collassabile "Consensi Privacy" (mancava del tutto) con `<ConsentManager entityType="athlete" perParentId={user.id} privacySignedOverride={athlete.privacy_accepted} />`.
+- **ConsentManager** `src/components/ConsentManager.tsx`: nuovi prop `perParentId` (legge chiave per-genitore `type__{parentId}` con fallback alla chiave diretta) e `privacySignedOverride` (sblocca i toggle per i minori con privacy firmata dal genitore). `entityType` ora include 'staff'.
+- **Staff (coach/dirigente/collaboratore)**: la sezione "Consensi Privacy" era avvolta in `{privacyAccepted && (...)}` e restava NASCOSTA finché non si firmava la privacy. Rimosso il gate → sempre visibile (coerente con il profilo atleta adulto). Il backend continua a bloccare la MODIFICA prima della firma (comportamento voluto).
+- Verificato: testing_agent iteration_98 → 4/4 profili mostrano la sezione. Vista minore verificata via codice + coerenza backend (endpoint `/athletes/{id}/consents` scrive/legge chiave per-genitore).
+
 ### Note tecniche
 - RN Web propaga solo `testID` (non `data-testid` grezzo) su TouchableOpacity/View/Text.
 - Preview = build statico Expo: dopo modifiche frontend `cd /app/frontend && rm -rf dist && npx expo export -p web && sudo supervisorctl restart expo`.
