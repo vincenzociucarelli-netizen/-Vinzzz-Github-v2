@@ -22,6 +22,7 @@ import CompensationSummaryCard from '../../../src/components/compensation/Compen
 import FipavAthleteRulesPanel from '../../../src/components/FipavAthleteRulesPanel';
 // 🆕 29/07/2026 — Card Calendario Gare (con export .ics)
 import AthleteMatchesCard from '../../../src/components/AthleteMatchesCard';
+import AdminConsentView from '../../../src/components/AdminConsentView';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import DualRoleHubBanner from '../../../src/components/admin/DualRoleHubBanner';
 import { Ionicons } from '../../../src/components/Icon';
@@ -217,7 +218,7 @@ interface AthleteAttendanceStats {
 
 export default function AdminAthleteDetail() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id, section } = useLocalSearchParams();
   const [athlete, setAthlete] = useState<Athlete | null>(null);
   const [team, setTeam] = useState<Team | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -229,6 +230,11 @@ export default function AdminAthleteDetail() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'dafare' | 'dati' | 'pagamenti' | 'presenze'>('dafare');
+  // 🆕 09/08/2026 — Deep-link dai "Consensi Immagini": apre direttamente la scheda
+  // Anagrafica dove è presente il pannello Consensi Privacy (sola lettura).
+  useEffect(() => {
+    if (section === 'consents') setActiveTab('dati');
+  }, [section]);
   
   // Edit mode
   const [editing, setEditing] = useState(false);
@@ -3168,6 +3174,15 @@ export default function AdminAthleteDetail() {
                 </View>
               )}
             </View>
+
+            {/* 🆕 09/08/2026 — Pannello Consensi Privacy (sola lettura) per l'admin:
+                stato firma privacy, consensi immagine (con dettaglio per-genitore per i
+                minori) e cronologia. Utile per capire cosa manca a ciascun atleta. */}
+            <AdminConsentView
+              entityType="athlete"
+              entityId={String(id)}
+              defaultOpen={section === 'consents'}
+            />
 
             {/* 🆕 22/02/2026 — Dati Genitore Detraente (visibile solo per atleti fiscalmente minori: età ≤ 18 nell'anno corrente) */}
             {(() => {

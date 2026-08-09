@@ -20,6 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import CompensationSummaryCard from '../../../src/components/compensation/CompensationSummaryCard';
+import AdminConsentView from '../../../src/components/AdminConsentView';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import AdminPersonTabs, { TabSection, type AdminPersonTab } from '../../../src/components/admin/AdminPersonTabs';
 import AdminCoachCommitments from '../../../src/components/admin/AdminCoachCommitments';
@@ -1293,6 +1294,9 @@ export default function AdminDirigenteDetail() {
                 readOnly
                 adminUserId={dirigente?.id}
               />
+
+              {/* 🆕 09/08/2026 — Consensi Privacy (sola lettura) */}
+              <AdminConsentView entityType="user" entityId={String(id)} entityName={dirigente?.full_name} />
               
               {/* Calcolo per Anno Solare - Enhanced UI */}
               {contractStartDate && contractEndDate && (

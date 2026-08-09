@@ -222,7 +222,13 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
         const c = (perKey && consents?.[perKey] !== undefined) ? consents[perKey] : consents?.[type];
         const isEditable = editableTypes.includes(type);
         // Handle both boolean (legacy) and object {value, timestamp} formats
-        const value = typeof c === 'boolean' ? c : (c?.value ?? null);
+        const rawValue = typeof c === 'boolean' ? c : (c?.value ?? null);
+        // 🐛 09/08/2026 — La "Presa visione Privacy" non è mai "Negata": o è firmata
+        // (true) o è "in attesa di firma". Se il valore memorizzato non è true la
+        // trattiamo come "non ancora espressa" (evita la X rossa "Negato" per i minori
+        // appena registrati, che avevano privacy_viewed=false residuo).
+        const value = (type === 'privacy_viewed' && rawValue !== true) ? null : rawValue;
+        const showTimestamp = !!c?.timestamp && value !== null;
 
         return (
           <View key={type} style={s.consentRow} data-testid={`consent-row-${type}`}>
@@ -236,11 +242,13 @@ export const ConsentManager: React.FC<ConsentManagerProps> = ({
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={s.consentLabel}>{CONSENT_LABELS[type] || type}</Text>
-                {c?.timestamp && (
+                {showTimestamp && (
                   <Text style={s.consentDate}>{formatDate(c.timestamp)}</Text>
                 )}
                 {value === null && (
-                  <Text style={s.consentDate}>Non ancora espresso</Text>
+                  <Text style={s.consentDate}>
+                    {type === 'privacy_viewed' ? 'In attesa di firma (a fine prova)' : 'Non ancora espresso'}
+                  </Text>
                 )}
               </View>
             </View>

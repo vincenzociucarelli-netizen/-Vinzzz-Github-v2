@@ -23,6 +23,7 @@ interface AthleteRow {
   consent_given: boolean;
   denied_by_parents: string[];
   has_signed: boolean;
+  privacy_signed?: boolean;
   privacy_accepted: boolean;
   entity_type?: 'athlete' | 'staff';
   role?: string;
@@ -376,13 +377,22 @@ export default function ImageConsentsPage() {
                 )}
                 {isOpen && (
                   <View style={styles.athleteList}>
-                    {g.athletes.map((a) => (
+                    {g.athletes.map((a) => {
+                      const isDenied = a.denied_by_parents.length > 0;
+                      const isPendingPrivacy = !a.consent_given && !isDenied && a.privacy_signed === false;
+                      const iconName = a.consent_given
+                        ? 'checkmark-circle'
+                        : isDenied
+                        ? 'close-circle'
+                        : 'time-outline';
+                      const iconColor = a.consent_given ? '#4CAF50' : isDenied ? '#D32F2F' : '#FB8C00';
+                      return (
                       <View key={a.athlete_id} style={styles.athleteRow}>
                         <View style={styles.athleteRowLeft}>
                           <Ionicons
-                            name={a.consent_given ? 'checkmark-circle' : 'close-circle'}
+                            name={iconName as any}
                             size={20}
-                            color={a.consent_given ? '#4CAF50' : '#D32F2F'}
+                            color={iconColor}
                           />
                           <View style={{ flex: 1, marginLeft: 10 }}>
                             <Text style={styles.athleteName}>
@@ -391,16 +401,19 @@ export default function ImageConsentsPage() {
                                 <Text style={styles.minorBadge}> · minorenne</Text>
                               )}
                             </Text>
-                            {a.denied_by_parents.length > 0 && (
+                            {isDenied ? (
                               <Text style={styles.deniedByText}>
                                 Negato da: {a.denied_by_parents.join(' · ')}
                               </Text>
-                            )}
-                            {!a.has_signed && (
+                            ) : isPendingPrivacy ? (
+                              <Text style={styles.pendingText}>
+                                In attesa di firma privacy (a fine prova)
+                              </Text>
+                            ) : !a.has_signed ? (
                               <Text style={styles.notSignedText}>
                                 Consenso non ancora compilato
                               </Text>
-                            )}
+                            ) : null}
                           </View>
                         </View>
                         <TouchableOpacity
@@ -408,8 +421,8 @@ export default function ImageConsentsPage() {
                           onPress={() =>
                             router.push(
                               (a.entity_type === 'staff' && a.nav_path
-                                ? a.nav_path
-                                : `/admin/athlete/${a.athlete_id}`) as any
+                                ? `${a.nav_path}?section=consents`
+                                : `/admin/athlete/${a.athlete_id}?section=consents`) as any
                             )
                           }
                           data-testid={`view-athlete-${a.athlete_id}`}
@@ -417,7 +430,8 @@ export default function ImageConsentsPage() {
                           <Ionicons name="eye-outline" size={18} color="#1976D2" />
                         </TouchableOpacity>
                       </View>
-                    ))}
+                      );
+                    })}
                   </View>
                 )}
               </View>
@@ -544,6 +558,7 @@ const styles = StyleSheet.create({
   athleteName: { fontSize: 14, color: '#222', fontWeight: '500' },
   minorBadge: { fontSize: 11, color: '#FF9800', fontWeight: 'normal' },
   deniedByText: { fontSize: 11, color: '#D32F2F', marginTop: 2 },
+  pendingText: { fontSize: 11, color: '#FB8C00', marginTop: 2, fontStyle: 'italic' },
   notSignedText: { fontSize: 11, color: '#999', marginTop: 2, fontStyle: 'italic' },
   viewBtn: { padding: 6 },
 });

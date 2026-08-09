@@ -19,6 +19,7 @@ import { Picker } from '@react-native-picker/picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import CompensationSummaryCard from '../../../src/components/compensation/CompensationSummaryCard';
+import AdminConsentView from '../../../src/components/AdminConsentView';
 import { Ionicons } from '../../../src/components/Icon';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import DualRoleHubBanner from '../../../src/components/admin/DualRoleHubBanner';
@@ -1716,6 +1717,9 @@ export default function AdminCoachDetail() {
                 pregressoNotice={isDualRole ? "Conteggiato sull'anagrafica Atleta (evita doppio conteggio)" : undefined}
                 adminUserId={coach?.id}
               />
+
+              {/* 🆕 09/08/2026 — Consensi Privacy (sola lettura) */}
+              <AdminConsentView entityType="user" entityId={String(id)} entityName={coach?.full_name} />
               
               {/* 🔧 22/06/2026 — Calcolo per Anno Solare RIATTIVATO: l'utente ha bisogno del breakdown
                   (RAS totale, dichiarazioni soglie €5k/€15k) anche per i coach single-role.

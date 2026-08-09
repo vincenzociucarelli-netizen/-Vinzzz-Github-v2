@@ -8391,16 +8391,26 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
     # Get client IP
     client_ip = request_obj.headers.get("x-forwarded-for", request_obj.client.host if request_obj.client else "unknown")
     
-    consents = {
-        "privacy_viewed": {"value": consent_privacy_viewed, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
-        "images_internal": {"value": consent_img_internal, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
-        "images_promo": {"value": consent_img_promo, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
-    }
-    consent_history = [
-        {"type": "privacy_viewed", "old_value": None, "new_value": consent_privacy_viewed, "timestamp": now.isoformat(), "user_id": current_user["id"], "ip_address": client_ip},
-        {"type": "images_internal", "old_value": None, "new_value": consent_img_internal, "timestamp": now.isoformat(), "user_id": current_user["id"], "ip_address": client_ip},
-        {"type": "images_promo", "old_value": None, "new_value": consent_img_promo, "timestamp": now.isoformat(), "user_id": current_user["id"], "ip_address": client_ip},
-    ]
+    # 🐛 09/08/2026 — MINORENNI: nessun consenso viene "espresso" alla registrazione.
+    # La privacy (e i consensi immagine) vengono firmati dal genitore SOLO a fine prova
+    # (o in caso di interruzione anticipata, se decide di restare). Prima salvavamo
+    # privacy_viewed=false e immagini=null con timestamp: questo faceva risultare il
+    # minore come "Privacy NEGATA" e "Consenso immagini NEGATO da <genitore>" pur non
+    # avendo mai firmato nulla. Ora il minore parte "pulito" (consensi vuoti).
+    if is_minor:
+        consents = {}
+        consent_history = []
+    else:
+        consents = {
+            "privacy_viewed": {"value": consent_privacy_viewed, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
+            "images_internal": {"value": consent_img_internal, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
+            "images_promo": {"value": consent_img_promo, "timestamp": now.isoformat(), "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
+        }
+        consent_history = [
+            {"type": "privacy_viewed", "old_value": None, "new_value": consent_privacy_viewed, "timestamp": now.isoformat(), "user_id": current_user["id"], "ip_address": client_ip},
+            {"type": "images_internal", "old_value": None, "new_value": consent_img_internal, "timestamp": now.isoformat(), "user_id": current_user["id"], "ip_address": client_ip},
+            {"type": "images_promo", "old_value": None, "new_value": consent_img_promo, "timestamp": now.isoformat(), "user_id": current_user["id"], "ip_address": client_ip},
+        ]
     
     # Hash data password if provided (for minors - protects sensitive data)
     data_password_hash = None
@@ -35636,14 +35646,27 @@ async def admin_list_image_consents(
     parent_info = {p["id"]: p for p in parents}
 
     def _extract(entry):
+        # 🐛 09/08/2026 — Ritorna il valore GREZZO: True / False / None (non espresso).
+        # Prima ritornava False anche per i consensi mai compilati (None), facendo
+        # risultare i minori come "Negato" pur non avendo mai firmato nulla.
         if isinstance(entry, bool):
             return entry
         if isinstance(entry, dict):
-            return entry.get("value", False)
+            return entry.get("value")
+        return None
+
+    def _privacy_signed(a: dict) -> bool:
+        cons = a.get("consents") or {}
+        if a.get("privacy_accepted"):
+            return True
+        for k, v in cons.items():
+            if k == "privacy_viewed" or (isinstance(k, str) and k.startswith("privacy_viewed__")):
+                if v is True or (isinstance(v, dict) and v.get("value") is True):
+                    return True
         return False
 
     def _is_minor(a: dict) -> bool:
-        bd = a.get("birth_date")
+        bd = a.get("date_of_birth") or a.get("birth_date")
         if not bd:
             return False
         try:
@@ -35666,15 +35689,21 @@ async def admin_list_image_consents(
 
         consents = a.get("consents") or {}
         athlete_parent_ids = [pid for pid in [a.get("parent_id"), a.get("second_parent_id")] if pid]
+        priv_signed = _privacy_signed(a)
 
-        # Compute final value
+        # Compute final value — considera SOLO i consensi effettivamente espressi
+        # (True/False). Un valore None (mai compilato) NON conta come "negato".
         parent_states = {}
         for pid in athlete_parent_ids:
             key = f"{consent_type}__{pid}"
             if key in consents:
-                parent_states[pid] = _extract(consents[key])
+                v = _extract(consents[key])
+                if v is not None:
+                    parent_states[pid] = v
             elif pid == a.get("parent_id") and consent_type in consents:
-                parent_states[pid] = _extract(consents[consent_type])
+                v = _extract(consents[consent_type])
+                if v is not None:
+                    parent_states[pid] = v
 
         if parent_states:
             final_value = all(parent_states.values())
@@ -35685,8 +35714,8 @@ async def admin_list_image_consents(
             ]
             has_record = True
         else:
-            raw = consents.get(consent_type)
-            final_value = _extract(raw) if raw is not None else False
+            raw = _extract(consents.get(consent_type))
+            final_value = bool(raw) if raw is not None else False
             denied_by_names = []
             has_record = raw is not None
 
@@ -35700,11 +35729,12 @@ async def admin_list_image_consents(
             "full_name": full_name,
             "team_id": a.get("team_id"),
             "team_name": team_names.get(a.get("team_id"), "Senza squadra"),
-            "birth_date": a.get("birth_date"),
+            "birth_date": a.get("date_of_birth") or a.get("birth_date"),
             "is_minor": _is_minor(a),
             "consent_given": final_value,
             "denied_by_parents": denied_by_names,
             "has_signed": has_record,
+            "privacy_signed": priv_signed,
             "privacy_accepted": bool(a.get("privacy_accepted")),
         })
 
@@ -35750,12 +35780,13 @@ async def admin_list_image_consents(
             if u.get("is_institutional"):
                 continue  # l'account istituzionale non firma consensi immagine
             consents = u.get("consents") or {}
-            raw = consents.get(consent_type)
-            final_value = _extract(raw) if raw is not None else False
-            has_record = raw is not None
+            raw_v = _extract(consents.get(consent_type))
+            final_value = bool(raw_v) if raw_v is not None else False
+            has_record = raw_v is not None
             if only_denied and final_value:
                 continue
             privacy_raw = consents.get("privacy_viewed")
+            priv_signed = (_extract(privacy_raw) is True)
             label = role_label.get(u.get("role"), "Staff")
             entry = {
                 "athlete_id": u.get("id"),
@@ -35770,7 +35801,8 @@ async def admin_list_image_consents(
                 "consent_given": final_value,
                 "denied_by_parents": [],
                 "has_signed": has_record,
-                "privacy_accepted": _extract(privacy_raw) if privacy_raw is not None else False,
+                "privacy_signed": priv_signed,
+                "privacy_accepted": priv_signed,
             }
             staff_by_label.setdefault(label, {
                 "team_id": f"_staff_{label}",

@@ -18,6 +18,7 @@ import { Picker } from '@react-native-picker/picker';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import CompensationSummaryCard from '../../../src/components/compensation/CompensationSummaryCard';
+import AdminConsentView from '../../../src/components/AdminConsentView';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import AdminPersonTabs, { TabSection, type AdminPersonTab } from '../../../src/components/admin/AdminPersonTabs';
 import AdminCoachCommitments from '../../../src/components/admin/AdminCoachCommitments';
@@ -1135,6 +1136,9 @@ export default function AdminCollaboratoreDetail() {
                 readOnly
                 adminUserId={collaboratore?.id}
               />
+
+              {/* 🆕 09/08/2026 — Consensi Privacy (sola lettura) */}
+              <AdminConsentView entityType="user" entityId={String(id)} entityName={collaboratore?.full_name} />
               
               {/* Totale già percepito (quietanze firmate) - Cliccabile - sempre visibile se contratto definito */}
               {contractStartDate && contractEndDate && (

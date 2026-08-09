@@ -448,6 +448,16 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - **Staff** (`/users/me/consents`): nessun gate backend → possono sempre modificare i propri consensi (sezione ora sempre visibile dal fix parte 3).
 - Verificato via curl: genitore con presa visione ora fa PATCH consenso minore → 200, scritta chiave per-genitore `images_promo__{parentId}`, `final_consents` coerente (prima 403).
 
+### Bugfix + Feature 09/08/2026 (parte 2) — Falso "Negato" consensi minori + pannello consensi admin read-only
+- **Causa radice**: alla registrazione di un minore `create_athlete` (server.py ~8380) salvava `consents.privacy_viewed={value:false}` e immagini `{value:null}` con timestamp. Effetti: (a) vista genitore/atleta mostrava la privacy come "Negato" (X rossa) invece di "in attesa"; (b) admin "Consensi Immagini" mostrava i minori come "Negato da: <genitore>" perché il valore `null` veniva contato come negazione.
+- **Fix 1 (backend `create_athlete`)**: per i MINORENNI ora `consents={}` e `consent_history=[]` (nessun consenso "espresso" alla registrazione; verrà firmato a fine prova). Maggiorenni invariati.
+- **Fix 2 (backend `GET /admin/athletes/image-consents`)**: `_extract` ora ritorna True/False/**None** (non più False per i non-espressi). I valori `None` NON contano come "negato". Nuovo campo `privacy_signed` per atleta/staff. Corretto anche `_is_minor` che leggeva `birth_date` invece di `date_of_birth`.
+- **Fix 3 (frontend `ConsentManager.tsx`)**: la "Presa visione Privacy" mostra "In attesa di firma (a fine prova)" invece di "Negato" quando il valore non è `true`. Nascosto il timestamp per i valori non espressi.
+- **Fix 4 (frontend `image-consents.tsx`)**: icona neutra (clessidra arancione) + testo "In attesa di firma privacy" per chi non ha ancora firmato; "Negato da" resta SOLO per negazioni reali. Occhietti → deep-link `?section=consents`.
+- **Feature B (`AdminConsentView.tsx` nuovo)**: pannello collassabile "Consensi Privacy (sola lettura)" per l'admin su scheda atleta (tab Anagrafica, apre da deep-link `?section=consents`) e su schede staff coach/dirigente/collaboratore (tab Compensi). Mostra stato firma privacy, consensi immagine (con denied_by per-genitore sui minori) e cronologia.
+- **VERIFICATO** (preview): image-consents non mostra più falsi "Negato"; pannello read-only presente e corretto su atleta (MAURI LENA) e coach (FARO REMO); deep-link apre il tab giusto.
+- **NOTA DEPLOY**: frontend → Save to Github/Vercel; backend → Render. In produzione anche i toggle "bloccati" della mamma di Ludovica dipendono dal fix per-genitore 09/08 non ancora online.
+
 ### Note tecniche
 - RN Web propaga solo `testID` (non `data-testid` grezzo) su TouchableOpacity/View/Text.
 - Preview = build statico Expo: dopo modifiche frontend `cd /app/frontend && rm -rf dist && npx expo export -p web && sudo supervisorctl restart expo`.
