@@ -723,6 +723,10 @@ export default function AdminAthletes() {
           renderSectionHeader={renderSectionHeader}
           stickySectionHeadersEnabled={true}
           contentContainerStyle={styles.list}
+          initialNumToRender={1000}
+          maxToRenderPerBatch={1000}
+          windowSize={999}
+          removeClippedSubviews={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }

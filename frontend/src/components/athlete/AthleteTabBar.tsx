@@ -56,7 +56,7 @@ export const AthleteTabBar: React.FC = () => {
   const tabs = baseTabs(athleteType);
 
   return (
-    <View style={styles.bar} data-testid="athlete-tab-bar">
+    <View style={styles.bar} testID="athlete-tab-bar">
       <View style={{ paddingHorizontal: 4, justifyContent: 'center' }}>
         <MiniSocietyLogo size={26} />
       </View>
@@ -72,7 +72,7 @@ export const AthleteTabBar: React.FC = () => {
               isCompensTab && active && styles.tabGoldActive,
             ]}
             onPress={() => router.push(t.route as any)}
-            data-testid={`athlete-tab-${t.key}`}
+            testID={`athlete-tab-${t.key}`}
           >
             <Ionicons
               name={t.icon}
