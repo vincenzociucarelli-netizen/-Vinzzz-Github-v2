@@ -39,6 +39,7 @@ import stripe
 
 from database import db
 from auth_utils import get_current_user
+from utils import get_next_receipt_number
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -343,6 +344,10 @@ async def _execute_next_charge(plan: dict) -> dict:
     # Crea payment row per generare lo scontrino
     payment_id = secrets.token_urlsafe(8)
     now = datetime.now(timezone.utc)
+    try:
+        _rn = await get_next_receipt_number(db, plan["society_id"])
+    except Exception:
+        _rn = None
     await db.payments.insert_one({
         "id": payment_id,
         "athlete_id": plan["athlete_id"],
@@ -354,6 +359,7 @@ async def _execute_next_charge(plan: dict) -> dict:
         "paid": True,
         "paid_date": now,
         "payment_method": "stripe",
+        "receipt_number": _rn,
         "description": plan.get("description") or "Iscrizione",
         "stripe_payment_intent": pi.id,
         "stripe_customer_id": plan["stripe_customer_id"],
@@ -621,6 +627,10 @@ async def handle_recurring_activation_webhook(session: dict, society_id: str) ->
 
     # Crea la 1ª riga payments (per scontrino della rata 1)
     first_payment_id = secrets.token_urlsafe(8)
+    try:
+        _rn_first = await get_next_receipt_number(db, society_id)
+    except Exception:
+        _rn_first = None
     await db.payments.insert_one({
         "id": first_payment_id,
         "athlete_id": plan["athlete_id"],
@@ -632,6 +642,7 @@ async def handle_recurring_activation_webhook(session: dict, society_id: str) ->
         "paid": True,
         "paid_date": now,
         "payment_method": "stripe",
+        "receipt_number": _rn_first,
         "description": plan.get("description") or "Iscrizione",
         "stripe_payment_intent": pi_id,
         "stripe_session_id": session.get("id"),

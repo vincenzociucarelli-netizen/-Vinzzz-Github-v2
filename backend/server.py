@@ -14566,6 +14566,32 @@ async def get_fiscal_receipt_data(athlete_id: str, current_user = Depends(get_cu
     
     # Get all payments for this athlete
     payments = await db.payments.find({"athlete_id": athlete_id, "paid": True}).sort("paid_date", 1).to_list(100)
+
+    # 🆕 10/08/2026 — Backfill N. Prog. per pagamenti PAGATI senza ricevuta
+    # (es. incassi Stripe registrati prima di questo fix). Assegnati in ordine
+    # cronologico (paid_date asc) così l'attestato mostra sempre il progressivo.
+    from utils import get_next_receipt_number as _next_rn
+    for p in payments:
+        if p.get("paid") and not p.get("receipt_number"):
+            try:
+                rn = await _next_rn(db, athlete.get("society_id") or "")
+                await db.payments.update_one({"id": p["id"]}, {"$set": {"receipt_number": rn}})
+                p["receipt_number"] = rn
+            except Exception:
+                pass
+
+    def _method_label(p: dict) -> str:
+        """Etichetta leggibile del metodo di pagamento per la colonna Note."""
+        pm = (p.get("payment_method") or "").strip().lower()
+        if pm == "stripe":
+            return "Online con Stripe (ricorrente)" if p.get("recurring_plan_id") else "Online con Stripe"
+        if pm in ("contanti", "cash") or p.get("is_cash"):
+            return "Contanti"
+        if pm in ("bonifico", "bank", "bank_transfer", "wire"):
+            return "Bonifico"
+        if pm == "pos":
+            return "POS"
+        return (p.get("payment_method") or "").strip() or (p.get("notes") or "")
     
     # Generate receipt number based on date and athlete
     from datetime import datetime
@@ -14623,8 +14649,8 @@ async def get_fiscal_receipt_data(athlete_id: str, current_user = Depends(get_cu
                 "receipt_number": p.get("receipt_number", ""),
                 "amount": p.get("amount", 0),
                 "description": p.get("description", ""),
-                "notes": p.get("notes", ""),
-                "payment_method": p.get("payment_method", ""),
+                "notes": _method_label(p),
+                "payment_method": _method_label(p),
                 "registration_date": p.get("registration_date").isoformat() if p.get("registration_date") else "",
             }
             for p in payments

@@ -103,6 +103,46 @@ async def get_current_season_for_society(db, society_id: str) -> str:
     return f"{now.year - 1}-{now.year}"
 
 
+async def get_next_receipt_number(db, society_id: str) -> str:
+    """🆕 10/08/2026 — Numero ricevuta progressivo per stagione: RIC-26/27-0001.
+    Condiviso tra pagamenti manuali (server.py) e pagamenti Stripe (routes/stripe_payments.py)
+    così anche gli incassi online ricevono un N. Prog. cronologico.
+    """
+    now = datetime.utcnow()
+    settings = None
+    if society_id:
+        settings = await db.settings.find_one({"type": "society", "society_id": society_id})
+    if not settings:
+        settings = await db.settings.find_one({"type": "society"})
+    season_start_month = (settings or {}).get("season_start_month", 7)
+    season_start_day = (settings or {}).get("season_start_day", 1)
+    try:
+        season_start_month = int(season_start_month or 7)
+        season_start_day = int(season_start_day or 1)
+    except Exception:
+        season_start_month, season_start_day = 7, 1
+    try:
+        season_start_this_year = datetime(now.year, season_start_month, season_start_day)
+    except Exception:
+        season_start_this_year = datetime(now.year, 7, 1)
+    if now >= season_start_this_year:
+        season_start_year, season_end_year = now.year, now.year + 1
+    else:
+        season_start_year, season_end_year = now.year - 1, now.year
+    prefix = f"RIC-{season_start_year % 100:02d}/{season_end_year % 100:02d}-"
+    last_payment = await db.payments.find_one(
+        {"receipt_number": {"$regex": f"^{prefix}"}},
+        sort=[("receipt_number", -1)],
+    )
+    next_num = 1
+    if last_payment and last_payment.get("receipt_number"):
+        try:
+            next_num = int(last_payment["receipt_number"].split("-")[-1]) + 1
+        except Exception:
+            next_num = 1
+    return f"{prefix}{next_num:04d}"
+
+
 __all__ = [
     "MONTH_NAMES",
     "to_rome_time",
@@ -111,4 +151,5 @@ __all__ = [
     "clean_mongo_docs",
     "get_current_season",
     "get_current_season_for_society",
+    "get_next_receipt_number",
 ]

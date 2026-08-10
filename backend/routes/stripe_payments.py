@@ -29,6 +29,7 @@ import stripe
 
 from database import db
 from auth_utils import get_current_user
+from utils import get_next_receipt_number
 
 
 router = APIRouter()
@@ -348,16 +349,20 @@ async def get_checkout_status(
         # Aggiorno la rata se non ancora aggiornata (idempotente)
         already_paid = await db.payments.find_one({"id": payment_id, "paid": True})
         if not already_paid:
-            await db.payments.update_one(
-                {"id": payment_id},
-                {"$set": {
-                    "paid": True,
-                    "paid_date": datetime.now(timezone.utc),
-                    "payment_method": "stripe",
-                    "stripe_session_id": session_id,
-                    "stripe_payment_intent": session.payment_intent,
-                }},
-            )
+            set_paid = {
+                "paid": True,
+                "paid_date": datetime.now(timezone.utc),
+                "payment_method": "stripe",
+                "stripe_session_id": session_id,
+                "stripe_payment_intent": session.payment_intent,
+            }
+            # 🆕 10/08/2026 — N. Prog. (ricevuta) anche via conferma-al-ritorno
+            if not payment.get("receipt_number"):
+                try:
+                    set_paid["receipt_number"] = await get_next_receipt_number(db, athlete.get("society_id") or "")
+                except Exception:
+                    pass
+            await db.payments.update_one({"id": payment_id}, {"$set": set_paid})
         return {"paid": True, "session_id": session_id}
 
     return {"paid": False, "status": session.payment_status}
@@ -435,6 +440,13 @@ async def stripe_webhook(society_id: str, request: Request):
                     if is_fully_paid:
                         set_updates["paid"] = True
                         set_updates["paid_date"] = now
+                        # 🆕 10/08/2026 — Assegna il N. Prog. (ricevuta) anche agli incassi
+                        # Stripe, come per contanti/bonifico, se non già presente.
+                        if not payment_doc.get("receipt_number"):
+                            try:
+                                set_updates["receipt_number"] = await get_next_receipt_number(db, society_id)
+                            except Exception:
+                                logger.exception("[stripe webhook] receipt_number assignment failed")
                     await db.payments.update_one(
                         {"id": payment_id},
                         {

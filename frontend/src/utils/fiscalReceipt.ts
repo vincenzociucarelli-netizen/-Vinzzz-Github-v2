@@ -91,7 +91,6 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
   const paymentRows = data.payments.map((payment, index) => {
     const bgColor = index % 2 === 0 ? '#fff' : '#f5f5f5';
     const payDate = formatDateIT(payment.date);
-    const method = payment.payment_method || '-';
     const note = payment.notes || '-';
     
     return `
@@ -99,7 +98,6 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
         <td style="padding: 6px; border: 1px solid #ddd; text-align: center;">${payment.receipt_number || '-'}</td>
         <td style="padding: 6px; border: 1px solid #ddd; text-align: left;">${note}</td>
         <td style="padding: 6px; border: 1px solid #ddd; text-align: center;">${payDate}</td>
-        <td style="padding: 6px; border: 1px solid #ddd; text-align: center;">${method}</td>
         <td style="padding: 6px; border: 1px solid #ddd; text-align: right;">${formatCurrency(payment.amount || 0)}</td>
       </tr>
     `;
@@ -252,14 +250,13 @@ export const generateReceiptHTML = (data: ReceiptData): string => {
               <th>N. Prog.</th>
               <th>Note</th>
               <th>Data Pagamento</th>
-              <th>Metodo</th>
               <th style="text-align: right;">Importo</th>
             </tr>
           </thead>
           <tbody>
             ${paymentRows}
             <tr class="total-row">
-              <td colspan="4"><b>TOTALE VERSATO alla data del: ${dateStr}</b></td>
+              <td colspan="3"><b>TOTALE VERSATO alla data del: ${dateStr}</b></td>
               <td style="text-align: right;"><b>${formatCurrency(totalPaid)}</b></td>
             </tr>
           </tbody>

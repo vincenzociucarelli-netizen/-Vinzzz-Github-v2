@@ -480,6 +480,14 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - NB testID: aggiunto `testID` oltre a `data-testid` sui componenti nuovi (RN-Web).
 - 🐛 10/08/2026 — Fix "Ruolo non compatibile: viewer": `propose_role_change` ora accetta come ruolo di PARTENZA anche "viewer" (alias legacy di dirigente) tramite `SOURCE_STAFF_ROLES`; blocca viewer→dirigente ("ha già questo ruolo"); label `viewer`→"Dirigente". Solo backend → richiede redeploy Render.
 
+### Feature/Fix 10/08/2026 (parte 6) — Attestato: N. Prog. per pagamenti Stripe + Note = metodo
+- **Bug**: gli incassi Stripe (one-shot + ricorrenti) non ricevevano il N. Prog. (numero ricevuta) né una Nota → nell'Attestato di Versamento comparivano "-" "-". La numerazione veniva assegnata solo ai pagamenti manuali.
+- **Fix numerazione**: nuova `get_next_receipt_number(db, society_id)` in `utils.py` (formato `RIC-YY/YY-NNNN`, progressivo per stagione). Assegnata ora anche: webhook Stripe (`checkout.session.completed`), conferma-al-ritorno (`/payments/{id}/checkout/status`), e charge ricorrenti (`routes/recurring_payments.py`). Backfill lazy in `GET /payments/{athlete_id}/fiscal-receipt` per i pagamenti pagati senza ricevuta (in ordine cronologico paid_date) → auto-sana anche il pagamento di test da 10€ già effettuato.
+- **Note = metodo**: la colonna Note dell'attestato mostra l'etichetta del metodo: Contanti / Bonifico / POS / Online con Stripe / Online con Stripe (ricorrente). Helper `_method_label` in server.py.
+- **Layout**: rimossa la colonna ridondante "Metodo" da `fiscalReceipt.ts` (ora: N. Prog. | Note | Data | Importo; total-row colspan 4→3).
+- VERIFICATO con dati sintetici: RIC-26/27-0001..0004 in ordine cronologico + etichette corrette.
+- NB: richiede redeploy Render (backend) + Vercel (frontend). Dopo il deploy di Render, il pagamento di test da 10€ prenderà il N. Prog. alla prima apertura/stampa dell'attestato.
+
 ### Note tecniche
 - RN Web propaga solo `testID` (non `data-testid` grezzo) su TouchableOpacity/View/Text.
 - Preview = build statico Expo: dopo modifiche frontend `cd /app/frontend && rm -rf dist && npx expo export -p web && sudo supervisorctl restart expo`.
