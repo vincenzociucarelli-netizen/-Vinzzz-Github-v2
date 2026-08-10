@@ -22,6 +22,8 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import api from '../../src/services/api';
 import { ConflictBanner } from '../../src/components/ConflictBanner';
 import GuideButton from '../../src/components/GuideButton';
+import FirstLoginGuideHint from '../../src/components/FirstLoginGuideHint';
+import RoleChangePrompt from '../../src/components/RoleChangePrompt';
 import { Ionicons } from '../../src/components/Icon';
 import { Team } from '../../src/types';
 import { format } from 'date-fns';
@@ -1471,6 +1473,7 @@ export default function CoachScreen() {  const router = useRouter();
           <Text style={styles.headerSubtitle}>Benvenuto, {user?.first_name || user?.full_name?.split(' ')[0] || 'Coach'}</Text>
         </View>
         <GuideButton role="coach" compact />
+        <FirstLoginGuideHint roleLabel="Coach" />
         <TouchableOpacity onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color="#fff" />
         </TouchableOpacity>
@@ -1484,6 +1487,9 @@ export default function CoachScreen() {  const router = useRouter();
 
       {/* 🚫 26/06/2026 — Banner "Vai a Compensi Sportivi" RIMOSSO: duplicava il bottone
           "Compensi" già presente in alto nella tab navigation. */}
+
+      {/* 🆕 09/08/2026 — Proposta cambio ruolo dall'admin (accetta/rifiuta) */}
+      <RoleChangePrompt />
 
       {/* Banner richieste cancellazione in attesa */}
       {pendingDeletions.length > 0 && (

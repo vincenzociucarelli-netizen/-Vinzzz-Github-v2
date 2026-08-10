@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/store/authStore';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import GuideButton from '../../src/components/GuideButton';
+import FirstLoginGuideHint from '../../src/components/FirstLoginGuideHint';
 
 interface PermItem {
   key: string;
@@ -88,6 +89,7 @@ export default function CoordinatorDashboard() {
           <Text style={styles.subtitle}>{user?.first_name} {user?.last_name}</Text>
         </View>
         <GuideButton role="coordinatore" compact />
+        <FirstLoginGuideHint roleLabel="Coordinatore" />
         {/* 🆕 17/07/2026 — Switch a Genitore se ha figli linkati */}
         {linkedAthletesCount > 0 && (
           <TouchableOpacity

@@ -20,6 +20,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import CompensationSummaryCard from '../../../src/components/compensation/CompensationSummaryCard';
 import AdminConsentView from '../../../src/components/AdminConsentView';
+import AdminRoleChange from '../../../src/components/AdminRoleChange';
 import { Ionicons } from '../../../src/components/Icon';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import DualRoleHubBanner from '../../../src/components/admin/DualRoleHubBanner';
@@ -1717,6 +1718,9 @@ export default function AdminCoachDetail() {
                 pregressoNotice={isDualRole ? "Conteggiato sull'anagrafica Atleta (evita doppio conteggio)" : undefined}
                 adminUserId={coach?.id}
               />
+
+              {/* 🆕 09/08/2026 — Proposta cambio ruolo (admin propone, persona accetta) */}
+              <AdminRoleChange userId={String(id)} currentRole="coach" userName={coach?.full_name} />
 
               {/* 🆕 09/08/2026 — Consensi Privacy (sola lettura) */}
               <AdminConsentView entityType="user" entityId={String(id)} entityName={coach?.full_name} />

@@ -462,6 +462,23 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - Coach/dirigenti/collaboratori NON hanno periodo di prova: firmano la privacy al termine della compilazione dell'anagrafica. Il flusso esisteva già (`profile.tsx` → su Salva, se privacy non accettata, salva anagrafica e apre `GDPRPrivacyModal`; `POST /documents/sign-gdpr-privacy` con `gdpr_adult` imposta `users.privacy_accepted=True` + `consents.privacy_viewed=True`).
 - Corrette solo le DICITURE che dicevano erroneamente "a fine prova" per lo staff: ora "a fine compilazione anagrafica" in `image-consents.tsx` (righe staff), `ConsentManager.tsx` (stato privacy + hint) e `AdminConsentView.tsx` (hint), condizionate a `entity_type/entityType` (athlete→prova, staff/user→anagrafica). Verificato in preview.
 
+### Feature 09/08/2026 (parte 4) — Coach-mark "Guida rapida" al primo accesso
+- Nuovo componente `src/components/FirstLoginGuideHint.tsx`: al primo ingresso di ogni utente evidenzia il libretto Guida (icona book-outline in alto a destra) con un callout + freccia, mostrato UNA sola volta per utente (flag AsyncStorage `guide_hint_seen_v1_{userId}`), saltabile ("Ho capito"/tap fuori).
+- Integrato nelle dashboard: admin, coach, collaboratore, dirigente, parent, athlete (entrambi i rami quota/PRO), coordinatore. Testo personalizzato per ruolo.
+- VERIFICATO in preview (dashboard admin). B (email fantasma) scartato su richiesta utente; C (FIPAV 2 categorie) in attesa di info.
+
+### Feature 09/08/2026 (parte 5) — Cambio ruolo staff (Coach ⇄ Dirigente ⇄ Collaboratore)
+- Flusso: l'ADMIN propone, la PERSONA accetta. Il ruolo cambia solo all'accettazione. Dati anagrafici e privacy invariati. Lasciando "coach" le squadre assegnate vengono scollegate (`users.assigned_teams=[]`).
+- Backend (server.py, dopo reject_deletion_request): collezione `role_change_requests`.
+  - `POST /admin/staff/{user_id}/propose-role-change` {to_role} (admin, stessa società; sostituisce proposte pendenti).
+  - `GET/DELETE /admin/staff/{user_id}/role-change-request` (admin: legge/annulla proposta pendente).
+  - `GET /role-change/pending` (persona: proposta in sospeso).
+  - `POST /role-change/{id}/accept` (persona: applica ruolo + unlink squadre se esce da coach).
+  - `POST /role-change/{id}/reject` (persona).
+- Frontend: `AdminRoleChange.tsx` (nelle schede admin coach/dirigente/collaboratore, tab Compensi, con pulsante "Proponi cambio ruolo") + `RoleChangePrompt.tsx` (banner Accetta/Rifiuta nelle dashboard coach/dirigente/collaboratore; su accept fa `refreshUser()` e redirect alla nuova dashboard).
+- VERIFICATO e2e via curl: propose→pending→accept ⇒ role=collaboratore, assigned_teams=[] (FARO ripristinato a coach dopo il test). UI admin verificata in preview.
+- NB testID: aggiunto `testID` oltre a `data-testid` sui componenti nuovi (RN-Web).
+
 ### Note tecniche
 - RN Web propaga solo `testID` (non `data-testid` grezzo) su TouchableOpacity/View/Text.
 - Preview = build statico Expo: dopo modifiche frontend `cd /app/frontend && rm -rf dist && npx expo export -p web && sudo supervisorctl restart expo`.

@@ -106,7 +106,7 @@ export const AdminConsentView: React.FC<AdminConsentViewProps> = ({
     const color = finalValue === true ? '#4CAF50' : finalValue === false ? '#F44336' : '#999';
     const icon = finalValue === true ? 'checkmark-circle' : finalValue === false ? 'close-circle' : 'help-circle-outline';
     return (
-      <View key={type} style={s.row} data-testid={`admin-consent-row-${type}`}>
+      <View key={type} style={s.row} testID={`admin-consent-row-${type}`} data-testid={`admin-consent-row-${type}`}>
         <Ionicons name={icon as any} size={20} color={color} />
         <View style={{ flex: 1, marginLeft: 10 }}>
           <Text style={s.rowLabel}>{label}</Text>
@@ -120,8 +120,8 @@ export const AdminConsentView: React.FC<AdminConsentViewProps> = ({
   };
 
   return (
-    <View style={[s.card, { borderTopColor: accentColor }]} data-testid={`admin-consent-view-${entityType}-${entityId}`}>
-      <TouchableOpacity style={s.header} onPress={toggle} data-testid="admin-consent-toggle">
+    <View style={[s.card, { borderTopColor: accentColor }]} testID={`admin-consent-view-${entityType}-${entityId}`} data-testid={`admin-consent-view-${entityType}-${entityId}`}>
+      <TouchableOpacity style={s.header} onPress={toggle} testID="admin-consent-toggle" data-testid="admin-consent-toggle">
         <Ionicons name="shield-checkmark-outline" size={18} color={accentColor} />
         <Text style={[s.title, { color: accentColor }]}>
           Consensi Privacy {entityName ? `- ${entityName}` : ''} (sola lettura)
@@ -165,6 +165,7 @@ export const AdminConsentView: React.FC<AdminConsentViewProps> = ({
                 <TouchableOpacity
                   style={s.historyToggle}
                   onPress={() => setShowHistory(!showHistory)}
+                  testID="admin-consent-history-toggle"
                   data-testid="admin-consent-history-toggle"
                 >
                   <Ionicons name={showHistory ? 'chevron-up' : 'chevron-down'} size={16} color={accentColor} />

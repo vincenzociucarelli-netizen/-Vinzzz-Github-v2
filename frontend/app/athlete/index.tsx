@@ -20,6 +20,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { ConflictBanner } from '../../src/components/ConflictBanner';
 import GuideButton from '../../src/components/GuideButton';
+import FirstLoginGuideHint from '../../src/components/FirstLoginGuideHint';
 import { Ionicons } from '../../src/components/Icon';
 import { GDPRPrivacyModal } from '../../src/components/GDPRPrivacyModal';
 import { SportIcon } from '../../src/components/SportIcon';
@@ -557,6 +558,7 @@ export default function AthleteScreen() {
             <Text style={styles.headerTitle}>Il Mio Profilo</Text>
           </View>
           <GuideButton role="athlete" compact />
+        <FirstLoginGuideHint roleLabel="Atleta" />
           <TouchableOpacity onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={24} color="#fff" />
           </TouchableOpacity>
@@ -1143,6 +1145,7 @@ export default function AthleteScreen() {
             <Text style={styles.headerTitle}>Il Mio Profilo</Text>
           </View>
         <GuideButton role="athlete" compact />
+        <FirstLoginGuideHint roleLabel="Atleta" />
         <TouchableOpacity onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={24} color="#fff" />
         </TouchableOpacity>

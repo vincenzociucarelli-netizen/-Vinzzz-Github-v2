@@ -29242,6 +29242,121 @@ async def reject_deletion_request(request_id: str, current_user = Depends(get_cu
     return {"message": "Cancellazione rifiutata. Il documento resta valido."}
 
 
+# ============================================================
+# 🆕 09/08/2026 — Cambio ruolo staff (Coach ⇄ Dirigente ⇄ Collaboratore)
+# Flusso: l'ADMIN PROPONE un nuovo ruolo → la PERSONA deve ACCETTARE.
+# Solo all'accettazione il ruolo cambia davvero. Dati anagrafici e privacy
+# restano invariati. Lasciando il ruolo COACH le squadre assegnate vengono
+# scollegate automaticamente (assigned_teams svuotato).
+# ============================================================
+STAFF_ROLE_LABELS = {"coach": "Coach", "dirigente": "Dirigente", "collaboratore": "Collaboratore"}
+INTERCHANGEABLE_STAFF_ROLES = ["coach", "dirigente", "collaboratore"]
+
+
+class RoleChangeProposal(BaseModel):
+    to_role: str
+
+
+@api_router.post("/admin/staff/{user_id}/propose-role-change")
+async def propose_role_change(user_id: str, payload: RoleChangeProposal, current_user = Depends(get_current_user)):
+    user = await _admin_check_user_and_society(user_id, INTERCHANGEABLE_STAFF_ROLES, current_user)
+    to_role = (payload.to_role or "").strip().lower()
+    if to_role not in INTERCHANGEABLE_STAFF_ROLES:
+        raise HTTPException(status_code=400, detail="Ruolo di destinazione non valido")
+    if to_role == user.get("role"):
+        raise HTTPException(status_code=400, detail="La persona ha già questo ruolo")
+    now = datetime.now(timezone.utc).isoformat()
+    # Sostituisce eventuali proposte pendenti precedenti
+    await db.role_change_requests.update_many(
+        {"user_id": user_id, "status": "pending"},
+        {"$set": {"status": "superseded", "resolved_at": now}}
+    )
+    req = {
+        "id": str(ObjectId()),
+        "society_id": current_user.get("society_id"),
+        "user_id": user_id,
+        "user_name": user.get("full_name", ""),
+        "from_role": user.get("role"),
+        "to_role": to_role,
+        "status": "pending",
+        "requested_by_id": current_user["id"],
+        "requested_by_name": current_user.get("full_name", "Amministrazione"),
+        "created_at": now,
+    }
+    await db.role_change_requests.insert_one({**req})
+    return {"message": "Proposta inviata. La persona dovrà accettarla.", "request": req}
+
+
+@api_router.get("/admin/staff/{user_id}/role-change-request")
+async def get_staff_role_change_request(user_id: str, current_user = Depends(get_current_user)):
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    req = await db.role_change_requests.find_one({"user_id": user_id, "status": "pending"}, {"_id": 0})
+    if req:
+        req["from_role_label"] = STAFF_ROLE_LABELS.get(req.get("from_role"), req.get("from_role"))
+        req["to_role_label"] = STAFF_ROLE_LABELS.get(req.get("to_role"), req.get("to_role"))
+    return {"request": req}
+
+
+@api_router.delete("/admin/staff/{user_id}/role-change-request")
+async def cancel_staff_role_change_request(user_id: str, current_user = Depends(get_current_user)):
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    now = datetime.now(timezone.utc).isoformat()
+    res = await db.role_change_requests.update_many(
+        {"user_id": user_id, "status": "pending", "society_id": current_user.get("society_id")},
+        {"$set": {"status": "cancelled", "resolved_at": now}}
+    )
+    return {"message": "Proposta annullata", "cancelled": res.modified_count}
+
+
+@api_router.get("/role-change/pending")
+async def my_pending_role_change(current_user = Depends(get_current_user)):
+    req = await db.role_change_requests.find_one({"user_id": current_user["id"], "status": "pending"}, {"_id": 0})
+    if req:
+        req["from_role_label"] = STAFF_ROLE_LABELS.get(req.get("from_role"), req.get("from_role"))
+        req["to_role_label"] = STAFF_ROLE_LABELS.get(req.get("to_role"), req.get("to_role"))
+    return {"request": req}
+
+
+@api_router.post("/role-change/{request_id}/accept")
+async def accept_role_change(request_id: str, current_user = Depends(get_current_user)):
+    req = await db.role_change_requests.find_one({"id": request_id})
+    if not req:
+        raise HTTPException(status_code=404, detail="Richiesta non trovata")
+    if req.get("user_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Solo la persona interessata può accettare")
+    if req.get("status") != "pending":
+        raise HTTPException(status_code=400, detail=f"Richiesta già {req.get('status')}")
+    to_role = req["to_role"]
+    now = datetime.now(timezone.utc).isoformat()
+    update = {"role": to_role}
+    # Lasciando il ruolo COACH → scollega le squadre assegnate (le riassegnerà l'admin)
+    if to_role != "coach":
+        update["assigned_teams"] = []
+    await db.users.update_one({"id": current_user["id"]}, {"$set": update})
+    await db.role_change_requests.update_one(
+        {"id": request_id}, {"$set": {"status": "accepted", "resolved_at": now}}
+    )
+    return {"message": "Ruolo aggiornato", "new_role": to_role, "new_role_label": STAFF_ROLE_LABELS.get(to_role, to_role)}
+
+
+@api_router.post("/role-change/{request_id}/reject")
+async def reject_role_change(request_id: str, current_user = Depends(get_current_user)):
+    req = await db.role_change_requests.find_one({"id": request_id})
+    if not req:
+        raise HTTPException(status_code=404, detail="Richiesta non trovata")
+    if req.get("user_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Solo la persona interessata può rifiutare")
+    if req.get("status") != "pending":
+        raise HTTPException(status_code=400, detail=f"Richiesta già {req.get('status')}")
+    now = datetime.now(timezone.utc).isoformat()
+    await db.role_change_requests.update_one(
+        {"id": request_id}, {"$set": {"status": "rejected", "resolved_at": now}}
+    )
+    return {"message": "Proposta rifiutata"}
+
+
 async def _regenerate_threshold_communication_pdf(document: dict) -> Optional[bytes]:
     """Regenerate the FULL Comunicazione Superamento Soglia €5k/€15k PDF
     when the original was not stored or was incomplete (no signature/luogo).

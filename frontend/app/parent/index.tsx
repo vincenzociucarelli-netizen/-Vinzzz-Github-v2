@@ -3,6 +3,7 @@ import SocietyBranding from '../../src/components/SocietyBranding';
 import { PrivacyRenewalBanner } from '../../src/components/PrivacyRenewalBanner';
 import { ConflictBanner } from '../../src/components/ConflictBanner';
 import GuideButton from '../../src/components/GuideButton';
+import FirstLoginGuideHint from '../../src/components/FirstLoginGuideHint';
 import {
   View,
   Text,
@@ -585,6 +586,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
             </View>
           </TouchableOpacity>
           <GuideButton role="parent" compact />
+          <FirstLoginGuideHint roleLabel="Genitore" />
           {/* 🆕 17/07/2026 — Se sei uno staff-user in modalità genitore, torna alla dashboard del tuo ruolo */}
           {user && user.role !== 'parent' && (
             <TouchableOpacity

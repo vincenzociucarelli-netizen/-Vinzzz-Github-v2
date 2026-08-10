@@ -17,6 +17,8 @@ import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import GuideButton from '../../src/components/GuideButton';
+import FirstLoginGuideHint from '../../src/components/FirstLoginGuideHint';
+import RoleChangePrompt from '../../src/components/RoleChangePrompt';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import SocietyContactsSection from '../../src/components/SocietyContactsSection';
 import CollaboratoreTabBar from '../../src/components/collaboratore/CollaboratoreTabBar';
@@ -162,6 +164,7 @@ export default function CollaboratoreHome() {
             <Ionicons name="person-circle-outline" size={24} color="#fff" />
           </TouchableOpacity>
           <GuideButton role="collaboratore" compact />
+          <FirstLoginGuideHint roleLabel="Collaboratore" />
           <TouchableOpacity onPress={handleLogout} style={styles.headerBtn}>
             <Ionicons name="log-out-outline" size={24} color="#fff" />
           </TouchableOpacity>
@@ -175,6 +178,9 @@ export default function CollaboratoreHome() {
         contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {/* 🆕 09/08/2026 — Proposta cambio ruolo dall'admin (accetta/rifiuta) */}
+        <RoleChangePrompt />
+
         {/* 🆕 23/02/2026 — Quick-link spostati FUORI dalla ScrollView (sticky in cima) */}
 
         {/* Da fare oggi card */}

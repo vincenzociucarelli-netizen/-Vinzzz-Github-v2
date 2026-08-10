@@ -4,6 +4,8 @@ import SocietyContactsSection from '../../src/components/SocietyContactsSection'
 import AdminCoachCommitments from '../../src/components/admin/AdminCoachCommitments';
 import DirigenteTabBar from '../../src/components/dirigente/DirigenteTabBar';
 import GuideButton from '../../src/components/GuideButton';
+import FirstLoginGuideHint from '../../src/components/FirstLoginGuideHint';
+import RoleChangePrompt from '../../src/components/RoleChangePrompt';
 import {
   View,
   Text,
@@ -268,6 +270,7 @@ export default function DirigenteIndex() {
             <Ionicons name="person-circle-outline" size={24} color="#fff" />
           </TouchableOpacity>
           <GuideButton role="dirigente" compact />
+          <FirstLoginGuideHint roleLabel="Dirigente" />
           <TouchableOpacity onPress={handleLogout} style={styles.headerBtn}>
             <Ionicons name="log-out-outline" size={24} color="#fff" />
           </TouchableOpacity>
@@ -281,6 +284,9 @@ export default function DirigenteIndex() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {/* 🆕 09/08/2026 — Proposta cambio ruolo dall'admin (accetta/rifiuta) */}
+        <RoleChangePrompt />
+
         {/* Admin Switch Card - only for admin users */}
         {user?.role === 'admin' && (
           <TouchableOpacity

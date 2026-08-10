@@ -19,6 +19,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import CompensationSummaryCard from '../../../src/components/compensation/CompensationSummaryCard';
 import AdminConsentView from '../../../src/components/AdminConsentView';
+import AdminRoleChange from '../../../src/components/AdminRoleChange';
 import ChangeEmailButton from '../../../src/components/admin/ChangeEmailButton';
 import AdminPersonTabs, { TabSection, type AdminPersonTab } from '../../../src/components/admin/AdminPersonTabs';
 import AdminCoachCommitments from '../../../src/components/admin/AdminCoachCommitments';
@@ -1136,6 +1137,9 @@ export default function AdminCollaboratoreDetail() {
                 readOnly
                 adminUserId={collaboratore?.id}
               />
+
+              {/* 🆕 09/08/2026 — Proposta cambio ruolo (admin propone, persona accetta) */}
+              <AdminRoleChange userId={String(id)} currentRole="collaboratore" userName={collaboratore?.full_name} />
 
               {/* 🆕 09/08/2026 — Consensi Privacy (sola lettura) */}
               <AdminConsentView entityType="user" entityId={String(id)} entityName={collaboratore?.full_name} />

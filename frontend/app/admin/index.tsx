@@ -22,6 +22,7 @@ import InstitutionalBanner from '../../src/components/InstitutionalBanner';
 import { AdminLiveStats } from '../../src/components/AdminLiveStats';
 import { AdminNotesButton } from '../../src/components/AdminNotesButton';
 import GuideButton from '../../src/components/GuideButton';
+import FirstLoginGuideHint from '../../src/components/FirstLoginGuideHint';
 import { SeasonBadge } from '../../src/services/SeasonBadge';
 import CompensationExportModal from '../../src/components/admin/CompensationExportModal';
 
@@ -524,6 +525,7 @@ export default function AdminDashboard() {
             </TouchableOpacity>
             {/* 📖 Guida ruolo Admin */}
             <GuideButton role="admin" compact />
+            <FirstLoginGuideHint roleLabel="Amministratore" />
             {/* Logout button */}
             <TouchableOpacity
               onPress={handleLogout}
