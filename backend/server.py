@@ -29249,8 +29249,11 @@ async def reject_deletion_request(request_id: str, current_user = Depends(get_cu
 # restano invariati. Lasciando il ruolo COACH le squadre assegnate vengono
 # scollegate automaticamente (assigned_teams svuotato).
 # ============================================================
-STAFF_ROLE_LABELS = {"coach": "Coach", "dirigente": "Dirigente", "collaboratore": "Collaboratore"}
+STAFF_ROLE_LABELS = {"coach": "Coach", "dirigente": "Dirigente", "viewer": "Dirigente", "collaboratore": "Collaboratore"}
 INTERCHANGEABLE_STAFF_ROLES = ["coach", "dirigente", "collaboratore"]
+# 🐛 10/08/2026 — "viewer" è l'alias legacy di "dirigente": va accettato come ruolo
+# di PARTENZA valido (altrimenti la proposta falliva con "Ruolo non compatibile: viewer").
+SOURCE_STAFF_ROLES = ["coach", "dirigente", "collaboratore", "viewer"]
 
 
 class RoleChangeProposal(BaseModel):
@@ -29259,11 +29262,13 @@ class RoleChangeProposal(BaseModel):
 
 @api_router.post("/admin/staff/{user_id}/propose-role-change")
 async def propose_role_change(user_id: str, payload: RoleChangeProposal, current_user = Depends(get_current_user)):
-    user = await _admin_check_user_and_society(user_id, INTERCHANGEABLE_STAFF_ROLES, current_user)
+    user = await _admin_check_user_and_society(user_id, SOURCE_STAFF_ROLES, current_user)
     to_role = (payload.to_role or "").strip().lower()
     if to_role not in INTERCHANGEABLE_STAFF_ROLES:
         raise HTTPException(status_code=400, detail="Ruolo di destinazione non valido")
-    if to_role == user.get("role"):
+    # "viewer" equivale a "dirigente": impedisci una proposta che non cambia nulla
+    current_role = user.get("role")
+    if to_role == current_role or (to_role == "dirigente" and current_role == "viewer"):
         raise HTTPException(status_code=400, detail="La persona ha già questo ruolo")
     now = datetime.now(timezone.utc).isoformat()
     # Sostituisce eventuali proposte pendenti precedenti

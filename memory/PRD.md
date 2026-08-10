@@ -478,6 +478,7 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - Frontend: `AdminRoleChange.tsx` (nelle schede admin coach/dirigente/collaboratore, tab Compensi, con pulsante "Proponi cambio ruolo") + `RoleChangePrompt.tsx` (banner Accetta/Rifiuta nelle dashboard coach/dirigente/collaboratore; su accept fa `refreshUser()` e redirect alla nuova dashboard).
 - VERIFICATO e2e via curl: propose→pending→accept ⇒ role=collaboratore, assigned_teams=[] (FARO ripristinato a coach dopo il test). UI admin verificata in preview.
 - NB testID: aggiunto `testID` oltre a `data-testid` sui componenti nuovi (RN-Web).
+- 🐛 10/08/2026 — Fix "Ruolo non compatibile: viewer": `propose_role_change` ora accetta come ruolo di PARTENZA anche "viewer" (alias legacy di dirigente) tramite `SOURCE_STAFF_ROLES`; blocca viewer→dirigente ("ha già questo ruolo"); label `viewer`→"Dirigente". Solo backend → richiede redeploy Render.
 
 ### Note tecniche
 - RN Web propaga solo `testID` (non `data-testid` grezzo) su TouchableOpacity/View/Text.
