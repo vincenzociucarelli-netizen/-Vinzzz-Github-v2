@@ -105,7 +105,7 @@ async def get_teams(current_user = Depends(get_current_user)):
 @router.get("/teams/athletes-count/all")
 async def get_all_teams_athletes_count(current_user = Depends(get_current_user)):
     """Get the count of athletes for all teams - OPTIMIZED with aggregation."""
-    if current_user["role"] != UserRole.ADMIN:
+    if current_user["role"] not in (UserRole.ADMIN, "coordinatore"):
         raise HTTPException(status_code=403, detail="Solo admin può vedere queste statistiche")
     society_id = current_user.get("society_id")
     # Filter by society_id before grouping to avoid full-collection scan

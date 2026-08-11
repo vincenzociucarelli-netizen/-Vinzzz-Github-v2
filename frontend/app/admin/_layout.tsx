@@ -30,6 +30,8 @@ const COORDINATOR_ALLOWED_PATHS = [
   '/admin/trainings',
   '/admin/training',
   '/admin/gdpr',
+  '/admin/documents-archive',
+  '/admin/medical-certificates-archive',
 ];
 
 function isCoordAllowed(pathname: string): boolean {

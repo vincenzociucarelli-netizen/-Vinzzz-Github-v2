@@ -6911,7 +6911,7 @@ async def update_user(user_id: str, data: dict, current_user = Depends(get_curre
 async def get_matches(format: str = "json", current_user = Depends(get_current_user)):
     """Get all matches for admin. `?format=ics` esporta un file .ics con TUTTE le gare
     della società (nazionali + regionali + caricate manualmente)."""
-    if current_user["role"] != UserRole.ADMIN:
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.COORDINATORE):
         raise HTTPException(status_code=403, detail="Solo admin può vedere tutte le gare")
     
     society_id = current_user.get("society_id")
@@ -8220,7 +8220,7 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
     esplicitamente rimossi dalla stagione corrente". Self-heal aggiunge
     la stagione corrente ad `active_seasons` (idempotente).
     """
-    if current_user["role"] != UserRole.ADMIN:
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.COORDINATORE):
         raise HTTPException(status_code=403, detail="Solo admin può vedere tutti gli atleti")
     
     society_id = current_user.get("society_id")
@@ -12013,7 +12013,7 @@ async def get_medical_certificates_archive(
     current_user = Depends(get_current_user)
 ):
     """Get archived medical certificates for admin (5-year retention for ASD/SSD compliance)"""
-    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER, UserRole.COORDINATORE]:
         raise HTTPException(status_code=403, detail="Accesso riservato agli amministratori")
     
     _sid = current_user.get("society_id")
@@ -12049,7 +12049,7 @@ async def get_medical_certificates_archive(
 @api_router.get("/admin/medical-certificates-archive/stats")
 async def get_certificates_archive_stats(current_user = Depends(get_current_user)):
     """Get statistics about archived certificates"""
-    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER, UserRole.COORDINATORE]:
         raise HTTPException(status_code=403, detail="Accesso riservato agli amministratori")
     
     _sid = current_user.get("society_id")
@@ -12078,7 +12078,7 @@ async def get_certificates_archive_stats(current_user = Depends(get_current_user
 @api_router.get("/admin/medical-certificates-archive/{certificate_id}")
 async def get_archived_certificate(certificate_id: str, current_user = Depends(get_current_user)):
     """Download a specific archived medical certificate"""
-    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER]:
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER, UserRole.COORDINATORE]:
         raise HTTPException(status_code=403, detail="Accesso riservato agli amministratori")
     
     certificate = await db.medical_certificates_archive.find_one({"id": certificate_id})
@@ -15627,7 +15627,7 @@ async def get_athlete_attendances(athlete_id: str, current_user = Depends(get_cu
 
 @api_router.get("/attendance/today", response_model=List[dict])
 async def get_today_attendances(current_user = Depends(get_current_user)):
-    if current_user["role"] not in [UserRole.COACH, UserRole.ADMIN]:
+    if current_user["role"] not in [UserRole.COACH, UserRole.ADMIN, UserRole.COORDINATORE]:
         raise HTTPException(status_code=403, detail="Accesso negato")
     
     # Get today's attendances (scoped by society via team membership)
@@ -27839,7 +27839,7 @@ async def get_documents_archive(
     current_user = Depends(get_current_user)
 ):
     """Get archived signed documents with filters - Admin only"""
-    if current_user["role"] != UserRole.ADMIN:
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.COORDINATORE):
         raise HTTPException(status_code=403, detail="Solo admin può visualizzare l'archivio")
     
     query = {}

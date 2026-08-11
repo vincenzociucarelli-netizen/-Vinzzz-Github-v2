@@ -14,6 +14,12 @@
 - Password: Test1234 (impostata 27/02/2026 per test libricino istruzioni)
 - Nota: role="viewer" nel DB (legacy alias per "dirigente")
 
+## Coordinatore (COORD TEST) — per test dashboard coordinatore (10/08/2026)
+- Email: coord.test@registrateam.it
+- Password: Test1234
+- role="coordinatore", coordinator_permissions=TUTTE, society_id = società con più atleti (preview)
+- Usato per verificare che le sezioni (Squadre/Atleti/Allenamenti/Partite/Presenze/Comunicazioni/Eventi/Certificati/GDPR) aprano le pagine admin reali con dati (non 403/Unmatched/login)
+
 
 - Password: Test1234
 

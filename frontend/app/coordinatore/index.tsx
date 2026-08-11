@@ -24,15 +24,15 @@ interface PermItem {
 }
 
 const SECTIONS: PermItem[] = [
-  { key: 'teams', label: 'Squadre e roster', icon: 'people', color: '#1565C0', route: '/admin/athletes', description: 'Elenco squadre, atleti per squadra' },
+  { key: 'teams', label: 'Squadre e roster', icon: 'people', color: '#1565C0', route: '/admin/teams', description: 'Elenco squadre, atleti per squadra' },
   { key: 'athletes', label: 'Atleti (anagrafica)', icon: 'person', color: '#00838F', route: '/admin/athletes', description: 'Anagrafica atleti, ricerca, filtri' },
-  { key: 'trainings', label: 'Allenamenti', icon: 'fitness', color: '#2E7D32', route: '/admin/settings/other', description: 'Calendario allenamenti settimanali' },
+  { key: 'trainings', label: 'Allenamenti', icon: 'fitness', color: '#2E7D32', route: '/admin/teams', description: 'Calendario allenamenti settimanali' },
   { key: 'matches', label: 'Convocazioni e partite', icon: 'trophy', color: '#E65100', route: '/admin/matches', description: 'Gestione gare e convocazioni' },
-  { key: 'attendance', label: 'Presenze e QR', icon: 'checkmark-done', color: '#4527A0', route: '/admin/attendance', description: 'Presenze allenamenti/partite, scanner QR' },
-  { key: 'communications', label: 'Comunicazioni', icon: 'megaphone', color: '#6A1B9A', route: '/admin/broadcast', description: 'Broadcast e comunicazioni push/email' },
+  { key: 'attendance', label: 'Presenze e QR', icon: 'checkmark-done', color: '#4527A0', route: '/admin/attendances', description: 'Presenze allenamenti/partite, scanner QR' },
+  { key: 'communications', label: 'Comunicazioni', icon: 'megaphone', color: '#6A1B9A', route: '/admin/notifications', description: 'Broadcast e comunicazioni push/email' },
   { key: 'events', label: 'Eventi in programma', icon: 'calendar', color: '#F9A825', route: '/admin/preseason', description: 'Pre-iscrizioni, Open Day, eventi' },
-  { key: 'certificates', label: 'Certificati medici', icon: 'medical', color: '#C62828', route: '/admin/certificates', description: 'Scadenze e archivio certificati' },
-  { key: 'gdpr_view', label: 'GDPR (lettura)', icon: 'shield-checkmark', color: '#455A64', route: '/admin/gdpr', description: 'Documenti GDPR firmati (solo lettura)' },
+  { key: 'certificates', label: 'Certificati medici', icon: 'medical', color: '#C62828', route: '/admin/medical-certificates-archive', description: 'Scadenze e archivio certificati' },
+  { key: 'gdpr_view', label: 'GDPR (lettura)', icon: 'shield-checkmark', color: '#455A64', route: '/admin/documents-archive', description: 'Documenti GDPR firmati (solo lettura)' },
 ];
 
 export default function CoordinatorDashboard() {

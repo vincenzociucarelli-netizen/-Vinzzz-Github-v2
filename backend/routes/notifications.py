@@ -32,10 +32,13 @@ class CertificateOverrideDenyRequest(BaseModel):
 @router.get("/admin/notifications")
 async def get_admin_notifications(current_user = Depends(get_current_user)):
     """Get all admin notifications."""
-    if current_user["role"] != UserRole.ADMIN:
+    role = current_user["role"]
+    if role not in (UserRole.ADMIN, "coordinatore"):
         raise HTTPException(status_code=403, detail="Solo admin può vedere le notifiche")
-    
-    notifications = await db.admin_notifications.find({}).sort("created_at", -1).to_list(100)
+
+    # Il coordinatore vede solo le notifiche della propria società (multi-tenant safe)
+    _q = {} if role == UserRole.ADMIN else {"society_id": current_user.get("society_id")}
+    notifications = await db.admin_notifications.find(_q).sort("created_at", -1).to_list(100)
     result = []
     for n in notifications:
         clean_mongo_doc(n)

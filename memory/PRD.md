@@ -488,6 +488,15 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - VERIFICATO con dati sintetici: RIC-26/27-0001..0004 in ordine cronologico + etichette corrette.
 - NB: richiede redeploy Render (backend) + Vercel (frontend). Dopo il deploy di Render, il pagamento di test da 10€ prenderà il N. Prog. alla prima apertura/stampa dell'attestato.
 
+### Fix 10/08/2026 (parte 7) — Dashboard Coordinatore: link rotti / liste vuote / login / Unmatched
+- **Sintomi**: le card del coordinatore aprivano pagine vuote (0 atleti/squadre/gare), rimandavano al LOGIN, o "Unmatched Route" (pagina nera).
+- **Causa 1 (route errate)** in `app/coordinatore/index.tsx`: teams→`/admin/athletes`, trainings→`/admin/settings/other`, attendance→`/admin/attendance`, communications→`/admin/broadcast`, certificates→`/admin/certificates`, gdpr→`/admin/gdpr` (pagine inesistenti). Corrette: teams→`/admin/teams`, trainings→`/admin/teams` (interim, vedi nota), attendance→`/admin/attendances`, communications→`/admin/notifications`, certificates→`/admin/medical-certificates-archive`, gdpr→`/admin/documents-archive`. events→`/admin/preseason` (già ok).
+- **Causa 2 (endpoint admin-only → 403)**: aperti al ruolo `coordinatore` (scope società): `/athletes`, `/matches` (server.py), `/teams/athletes-count/all` (routes/teams.py, usa stringa "coordinatore" perché models.enums.UserRole non ha COORDINATORE), `/attendance/today`, `/admin/medical-certificates-archive` (x3), `/documents/archive` (server.py), `/admin/notifications` (routes/notifications.py, scope per società per il coordinatore).
+- **Causa 3 (whitelist layout)**: aggiunti `/admin/documents-archive` e `/admin/medical-certificates-archive` a `app/admin/_layout.tsx`.
+- **VERIFICATO** (testing_agent, iteration_99): 16/16 backend + 9/9 card frontend OK sulla preview. Account test: coord.test@registrateam.it / Test1234.
+- **Nota "Allenamenti"**: non esiste una pagina globale allenamenti (sono per-squadra) → per ora punta a `/admin/teams`. Da definire con l'utente cosa mostrare.
+- **NB**: richiede redeploy Render (backend) + Vercel (frontend). Le sezioni Comunicazioni/Certificati/GDPR usano pagine admin reali (notifications/medical-certificates-archive/documents-archive).
+
 ### Note tecniche
 - RN Web propaga solo `testID` (non `data-testid` grezzo) su TouchableOpacity/View/Text.
 - Preview = build statico Expo: dopo modifiche frontend `cd /app/frontend && rm -rf dist && npx expo export -p web && sudo supervisorctl restart expo`.
