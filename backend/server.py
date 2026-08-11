@@ -12075,6 +12075,119 @@ async def get_certificates_archive_stats(current_user = Depends(get_current_user
     }
 
 
+@api_router.get("/admin/certificates-expiry-list")
+async def get_certificates_expiry_list(
+    search: str = None,
+    current_user = Depends(get_current_user)
+):
+    """🆕 09/08/2026 — Scadenzario certificati medici.
+    Per privacy NON archiviamo le immagini dei certificati, quindi l'Archivio
+    risultava vuoto. Questo endpoint restituisce l'elenco degli atleti con i
+    metadati del certificato (data scadenza) ordinato per scadenza crescente,
+    con nome atleta e squadra. Utile a admin/dirigente/coordinatore.
+    """
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER, UserRole.DIRIGENTE, UserRole.COORDINATORE]:
+        raise HTTPException(status_code=403, detail="Accesso riservato")
+
+    _sid = current_user.get("society_id")
+    query = {"status": {"$nin": ["rejected", "withdrawn", "removed", "deleted"]}, "is_withdrawn": {"$ne": True}}
+    if _sid:
+        query["society_id"] = _sid
+
+    athletes = await db.athletes.find(query).to_list(2000)
+
+    # Mappa squadre → nome
+    team_ids = set()
+    for a in athletes:
+        for k in ("team_id", "team_id_2"):
+            if a.get(k):
+                team_ids.add(a[k])
+        for tid in (a.get("team_ids") or []):
+            if tid:
+                team_ids.add(tid)
+    teams_map = {}
+    if team_ids:
+        tq = {"id": {"$in": list(team_ids)}}
+        async for t in db.teams.find(tq, {"id": 1, "name": 1}):
+            teams_map[t["id"]] = t.get("name", "")
+
+    now = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    def _parse(dt):
+        if not dt:
+            return None
+        try:
+            if isinstance(dt, str):
+                return datetime.fromisoformat(dt.replace('Z', '+00:00')).replace(tzinfo=None)
+            if isinstance(dt, datetime):
+                return dt.replace(tzinfo=None)
+        except Exception:
+            return None
+        return None
+
+    with_cert = []
+    without_cert = []
+    for a in athletes:
+        last = (a.get("last_name") or "").strip()
+        first = (a.get("first_name") or "").strip()
+        full = f"{last} {first}".strip() or (a.get("full_name") or "").strip()
+        if search:
+            s = search.lower()
+            if s not in full.lower():
+                continue
+        # Nome squadra (primo team disponibile)
+        team_name = ""
+        for k in ("team_id", "team_id_2"):
+            if a.get(k) and teams_map.get(a[k]):
+                team_name = teams_map[a[k]]
+                break
+        if not team_name:
+            for tid in (a.get("team_ids") or []):
+                if teams_map.get(tid):
+                    team_name = teams_map[tid]
+                    break
+
+        expiry = _parse(a.get("medical_certificate_expiry"))
+        issue = _parse(a.get("medical_certificate_date"))
+        verified = bool(a.get("medical_certificate_verified"))
+
+        row = {
+            "athlete_id": a.get("id"),
+            "full_name": full,
+            "team_name": team_name,
+            "issue_date": issue.isoformat() if issue else None,
+            "expiry_date": expiry.isoformat() if expiry else None,
+            "verified": verified,
+        }
+        if expiry:
+            days = (expiry - now).days
+            row["days_until_expiry"] = days
+            if days < 0:
+                row["status"] = "expired"
+            elif days <= 30:
+                row["status"] = "expiring"
+            else:
+                row["status"] = "valid"
+            with_cert.append(row)
+        else:
+            row["days_until_expiry"] = None
+            row["status"] = "missing"
+            without_cert.append(row)
+
+    with_cert.sort(key=lambda x: x["expiry_date"])
+    without_cert.sort(key=lambda x: x["full_name"].lower())
+    items = with_cert + without_cert
+
+    return {
+        "items": items,
+        "total": len(items),
+        "count_expired": sum(1 for r in with_cert if r["status"] == "expired"),
+        "count_expiring": sum(1 for r in with_cert if r["status"] == "expiring"),
+        "count_valid": sum(1 for r in with_cert if r["status"] == "valid"),
+        "count_missing": len(without_cert),
+    }
+
+
 @api_router.get("/admin/medical-certificates-archive/{certificate_id}")
 async def get_archived_certificate(certificate_id: str, current_user = Depends(get_current_user)):
     """Download a specific archived medical certificate"""
@@ -13473,12 +13586,23 @@ def count_training_days_in_period(training_sessions: list, start_date: datetime,
 @api_router.get("/teams/{team_id}/attendance-stats")
 async def get_team_attendance_stats(team_id: str, current_user = Depends(get_current_user)):
     """Get attendance statistics for all athletes in a team"""
-    if current_user["role"] not in [UserRole.ADMIN, UserRole.COACH]:
-        raise HTTPException(status_code=403, detail="Solo admin o coach possono vedere le statistiche")
+    # 🐛 09/08/2026 — Il Coordinatore (e il Dirigente) apriva il "Registro Presenze"
+    # di una squadra e riceveva 403 → la pagina mostrava "Errore". Abilitati i ruoli
+    # organizzativi (viewer/dirigente/coordinatore) oltre ad admin/coach, con
+    # isolamento per società garantito dal filtro society_id sotto.
+    if current_user["role"] not in [
+        UserRole.ADMIN, UserRole.COACH, UserRole.VIEWER,
+        UserRole.DIRIGENTE, UserRole.COORDINATORE,
+    ]:
+        raise HTTPException(status_code=403, detail="Non autorizzato a vedere le statistiche")
     
     # Check team exists
     team = await db.teams.find_one({"id": team_id})
     if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    # Isolamento multi-tenant: la squadra deve appartenere alla società dell'utente
+    _uid_sid = current_user.get("society_id")
+    if _uid_sid and team.get("society_id") and team.get("society_id") != _uid_sid:
         raise HTTPException(status_code=404, detail="Squadra non trovata")
     
     # Get all athletes in the team — scoped by society.

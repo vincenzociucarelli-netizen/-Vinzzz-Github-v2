@@ -9,59 +9,54 @@ import {
   TextInput,
   ActivityIndicator,
   Platform,
-  Modal,
-  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 
-interface ArchivedCertificate {
-  id: string;
+interface CertExpiryRow {
   athlete_id: string;
-  last_name: string;
-  first_name: string;
   full_name: string;
   team_name?: string;
-  issue_date: string;
-  expiry_date: string;
-  uploaded_at: string;
-  uploaded_by: string;
+  issue_date: string | null;
+  expiry_date: string | null;
+  verified: boolean;
+  days_until_expiry: number | null;
+  status: 'expired' | 'expiring' | 'valid' | 'missing';
+}
+
+interface ExpiryStats {
+  total: number;
+  count_expired: number;
+  count_expiring: number;
+  count_valid: number;
+  count_missing: number;
 }
 
 export default function MedicalCertificatesArchiveScreen() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [certificates, setCertificates] = useState<ArchivedCertificate[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
+  const [items, setItems] = useState<CertExpiryRow[]>([]);
+  const [stats, setStats] = useState<ExpiryStats | null>(null);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [stats, setStats] = useState<{ total_certificates: number; by_year: Record<string, number> } | null>(null);
-  
-  // View certificate modal
-  const [viewModalVisible, setViewModalVisible] = useState(false);
-  const [selectedCertificate, setSelectedCertificate] = useState<any>(null);
-  const [loadingCertificate, setLoadingCertificate] = useState(false);
 
-  const loadData = async (pageNum: number = 1, searchTerm: string = '') => {
+  const loadData = async (searchTerm: string = '') => {
     try {
-      const params: any = { page: pageNum, limit: 50 };
-      if (searchTerm) {
-        params.search = searchTerm;
-      }
-      
-      const response = await api.get('/admin/medical-certificates-archive', { params });
-      setCertificates(response.data.certificates);
-      setTotal(response.data.total);
-      setPage(pageNum);
-      
-      // Load stats
-      const statsResponse = await api.get('/admin/medical-certificates-archive/stats');
-      setStats(statsResponse.data);
+      const params: any = {};
+      if (searchTerm) params.search = searchTerm;
+      const response = await api.get('/admin/certificates-expiry-list', { params });
+      setItems(response.data.items || []);
+      setStats({
+        total: response.data.total || 0,
+        count_expired: response.data.count_expired || 0,
+        count_expiring: response.data.count_expiring || 0,
+        count_valid: response.data.count_valid || 0,
+        count_missing: response.data.count_missing || 0,
+      });
     } catch (error) {
-      console.error('Error loading certificates archive:', error);
+      console.error('Error loading certificates expiry list:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -74,46 +69,13 @@ export default function MedicalCertificatesArchiveScreen() {
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadData(1, search);
+    loadData(search);
   };
 
   const handleSearch = () => {
     setSearch(searchInput);
     setLoading(true);
-    loadData(1, searchInput);
-  };
-
-  const handleViewCertificate = async (cert: ArchivedCertificate) => {
-    setLoadingCertificate(true);
-    setViewModalVisible(true);
-    
-    try {
-      const response = await api.get(`/admin/medical-certificates-archive/${cert.id}`);
-      setSelectedCertificate(response.data);
-    } catch (error) {
-      console.error('Error loading certificate:', error);
-      if (Platform.OS === 'web') {
-        window.alert('Errore nel caricamento del certificato');
-      }
-    } finally {
-      setLoadingCertificate(false);
-    }
-  };
-
-  const handleDownloadCertificate = () => {
-    if (!selectedCertificate?.certificate_data) return;
-    
-    if (Platform.OS === 'web') {
-      try {
-        const data = selectedCertificate.certificate_data;
-        const link = document.createElement('a');
-        link.href = data;
-        link.download = `Certificato_${selectedCertificate.last_name}_${selectedCertificate.first_name}_${selectedCertificate.expiry_date}.${data.includes('pdf') ? 'pdf' : 'jpg'}`;
-        link.click();
-      } catch (error) {
-        console.error('Error downloading:', error);
-      }
-    }
+    loadData(searchInput);
   };
 
   const formatDate = (dateStr: string) => {
@@ -123,14 +85,6 @@ export default function MedicalCertificatesArchiveScreen() {
       return date.toLocaleDateString('it-IT');
     } catch {
       return dateStr;
-    }
-  };
-
-  const isExpired = (expiryDate: string) => {
-    try {
-      return new Date(expiryDate) < new Date();
-    } catch {
-      return false;
     }
   };
 
@@ -152,7 +106,7 @@ export default function MedicalCertificatesArchiveScreen() {
         <TouchableOpacity onPress={() => router.replace('/admin')} data-testid="header-home-btn" style={{ marginLeft: 8 }}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Archivio Certificati Medici</Text>
+        <Text style={styles.headerTitle}>Scadenze Certificati</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -163,21 +117,27 @@ export default function MedicalCertificatesArchiveScreen() {
         {/* Stats Card */}
         {stats && (
           <View style={styles.statsCard}>
-            <Text style={styles.statsTitle}>📊 Statistiche Archivio</Text>
+            <Text style={styles.statsTitle}>📊 Scadenzario Certificati</Text>
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>{stats.total_certificates}</Text>
-                <Text style={styles.statLabel}>Totale Certificati</Text>
+                <Text style={[styles.statValue, { color: '#FF3B30' }]}>{stats.count_expired}</Text>
+                <Text style={styles.statLabel}>Scaduti</Text>
               </View>
-              {Object.entries(stats.by_year).slice(0, 3).map(([year, count]) => (
-                <View key={year} style={styles.statItem}>
-                  <Text style={styles.statValue}>{count}</Text>
-                  <Text style={styles.statLabel}>{year}</Text>
-                </View>
-              ))}
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: '#FF9500' }]}>{stats.count_expiring}</Text>
+                <Text style={styles.statLabel}>In scadenza</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: '#34C759' }]}>{stats.count_valid}</Text>
+                <Text style={styles.statLabel}>Validi</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: '#999' }]}>{stats.count_missing}</Text>
+                <Text style={styles.statLabel}>Mancanti</Text>
+              </View>
             </View>
             <Text style={styles.legalNote}>
-              ⚖️ Conservazione obbligatoria 5 anni (normativa ASD)
+              🔒 Per privacy non archiviamo l&apos;immagine del certificato: qui trovi solo le scadenze
             </Text>
           </View>
         )}
@@ -199,7 +159,7 @@ export default function MedicalCertificatesArchiveScreen() {
               <TouchableOpacity onPress={() => {
                 setSearchInput('');
                 setSearch('');
-                loadData(1, '');
+                loadData('');
               }}>
                 <Ionicons name="close-circle" size={20} color="#999" />
               </TouchableOpacity>
@@ -212,159 +172,72 @@ export default function MedicalCertificatesArchiveScreen() {
 
         {/* Results count */}
         <Text style={styles.resultsCount}>
-          {total} certificati trovati {search && `per "${search}"`}
+          {stats?.total || 0} atleti {search && `per "${search}"`}
         </Text>
 
-        {/* Certificates List */}
-        {certificates.length === 0 ? (
+        {/* Certificates Expiry List */}
+        {items.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="document-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>Nessun certificato nell'archivio</Text>
+            <Text style={styles.emptyText}>Nessun atleta trovato</Text>
           </View>
         ) : (
-          certificates.map((cert) => (
-            <TouchableOpacity
-              key={cert.id}
-              style={styles.certCard}
-              onPress={() => handleViewCertificate(cert)}
-            >
-              <View style={styles.certIcon}>
-                <Ionicons 
-                  name="document-text" 
-                  size={28} 
-                  color={isExpired(cert.expiry_date) ? '#FF3B30' : '#4CAF50'} 
-                />
-              </View>
-              <View style={styles.certInfo}>
-                <Text style={styles.certName}>
-                  {cert.last_name?.toUpperCase()} {cert.first_name}
-                </Text>
-                {cert.team_name && (
-                  <Text style={styles.certTeam}>{cert.team_name}</Text>
-                )}
-                <View style={styles.certDates}>
-                  <Text style={styles.certDate}>
-                    Emissione: {formatDate(cert.issue_date)}
-                  </Text>
-                  <Text style={[
-                    styles.certDate,
-                    isExpired(cert.expiry_date) && styles.certExpired
-                  ]}>
-                    Scadenza: {formatDate(cert.expiry_date)}
-                  </Text>
+          items.map((row) => {
+            const statusMap: Record<string, { color: string; label: string; icon: any }> = {
+              expired: { color: '#FF3B30', label: 'Scaduto', icon: 'close-circle' },
+              expiring: { color: '#FF9500', label: 'In scadenza', icon: 'alert-circle' },
+              valid: { color: '#34C759', label: 'Valido', icon: 'checkmark-circle' },
+              missing: { color: '#999', label: 'Mancante', icon: 'help-circle' },
+            };
+            const s = statusMap[row.status] || statusMap.missing;
+            return (
+              <TouchableOpacity
+                key={row.athlete_id}
+                style={styles.certCard}
+                onPress={() => router.push(`/admin/athlete/${row.athlete_id}`)}
+                testID={`cert-row-${row.athlete_id}`}
+              >
+                <View style={styles.certIcon}>
+                  <Ionicons name={s.icon} size={28} color={s.color} />
                 </View>
-                <Text style={styles.certUploaded}>
-                  Caricato: {formatDate(cert.uploaded_at)} da {cert.uploaded_by}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#999" />
-            </TouchableOpacity>
-          ))
-        )}
-
-        {/* Pagination */}
-        {total > 50 && (
-          <View style={styles.pagination}>
-            <TouchableOpacity
-              style={[styles.pageButton, page === 1 && styles.pageButtonDisabled]}
-              onPress={() => page > 1 && loadData(page - 1, search)}
-              disabled={page === 1}
-            >
-              <Text style={styles.pageButtonText}>← Precedente</Text>
-            </TouchableOpacity>
-            <Text style={styles.pageInfo}>Pagina {page} di {Math.ceil(total / 50)}</Text>
-            <TouchableOpacity
-              style={[styles.pageButton, page >= Math.ceil(total / 50) && styles.pageButtonDisabled]}
-              onPress={() => page < Math.ceil(total / 50) && loadData(page + 1, search)}
-              disabled={page >= Math.ceil(total / 50)}
-            >
-              <Text style={styles.pageButtonText}>Successiva →</Text>
-            </TouchableOpacity>
-          </View>
+                <View style={styles.certInfo}>
+                  <Text style={styles.certName}>{row.full_name}</Text>
+                  {!!row.team_name && (
+                    <Text style={styles.certTeam}>{row.team_name}</Text>
+                  )}
+                  <View style={styles.certDates}>
+                    {row.expiry_date ? (
+                      <Text style={[styles.certDate, { color: s.color, fontWeight: '600' }]}>
+                        Scadenza: {formatDate(row.expiry_date)}
+                        {typeof row.days_until_expiry === 'number' && row.days_until_expiry >= 0
+                          ? ` (tra ${row.days_until_expiry}gg)`
+                          : (typeof row.days_until_expiry === 'number' ? ` (${Math.abs(row.days_until_expiry)}gg fa)` : '')}
+                      </Text>
+                    ) : (
+                      <Text style={[styles.certDate, { color: '#999', fontStyle: 'italic' }]}>
+                        Nessun certificato registrato
+                      </Text>
+                    )}
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                    <View style={{ backgroundColor: s.color + '22', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: s.color }}>{s.label}</Text>
+                    </View>
+                    {row.expiry_date && !row.verified && (
+                      <View style={{ backgroundColor: '#FFF3E0', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '600', color: '#E65100' }}>Da verificare</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#999" />
+              </TouchableOpacity>
+            );
+          })
         )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
-
-      {/* View Certificate Modal */}
-      <Modal
-        visible={viewModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setViewModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Certificato Medico</Text>
-              <TouchableOpacity onPress={() => setViewModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#333" />
-              </TouchableOpacity>
-            </View>
-
-            {loadingCertificate ? (
-              <ActivityIndicator size="large" color="#007AFF" style={{ marginVertical: 40 }} />
-            ) : selectedCertificate ? (
-              <ScrollView style={styles.modalBody}>
-                <View style={styles.certDetails}>
-                  <Text style={styles.detailLabel}>Atleta:</Text>
-                  <Text style={styles.detailValue}>
-                    {selectedCertificate.last_name?.toUpperCase()} {selectedCertificate.first_name}
-                  </Text>
-                  
-                  <Text style={styles.detailLabel}>Squadra:</Text>
-                  <Text style={styles.detailValue}>{selectedCertificate.team_name || '-'}</Text>
-                  
-                  <Text style={styles.detailLabel}>Data Emissione:</Text>
-                  <Text style={styles.detailValue}>{formatDate(selectedCertificate.issue_date)}</Text>
-                  
-                  <Text style={styles.detailLabel}>Data Scadenza:</Text>
-                  <Text style={[
-                    styles.detailValue,
-                    isExpired(selectedCertificate.expiry_date) && { color: '#FF3B30' }
-                  ]}>
-                    {formatDate(selectedCertificate.expiry_date)}
-                    {isExpired(selectedCertificate.expiry_date) && ' (SCADUTO)'}
-                  </Text>
-                  
-                  <Text style={styles.detailLabel}>Caricato:</Text>
-                  <Text style={styles.detailValue}>
-                    {formatDate(selectedCertificate.uploaded_at)} da {selectedCertificate.uploaded_by}
-                  </Text>
-                </View>
-
-                {selectedCertificate.certificate_data && (
-                  <View style={styles.certificatePreview}>
-                    {selectedCertificate.certificate_data.includes('application/pdf') ? (
-                      <View style={styles.pdfPreview}>
-                        <Ionicons name="document" size={64} color="#FF3B30" />
-                        <Text style={styles.pdfPreviewText}>Documento PDF</Text>
-                        <Text style={styles.pdfPreviewHint}>Clicca scarica per visualizzare</Text>
-                      </View>
-                    ) : (
-                      <Image 
-                        source={{ uri: selectedCertificate.certificate_data }}
-                        style={styles.certificateImage}
-                        resizeMode="contain"
-                      />
-                    )}
-                  </View>
-                )}
-
-                {selectedCertificate.certificate_data && (
-                  <TouchableOpacity 
-                    style={styles.downloadButton}
-                    onPress={handleDownloadCertificate}
-                  >
-                    <Ionicons name="download" size={20} color="#fff" />
-                    <Text style={styles.downloadButtonText}>Scarica Certificato</Text>
-                  </TouchableOpacity>
-                )}
-              </ScrollView>
-            ) : null}
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }

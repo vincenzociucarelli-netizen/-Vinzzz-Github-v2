@@ -497,6 +497,12 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - **Nota "Allenamenti"**: non esiste una pagina globale allenamenti (sono per-squadra) → per ora punta a `/admin/teams`. Da definire con l'utente cosa mostrare.
 - **NB**: richiede redeploy Render (backend) + Vercel (frontend). Le sezioni Comunicazioni/Certificati/GDPR usano pagine admin reali (notifications/medical-certificates-archive/documents-archive).
 
+### Fix + Feature 09/08/2026 (parte 8) — Coordinatore Presenze / Banner genitore / Elimina protetto / Scadenzario certificati
+- **Registro Presenze Coordinatore (P0)**: `GET /teams/{id}/attendance-stats` (server.py ~13476) accettava solo ADMIN/COACH → il Coordinatore riceveva 403 e la pagina mostrava "Errore". Ora abilitati anche VIEWER/DIRIGENTE/COORDINATORE con isolamento multi-tenant (la squadra deve appartenere alla società dell'utente). Verificato via curl: coord.test → HTTP 200.
+- **Banner "Sono io il genitore" (P0)**: era un box viola invasivo dentro la scheda Anagrafica di ogni atleta (per admin/dirigente/coordinatore). Spostato in un **pulsante discreto in fondo** alla scheda (prima del pulsante Elimina), con testID `link-me-as-parent-btn` / `unlink-me-as-parent-btn`. Stessa logica `POST /athletes/{id}/link-me-as-parent`.
+- **Protezione Elimina Atleta**: il modal di conferma ora richiede di digitare `ELIMINA` per abilitare il pulsante rosso (testID `delete-confirm-input` + `confirm-delete-athlete-btn`). Il pulsante apre comunque un modal (nessuna cancellazione al primo tocco).
+- **Scadenzario Certificati Medici**: l'Archivio era vuoto perché per privacy NON si caricano le immagini dei certificati. Nuovo endpoint `GET /admin/certificates-expiry-list` (admin/viewer/dirigente/coordinatore) → elenco atleti con data scadenza certificato, ordinato per scadenza crescente, con nome + squadra + stato (scaduto/in scadenza/valido/mancante) + flag "Da verificare". La pagina `admin/medical-certificates-archive.tsx` è stata riproposta come "Scadenze Certificati" (card conteggi + lista tap→scheda atleta). Verificato via curl + screenshot.
+
 ### Note tecniche
 - RN Web propaga solo `testID` (non `data-testid` grezzo) su TouchableOpacity/View/Text.
 - Preview = build statico Expo: dopo modifiche frontend `cd /app/frontend && rm -rf dist && npx expo export -p web && sudo supervisorctl restart expo`.

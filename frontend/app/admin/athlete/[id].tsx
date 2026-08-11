@@ -377,6 +377,8 @@ export default function AdminAthleteDetail() {
   // Delete athlete
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // 🛡️ 09/08/2026 — Conferma digitata per evitare cancellazioni accidentali
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   const pickCertImage = async () => {
     // Show action sheet to choose camera or gallery
@@ -1244,6 +1246,43 @@ export default function AdminAthleteDetail() {
     if (percentage >= 80) return '#34C759';
     if (percentage >= 50) return '#FF9500';
     return '#FF3B30';
+  };
+
+  // 🔐 09/08/2026 — "Sono io il genitore" (spostato in fondo, pulsante discreto)
+  const handleLinkMeAsParent = () => {
+    if (!athlete) return;
+    const confirmMsg = 'Confermo di essere il genitore o esercente la patria potestà di ' + (athlete.first_name || '') + ' ' + (athlete.last_name || '') + '.\n\nSe la scheda ha già un genitore registrato, la tua richiesta sarà inviata al genitore attuale per approvazione.';
+    const ok = typeof window !== 'undefined' && (window as any).confirm ? (window as any).confirm(confirmMsg) : true;
+    if (!ok) return;
+    (async () => {
+      try {
+        const r = await api.post(`/athletes/${athlete.id}/link-me-as-parent`, {});
+        if (r.data?.status === 'linked') {
+          showAlert('Collegato', 'Sei ora collegato come genitore di questo atleta.');
+        } else if (r.data?.status === 'pending') {
+          showAlert('Richiesta inviata', r.data?.message || 'Richiesta inviata al genitore attuale. Sarai collegato dopo la sua approvazione.');
+        }
+        loadData();
+      } catch (e: any) {
+        showAlert('Non autorizzato', e?.response?.data?.detail || 'Impossibile collegarti come genitore');
+      }
+    })();
+  };
+
+  const handleUnlinkMeAsParent = () => {
+    if (!athlete) return;
+    const confirmMsg = 'Sei sicuro di voler rimuovere il collegamento come genitore di ' + athlete.first_name + ' ' + athlete.last_name + '?';
+    const ok = typeof window !== 'undefined' && (window as any).confirm ? (window as any).confirm(confirmMsg) : true;
+    if (!ok) return;
+    (async () => {
+      try {
+        await api.delete(`/athletes/${athlete.id}/unlink-me-as-parent`);
+        showAlert('Fatto', 'Collegamento rimosso.');
+        loadData();
+      } catch (e: any) {
+        showAlert('Errore', e?.response?.data?.detail || 'Impossibile scollegare');
+      }
+    })();
   };
 
   const handleVerifyCertificate = async () => {
@@ -2878,91 +2917,10 @@ export default function AdminAthleteDetail() {
                     <Text style={styles.label}>Tel. Padre</Text>
                     <Text style={styles.value}>{athlete.phone_father || '-'}</Text>
                   </View>
-                  {/* 🔐 17/07/2026 (v3) — Nuovo flusso "Sono io il genitore":
-                      CASO 1 (atleta senza genitori linkati): auto-verify via created_by o CF-match → link diretto
-                      CASO 2 (con genitori linkati): richiesta pending, approvazione obbligatoria dal genitore */}
-                  {currentUser && ['admin','viewer','dirigente','coordinatore'].includes(currentUser.role) &&
-                    (athlete as any).parent_id !== currentUser.id && (athlete as any).second_parent_id !== currentUser.id && (
-                      <TouchableOpacity
-                        onPress={() => {
-                          const confirmMsg = 'Confermo di essere il genitore o esercente la patria potestà di ' + (athlete.first_name || '') + ' ' + (athlete.last_name || '') + '.\n\nSe la scheda ha già un genitore registrato, la tua richiesta sarà inviata al genitore attuale per approvazione.';
-                          const ok = typeof window !== 'undefined' && (window as any).confirm ? (window as any).confirm(confirmMsg) : true;
-                          if (!ok) return;
-                          (async () => {
-                            try {
-                              const r = await api.post(`/athletes/${athlete.id}/link-me-as-parent`, {});
-                              if (r.data?.status === 'linked') {
-                                Alert.alert('Collegato', 'Sei ora collegato come genitore di questo atleta.');
-                              } else if (r.data?.status === 'pending') {
-                                Alert.alert('Richiesta inviata', r.data?.message || 'Richiesta inviata al genitore attuale. Sarai collegato dopo la sua approvazione.');
-                              }
-                              loadData();
-                            } catch (e: any) {
-                              Alert.alert('Non autorizzato', e?.response?.data?.detail || 'Impossibile collegarti come genitore');
-                            }
-                          })();
-                        }}
-                        style={{
-                          marginTop: 8, backgroundColor: '#EDE9FE',
-                          borderRadius: 10, padding: 12,
-                          flexDirection: 'row', alignItems: 'center', gap: 10,
-                          borderWidth: 1, borderColor: '#635BFF',
-                        }}
-                        data-testid="link-me-as-parent-btn"
-                      >
-                        <Ionicons name="shield-checkmark" size={20} color="#635BFF" />
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ fontSize: 13, color: '#4C1D95', fontWeight: '700' }}>
-                            Sono io il genitore di questo atleta
-                          </Text>
-                          <Text style={{ fontSize: 11, color: '#6B46C1', marginTop: 2 }}>
-                            Se l&apos;atleta ha già un genitore, la richiesta gli verrà inviata per approvazione
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    )}
-                  {currentUser && ((athlete as any).parent_id === currentUser.id || (athlete as any).second_parent_id === currentUser.id) && (
-                    <View style={{
-                      marginTop: 8, backgroundColor: '#E8F5E9',
-                      borderRadius: 8, padding: 10,
-                      gap: 8,
-                    }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />
-                        <Text style={{ fontSize: 12, color: '#1B5E20', fontWeight: '600', flex: 1 }}>
-                          Sei collegato come genitore di questo atleta
-                        </Text>
-                      </View>
-                      <TouchableOpacity
-                        onPress={() => {
-                          const confirmMsg = 'Sei sicuro di voler rimuovere il collegamento come genitore di ' + athlete.first_name + ' ' + athlete.last_name + '?';
-                          const ok = typeof window !== 'undefined' && (window as any).confirm ? (window as any).confirm(confirmMsg) : true;
-                          if (!ok) return;
-                          (async () => {
-                            try {
-                              await api.delete(`/athletes/${athlete.id}/unlink-me-as-parent`);
-                              Alert.alert('Fatto', 'Collegamento rimosso.');
-                              loadData();
-                            } catch (e: any) {
-                              Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile scollegare');
-                            }
-                          })();
-                        }}
-                        style={{
-                          alignSelf: 'flex-start', backgroundColor: '#fff',
-                          borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6,
-                          borderWidth: 1, borderColor: '#C62828',
-                          flexDirection: 'row', alignItems: 'center', gap: 4,
-                        }}
-                        data-testid="unlink-me-as-parent-btn"
-                      >
-                        <Ionicons name="close-circle" size={14} color="#C62828" />
-                        <Text style={{ fontSize: 11, color: '#C62828', fontWeight: '600' }}>
-                          Rimuovi collegamento
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
+                  {/* 🔐 09/08/2026 — Il banner viola "Sono io il genitore" è stato
+                      spostato in fondo alla scheda (pulsante discreto) perché troppo
+                      invasivo su ogni profilo atleta per lo staff. Vedi sezione
+                      "Collegamento genitore" prima del pulsante Elimina. */}
                   {!athlete.parents_detached && (
                     <View style={styles.infoRow}>
                       <Text style={styles.label}>Email 2° Genitore</Text>
@@ -3319,11 +3277,34 @@ export default function AdminAthleteDetail() {
               </View>
             )}
 
+            {/* 🔐 09/08/2026 — Collegamento genitore (spostato in fondo, discreto) */}
+            {currentUser && ['admin','viewer','dirigente','coordinatore'].includes(currentUser.role) && (
+              (currentUser && ((athlete as any).parent_id === currentUser.id || (athlete as any).second_parent_id === currentUser.id)) ? (
+                <TouchableOpacity
+                  onPress={handleUnlinkMeAsParent}
+                  style={styles.linkParentBtnLinked}
+                  testID="unlink-me-as-parent-btn"
+                >
+                  <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
+                  <Text style={styles.linkParentBtnLinkedText}>Sei collegato come genitore · Rimuovi</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  onPress={handleLinkMeAsParent}
+                  style={styles.linkParentBtn}
+                  testID="link-me-as-parent-btn"
+                >
+                  <Ionicons name="person-add-outline" size={16} color="#635BFF" />
+                  <Text style={styles.linkParentBtnText}>Sono io il genitore di questo atleta</Text>
+                </TouchableOpacity>
+              )
+            )}
+
             {/* Delete Athlete Button */}
             <TouchableOpacity
               style={styles.deleteButton}
-              onPress={() => setDeleteModalVisible(true)}
-              data-testid="delete-athlete-btn"
+              onPress={() => { setDeleteConfirmText(''); setDeleteModalVisible(true); }}
+              testID="delete-athlete-btn"
             >
               <Ionicons name="trash" size={20} color="#fff" />
               <Text style={styles.deleteButtonText}>Elimina Atleta Definitivamente</Text>
@@ -5007,17 +4988,31 @@ export default function AdminAthleteDetail() {
                 Stai per eliminare: {athlete?.first_name} {athlete?.last_name}
               </Text>
             </View>
+            {/* 🛡️ Conferma digitata: scrivi ELIMINA per abilitare */}
+            <Text style={{ fontSize: 13, color: '#666', marginBottom: 6 }}>
+              Per confermare, scrivi <Text style={{ fontWeight: '700', color: '#FF3B30' }}>ELIMINA</Text> qui sotto:
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={deleteConfirmText}
+              onChangeText={setDeleteConfirmText}
+              placeholder="ELIMINA"
+              placeholderTextColor="#bbb"
+              autoCapitalize="characters"
+              testID="delete-confirm-input"
+            />
             <View style={styles.modalButtonsRow}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonCancel]}
-                onPress={() => setDeleteModalVisible(false)}
+                onPress={() => { setDeleteModalVisible(false); setDeleteConfirmText(''); }}
               >
                 <Text style={styles.modalButtonCancelText}>Annulla</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonDanger]}
+                style={[styles.modalButton, styles.modalButtonDanger, (deleting || deleteConfirmText.trim().toUpperCase() !== 'ELIMINA') && { opacity: 0.5 }]}
                 onPress={handleDeleteAthlete}
-                disabled={deleting}
+                disabled={deleting || deleteConfirmText.trim().toUpperCase() !== 'ELIMINA'}
+                testID="confirm-delete-athlete-btn"
               >
                 <Text style={styles.modalButtonDangerText}>
                   {deleting ? 'Eliminazione...' : 'ELIMINA DEFINITIVAMENTE'}
@@ -5958,6 +5953,10 @@ const styles = StyleSheet.create({
   withdrawButtonText: { color: '#FF3B30', fontSize: 14, fontWeight: '600', marginLeft: 8 },
   deleteButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FF3B30', marginHorizontal: 16, marginVertical: 8, padding: 14, borderRadius: 12 },
   deleteButtonText: { color: '#fff', fontSize: 14, fontWeight: '600', marginLeft: 8 },
+  linkParentBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#F5F3FF', marginHorizontal: 16, marginTop: 8, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: '#DDD6FE' },
+  linkParentBtnText: { color: '#635BFF', fontSize: 13, fontWeight: '600' },
+  linkParentBtnLinked: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#E8F5E9', marginHorizontal: 16, marginTop: 8, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: '#A5D6A7' },
+  linkParentBtnLinkedText: { color: '#2E7D32', fontSize: 13, fontWeight: '600' },
   deleteConfirmBox: { backgroundColor: '#FFEBEE', padding: 12, borderRadius: 8, marginVertical: 12, borderWidth: 1, borderColor: '#FFCDD2' },
   deleteConfirmText: { color: '#C62828', fontSize: 14, fontWeight: '600', textAlign: 'center' },
   parentsActionSection: { marginHorizontal: 16, marginVertical: 8 },
