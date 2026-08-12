@@ -334,6 +334,8 @@ export default function AthleteDetail() {
   const [endTrialStatus, setEndTrialStatus] = useState<any>(null);
   const [requestingEndTrial, setRequestingEndTrial] = useState(false);
   const [showEndTrialChoice, setShowEndTrialChoice] = useState(false);
+  // 🆕 12/08/2026 — Rinuncia alla prova (minore già in forza)
+  const [waiveFlow, setWaiveFlow] = useState(false);
   const [deletionCheck, setDeletionCheck] = useState<any>(null);
   const [requestingDeletion, setRequestingDeletion] = useState(false);
   const [showDeletionConfirm, setShowDeletionConfirm] = useState(false);
@@ -1384,6 +1386,23 @@ export default function AthleteDetail() {
 
   const handleGDPRPrivacySigned = async (success: boolean, documentId?: string) => {
     if (success) {
+      // 🆕 12/08/2026 — Flusso "Rinuncia alla prova": firma privacy → salta la prova.
+      // In forza subito se il certificato è convalidato, altrimenti in attesa cert.
+      if (waiveFlow) {
+        try {
+          const r = await api.post(`/athletes/${id}/waive-trial`, { images_internal: false, images_promo: false });
+          setPrivacyModalVisible(false);
+          setPrivacyConfirmed(false);
+          setWaiveFlow(false);
+          const athRes = await api.get(`/athletes/${id}`);
+          setAthlete(athRes.data);
+          showAlert(r.data?.status === 'active' ? 'Atleta in forza' : 'Privacy firmata', r.data?.message || '');
+        } catch (e: any) {
+          setWaiveFlow(false);
+          showAlert('Errore', e.response?.data?.detail || 'Errore durante la rinuncia alla prova');
+        }
+        return;
+      }
       try {
         const isEndTrialFlow = endTrialStatus?.end_trial_requested;
         if (isEndTrialFlow) {
@@ -1419,6 +1438,16 @@ export default function AthleteDetail() {
         showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'attivazione');
       }
     }
+  };
+
+  const handleWaiveTrial = () => {
+    if (!athlete) return;
+    const name = athlete.first_name || athlete.full_name?.split(' ').pop() || '';
+    const msg = 'Rinuncia al periodo di prova.\n\nConfermi che ' + name + ' è già tesserato/a ed è già in forza con la società?\n\nFirmerai ora la privacy. L\'atleta potrà entrare in palestra solo dopo che l\'admin avrà convalidato la data del certificato medico.';
+    const ok = typeof window !== 'undefined' && (window as any).confirm ? (window as any).confirm(msg) : true;
+    if (!ok) return;
+    setWaiveFlow(true);
+    setPrivacyModalVisible(true);
   };
 
   const handleRequestEndTrial = async () => {
@@ -2038,6 +2067,25 @@ export default function AthleteDetail() {
                 </TouchableOpacity>
               )}
             </>
+          )}
+
+          {/* 🆕 12/08/2026 — Rinuncia al periodo di prova (minore già in forza) */}
+          {athlete.is_minor && !athlete.privacy_accepted && !endTrialStatus?.end_trial_requested &&
+            (athlete.status === 'pending_trial' || athlete.status === 'pending_certificate' || (athlete.status === 'trial' && !trialHasStarted)) && (
+            <View style={{ backgroundColor: '#E8F5E9', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#2E7D32', marginBottom: 12 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#1B5E20', marginBottom: 4 }}>Già tesserato/a con noi?</Text>
+              <Text style={{ fontSize: 12, color: '#33691E', lineHeight: 18, marginBottom: 10 }}>
+                Se {athlete.first_name || 'l\'atleta'} è già in forza e non deve fare la prova, puoi rinunciare al periodo di prova: firma la privacy ora. L&apos;atleta sarà in forza appena l&apos;admin convaliderà la data del certificato medico.
+              </Text>
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#2E7D32', paddingVertical: 12, borderRadius: 10, gap: 8 }}
+                onPress={handleWaiveTrial}
+                testID="waive-trial-button"
+              >
+                <Ionicons name="shield-checkmark" size={18} color="#fff" />
+                <Text style={{ fontWeight: '700', color: '#fff', fontSize: 14 }}>Rinuncia alla prova (già in forza)</Text>
+              </TouchableOpacity>
+            </View>
           )}
 
           {/* Banner - Richiesta cancellazione in attesa */}

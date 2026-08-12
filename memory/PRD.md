@@ -497,6 +497,17 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - **Nota "Allenamenti"**: non esiste una pagina globale allenamenti (sono per-squadra) → per ora punta a `/admin/teams`. Da definire con l'utente cosa mostrare.
 - **NB**: richiede redeploy Render (backend) + Vercel (frontend). Le sezioni Comunicazioni/Certificati/GDPR usano pagine admin reali (notifications/medical-certificates-archive/documents-archive).
 
+### Feature 12/08/2026 — Ripristino "Rinuncia alla prova" per minore già in forza
+- **Contesto**: fino al 03/08/2026 un minore già tesserato poteva saltare il periodo di prova (genitore firma privacy → subito in forza). I cambi onboarding del 03/08 e 08/08 hanno reso la prova obbligatoria per tutti i minori (privacy solo a fine prova), rimuovendo di fatto quella scorciatoia.
+- **Backend**: nuovo endpoint `POST /api/athletes/{id}/waive-trial` (genitore dell'atleta o admin/staff). Registra la firma privacy per-genitore (consenso + IP, come `/trial/accept-privacy`), imposta `end_trial_requested=True` + `trial_waived=True`. GATE certificato:
+  - se certificato già convalidato → `status=active` (in forza) subito;
+  - altrimenti → `status=pending_certificate` (non può entrare in palestra); alla convalida del certificato da parte dell'admin (`/certificates/simple` verified=true) l'atleta si attiva automaticamente (riusa `check_and_activate_if_ready` via `end_trial_requested`). Guard: solo minorenni, non se già active/blocked.
+- **Frontend**:
+  - Genitore (`parent/athlete/[id].tsx`): card verde "Già tesserato/a con noi?" + pulsante `waive-trial-button` (mostrato per minori in pending_trial/pending_certificate/trial non ancora avviato). Apre `GDPRPrivacyModal`; alla firma chiama `waive-trial`.
+  - Admin (`admin/athlete/[id].tsx`, tab Da fare): card + pulsante `admin-waive-trial-btn` per minori non attivi.
+- **Verificato via API**: cert valido→active; cert assente→pending_certificate poi active alla convalida; adulto→400. Smoke UI admin OK (pulsante visibile su MAURI LENA).
+- **NB deploy**: backend Render + frontend Vercel.
+
 ### Performance 12/08/2026 (parte 2) — Compressione automatica foto squadra (stile WhatsApp)
 - **Problema**: le foto squadra (uniche immagini caricate dall'utente) erano salvate come base64 grezzo fino a ~10.8MB per documento, appesantendo DB, RAM Render e le pagine di dettaglio.
 - **Fix**: nuovo helper `compress_base64_image()` in `utils.py` (Pillow): rispetta EXIF, ridimensiona il lato lungo a 1280px, ricodifica JPEG q72; salta le immagini già < 350KB; in caso di errore lascia l'originale (mai perdita foto).

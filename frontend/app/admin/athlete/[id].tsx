@@ -1269,6 +1269,27 @@ export default function AdminAthleteDetail() {
     })();
   };
 
+  // 🆕 12/08/2026 — Admin: rinuncia alla prova per minore già in forza
+  const [waivingTrial, setWaivingTrial] = useState(false);
+  const handleAdminWaiveTrial = async () => {
+    if (!athlete) return;
+    const name = `${athlete.first_name || ''} ${athlete.last_name || ''}`.trim();
+    const ok = Platform.OS === 'web'
+      ? window.confirm(`Rinuncia al periodo di prova per ${name} (minore già tesserato/in forza).\n\nVerrà registrata l'accettazione della privacy per conto del genitore. L'atleta sarà "in forza" solo dopo la convalida della data del certificato medico.\n\nProcedere?`)
+      : true;
+    if (!ok) return;
+    setWaivingTrial(true);
+    try {
+      const r = await api.post(`/athletes/${id}/waive-trial`, { images_internal: false, images_promo: false });
+      showAlert(r.data?.status === 'active' ? 'Atleta in forza' : 'Prova saltata', r.data?.message || '');
+      await loadData();
+    } catch (e: any) {
+      showAlert('Errore', e?.response?.data?.detail || 'Errore durante la rinuncia alla prova');
+    } finally {
+      setWaivingTrial(false);
+    }
+  };
+
   const handleUnlinkMeAsParent = () => {
     if (!athlete) return;
     const confirmMsg = 'Sei sicuro di voler rimuovere il collegamento come genitore di ' + athlete.first_name + ' ' + athlete.last_name + '?';
@@ -2319,11 +2340,33 @@ export default function AdminAthleteDetail() {
 
         {/* 🆕 23/06/2026 — DA FARE TAB (impegni atleta 7 giorni) */}
         {activeTab === 'dafare' && athlete && (
-          <AdminCoachCommitments
-            athleteId={athlete.id}
-            userId={linkedCoach?.coach_user_id || undefined}
-            roleLabel={linkedCoach ? 'atleta + coach' : 'atleta'}
-          />
+          <>
+            {/* 🆕 12/08/2026 — Rinuncia alla prova (minore già in forza) */}
+            {athlete.is_minor && !['active','blocked'].includes(athlete.status || '') && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>🎽 Atleta già tesserato/in forza</Text>
+                <Text style={{ fontSize: 13, color: '#555', marginBottom: 10, lineHeight: 18 }}>
+                  Se questo minore è già in forza e non deve svolgere il periodo di prova, puoi rinunciare alla prova. Verrà registrata l&apos;accettazione della privacy. Diventerà &quot;in forza&quot; appena il certificato medico sarà convalidato.
+                </Text>
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#2E7D32', paddingVertical: 12, borderRadius: 10, gap: 8, opacity: waivingTrial ? 0.6 : 1 }}
+                  onPress={handleAdminWaiveTrial}
+                  disabled={waivingTrial}
+                  testID="admin-waive-trial-btn"
+                >
+                  <Ionicons name="shield-checkmark" size={18} color="#fff" />
+                  <Text style={{ fontWeight: '700', color: '#fff', fontSize: 14 }}>
+                    {waivingTrial ? 'Attendere...' : 'Rinuncia alla prova (già in forza)'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            <AdminCoachCommitments
+              athleteId={athlete.id}
+              userId={linkedCoach?.coach_user_id || undefined}
+              roleLabel={linkedCoach ? 'atleta + coach' : 'atleta'}
+            />
+          </>
         )}
 
         {/* DATI TAB */}

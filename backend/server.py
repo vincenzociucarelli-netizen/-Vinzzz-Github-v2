@@ -31618,6 +31618,97 @@ async def check_and_activate_if_ready(athlete_id: str):
     return False
 
 
+@api_router.post("/athletes/{athlete_id}/waive-trial")
+async def waive_trial_and_sign_privacy(athlete_id: str, req: Request, data: dict = Body(default={}), current_user = Depends(get_current_user)):
+    """🆕 12/08/2026 — Rinuncia al periodo di prova per MINORENNE già in forza.
+    Ripristina la vecchia funzione: il genitore (o admin) firma la privacy e salta
+    la prova. Se il certificato medico è GIÀ convalidato → ATTIVO subito; altrimenti
+    resta in ATTESA (pending_certificate): non può entrare in palestra finché l'admin
+    non convalida la data del certificato medico, poi si attiva automaticamente
+    (riusa il flag end_trial_requested + la logica di validazione certificato).
+    """
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    if not athlete.get("is_minor"):
+        raise HTTPException(status_code=400, detail="Funzione riservata agli atleti minorenni")
+    # Autorizzazione: genitore dell'atleta oppure admin (stessa società)
+    if current_user["role"] == UserRole.PARENT:
+        if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Non sei il genitore di questo atleta")
+    elif current_user["role"] not in [UserRole.ADMIN, UserRole.VIEWER, UserRole.DIRIGENTE, UserRole.COORDINATORE]:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    if athlete.get("status") in (AthleteStatus.ACTIVE, AthleteStatus.BLOCKED):
+        raise HTTPException(status_code=400, detail="L'atleta è già in forza")
+
+    # IP client (per tracciabilità consenso)
+    client_ip = req.client.host if req.client else "unknown"
+    fwd = req.headers.get("X-Forwarded-For")
+    if fwd:
+        client_ip = fwd.split(",")[0].strip()
+    now = datetime.now(timezone.utc)
+
+    images_internal = bool(data.get("images_internal", False))
+    images_promo = bool(data.get("images_promo", False))
+    document_version = data.get("document_version", "1.0-2026")
+    signer_id = current_user["id"]
+
+    new_consents = {
+        "privacy_viewed": {"value": True, "timestamp": now.isoformat(), "parent_id": signer_id, "child_id": athlete_id, "document_version": document_version, "document_name": f"privacy_minore_v{document_version}", "ip_address": client_ip},
+        f"privacy_viewed__{signer_id}": {"value": True, "timestamp": now.isoformat(), "parent_id": signer_id, "child_id": athlete_id, "document_version": document_version, "ip_address": client_ip},
+        f"images_internal__{signer_id}": {"value": images_internal, "timestamp": now.isoformat(), "parent_id": signer_id, "child_id": athlete_id, "document_version": document_version, "ip_address": client_ip},
+        f"images_promo__{signer_id}": {"value": images_promo, "timestamp": now.isoformat(), "parent_id": signer_id, "child_id": athlete_id, "document_version": document_version, "ip_address": client_ip},
+    }
+    merged_consents = {**(athlete.get("consents") or {}), **new_consents}
+    hist = list(athlete.get("consent_history") or [])
+    hist.append({
+        "action": "waive_trial_privacy",
+        "timestamp": now.isoformat(),
+        "user_id": signer_id,
+        "user_role": current_user["role"],
+        "child_id": athlete_id,
+        "ip_address": client_ip,
+        "document_version": document_version,
+        "consents_given": {"privacy_viewed": True, "images_internal": images_internal, "images_promo": images_promo},
+    })
+
+    # GATE certificato: per essere "in forza" serve un certificato convalidato
+    _team = await db.teams.find_one({"id": athlete.get("team_id")}) if athlete.get("team_id") else None
+    _cert_type = cert_type_for_team(_team)
+    cert_ok = has_valid_verified_cert(athlete) if cert_required_for_active(_cert_type) else True
+
+    update = {
+        "privacy_accepted": True,
+        "privacy_accepted_date": now,
+        "end_trial_requested": True,
+        "end_trial_requested_date": now,
+        "trial_waived": True,
+        "trial_waived_by": signer_id,
+        "trial_waived_by_name": current_user.get("full_name", current_user.get("email", "")),
+        "trial_waived_at": now.isoformat(),
+        "consents": merged_consents,
+        "consent_history": hist,
+    }
+    if cert_ok:
+        update["status"] = AthleteStatus.ACTIVE
+        update["is_trial"] = False
+        update["activated_at"] = now.isoformat()
+        update["activated_by"] = signer_id
+        update["activated_by_name"] = current_user.get("full_name", current_user.get("email", ""))
+        result_status = "active"
+        msg = "Prova saltata: l'atleta è ora in forza."
+    else:
+        update["status"] = "pending_certificate"
+        result_status = "pending_certificate"
+        msg = "Privacy firmata e prova saltata. L'atleta entrerà in forza appena l'admin convaliderà la data del certificato medico (non può entrare in palestra prima)."
+
+    await db.athletes.update_one({"id": athlete_id}, {"$set": update})
+    if athlete.get("user_id"):
+        await db.users.update_one({"id": athlete["user_id"]}, {"$set": {"status": update["status"]}})
+
+    return {"status": result_status, "message": msg, "cert_validated": cert_ok}
+
+
 @api_router.post("/athletes/{athlete_id}/request-end-trial")
 async def request_end_trial(athlete_id: str, current_user = Depends(get_current_user)):
     """Genitore o admin richiede la fine del periodo di prova"""
