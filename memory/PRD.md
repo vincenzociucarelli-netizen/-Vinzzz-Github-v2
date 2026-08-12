@@ -497,6 +497,15 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - **Nota "Allenamenti"**: non esiste una pagina globale allenamenti (sono per-squadra) → per ora punta a `/admin/teams`. Da definire con l'utente cosa mostrare.
 - **NB**: richiede redeploy Render (backend) + Vercel (frontend). Le sezioni Comunicazioni/Certificati/GDPR usano pagine admin reali (notifications/medical-certificates-archive/documents-archive).
 
+### Privacy 12/08/2026 — Consensi immagini sempre registrati (fix "Non ancora espresso") + nota GDPR
+- **Problema (utente)**: atleta con privacy firmata (es. ZECCA GIORGIA) mostrava i consensi immagini come "Non ancora espresso".
+- **Causa**: in `sign-gdpr-privacy` i consensi immagine venivano scritti solo se avevano un valore esplicito (`is not None`); nei percorsi in cui non arrivavano, la chiave non veniva salvata → il pannello (`AdminConsentView` via `/athletes/{id}/consents`) mostrava null = "Non ancora espresso".
+- **Fix backend**: alla firma i consensi immagini vengono ora **sempre** registrati con valore esplicito (Sì/No, default No se non spuntato) e salvati anche **per-genitore** (`images_internal__{pid}`, `images_promo__{pid}`) → aggregazione multi-genitore corretta. Verificato via `/consents`: per_parent popolato, final_value coerente (No→"Negato", Sì→"Dato").
+- **Compliance**: NON è stato pre-selezionato "Sì" (GDPR Considerando 32 vieta le caselle pre-spuntate: il consenso deve essere scelta attiva). Le caselle restano da spuntare.
+- **Nota GDPR** aggiunta nel `GDPRPrivacyModal` sotto i consensi immagini: "I consensi all'utilizzo delle immagini sono facoltativi e possono essere revocati in qualsiasi momento contattando la società (art. 7 Reg. UE 2016/679). La revoca non pregiudica la liceità del trattamento effettuato in precedenza. In assenza di consenso o in caso di revoca, il minore/l'interessato non potrà comparire nelle fotografie e nei video delle attività sportive pubblicati o diffusi dalla società."
+- **Bug latente risolto**: `handleClose` del modal richiamava `setConsentDataTreatment` (setter inesistente) → potenziale errore alla chiusura; rimosso.
+- **Storico**: invariato (opzione A): i record firmati in passato restano come sono; la nuova regola vale dalle firme successive. NB: richiede redeploy Render+Vercel.
+
 ### UI 12/08/2026 (parte 2) — "RINUNCIA ALLA PROVA" come pulsante compatto + schermata a 2 scelte
 - Su richiesta utente: la card grande introdotta prima era troppo ingombrante. Ripristinata la UX originale.
 - Ora è un **pulsante compatto "RINUNCIA ALLA PROVA"** (verde) che apre un **modal con 2 scelte**:

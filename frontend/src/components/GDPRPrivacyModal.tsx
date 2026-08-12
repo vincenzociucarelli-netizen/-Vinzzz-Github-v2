@@ -259,7 +259,6 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
   const handleClose = () => {
     setStep(1);
     setConsentPrivacyViewed(false);
-    setConsentDataTreatment(false);
     setConsentImagesInternal(false);
     setConsentImagesPromo(false);
     handleClear();
@@ -516,7 +515,7 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
                   </View>
                   <View style={consentStyles.checkboxTextContainer}>
                     <Text style={consentStyles.checkboxLabel}>Presa visione informativa *</Text>
-                    <Text style={consentStyles.checkboxSubtext}>Dichiaro di aver letto e compreso l'informativa (obbligatorio)</Text>
+                    <Text style={consentStyles.checkboxSubtext}>Dichiaro di aver letto e compreso l&apos;informativa (obbligatorio)</Text>
                   </View>
                 </TouchableOpacity>
 
@@ -550,6 +549,13 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
                     <Text style={consentStyles.checkboxSubtext}>Sito web, social, materiale pubblicitario</Text>
                   </View>
                 </TouchableOpacity>
+
+                {/* 🔒 12/08/2026 — Nota informativa GDPR su revoca e conseguenze */}
+                <View style={consentStyles.imageInfoBox}>
+                  <Text style={consentStyles.imageInfoText}>
+                    ℹ️ I consensi all&apos;utilizzo delle immagini sono facoltativi e possono essere revocati in qualsiasi momento contattando la società (art. 7 Reg. UE 2016/679). La revoca non pregiudica la liceità del trattamento effettuato in precedenza. In assenza di consenso o in caso di revoca, {isMinor ? 'il minore' : 'l\'interessato'} non potrà comparire nelle fotografie e nei video delle attività sportive pubblicati o diffusi dalla società.
+                  </Text>
+                </View>
               </View>
 
               {/* Preview PDF Button */}
@@ -1123,5 +1129,18 @@ const consentStyles = StyleSheet.create({
     color: '#666',
     fontStyle: 'italic',
     marginBottom: 6,
+  },
+  imageInfoBox: {
+    marginTop: 10,
+    backgroundColor: '#FFF8E1',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#F9A825',
+    padding: 10,
+  },
+  imageInfoText: {
+    fontSize: 11,
+    color: '#795548',
+    lineHeight: 16,
   },
 });

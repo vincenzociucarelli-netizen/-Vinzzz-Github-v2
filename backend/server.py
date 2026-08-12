@@ -24257,23 +24257,32 @@ async def sign_gdpr_privacy_document(
     await db.signed_documents.insert_one(document_record)
     
     # Sync mandatory consents to athlete/user record
+    # 🔒 12/08/2026 — I consensi immagine sono FACOLTATIVI ma ora vengono SEMPRE
+    # registrati con un valore esplicito (Sì/No) alla firma: prima, se il valore
+    # non era passato, la chiave non veniva salvata e il pannello mostrava
+    # "Non ancora espresso". Salviamo anche la versione PER-GENITORE
+    # (images_*__{parent_id}) così l'aggregazione multi-genitore è corretta.
+    _pid = current_user["id"]
+    _ii = bool(consent_data.get("images_internal") or False)
+    _ip = bool(consent_data.get("images_promo") or False)
+    _meta = {"timestamp": timestamp_str, "user_id": _pid, "document_version": document_version, "ip_address": client_ip}
     consent_sync = {
-        "consents.privacy_viewed": {"value": True, "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
+        "consents.privacy_viewed": {"value": True, **_meta},
+        "consents.images_internal": {"value": _ii, **_meta},
+        "consents.images_promo": {"value": _ip, **_meta},
     }
-    # Also sync image consents from the signing form
-    if consent_data.get("images_internal") is not None:
-        consent_sync["consents.images_internal"] = {"value": bool(consent_data.get("images_internal")), "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip}
-    if consent_data.get("images_promo") is not None:
-        consent_sync["consents.images_promo"] = {"value": bool(consent_data.get("images_promo")), "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip}
     
     if request.document_type == "gdpr_minor" and related_entity_id:
-        # Update athlete record for minor
+        # Update athlete record for minor (consensi globali + per-genitore)
         await db.athletes.update_one(
             {"id": related_entity_id},
             {"$set": {
                 "privacy_accepted": True,
                 "privacy_accepted_date": timestamp,
-                **consent_sync
+                **consent_sync,
+                f"consents.privacy_viewed__{_pid}": {"value": True, **_meta},
+                f"consents.images_internal__{_pid}": {"value": _ii, **_meta},
+                f"consents.images_promo__{_pid}": {"value": _ip, **_meta},
             }}
         )
         # If athlete was in trial and privacy is now accepted, update status
@@ -24285,12 +24294,10 @@ async def sign_gdpr_privacy_document(
             )
         # Also update the signing parent's own consents (mandatory + image consents)
         parent_consent_sync = {
-            "consents.privacy_viewed": {"value": True, "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip},
+            "consents.privacy_viewed": {"value": True, **_meta},
+            "consents.images_internal": {"value": _ii, **_meta},
+            "consents.images_promo": {"value": _ip, **_meta},
         }
-        if consent_data.get("images_internal") is not None:
-            parent_consent_sync["consents.images_internal"] = {"value": bool(consent_data.get("images_internal")), "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip}
-        if consent_data.get("images_promo") is not None:
-            parent_consent_sync["consents.images_promo"] = {"value": bool(consent_data.get("images_promo")), "timestamp": timestamp_str, "user_id": current_user["id"], "document_version": document_version, "ip_address": client_ip}
         await db.users.update_one(
             {"id": current_user["id"]},
             {"$set": {
