@@ -497,6 +497,17 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - **Nota "Allenamenti"**: non esiste una pagina globale allenamenti (sono per-squadra) → per ora punta a `/admin/teams`. Da definire con l'utente cosa mostrare.
 - **NB**: richiede redeploy Render (backend) + Vercel (frontend). Le sezioni Comunicazioni/Certificati/GDPR usano pagine admin reali (notifications/medical-certificates-archive/documents-archive).
 
+### Feature 12/08/2026 — Data inizio attività squadra + allenamenti provvisori + creazione flessibile
+- **Modello Team** (`models/team_models.py` + `server.py`): nuovi campi `activity_start_date` (ISO string, opzionale) e `trainings_provisional` (bool). `create_team`/`update_team` (routes/teams.py) li propagano; `activity_start_date` è nullable in update.
+- **Da Fare / commitments** (`/coach/commitments` in server.py e `_build_commitments_payload` in routes/parents.py): gli allenamenti compaiono SOLO se la squadra ha `activity_start_date` impostata e solo per date >= inizio. Ogni allenamento porta `provisional`. Aggiunto `activity_banners` (banner "inizio allenamenti il GG/MM/AAAA", visibile fino al giorno dell'inizio, scompare il giorno dopo). Vale per atleti/genitori E staff (B).
+- **Statistiche presenze** (`/teams/{id}/attendance-stats`): week/month/total e conteggio presenze partono da `activity_start_date` (clamp). Prima di quella data nulla viene conteggiato.
+- **Frontend**:
+  - `admin/team/[id].tsx` (modifica): nuova sezione "📅 Inizio attività" con input data (GG/MM/AAAA, vuoto ammesso) + toggle "Allenamenti provvisori".
+  - `AdminCoachCommitments.tsx`: mostra i banner inizio attività + badge "PROVVISORIO" sugli allenamenti.
+  - `admin/teams.tsx` (creazione): allenamenti e pagamenti NON più obbligatori; selettore giorni con opzione "— Nessun giorno —".
+  - `admin/athlete/[id].tsx`: pulsante "RINUNCIA ALLA PROVA" nascosto quando la prova è già usata/scaduta (trial_end_date passato o days/sessions esauriti).
+- **Verificato via API**: senza data → 0 allenamenti/0 banner; con data (+3gg) → allenamenti solo dalla data, banner corretto, provisional=True. Smoke UI edit squadra OK. NB deploy Render+Vercel.
+
 ### Privacy 12/08/2026 — Consensi immagini sempre registrati (fix "Non ancora espresso") + nota GDPR
 - **Problema (utente)**: atleta con privacy firmata (es. ZECCA GIORGIA) mostrava i consensi immagini come "Non ancora espresso".
 - **Causa**: in `sign-gdpr-privacy` i consensi immagine venivano scritti solo se avevano un valore esplicito (`is not None`); nei percorsi in cui non arrivavano, la chiave non veniva salvata → il pannello (`AdminConsentView` via `/athletes/{id}/consents`) mostrava null = "Non ancora espresso".

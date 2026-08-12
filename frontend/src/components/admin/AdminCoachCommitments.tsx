@@ -12,6 +12,7 @@ import api from '../../services/api';
 
 interface CommitmentItem {
   type?: string; // 'training' | 'match'
+  team_id?: string;
   team_name?: string;
   time_start?: string;
   time_end?: string;
@@ -20,10 +21,18 @@ interface CommitmentItem {
   home_away?: 'home' | 'away';
   reason?: string;
   cancelled?: boolean;
+  provisional?: boolean;
   day_name?: string;
   date?: string;
   // 🆕 01/07/2026 — Badge lato per dual-role (Atleta/Coach)
   as_role?: 'atleta' | 'coach';
+}
+
+interface ActivityBanner {
+  team_id: string;
+  team_name: string;
+  start_label: string;
+  provisional?: boolean;
 }
 
 interface Commitments {
@@ -81,6 +90,15 @@ const dedupCommitments = (arr: CommitmentItem[] = []): CommitmentItem[] => {
   return out;
 };
 
+const ProvisionalTag: React.FC<{ show?: boolean }> = ({ show }) => {
+  if (!show) return null;
+  return (
+    <View style={{ backgroundColor: '#FFF3E0', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1, marginLeft: 6, borderWidth: 1, borderColor: '#FFB74D' }}>
+      <Text style={{ fontSize: 9, fontWeight: '700', color: '#E65100' }}>PROVVISORIO</Text>
+    </View>
+  );
+};
+
 const DayBlock: React.FC<{ title: string; items: CommitmentItem[]; emoji: string; dayName?: string }> = ({ title, items, emoji, dayName }) => (
   <View style={styles.dayBlock}>
     <Text style={styles.dayTitle}>{emoji} {title}{dayName ? ` — ${dayName}` : ''}</Text>
@@ -102,6 +120,7 @@ const DayBlock: React.FC<{ title: string; items: CommitmentItem[]; emoji: string
                 {it.team_name || 'Squadra'} {it.type === 'match' ? `vs ${it.opponent || '?'}` : ''}
                 {it.cancelled ? ' (ANNULLATO)' : ''}
               </Text>
+              <ProvisionalTag show={it.type === 'training' && it.provisional} />
             </View>
             <Text style={styles.itemSubtitle}>
               {it.time_start || ''}{it.time_end ? `–${it.time_end}` : ''}
@@ -117,6 +136,7 @@ const DayBlock: React.FC<{ title: string; items: CommitmentItem[]; emoji: string
 
 export const AdminCoachCommitments: React.FC<Props> = ({ userId, athleteId, roleLabel = 'coach' }) => {
   const [data, setData] = useState<Commitments | null>(null);
+  const [activityBanners, setActivityBanners] = useState<ActivityBanner[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // 🆕 22/06/2026 — "Prossimi giorni" collassabile (default chiuso)
@@ -141,6 +161,11 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, athleteId, role
             const kb = `${b.date || ''}T${b.time_start || '00:00'}`;
             return ka.localeCompare(kb);
           };
+          const bmap: Record<string, ActivityBanner> = {};
+          for (const b of [...(coachData?.activity_banners || []), ...(athleteData?.activity_banners || [])]) {
+            if (b && b.team_id) bmap[b.team_id] = b;
+          }
+          setActivityBanners(Object.values(bmap));
           return {
             today: [...tag(coachData?.today, 'coach'), ...tag(athleteData?.today, 'atleta')].sort(sortBy),
             tomorrow: [...tag(coachData?.tomorrow, 'coach'), ...tag(athleteData?.tomorrow, 'atleta')].sort(sortBy),
@@ -148,7 +173,10 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, athleteId, role
             upcoming: [...tag(coachData?.upcoming, 'coach'), ...tag(athleteData?.upcoming, 'atleta')].sort(sortBy),
           } as Commitments;
         })
-      : fetchOne(athleteId ? { athlete_id: athleteId } : { user_id: userId });
+      : fetchOne(athleteId ? { athlete_id: athleteId } : { user_id: userId }).then((res: any) => {
+          setActivityBanners(res?.activity_banners || []);
+          return res;
+        });
     promise
       .then((res: any) => { retriedRef.current = false; setData(res); })
       .catch((err) => {
@@ -204,6 +232,19 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, athleteId, role
   return (
     <View style={styles.card} data-testid="admin-commitments-card">
       <Text style={styles.cardTitle}>📌 Impegni del {roleLabel}</Text>
+      {activityBanners.map((b) => (
+        <View key={b.team_id} style={{ backgroundColor: '#E8F5E9', borderRadius: 10, borderLeftWidth: 4, borderLeftColor: '#2E7D32', padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Ionicons name="calendar" size={20} color="#2E7D32" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: '#1B5E20' }}>
+              Inizio allenamenti {b.team_name}: {b.start_label}
+            </Text>
+            <Text style={{ fontSize: 11, color: '#33691E', marginTop: 2 }}>
+              {b.provisional ? 'Programma allenamenti provvisorio' : 'Programma allenamenti confermato'}
+            </Text>
+          </View>
+        </View>
+      ))}
       {totalCount === 0 ? (
         <View style={{ padding: 12, backgroundColor: '#F9FAFB', borderRadius: 8 }}>
           <Text style={styles.emptyText}>Nessun impegno nei prossimi 7 giorni.</Text>
@@ -247,6 +288,7 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, athleteId, role
                             {it.team_name || 'Squadra'} {it.type === 'match' ? `vs ${it.opponent || '?'}` : ''}
                             {it.cancelled ? ' (ANNULLATO)' : ''}
                           </Text>
+                          <ProvisionalTag show={it.type === 'training' && it.provisional} />
                         </View>
                         <Text style={styles.itemSubtitle}>
                           {/* 🆕 Giorno della settimana + data */}

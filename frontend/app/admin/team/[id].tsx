@@ -115,6 +115,9 @@ export default function TeamDetail() {
   const [championships, setChampionships] = useState('');
   const [calendarLink, setCalendarLink] = useState('');
   const [certificateTypeRequired, setCertificateTypeRequired] = useState<'none' | 'buona_salute' | 'agonistico'>('agonistico');
+  // 🆕 12/08/2026 — Data inizio attività + flag allenamenti provvisori
+  const [activityStartDate, setActivityStartDate] = useState('');
+  const [trainingsProvisional, setTrainingsProvisional] = useState(false);
   
   // Form fields - payments
   const [totalAmount, setTotalAmount] = useState('');
@@ -251,6 +254,19 @@ export default function TeamDetail() {
       setChampionships(teamData.championships || '');
       setCalendarLink(teamData.calendar_link || '');
       setCertificateTypeRequired((teamData as any).certificate_type_required || 'agonistico');
+      // 🆕 Data inizio attività (accetta ISO o vuoto) → mostra come GG/MM/AAAA
+      const _asd = (teamData as any).activity_start_date;
+      if (_asd) {
+        try {
+          const d = new Date(String(_asd));
+          const gg = String(d.getDate()).padStart(2, '0');
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          setActivityStartDate(`${gg}/${mm}/${d.getFullYear()}`);
+        } catch { setActivityStartDate(''); }
+      } else {
+        setActivityStartDate('');
+      }
+      setTrainingsProvisional(!!(teamData as any).trainings_provisional);
       
       // Load training sessions
       if (teamData.training_sessions && teamData.training_sessions.length > 0) {
@@ -419,6 +435,9 @@ export default function TeamDetail() {
         training_sessions: trainingSessions,
         match_day: matchDay,
         rifinitura: rifinitura.enabled ? { timeStart: rifinitura.timeStart, timeEnd: rifinitura.timeEnd, venue: rifinitura.venue } : null,
+        // 🆕 Data inizio attività (ISO) + flag provvisori. Vuoto → null.
+        activity_start_date: activityStartDate.trim() ? formatDateToISO(activityStartDate.trim()) : null,
+        trainings_provisional: trainingsProvisional,
       };
 
       // Se è Prima Squadra, azzera i campi pagamento
@@ -894,6 +913,34 @@ export default function TeamDetail() {
               />
             </View>
             )}
+
+            {/* 🆕 12/08/2026 — Data inizio attività + allenamenti provvisori */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>📅 Inizio attività</Text>
+              <Text style={{ fontSize: 12, color: '#666', marginBottom: 8, lineHeight: 17 }}>
+                Gli allenamenti compaiono nella sezione &quot;Da Fare&quot; dei membri solo dopo aver inserito questa data. Le statistiche presenze partono da qui.
+              </Text>
+              <Text style={styles.label}>Data inizio attività (GG/MM/AAAA)</Text>
+              <TextInput
+                style={styles.input}
+                value={activityStartDate}
+                onChangeText={setActivityStartDate}
+                placeholder="Es. 15/09/2026 — lascia vuoto se non ancora definita"
+                placeholderTextColor="#bbb"
+                testID="team-activity-start-input"
+              />
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 }}
+                onPress={() => setTrainingsProvisional(!trainingsProvisional)}
+                testID="team-provisional-toggle"
+              >
+                <Ionicons name={trainingsProvisional ? 'checkbox' : 'square-outline'} size={22} color={trainingsProvisional ? '#F57C00' : '#999'} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Allenamenti provvisori</Text>
+                  <Text style={{ fontSize: 11, color: '#888' }}>Se attivo, gli allenamenti sono segnati come &quot;provvisori&quot;. Togli il flag per renderli definitivi.</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
 
             {/* Sezione Allenamenti */}
             <View style={styles.section}>

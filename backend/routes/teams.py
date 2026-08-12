@@ -84,6 +84,8 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
         championships=team_data.championships if team_data.championships else None,
         calendar_link=team_data.calendar_link if team_data.calendar_link else None,
         certificate_type_required=team_data.certificate_type_required or "agonistico",
+        activity_start_date=team_data.activity_start_date if team_data.activity_start_date else None,
+        trainings_provisional=bool(team_data.trainings_provisional),
     )
     await db.teams.insert_one(team.dict())
     return team
@@ -206,7 +208,7 @@ async def update_team(team_id: str, team_data: TeamUpdate, current_user = Depend
     
     update_dict = {}
     nullable_fields = {'rifinitura', 'description', 'championships', 'calendar_link', 'bank_info', 'paypal_email',
-                       'installment_2_due_date', 'installment_3_due_date'}
+                       'installment_2_due_date', 'installment_3_due_date', 'activity_start_date'}
     
     for key, value in team_data.dict(exclude_unset=True).items():
         if value is None and key in nullable_fields:

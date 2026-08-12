@@ -46,6 +46,9 @@ class Team(BaseModel):
     championships: Optional[str] = None
     calendar_link: Optional[str] = None
     certificate_type_required: str = "agonistico"
+    # 🆕 12/08/2026 — Data inizio attività + flag allenamenti provvisori
+    activity_start_date: Optional[str] = None
+    trainings_provisional: bool = False
 
 
 class TeamCreate(BaseModel):
@@ -70,6 +73,8 @@ class TeamCreate(BaseModel):
     championships: Optional[str] = None
     calendar_link: Optional[str] = None
     certificate_type_required: Optional[str] = None
+    activity_start_date: Optional[str] = None
+    trainings_provisional: Optional[bool] = False
 
 
 class TeamUpdate(BaseModel):
@@ -94,6 +99,8 @@ class TeamUpdate(BaseModel):
     championships: Optional[str] = None
     calendar_link: Optional[str] = None
     certificate_type_required: Optional[str] = None
+    activity_start_date: Optional[str] = None
+    trainings_provisional: Optional[bool] = None
 
 
 class AssignmentRequest(BaseModel):

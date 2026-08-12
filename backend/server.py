@@ -13651,7 +13651,22 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
     week_start = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
     # Set month_start to 1st of month 00:00:00
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    
+
+    # 🆕 12/08/2026 — Data inizio attività: le statistiche presenze partono da questa
+    # data. Prima di essa nessun allenamento viene conteggiato (attività ferma).
+    activity_start = None
+    _asd = team.get("activity_start_date")
+    if _asd:
+        try:
+            activity_start = datetime.fromisoformat(str(_asd).replace('Z', '').replace('+00:00', '')).replace(hour=0, minute=0, second=0, microsecond=0)
+        except Exception:
+            activity_start = None
+    if activity_start:
+        if week_start < activity_start:
+            week_start = activity_start
+        if month_start < activity_start:
+            month_start = activity_start
+
     # Calculate expected trainings based on ACTUAL training days up to TODAY
     expected_weekly = count_training_days_in_period(training_sessions, week_start, today_end)
     expected_monthly = count_training_days_in_period(training_sessions, month_start, today_end)
@@ -13668,12 +13683,18 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
         # Ensure naive datetime for comparison
         if reg_date.tzinfo is not None:
             reg_date = reg_date.replace(tzinfo=None)
+        # 🆕 Clamp alla data inizio attività (le presenze contano da lì)
+        if activity_start and reg_date < activity_start:
+            reg_date = activity_start
         
         # Calculate expected total trainings from registration to today
         expected_total = count_training_days_in_period(training_sessions, reg_date, today_end)
         
-        # Get all attendances for this athlete
-        all_attendances = await db.attendances.count_documents({"athlete_id": athlete_id})
+        # Get all attendances for this athlete (dalla data inizio attività, se impostata)
+        _att_q = {"athlete_id": athlete_id}
+        if activity_start:
+            _att_q["check_in_time"] = {"$gte": activity_start}
+        all_attendances = await db.attendances.count_documents(_att_q)
         
         # Get weekly attendances (use datetime objects, not strings for MongoDB comparison)
         week_attendances = await db.attendances.count_documents({
@@ -16096,6 +16117,34 @@ async def get_coach_commitments(
         _q_teams["society_id"] = _sid
     teams = await db.teams.find(_q_teams).to_list(20)
     teams_dict = {t["id"]: t for t in teams}
+
+    # 🆕 12/08/2026 — Data inizio attività: gli allenamenti compaiono in "Da Fare"
+    # SOLO se la squadra ha una data inizio attività impostata, e solo dalle date
+    # >= data inizio. Se non impostata, gli allenamenti restano nascosti (l'attività
+    # è ferma). trainings_provisional=True → gli allenamenti sono "provvisori".
+    def _parse_activity_date(val):
+        if not val:
+            return None
+        try:
+            if isinstance(val, str):
+                return datetime.fromisoformat(val.replace('Z', '').replace('+00:00', '')).replace(hour=0, minute=0, second=0, microsecond=0)
+            if isinstance(val, datetime):
+                return val.replace(hour=0, minute=0, second=0, microsecond=0)
+        except Exception:
+            return None
+        return None
+    team_activity = {}
+    for _tid, _t in teams_dict.items():
+        team_activity[_tid] = {
+            "start": _parse_activity_date(_t.get("activity_start_date")),
+            "provisional": bool(_t.get("trainings_provisional")),
+        }
+
+    def _training_visible(team_id, target_date):
+        info = team_activity.get(team_id)
+        if not info or not info.get("start"):
+            return False  # senza data inizio attività → allenamenti nascosti
+        return target_date.replace(hour=0, minute=0, second=0, microsecond=0) >= info["start"]
     
     # Get current date info
     now = datetime.utcnow()
@@ -16212,6 +16261,8 @@ async def get_coach_commitments(
             team_name = team.get("name", "Squadra")
             training_sessions = team.get("training_sessions", [])
             override = overrides_map.get((team_id, date_iso))
+            if not _training_visible(team_id, target_date):
+                continue
 
             for session in training_sessions:
                 if session.get("day") == day_name:
@@ -16241,6 +16292,7 @@ async def get_coach_commitments(
                         "cancelled": cancelled,
                         "modified": modified,
                         "reason": reason,
+                        "provisional": team_activity.get(team_id, {}).get("provisional", False),
                     })
         
         # Add rifinitura for home matches on this day
@@ -16274,6 +16326,8 @@ async def get_coach_commitments(
             team_name = team.get("name", "Squadra")
             training_sessions = team.get("training_sessions", [])
             override = overrides_map.get((team_id, date_iso))
+            if not _training_visible(team_id, target_date):
+                continue
 
             for session in training_sessions:
                 if session.get("day") == day_name:
@@ -16305,6 +16359,7 @@ async def get_coach_commitments(
                         "cancelled": cancelled,
                         "modified": modified,
                         "reason": reason,
+                        "provisional": team_activity.get(team_id, {}).get("provisional", False),
                     })
     
     # Add rifinitura for upcoming days with home matches
@@ -16372,7 +16427,23 @@ async def get_coach_commitments(
     
     # Sort upcoming by date and time
     result["upcoming"].sort(key=lambda x: (x.get("date", ""), x.get("time_start", x.get("time", "00:00"))))
-    
+
+    # 🆕 12/08/2026 — Banner "inizio allenamenti" per le squadre del membro.
+    # Visibile fino al giorno dell'inizio (scompare il giorno dopo la data prevista).
+    activity_banners = []
+    for _tid, _info in team_activity.items():
+        _start = _info.get("start")
+        if _start and _start.date() >= today.date():
+            _t = teams_dict.get(_tid, {})
+            activity_banners.append({
+                "team_id": _tid,
+                "team_name": _t.get("name", "Squadra"),
+                "start_date": _start.strftime("%Y-%m-%d"),
+                "start_label": _start.strftime("%d/%m/%Y"),
+                "provisional": _info.get("provisional", False),
+            })
+    result["activity_banners"] = activity_banners
+
     return result
 
 @api_router.get("/coach/team/{team_id}/athletes")

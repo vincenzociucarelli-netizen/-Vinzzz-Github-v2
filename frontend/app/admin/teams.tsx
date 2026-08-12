@@ -294,12 +294,9 @@ export default function TeamsScreen() {
       return;
     }
 
-    // Validate trainings (at least 2 complete)
+    // 🆕 12/08/2026 — Allenamenti FACOLTATIVI in creazione (le squadre si creano
+    // molto prima di orari e quote). Si tengono solo quelli completi.
     const validTrainings = trainings.filter(t => t.day && t.timeStart && t.timeEnd && t.venue);
-    if (validTrainings.length < 2) {
-      showAlert('Errore', 'Inserisci almeno 2 allenamenti completi');
-      return;
-    }
 
     // Match day is optional - only validate if partially filled
     const hasPartialMatchDay = matchDay.day || matchDay.time || matchDay.venue;
@@ -309,36 +306,19 @@ export default function TeamsScreen() {
       return;
     }
 
-    // Solo per squadre NON prime squadre: valida i pagamenti
+    // 🆕 12/08/2026 — Pagamenti FACOLTATIVI in creazione (importi definiti dopo).
+    // Se non è Prima Squadra e sono state inserite delle rate, validiamo solo il
+    // formato della scadenza; nessun campo pagamento è obbligatorio.
     if (!isPrimaSquadra) {
-      if (!totalAmount) {
-        showAlert('Errore', 'Inserisci la quota totale annuale');
-        return;
-      }
-
       const validInstallments = installments.filter(inst => inst.amount && parseFloat(inst.amount) > 0);
-      if (validInstallments.length === 0) {
-        showAlert('Errore', 'Inserisci almeno una rata');
-        return;
-      }
-
-      // Check that installments from the 2nd onward have a due date
-      for (let i = 1; i < validInstallments.length; i++) {
-        if (!validInstallments[i].due_date) {
-          showAlert('Errore', `Inserisci la scadenza per ${validInstallments[i].name}`);
-          return;
+      for (let i = 0; i < validInstallments.length; i++) {
+        if (validInstallments[i].due_date) {
+          const dateParts = validInstallments[i].due_date.split('/');
+          if (dateParts.length !== 3 || dateParts[2].length !== 4) {
+            showAlert('Errore', `La scadenza di ${validInstallments[i].name} deve essere in formato GG/MM/AAAA (es: 15/11/2026)`);
+            return;
+          }
         }
-        // Validate date format DD/MM/YYYY
-        const dateParts = validInstallments[i].due_date.split('/');
-        if (dateParts.length !== 3 || dateParts[2].length !== 4) {
-          showAlert('Errore', `La scadenza di ${validInstallments[i].name} deve essere in formato GG/MM/AAAA (es: 15/11/2026)`);
-          return;
-        }
-      }
-
-      if (!bankInfo || !paypalEmail) {
-        showAlert('Errore', 'Inserisci le informazioni di pagamento');
-        return;
       }
     }
 
@@ -1063,6 +1043,17 @@ export default function TeamsScreen() {
         >
           <View style={styles.dayPickerContent}>
             <Text style={styles.dayPickerTitle}>Seleziona Giorno</Text>
+            <TouchableOpacity
+              style={styles.dayPickerItem}
+              onPress={() => handleDaySelect('')}
+              testID="day-picker-none"
+            >
+              <Text style={[styles.dayPickerItemText, { color: '#999', fontStyle: 'italic' }]}>— Nessun giorno —</Text>
+              {((dayPickerTarget?.type === 'training' && dayPickerTarget.index !== undefined && !trainings[dayPickerTarget.index]?.day) ||
+                (dayPickerTarget?.type === 'match' && !matchDay.day)) && (
+                <Ionicons name="checkmark" size={20} color="#007AFF" />
+              )}
+            </TouchableOpacity>
             {daysOfWeek.map((day) => (
               <TouchableOpacity
                 key={day}

@@ -35,6 +35,28 @@ async def _build_commitments_payload(team_athletes: dict) -> dict:
     teams_dict = {}
     async for t in teams_cursor:
         teams_dict[t["id"]] = t
+
+    # 🆕 12/08/2026 — Data inizio attività: allenamenti visibili solo se impostata
+    # e solo dalle date >= inizio. trainings_provisional → allenamenti "provvisori".
+    def _parse_activity_date(val):
+        if not val:
+            return None
+        try:
+            if isinstance(val, str):
+                return datetime.fromisoformat(val.replace('Z', '').replace('+00:00', '')).replace(hour=0, minute=0, second=0, microsecond=0)
+            if isinstance(val, datetime):
+                return val.replace(hour=0, minute=0, second=0, microsecond=0)
+        except Exception:
+            return None
+        return None
+    team_activity = {}
+    for _tid, _t in teams_dict.items():
+        team_activity[_tid] = {"start": _parse_activity_date(_t.get("activity_start_date")), "provisional": bool(_t.get("trainings_provisional"))}
+    def _training_visible(team_id, target_date):
+        info = team_activity.get(team_id)
+        if not info or not info.get("start"):
+            return False
+        return target_date.replace(hour=0, minute=0, second=0, microsecond=0) >= info["start"]
     
     now = datetime.utcnow()
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -85,6 +107,8 @@ async def _build_commitments_payload(team_athletes: dict) -> dict:
             athlete_names_str = ", ".join(athlete_names) if athlete_names else ""
             override = overrides_map.get((team_id, date_iso))
             has_match_today = (team_id, day_key) in home_match_days
+            if not _training_visible(team_id, target_date):
+                continue
             for session in training_sessions:
                 if session.get("day") == day_name:
                     t_start = session.get("timeStart", "")
@@ -113,6 +137,7 @@ async def _build_commitments_payload(team_athletes: dict) -> dict:
                         "time_start": t_start, "time_end": t_end, "venue": venue,
                         "title": f"Allenamento {team_name}",
                         "modified": modified, "cancelled": cancelled, "reason": reason,
+                        "provisional": team_activity.get(team_id, {}).get("provisional", False),
                     })
     
     for day_offset in range(3, 7):
@@ -128,6 +153,8 @@ async def _build_commitments_payload(team_athletes: dict) -> dict:
             athlete_names_str = ", ".join(athlete_names) if athlete_names else ""
             override = overrides_map.get((team_id, date_iso))
             has_match_today = (team_id, date_str) in home_match_days
+            if not _training_visible(team_id, target_date):
+                continue
             for session in training_sessions:
                 if session.get("day") == day_name:
                     t_start = session.get("timeStart", "")
@@ -155,6 +182,7 @@ async def _build_commitments_payload(team_athletes: dict) -> dict:
                         "time_start": t_start, "time_end": t_end, "venue": venue,
                         "title": f"Allenamento {team_name}",
                         "modified": modified, "cancelled": cancelled, "reason": reason,
+                        "provisional": team_activity.get(team_id, {}).get("provisional", False),
                     })
     
     # Matches → split by day bucket
@@ -196,7 +224,22 @@ async def _build_commitments_payload(team_athletes: dict) -> dict:
     for day_key in ["today", "tomorrow", "day_after"]:
         result[day_key].sort(key=lambda x: x.get("time_start", x.get("time", "00:00")))
     result["upcoming"].sort(key=lambda x: (x.get("date", ""), x.get("time_start", x.get("time", "00:00"))))
-    
+
+    # 🆕 12/08/2026 — Banner "inizio allenamenti" (scompare il giorno dopo l'inizio)
+    activity_banners = []
+    for _tid, _info in team_activity.items():
+        _start = _info.get("start")
+        if _start and _start.date() >= today.date():
+            _t = teams_dict.get(_tid, {})
+            activity_banners.append({
+                "team_id": _tid,
+                "team_name": _t.get("name", "Squadra"),
+                "start_date": _start.strftime("%Y-%m-%d"),
+                "start_label": _start.strftime("%d/%m/%Y"),
+                "provisional": _info.get("provisional", False),
+            })
+    result["activity_banners"] = activity_banners
+
     return result
 
 

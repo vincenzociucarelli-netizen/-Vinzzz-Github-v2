@@ -2343,17 +2343,32 @@ export default function AdminAthleteDetail() {
         {/* 🆕 23/06/2026 — DA FARE TAB (impegni atleta 7 giorni) */}
         {activeTab === 'dafare' && athlete && (
           <>
-            {/* 🆕 12/08/2026 — Rinuncia alla prova (pulsante compatto → schermata a 2 scelte) */}
-            {athlete.is_minor && !['active','blocked'].includes(athlete.status || '') && (
-              <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#2E7D32', paddingVertical: 13, borderRadius: 12, gap: 8, marginBottom: 12 }}
-                onPress={() => setShowWaiveChoice(true)}
-                testID="admin-waive-trial-btn"
-              >
-                <Ionicons name="exit-outline" size={18} color="#fff" />
-                <Text style={{ fontWeight: '700', color: '#fff', fontSize: 15, letterSpacing: 0.3 }}>RINUNCIA ALLA PROVA</Text>
-              </TouchableOpacity>
-            )}
+            {/* 🆕 12/08/2026 — Rinuncia alla prova (pulsante compatto → schermata a 2 scelte).
+                Nascosto se la prova è già stata usata o è scaduta. */}
+            {athlete.is_minor && !['active','blocked'].includes(athlete.status || '') && (() => {
+              // Prova usata/scaduta → non mostrare (non c'è più nulla a cui rinunciare)
+              let trialEnded = false;
+              if (athlete.trial_end_date) {
+                const end = new Date(athlete.trial_end_date);
+                const todayStart = new Date(new Date().toDateString());
+                if (!isNaN(end.getTime()) && end < todayStart) trialEnded = true;
+              }
+              if (trialStatus) {
+                if (typeof trialStatus.days_remaining === 'number' && trialStatus.days_remaining < 0) trialEnded = true;
+                if (typeof trialStatus.sessions_remaining === 'number' && trialStatus.sessions_remaining <= 0) trialEnded = true;
+              }
+              if (trialEnded) return null;
+              return (
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#2E7D32', paddingVertical: 13, borderRadius: 12, gap: 8, marginBottom: 12 }}
+                  onPress={() => setShowWaiveChoice(true)}
+                  testID="admin-waive-trial-btn"
+                >
+                  <Ionicons name="exit-outline" size={18} color="#fff" />
+                  <Text style={{ fontWeight: '700', color: '#fff', fontSize: 15, letterSpacing: 0.3 }}>RINUNCIA ALLA PROVA</Text>
+                </TouchableOpacity>
+              );
+            })()}
             <AdminCoachCommitments
               athleteId={athlete.id}
               userId={linkedCoach?.coach_user_id || undefined}
