@@ -21,7 +21,7 @@ from database import db
 from auth_utils import get_current_user
 from models.enums import UserRole
 from models.team_models import Team, TeamCreate, TeamUpdate, AssignmentRequest
-from utils import clean_mongo_doc, clean_mongo_docs
+from utils import clean_mongo_doc, clean_mongo_docs, compress_base64_image
 
 router = APIRouter()
 
@@ -127,6 +127,19 @@ async def get_team(team_id: str, current_user = Depends(get_current_user)):
     team = await db.teams.find_one({"id": team_id})
     if not team:
         raise HTTPException(status_code=404, detail="Squadra non trovata")
+    # 🚀 12/08/2026 — Backfill automatico: se la foto squadra è pesante (vecchie
+    # foto caricate senza compressione), la comprimo e la salvo alla prima
+    # apertura, così il DB e la pagina si alleggeriscono nel tempo.
+    for _imgk in ('team_photo', 'team_logo'):
+        _val = team.get(_imgk)
+        if isinstance(_val, str) and len(_val) > 500_000:
+            _compressed = compress_base64_image(_val)
+            if _compressed and _compressed != _val and len(_compressed) < len(_val):
+                team[_imgk] = _compressed
+                try:
+                    await db.teams.update_one({"id": team_id}, {"$set": {_imgk: _compressed}})
+                except Exception:
+                    pass
     clean_mongo_doc(team)
     
     coaches = await db.users.find({"role": "coach", "assigned_teams": team_id}).to_list(10)
@@ -213,6 +226,11 @@ async def update_team(team_id: str, team_data: TeamUpdate, current_user = Depend
                 update_dict[key] = value
     
     if update_dict:
+        # 🚀 12/08/2026 — Comprimi automaticamente le immagini caricate (stile
+        # WhatsApp) per non appesantire il DB: le foto squadra passano da ~MB a ~KB.
+        for _imgk in ('team_photo', 'team_logo'):
+            if _imgk in update_dict and isinstance(update_dict[_imgk], str) and update_dict[_imgk]:
+                update_dict[_imgk] = compress_base64_image(update_dict[_imgk])
         await db.teams.update_one({"id": team_id}, {"$set": update_dict})
         team.update(update_dict)
     

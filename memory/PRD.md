@@ -497,6 +497,14 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - **Nota "Allenamenti"**: non esiste una pagina globale allenamenti (sono per-squadra) → per ora punta a `/admin/teams`. Da definire con l'utente cosa mostrare.
 - **NB**: richiede redeploy Render (backend) + Vercel (frontend). Le sezioni Comunicazioni/Certificati/GDPR usano pagine admin reali (notifications/medical-certificates-archive/documents-archive).
 
+### Performance 12/08/2026 (parte 2) — Compressione automatica foto squadra (stile WhatsApp)
+- **Problema**: le foto squadra (uniche immagini caricate dall'utente) erano salvate come base64 grezzo fino a ~10.8MB per documento, appesantendo DB, RAM Render e le pagine di dettaglio.
+- **Fix**: nuovo helper `compress_base64_image()` in `utils.py` (Pillow): rispetta EXIF, ridimensiona il lato lungo a 1280px, ricodifica JPEG q72; salta le immagini già < 350KB; in caso di errore lascia l'originale (mai perdita foto).
+  - Applicato al salvataggio in `PATCH /teams/{id}` (`routes/teams.py`) su `team_photo`/`team_logo` → nuove foto compresse subito.
+  - Backfill lazy in `GET /teams/{id}`: se la foto salvata è > 500KB viene compressa e ri-salvata alla prima apertura della squadra → il DB si alleggerisce nel tempo senza migrazioni pesanti allo startup.
+- **Verificato**: foto Serie D 10.8MB → 239KB (−97%); foto Under 16 1.9MB → 202KB (−89%); seconda GET della stessa squadra ~16ms.
+- **NB deploy**: richiede redeploy Render. Le nuove foto sono compresse all'upload; le foto esistenti si comprimono man mano che si aprono le rispettive squadre.
+
 ### Performance 12/08/2026 — Indici mancanti sulla collezione `attendances` (causa rallentamento stagionale)
 - **Diagnosi**: il codice usa `db.attendances` (PLURALE, 28 occorrenze) ma la funzione `_create_indexes()` creava indici solo su `db.attendance` (SINGOLARE). Quindi la collezione calda delle presenze non aveva indici (solo `_id_`) → ogni query presenze (attendance-stats fa più `count_documents` per atleta su `athlete_id`/`check_in_time`/`team_id`) faceva scansioni complete. Con l'accumulo di presenze durante la stagione il rallentamento peggiora "ultimamente" (coerente con la segnalazione).
 - **Fix (server.py `_create_indexes`)**: aggiunti indici su `attendances`: `athlete_id`, `team_id`, `[athlete_id, check_in_time]`, `[team_id, check_in_time]`. Aggiunti anche su `signed_documents` (contiene `pdf_base64` pesante): `id`, `society_id`, `related_entity_id`, `athlete_id`, `signer_id`. Idempotente, creato allo startup. Verificato: indici presenti dopo restart.

@@ -57,6 +57,42 @@ def clean_mongo_docs(docs):
     return [clean_mongo_doc(doc) for doc in docs]
 
 
+def compress_base64_image(b64_str, max_dim: int = 1280, quality: int = 72, min_bytes: int = 350_000):
+    """🚀 12/08/2026 — Compressione automatica immagini (stile WhatsApp).
+    Prende una stringa base64 (con o senza prefisso data URI), ridimensiona il
+    lato lungo a `max_dim` px e ricodifica in JPEG con qualità `quality`.
+    Ritorna base64 RAW (senza prefisso). Se l'immagine è già piccola
+    (< min_bytes) la lascia com'è (solo strip del prefisso). In caso di errore
+    ritorna l'input invariato per non perdere mai la foto.
+    """
+    if not b64_str or not isinstance(b64_str, str):
+        return b64_str
+    try:
+        import base64 as _b64, io as _io
+        from PIL import Image as _Image, ImageOps as _ImageOps
+
+        raw = b64_str
+        if raw.startswith('data:'):
+            raw = raw.split(',', 1)[1]
+        img_bytes = _b64.b64decode(raw)
+        if len(img_bytes) < min_bytes:
+            return raw  # già leggera
+        img = _Image.open(_io.BytesIO(img_bytes))
+        # Rispetta l'orientamento EXIF (foto da smartphone)
+        img = _ImageOps.exif_transpose(img)
+        if img.mode in ('RGBA', 'P', 'LA'):
+            img = img.convert('RGB')
+        elif img.mode != 'RGB':
+            img = img.convert('RGB')
+        img.thumbnail((max_dim, max_dim))
+        out = _io.BytesIO()
+        img.save(out, format='JPEG', quality=quality, optimize=True)
+        return _b64.b64encode(out.getvalue()).decode('ascii')
+    except Exception:
+        return b64_str
+
+
+
 def get_current_season() -> str:
     """Get current season name based on Rome local date (July to June)."""
     # 🆕 01/07/2026 — Usa ora di Roma (CET/CEST) invece di UTC: alle 01:27 ora
