@@ -3337,7 +3337,7 @@ export default function AdminAthleteDetail() {
                   style={styles.linkParentBtn}
                   testID="link-me-as-parent-btn"
                 >
-                  <Ionicons name="person-add-outline" size={16} color="#635BFF" />
+                  <Ionicons name="person-add-outline" size={13} color="#8E8E93" />
                   <Text style={styles.linkParentBtnText}>Sono io il genitore di questo atleta</Text>
                 </TouchableOpacity>
               )
@@ -5996,10 +5996,10 @@ const styles = StyleSheet.create({
   withdrawButtonText: { color: '#FF3B30', fontSize: 14, fontWeight: '600', marginLeft: 8 },
   deleteButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FF3B30', marginHorizontal: 16, marginVertical: 8, padding: 14, borderRadius: 12 },
   deleteButtonText: { color: '#fff', fontSize: 14, fontWeight: '600', marginLeft: 8 },
-  linkParentBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#F5F3FF', marginHorizontal: 16, marginTop: 8, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: '#DDD6FE' },
-  linkParentBtnText: { color: '#635BFF', fontSize: 13, fontWeight: '600' },
-  linkParentBtnLinked: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#E8F5E9', marginHorizontal: 16, marginTop: 8, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: '#A5D6A7' },
-  linkParentBtnLinkedText: { color: '#2E7D32', fontSize: 13, fontWeight: '600' },
+  linkParentBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 5, backgroundColor: 'transparent', marginHorizontal: 16, marginTop: 4, marginBottom: 4, paddingVertical: 6, paddingHorizontal: 2, alignSelf: 'flex-start' },
+  linkParentBtnText: { color: '#8E8E93', fontSize: 12, fontWeight: '500', textDecorationLine: 'underline' },
+  linkParentBtnLinked: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 5, backgroundColor: 'transparent', marginHorizontal: 16, marginTop: 4, marginBottom: 4, paddingVertical: 6, paddingHorizontal: 2, alignSelf: 'flex-start' },
+  linkParentBtnLinkedText: { color: '#2E7D32', fontSize: 12, fontWeight: '600' },
   deleteConfirmBox: { backgroundColor: '#FFEBEE', padding: 12, borderRadius: 8, marginVertical: 12, borderWidth: 1, borderColor: '#FFCDD2' },
   deleteConfirmText: { color: '#C62828', fontSize: 14, fontWeight: '600', textAlign: 'center' },
   parentsActionSection: { marginHorizontal: 16, marginVertical: 8 },

@@ -497,6 +497,10 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - **Nota "Allenamenti"**: non esiste una pagina globale allenamenti (sono per-squadra) → per ora punta a `/admin/teams`. Da definire con l'utente cosa mostrare.
 - **NB**: richiede redeploy Render (backend) + Vercel (frontend). Le sezioni Comunicazioni/Certificati/GDPR usano pagine admin reali (notifications/medical-certificates-archive/documents-archive).
 
+### UI 12/08/2026 — Pulsante "Sono io il genitore" reso più discreto (admin athlete)
+- Su richiesta utente: era ancora percepito ingombrante. Nella scheda admin (`admin/athlete/[id].tsx`) il pulsante era già spostato in fondo (sopra Elimina) ma con sfondo/bordo pieno; ora è un **link compatto** (testo grigio #8E8E93, 12px, sottolineato, icona 13px, allineato a sinistra, senza sfondo). Stessa cosa per lo stato "Sei collegato come genitore · Rimuovi".
+- NB: su registrateam.it (produzione) la modifica compare solo dopo redeploy Vercel.
+
 ### Feature 12/08/2026 — Ripristino "Rinuncia alla prova" per minore già in forza
 - **Contesto**: fino al 03/08/2026 un minore già tesserato poteva saltare il periodo di prova (genitore firma privacy → subito in forza). I cambi onboarding del 03/08 e 08/08 hanno reso la prova obbligatoria per tutti i minori (privacy solo a fine prova), rimuovendo di fatto quella scorciatoia.
 - **Backend**: nuovo endpoint `POST /api/athletes/{id}/waive-trial` (genitore dell'atleta o admin/staff). Registra la firma privacy per-genitore (consenso + IP, come `/trial/accept-privacy`), imposta `end_trial_requested=True` + `trial_waived=True`. GATE certificato:
