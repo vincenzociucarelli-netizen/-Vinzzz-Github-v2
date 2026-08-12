@@ -1271,6 +1271,7 @@ export default function AdminAthleteDetail() {
 
   // 🆕 12/08/2026 — Admin: rinuncia alla prova per minore già in forza
   const [waivingTrial, setWaivingTrial] = useState(false);
+  const [showWaiveChoice, setShowWaiveChoice] = useState(false);
   const handleAdminWaiveTrial = async () => {
     if (!athlete) return;
     const name = `${athlete.first_name || ''} ${athlete.last_name || ''}`.trim();
@@ -1278,6 +1279,7 @@ export default function AdminAthleteDetail() {
       ? window.confirm(`Rinuncia al periodo di prova per ${name} (minore già tesserato/in forza).\n\nVerrà registrata l'accettazione della privacy per conto del genitore. L'atleta sarà "in forza" solo dopo la convalida della data del certificato medico.\n\nProcedere?`)
       : true;
     if (!ok) return;
+    setShowWaiveChoice(false);
     setWaivingTrial(true);
     try {
       const r = await api.post(`/athletes/${id}/waive-trial`, { images_internal: false, images_promo: false });
@@ -2341,25 +2343,16 @@ export default function AdminAthleteDetail() {
         {/* 🆕 23/06/2026 — DA FARE TAB (impegni atleta 7 giorni) */}
         {activeTab === 'dafare' && athlete && (
           <>
-            {/* 🆕 12/08/2026 — Rinuncia alla prova (minore già in forza) */}
+            {/* 🆕 12/08/2026 — Rinuncia alla prova (pulsante compatto → schermata a 2 scelte) */}
             {athlete.is_minor && !['active','blocked'].includes(athlete.status || '') && (
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>🎽 Atleta già tesserato/in forza</Text>
-                <Text style={{ fontSize: 13, color: '#555', marginBottom: 10, lineHeight: 18 }}>
-                  Se questo minore è già in forza e non deve svolgere il periodo di prova, puoi rinunciare alla prova. Verrà registrata l&apos;accettazione della privacy. Diventerà &quot;in forza&quot; appena il certificato medico sarà convalidato.
-                </Text>
-                <TouchableOpacity
-                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#2E7D32', paddingVertical: 12, borderRadius: 10, gap: 8, opacity: waivingTrial ? 0.6 : 1 }}
-                  onPress={handleAdminWaiveTrial}
-                  disabled={waivingTrial}
-                  testID="admin-waive-trial-btn"
-                >
-                  <Ionicons name="shield-checkmark" size={18} color="#fff" />
-                  <Text style={{ fontWeight: '700', color: '#fff', fontSize: 14 }}>
-                    {waivingTrial ? 'Attendere...' : 'Rinuncia alla prova (già in forza)'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#2E7D32', paddingVertical: 13, borderRadius: 12, gap: 8, marginBottom: 12 }}
+                onPress={() => setShowWaiveChoice(true)}
+                testID="admin-waive-trial-btn"
+              >
+                <Ionicons name="exit-outline" size={18} color="#fff" />
+                <Text style={{ fontWeight: '700', color: '#fff', fontSize: 15, letterSpacing: 0.3 }}>RINUNCIA ALLA PROVA</Text>
+              </TouchableOpacity>
             )}
             <AdminCoachCommitments
               athleteId={athlete.id}
@@ -5002,6 +4995,66 @@ export default function AdminAthleteDetail() {
           </View>
         </View>
       </Modal>
+
+      {/* 🆕 12/08/2026 — Modal a 2 scelte "Rinuncia alla prova" */}
+      <Modal
+        visible={showWaiveChoice}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowWaiveChoice(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 440, overflow: 'hidden' }}>
+            <View style={{ backgroundColor: '#2E7D32', paddingVertical: 16, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Rinuncia alla prova</Text>
+              <TouchableOpacity onPress={() => setShowWaiveChoice(false)} testID="waive-choice-close">
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <View style={{ padding: 20 }}>
+              <Text style={{ fontSize: 13, color: '#555', marginBottom: 16, lineHeight: 19 }}>
+                Scegli come procedere per {athlete?.first_name} {athlete?.last_name}:
+              </Text>
+
+              {/* Opzione A — resta */}
+              <TouchableOpacity
+                style={{ borderWidth: 1.5, borderColor: '#2E7D32', borderRadius: 12, padding: 14, marginBottom: 12, backgroundColor: '#F1F8E9', opacity: waivingTrial ? 0.6 : 1 }}
+                onPress={handleAdminWaiveTrial}
+                disabled={waivingTrial}
+                testID="waive-choice-stay"
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <Ionicons name="shield-checkmark" size={20} color="#2E7D32" />
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#1B5E20', flex: 1 }}>
+                    Rinuncia alla prova, firma la privacy e resta in {societyData?.name || societyData?.ragione_sociale || societyData?.society_name || 'società'}
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 12, color: '#558B2F', lineHeight: 17 }}>
+                  Ricordati di inserire la data di emissione del certificato medico e consegnare l&apos;originale in società.
+                </Text>
+              </TouchableOpacity>
+
+              {/* Opzione B — lascia */}
+              <TouchableOpacity
+                style={{ borderWidth: 1.5, borderColor: '#C62828', borderRadius: 12, padding: 14, backgroundColor: '#FFEBEE' }}
+                onPress={() => { setShowWaiveChoice(false); setDeleteConfirmText(''); setDeleteModalVisible(true); }}
+                testID="waive-choice-leave"
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <Ionicons name="trash-outline" size={20} color="#C62828" />
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#B71C1C', flex: 1 }}>
+                    Rinuncia alla prova e lascia {societyData?.name || societyData?.ragione_sociale || societyData?.society_name || 'la società'}
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 12, color: '#C62828', lineHeight: 17 }}>
+                  Confermando la cancellazione di tutti i dati inseriti.
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
 
       {/* Delete Confirmation Modal */}
       <Modal

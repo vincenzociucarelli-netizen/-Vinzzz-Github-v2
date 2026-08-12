@@ -497,7 +497,13 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - **Nota "Allenamenti"**: non esiste una pagina globale allenamenti (sono per-squadra) → per ora punta a `/admin/teams`. Da definire con l'utente cosa mostrare.
 - **NB**: richiede redeploy Render (backend) + Vercel (frontend). Le sezioni Comunicazioni/Certificati/GDPR usano pagine admin reali (notifications/medical-certificates-archive/documents-archive).
 
-### UI 12/08/2026 — Pulsante "Sono io il genitore" reso più discreto (admin athlete)
+### UI 12/08/2026 (parte 2) — "RINUNCIA ALLA PROVA" come pulsante compatto + schermata a 2 scelte
+- Su richiesta utente: la card grande introdotta prima era troppo ingombrante. Ripristinata la UX originale.
+- Ora è un **pulsante compatto "RINUNCIA ALLA PROVA"** (verde) che apre un **modal con 2 scelte**:
+  A. "Rinuncia alla prova, firma la privacy e resta in [Società]" → nota "Ricordati di inserire la data di emissione del certificato medico e consegnare l'originale in società" → `waive-trial`.
+  B. "Rinuncia alla prova e lascia [Società], confermando la cancellazione di tutti i dati inseriti" → apre il flusso di cancellazione (admin: modal Elimina con conferma "ELIMINA"; genitore: `deletion-check` → richiesta cancellazione).
+- Implementato in `admin/athlete/[id].tsx` (tab Da fare) e `parent/athlete/[id].tsx`. Nome società da `societyData`/`societyName`. Verificato via screenshot (società "Pallavolo Perugia SSD a RL").
+
 - Su richiesta utente: era ancora percepito ingombrante. Nella scheda admin (`admin/athlete/[id].tsx`) il pulsante era già spostato in fondo (sopra Elimina) ma con sfondo/bordo pieno; ora è un **link compatto** (testo grigio #8E8E93, 12px, sottolineato, icona 13px, allineato a sinistra, senza sfondo). Stessa cosa per lo stato "Sei collegato come genitore · Rimuovi".
 - NB: su registrateam.it (produzione) la modifica compare solo dopo redeploy Vercel.
 
