@@ -37576,6 +37576,29 @@ async def ensure_mongodb_indexes():
                 await db.attendance.create_index([("society_id", 1), ("team_id", 1), ("date", -1)])
             except Exception:
                 pass
+            # 🚀 12/08/2026 — Il codice usa la collezione `attendances` (PLURALE, 28
+            # occorrenze) ma finora gli indici erano solo su `attendance` (singolare):
+            # la collezione calda faceva scansioni complete su ogni query presenze,
+            # rallentando progressivamente man mano che le presenze crescevano nella
+            # stagione. Indici sui campi effettivamente filtrati (athlete_id, team_id,
+            # check_in_time).
+            try:
+                await db.attendances.create_index("athlete_id")
+                await db.attendances.create_index("team_id")
+                await db.attendances.create_index([("athlete_id", 1), ("check_in_time", 1)])
+                await db.attendances.create_index([("team_id", 1), ("check_in_time", 1)])
+            except Exception:
+                pass
+            # 🚀 12/08/2026 — signed_documents (contiene pdf_base64 pesante) senza indici:
+            # lookup per id/related_entity_id/società ora indicizzati.
+            try:
+                await db.signed_documents.create_index("id")
+                await db.signed_documents.create_index("society_id")
+                await db.signed_documents.create_index("related_entity_id")
+                await db.signed_documents.create_index("athlete_id")
+                await db.signed_documents.create_index("signer_id")
+            except Exception:
+                pass
             # payments
             try:
                 await db.payments.create_index([("society_id", 1), ("athlete_id", 1)])
