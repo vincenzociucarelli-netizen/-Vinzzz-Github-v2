@@ -2522,13 +2522,22 @@ async def register(user_data: UserCreate, request: Request):
             "athlete": "Atleta",
         }.get(final_role, final_role.capitalize())
         
+        # Genitori e atleti sono auto-approvati (nessuna approvazione admin richiesta).
+        # Gli altri ruoli (coach/dirigente/collaboratore) restano in attesa di approvazione.
+        auto_approved = final_role in (UserRole.PARENT, "athlete")
+        reg_message = (
+            f"{user_data.full_name} si è registrato/a come {role_label}."
+            if auto_approved
+            else f"{user_data.full_name} si è registrato/a come {role_label} e attende approvazione."
+        )
+
         for admin in admins:
             notification = {
                 "id": str(uuid.uuid4()),
                 "user_id": admin["id"],
                 "type": "new_registration",
                 "title": f"🆕 Nuova registrazione {role_label}",
-                "message": f"{user_data.full_name} si è registrato come {role_label} e attende approvazione.",
+                "message": reg_message,
                 "data": {
                     "user_id": user.id,
                     "user_name": user_data.full_name,
