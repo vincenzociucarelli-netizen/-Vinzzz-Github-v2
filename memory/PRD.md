@@ -569,3 +569,8 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 ### Note tecniche
 - RN Web propaga solo `testID` (non `data-testid` grezzo) su TouchableOpacity/View/Text.
 - Preview = build statico Expo: dopo modifiche frontend `cd /app/frontend && rm -rf dist && npx expo export -p web && sudo supervisorctl restart expo`.
+
+---
+## Changelog 13/08/2026 (fork)
+- **Notifica registrazione**: solo i GENITORI sono auto-approvati (msg "si è registrato/a come Genitore."). Atleti (18+/PRO) e ruoli staff mostrano "...e attende approvazione" (server.py ~2525). Lo stato di approvazione atleti adulti era già corretto (register_adult_athlete → pending).
+- **Banner "Inizio allenamenti" esteso a coach/atleta/genitore**: creato componente riutilizzabile `frontend/src/components/ActivityStartBanners.tsx` (dedup per team_id). Cablato in coach/index.tsx, athlete/index.tsx, parent/index.tsx leggendo `activity_banners` da /coach|/athlete|/parent/commitments. Prima i banner comparivano solo nelle viste admin (AdminCoachCommitments). Multi-squadra già supportato dal backend (_build_commitments_payload).

@@ -24,6 +24,7 @@ import { Athlete } from '../../src/types';
 import SignaturePad from '../../src/components/SignaturePad';
 import { SportIcon } from '../../src/components/SportIcon';
 import { OnboardingTutorial, PARENT_STEPS } from '../../src/components/OnboardingTutorial';
+import ActivityStartBanners from '../../src/components/ActivityStartBanners';
 
 // Colori vivaci per distinguere i figli
 const ATHLETE_COLORS = [
@@ -54,6 +55,7 @@ export default function ParentDashboard() {
     day_after: any[];
     upcoming: any[];
   }>({ today: [], tomorrow: [], day_after: [], upcoming: [] });
+  const [activityBanners, setActivityBanners] = useState<any[]>([]);
   const [showUpcoming, setShowUpcoming] = useState(false);
 
   // Helper: returns "DD/MM - GIORNO" for a date offset (0=today, 1=tomorrow, 2=day_after)
@@ -245,6 +247,7 @@ export default function ParentDashboard() {
         day_after: dedup(d.day_after || []),
         upcoming: dedup(d.upcoming || []),
       } as any);
+      setActivityBanners((d as any)?.activity_banners || []);
     } catch (error) {
       console.error('Error loading commitments:', error);
     }
@@ -716,6 +719,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
         {/* IMPEGNI Section */}
         <View style={styles.commitmentsSection}>
           <Text style={styles.commitmentsSectionTitle}>📅 Impegni</Text>
+          <ActivityStartBanners banners={activityBanners} />
           
           {/* OGGI */}
           <View style={styles.commitmentDay}>

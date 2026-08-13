@@ -33,6 +33,7 @@ import { OnboardingTutorial, COACH_STEPS } from '../../src/components/Onboarding
 import SocietyBranding from '../../src/components/SocietyBranding';
 import MiniSocietyLogo from '../../src/components/MiniSocietyLogo';
 import SwitchAccountButton from '../../src/components/SwitchAccountButton';
+import ActivityStartBanners from '../../src/components/ActivityStartBanners';
 
 // Web QR Scanner
 let Html5QrcodeScanner: any = null;
@@ -103,6 +104,7 @@ export default function CoachScreen() {  const router = useRouter();
     day_after: any[];
     upcoming: any[];
   }>({ today: [], tomorrow: [], day_after: [], upcoming: [] });
+  const [activityBanners, setActivityBanners] = useState<any[]>([]);
   const [showUpcoming, setShowUpcoming] = useState(false);
   const [expandedReasons, setExpandedReasons] = useState<Set<string>>(new Set());
   const toggleReason = (key: string) => {
@@ -221,6 +223,7 @@ export default function CoachScreen() {  const router = useRouter();
       }) : d;
       if (!isDualRole) {
         setCommitments(_dedupData(coachRes.data));
+        setActivityBanners((coachRes.data as any)?.activity_banners || []);
         return;
       }
       const tag = (arr: any[] = [], as_role: 'atleta' | 'coach') => (arr || []).map((x) => ({ ...x, as_role }));
@@ -237,6 +240,10 @@ export default function CoachScreen() {  const router = useRouter();
         day_after: _dedup([...tag(c.day_after, 'coach'), ...tag(a.day_after, 'atleta')]).sort(sortBy),
         upcoming: _dedup([...tag(c.upcoming, 'coach'), ...tag(a.upcoming, 'atleta')]).sort(sortBy),
       });
+      setActivityBanners([
+        ...(((coachRes?.data as any)?.activity_banners) || []),
+        ...(((athleteRes?.data as any)?.activity_banners) || []),
+      ]);
     } catch (error) {
       console.error('Error loading commitments:', error);
     }
@@ -1821,6 +1828,7 @@ export default function CoachScreen() {  const router = useRouter();
         {/* IMPEGNI Section */}
         <View style={styles.commitmentsSection}>
           <Text style={styles.commitmentsSectionTitle}>📅 Impegni</Text>
+          <ActivityStartBanners banners={activityBanners} />
           
           {/* OGGI */}
           <View style={styles.commitmentDay}>

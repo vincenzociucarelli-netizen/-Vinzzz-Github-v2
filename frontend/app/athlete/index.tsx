@@ -27,6 +27,7 @@ import { SportIcon } from '../../src/components/SportIcon';
 import { OnboardingTutorial, ATHLETE_STEPS } from '../../src/components/OnboardingTutorial';
 import SignaturePadInline, { SignaturePadInlineRef } from '../../src/components/SignaturePadInline';
 import SwitchAccountButton from '../../src/components/SwitchAccountButton';
+import ActivityStartBanners from '../../src/components/ActivityStartBanners';
 // 🐛 01/08/2026 — AthleteMatchesCard rimosso da "Da fare" (duplicava la tab Presenze)
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
@@ -121,6 +122,7 @@ export default function AthleteScreen() {
   const [commitments, setCommitments] = useState<{
     today: any[]; tomorrow: any[]; day_after: any[]; upcoming: any[];
   }>({ today: [], tomorrow: [], day_after: [], upcoming: [] });
+  const [activityBanners, setActivityBanners] = useState<any[]>([]);
   
   // Trial document signing
   const [showTrialSignModal, setShowTrialSignModal] = useState(false);
@@ -387,6 +389,10 @@ export default function AthleteScreen() {
           day_after: [...tag(a.day_after, 'atleta'), ...tag(c.day_after, 'coach')].sort(sortBy),
           upcoming: [...tag(a.upcoming, 'atleta'), ...tag(c.upcoming, 'coach')].sort(sortBy),
         });
+        setActivityBanners([
+          ...(((athleteRes?.data as any)?.activity_banners) || []),
+          ...(((coachRes?.data as any)?.activity_banners) || []),
+        ]);
       } catch {
         console.log('Could not load commitments');
       }
@@ -1249,6 +1255,9 @@ export default function AthleteScreen() {
           ))}
         </View>
       )}
+
+      {/* Banner "Inizio allenamenti" per ogni squadra dell'atleta */}
+      <ActivityStartBanners banners={activityBanners} />
 
       {/* Prossimi Impegni — Trainings + Matches con supporto annullamento/modifica */}
       {(commitments.today.length + commitments.tomorrow.length + commitments.day_after.length + commitments.upcoming.length > 0) && (

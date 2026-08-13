@@ -2522,9 +2522,9 @@ async def register(user_data: UserCreate, request: Request):
             "athlete": "Atleta",
         }.get(final_role, final_role.capitalize())
         
-        # Genitori e atleti sono auto-approvati (nessuna approvazione admin richiesta).
-        # Gli altri ruoli (coach/dirigente/collaboratore) restano in attesa di approvazione.
-        auto_approved = final_role in (UserRole.PARENT, "athlete")
+        # Solo i genitori sono auto-approvati (nessuna approvazione admin richiesta).
+        # Atleti (adulti/PRO) e altri ruoli (coach/dirigente/collaboratore) attendono approvazione.
+        auto_approved = final_role == UserRole.PARENT
         reg_message = (
             f"{user_data.full_name} si è registrato/a come {role_label}."
             if auto_approved
