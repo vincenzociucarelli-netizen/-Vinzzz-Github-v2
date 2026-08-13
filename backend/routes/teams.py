@@ -157,9 +157,9 @@ async def get_team(team_id: str, current_user = Depends(get_current_user)):
         })
     
     dirigenti = await db.users.find({
-        "role": {"$in": ["admin", "viewer"]},
+        "role": {"$in": ["admin", "viewer", "dirigente", "coordinatore"]},
         "assigned_teams": team_id
-    }).to_list(10)
+    }).to_list(20)
     dirigenti_info = []
     for dirigente in dirigenti:
         dirigenti_info.append({
@@ -189,11 +189,32 @@ async def get_team(team_id: str, current_user = Depends(get_current_user)):
             "profile_photo_artistic": collab.get("profile_photo_artistic", ""),
         })
 
+    # 🆕 12/08/2026 — Staff FIPAV assegnato: segnapunti, dirigenti accompagnatori, arbitri
+    async def _staff_info(ids):
+        out = []
+        if ids:
+            async for u in db.users.find({"id": {"$in": ids}}):
+                out.append({
+                    "id": u.get("id"), "full_name": u.get("full_name", ""),
+                    "email": u.get("email", ""), "phone": u.get("phone", ""),
+                    "profile_photo": u.get("profile_photo", ""),
+                    "is_scorekeeper": bool(u.get("is_scorekeeper")),
+                    "is_referee": bool(u.get("is_referee")),
+                    "is_accompanying_manager": bool(u.get("is_accompanying_manager")),
+                })
+        return out
+    scorekeepers_info = await _staff_info(team.get("scorekeeper_ids") or [])
+    accompanying_info = await _staff_info(team.get("accompanying_ids") or [])
+    referees_info = await _staff_info(team.get("referee_ids") or [])
+
     team_obj = Team(**team)
     team_dict = team_obj.dict()
     team_dict["coach_info"] = coach_info
     team_dict["dirigenti_info"] = dirigenti_info
     team_dict["collaboratori_info"] = collaboratori_info
+    team_dict["scorekeepers_info"] = scorekeepers_info
+    team_dict["accompanying_info"] = accompanying_info
+    team_dict["referees_info"] = referees_info
     return team_dict
 
 
@@ -274,13 +295,14 @@ async def assign_dirigenti_to_team(team_id: str, request: AssignmentRequest, cur
         raise HTTPException(status_code=404, detail="Squadra non trovata")
     
     dirigente_ids = request.ids
+    _dir_roles = [UserRole.ADMIN, UserRole.VIEWER, UserRole.DIRIGENTE, UserRole.COORDINATORE]
     await db.users.update_many(
-        {"role": {"$in": [UserRole.ADMIN, UserRole.VIEWER]}, "assigned_teams": team_id},
+        {"role": {"$in": _dir_roles}, "assigned_teams": team_id},
         {"$pull": {"assigned_teams": team_id}}
     )
     if dirigente_ids:
         await db.users.update_many(
-            {"id": {"$in": dirigente_ids}, "role": {"$in": [UserRole.ADMIN, UserRole.VIEWER]}},
+            {"id": {"$in": dirigente_ids}, "role": {"$in": _dir_roles}},
             {"$addToSet": {"assigned_teams": team_id}}
         )
     return {"success": True, "message": f"Dirigenti assegnati alla squadra {team.get('name')}"}
@@ -307,6 +329,69 @@ async def assign_collaboratori_to_team(team_id: str, request: AssignmentRequest,
             {"$addToSet": {"assigned_teams": team_id}}
         )
     return {"success": True, "message": f"Collaboratori assegnati alla squadra {team.get('name')}"}
+
+
+# 🆕 12/08/2026 — Assegnazione staff FIPAV (segnapunti, accompagnatori, arbitri).
+# Gli ID vengono salvati direttamente sul documento squadra (non su assigned_teams,
+# perché la stessa persona può ricoprire ruoli diversi in squadre diverse).
+_FIPAV_FIELDS = {
+    "scorekeepers": "scorekeeper_ids",
+    "accompanying": "accompanying_ids",
+    "referees": "referee_ids",
+}
+
+
+async def _assign_fipav_staff(team_id: str, kind: str, ids, current_user):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può assegnare lo staff")
+    team = await db.teams.find_one({"id": team_id})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    field = _FIPAV_FIELDS[kind]
+    await db.teams.update_one({"id": team_id}, {"$set": {field: list(ids or [])}})
+    return {"success": True, "message": f"Staff aggiornato per {team.get('name')}"}
+
+
+@router.post("/teams/{team_id}/assign-scorekeepers")
+async def assign_scorekeepers(team_id: str, request: AssignmentRequest, current_user = Depends(get_current_user)):
+    return await _assign_fipav_staff(team_id, "scorekeepers", request.ids, current_user)
+
+
+@router.post("/teams/{team_id}/assign-accompanying")
+async def assign_accompanying(team_id: str, request: AssignmentRequest, current_user = Depends(get_current_user)):
+    return await _assign_fipav_staff(team_id, "accompanying", request.ids, current_user)
+
+
+@router.post("/teams/{team_id}/assign-referees")
+async def assign_referees(team_id: str, request: AssignmentRequest, current_user = Depends(get_current_user)):
+    return await _assign_fipav_staff(team_id, "referees", request.ids, current_user)
+
+
+@router.get("/staff/qualified")
+async def get_qualified_staff(qualification: str, current_user = Depends(get_current_user)):
+    """Elenco staff (dirigenti + collaboratori) con una specifica qualifica FIPAV.
+    qualification: scorekeeper | referee | accompanying"""
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.VIEWER, UserRole.DIRIGENTE, UserRole.COORDINATORE):
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    flag = {"scorekeeper": "is_scorekeeper", "referee": "is_referee", "accompanying": "is_accompanying_manager"}.get(qualification)
+    if not flag:
+        raise HTTPException(status_code=400, detail="Qualifica non valida")
+    society_id = current_user.get("society_id")
+    q = {
+        "role": {"$in": ["admin", "viewer", "dirigente", "coordinatore", "collaboratore"]},
+        flag: True,
+    }
+    if society_id:
+        q["society_id"] = society_id
+    out = []
+    async for u in db.users.find(q):
+        out.append({
+            "id": u.get("id"), "full_name": u.get("full_name", ""),
+            "profile_photo": u.get("profile_photo", ""),
+            "role": u.get("role", ""),
+        })
+    return out
+
 
 
 @router.get("/teams/{team_id}/payment-info")

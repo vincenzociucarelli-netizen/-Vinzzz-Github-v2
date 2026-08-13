@@ -104,12 +104,25 @@ export default function TeamDetail() {
   const [availableCollaboratori, setAvailableCollaboratori] = useState<CoachInfo[]>([]);
   const [selectedCollaboratoreIds, setSelectedCollaboratoreIds] = useState<string[]>([]);
 
+  // 🆕 12/08/2026 — Staff FIPAV (segnapunti / accompagnatori / arbitri)
+  const [scorekeepersInfo, setScorekeepersInfo] = useState<CoachInfo[]>([]);
+  const [accompanyingInfo, setAccompanyingInfo] = useState<CoachInfo[]>([]);
+  const [refereesInfo, setRefereesInfo] = useState<CoachInfo[]>([]);
+  const [availableScorekeepers, setAvailableScorekeepers] = useState<CoachInfo[]>([]);
+  const [availableAccompanying, setAvailableAccompanying] = useState<CoachInfo[]>([]);
+  const [availableReferees, setAvailableReferees] = useState<CoachInfo[]>([]);
+  const [selectedScorekeeperIds, setSelectedScorekeeperIds] = useState<string[]>([]);
+  const [selectedAccompanyingIds, setSelectedAccompanyingIds] = useState<string[]>([]);
+  const [selectedRefereeIds, setSelectedRefereeIds] = useState<string[]>([]);
+
   // Team photo
   const [teamPhoto, setTeamPhoto] = useState<string | null>(null);
   const [teamPhotoModal, setTeamPhotoModal] = useState(false);
   
   // Form fields - basic info
   const [name, setName] = useState('');
+  // 🆕 12/08/2026 — Arbitri associati solo per Under 12/13/14/15 (dal nome squadra)
+  const isUnderYouth = /(^|[^0-9])(under\s*|u\s*)?1[2-5]([^0-9]|$)/i.test((name || '').toLowerCase());
   const [description, setDescription] = useState('');
   const [isPrimaSquadra, setIsPrimaSquadra] = useState(false);
   const [championships, setChampionships] = useState('');
@@ -190,6 +203,17 @@ export default function TeamDetail() {
       const collaboratori = teamData.collaboratori_info || [];
       setCollaboratoriInfo(collaboratori);
       setSelectedCollaboratoreIds(collaboratori.map((c: CoachInfo) => c.id).filter(Boolean));
+
+      // 🆕 12/08/2026 — Staff FIPAV
+      const sk = teamData.scorekeepers_info || [];
+      setScorekeepersInfo(sk);
+      setSelectedScorekeeperIds(sk.map((c: CoachInfo) => c.id).filter(Boolean));
+      const acc = teamData.accompanying_info || [];
+      setAccompanyingInfo(acc);
+      setSelectedAccompanyingIds(acc.map((c: CoachInfo) => c.id).filter(Boolean));
+      const ref = teamData.referees_info || [];
+      setRefereesInfo(ref);
+      setSelectedRefereeIds(ref.map((c: CoachInfo) => c.id).filter(Boolean));
 
       // Set team photo
       if (teamData.team_photo) {
@@ -320,6 +344,22 @@ export default function TeamDetail() {
     }
   };
 
+  // 🆕 12/08/2026 — Pool staff FIPAV filtrato per qualifica
+  const loadAvailableFipav = async () => {
+    try {
+      const [sk, acc, ref] = await Promise.all([
+        api.get('/staff/qualified', { params: { qualification: 'scorekeeper' } }),
+        api.get('/staff/qualified', { params: { qualification: 'accompanying' } }),
+        api.get('/staff/qualified', { params: { qualification: 'referee' } }),
+      ]);
+      setAvailableScorekeepers(sk.data || []);
+      setAvailableAccompanying(acc.data || []);
+      setAvailableReferees(ref.data || []);
+    } catch (error) {
+      console.error('Error loading FIPAV staff:', error);
+    }
+  };
+
   const loadAvailableVenues = async () => {
     try {
       const response = await api.get('/settings/society');
@@ -334,6 +374,7 @@ export default function TeamDetail() {
     loadAvailableCoaches();
     loadAvailableDirigenti();
     loadAvailableCollaboratori();
+    loadAvailableFipav();
     loadAvailableVenues();
   }, [id]);
 
@@ -522,6 +563,15 @@ export default function TeamDetail() {
         });
       } catch (collaboratoreError) {
         console.error('Error assigning collaboratori:', collaboratoreError);
+      }
+
+      // 🆕 12/08/2026 — Assegna staff FIPAV (segnapunti / accompagnatori / arbitri)
+      try {
+        await api.post(`/teams/${id}/assign-scorekeepers`, { ids: selectedScorekeeperIds });
+        await api.post(`/teams/${id}/assign-accompanying`, { ids: selectedAccompanyingIds });
+        await api.post(`/teams/${id}/assign-referees`, { ids: isUnderYouth ? selectedRefereeIds : [] });
+      } catch (fipavError) {
+        console.error('Error assigning FIPAV staff:', fipavError);
       }
       
       setEditing(false);
@@ -765,6 +815,40 @@ export default function TeamDetail() {
                 Seleziona uno o più collaboratori da assegnare a questa squadra
               </Text>
             </View>
+
+            {/* 🆕 12/08/2026 — Staff FIPAV: Segnapunti */}
+            {[
+              { title: '🖊️ Assegna Segnapunti', list: availableScorekeepers, sel: selectedScorekeeperIds, setSel: setSelectedScorekeeperIds, color: '#8E44AD', empty: 'Nessun segnapunti tesserato (attiva il tesseramento nella scheda dello staff)', show: true },
+              { title: '🧍 Assegna Dirigenti Accompagnatori', list: availableAccompanying, sel: selectedAccompanyingIds, setSel: setSelectedAccompanyingIds, color: '#16A085', empty: 'Nessun dirigente accompagnatore tesserato', show: true },
+              { title: '🏁 Assegna Arbitri Associati', list: availableReferees, sel: selectedRefereeIds, setSel: setSelectedRefereeIds, color: '#E67E22', empty: 'Nessun arbitro associato tesserato', show: isUnderYouth },
+            ].filter(s => s.show).map((s, si) => (
+              <View style={styles.section} key={si}>
+                <Text style={styles.sectionTitle}>{s.title}</Text>
+                {s.list.length > 0 ? (
+                  <View style={styles.coachSelectionList}>
+                    {s.list.map((p) => (
+                      <TouchableOpacity
+                        key={p.id}
+                        style={[styles.coachSelectionItem, s.sel.includes(p.id) && styles.coachSelectionItemSelected]}
+                        onPress={() => {
+                          if (s.sel.includes(p.id)) s.setSel(s.sel.filter((x) => x !== p.id));
+                          else s.setSel([...s.sel, p.id]);
+                        }}
+                      >
+                        <View style={[styles.coachSelectionPhotoPlaceholder, { backgroundColor: s.color }]}>
+                          <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{getInitials(p.full_name)}</Text>
+                        </View>
+                        <Text style={[styles.coachSelectionName, s.sel.includes(p.id) && styles.coachSelectionNameSelected]}>{p.full_name}</Text>
+                        {s.sel.includes(p.id) && <Ionicons name="checkmark-circle" size={20} color="#007AFF" />}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={styles.noCoachText}>{s.empty}</Text>
+                )}
+              </View>
+            ))}
+
 
             {/* Checkbox Prima Squadra */}
             <TouchableOpacity 
@@ -1355,6 +1439,46 @@ export default function TeamDetail() {
                 <Text style={styles.noCoachText}>Nessun collaboratore assegnato a questa squadra</Text>
               )}
             </View>
+
+            {/* 🆕 12/08/2026 — Staff FIPAV assegnato (segnapunti / accompagnatori / arbitri) */}
+            {[
+              { title: '🖊️ Segnapunti', data: scorekeepersInfo, color: '#8E44AD', show: true },
+              { title: '🧍 Dirigenti Accompagnatori', data: accompanyingInfo, color: '#16A085', show: true },
+              { title: '🏁 Arbitri Associati', data: refereesInfo, color: '#E67E22', show: isUnderYouth || refereesInfo.length > 0 },
+            ].filter(s => s.show).map((s, si) => (
+              <View style={styles.section} key={`fipav-view-${si}`}>
+                <Text style={styles.sectionTitle}>{s.title}</Text>
+                {s.data.length > 0 ? (
+                  s.data.map((p, index) => (
+                    <View key={p.id || index} style={styles.coachCard}>
+                      <View style={[styles.coachPhotoPlaceholderWithText, { backgroundColor: s.color }]}>
+                        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700' }}>{getInitials(p.full_name)}</Text>
+                      </View>
+                      <View style={styles.coachInfo}>
+                        <Text style={styles.coachName}>{p.full_name}</Text>
+                        {!!p.phone && (
+                          <TouchableOpacity
+                            style={styles.coachContactRow}
+                            onPress={() => {
+                              let phone = p.phone.replace(/\s+/g, '').replace(/^0/, '39');
+                              if (!phone.startsWith('+') && !phone.startsWith('39')) phone = '39' + phone;
+                              phone = phone.replace('+', '');
+                              Linking.openURL(`https://wa.me/${phone}`);
+                            }}
+                          >
+                            <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
+                            <Text style={styles.coachPhone}>{p.phone}</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.noCoachText}>Nessuno assegnato</Text>
+                )}
+              </View>
+            ))}
+
 
             {/* Training Schedule Card */}
             <View style={styles.trainingCard}>

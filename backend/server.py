@@ -6828,6 +6828,10 @@ async def update_user(user_id: str, data: dict, current_user = Depends(get_curre
         update_data["qualification2"] = data["qualification2"]
     if "qualifications" in data:
         update_data["qualifications"] = data["qualifications"]
+    # 🆕 12/08/2026 — Tesseramenti FIPAV per assegnazione alle squadre
+    for _fipav in ("is_scorekeeper", "is_referee", "is_accompanying_manager"):
+        if _fipav in data:
+            update_data[_fipav] = bool(data[_fipav])
     
     # Compensation fields
     if "monthly_compensation" in data:

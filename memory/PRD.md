@@ -497,6 +497,14 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - **Nota "Allenamenti"**: non esiste una pagina globale allenamenti (sono per-squadra) → per ora punta a `/admin/teams`. Da definire con l'utente cosa mostrare.
 - **NB**: richiede redeploy Render (backend) + Vercel (frontend). Le sezioni Comunicazioni/Certificati/GDPR usano pagine admin reali (notifications/medical-certificates-archive/documents-archive).
 
+### Fix + Feature 13/08/2026 — 3° dirigente non salvato + Staff FIPAV (segnapunti/accompagnatori/arbitri)
+- **Bug 3° dirigente (P0)**: `/users/dirigenti` restituisce ruoli admin/viewer/dirigente/coordinatore, ma `assign-dirigenti` e `get_team` filtravano solo admin/viewer → i dirigenti con ruolo "dirigente" (nuovo) non venivano salvati/mostrati. Corretto: ruoli estesi a `["admin","viewer","dirigente","coordinatore"]` in `routes/teams.py` (get_team query + pull/addToSet). Aggiunto `COORDINATORE` a `models/enums.py`. Verificato: 3 dirigenti (role dirigente) salvati e mostrati.
+- **Feature Staff FIPAV**: nuovi tesseramenti su staff (dirigenti/collaboratori): `is_scorekeeper`, `is_referee`, `is_accompanying_manager` (settabili via `PATCH /users/{id}`; UI card "🎽 Tesseramenti FIPAV" con 3 toggle in `admin/dirigente/[id].tsx`).
+  - Assegnazione per squadra (id su documento team: `scorekeeper_ids`/`accompanying_ids`/`referee_ids`): endpoint `POST /teams/{id}/assign-scorekeepers|assign-accompanying|assign-referees`; pool filtrato `GET /staff/qualified?qualification=scorekeeper|referee|accompanying`.
+  - `get_team` restituisce `scorekeepers_info`/`accompanying_info`/`referees_info`.
+  - UI `admin/team/[id].tsx`: 3 sezioni di assegnazione (multi-select, stesso stile coach/dirigenti) + card in visualizzazione. **Arbitri associati** mostrati solo per squadre Under 12/13/14/15 (rilevate dal nome via regex `isUnderYouth`).
+  - Verificato E2E: flag→pool filtrato→assegnazione→get_team; smoke UI OK (Under 14 mostra tutte e 3 le sezioni). NB deploy Render+Vercel.
+
 ### Feature 12/08/2026 — Data inizio attività squadra + allenamenti provvisori + creazione flessibile
 - **Modello Team** (`models/team_models.py` + `server.py`): nuovi campi `activity_start_date` (ISO string, opzionale) e `trainings_provisional` (bool). `create_team`/`update_team` (routes/teams.py) li propagano; `activity_start_date` è nullable in update.
 - **Da Fare / commitments** (`/coach/commitments` in server.py e `_build_commitments_payload` in routes/parents.py): gli allenamenti compaiono SOLO se la squadra ha `activity_start_date` impostata e solo per date >= inizio. Ogni allenamento porta `provisional`. Aggiunto `activity_banners` (banner "inizio allenamenti il GG/MM/AAAA", visibile fino al giorno dell'inizio, scompare il giorno dopo). Vale per atleti/genitori E staff (B).

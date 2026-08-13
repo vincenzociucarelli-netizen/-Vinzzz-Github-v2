@@ -8,6 +8,7 @@ class UserRole:
     ADMIN = "admin"
     VIEWER = "viewer"          # Dirigente solo visualizzazione
     DIRIGENTE = "dirigente"    # Dirigenti sportivi
+    COORDINATORE = "coordinatore"  # Figura intermedia tra Admin e Dirigente
     COACH = "coach"
     COLLABORATORE = "collaboratore"
     PARENT = "parent"

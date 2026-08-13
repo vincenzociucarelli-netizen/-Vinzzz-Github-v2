@@ -121,6 +121,8 @@ export default function AdminDirigenteDetail() {
   const [qualifications, setQualifications] = useState<string[]>([]); // Array di tutte le cariche
   const [availableQualifications, setAvailableQualifications] = useState<string[]>([]);
   const [qualificationModalVisible, setQualificationModalVisible] = useState(false);
+  // 🆕 12/08/2026 — Tesseramenti FIPAV (segnapunti / arbitro / dirigente accompagnatore)
+  const [fipavRoles, setFipavRoles] = useState({ is_scorekeeper: false, is_referee: false, is_accompanying_manager: false });
   // Bank details
   const [documentType, setDocumentType] = useState('');
   const [documentFront, setDocumentFront] = useState('');
@@ -224,6 +226,12 @@ export default function AdminDirigenteDetail() {
         }
       }
       setQualifications(loadedQualifications);
+      // 🆕 Tesseramenti FIPAV
+      setFipavRoles({
+        is_scorekeeper: !!userResponse.data.is_scorekeeper,
+        is_referee: !!userResponse.data.is_referee,
+        is_accompanying_manager: !!userResponse.data.is_accompanying_manager,
+      });
       
       setDocumentType(userResponse.data.document_type || '');
       setDocumentFront(userResponse.data.document_front || '');
@@ -344,6 +352,18 @@ export default function AdminDirigenteDetail() {
     } catch (e: any) {
       const detail = e?.response?.data?.detail || 'Operazione non riuscita';
       showAlert('Errore', String(detail));
+    }
+  };
+
+  const toggleFipavRole = async (key: 'is_scorekeeper' | 'is_referee' | 'is_accompanying_manager') => {
+    const newVal = !fipavRoles[key];
+    setFipavRoles((prev) => ({ ...prev, [key]: newVal }));
+    try {
+      await api.patch(`/users/${id}`, { [key]: newVal });
+    } catch (e) {
+      // rollback on error
+      setFipavRoles((prev) => ({ ...prev, [key]: !newVal }));
+      Alert.alert('Errore', 'Impossibile aggiornare il tesseramento');
     }
   };
 
@@ -989,6 +1009,30 @@ export default function AdminDirigenteDetail() {
             <Text style={[styles.value, styles.valueCode]}>{dirigente.fiscal_code || '-'}</Text>
           </View>
         </View>
+
+        {/* 🆕 12/08/2026 — Tesseramenti FIPAV per assegnazione alle squadre */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>🎽 Tesseramenti FIPAV</Text>
+          <Text style={{ fontSize: 12, color: '#666', marginBottom: 10 }}>
+            Attiva i ruoli per cui è tesserato/a: potrà essere assegnato/a alle squadre come tale.
+          </Text>
+          {[
+            { key: 'is_scorekeeper' as const, label: 'Segnapunti', icon: 'clipboard' },
+            { key: 'is_accompanying_manager' as const, label: 'Dirigente accompagnatore', icon: 'people' },
+            { key: 'is_referee' as const, label: 'Arbitro associato', icon: 'whistle' },
+          ].map((r) => (
+            <TouchableOpacity
+              key={r.key}
+              style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' }}
+              onPress={() => toggleFipavRole(r.key)}
+              testID={`fipav-${r.key}`}
+            >
+              <Ionicons name={fipavRoles[r.key] ? 'checkbox' : 'square-outline'} size={22} color={fipavRoles[r.key] ? '#007AFF' : '#bbb'} />
+              <Text style={{ marginLeft: 10, fontSize: 15, color: '#333', fontWeight: fipavRoles[r.key] ? '700' : '500' }}>{r.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
 
         {/* Carica nella Società */}
         <View style={styles.card}>

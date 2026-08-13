@@ -49,6 +49,10 @@ class Team(BaseModel):
     # 🆕 12/08/2026 — Data inizio attività + flag allenamenti provvisori
     activity_start_date: Optional[str] = None
     trainings_provisional: bool = False
+    # 🆕 12/08/2026 — Staff FIPAV assegnato alla squadra (id utente)
+    scorekeeper_ids: List[str] = []
+    accompanying_ids: List[str] = []
+    referee_ids: List[str] = []
 
 
 class TeamCreate(BaseModel):
