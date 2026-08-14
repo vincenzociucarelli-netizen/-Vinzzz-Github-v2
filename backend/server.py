@@ -34240,14 +34240,51 @@ async def get_public_campaign_info(campaign_id: str):
 # 🆕 27/02/2026 — Endpoint pubblico che serve l'immagine di copertina della campagna
 # come immagine binaria (per uso in og:image, che richiede URL assoluto raggiungibile
 # dai crawler social senza autenticazione).
+def _process_cover_for_og(cover_uri, max_dim: int = 1200, target_kb: int = 280):
+    """Decodifica, ridimensiona e comprime la cover per anteprime social (WhatsApp/Facebook).
+    WhatsApp NON mostra l'anteprima se l'immagine og:image è troppo pesante (~>300KB) o troppo
+    grande in pixel. Qui la normalizziamo: max lato 1200px, JPEG compresso < ~280KB.
+    Ritorna (jpeg_bytes, width, height) oppure (None, 0, 0)."""
+    if not cover_uri or not isinstance(cover_uri, str) or not cover_uri.startswith("data:"):
+        return None, 0, 0
+    try:
+        import base64 as _b64
+        from io import BytesIO
+        from PIL import Image
+        _, b64 = cover_uri.split(",", 1)
+        img = Image.open(BytesIO(_b64.b64decode(b64)))
+        # Appiattisci trasparenza su sfondo bianco
+        if img.mode in ("RGBA", "LA", "P"):
+            img = img.convert("RGBA")
+            bg = Image.new("RGBA", img.size, (255, 255, 255, 255))
+            img = Image.alpha_composite(bg, img).convert("RGB")
+        else:
+            img = img.convert("RGB")
+        w, h = img.size
+        if max(w, h) > max_dim:
+            if w >= h:
+                img = img.resize((max_dim, max(1, int(h * max_dim / w))), Image.LANCZOS)
+            else:
+                img = img.resize((max(1, int(w * max_dim / h)), max_dim), Image.LANCZOS)
+        quality = 85
+        while True:
+            buf = BytesIO()
+            img.save(buf, format="JPEG", quality=quality, optimize=True)
+            data = buf.getvalue()
+            if len(data) <= target_kb * 1024 or quality <= 40:
+                return data, img.width, img.height
+            quality -= 10
+    except Exception:
+        return None, 0, 0
+
+
 @api_router.get("/preseason/public/{campaign_id}/cover.jpg")
 async def get_preseason_cover_image(campaign_id: str):
-    """Serve la cover image di una campagna come immagine binaria (originale, no padding).
-    
-    🐛 27/07/2026 (bis) — RIMOSSO il padding 1200×1200 che rovinava il preview WhatsApp
-                          (mostrava un quadratone bianco enorme con la locandina piccola).
-                          Il preview "piccolo" di WhatsApp mostra la locandina INTERA
-                          ed è visivamente più bello. Meglio così.
+    """Serve la cover image di una campagna come JPEG compresso (ottimizzato per anteprime social).
+
+    🐛 14/08/2026 — Aggiunta compressione/resize server-side: WhatsApp non mostrava l'anteprima
+                    quando la locandina caricata era troppo grande/pesante. Ora normalizziamo a
+                    max 1200px e JPEG < ~280KB così l'anteprima compare sempre.
     Fallback: se la campagna non ha cover_image → 404 (il chiamante userà il logo società).
     """
     campaign = await db.preseason_campaigns.find_one(
@@ -34259,15 +34296,11 @@ async def get_preseason_cover_image(campaign_id: str):
     cover = campaign["cover_image"]
     if not cover.startswith("data:"):
         raise HTTPException(status_code=404, detail="Cover image in formato non valido")
-    try:
-        header, b64 = cover.split(",", 1)
-        media_type = header.split(";")[0].replace("data:", "") or "image/jpeg"
-        import base64 as _b64
-        img_bytes = _b64.b64decode(b64)
-    except Exception:
+    jpeg_bytes, _w, _h = _process_cover_for_og(cover)
+    if jpeg_bytes is None:
         raise HTTPException(status_code=404, detail="Cover image non decodificabile")
     from fastapi.responses import Response
-    return Response(content=img_bytes, media_type=media_type, headers={"Cache-Control": "public, max-age=300"})
+    return Response(content=jpeg_bytes, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=300"})
 
 
 def _convert_date_to_italian(date_str: str) -> str:
@@ -34351,19 +34384,13 @@ async def get_preseason_share_page(campaign_id: str, request: Request):
     has_cover = bool(campaign.get("cover_image"))
     if has_cover and backend_url:
         logo_url = f"{backend_url}/api/preseason/public/{campaign_id}/cover.jpg"
-        # Estrai dimensioni reali dall'immagine cover (data URI base64)
+        og_img_type = "image/jpeg"
+        # Dimensioni reali DOPO normalizzazione (max 1200px) — coerenti con cover.jpg servito
         try:
-            cover_uri = campaign["cover_image"]
-            if cover_uri.startswith("data:"):
-                header, b64 = cover_uri.split(",", 1)
-                mime = header.split(";")[0].replace("data:", "") or "image/jpeg"
-                import base64 as _b64_og
-                from io import BytesIO as _BIO_og
-                from PIL import Image as _PILImg
-                _img = _PILImg.open(_BIO_og(_b64_og.b64decode(b64)))
-                og_img_width = int(_img.width)
-                og_img_height = int(_img.height)
-                og_img_type = mime
+            _cov_bytes, _cov_w, _cov_h = _process_cover_for_og(campaign["cover_image"])
+            if _cov_bytes and _cov_w and _cov_h:
+                og_img_width = _cov_w
+                og_img_height = _cov_h
         except Exception:
             pass
     elif has_logo and backend_url:

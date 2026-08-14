@@ -587,3 +587,8 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - **Foto 1 - Checkbox FIPAV non memorizzate**: GET /users/{user_id} NON restituiva is_scorekeeper/is_referee/is_accompanying_manager → al reload le checkbox si azzeravano (il PATCH salvava correttamente in DB). Aggiunti i 3 flag alla risposta GET (server.py ~6757). Verificato: toggle persiste dopo reload.
 - **Foto 3 - Data/luogo di nascita non visibili**: GET /users/{user_id} ora fa fallback su birth_date/birth_place e, se ancora vuoti, DECODIFICA data e luogo dal codice fiscale via libreria `codicefiscale.decode()` (helper _cf_birth_fallback, server.py ~6718). Verificato: dob e place mostrati anche quando i campi anagrafici sono vuoti.
 - Modifiche SOLO backend (nessun rebuild frontend). Serve Deploy per produzione.
+
+## Changelog 14/08/2026 (fork) — fix anteprima WhatsApp (og:image locandina)
+- **Problema**: incollando il link della campagna pre-iscrizione su WhatsApp l'immagine (locandina) non compariva. Causa: la cover_image veniva salvata/servita in dimensione originale (anche >6MB) → WhatsApp non mostra og:image troppo pesanti (~limite 300KB).
+- **Fix (server.py)**: nuovo helper `_process_cover_for_og()` che ridimensiona a max 1200px e comprime JPEG < ~280KB. Usato in GET /preseason/public/{id}/cover.jpg (ora serve sempre JPEG ottimizzato) e nella pagina /preseason/share/{id} per dichiarare og:image:type=image/jpeg + width/height reali post-resize. Testato: 6.5MB → 276KB.
+- Solo backend → serve Deploy. NB: WhatsApp mette in cache l'anteprima; dopo il deploy testare con link "nuovo" (o aggiungere ?v=2) per forzare il re-scrape.
