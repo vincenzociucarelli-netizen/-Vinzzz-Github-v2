@@ -619,7 +619,7 @@ export default function TeamDetail() {
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{team.name}</Text>
-        <TouchableOpacity onPress={() => setEditing(!editing)}>
+        <TouchableOpacity onPress={() => setEditing(!editing)} testID="team-edit-toggle-btn">
           <Ionicons name={editing ? "close" : "create"} size={24} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -1008,9 +1008,11 @@ export default function TeamDetail() {
               <TextInput
                 style={styles.input}
                 value={activityStartDate}
-                onChangeText={setActivityStartDate}
-                placeholder="Es. 15/09/2026 — lascia vuoto se non ancora definita"
+                onChangeText={(text) => setActivityStartDate(formatDateInput(text))}
+                placeholder="gg/mm/aaaa"
                 placeholderTextColor="#bbb"
+                keyboardType="number-pad"
+                maxLength={10}
                 testID="team-activity-start-input"
               />
               <TouchableOpacity
@@ -1680,7 +1682,7 @@ export default function TeamDetail() {
       {/* Floating Save Button - only visible in edit mode */}
       {editing && (
         <View style={styles.floatingSaveContainer}>
-          <TouchableOpacity style={styles.floatingSaveButton} onPress={handleSave}>
+          <TouchableOpacity style={styles.floatingSaveButton} onPress={handleSave} testID="team-save-btn">
             <Ionicons name="checkmark" size={24} color="#fff" />
             <Text style={styles.floatingSaveButtonText}>Salva Modifiche</Text>
           </TouchableOpacity>

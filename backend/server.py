@@ -32100,8 +32100,14 @@ async def get_minor_dashboard(current_user = Depends(get_current_user)):
     from routes.parents import _build_commitments_payload
     athlete_display = athlete.get("nome_lite") or athlete.get("first_name", "")
     team_athletes_map = {}
-    for tid in (athlete.get("team_id"), athlete.get("team_id_2")):
-        if tid:
+    _minor_team_ids = [
+        athlete.get("team_id"),
+        athlete.get("team_id_2"),
+        athlete.get("team_id_secondary"),
+        *(athlete.get("team_ids") or []),
+    ]
+    for tid in _minor_team_ids:
+        if tid and tid not in team_athletes_map:
             team_athletes_map[tid] = [athlete_display]
     commitments = await _build_commitments_payload(team_athletes_map)
     

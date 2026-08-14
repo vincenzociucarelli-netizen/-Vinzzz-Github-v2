@@ -17,6 +17,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import AthleteMatchesCard from '../../src/components/AthleteMatchesCard';
+import ActivityStartBanners from '../../src/components/ActivityStartBanners';
 
 const DAYS_IT: { [key: string]: string } = {
   'monday': 'Lunedi',
@@ -442,6 +443,9 @@ export default function MinorDashboard() {
           <Text style={styles.statValue}>{data.stats.monthly_attendances}</Text>
         </View>
       </View>
+
+      {/* Banner "Inizio allenamenti" per squadra (visibile anche in accesso lite) */}
+      <ActivityStartBanners banners={(data.commitments as any)?.activity_banners} />
 
       {/* Prossimi Impegni 7 giorni - con annullamenti/modifiche */}
       {data.commitments && (data.commitments.today.length + data.commitments.tomorrow.length + data.commitments.day_after.length + data.commitments.upcoming.length > 0) && (

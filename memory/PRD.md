@@ -574,3 +574,11 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 ## Changelog 13/08/2026 (fork)
 - **Notifica registrazione**: solo i GENITORI sono auto-approvati (msg "si è registrato/a come Genitore."). Atleti (18+/PRO) e ruoli staff mostrano "...e attende approvazione" (server.py ~2525). Lo stato di approvazione atleti adulti era già corretto (register_adult_athlete → pending).
 - **Banner "Inizio allenamenti" esteso a coach/atleta/genitore**: creato componente riutilizzabile `frontend/src/components/ActivityStartBanners.tsx` (dedup per team_id). Cablato in coach/index.tsx, athlete/index.tsx, parent/index.tsx leggendo `activity_banners` da /coach|/athlete|/parent/commitments. Prima i banner comparivano solo nelle viste admin (AdminCoachCommitments). Multi-squadra già supportato dal backend (_build_commitments_payload).
+
+## Changelog 14/08/2026 (fork) — banner allenamenti esteso + fix vari
+- **3° dirigente**: CONFERMATO che il codice attuale salva 3+ dirigenti (ruoli admin/viewer/dirigente/coordinatore) via POST /teams/{id}/assign-dirigenti (verificato API + pytest). Il problema del "3° non salvato" è dovuto al vecchio codice NON ancora deployato in produzione (accettava solo admin/viewer). Serve Deploy.
+- **Data inizio attività**: campo in admin/team/[id].tsx ora usa formatDateInput (auto-slash gg/mm/aaaa), placeholder 'gg/mm/aaaa', keyboardType number-pad, maxLength 10.
+- **Banner "Inizio allenamenti" esteso a ACCESSO LITE minore**: minor/index.tsx ora rende <ActivityStartBanners banners={data.commitments.activity_banners}/>. Backend /minor/dashboard ora costruisce team_athletes_map con team_id + team_id_2 + team_id_secondary + team_ids[] (multi-squadra). Verificato a video con login lite.
+- **testID aggiunti**: team-edit-toggle-btn (matita) e team-save-btn (Salva Modifiche) in admin/team/[id].tsx per automazione test.
+- Banner già presenti (sessione precedente) in coach/athlete/parent (component riutilizzabile ActivityStartBanners con dedup per team_id).
+- Test: /app/backend/tests/test_activity_banners_and_dirigenti.py (4/4 pass), iteration_101.json.
