@@ -582,3 +582,8 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - **testID aggiunti**: team-edit-toggle-btn (matita) e team-save-btn (Salva Modifiche) in admin/team/[id].tsx per automazione test.
 - Banner già presenti (sessione precedente) in coach/athlete/parent (component riutilizzabile ActivityStartBanners con dedup per team_id).
 - Test: /app/backend/tests/test_activity_banners_and_dirigenti.py (4/4 pass), iteration_101.json.
+
+## Changelog 14/08/2026 (fork) — fix scheda staff admin
+- **Foto 1 - Checkbox FIPAV non memorizzate**: GET /users/{user_id} NON restituiva is_scorekeeper/is_referee/is_accompanying_manager → al reload le checkbox si azzeravano (il PATCH salvava correttamente in DB). Aggiunti i 3 flag alla risposta GET (server.py ~6757). Verificato: toggle persiste dopo reload.
+- **Foto 3 - Data/luogo di nascita non visibili**: GET /users/{user_id} ora fa fallback su birth_date/birth_place e, se ancora vuoti, DECODIFICA data e luogo dal codice fiscale via libreria `codicefiscale.decode()` (helper _cf_birth_fallback, server.py ~6718). Verificato: dob e place mostrati anche quando i campi anagrafici sono vuoti.
+- Modifiche SOLO backend (nessun rebuild frontend). Serve Deploy per produzione.

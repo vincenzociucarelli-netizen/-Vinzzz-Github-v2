@@ -6715,6 +6715,22 @@ async def delete_user(user_id: str, current_user = Depends(get_current_user)):
     
     return {"message": "Utente eliminato con successo"}
 
+def _cf_birth_fallback(fiscal_code):
+    """Decodifica data (ISO) e luogo di nascita dal codice fiscale.
+    Usato come fallback quando i campi anagrafici non sono valorizzati."""
+    if not CF_AVAILABLE or not fiscal_code:
+        return None, None
+    try:
+        d = codicefiscale.decode(str(fiscal_code).strip().upper())
+        bd = d.get("birthdate")
+        bp = d.get("birthplace") or {}
+        bd_iso = bd.strftime("%Y-%m-%d") if bd else None
+        bp_name = bp.get("name") if isinstance(bp, dict) else None
+        return bd_iso, bp_name
+    except Exception:
+        return None, None
+
+
 @api_router.get("/users/{user_id}")
 async def get_user_detail(user_id: str, current_user = Depends(get_current_user)):
     """Get detailed user information by ID"""
@@ -6724,6 +6740,15 @@ async def get_user_detail(user_id: str, current_user = Depends(get_current_user)
     user = await db.users.find_one({"id": user_id})
     if not user:
         raise HTTPException(status_code=404, detail="Utente non trovato")
+    
+    # 🐛 14/08/2026 — Data/luogo di nascita: supporta nomi campo legacy (birth_date/birth_place)
+    # e fallback dal Codice Fiscale quando l'anagrafica non è valorizzata (import/onboarding parziale).
+    _dob = user.get("date_of_birth") or user.get("birth_date")
+    _pob = user.get("place_of_birth") or user.get("birth_place")
+    if not _dob or not _pob:
+        _cf_bd, _cf_bp = _cf_birth_fallback(user.get("fiscal_code"))
+        _dob = _dob or _cf_bd
+        _pob = _pob or _cf_bp
     
     # Return all relevant fields
     return {
@@ -6739,8 +6764,8 @@ async def get_user_detail(user_id: str, current_user = Depends(get_current_user)
         # Personal data
         "first_name": user.get("first_name"),
         "last_name": user.get("last_name"),
-        "date_of_birth": user.get("date_of_birth"),
-        "place_of_birth": user.get("place_of_birth"),
+        "date_of_birth": _dob,
+        "place_of_birth": _pob,
         "country_of_birth": user.get("country_of_birth"),
         # Contact
         "phone": user.get("phone"),
@@ -6755,6 +6780,10 @@ async def get_user_detail(user_id: str, current_user = Depends(get_current_user)
         # Qualification (for dirigenti)
         "qualification": user.get("qualification"),
         "qualifications": user.get("qualifications", []),
+        # 🆕 14/08/2026 — Tesseramenti FIPAV (necessari per persistere le checkbox al reload)
+        "is_scorekeeper": bool(user.get("is_scorekeeper", False)),
+        "is_referee": bool(user.get("is_referee", False)),
+        "is_accompanying_manager": bool(user.get("is_accompanying_manager", False)),
         # Photo
         "profile_photo": user.get("profile_photo"),
         "profile_photo_artistic": user.get("profile_photo_artistic"),
