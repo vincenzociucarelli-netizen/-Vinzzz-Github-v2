@@ -630,13 +630,30 @@ export default function AdminAthletes() {
             </View>
           )}
         </View>
-        <Text style={[
-          styles.teamName,
-          (item as any).athlete_type === 'compensated' && styles.teamNameCompensated
-        ]} numberOfLines={1}>
-          {teams[item.team_id]?.name || '—'}
-          {(item as any).athlete_type === 'compensated' && ' • Retribuito'}
-        </Text>
+        <View style={styles.metaRow}>
+          <Text style={[
+            styles.teamName,
+            (item as any).athlete_type === 'compensated' && styles.teamNameCompensated
+          ]} numberOfLines={1}>
+            {teams[item.team_id]?.name || '—'}
+            {(item as any).athlete_type === 'compensated' && ' • Retribuito'}
+          </Text>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item) + '20' }]}>
+            <Text style={[styles.statusText, { color: getStatusColor(item) }]}>
+              {getStatusText(item)}
+            </Text>
+          </View>
+          {section?.isReview && (
+            <TouchableOpacity
+              onPress={(e: any) => { e.stopPropagation?.(); handleDismissReview(item.id, formatAthleteNameForDisplay(item)); }}
+              style={styles.dismissReviewBtn}
+              testID={`dismiss-review-${item.id}`}
+            >
+              <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
+              <Text style={styles.dismissReviewBtnText}>Controllato</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         {/* 🆕 04/07/2026 — Snapshot squadra precedente (post-riconferma bulk) */}
         {(item as any).team_id_previous_season && !item.team_id && (
           <Text style={styles.previousSeasonHint} numberOfLines={1} data-testid={`athlete-prev-team-${item.id}`}>
@@ -644,21 +661,6 @@ export default function AdminAthletes() {
           </Text>
         )}
       </View>
-      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item) + '20' }]}>
-        <Text style={[styles.statusText, { color: getStatusColor(item) }]}>
-          {getStatusText(item)}
-        </Text>
-      </View>
-      {section?.isReview && (
-        <TouchableOpacity
-          onPress={(e: any) => { e.stopPropagation?.(); handleDismissReview(item.id, formatAthleteNameForDisplay(item)); }}
-          style={styles.dismissReviewBtn}
-          testID={`dismiss-review-${item.id}`}
-        >
-          <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
-          <Text style={styles.dismissReviewBtnText}>Controllato</Text>
-        </TouchableOpacity>
-      )}
       <Text style={{ fontSize: 18, color: '#ccc' }}>›</Text>
     </TouchableOpacity>
   );
@@ -1410,6 +1412,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#007AFF',
     marginTop: 2,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 3,
   },
   teamNameCompensated: {
     color: '#B8860B',
