@@ -592,3 +592,8 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - **Problema**: incollando il link della campagna pre-iscrizione su WhatsApp l'immagine (locandina) non compariva. Causa: la cover_image veniva salvata/servita in dimensione originale (anche >6MB) → WhatsApp non mostra og:image troppo pesanti (~limite 300KB).
 - **Fix (server.py)**: nuovo helper `_process_cover_for_og()` che ridimensiona a max 1200px e comprime JPEG < ~280KB. Usato in GET /preseason/public/{id}/cover.jpg (ora serve sempre JPEG ottimizzato) e nella pagina /preseason/share/{id} per dichiarare og:image:type=image/jpeg + width/height reali post-resize. Testato: 6.5MB → 276KB.
 - Solo backend → serve Deploy. NB: WhatsApp mette in cache l'anteprima; dopo il deploy testare con link "nuovo" (o aggiungere ?v=2) per forzare il re-scrape.
+
+## Changelog 16/08/2026 (fork) — ricerca genitori per telefono + documenti in scheda atleta
+- **Ricerca Genitori per telefono** (admin/parents.tsx): il filtro ora matcha anche il numero di telefono (confronto solo cifre, min 3). Placeholder aggiornato a "Cerca per nome, telefono o atleta...". Verificato: "3535632" trova ROSSI PAOLA.
+- **Documenti firmati in Anagrafica atleta** (admin/athlete/[id].tsx): nuova card "Documenti Firmati" nel tab Anagrafica (collassabile). Carica GET /documents/signed?related_entity_id={athlete_id}; ogni voce apre il PDF via GET /documents/download/{id} (web: window.open blob; mobile: expo-file-system + Sharing). Verificato a video (Test REACT → "Informativa Privacy GDPR - Staff").
+- Solo frontend (endpoint backend già esistenti) → serve Deploy per produzione.

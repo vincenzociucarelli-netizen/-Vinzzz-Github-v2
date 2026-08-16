@@ -117,11 +117,13 @@ export default function ParentsScreen() {
     if (searchQuery.trim().length > 0) {
       setIsSearching(true);
       const query = searchQuery.toLowerCase();
+      const digitsQuery = searchQuery.replace(/\D/g, '');
       
-      // Search parents
+      // Search parents (nome, email e — 🆕 14/08/2026 — numero di telefono)
       const matchingParents = parents.filter(p => 
         p.full_name.toLowerCase().includes(query) ||
-        p.email.toLowerCase().includes(query)
+        p.email.toLowerCase().includes(query) ||
+        (digitsQuery.length >= 3 && (p.phone || '').replace(/\D/g, '').includes(digitsQuery))
       );
       
       // Search athletes and find their parents
@@ -393,7 +395,7 @@ export default function ParentsScreen() {
         <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Cerca genitore o atleta..."
+          placeholder="Cerca per nome, telefono o atleta..."
           placeholderTextColor="#999"
           value={searchQuery}
           onChangeText={setSearchQuery}

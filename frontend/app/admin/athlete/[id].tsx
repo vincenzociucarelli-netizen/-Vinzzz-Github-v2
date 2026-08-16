@@ -338,6 +338,9 @@ export default function AdminAthleteDetail() {
   const [creatingReceipt, setCreatingReceipt] = useState(false);
   // 🆕 21/06/2026 — Quietanze firmate (per widget "Già Percepito" + modal Gestione Quietanze)
   const [signedReceipts, setSignedReceipts] = useState<any[]>([]);
+  // 🆕 14/08/2026 — Documenti firmati dell'atleta (visibili in Anagrafica)
+  const [signedDocuments, setSignedDocuments] = useState<any[]>([]);
+  const [docsExpanded, setDocsExpanded] = useState(false);
   // 🆕 29/06/2026 — Compensi esterni dichiarati dall'atleta (per calcolo soglie corretto)
   const [externalCompByYear, setExternalCompByYear] = useState<{ [year: number]: number }>({});
   const [receiptsModalVisible, setReceiptsModalVisible] = useState(false);
@@ -554,6 +557,18 @@ export default function AdminAthleteDetail() {
       setPayments(paymentsRes.data);
       setCertificate(certRes.data);
       
+      // 🆕 14/08/2026 — Documenti firmati dell'atleta (leggibili direttamente in Anagrafica)
+      try {
+        const docsRes = await api.get(`/documents/signed?related_entity_id=${id}`);
+        const docs = Array.isArray(docsRes.data) ? docsRes.data : [];
+        docs.sort((a: any, b: any) =>
+          new Date(b.signed_at || b.created_at || 0).getTime() - new Date(a.signed_at || a.created_at || 0).getTime()
+        );
+        setSignedDocuments(docs);
+      } catch (e) {
+        setSignedDocuments([]);
+      }
+      
       // Load athlete type (for adult athletes)
       setAthleteType(athleteData.athlete_type || 'quota');
       
@@ -766,6 +781,50 @@ export default function AdminAthleteDetail() {
       window.alert(`${title}\n\n${message}`);
     } else {
       Alert.alert(title, message);
+    }
+  };
+
+  // 🆕 14/08/2026 — Apri/scarica un documento firmato dell'atleta
+  const viewSignedDocument = async (doc: any) => {
+    try {
+      if (Platform.OS === 'web') {
+        const response = await api.get(`/documents/download/${doc.id}`, { responseType: 'blob' });
+        const rawBlob: Blob = response.data;
+        if (!rawBlob || rawBlob.size === 0) {
+          showAlert('Documento vuoto', 'Il PDF non è disponibile o è stato eliminato.');
+          return;
+        }
+        const pdfBlob = new Blob([rawBlob], { type: 'application/pdf' });
+        const objectUrl = window.URL.createObjectURL(pdfBlob);
+        const newTab = window.open(objectUrl, '_blank');
+        if (!newTab) {
+          const a = document.createElement('a');
+          a.href = objectUrl;
+          a.download = doc.pdf_filename || `documento_${doc.id}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        }
+        setTimeout(() => window.URL.revokeObjectURL(objectUrl), 60000);
+      } else {
+        const response = await api.get(`/documents/download/${doc.id}`, { responseType: 'arraybuffer' });
+        const bytes = new Uint8Array(response.data as ArrayBuffer);
+        let binary = '';
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        const base64 = btoa(binary);
+        const FileSystem = require('expo-file-system/legacy');
+        const safeName = (doc.pdf_filename || `documento_${doc.id}`).replace(/[^\w.\-]+/g, '_');
+        const localUri = `${FileSystem.cacheDirectory}${safeName.endsWith('.pdf') ? safeName : safeName + '.pdf'}`;
+        await FileSystem.writeAsStringAsync(localUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(localUri, { mimeType: 'application/pdf', dialogTitle: 'Documento firmato' });
+        } else {
+          showAlert('Documento salvato', `PDF salvato in:\n${localUri}`);
+        }
+      }
+    } catch (err) {
+      console.error('Errore apertura documento:', err);
+      showAlert('Errore', 'Impossibile aprire il documento.');
     }
   };
 
@@ -2394,7 +2453,61 @@ export default function AdminAthleteDetail() {
               <Ionicons name="chevron-forward" size={20} color="#999" />
             </TouchableOpacity>
 
-            {/* Foto Atleta - RIMOSSA per privacy */}
+            {/* 🆕 14/08/2026 — Documenti Firmati (leggibili direttamente in Anagrafica) */}
+            <View style={{ backgroundColor: '#fff', borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#34C75940', overflow: 'hidden' }}>
+              <TouchableOpacity
+                style={{ padding: 14, flexDirection: 'row', alignItems: 'center' }}
+                onPress={() => setDocsExpanded((v) => !v)}
+                testID="admin-signed-docs-toggle"
+              >
+                <Ionicons name="document-text" size={30} color="#34C759" />
+                <View style={{ marginLeft: 12, flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#333' }}>Documenti Firmati</Text>
+                  <Text style={{ fontSize: 12, color: '#888' }}>
+                    {signedDocuments.length === 0 ? 'Nessun documento firmato' : `${signedDocuments.length} document${signedDocuments.length === 1 ? 'o' : 'i'} · tocca per ${docsExpanded ? 'chiudere' : 'vedere'}`}
+                  </Text>
+                </View>
+                <Ionicons name={docsExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="#999" />
+              </TouchableOpacity>
+
+              {docsExpanded && signedDocuments.length > 0 && (
+                <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+                  {signedDocuments.map((doc: any, index: number) => {
+                    const dt = doc.document_type || '';
+                    const color = dt === 'privacy_consent' ? '#4CAF50' :
+                      dt.includes('compensation') ? '#007AFF' :
+                      dt.includes('5000') ? '#FF9800' :
+                      dt.includes('15000') ? '#8E44AD' :
+                      dt.includes('trial') ? '#FF3B30' : '#007AFF';
+                    const icon = dt === 'privacy_consent' ? 'shield-checkmark' :
+                      dt.includes('compensation') ? 'receipt' :
+                      dt.includes('5000') ? 'alert-circle' :
+                      dt.includes('15000') ? 'warning' :
+                      dt.includes('trial') ? 'walk' : 'document-text';
+                    return (
+                      <TouchableOpacity
+                        key={doc.id || index}
+                        style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: 10, backgroundColor: '#fafafa', borderRadius: 8, marginTop: 8, borderLeftWidth: 3, borderLeftColor: color }}
+                        onPress={() => viewSignedDocument(doc)}
+                        testID={`admin-signed-doc-${doc.id || index}`}
+                      >
+                        <Ionicons name={icon as any} size={22} color={color} />
+                        <View style={{ marginLeft: 12, flex: 1 }}>
+                          <Text style={{ fontSize: 14, fontWeight: '500', color: '#333' }} numberOfLines={2}>
+                            {doc.document_title || doc.title || 'Documento'}
+                          </Text>
+                          <Text style={{ fontSize: 12, color: '#666', marginTop: 3 }}>
+                            {(doc.signed_at || doc.created_at) ? new Date(doc.signed_at || doc.created_at).toLocaleDateString('it-IT') : 'Firmato'}
+                          </Text>
+                        </View>
+                        <Ionicons name="eye-outline" size={22} color={color} />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+
 
             {/* 🆕 22/02/2026 — Status Alerts (Email non verificata / Validazione Cert) in card dedicata in cima */}
             {(athlete.status === 'pending_email' || athlete.status === 'pending_certificate') && (
