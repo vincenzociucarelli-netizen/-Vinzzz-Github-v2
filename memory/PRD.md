@@ -597,3 +597,11 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - **Ricerca Genitori per telefono** (admin/parents.tsx): il filtro ora matcha anche il numero di telefono (confronto solo cifre, min 3). Placeholder aggiornato a "Cerca per nome, telefono o atleta...". Verificato: "3535632" trova ROSSI PAOLA.
 - **Documenti firmati in Anagrafica atleta** (admin/athlete/[id].tsx): nuova card "Documenti Firmati" nel tab Anagrafica (collassabile). Carica GET /documents/signed?related_entity_id={athlete_id}; ogni voce apre il PDF via GET /documents/download/{id} (web: window.open blob; mobile: expo-file-system + Sharing). Verificato a video (Test REACT → "Informativa Privacy GDPR - Staff").
 - Solo frontend (endpoint backend già esistenti) → serve Deploy per produzione.
+
+## Changelog 16/08/2026 (fork) — Residenza obbligatoria per firma GDPR
+- **Richiesta utente**: RICCI SARA (minore) aveva firmato il GDPR con "Residente in ____" vuoto. Reso obbligatorio inserire la residenza prima della firma.
+- **Backend (server.py)**: nuovo helper `_missing_residence()` (Indirizzo, Città, Provincia, CAP). Integrato in `validate_athlete_profile` e `validate_parent_profile` (→ blocca firma GDPR minore via check_profiles_for_document su /documents/sign e /documents/sign-gdpr-privacy). Aggiunta validazione residenza anche nel ramo self-sign adulto/staff (`gdpr_adult`) leggendo request.signer_* + full_user.
+- Ambito: atleti + genitori + staff/adulti (come richiesto "Tutti"). Documenti GIÀ firmati NON toccati (solo firme future).
+- Campi residenza già editabili in anagrafica atleta/genitore. Errore 400 mostrato nel modale GDPR (alert con detail).
+- Solo backend → serve Deploy. Verificato con unit test dei validator (atleta/genitore senza residenza → 4 campi mancanti; con residenza → 0).
+- NB (da confermare con utente): richiedere la residenza ANCHE al genitore blocca la firma finché ogni genitore non completa la propria residenza (non appare sul documento del minore). Valutare se rilassare.

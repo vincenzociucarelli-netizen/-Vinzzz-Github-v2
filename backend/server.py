@@ -154,6 +154,20 @@ def format_rome_timestamp(dt: datetime) -> str:
     return rome_dt.strftime('%Y-%m-%d %H:%M:%S')
 
 
+def _missing_residence(entity: dict) -> list:
+    """🆕 16/08/2026 — Campi residenza obbligatori per firmare i documenti GDPR."""
+    missing = []
+    if not (entity.get("address") or "").strip():
+        missing.append("Indirizzo di residenza")
+    if not (entity.get("city") or "").strip():
+        missing.append("Città di residenza")
+    if not (entity.get("province") or "").strip():
+        missing.append("Provincia di residenza")
+    if not (entity.get("postal_code") or "").strip():
+        missing.append("CAP")
+    return missing
+
+
 def validate_parent_profile(parent: dict) -> list:
     """Check required fields for parent profile. Returns list of missing field names."""
     missing = []
@@ -163,6 +177,7 @@ def validate_parent_profile(parent: dict) -> list:
         missing.append("Codice Fiscale")
     if not (parent.get("phone") or "").strip():
         missing.append("Telefono")
+    missing.extend(_missing_residence(parent))
     return missing
 
 
@@ -193,6 +208,7 @@ def validate_athlete_profile(athlete: dict) -> list:
         place = athlete.get("place_of_birth") or athlete.get("birth_place") or ""
         if not place.strip():
             missing.append("Luogo di nascita")
+    missing.extend(_missing_residence(athlete))
     return missing
 
 def check_profiles_for_document(parent: dict = None, athlete: dict = None):
@@ -24132,6 +24148,26 @@ async def sign_gdpr_privacy_document(
             
             # Load full user data for fields not in JWT token
             full_user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0})
+            
+            # 🆕 16/08/2026 — Residenza obbligatoria prima della firma GDPR (adulti/staff)
+            _res_addr = request.signer_address or (full_user or {}).get("address") or ""
+            _res_city = request.signer_city or (full_user or {}).get("city") or ""
+            _res_prov = request.signer_province or (full_user or {}).get("province") or ""
+            _res_cap = (full_user or {}).get("postal_code") or ""
+            _res_missing = []
+            if not str(_res_addr).strip():
+                _res_missing.append("Indirizzo di residenza")
+            if not str(_res_city).strip():
+                _res_missing.append("Città di residenza")
+            if not str(_res_prov).strip():
+                _res_missing.append("Provincia di residenza")
+            if not str(_res_cap).strip():
+                _res_missing.append("CAP")
+            if _res_missing:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Completa i dati di residenza nel tuo profilo prima di firmare: " + ", ".join(_res_missing)
+                )
             
             # If full_name is "COGNOME NOME" format
             if not signer_name and current_user.get("full_name"):
