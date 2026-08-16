@@ -177,7 +177,6 @@ def validate_parent_profile(parent: dict) -> list:
         missing.append("Codice Fiscale")
     if not (parent.get("phone") or "").strip():
         missing.append("Telefono")
-    missing.extend(_missing_residence(parent))
     return missing
 
 
@@ -13673,7 +13672,8 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
     _q = {
         "$or": [
             {"team_id": team_id},
-            {"team_id_2": team_id}
+            {"team_id_2": team_id},
+            {"team_ids": team_id}
         ],
         "status": {"$nin": ["rejected", "withdrawn", "removed", "deleted"]},
         "is_withdrawn": {"$ne": True}
@@ -13681,6 +13681,20 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
     if _sid:
         _q["society_id"] = _sid
     athletes = await db.athletes.find(_q).to_list(1000)
+    
+    # 🆕 16/08/2026 — Mappa id→nome squadre (per etichetta "Aggregata — paga in [X]")
+    _team_name_map = {}
+    async for _t in db.teams.find(
+        ({"society_id": _sid} if _sid else {}),
+        {"_id": 0, "id": 1, "name": 1}
+    ):
+        _team_name_map[_t.get("id")] = _t.get("name") or ""
+    
+    def _primary_team_of(a):
+        tids = a.get("team_ids") or []
+        if tids:
+            return tids[0]
+        return a.get("team_id")
     
     # Also include trial athletes who have attendances for this team but no team_id set
     team_athlete_ids = [a["id"] for a in athletes]
@@ -13776,10 +13790,16 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
         monthly_percentage = min(monthly_percentage, 100)
         weekly_percentage = min(weekly_percentage, 100)
         
+        # 🆕 16/08/2026 — Squadra principale (paga qui) vs aggregata (paga altrove)
+        _primary_tid = _primary_team_of(athlete)
+        _is_primary = (_primary_tid == team_id)
         stats.append({
             "athlete_id": athlete_id,
             "athlete_name": athlete["full_name"],
             "status": athlete.get("status", "active"),
+            "is_primary_team": _is_primary,
+            "primary_team_id": _primary_tid,
+            "primary_team_name": _team_name_map.get(_primary_tid, "") if not _is_primary else team["name"],
             "total_attendances": all_attendances,
             "weekly_attendances": week_attendances,
             "monthly_attendances": month_attendances,
@@ -24149,25 +24169,27 @@ async def sign_gdpr_privacy_document(
             # Load full user data for fields not in JWT token
             full_user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0})
             
-            # 🆕 16/08/2026 — Residenza obbligatoria prima della firma GDPR (adulti/staff)
-            _res_addr = request.signer_address or (full_user or {}).get("address") or ""
-            _res_city = request.signer_city or (full_user or {}).get("city") or ""
-            _res_prov = request.signer_province or (full_user or {}).get("province") or ""
-            _res_cap = (full_user or {}).get("postal_code") or ""
-            _res_missing = []
-            if not str(_res_addr).strip():
-                _res_missing.append("Indirizzo di residenza")
-            if not str(_res_city).strip():
-                _res_missing.append("Città di residenza")
-            if not str(_res_prov).strip():
-                _res_missing.append("Provincia di residenza")
-            if not str(_res_cap).strip():
-                _res_missing.append("CAP")
-            if _res_missing:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Completa i dati di residenza nel tuo profilo prima di firmare: " + ", ".join(_res_missing)
-                )
+            # 🆕 16/08/2026 — Residenza obbligatoria prima della firma GDPR — SOLO per gli ATLETI adulti
+            # (per lo staff/dirigenti/collaboratori non è richiesta).
+            if (full_user or {}).get("role") == "athlete":
+                _res_addr = request.signer_address or (full_user or {}).get("address") or ""
+                _res_city = request.signer_city or (full_user or {}).get("city") or ""
+                _res_prov = request.signer_province or (full_user or {}).get("province") or ""
+                _res_cap = (full_user or {}).get("postal_code") or ""
+                _res_missing = []
+                if not str(_res_addr).strip():
+                    _res_missing.append("Indirizzo di residenza")
+                if not str(_res_city).strip():
+                    _res_missing.append("Città di residenza")
+                if not str(_res_prov).strip():
+                    _res_missing.append("Provincia di residenza")
+                if not str(_res_cap).strip():
+                    _res_missing.append("CAP")
+                if _res_missing:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Completa i dati di residenza nel tuo profilo prima di firmare: " + ", ".join(_res_missing)
+                    )
             
             # If full_name is "COGNOME NOME" format
             if not signer_name and current_user.get("full_name"):

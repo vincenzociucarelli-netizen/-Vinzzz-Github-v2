@@ -605,3 +605,14 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - Campi residenza già editabili in anagrafica atleta/genitore. Errore 400 mostrato nel modale GDPR (alert con detail).
 - Solo backend → serve Deploy. Verificato con unit test dei validator (atleta/genitore senza residenza → 4 campi mancanti; con residenza → 0).
 - NB (da confermare con utente): richiedere la residenza ANCHE al genitore blocca la firma finché ogni genitore non completa la propria residenza (non appare sul documento del minore). Valutare se rilassare.
+
+## Changelog 16/08/2026 (fork) — residenza solo atleta + squadre multi-slot
+- **Residenza GDPR ora obbligatoria SOLO per l'atleta** (rimossa da validate_parent_profile; nel ramo self-sign gdpr_adult il check residenza si applica solo se role=='athlete', non per staff).
+- **Conteggio squadre per QUALSIASI slot** (fix "U.19 = 0 ma dentro 3 atleti"):
+  - `/teams/athletes-count/all`: aggregazione su $setUnion di team_ids + team_id + team_id_2 → ogni atleta conta in ogni squadra in cui gioca.
+  - `/teams/{id}/athletes-count`, `/teams/{id}/athletes`, DELETE team check: query $or su team_id/team_id_2/team_ids.
+  - `/teams/{id}/attendance-stats`: roster include anche team_ids; ogni atleta ora ha `is_primary_team`, `primary_team_id`, `primary_team_name`.
+- **Etichetta Principale/Aggregata** nel Registro Presenze (attendances.tsx): "🏠 Principale" (paga qui) vs "➕ Aggregata · paga in [Squadra]". Risolve la visibilità "chi non paga doppia quota". Verificato a video (Test REACT → Aggregata · paga in Under 16).
+- Modello: quota addebitata SOLO sulla squadra principale (team_ids[0]); squadre aggiuntive NON creano quota doppia (già così). Consiglio all'utente: impostare come 1ª squadra quella "casa" dove l'atleta paga/gioca di più.
+- Assegnazione multi-squadra (1ª/2ª/3ª) già supportata nell'edit atleta admin (team_ids dinamico).
+- Backend + frontend → serve Deploy.

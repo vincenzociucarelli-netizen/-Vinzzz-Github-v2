@@ -25,6 +25,8 @@ interface AthleteStats {
   monthly_percentage: number;
   weekly_percentage: number;
   status?: string;
+  is_primary_team?: boolean;
+  primary_team_name?: string;
 }
 
 interface TeamAttendanceStats {
@@ -238,6 +240,18 @@ export default function TeamAttendances() {
                         </View>
                       );
                     })()}
+                    {/* 🆕 16/08/2026 — Principale (paga qui) vs Aggregata (paga altrove) */}
+                    {athlete.is_primary_team === false ? (
+                      <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }} testID={`att-aggregata-${athlete.athlete_id}`}>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#E65100' }}>
+                          ➕ Aggregata{athlete.primary_team_name ? ` · paga in ${athlete.primary_team_name}` : ''}
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={{ backgroundColor: '#E8F5E9', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }} testID={`att-principale-${athlete.athlete_id}`}>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#2E7D32' }}>🏠 Principale</Text>
+                      </View>
+                    )}
                   </View>
                   <View style={styles.attendanceInfo}>
                     <Ionicons 

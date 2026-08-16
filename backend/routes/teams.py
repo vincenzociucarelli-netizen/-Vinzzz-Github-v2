@@ -110,10 +110,19 @@ async def get_all_teams_athletes_count(current_user = Depends(get_current_user))
     if current_user["role"] not in (UserRole.ADMIN, "coordinatore"):
         raise HTTPException(status_code=403, detail="Solo admin può vedere queste statistiche")
     society_id = current_user.get("society_id")
-    # Filter by society_id before grouping to avoid full-collection scan
+    # 🆕 16/08/2026 — Conta gli atleti presenti nella squadra in QUALSIASI slot
+    # (squadra principale + aggiuntive), unificando array canonico team_ids e i
+    # campi legacy team_id/team_id_2. Ogni atleta conta una volta per ciascuna
+    # squadra in cui gioca (numero reale dei componenti, es. seconde/terze squadre).
     pipeline = [
         {"$match": {"society_id": society_id}},
-        {"$group": {"_id": "$team_id", "count": {"$sum": 1}}},
+        {"$project": {"all_teams": {"$setUnion": [
+            {"$ifNull": ["$team_ids", []]},
+            {"$cond": [{"$ifNull": ["$team_id", False]}, ["$team_id"], []]},
+            {"$cond": [{"$ifNull": ["$team_id_2", False]}, ["$team_id_2"], []]},
+        ]}}},
+        {"$unwind": "$all_teams"},
+        {"$group": {"_id": "$all_teams", "count": {"$sum": 1}}},
     ]
     counts = await db.athletes.aggregate(pipeline).to_list(1000)
     result = {item["_id"]: item["count"] for item in counts if item["_id"]}
@@ -443,7 +452,9 @@ async def get_team_athletes_count(team_id: str, current_user = Depends(get_curre
     team = await db.teams.find_one({"id": team_id})
     if not team:
         raise HTTPException(status_code=404, detail="Squadra non trovata")
-    count = await db.athletes.count_documents({"team_id": team_id})
+    count = await db.athletes.count_documents({
+        "$or": [{"team_id": team_id}, {"team_id_2": team_id}, {"team_ids": team_id}]
+    })
     return {"count": count}
 
 
@@ -457,15 +468,30 @@ async def get_team_athletes(team_id: str, current_user = Depends(get_current_use
     if not team:
         raise HTTPException(status_code=404, detail="Squadra non trovata")
     
-    athletes = await db.athletes.find({"team_id": team_id}).to_list(1000)
+    athletes = await db.athletes.find({
+        "$or": [{"team_id": team_id}, {"team_id_2": team_id}, {"team_ids": team_id}]
+    }).to_list(1000)
+    # Mappa id→nome squadre della società (per etichetta "Aggregata — paga in [X]")
+    team_name_map = {}
+    async for t in db.teams.find(
+        ({"society_id": team.get("society_id")} if team.get("society_id") else {}),
+        {"_id": 0, "id": 1, "name": 1}
+    ):
+        team_name_map[t.get("id")] = t.get("name") or ""
     result = []
     for athlete in athletes:
+        tids = athlete.get("team_ids") or []
+        primary_tid = tids[0] if tids else athlete.get("team_id")
+        is_primary = (primary_tid == team_id)
         result.append({
             "id": athlete["id"],
             "full_name": athlete["full_name"],
             "first_name": athlete.get("first_name"),
             "last_name": athlete.get("last_name"),
-            "team_id": athlete["team_id"],
+            "team_id": athlete.get("team_id"),
+            "is_primary_team": is_primary,
+            "primary_team_id": primary_tid,
+            "primary_team_name": (team["name"] if is_primary else team_name_map.get(primary_tid, "")),
             "status": athlete.get("status", "active"),
             "medical_certificate_expiry": athlete.get("medical_certificate_expiry"),
             "is_withdrawn": athlete.get("is_withdrawn", False),
@@ -484,7 +510,9 @@ async def delete_team(team_id: str, current_user = Depends(get_current_user)):
     if not team:
         raise HTTPException(status_code=404, detail="Squadra non trovata")
     
-    athletes_count = await db.athletes.count_documents({"team_id": team_id})
+    athletes_count = await db.athletes.count_documents({
+        "$or": [{"team_id": team_id}, {"team_id_2": team_id}, {"team_ids": team_id}]
+    })
     if athletes_count > 0:
         raise HTTPException(
             status_code=400,
