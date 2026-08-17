@@ -1683,6 +1683,19 @@ async def get_my_society(current_user = Depends(get_current_user)):
     if not society:
         raise HTTPException(status_code=404, detail="Società non trovata")
     
+    # 🚀 16/08/2026 — Backfill compressione logo pesante: riduce payload/RAM e
+    # velocizza sia questa pagina sia la generazione del biglietto da visita.
+    from utils import compress_base64_image
+    _logo = society.get("logo")
+    if isinstance(_logo, str) and len(_logo) > 500_000:
+        _comp = compress_base64_image(_logo)
+        if _comp and _comp != _logo and len(_comp) < len(_logo):
+            society["logo"] = _comp
+            try:
+                await db.societies.update_one({"id": society["id"]}, {"$set": {"logo": _comp}})
+            except Exception:
+                pass
+    
     clean_mongo_doc(society)
     return society
 
@@ -4336,6 +4349,25 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
     # Remove sensitive fields
     user.pop("password_hash", None)
     user.pop("hashed_password", None)
+
+    # 🚀 16/08/2026 — Backfill compressione immagini pesanti (foto profilo, timbro/firma,
+    # documenti) quando richieste. Riduce payload/RAM e velocizza le pagine che usano
+    # include_images=true (es. anagrafica atleta lato admin). Compressione solo se > ~500KB.
+    if include_images and user:
+        from utils import compress_base64_image
+        _img_updates = {}
+        for _pk in HEAVY_IMAGE_FIELDS:
+            _val = user.get(_pk)
+            if isinstance(_val, str) and len(_val) > 500_000:
+                _comp = compress_base64_image(_val)
+                if _comp and _comp != _val and len(_comp) < len(_val):
+                    user[_pk] = _comp
+                    _img_updates[_pk] = _comp
+        if _img_updates:
+            try:
+                await db.users.update_one({"id": current_user["id"]}, {"$set": _img_updates})
+            except Exception:
+                pass
 
     # 🆕 26/06/2026 — Step C "Display unificato email dual-role":
     # Se l'account è un alias secondario creato a partire da un atleta
@@ -11138,6 +11170,23 @@ async def get_athlete(athlete_id: str, current_user = Depends(get_current_user))
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
+    
+    # 🚀 16/08/2026 — Backfill compressione foto pesanti (riduce payload + RAM su Render,
+    # velocizza l'apertura dell'anagrafica atleta). Solo se > ~500KB.
+    from utils import compress_base64_image
+    _photo_updates = {}
+    for _pk in ('athlete_photo', 'athlete_photo_artistic'):
+        _val = athlete.get(_pk)
+        if isinstance(_val, str) and len(_val) > 500_000:
+            _comp = compress_base64_image(_val)
+            if _comp and _comp != _val and len(_comp) < len(_val):
+                athlete[_pk] = _comp
+                _photo_updates[_pk] = _comp
+    if _photo_updates:
+        try:
+            await db.athletes.update_one({"id": athlete_id}, {"$set": _photo_updates})
+        except Exception:
+            pass
     
     # Check permissions - allow primary and second parent
     if current_user["role"] == UserRole.PARENT:

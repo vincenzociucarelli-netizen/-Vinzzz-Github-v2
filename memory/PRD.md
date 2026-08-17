@@ -616,3 +616,11 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - Modello: quota addebitata SOLO sulla squadra principale (team_ids[0]); squadre aggiuntive NON creano quota doppia (già così). Consiglio all'utente: impostare come 1ª squadra quella "casa" dove l'atleta paga/gioca di più.
 - Assegnazione multi-squadra (1ª/2ª/3ª) già supportata nell'edit atleta admin (team_ids dinamico).
 - Backend + frontend → serve Deploy.
+
+## Changelog 16/08/2026 (fork) — lentezza pagine (immagini pesanti)
+- Sintomo: profilo società ~25s, biglietto da visita ~15s, anagrafica atleta ~15s.
+- Causa: NON foto atleta/squadra (non caricate), ma le immagini caricate sul doc settings/società (LOGO, sport_image, timbro/firma stamp_signature) servite NON compresse. La pagina anagrafica atleta chiama GET /settings/society?include_images=true (routes/settings.py) → caricava tutto pesante.
+- Fix compressione on-read (max 1280px, JPEG q72, >500KB) con persistenza, aggiunta a: GET /societies/my (logo), GET /athletes/{id} (athlete_photo/artistic), GET /auth/me?include_images (server.py HEAVY_IMAGE_FIELDS), e soprattutto GET /settings/society?include_images (routes/settings.py: logo/sport_image/stamp_signature) che era l'endpoint realmente usato dalle pagine.
+- Bug preesistente corretto: get_society_settings NON restituiva has_logo/has_sport_image/has_stamp_signature (persi nel rebuild del dict) → il frontend poteva ricaricare sempre le versioni pesanti. Ora inclusi.
+- Verificato: pytest tests/test_settings_society_image_compression.py 9/9, iteration_102/103.json. Backend-only → serve Deploy.
+- NB: se dopo il deploy nessuna immagine è grande e la lentezza persiste, la causa residua è probabilmente l'hosting (Render cold start/RAM) o latenza DB — da investigare sui log del backend deployato.

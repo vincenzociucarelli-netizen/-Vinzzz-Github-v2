@@ -271,6 +271,25 @@ async def get_society_settings(request: Request, include_images: bool = False):
     # Use projection to avoid fetching heavy base64 fields from MongoDB unless requested
     if include_images:
         settings = await db.settings.find_one(query, {"_id": 0})
+        # 🚀 16/08/2026 — Compressione on-read delle immagini pesanti (logo, sport_image,
+        # stamp_signature): questo endpoint è caricato con include_images=true da più
+        # pagine (es. anagrafica atleta) e un'immagine grande non compressa rallentava
+        # l'apertura. Comprimiamo (max 1280px, JPEG q72) e persistiamo, solo se > ~500KB.
+        if settings:
+            try:
+                from utils import compress_base64_image
+                _img_updates = {}
+                for _pk in ("logo", "sport_image", "stamp_signature"):
+                    _val = settings.get(_pk)
+                    if isinstance(_val, str) and len(_val) > 500_000:
+                        _comp = compress_base64_image(_val)
+                        if _comp and _comp != _val and len(_comp) < len(_val):
+                            settings[_pk] = _comp
+                            _img_updates[_pk] = _comp
+                if _img_updates:
+                    await db.settings.update_one(query, {"$set": _img_updates})
+            except Exception:
+                pass
     else:
         # Lightweight: probe whether each image exists, but don't transfer it
         settings = await db.settings.find_one(query, {"_id": 0, "logo": 0, "sport_image": 0, "stamp_signature": 0})
@@ -354,6 +373,12 @@ async def get_society_settings(request: Request, include_images: bool = False):
         "season_end_day": settings.get("season_end_day", 30),
         "trial_max_days": settings.get("trial_max_days", 7),
         "trial_max_sessions": settings.get("trial_max_sessions", 3),
+        # 🐛 16/08/2026 — I flag di esistenza immagini venivano calcolati ma persi nel
+        # rebuild del dict di ritorno: senza di essi il frontend non sapeva se le immagini
+        # esistevano (e poteva ricaricare sempre le versioni pesanti). Ora inclusi.
+        "has_logo": settings.get("has_logo", bool(settings.get("logo"))),
+        "has_sport_image": settings.get("has_sport_image", bool(settings.get("sport_image"))),
+        "has_stamp_signature": settings.get("has_stamp_signature", bool(settings.get("stamp_signature"))),
     }
 
 
