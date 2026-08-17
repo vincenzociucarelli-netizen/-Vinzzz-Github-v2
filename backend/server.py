@@ -37877,6 +37877,13 @@ async def ensure_mongodb_indexes():
             await db.athletes.create_index("id")
             await db.athletes.create_index("society_id")
             await db.athletes.create_index("team_id")
+            # 🚀 16/08/2026 — Indici per le query multi-squadra (conteggi/roster su
+            # team_id_2 e team_ids[]). Senza questi indici i $or introdotti il 15/08
+            # facevano collection scan → lentezza aprendo squadre/registro presenze.
+            await db.athletes.create_index("team_id_2")
+            await db.athletes.create_index("team_ids")
+            await db.athletes.create_index([("society_id", 1), ("team_id_2", 1)])
+            await db.athletes.create_index([("society_id", 1), ("team_ids", 1)])
             await db.athletes.create_index("user_id")
             await db.athletes.create_index([("society_id", 1), ("team_id", 1)])
             # 🆕 08/07/2026 (v7.11) — Indice compound per login Lite: nome_lite deve essere
