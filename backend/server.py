@@ -37962,6 +37962,29 @@ async def ensure_mongodb_indexes():
                 await db.payments.create_index([("society_id", 1), ("athlete_id", 1)])
             except Exception:
                 pass
+            # 🚀 16/08/2026 — Pre-compressione una-tantum delle immagini pesanti su
+            # collezioni PICCOLE (settings/societies): così la primissima apertura della
+            # pagina Società / biglietto da visita è già veloce dopo il deploy, senza
+            # attendere la compressione lazy on-read. Idempotente (salta se già leggera).
+            try:
+                from utils import compress_base64_image as _cbi
+                for _coll, _fields in (
+                    (db.settings, ("logo", "sport_image", "stamp_signature")),
+                    (db.societies, ("logo",)),
+                ):
+                    async for _doc in _coll.find({}, {"_id": 1, "logo": 1, "sport_image": 1, "stamp_signature": 1}):
+                        _upd = {}
+                        for _f in _fields:
+                            _v = _doc.get(_f)
+                            if isinstance(_v, str) and len(_v) > 500_000:
+                                _c = _cbi(_v)
+                                if _c and _c != _v and len(_c) < len(_v):
+                                    _upd[_f] = _c
+                        if _upd:
+                            await _coll.update_one({"_id": _doc["_id"]}, {"$set": _upd})
+                logger.info("Pre-compressione immagini società completata.")
+            except Exception as _exc_img:
+                logger.warning(f"Pre-compressione immagini saltata: {_exc_img}")
             logger.info("MongoDB indexes ensured.")
         except Exception as exc:
             logger.warning(f"Could not create some indexes: {exc}")
