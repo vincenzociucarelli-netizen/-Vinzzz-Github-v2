@@ -300,13 +300,30 @@ async def get_society_settings(request: Request, include_images: bool = False):
         # Add boolean flags so the frontend knows whether to render <Image> tags
         # pointing at the dedicated /logo.png endpoints.
         if settings:
-            existence_probe = await db.settings.find_one(
-                query,
-                {"_id": 0, "logo": 1, "sport_image": 1, "stamp_signature": 1},
-            ) or {}
-            settings["has_logo"] = bool(existence_probe.get("logo"))
-            settings["has_sport_image"] = bool(existence_probe.get("sport_image"))
-            settings["has_stamp_signature"] = bool(existence_probe.get("stamp_signature"))
+            # 🚀 18/08/2026 PERF — Calcola l'esistenza delle immagini LATO DB con
+            # un'aggregazione, SENZA trasferire i base64 multi-MB. Prima veniva fatta
+            # una find_one con projection {logo:1,...} che scaricava le 3 immagini
+            # pesanti solo per farne dei booleani → ~7s di risposta su Render.
+            existence_probe = {}
+            try:
+                _cursor = db.settings.aggregate([
+                    {"$match": query},
+                    {"$project": {
+                        "_id": 0,
+                        "has_logo": {"$gt": [{"$strLenBytes": {"$ifNull": ["$logo", ""]}}, 0]},
+                        "has_sport_image": {"$gt": [{"$strLenBytes": {"$ifNull": ["$sport_image", ""]}}, 0]},
+                        "has_stamp_signature": {"$gt": [{"$strLenBytes": {"$ifNull": ["$stamp_signature", ""]}}, 0]},
+                    }},
+                    {"$limit": 1},
+                ])
+                _rows = await _cursor.to_list(length=1)
+                if _rows:
+                    existence_probe = _rows[0]
+            except Exception:
+                existence_probe = {}
+            settings["has_logo"] = bool(existence_probe.get("has_logo"))
+            settings["has_sport_image"] = bool(existence_probe.get("has_sport_image"))
+            settings["has_stamp_signature"] = bool(existence_probe.get("has_stamp_signature"))
     if not settings:
         return {
             "name": "Società Sportiva",
@@ -546,7 +563,13 @@ async def get_certificate_override_status(current_user = Depends(get_current_use
     _q = {"type": "society"}
     if _sid:
         _q["society_id"] = _sid
-    settings = await db.settings.find_one(_q) or {}
+    # 🚀 18/08/2026 PERF — Projection: NON scaricare le immagini base64 (logo,
+    # sport_image, stamp_signature) che qui non servono. Questo endpoint gira in
+    # polling ogni 30s e senza projection trasferiva diversi MB dal DB ad ogni
+    # chiamata → ~7s di risposta su Render (confermato dai log X-Response-Time).
+    settings = await db.settings.find_one(
+        _q, {"logo": 0, "sport_image": 0, "stamp_signature": 0}
+    ) or {}
     block_enabled = settings.get("block_expired_certificates", True)
     # Today key (Italy) for per-day popup
     try:

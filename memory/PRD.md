@@ -638,3 +638,13 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - **Conteggio squadre multi-team**: verificato che `/teams/athletes-count/all` usa già UNA sola aggregazione (efficiente) e `/teams` esclude le immagini pesanti → non è la causa della lentezza squadre; la causa è il traffico poller comune a tutte le pagine admin.
 - **NB DEPLOY**: frontend → Vercel; backend → Render. Le migliorie hanno effetto solo dopo il deploy.
 
+
+### Performance 18/08/2026 (bis) — CAUSA REALE trovata via log Render (X-Response-Time)
+Il middleware di timing ha rivelato che il **server stesso** impiegava ~7,3s (non coda browser).
+Tutti gli endpoint lenti condividevano una causa: **scaricavano immagini base64 multi-MB inutilmente**.
+- **FIX 1** `GET /settings/certificate-override-status` (routes/settings.py ~549): faceva `find_one(_q)` SENZA projection → scaricava logo+sport_image+timbro (MB) solo per leggere un booleano, ogni 30s. Aggiunta projection `{logo:0, sport_image:0, stamp_signature:0}`.
+- **FIX 2** `GET /settings/society` (include_images=false): l'`existence_probe` faceva `find_one` con `{logo:1,sport_image:1,stamp_signature:1}` scaricando le 3 immagini pesanti solo per calcolare i booleani has_logo/has_sport_image/has_stamp_signature. Sostituito con **aggregazione `$strLenBytes`** che calcola i booleani lato DB SENZA trasferire i base64. `/settings/society` è chiamato da quasi ogni pagina → questo risolve i "7-10s su tutte le cartelle".
+- **FIX 3** `GET /certificates/expiring` (server.py ~13439): faceva `db.athletes.find({society_id}).to_list(1000)` scaricando TUTTI gli atleti con le loro foto base64 solo per leggere data scadenza+nome. Aggiunta projection `{id,full_name,medical_certificate_expiry}`.
+- Verifica locale: i 3 endpoint ora rispondono in ~3-7ms (prima 7,3s / 1,5s in prod). Da confermare in produzione dopo DEPLOY su Render.
+- NB: `whatsapp/pending-count` (1,8s) è già mitigato da cache in-memory 60s → lasciato così.
+- Lezione: le immagini base64 dentro i documenti Mongo rendono lento OGNI `find` senza projection. Fix definitivo futuro: spostare le immagini su Object Storage.

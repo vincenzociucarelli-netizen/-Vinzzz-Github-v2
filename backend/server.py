@@ -13436,7 +13436,11 @@ async def get_expiring_certificates(current_user = Depends(get_current_user)):
     expiring_soon = []
     
     # Get all athletes for this society with medical certificate info
-    athletes = await db.athletes.find({"society_id": society_id}).to_list(1000)
+    # 🚀 18/08/2026 PERF — projection: solo i campi necessari (NIENTE foto base64).
+    athletes = await db.athletes.find(
+        {"society_id": society_id},
+        {"_id": 0, "id": 1, "full_name": 1, "medical_certificate_expiry": 1},
+    ).to_list(2000)
     
     for athlete in athletes:
         expiry_str = athlete.get("medical_certificate_expiry")
