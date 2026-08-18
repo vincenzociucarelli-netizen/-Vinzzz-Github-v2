@@ -400,6 +400,23 @@ Vedi `/app/memory/test_credentials.md`
 - `/app/frontend/src/utils/fiscalReceipt.ts`
 
 
+## Changelog — 18/08/2026 (fork continuazione) — PERF cartella EVENTI (~30s → ~10ms)
+### Root cause
+- `GET /preseason/campaigns` restituiva l'intero documento campagna INCLUSO `cover_image` (locandina base64 multi-MB). Con più campagne la lista scaricava decine di MB → ~30s di caricamento della cartella "Eventi in programma".
+### Fix backend (`server.py`, get_preseason_campaigns)
+- Sostituito il `find` con aggregation pipeline: `$addFields has_cover` (booleano, via `$strLenCP`) + `$project {cover_image: 0}`. Il base64 NON viene più trasferito nella lista. Verificato: risposta 669B in ~10ms (prima multi-MB).
+### Fix frontend (`app/admin/preseason.tsx`)
+- Nuovo helper `campaignCoverUri(c)` = `${EXPO_PUBLIC_BACKEND_URL}/api/preseason/public/{id}/cover.jpg` (JPEG compresso ~280KB, `Cache-Control 300s`), usato SOLO se `has_cover=true`.
+- Thumbnail lista + anteprima WhatsApp/Facebook ora usano l'URL `/cover.jpg` invece del base64 inline (fallback al logo società se assente).
+- `handleOpenEdit` reso `async`: se `has_cover`, recupera il base64 completo da `GET /preseason/campaigns/{id}` così il salvataggio in modifica NON cancella la copertina.
+- Interfaccia `Campaign`: aggiunto `has_cover?: boolean`.
+### Nota ambiente (fork)
+- Rebuild statico richiede `babel-preset-expo` al top-level di `node_modules` (era annidato solo sotto `expo/node_modules`, non hoistato). Creato symlink `node_modules/babel-preset-expo -> expo/node_modules/babel-preset-expo` per sbloccare `npx expo export -p web`.
+### Atleti/Genitori ancora lenti (7-8s) in PRODUZIONE
+- Le projection base64-exclude su `/athletes` e `/users/parents` sono GIÀ nel codice (verificate veloci: <50ms in preview). Il 7-8s dipende dal fatto che NON sono ancora deployate su Render. Serve un deploy backend.
+- **NOTA DEPLOY**: frontend → Save to Github/Vercel; backend → Render.
+
+
 ## Changelog — 08/08/2026 (fork continuazione)
 ### 1) Certificati in scadenza (dashboard) — mostra i NOMI
 - `admin/index.tsx`: il task "Certificati in scadenza" (Da fare oggi) ora apre un popup con i nomi atleti + giorni alla scadenza (prima apriva solo la lista atleti).

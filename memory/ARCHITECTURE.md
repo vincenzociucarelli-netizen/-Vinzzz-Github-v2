@@ -140,7 +140,7 @@ cd /app/backend && python -m pytest tests/test_smoke_regression.py -v
 
 | Ambiente | URL | Uso |
 |---|---|---|
-| **Preview** | `https://zaino-coach.preview.emergentagent.com` | Sviluppo + test interno |
+| **Preview** | `https://zaino-coach-hub.preview.emergentagent.com` | Sviluppo + test interno |
 | **Locale** | `http://localhost:3000` (frontend) + `http://localhost:8001` (backend) | Dev |
 | **Produzione** | TBD (`https://app.registrateam.it`) | Da fare deploy |
 

@@ -34124,9 +34124,18 @@ async def get_preseason_campaigns(current_user = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Non autorizzato")
     
     society_id = current_user.get("society_id", "")
-    campaigns = await db.preseason_campaigns.find(
-        {"society_id": society_id}, {"_id": 0}
-    ).sort("created_at", -1).to_list(100)
+    # ⚡ PERF 15/08/2026 — Escludi il campo cover_image (base64 multi-MB) dalla lista:
+    # era la causa dei ~30s di caricamento della cartella Eventi. Restituiamo solo
+    # un flag booleano has_cover; la thumbnail nel frontend viene servita compressa
+    # dall'endpoint /preseason/public/{id}/cover.jpg (JPEG ~280KB, cache 300s).
+    pipeline = [
+        {"$match": {"society_id": society_id}},
+        {"$addFields": {"has_cover": {"$gt": [{"$strLenCP": {"$ifNull": ["$cover_image", ""]}}, 0]}}},
+        {"$project": {"_id": 0, "cover_image": 0}},
+        {"$sort": {"created_at": -1}},
+        {"$limit": 100},
+    ]
+    campaigns = await db.preseason_campaigns.aggregate(pipeline).to_list(100)
     
     # Count total parents and who responded
     all_parents = await db.users.count_documents({"society_id": society_id, "role": "parent"})

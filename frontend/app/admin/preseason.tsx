@@ -7,6 +7,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
 
+// ⚡ PERF 15/08/2026 — La lista campagne NON include più il base64 della copertina
+// (era la causa dei ~30s di caricamento). La thumbnail usa l'endpoint /cover.jpg
+// compresso (JPEG ~280KB, cacheable). has_cover indica se la copertina esiste.
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8001';
+const campaignCoverUri = (c: any): string =>
+  c && c.has_cover ? `${BACKEND_URL}/api/preseason/public/${c.id}/cover.jpg` : '';
+
 // 🆕 30/06/2026 — Renderer mini-markdown per la lista admin: trasforma
 // [label](url) e URL grezzi (http/https/mailto/tel) in <Text onPress>
 // cliccabili (Linking.openURL). Stesso comportamento di /preseason/[id].
@@ -60,6 +67,7 @@ interface Campaign {
   description: string;
   event_info?: string;  // 🆕 27/02/2026 — Info aggiuntive admin (es. indicazioni Open Day, contatti, orari)
   cover_image?: string;  // 🆕 27/02/2026 — Immagine copertina per anteprima social (data URI base64)
+  has_cover?: boolean;   // ⚡ 15/08/2026 — flag dalla lista (base64 non trasferito per performance)
   is_active: boolean;
   open_date?: string;
   close_date?: string;
@@ -328,16 +336,26 @@ export default function PreseasonAdmin() {
   };
 
   // 🆕 Apre il modal in modalità "modifica" pre-popolando i campi
-  const handleOpenEdit = (campaign: Campaign) => {
+  const handleOpenEdit = async (campaign: Campaign) => {
     setEditingId(campaign.id);
     setNewTitle(campaign.title || '');
     setNewSeason(campaign.season || '');
     setNewDesc(campaign.description || '');
     setNewEventInfo(campaign.event_info || '');
-    setNewCoverImage((campaign as any).cover_image || '');
     setNewOpenDate(isoToItalianDate(campaign.open_date));
     setNewCloseDate(isoToItalianDate(campaign.close_date));
     setShowCreate(true);
+    // ⚡ 15/08/2026 — La lista non porta più il base64 della copertina (performance).
+    // In modifica lo recuperiamo dal dettaglio così il salvataggio non la cancella.
+    if (campaign.has_cover) {
+      setNewCoverImage('');
+      try {
+        const res = await api.get(`/preseason/campaigns/${campaign.id}`);
+        setNewCoverImage((res.data as any)?.cover_image || '');
+      } catch { /* se fallisce, l'utente può ri-caricare l'immagine */ }
+    } else {
+      setNewCoverImage('');
+    }
   };
 
   // 🆕 27/02/2026 — Picker immagine di copertina (Web + Native).
@@ -639,9 +657,9 @@ export default function PreseasonAdmin() {
               data-testid={`campaign-toggle-${c.id}`}
             >
               <View style={{ flexDirection: 'row', padding: 12, alignItems: 'center', gap: 12 }}>
-                {(c as any).cover_image ? (
+                {campaignCoverUri(c) ? (
                   <Image
-                    source={{ uri: (c as any).cover_image }}
+                    source={{ uri: campaignCoverUri(c) }}
                     style={{ width: 72, height: 72, borderRadius: 10, backgroundColor: '#f0f0f0' }}
                     resizeMode="cover"
                   />
@@ -1061,8 +1079,8 @@ export default function PreseasonAdmin() {
                 </Text>
                 <View style={{ backgroundColor: '#DCF8C6', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: '#c7e6b4' }}>
                   <View style={{ backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden', borderWidth: 1, borderColor: '#e0e0e0' }}>
-                    {(previewCampaign as any).cover_image || societyLogo ? (
-                      <Image source={{ uri: (previewCampaign as any).cover_image || societyLogo }} style={{ width: '100%', height: 140, backgroundColor: '#f0f0f0' }} resizeMode={(previewCampaign as any).cover_image ? 'cover' : 'contain'} />
+                    {campaignCoverUri(previewCampaign) || societyLogo ? (
+                      <Image source={{ uri: campaignCoverUri(previewCampaign) || societyLogo }} style={{ width: '100%', height: 140, backgroundColor: '#f0f0f0' }} resizeMode={campaignCoverUri(previewCampaign) ? 'cover' : 'contain'} />
                     ) : (
                       <View style={{ width: '100%', height: 140, backgroundColor: '#eee', alignItems: 'center', justifyContent: 'center' }}>
                         <Ionicons name="image-outline" size={40} color="#bbb" />
@@ -1087,8 +1105,8 @@ export default function PreseasonAdmin() {
                   📘 Come appare su Facebook / Telegram
                 </Text>
                 <View style={{ backgroundColor: '#F0F2F5', borderRadius: 10, overflow: 'hidden', borderWidth: 1, borderColor: '#e0e0e0' }}>
-                  {(previewCampaign as any).cover_image || societyLogo ? (
-                    <Image source={{ uri: (previewCampaign as any).cover_image || societyLogo }} style={{ width: '100%', height: 200, backgroundColor: '#fff' }} resizeMode={(previewCampaign as any).cover_image ? 'cover' : 'contain'} />
+                  {campaignCoverUri(previewCampaign) || societyLogo ? (
+                    <Image source={{ uri: campaignCoverUri(previewCampaign) || societyLogo }} style={{ width: '100%', height: 200, backgroundColor: '#fff' }} resizeMode={campaignCoverUri(previewCampaign) ? 'cover' : 'contain'} />
                   ) : (
                     <View style={{ width: '100%', height: 200, backgroundColor: '#eee', alignItems: 'center', justifyContent: 'center' }}>
                       <Ionicons name="image-outline" size={50} color="#bbb" />
