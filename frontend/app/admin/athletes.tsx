@@ -22,6 +22,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '../../src/components/Icon';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../src/constants/countries';
 import api from '../../src/services/api';
+import { sharedGet } from '../../src/services/sharedGet';
 import { Athlete, Team } from '../../src/types';
 import { exportToExcel } from '../../src/utils/excelExport';
 import { useAuthStore } from '../../src/store/authStore';
@@ -341,7 +342,7 @@ export default function AdminAthletes() {
   const loadData = async () => {
     try {
       const [athletesRes, teamsRes, codeRes, delRes, seasonRes] = await Promise.all([
-        api.get('/athletes'),
+        sharedGet('/athletes'),
         api.get('/teams'),
         api.get('/societies/invite-code').catch(() => ({ data: { invite_code: '', society_name: '' } })),
         api.get('/admin/deletion-requests/pending-summary').catch(() => ({ data: { by_athlete: {} } })),

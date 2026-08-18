@@ -382,13 +382,42 @@ export default function PreseasonAdmin() {
         input.onchange = async () => {
           const file = input.files && input.files[0];
           if (!file) return;
-          if (file.size > 3 * 1024 * 1024) {
-            showAlert('Immagine troppo grande', 'Massimo 3 MB. Comprimi l\'immagine prima di caricarla.');
-            return;
+          // ⚡ 18/08/2026 — Comprimi SEMPRE lato client (canvas): ridimensiona a max
+          // 1200px lato lungo e riesporta in JPEG. Così qualsiasi locandina (anche
+          // da diversi MB) diventa un payload leggero (~200-400KB) e l'upload non
+          // fallisce più al proxy/su Render. Niente più blocco "immagine troppo grande".
+          try {
+            const dataUri = await new Promise<string>((resolve, reject) => {
+              const rd = new FileReader();
+              rd.onerror = () => reject(new Error('read'));
+              rd.onload = () => {
+                const im = new (window as any).Image();
+                im.onerror = () => reject(new Error('img'));
+                im.onload = () => {
+                  const maxDim = 1200;
+                  let { width, height } = im;
+                  if (Math.max(width, height) > maxDim) {
+                    if (width >= height) { height = Math.round(height * maxDim / width); width = maxDim; }
+                    else { width = Math.round(width * maxDim / height); height = maxDim; }
+                  }
+                  const canvas = document.createElement('canvas');
+                  canvas.width = width; canvas.height = height;
+                  const ctx = canvas.getContext('2d');
+                  if (!ctx) { reject(new Error('ctx')); return; }
+                  ctx.fillStyle = '#ffffff';
+                  ctx.fillRect(0, 0, width, height);
+                  ctx.drawImage(im, 0, 0, width, height);
+                  resolve(canvas.toDataURL('image/jpeg', 0.82));
+                };
+                im.src = String(rd.result || '');
+              };
+              rd.readAsDataURL(file);
+            });
+            setNewCoverImage(dataUri);
+            setCoverChanged(true);
+          } catch (e) {
+            showAlert('Errore', 'Impossibile elaborare l\'immagine. Riprova con un altro file.');
           }
-          const reader = new FileReader();
-          reader.onload = () => { setNewCoverImage(String(reader.result || '')); setCoverChanged(true); };
-          reader.readAsDataURL(file);
         };
         input.click();
         return;

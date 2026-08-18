@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
+import { sharedGet } from '../../src/services/sharedGet';
 import { Ionicons } from '../../src/components/Icon';
 
 interface Athlete {
@@ -59,9 +60,9 @@ export default function ParentsScreen() {
   const loadData = async () => {
     try {
       const [parentsRes, pendingRes, athletesRes] = await Promise.all([
-        api.get('/users/parents'),
+        sharedGet('/users/parents'),
         api.get('/users/pending'),
-        api.get('/athletes'),
+        sharedGet('/athletes'),
       ]);
       
       // All parents with their athletes

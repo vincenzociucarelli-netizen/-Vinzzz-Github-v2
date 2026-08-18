@@ -15,6 +15,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../../src/services/api';
+import { sharedGet } from '../../src/services/sharedGet';
 
 interface Athlete {
   id: string;
@@ -160,7 +161,7 @@ export default function PrimeSquadrePage() {
     try {
       // Load both athletes and coaches
       const [athletesRes, coachesRes] = await Promise.all([
-        api.get('/athletes'),
+        sharedGet('/athletes'),
         api.get('/users/coaches'),
       ]);
       

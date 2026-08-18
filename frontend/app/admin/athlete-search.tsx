@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '../../src/components/Icon';
 import { Picker } from '@react-native-picker/picker';
 import api from '../../src/services/api';
+import { sharedGet } from '../../src/services/sharedGet';
 import * as XLSX from 'xlsx';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -71,7 +72,7 @@ export default function AthleteSearchScreen() {
     setLoading(true);
     try {
       const [athletesRes, settingsRes] = await Promise.all([
-        api.get('/athletes'),
+        sharedGet('/athletes'),
         api.get('/settings/society'),
       ]);
       setAthletes(athletesRes.data || []);

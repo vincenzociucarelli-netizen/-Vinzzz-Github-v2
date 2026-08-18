@@ -34194,7 +34194,8 @@ async def create_preseason_campaign(data: PreseasonCampaignCreate, current_user 
         "season": data.season,
         "description": data.description or "",
         "event_info": data.event_info or "",
-        "cover_image": data.cover_image or "",  # 🆕 27/02/2026
+        "cover_image": "",  # ⚡ 18/08/2026 — la cover va su object storage (vedi sotto)
+        "cover_storage_path": "",
         "open_date": data.open_date,
         "close_date": data.close_date,
         "is_active": True,
@@ -34202,7 +34203,17 @@ async def create_preseason_campaign(data: PreseasonCampaignCreate, current_user 
         "created_by": current_user["id"],
         "response_count": 0,
     }
-    
+
+    # ⚡ 18/08/2026 — Se è stata caricata una copertina (data URI base64), la carichiamo
+    # su object storage (JPEG compresso) invece di salvare il base64 pesante in Mongo.
+    # Fallback: se l'upload fallisce, teniamo il base64 così non si perde nulla.
+    if data.cover_image and isinstance(data.cover_image, str) and data.cover_image.startswith("data:"):
+        _cov_path = await _store_cover_from_datauri(society_id, campaign["id"], data.cover_image)
+        if _cov_path:
+            campaign["cover_storage_path"] = _cov_path
+        else:
+            campaign["cover_image"] = data.cover_image
+
     await db.preseason_campaigns.insert_one(campaign)
     campaign.pop("_id", None)
     return campaign
@@ -34221,7 +34232,10 @@ async def get_preseason_campaigns(current_user = Depends(get_current_user)):
     # dall'endpoint /preseason/public/{id}/cover.jpg (JPEG ~280KB, cache 300s).
     pipeline = [
         {"$match": {"society_id": society_id}},
-        {"$addFields": {"has_cover": {"$gt": [{"$strLenCP": {"$ifNull": ["$cover_image", ""]}}, 0]}}},
+        {"$addFields": {"has_cover": {"$or": [
+            {"$gt": [{"$strLenCP": {"$ifNull": ["$cover_image", ""]}}, 0]},
+            {"$gt": [{"$strLenCP": {"$ifNull": ["$cover_storage_path", ""]}}, 0]},
+        ]}}},
         {"$project": {"_id": 0, "cover_image": 0}},
         {"$sort": {"created_at": -1}},
         {"$limit": 100},
@@ -34283,7 +34297,25 @@ async def update_preseason_campaign(campaign_id: str, data: PreseasonCampaignUpd
             update[k] = v
     if not update:
         raise HTTPException(status_code=400, detail="Nessun campo da aggiornare")
-    
+
+    # ⚡ 18/08/2026 — Gestione copertina via object storage.
+    # Se arriva un nuovo data URI base64 → carica su storage e salva cover_storage_path
+    # (svuota cover_image). Se arriva "" (rimozione) → svuota entrambi.
+    if "cover_image" in update:
+        cv = update.pop("cover_image")
+        _existing = await db.preseason_campaigns.find_one({"id": campaign_id}, {"_id": 0, "society_id": 1})
+        _sid = (_existing or {}).get("society_id", "")
+        if cv and isinstance(cv, str) and cv.startswith("data:"):
+            _cov_path = await _store_cover_from_datauri(_sid, campaign_id, cv)
+            if _cov_path:
+                update["cover_storage_path"] = _cov_path
+                update["cover_image"] = ""
+            else:
+                update["cover_image"] = cv  # fallback base64
+        else:
+            update["cover_storage_path"] = ""
+            update["cover_image"] = ""
+
     await db.preseason_campaigns.update_one({"id": campaign_id}, {"$set": update})
     campaign = await db.preseason_campaigns.find_one({"id": campaign_id}, {"_id": 0})
     return campaign
@@ -34525,6 +34557,74 @@ def _process_cover_for_og(cover_uri, max_dim: int = 1200, target_kb: int = 280):
         return None, 0, 0
 
 
+# ============================================================
+# ⚡ 18/08/2026 — Emergent Object Storage: migrazione immagini base64 → storage.
+# Riduce il peso dei documenti MongoDB (causa principale della lentezza su Atlas M0)
+# ed evita di spingere base64 multi-MB attraverso l'API (causa del mancato
+# salvataggio delle copertine pesanti). Fase B (trial): copertine campagne
+# pre-stagione. Dual-read: se esiste cover_storage_path si serve dallo storage,
+# altrimenti fallback al vecchio base64.
+# ------------------------------------------------------------
+import requests as _os_requests
+from fastapi.concurrency import run_in_threadpool as _run_in_threadpool
+
+_STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
+_STORAGE_URL = _STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
+_STORAGE_APP = "registrateam"
+_storage_key = None
+
+
+def _storage_init_sync():
+    global _storage_key
+    if _storage_key:
+        return _storage_key
+    resp = _os_requests.post(f"{_STORAGE_URL}/init", json={"emergent_key": os.environ.get("EMERGENT_LLM_KEY")}, timeout=30)
+    resp.raise_for_status()
+    _storage_key = resp.json()["storage_key"]
+    return _storage_key
+
+
+def _storage_put_sync(path, data, content_type):
+    global _storage_key
+    key = _storage_init_sync()
+    resp = _os_requests.put(f"{_STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key, "Content-Type": content_type}, data=data, timeout=120)
+    if resp.status_code == 503:
+        _storage_key = None
+        key = _storage_init_sync()
+        resp = _os_requests.put(f"{_STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key, "Content-Type": content_type}, data=data, timeout=120)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def _storage_get_sync(path):
+    global _storage_key
+    key = _storage_init_sync()
+    resp = _os_requests.get(f"{_STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key}, timeout=60)
+    if resp.status_code == 503:
+        _storage_key = None
+        key = _storage_init_sync()
+        resp = _os_requests.get(f"{_STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key}, timeout=60)
+    resp.raise_for_status()
+    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+
+
+async def _store_cover_from_datauri(society_id, campaign_id, data_uri):
+    """Comprime la cover (JPEG ~280KB) e la carica su object storage.
+    Ritorna lo storage_path oppure None (fallback: si tiene il base64)."""
+    jpeg_bytes, _w, _h = _process_cover_for_og(data_uri)
+    if not jpeg_bytes:
+        return None
+    path = f"{_STORAGE_APP}/uploads/{society_id or 'shared'}/covers/{campaign_id}.jpg"
+    try:
+        await _run_in_threadpool(_storage_put_sync, path, jpeg_bytes, "image/jpeg")
+        return path
+    except Exception as e:
+        logger.warning(f"[storage] upload cover fallito per {campaign_id}: {e}")
+        return None
+
+
+
+
 @api_router.get("/preseason/public/{campaign_id}/cover.jpg")
 async def get_preseason_cover_image(campaign_id: str):
     """Serve la cover image di una campagna come JPEG compresso (ottimizzato per anteprime social).
@@ -34536,17 +34636,26 @@ async def get_preseason_cover_image(campaign_id: str):
     """
     campaign = await db.preseason_campaigns.find_one(
         {"id": campaign_id},
-        {"_id": 0, "cover_image": 1}
+        {"_id": 0, "cover_image": 1, "cover_storage_path": 1}
     )
-    if not campaign or not campaign.get("cover_image"):
+    if not campaign:
         raise HTTPException(status_code=404, detail="Cover image non presente")
-    cover = campaign["cover_image"]
-    if not cover.startswith("data:"):
-        raise HTTPException(status_code=404, detail="Cover image in formato non valido")
+    from fastapi.responses import Response
+    # ⚡ 18/08/2026 — Dual-read: prima prova lo storage dedicato, poi fallback base64.
+    _sp = campaign.get("cover_storage_path")
+    if _sp:
+        try:
+            _content, _ctype = await _run_in_threadpool(_storage_get_sync, _sp)
+            return Response(content=_content, media_type=_ctype or "image/jpeg", headers={"Cache-Control": "public, max-age=300"})
+        except Exception as e:
+            logger.warning(f"[storage] get cover fallito {campaign_id}: {e}")
+            # prosegue col fallback base64 se presente
+    cover = campaign.get("cover_image")
+    if not cover or not cover.startswith("data:"):
+        raise HTTPException(status_code=404, detail="Cover image non presente")
     jpeg_bytes, _w, _h = _process_cover_for_og(cover)
     if jpeg_bytes is None:
         raise HTTPException(status_code=404, detail="Cover image non decodificabile")
-    from fastapi.responses import Response
     return Response(content=jpeg_bytes, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=300"})
 
 
@@ -34628,16 +34737,22 @@ async def get_preseason_share_page(campaign_id: str, request: Request):
     og_img_width = 512
     og_img_height = 512
     og_img_type = "image/png"
-    has_cover = bool(campaign.get("cover_image"))
+    has_cover = bool(campaign.get("cover_image")) or bool(campaign.get("cover_storage_path"))
     if has_cover and backend_url:
         logo_url = f"{backend_url}/api/preseason/public/{campaign_id}/cover.jpg"
         og_img_type = "image/jpeg"
         # Dimensioni reali DOPO normalizzazione (max 1200px) — coerenti con cover.jpg servito
         try:
-            _cov_bytes, _cov_w, _cov_h = _process_cover_for_og(campaign["cover_image"])
-            if _cov_bytes and _cov_w and _cov_h:
-                og_img_width = _cov_w
-                og_img_height = _cov_h
+            _cov = campaign.get("cover_image")
+            if _cov and isinstance(_cov, str) and _cov.startswith("data:"):
+                _cov_bytes, _cov_w, _cov_h = _process_cover_for_og(_cov)
+                if _cov_bytes and _cov_w and _cov_h:
+                    og_img_width = _cov_w
+                    og_img_height = _cov_h
+            else:
+                # servita da object storage (JPEG standard 1200x630 per OG)
+                og_img_width = 1200
+                og_img_height = 630
         except Exception:
             pass
     elif has_logo and backend_url:

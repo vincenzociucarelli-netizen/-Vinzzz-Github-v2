@@ -400,6 +400,36 @@ Vedi `/app/memory/test_credentials.md`
 - `/app/frontend/src/utils/fiscalReceipt.ts`
 
 
+## Changelog — 18/08/2026 (f) — Fase B trial: copertine eventi → Emergent Object Storage
+### Bug utente
+- "Ho messo nuove copertine sugli eventi ma non si salvano, appare solo il logo": (a) il frontend RIFIUTAVA immagini >3MB; (b) il base64 pesante non veniva salvato/appesantiva Mongo.
+### Fix
+- Frontend (preseason.tsx handlePickCoverImage web): rimosso il blocco 3MB; ora COMPRIME sempre via canvas (max 1200px, JPEG 0.82) → payload ~200-400KB, upload affidabile.
+- Backend: nuovi helper Emergent Object Storage (_storage_init/put/get_sync via INTEGRATION_PROXY_URL + EMERGENT_LLM_KEY, run_in_threadpool). `_store_cover_from_datauri` comprime (JPEG) e carica su storage.
+- create/update campagna: se arriva cover_image data URI → carica su storage, salva `cover_storage_path`, `cover_image` resta VUOTO in Mongo (doc leggero). Fallback: se upload fallisce, tiene il base64.
+- cover.jpg: DUAL-READ (storage se cover_storage_path, altrimenti base64 legacy). Lista has_cover = storage OR base64. Share og:image aggiornato.
+- Script migrazione: `/app/backend/migrate_covers_to_storage.py` (idempotente) per spostare i base64 esistenti → storage.
+### Verifica (testing agent, iteration_108) — backend 10/10 + UI
+- CREATE→storage_path valorizzato, cover_image vuoto, cover.jpg 200 dallo storage. EDIT senza toccare cover→intatta. EDIT cambio→nuovo path. EDIT rimozione→404. Fallback base64 legacy (6f3b4944) OK. Thumbnail lista da cover.jpg.
+### NOTE
+- Emergent Object Storage NON ha URL pubblici: le immagini si servono via backend (cover.jpg è già pubblico per gli OG WhatsApp → nessun token necessario).
+- Produzione: verificare che INTEGRATION_PROXY_URL/EMERGENT_LLM_KEY siano iniettati su Render (default hardcoded https://integrations.emergentagent.com come fallback).
+- DA FARE (Fase B resto): migrare profile_photo (users/athletes) e logo (settings) — sono le collezioni CALDE che pesano sulla performance M0; lavoro più grande e rischioso, da fare dopo aver misurato l'effetto dell'auth-cache in produzione.
+
+
+## Changelog — 18/08/2026 (e) — PERF Fase A: deduplica richieste GET duplicate
+### Problema
+- Nella tab Network: `/athletes` partiva 4 volte in parallelo (chiamata da athletes.tsx, parents.tsx, athlete-search.tsx, prime-squadre.tsx al mount), saturando connessioni browser + worker Render.
+### Fix
+- Nuovo `src/services/sharedGet.ts`: dedup delle richieste GET concorrenti + cache TTL 2.5s (collassa il burst di apertura pagina). Ritorna `{data}` (drop-in di `api.get`).
+- Applicato a tutte le chiamate `/athletes` (4 schermate) + `/users/parents`.
+### Verifica
+- Smoke test UI: /admin/athletes carica correttamente (3 atleti), nessuna regressione.
+### Fase B (DA FARE) — migrazione immagini base64 → Emergent Object Storage
+- Playbook ottenuto (integration_expert): storage gestito via backend con EMERGENT_LLM_KEY, handshake /init→storage_key→X-Storage-Key, put/get via /objects/{path}, `requests` sync → run_in_threadpool, no URL pubblici (serve endpoint /media con token per web). Path: `{app}/uploads/{user_id}/{uuid}.{ext}`.
+- Piano: helper storage + init startup + endpoint media; migrazione incrementale con dual-read (storage_path else base64 fallback) partendo da preseason_campaigns.cover_image, poi settings.logo, poi profile_photo (users/athletes). Serve script di migrazione dati + test dedicato. NON ancora implementato (task grande, da fare in pass dedicato).
+
+
 ## Changelog — 18/08/2026 (d) — REGRESSIONE FIX: copertine eventi cancellate (anteprime WhatsApp senza immagine)
 ### Sintomo
 - I link di condivisione campagne (/api/preseason/share/{id}) non mostravano più l'immagine evento su WhatsApp: solo logo società o nessuna immagine.
