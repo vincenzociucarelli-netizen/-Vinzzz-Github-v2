@@ -13078,36 +13078,47 @@ async def create_certificate_simple(
 ):
     """Create/update certificate - Admin, Dirigente (assigned to team), Athlete (own), Parent (own child).
     Only Admin can mark as verified. Full metadata tracking."""
-    allowed_roles = [UserRole.ADMIN, UserRole.DIRIGENTE, UserRole.VIEWER, "athlete", UserRole.PARENT]
-    if current_user["role"] not in allowed_roles:
-        raise HTTPException(status_code=403, detail="Non hai i permessi per aggiornare certificati")
-    
     # Check athlete exists
     athlete = await db.athletes.find_one({"id": data.athlete_id})
     if not athlete:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
-    
-    # Permission checks by role
-    if current_user["role"] in [UserRole.DIRIGENTE, UserRole.VIEWER]:
-        # Dirigente must be assigned to the athlete's team
+
+    # 🐛 18/08/2026 — Autorizzazione basata sulla RELAZIONE con l'atleta (robusta
+    # rispetto a piccole differenze nella stringa 'role'). Un genitore realmente
+    # collegato all'atleta (parent_id/second_parent_id) veniva rifiutato con
+    # "Non hai i permessi per aggiornare certificati" quando il suo ruolo non era
+    # ESATTAMENTE "parent" (es. utente collegato come genitore ma con ruolo
+    # coach/coordinatore/dual-role): la whitelist di ruoli scattava PRIMA del
+    # controllo di parentela. Ora consentiamo la modifica se l'utente è: admin o
+    # coordinatore della stessa società, genitore collegato (primario/secondario),
+    # l'atleta stesso (incl. login Lite minorenne), o il dirigente/coach incaricato
+    # della squadra dell'atleta. La sicurezza è garantita dalla relazione, non dal ruolo.
+    role = current_user.get("role")
+    uid = current_user.get("id")
+    same_society = athlete.get("society_id") == current_user.get("society_id")
+
+    is_admin = role == UserRole.ADMIN
+    is_coordinatore = role == "coordinatore" and same_society
+    is_linked_parent = (
+        athlete.get("parent_id") == uid or athlete.get("second_parent_id") == uid
+    )
+    is_self_athlete = (
+        current_user.get("athlete_id") == data.athlete_id or uid == data.athlete_id
+    )
+
+    is_authorized_staff = False
+    if role in [UserRole.DIRIGENTE, UserRole.VIEWER, UserRole.COACH]:
         athlete_team_id = athlete.get("team_id")
         if athlete_team_id:
-            # Check both: dirigente_ids on team AND assigned_teams on user
             team = await db.teams.find_one({"id": athlete_team_id})
             dirigente_ids = team.get("dirigente_ids", []) if team else []
+            coach_ids = team.get("coach_ids", []) if team else []
             user_assigned_teams = current_user.get("assigned_teams", [])
-            if current_user["id"] not in dirigente_ids and athlete_team_id not in user_assigned_teams:
-                raise HTTPException(status_code=403, detail="Non sei il dirigente incaricato a questa squadra")
-        else:
-            raise HTTPException(status_code=403, detail="L'atleta non ha una squadra assegnata")
-    elif current_user["role"] == "athlete":
-        # Athlete can only update their own certificate
-        if current_user.get("athlete_id") != data.athlete_id and current_user["id"] != data.athlete_id:
-            raise HTTPException(status_code=403, detail="Puoi aggiornare solo il tuo certificato")
-    elif current_user["role"] == UserRole.PARENT:
-        # Parent can only update their child's certificate
-        if athlete.get("parent_id") != current_user["id"] and athlete.get("second_parent_id") != current_user["id"]:
-            raise HTTPException(status_code=403, detail="Puoi aggiornare solo il certificato del tuo atleta")
+            if uid in dirigente_ids or uid in coach_ids or athlete_team_id in user_assigned_teams:
+                is_authorized_staff = True
+
+    if not (is_admin or is_coordinatore or is_linked_parent or is_self_athlete or is_authorized_staff):
+        raise HTTPException(status_code=403, detail="Non hai i permessi per aggiornare certificati")
     
     # Only admin can set verified = True
     verified_value = data.verified if data.verified is not None else False

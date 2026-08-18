@@ -400,6 +400,16 @@ Vedi `/app/memory/test_credentials.md`
 - `/app/frontend/src/utils/fiscalReceipt.ts`
 
 
+## Changelog — 18/08/2026 (b) — BUGFIX 403 "Non hai i permessi per aggiornare certificati" (genitore)
+### Root cause
+- `POST /api/certificates/simple` rifiutava l'utente sulla WHITELIST DI RUOLO (`["admin","dirigente","viewer","athlete","parent"]`) PRIMA di controllare la relazione. Genitori reali collegati come `parent_id`/`second_parent_id` ma con ruolo diverso da "parent" (es. coach/coordinatore/dual-role) ricevevano 403.
+### Fix (server.py, guardia autorizzazione ~13081)
+- Autorizzazione ora RELAZIONE-BASED: consentito se admin, coordinatore stessa società, genitore collegato (parent_id/second_parent_id, qualsiasi ruolo), l'atleta stesso (incl. login Lite minorenne), o dirigente/viewer/coach incaricato della squadra. La sicurezza è data dalla relazione + società, non dalla stringa di ruolo.
+### Verifica (testing agent, iteration_105) — 6/6 PASS
+- parent linked→200; coach linked come parent_id→200 (prima 403); non collegato→403; admin→200; viewer assegnato→200; round-trip GET + sync campi atleta OK. DB ripristinato.
+- Backlog tecnico (non bloccante): estrarre la guardia in helper `user_can_edit_athlete_certificate(user, athlete)` da riusare in upload/delete cert.
+
+
 ## Changelog — 18/08/2026 — BUGFIX certificato medico "non memorizzato" (lato genitore)
 ### Root cause (verificata dal testing agent, backend + UI)
 - La ScrollView della pagina genitore `/parent/athlete/[id].tsx` NON aveva `keyboardShouldPersistTaps="handled"`: su mobile il primo tap su "Salva" con tastiera numerica aperta chiudeva solo la tastiera senza attivare il pulsante → il salvataggio non partiva.
