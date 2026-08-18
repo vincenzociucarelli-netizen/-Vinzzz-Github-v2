@@ -110,8 +110,17 @@ async def get_society_logo_image(request: Request, society_id: Optional[str] = N
     if not has_society_scope:
         # Public/anonymous request without explicit society → no branding leak
         raise HTTPException(status_code=404, detail="Logo non trovato")
-    settings = await db.settings.find_one(query, {"_id": 0, "logo": 1})
-    if not settings or not settings.get("logo"):
+    settings = await db.settings.find_one(query, {"_id": 0, "logo": 1, "logo_storage_path": 1})
+    if not settings:
+        raise HTTPException(status_code=404, detail="Logo non trovato")
+    # ⚡ 06/2026 — Dual-read: prima lo storage dedicato, poi fallback base64 legacy.
+    _lp = settings.get("logo_storage_path")
+    if _lp:
+        from storage_util import get_image
+        _content, _ctype = await get_image(_lp)
+        if _content:
+            return Response(content=_content, media_type=_ctype or "image/jpeg", headers={"Cache-Control": "public, max-age=300"})
+    if not settings.get("logo"):
         raise HTTPException(status_code=404, detail="Logo non trovato")
     # 🐛 27/02/2026 — Gestisce sia il caso raw base64 sia il caso data URI con prefisso
     logo_str = settings["logo"]
@@ -271,6 +280,17 @@ async def get_society_settings(request: Request, include_images: bool = False):
     # Use projection to avoid fetching heavy base64 fields from MongoDB unless requested
     if include_images:
         settings = await db.settings.find_one(query, {"_id": 0})
+        # ⚡ 06/2026 — Dual-read: se il logo è su object storage (logo_storage_path)
+        # e il campo base64 è vuoto, lo idratiamo dallo storage così le pagine che
+        # richiedono il base64 (preview edit logo, generazione PDF) continuano a funzionare.
+        if settings and settings.get("logo_storage_path") and not settings.get("logo"):
+            try:
+                from storage_util import get_image_datauri
+                _du = await get_image_datauri(settings["logo_storage_path"])
+                if _du:
+                    settings["logo"] = _du
+            except Exception:
+                pass
         # 🚀 16/08/2026 — Compressione on-read delle immagini pesanti (logo, sport_image,
         # stamp_signature): questo endpoint è caricato con include_images=true da più
         # pagine (es. anagrafica atleta) e un'immagine grande non compressa rallentava
@@ -300,17 +320,16 @@ async def get_society_settings(request: Request, include_images: bool = False):
         # Add boolean flags so the frontend knows whether to render <Image> tags
         # pointing at the dedicated /logo.png endpoints.
         if settings:
-            # 🚀 18/08/2026 PERF — Calcola l'esistenza delle immagini LATO DB con
-            # un'aggregazione, SENZA trasferire i base64 multi-MB. Prima veniva fatta
-            # una find_one con projection {logo:1,...} che scaricava le 3 immagini
-            # pesanti solo per farne dei booleani → ~7s di risposta su Render.
             existence_probe = {}
             try:
                 _cursor = db.settings.aggregate([
                     {"$match": query},
                     {"$project": {
                         "_id": 0,
-                        "has_logo": {"$gt": [{"$strLenBytes": {"$ifNull": ["$logo", ""]}}, 0]},
+                        "has_logo": {"$or": [
+                            {"$gt": [{"$strLenBytes": {"$ifNull": ["$logo", ""]}}, 0]},
+                            {"$gt": [{"$strLenBytes": {"$ifNull": ["$logo_storage_path", ""]}}, 0]},
+                        ]},
                         "has_sport_image": {"$gt": [{"$strLenBytes": {"$ifNull": ["$sport_image", ""]}}, 0]},
                         "has_stamp_signature": {"$gt": [{"$strLenBytes": {"$ifNull": ["$stamp_signature", ""]}}, 0]},
                     }},
@@ -531,7 +550,22 @@ async def update_society_settings(request: Request, data: SocietySettingsUpdate,
         update_dict["trial_max_days"] = max(3, min(15, data.trial_max_days))
     if data.trial_max_sessions is not None:
         update_dict["trial_max_sessions"] = max(1, min(5, data.trial_max_sessions))
-    
+
+    # ⚡ 06/2026 — Migrazione logo → Emergent Object Storage. Il logo può arrivare
+    # come data URI (data:image/...;base64,...) oppure come base64 grezzo (alcuni
+    # picker inviano solo il base64). In entrambi i casi lo comprimiamo e carichiamo
+    # su storage: nel doc MongoDB resta solo logo_storage_path (doc leggero). Se
+    # l'upload fallisce, teniamo il valore originale come fallback (dual-read su /logo.png).
+    _lg_val = update_dict.get("logo")
+    if isinstance(_lg_val, str) and len(_lg_val) > 100 and not _lg_val.startswith("http"):
+        from storage_util import store_image_from_datauri, storage_path_for
+        _sid_logo = current_user.get("society_id") or "shared"
+        _path = storage_path_for("logo", _sid_logo, _sid_logo)
+        _stored = await store_image_from_datauri(_path, _lg_val, max_dim=800, target_kb=180)
+        if _stored:
+            update_dict["logo_storage_path"] = _stored
+            update_dict["logo"] = ""
+
     if update_dict:
         # Multi-tenant: scope settings to the admin's society to prevent
         # cross-tenant data leakage (e.g. Sirio admin overwriting PPG settings).

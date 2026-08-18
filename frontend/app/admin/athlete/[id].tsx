@@ -1392,6 +1392,24 @@ export default function AdminAthleteDetail() {
     }
   };
 
+  const handleToggleOriginal = async () => {
+    const newVal = !athlete?.medical_certificate_original_received;
+    try {
+      const resp = await api.patch(`/admin/athletes/${id}/certificate-original`, {
+        original_received: newVal,
+      });
+      setAthlete((prev: any) => prev ? {
+        ...prev,
+        medical_certificate_original_received: resp.data.medical_certificate_original_received,
+        medical_certificate_original_received_by_name: resp.data.medical_certificate_original_received_by_name,
+        medical_certificate_original_received_at: resp.data.medical_certificate_original_received_at,
+      } : prev);
+      showAlert('Successo', newVal ? 'Copia originale registrata come ricevuta' : 'Registrazione copia originale rimossa');
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore aggiornamento copia originale');
+    }
+  };
+
   const handleSaveCertificate = async () => {
     if (!certIssueDate) {
       showAlert('Errore', 'Inserisci la data di emissione');
@@ -2656,6 +2674,38 @@ export default function AdminAthleteDetail() {
                   </Text>
                 </TouchableOpacity>
               )}
+              {/* 🆕 06/2026 — Copia ORIGINALE cartacea ricevuta (requisito FIPAV). Indipendente
+                  dalla convalida (che può avvenire su foto anticipata dal genitore). */}
+              {certificate && (
+                <>
+                  <TouchableOpacity
+                    testID="cert-original-toggle"
+                    style={{
+                      backgroundColor: athlete?.medical_certificate_original_received ? '#E3F2FD' : '#FFF3E0',
+                      borderRadius: 8, padding: 8, marginTop: 6,
+                      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      borderWidth: 1, borderColor: athlete?.medical_certificate_original_received ? '#42A5F5' : '#FFB74D',
+                    }}
+                    onPress={handleToggleOriginal}
+                  >
+                    <Ionicons name={athlete?.medical_certificate_original_received ? "document-attach" : "document-attach-outline"} size={15} color={athlete?.medical_certificate_original_received ? '#1565C0' : '#E65100'} />
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: athlete?.medical_certificate_original_received ? '#1565C0' : '#E65100' }}>
+                      {athlete?.medical_certificate_original_received ? 'Copia originale ricevuta ✓' : 'Copia originale NON ricevuta'}
+                    </Text>
+                  </TouchableOpacity>
+                  {!athlete?.medical_certificate_original_received && (
+                    <Text style={{ fontSize: 10, color: '#888', textAlign: 'center', marginTop: 4, fontStyle: 'italic' }}>
+                      Tocca per confermare di avere in sede la copia originale cartacea (obbligo FIPAV)
+                    </Text>
+                  )}
+                  {athlete?.medical_certificate_original_received && athlete?.medical_certificate_original_received_by_name && (
+                    <Text style={{ fontSize: 10, color: '#888', textAlign: 'center', marginTop: 4 }}>
+                      Registrata da {athlete.medical_certificate_original_received_by_name}
+                      {athlete.medical_certificate_original_received_at ? ` il ${formatDate(athlete.medical_certificate_original_received_at)}` : ''}
+                    </Text>
+                  )}
+                </>
+              )}
               {/* 🆕 20/07/2026 — Richiesta Visita Medico-Sportiva integrata nella card certificato */}
               {/* 🐛 27/07/2026 — Nascosta per atleti 18+ (adulti): non serve il modulo ASL per minori */}
               {(() => {
@@ -3497,9 +3547,16 @@ export default function AdminAthleteDetail() {
                       {(paymentSummary as any).installments_list && (paymentSummary as any).installments_list.length > 0 ? (
                         (paymentSummary as any).installments_list.map((inst: any, idx: number) => (
                           <View key={idx} style={styles.infoRow}>
-                            <Text style={styles.label}>
-                              {inst.name}{inst.discounted ? ' (con sconto)' : ''}
-                            </Text>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.label}>
+                                {inst.name}{inst.discounted ? ' (con sconto)' : ''}
+                              </Text>
+                              {inst.due_date ? (
+                                <Text style={{ fontSize: 11, color: '#888' }}>
+                                  Scad. {new Date(inst.due_date).toLocaleDateString('it-IT')}
+                                </Text>
+                              ) : null}
+                            </View>
                             <Text style={styles.value}>{formatCurrency(inst.amount)}</Text>
                           </View>
                         ))

@@ -1510,6 +1510,22 @@ export default function AdminDashboard() {
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
+          {/* 🆕 06/2026 — Copie Originali Certificati (dopo gli elenchi privacy) */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/certificate-originals')}
+            testID="certificate-originals-menu-card"
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#FFF3E0' }]}>
+              <Text style={{ fontSize: 26 }}>📄</Text>
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Copie Originali Certificati</Text>
+              <Text style={styles.menuCardSubtitle}>Chi ha consegnato l&apos;originale cartaceo e chi no</Text>
+            </View>
+            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
+          </TouchableOpacity>
+
           {/* Ricerca Avanzata Atleti */}
           <TouchableOpacity
             style={styles.menuCard}

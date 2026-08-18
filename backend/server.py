@@ -1003,6 +1003,12 @@ class Athlete(BaseModel):
     medical_certificate_updated_by_name: Optional[str] = None  # Nome ultimo aggiornamento
     medical_certificate_updated_by_role: Optional[str] = None  # Ruolo ultimo aggiornamento
     medical_certificate_updated_at: Optional[str] = None  # Data ultimo aggiornamento
+    # 🆕 06/2026 — Copia ORIGINALE cartacea ricevuta (requisito FIPAV). Indipendente
+    # dalla convalida (che può avvenire su foto): attesta il possesso dell'originale.
+    medical_certificate_original_received: Optional[bool] = None
+    medical_certificate_original_received_by: Optional[str] = None
+    medical_certificate_original_received_by_name: Optional[str] = None
+    medical_certificate_original_received_at: Optional[str] = None
     privacy_signature: Optional[str] = None  # Firma privacy (base64) - DA RIMUOVERE in futuro
     privacy_pdf_url: Optional[str] = None  # URL PDF privacy firmato
     # Fine periodo di prova
@@ -1417,6 +1423,28 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     except Exception as e:
         logging.error(f"JWT decode error: {str(e)}")
         raise HTTPException(status_code=401, detail="Invalid token")
+
+
+async def _settings_logo_b64(society) -> str:
+    """⚡ 06/2026 — Ritorna il logo società come base64/data-URI.
+    Dual-read: se il logo è stato migrato su Emergent Object Storage
+    (campo logo_storage_path) lo recupera da lì, altrimenti usa il base64
+    legacy in `logo`. Ritorna stringa vuota se assente.
+    """
+    if not society:
+        return ""
+    lg = society.get("logo")
+    if lg:
+        return lg
+    sp = society.get("logo_storage_path")
+    if sp:
+        try:
+            from storage_util import get_image_datauri
+            return await get_image_datauri(sp) or ""
+        except Exception:
+            return ""
+    return ""
+
 
 def generate_qr_code(athlete_id: str) -> str:
     """Generate QR code and return as base64 string"""
@@ -4235,7 +4263,7 @@ async def minor_login(request: Request, credentials: MinorLogin):
             "nome_lite": athlete.get("nome_lite", ""),
             "society_id": athlete.get("society_id", ""),
             "society_name": (society or {}).get("ragione_sociale") or (society or {}).get("name", ""),
-            "society_logo": (society or {}).get("logo", ""),
+            "society_logo": await _settings_logo_b64(society),
         }
     )
 
@@ -8507,6 +8535,127 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
         })
     
     return result
+
+
+# 🆕 06/2026 — Export anagrafica atleti con campi selezionabili (XLS/CSV lato client).
+# Ritorna il catalogo dei campi esportabili + una riga "piatta" formattata per atleta.
+EXPORT_FIELD_CATALOG = [
+    {"key": "last_name", "label": "Cognome", "group": "Anagrafica"},
+    {"key": "first_name", "label": "Nome", "group": "Anagrafica"},
+    {"key": "date_of_birth", "label": "Data di nascita", "group": "Anagrafica"},
+    {"key": "gender", "label": "Sesso", "group": "Anagrafica"},
+    {"key": "birth_place", "label": "Luogo di nascita", "group": "Anagrafica"},
+    {"key": "birth_province", "label": "Prov. nascita", "group": "Anagrafica"},
+    {"key": "fiscal_code", "label": "Codice Fiscale", "group": "Anagrafica"},
+    {"key": "email", "label": "Email", "group": "Contatti"},
+    {"key": "phone_athlete", "label": "Tel. atleta", "group": "Contatti"},
+    {"key": "phone_father", "label": "Tel. padre", "group": "Contatti"},
+    {"key": "phone_mother", "label": "Tel. madre", "group": "Contatti"},
+    {"key": "address", "label": "Indirizzo", "group": "Residenza"},
+    {"key": "postal_code", "label": "CAP", "group": "Residenza"},
+    {"key": "city", "label": "Città", "group": "Residenza"},
+    {"key": "province", "label": "Provincia", "group": "Residenza"},
+    {"key": "team_name", "label": "Squadra", "group": "Sportivo"},
+    {"key": "athlete_role", "label": "Ruolo", "group": "Sportivo"},
+    {"key": "athlete_height", "label": "Altezza (cm)", "group": "Sportivo"},
+    {"key": "athlete_weight", "label": "Peso (kg)", "group": "Sportivo"},
+    {"key": "athlete_elevation", "label": "Elevazione (cm)", "group": "Sportivo"},
+    {"key": "status", "label": "Stato", "group": "Stato"},
+    {"key": "is_registered", "label": "Tesserato", "group": "Stato"},
+    {"key": "athlete_code", "label": "Codice atleta", "group": "Stato"},
+    {"key": "registration_date", "label": "Data iscrizione", "group": "Stato"},
+    {"key": "medical_certificate_expiry", "label": "Scad. certificato", "group": "Certificato"},
+    {"key": "medical_certificate_verified", "label": "Cert. verificato", "group": "Certificato"},
+    {"key": "medical_certificate_original_received", "label": "Copia originale", "group": "Certificato"},
+]
+
+
+def _fmt_export_date(v):
+    if not v:
+        return ""
+    try:
+        if isinstance(v, datetime):
+            return v.strftime("%d/%m/%Y")
+        s = str(v)
+        return datetime.fromisoformat(s.replace("Z", "+00:00")).strftime("%d/%m/%Y")
+    except Exception:
+        return str(v)[:10]
+
+
+@api_router.get("/admin/athletes/export-data")
+async def admin_athletes_export_data(current_user = Depends(get_current_user)):
+    """Dati anagrafici completi degli atleti della società per l'export XLS/CSV.
+    Ritorna {fields:[{key,label,group}], rows:[{id, team_id, values:{key:val}}]}."""
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.COORDINATORE):
+        raise HTTPException(status_code=403, detail="Solo admin")
+    society_id = current_user.get("society_id")
+    from utils import get_current_season_for_society as _get_cs
+    _cs = await _get_cs(db, society_id)
+    athletes = await db.athletes.find({
+        "society_id": society_id,
+        "$or": [
+            {"rollover_decision": {"$ne": "removed"}},
+            {"rollover_decision_season": {"$ne": _cs}},
+        ],
+    }, {
+        "_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1,
+        "date_of_birth": 1, "gender": 1, "birth_place": 1, "place_of_birth": 1,
+        "birth_province": 1, "province_of_birth": 1, "fiscal_code": 1,
+        "email": 1, "phone_athlete": 1, "phone_father": 1, "phone_mother": 1,
+        "address": 1, "postal_code": 1, "city": 1, "province": 1,
+        "team_id": 1, "athlete_role": 1, "athlete_height": 1, "athlete_weight": 1,
+        "athlete_elevation": 1, "status": 1, "is_registered": 1, "athlete_code": 1,
+        "registration_date": 1, "medical_certificate_expiry": 1,
+        "medical_certificate_verified": 1, "medical_certificate_original_received": 1,
+    }).to_list(5000)
+
+    team_ids = list({a.get("team_id") for a in athletes if a.get("team_id")})
+    teams = await db.teams.find({"id": {"$in": team_ids}}, {"_id": 0, "id": 1, "name": 1}).to_list(500)
+    team_names = {t["id"]: t.get("name", "") for t in teams}
+
+    def _yn(v):
+        return "Sì" if v else "No"
+
+    rows = []
+    for a in athletes:
+        last = a.get("last_name") or ""
+        first = a.get("first_name") or ""
+        if not (last or first) and a.get("full_name"):
+            # full_name legacy = "Cognome Nome" oppure "Nome Cognome": best-effort
+            last = a.get("full_name")
+        values = {
+            "last_name": last,
+            "first_name": first,
+            "date_of_birth": _fmt_export_date(a.get("date_of_birth")),
+            "gender": a.get("gender") or "",
+            "birth_place": a.get("birth_place") or a.get("place_of_birth") or "",
+            "birth_province": a.get("birth_province") or a.get("province_of_birth") or "",
+            "fiscal_code": a.get("fiscal_code") or "",
+            "email": a.get("email") or "",
+            "phone_athlete": a.get("phone_athlete") or "",
+            "phone_father": a.get("phone_father") or "",
+            "phone_mother": a.get("phone_mother") or "",
+            "address": a.get("address") or "",
+            "postal_code": a.get("postal_code") or "",
+            "city": a.get("city") or "",
+            "province": a.get("province") or "",
+            "team_name": team_names.get(a.get("team_id"), ""),
+            "athlete_role": a.get("athlete_role") or "",
+            "athlete_height": a.get("athlete_height") or "",
+            "athlete_weight": a.get("athlete_weight") or "",
+            "athlete_elevation": a.get("athlete_elevation") or "",
+            "status": a.get("status") or "",
+            "is_registered": _yn(a.get("is_registered")),
+            "athlete_code": a.get("athlete_code") or "",
+            "registration_date": _fmt_export_date(a.get("registration_date")),
+            "medical_certificate_expiry": _fmt_export_date(a.get("medical_certificate_expiry")),
+            "medical_certificate_verified": _yn(a.get("medical_certificate_verified")),
+            "medical_certificate_original_received": _yn(a.get("medical_certificate_original_received")),
+        }
+        rows.append({"id": a.get("id"), "team_id": a.get("team_id"), "values": values})
+
+    return {"fields": EXPORT_FIELD_CATALOG, "rows": rows}
+
 
 @api_router.post("/athletes", response_model=Athlete)
 async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, current_user = Depends(get_current_user)):
@@ -13372,6 +13521,94 @@ async def create_certificate_simple(
         "athlete_activated": activated,
     }
 
+# 🆕 06/2026 — Flag "copia originale ricevuta" (requisito FIPAV).
+class CertificateOriginalRequest(BaseModel):
+    original_received: bool
+
+
+@api_router.patch("/admin/athletes/{athlete_id}/certificate-original")
+async def set_certificate_original_received(
+    athlete_id: str,
+    data: CertificateOriginalRequest,
+    current_user = Depends(get_current_user),
+):
+    """Attesta (o revoca) il possesso della COPIA ORIGINALE cartacea del certificato
+    medico. È indipendente dalla convalida (che può avvenire su foto anticipata dal
+    genitore): serve all'admin per sapere se l'originale FIPAV è effettivamente in sede.
+    Solo admin o coordinatore autorizzato ai certificati, stessa società."""
+    if not _has_admin_or_coord_perm(current_user, "certificates"):
+        raise HTTPException(status_code=403, detail="Solo admin o coordinatore autorizzato")
+    athlete = await db.athletes.find_one({"id": athlete_id}, {"_id": 0, "society_id": 1, "full_name": 1})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    if athlete.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Atleta di un'altra società")
+
+    now = datetime.utcnow()
+    if data.original_received:
+        update = {
+            "medical_certificate_original_received": True,
+            "medical_certificate_original_received_by": current_user["id"],
+            "medical_certificate_original_received_by_name": current_user.get("full_name", current_user.get("email", "")),
+            "medical_certificate_original_received_at": now.isoformat(),
+        }
+    else:
+        update = {
+            "medical_certificate_original_received": False,
+            "medical_certificate_original_received_by": None,
+            "medical_certificate_original_received_by_name": None,
+            "medical_certificate_original_received_at": None,
+        }
+    await db.athletes.update_one({"id": athlete_id}, {"$set": update})
+    return {
+        "athlete_id": athlete_id,
+        "medical_certificate_original_received": update["medical_certificate_original_received"],
+        "medical_certificate_original_received_by_name": update.get("medical_certificate_original_received_by_name"),
+        "medical_certificate_original_received_at": update.get("medical_certificate_original_received_at"),
+    }
+
+
+@api_router.get("/admin/athletes/certificate-originals")
+async def admin_list_certificate_originals(current_user = Depends(get_current_user)):
+    """Elenco di TUTTI gli atleti della società con lo stato della COPIA ORIGINALE
+    cartacea del certificato medico. Il frontend divide in due tab
+    (Da consegnare / Già consegnato) e permette l'ordinamento per nome o squadra."""
+    if not _has_admin_or_coord_perm(current_user, "certificates"):
+        raise HTTPException(status_code=403, detail="Solo admin o coordinatore autorizzato")
+    society_id = current_user.get("society_id")
+    athletes = await db.athletes.find(
+        {"society_id": society_id},
+        {"_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1,
+         "team_id": 1, "medical_certificate_original_received": 1,
+         "medical_certificate_verified": 1, "medical_certificate_expiry": 1,
+         "medical_certificate_original_received_at": 1,
+         "medical_certificate_original_received_by_name": 1},
+    ).to_list(5000)
+
+    team_ids = list({a.get("team_id") for a in athletes if a.get("team_id")})
+    teams = await db.teams.find({"id": {"$in": team_ids}}, {"_id": 0, "id": 1, "name": 1}).to_list(500)
+    team_names = {t["id"]: t.get("name", "—") for t in teams}
+
+    rows = []
+    for a in athletes:
+        name = a.get("full_name") or f"{a.get('first_name','')} {a.get('last_name','')}".strip() or "—"
+        rows.append({
+            "id": a.get("id"),
+            "full_name": name,
+            "team_id": a.get("team_id"),
+            "team_name": team_names.get(a.get("team_id"), "Nessuna squadra"),
+            "original_received": bool(a.get("medical_certificate_original_received")),
+            "certificate_verified": bool(a.get("medical_certificate_verified")),
+            "has_certificate": bool(a.get("medical_certificate_expiry") or a.get("medical_certificate_verified")),
+            "original_received_at": a.get("medical_certificate_original_received_at"),
+            "original_received_by_name": a.get("medical_certificate_original_received_by_name"),
+        })
+    rows.sort(key=lambda r: (r["full_name"] or "").lower())
+    received = [r for r in rows if r["original_received"]]
+    pending = [r for r in rows if not r["original_received"]]
+    return {"total": len(rows), "received_count": len(received), "pending_count": len(pending), "athletes": rows}
+
+
 # Override blocco certificato scaduto (solo Admin)
 class CertificateOverrideRequest(BaseModel):
     athlete_id: str
@@ -15052,7 +15289,7 @@ async def get_fiscal_receipt_data(athlete_id: str, current_user = Depends(get_cu
             "phone": society.get("phone", "") if society else "",
             "phone2": society.get("phone2", "") if society else "",
             "president_name": society.get("president_name", "") if society else "",
-            "logo": society.get("logo", "") if society else "",
+            "logo": await _settings_logo_b64(society),
             "stamp_signature": society.get("stamp_signature", "") if society else "",
             "sport_type": society.get("sport_type", "PALLAVOLO") if society else "PALLAVOLO",
         },
@@ -30822,7 +31059,9 @@ async def generate_fiscal_card(current_user = Depends(get_current_user)):
     president = society.get("president_name", "")
     affiliations = society.get("affiliations", [])
     logo_data = society.get("logo")
-    
+    if not logo_data and society.get("logo_storage_path"):
+        from storage_util import get_image_datauri
+        logo_data = await get_image_datauri(society["logo_storage_path"])
     # === Layout constants ===
     W = 720
     pad_x = 32
@@ -31077,6 +31316,9 @@ async def generate_bank_card(current_user = Depends(get_current_user)):
     logo_x, logo_y = 30, 24
     logo_size = 80
     logo_data = society.get("logo")
+    if not logo_data and society.get("logo_storage_path"):
+        from storage_util import get_image_datauri
+        logo_data = await get_image_datauri(society["logo_storage_path"])
     if logo_data:
         try:
             if ',' in logo_data:
@@ -32417,7 +32659,7 @@ async def get_minor_dashboard(current_user = Depends(get_current_user)):
         "schedule": team_schedule,
         "society": {
             "name": society.get("name") if society else None,
-            "logo": society.get("logo") if society else None,
+            "logo": await _settings_logo_b64(society) or None,
             "sport": society.get("sport_praticato") or society.get("sport") if society else None,
             "sport_image": society.get("sport_image") if society else None,
         } if society else None,
@@ -34510,6 +34752,9 @@ async def get_public_campaign_info(campaign_id: str):
     sport_name = ""
     if society:
         logo = society.get("logo", "")
+        if not logo and society.get("logo_storage_path"):
+            from storage_util import get_image_datauri
+            logo = await get_image_datauri(society["logo_storage_path"]) or ""
         if not society_name:
             society_name = society.get("name", "")
         sport_name = society.get("sport_praticato", "") or society.get("sport_name", "")
@@ -34731,7 +34976,7 @@ async def get_preseason_share_page(campaign_id: str, request: Request):
         society = await db.settings.find_one({"type": "society"})  # noqa: multitenancy-ok — fallback branding pubblico dopo tentativo mirato
 
     society_name = campaign.get("society_name") or (society.get("name") if society else "") or "Società Sportiva"
-    has_logo = bool(society and society.get("logo"))
+    has_logo = bool(society and (society.get("logo") or society.get("logo_storage_path")))
     society_id = (society or {}).get("society_id") or campaign.get("society_id") or ""
 
     # Construct absolute logo URL (required by WhatsApp/OG crawlers).

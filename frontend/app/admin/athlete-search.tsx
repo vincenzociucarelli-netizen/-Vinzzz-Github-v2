@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
   FlatList,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '../../src/components/Icon';
@@ -28,15 +29,29 @@ interface Athlete {
   athlete_role?: string;
   athlete_height?: number;
   team_name?: string;
+  team_id?: string;
 }
 
 interface FilterState {
   role: string;
+  team: string;
   birthYearFrom: string;
   birthYearTo: string;
   postalCode: string;
   heightMin: string;
   heightMax: string;
+}
+
+interface ExportField {
+  key: string;
+  label: string;
+  group: string;
+}
+
+interface ExportRow {
+  id: string;
+  team_id?: string | null;
+  values: Record<string, any>;
 }
 
 interface SocietySettings {
@@ -50,9 +65,20 @@ export default function AthleteSearchScreen() {
   const [filteredAthletes, setFilteredAthletes] = useState<Athlete[]>([]);
   const [settings, setSettings] = useState<SocietySettings>({ athlete_roles: [] });
   const [showFilters, setShowFilters] = useState(true);
-  
+
+  // 🆕 06/2026 — Export con campi selezionabili
+  const [teamsList, setTeamsList] = useState<{ id: string; name: string }[]>([]);
+  const [exportFields, setExportFields] = useState<ExportField[]>([]);
+  const [exportRows, setExportRows] = useState<Record<string, ExportRow>>({});
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [selectedFields, setSelectedFields] = useState<string[]>([
+    'last_name', 'first_name', 'date_of_birth', 'team_name', 'athlete_role', 'fiscal_code',
+  ]);
+  const [exportFormat, setExportFormat] = useState<'xlsx' | 'csv'>('xlsx');
+
   const [filters, setFilters] = useState<FilterState>({
     role: '',
+    team: '',
     birthYearFrom: '',
     birthYearTo: '',
     postalCode: '',
@@ -71,15 +97,26 @@ export default function AthleteSearchScreen() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [athletesRes, settingsRes] = await Promise.all([
+      const [athletesRes, settingsRes, exportRes] = await Promise.all([
         sharedGet('/athletes'),
         api.get('/settings/society'),
+        api.get('/admin/athletes/export-data'),
       ]);
-      setAthletes(athletesRes.data || []);
-      setFilteredAthletes(athletesRes.data || []);
+      const list: Athlete[] = athletesRes.data || [];
+      setAthletes(list);
+      setFilteredAthletes(list);
       setSettings({
         athlete_roles: settingsRes.data.athlete_roles || [],
       });
+      // Catalogo campi + righe anagrafica per l'export
+      setExportFields(exportRes.data.fields || []);
+      const map: Record<string, ExportRow> = {};
+      (exportRes.data.rows || []).forEach((r: ExportRow) => { map[r.id] = r; });
+      setExportRows(map);
+      // Squadre disponibili (derivate dagli atleti caricati)
+      const seen = new Map<string, string>();
+      list.forEach((a) => { if (a.team_id) seen.set(a.team_id, a.team_name || '—'); });
+      setTeamsList(Array.from(seen.entries()).map(([id, name]) => ({ id, name })).sort((x, y) => x.name.localeCompare(y.name, 'it')));
     } catch (error) {
       console.error('Error loading data:', error);
       showAlert('Errore', 'Impossibile caricare i dati');
@@ -102,6 +139,11 @@ export default function AthleteSearchScreen() {
     // Filter by role
     if (filters.role) {
       result = result.filter(a => a.athlete_role === filters.role);
+    }
+
+    // Filter by team
+    if (filters.team) {
+      result = result.filter(a => a.team_id === filters.team);
     }
 
     // Filter by birth year range
@@ -149,6 +191,7 @@ export default function AthleteSearchScreen() {
   const clearFilters = () => {
     setFilters({
       role: '',
+      team: '',
       birthYearFrom: '',
       birthYearTo: '',
       postalCode: '',
@@ -158,63 +201,80 @@ export default function AthleteSearchScreen() {
     setFilteredAthletes(athletes);
   };
 
-  const exportToXLS = async () => {
+  const toggleField = (key: string) => {
+    setSelectedFields((prev) => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+  };
+
+  const doExport = async () => {
     if (filteredAthletes.length === 0) {
-      Alert.alert('Attenzione', 'Nessun atleta da esportare');
+      showAlert('Attenzione', 'Nessun atleta da esportare');
       return;
     }
-
+    if (selectedFields.length === 0) {
+      showAlert('Attenzione', 'Seleziona almeno un campo da esportare');
+      return;
+    }
     try {
-      // Prepare data for export
-      const exportData = filteredAthletes.map(athlete => ({
-        'Nome Completo': athlete.full_name,
-        'Data di Nascita': athlete.date_of_birth ? new Date(athlete.date_of_birth).toLocaleDateString('it-IT') : '',
-        'Età': athlete.date_of_birth ? calculateAge(athlete.date_of_birth) : '',
-        'Ruolo': athlete.athlete_role || '',
-        'Altezza (cm)': athlete.athlete_height || '',
-        'CAP': athlete.postal_code || '',
-        'Squadra': athlete.team_name || '',
-      }));
+      // Campi in ordine di catalogo (mantiene ordine coerente indipendente dai tap)
+      const orderedKeys = exportFields.filter(f => selectedFields.includes(f.key));
+      const exportData = filteredAthletes.map((a) => {
+        const row = exportRows[a.id];
+        const obj: Record<string, any> = {};
+        orderedKeys.forEach((f) => {
+          obj[f.label] = row ? (row.values[f.key] ?? '') : '';
+        });
+        return obj;
+      });
 
-      // Create workbook
+      const dateStr = new Date().toISOString().split('T')[0];
+      const isCsv = exportFormat === 'csv';
+      const fileName = `atleti_${dateStr}.${isCsv ? 'csv' : 'xlsx'}`;
+
       const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Atleti');
 
-      // Generate file
-      const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-
       if (Platform.OS === 'web') {
-        // For web, download directly
-        const blob = new Blob([s2ab(atob(wbout))], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `atleti_${new Date().toISOString().split('T')[0]}.xlsx`;
-        a.click();
-        URL.revokeObjectURL(url);
-        Alert.alert('✅ Esportato', 'File XLS scaricato');
+        if (isCsv) {
+          const csv = XLSX.utils.sheet_to_csv(ws);
+          // BOM per corretta visualizzazione accenti in Excel
+          const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url; link.download = fileName; link.click();
+          URL.revokeObjectURL(url);
+        } else {
+          const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+          const blob = new Blob([s2ab(atob(wbout))], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url; link.download = fileName; link.click();
+          URL.revokeObjectURL(url);
+        }
+        setShowExportModal(false);
+        showAlert('✅ Esportato', `File ${isCsv ? 'CSV' : 'XLS'} scaricato (${exportData.length} atleti)`);
       } else {
-        // For mobile, use FileSystem and Sharing
-        const fileName = `atleti_${new Date().toISOString().split('T')[0]}.xlsx`;
         const fileUri = FileSystem.documentDirectory + fileName;
-        
-        await FileSystem.writeAsStringAsync(fileUri, wbout, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-
+        if (isCsv) {
+          const csv = XLSX.utils.sheet_to_csv(ws);
+          await FileSystem.writeAsStringAsync(fileUri, '\uFEFF' + csv, { encoding: FileSystem.EncodingType.UTF8 });
+        } else {
+          const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+          await FileSystem.writeAsStringAsync(fileUri, wbout, { encoding: FileSystem.EncodingType.Base64 });
+        }
+        setShowExportModal(false);
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(fileUri, {
-            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            mimeType: isCsv ? 'text/csv' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             dialogTitle: 'Esporta Lista Atleti',
           });
         } else {
-          Alert.alert('✅ Esportato', `File salvato: ${fileName}`);
+          showAlert('✅ Esportato', `File salvato: ${fileName}`);
         }
       }
     } catch (error) {
       console.error('Export error:', error);
-      Alert.alert('Errore', 'Impossibile esportare i dati');
+      showAlert('Errore', 'Impossibile esportare i dati');
     }
   };
 
@@ -318,6 +378,24 @@ export default function AthleteSearchScreen() {
             </View>
           </View>
 
+          {/* Team Filter 🆕 */}
+          <View style={styles.filterRow}>
+            <Text style={styles.filterLabel}>Squadra</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={filters.team}
+                onValueChange={(value) => setFilters({...filters, team: value})}
+                style={styles.picker}
+                testID="team-filter-picker"
+              >
+                <Picker.Item label="Tutte le squadre" value="" />
+                {teamsList.map((t) => (
+                  <Picker.Item key={t.id} label={t.name} value={t.id} />
+                ))}
+              </Picker>
+            </View>
+          </View>
+
           {/* Birth Year Range Filter */}
           <View style={styles.filterRow}>
             <Text style={styles.filterLabel}>Anno di Nascita</Text>
@@ -403,9 +481,9 @@ export default function AthleteSearchScreen() {
           {filteredAthletes.length} atleti trovati
         </Text>
         {filteredAthletes.length > 0 && (
-          <TouchableOpacity style={styles.exportButton} onPress={exportToXLS}>
-            <Ionicons name="share-outline" size={18} color="#fff" />
-            <Text style={styles.exportButtonText}>Condividi XLS</Text>
+          <TouchableOpacity style={styles.exportButton} onPress={() => setShowExportModal(true)} testID="open-export-modal-btn">
+            <Ionicons name="download-outline" size={18} color="#fff" />
+            <Text style={styles.exportButtonText}>Esporta</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -429,6 +507,84 @@ export default function AthleteSearchScreen() {
           }
         />
       )}
+
+      {/* 🆕 Modal export campi selezionabili */}
+      <Modal visible={showExportModal} transparent animationType="slide" onRequestClose={() => setShowExportModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Esporta {filteredAthletes.length} atleti</Text>
+              <TouchableOpacity onPress={() => setShowExportModal(false)} testID="export-modal-close">
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Formato */}
+            <Text style={styles.modalSectionTitle}>Formato</Text>
+            <View style={styles.formatRow}>
+              <TouchableOpacity
+                testID="format-xlsx"
+                style={[styles.formatChip, exportFormat === 'xlsx' && styles.formatChipActive]}
+                onPress={() => setExportFormat('xlsx')}
+              >
+                <Ionicons name="grid-outline" size={16} color={exportFormat === 'xlsx' ? '#fff' : '#007AFF'} />
+                <Text style={[styles.formatChipText, exportFormat === 'xlsx' && styles.formatChipTextActive]}>Excel (.xlsx)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="format-csv"
+                style={[styles.formatChip, exportFormat === 'csv' && styles.formatChipActive]}
+                onPress={() => setExportFormat('csv')}
+              >
+                <Ionicons name="document-text-outline" size={16} color={exportFormat === 'csv' ? '#fff' : '#007AFF'} />
+                <Text style={[styles.formatChipText, exportFormat === 'csv' && styles.formatChipTextActive]}>CSV (.csv)</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Campi */}
+            <View style={styles.fieldsHeaderRow}>
+              <Text style={styles.modalSectionTitle}>Campi da esportare ({selectedFields.length})</Text>
+              <TouchableOpacity
+                testID="toggle-all-fields"
+                onPress={() => setSelectedFields(selectedFields.length === exportFields.length ? [] : exportFields.map(f => f.key))}
+              >
+                <Text style={styles.selectAllText}>
+                  {selectedFields.length === exportFields.length ? 'Deseleziona tutti' : 'Seleziona tutti'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.fieldsScroll}>
+              {Array.from(new Set(exportFields.map(f => f.group))).map((group) => (
+                <View key={group}>
+                  <Text style={styles.fieldGroupTitle}>{group}</Text>
+                  {exportFields.filter(f => f.group === group).map((f) => {
+                    const checked = selectedFields.includes(f.key);
+                    return (
+                      <TouchableOpacity
+                        key={f.key}
+                        style={styles.fieldRow}
+                        onPress={() => toggleField(f.key)}
+                        testID={`field-${f.key}`}
+                      >
+                        <Ionicons
+                          name={checked ? 'checkbox' : 'square-outline'}
+                          size={22}
+                          color={checked ? '#007AFF' : '#bbb'}
+                        />
+                        <Text style={styles.fieldLabel}>{f.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity style={styles.downloadBtn} onPress={doExport} testID="download-export-btn">
+              <Ionicons name="download" size={18} color="#fff" />
+              <Text style={styles.downloadBtnText}>Scarica {exportFormat === 'csv' ? 'CSV' : 'Excel'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -633,4 +789,43 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 4,
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    padding: 18,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#222' },
+  modalSectionTitle: { fontSize: 14, fontWeight: '600', color: '#444', marginTop: 6, marginBottom: 8 },
+  formatRow: { flexDirection: 'row', gap: 10, marginBottom: 8 },
+  formatChip: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: '#007AFF', backgroundColor: '#fff',
+  },
+  formatChipActive: { backgroundColor: '#007AFF' },
+  formatChipText: { fontSize: 13, fontWeight: '600', color: '#007AFF' },
+  formatChipTextActive: { color: '#fff' },
+  fieldsHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 },
+  selectAllText: { fontSize: 13, color: '#007AFF', fontWeight: '600' },
+  fieldsScroll: { maxHeight: 320, marginTop: 4 },
+  fieldGroupTitle: { fontSize: 12, fontWeight: '700', color: '#888', marginTop: 10, marginBottom: 2, textTransform: 'uppercase' },
+  fieldRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  fieldLabel: { fontSize: 15, color: '#333' },
+  downloadBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: '#34C759', paddingVertical: 14, borderRadius: 12, marginTop: 14,
+  },
+  downloadBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 });

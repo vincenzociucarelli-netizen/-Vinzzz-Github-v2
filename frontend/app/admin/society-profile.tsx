@@ -153,7 +153,7 @@ export default function SocietyProfile() {
         base64: true,
       });
       if (!result.canceled && result.assets[0].base64) {
-        setLogo(result.assets[0].base64);
+        setLogo(`data:image/jpeg;base64,${result.assets[0].base64}`);
       }
     } catch (error) {
       showAlert('Errore', 'Impossibile selezionare l\'immagine');
@@ -345,7 +345,7 @@ export default function SocietyProfile() {
             {editMode ? (
               <TouchableOpacity onPress={handleSelectLogo} style={styles.avatarEdit}>
                 {logo ? (
-                  <Image source={{ uri: `data:image/jpeg;base64,${logo}` }} style={styles.avatar} resizeMode="contain" />
+                  <Image source={{ uri: logo.startsWith('data:') ? logo : `data:image/jpeg;base64,${logo}` }} style={styles.avatar} resizeMode="contain" />
                 ) : (
                   <View style={styles.avatarPlaceholder}>
                     <Ionicons name="camera" size={28} color="#999" />
@@ -358,7 +358,7 @@ export default function SocietyProfile() {
             ) : (
               <View>
                 {logo ? (
-                  <Image source={{ uri: `data:image/jpeg;base64,${logo}` }} style={styles.avatar} resizeMode="contain" />
+                  <Image source={{ uri: logo.startsWith('data:') ? logo : `data:image/jpeg;base64,${logo}` }} style={styles.avatar} resizeMode="contain" />
                 ) : (
                   <View style={styles.avatarPlaceholder}>
                     <Ionicons name="business" size={36} color="#999" />

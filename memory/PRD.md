@@ -400,6 +400,17 @@ Vedi `/app/memory/test_credentials.md`
 - `/app/frontend/src/utils/fiscalReceipt.ts`
 
 
+## Changelog — 18/08/2026 (g) — Scadenze rate nel "Riepilogo Quote" (vista Admin atleta)
+### Bug
+- Nella scheda ATLETA lato Admin, "💰 Riepilogo Quote" mostrava nome+importo ma NON le date di scadenza delle rate (presenti invece nella scheda Squadra e lato Genitore).
+### Fix (frontend admin/athlete/[id].tsx, installments_list.map ~riga 3497)
+- Aggiunta la riga "Scad. GG/MM/AAAA" sotto il nome di ogni rata quando `inst.due_date` è presente (il backend lo forniva già). Stile identico alla scheda Squadra. La 1ª rata (Iscrizione, senza scadenza) resta senza data.
+### Verifica (testing agent, iteration_109) — frontend
+- Test REACT (Under 14): Rata 2 Scad. 03/11/2025 (150€), Rata 3 Scad. 23/12/2025 (200€), Iscrizione senza data. Nessuna regressione sulla scheda Squadra.
+### Note
+- Vista Genitore (parent/athlete) mostrava già le scadenze. Vista Atleta 18+ (athlete/payments) mostra "Scadenza: ..." per le rate NON pagate (status-aware) — lasciata invariata.
+
+
 ## Diagnosi DEFINITIVA lentezza — 18/08/2026 (dopo deploy utente)
 ### Misure oggettive
 - Chrome Timing su richiesta lenta: 99% del tempo su "Waiting for server response" (TTFB ~9s); Stalled/Queueing pochi ms. ~93 richieste per apertura pagina.
@@ -802,3 +813,42 @@ Fix: la guardia ora è `if ts and te and te <= today:` → "Fine prova" scatta s
 realmente iniziata (trial_start_date valorizzata). Aggiunta anche projection base64 su athletes in
 questa funzione (alimenta il badge solleciti in polling).
 Da confermare in produzione dopo DEPLOY.
+
+
+### 06/2026 — Migrazione LOGO società → Emergent Object Storage
+Obiettivo: togliere i base64 multi-MB dei loghi dai documenti Mongo (alleggerisce M0 e payload).
+Implementazione:
+- Nuovo modulo condiviso `/app/backend/storage_util.py` (init/put/get + compressione JPEG PIL + helper path).
+- `routes/settings.py`:
+  - PATCH `/settings/society`: se arriva `logo` (data URI O base64 grezzo, len>100, non http) → comprime a JPEG (max 800px, ~180KB) e carica su object storage; nel doc resta solo `logo_storage_path`, `logo=""`. Fallback: se upload fallisce tiene il valore originale.
+  - GET `/settings/society/logo.png`: dual-read (storage → fallback base64 legacy).
+  - GET `/settings/society?include_images=true`: se `logo_storage_path` e `logo` vuoto → idrata il base64 dallo storage (per anteprima edit + generazione PDF). `has_logo` considera anche `logo_storage_path`.
+- `server.py`: helper `_settings_logo_b64(society)` (dual-read) applicato ai consumer server-side che leggono `settings.logo` come base64: card fiscale (`/society/card-fiscale`), card bancaria, ricevuta fiscale, login minore (`minor_login`), dashboard minore, share preseason JSON+HTML (`has_logo`).
+- Frontend: `admin/settings/society.tsx` e `admin/society-profile.tsx` — upload logo ora wrappato come data URI; rendering logo reso robusto (`startsWith('data:')` evita il doppio prefisso `data:...data:...`).
+- Script migrazione una-tantum: `/app/backend/migrate_logos_to_storage.py` (idempotente). In preview c'è 1 sola società.
+- NOTA: `societies.logo` (business card `/societies/my`) NON migrato (collezione separata, invariato).
+- Test: pytest `tests/test_logo_storage_and_cert_original.py` 9/9 PASS + verifica curl (raw base64 → migra; include_images ritorna singolo prefisso data URI).
+
+### 06/2026 — Flag "Copia originale certificato ricevuta" (requisito FIPAV)
+Esigenza utente: i genitori anticipano il certificato via foto (convalida rapida per far entrare in palestra),
+ma la FIPAV richiede il possesso della COPIA ORIGINALE cartacea. Serve un flag indipendente dalla convalida.
+Implementazione:
+- Modello `Athlete`: campi `medical_certificate_original_received` (+ `_by`, `_by_name`, `_at`).
+- Endpoint `PATCH /admin/athletes/{id}/certificate-original` body `{original_received: bool}` (solo admin/coordinatore con perm certificates, stessa società). Con true set flag+metadati; con false azzera.
+- Frontend `admin/athlete/[id].tsx`: pulsante testID `cert-original-toggle` nella card Certificato Medico (visibile solo se esiste un certificato) con handler `handleToggleOriginal`, mostra "Registrata da X il Y".
+- Test: incluso nel pytest sopra + verifica frontend testing agent OK.
+
+### 06/2026 — Elenco "Copie Originali Certificati" (Dashboard Admin)
+- Nuova card dashboard `certificate-originals-menu-card` (dopo "Consensi Immagini") → pagina `/admin/certificate-originals`.
+- Backend: `GET /admin/athletes/certificate-originals` (admin/coord) → tutti gli atleti società con stato copia originale + squadra.
+- Pagina `app/admin/certificate-originals.tsx`: 2 tab (Da consegnare / Già consegnato) con contatori, ordinamento Nome/Squadra, toggle per riga (`cert-orig-toggle-{id}`) che marca la consegna e sposta l'atleta tra i tab. Riusa PATCH `/admin/athletes/{id}/certificate-original`.
+- Test: pytest `tests/test_certificate_originals_list.py` 4/4 + frontend OK (iteration 111).
+
+### 06/2026 — Ricerca Atleti: filtro Squadra + Export con campi selezionabili (XLS/CSV)
+- `app/admin/athlete-search.tsx`:
+  - Nuovo filtro Picker "Squadra" (`team-filter-picker`, squadre derivate dagli atleti caricati) integrato in applyFilters/clearFilters.
+  - Sostituito il vecchio "Condividi XLS" (campi fissi) con pulsante "Esporta" (`open-export-modal-btn`) che apre un modal: toggle formato Excel(.xlsx)/CSV(.csv) (`format-xlsx`/`format-csv`), checkbox campi raggruppati (`field-{key}`) con "Seleziona/Deseleziona tutti" (`toggle-all-fields`), download (`download-export-btn`). CSV con BOM UTF-8 per accenti. Esporta gli atleti attualmente filtrati con solo i campi scelti, in ordine di catalogo.
+- Backend: `GET /admin/athletes/export-data` (admin/coord) → `{fields:[{key,label,group}] (27 campi, 6 gruppi), rows:[{id, team_id, values}]}` con valori formattati (date dd/mm/yyyy, booleani Sì/No). Catalogo `EXPORT_FIELD_CATALOG` + helper `_fmt_export_date`.
+- Campi export disponibili: Cognome, Nome, Data nascita, Sesso, Luogo/Prov. nascita, Codice Fiscale, Email, Tel atleta/padre/madre, Indirizzo, CAP, Città, Provincia, Squadra, Ruolo, Altezza, Peso, Elevazione, Stato, Tesserato, Codice atleta, Data iscrizione, Scad. certificato, Cert. verificato, Copia originale.
+- Test: pytest 4/4 + frontend OK (iteration 112), download reale .xlsx/.csv catturato.
+

@@ -245,7 +245,8 @@ export default function SocietySettings() {
       });
 
       if (!result.canceled && result.assets[0].base64) {
-        setLogo(result.assets[0].base64);
+        // ⚡ 06/2026 — Salviamo come data URI così il backend migra su Object Storage
+        setLogo(`data:image/jpeg;base64,${result.assets[0].base64}`);
       }
     } catch (error) {
       showAlert('Errore', 'Impossibile selezionare l\'immagine');
@@ -699,7 +700,7 @@ export default function SocietySettings() {
             {logo ? (
               <View style={styles.logoPreview}>
                 <Image
-                  source={{ uri: `data:image/jpeg;base64,${logo}` }}
+                  source={{ uri: (logo.startsWith('data:') || logo.startsWith('http')) ? logo : `data:image/jpeg;base64,${logo}` }}
                   style={[styles.logoImage, { width: logoSize, height: logoSize }]}
                   resizeMode="contain"
                 />
