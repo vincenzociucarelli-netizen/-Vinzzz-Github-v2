@@ -277,12 +277,16 @@ async def get_society_settings(request: Request, include_images: bool = False):
         # l'apertura. Comprimiamo (max 1280px, JPEG q72) e persistiamo, solo se > ~500KB.
         if settings:
             try:
+                import asyncio as _asyncio_img
                 from utils import compress_base64_image
                 _img_updates = {}
                 for _pk in ("logo", "sport_image", "stamp_signature"):
                     _val = settings.get(_pk)
                     if isinstance(_val, str) and len(_val) > 500_000:
-                        _comp = compress_base64_image(_val)
+                        # 🚀 18/08/2026 — Compressione OFF dall'event loop (thread separato):
+                        # PIL è CPU-bound e su Render (1 worker) bloccava tutte le altre
+                        # richieste in coda finché non finiva (stalli fino a 7s).
+                        _comp = await _asyncio_img.to_thread(compress_base64_image, _val)
                         if _comp and _comp != _val and len(_comp) < len(_val):
                             settings[_pk] = _comp
                             _img_updates[_pk] = _comp

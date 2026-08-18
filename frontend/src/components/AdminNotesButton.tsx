@@ -14,6 +14,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated, Easing } from 'reac
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import api from '../services/api';
+import { isTabActive } from '../services/pollGate';
 
 interface AdminNoteSummary {
   id: string;
@@ -57,7 +58,8 @@ export const AdminNotesButton: React.FC = () => {
   useEffect(() => {
     load();
     // ricarica ogni 60s per aggiornare contatore/urgenza in background
-    const t = setInterval(load, 60000);
+    // (salta quando la scheda del browser non è in primo piano)
+    const t = setInterval(() => { if (isTabActive()) load(); }, 60000);
     return () => clearInterval(t);
   }, [load]);
 

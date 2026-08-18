@@ -4355,11 +4355,13 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
     # include_images=true (es. anagrafica atleta lato admin). Compressione solo se > ~500KB.
     if include_images and user:
         from utils import compress_base64_image
+        import asyncio as _asyncio_usr
         _img_updates = {}
         for _pk in HEAVY_IMAGE_FIELDS:
             _val = user.get(_pk)
             if isinstance(_val, str) and len(_val) > 500_000:
-                _comp = compress_base64_image(_val)
+                # 🚀 18/08/2026 — Compressione OFF dall'event loop (thread separato).
+                _comp = await _asyncio_usr.to_thread(compress_base64_image, _val)
                 if _comp and _comp != _val and len(_comp) < len(_val):
                     user[_pk] = _comp
                     _img_updates[_pk] = _comp
@@ -11174,11 +11176,13 @@ async def get_athlete(athlete_id: str, current_user = Depends(get_current_user))
     # 🚀 16/08/2026 — Backfill compressione foto pesanti (riduce payload + RAM su Render,
     # velocizza l'apertura dell'anagrafica atleta). Solo se > ~500KB.
     from utils import compress_base64_image
+    import asyncio as _asyncio_ath
     _photo_updates = {}
     for _pk in ('athlete_photo', 'athlete_photo_artistic'):
         _val = athlete.get(_pk)
         if isinstance(_val, str) and len(_val) > 500_000:
-            _comp = compress_base64_image(_val)
+            # 🚀 18/08/2026 — Compressione OFF dall'event loop (thread separato).
+            _comp = await _asyncio_ath.to_thread(compress_base64_image, _val)
             if _comp and _comp != _val and len(_comp) < len(_val):
                 athlete[_pk] = _comp
                 _photo_updates[_pk] = _comp
@@ -37253,6 +37257,38 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# ============================================================
+# ⏱️ 18/08/2026 — Middleware di timing per DIAGNOSI performance produzione
+# ------------------------------------------------------------
+# Logga la durata di ogni richiesta. Le richieste lente (> soglia) vengono
+# loggate come WARNING con prefisso "SLOW" per essere facilmente filtrate
+# nei log di Render (grep "SLOW"). Aiuta a individuare quale endpoint causa
+# i 15-20s di attesa sulle pagine Società / Atleta.
+import time as _time_perf
+
+_SLOW_REQUEST_THRESHOLD_MS = 1000  # soglia in millisecondi
+
+class RequestTimingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        _start = _time_perf.perf_counter()
+        response = await call_next(request)
+        _elapsed_ms = (_time_perf.perf_counter() - _start) * 1000.0
+        try:
+            _path = request.url.path or ""
+            if _path.startswith("/api/"):
+                _msg = f"{request.method} {_path} -> {response.status_code} in {_elapsed_ms:.0f}ms"
+                if _elapsed_ms >= _SLOW_REQUEST_THRESHOLD_MS:
+                    logger.warning(f"⏱️ SLOW {_msg}")
+                else:
+                    logger.debug(f"⏱️ {_msg}")
+                response.headers["X-Response-Time-ms"] = f"{_elapsed_ms:.0f}"
+        except Exception:
+            pass
+        return response
+
+app.add_middleware(RequestTimingMiddleware)
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

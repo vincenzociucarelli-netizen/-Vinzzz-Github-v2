@@ -7,6 +7,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import api from '../services/api';
+import { isTabActive } from '../services/pollGate';
 
 interface Stats {
   online_users: number;
@@ -20,6 +21,7 @@ export const AdminLiveStats: React.FC = () => {
 
   useEffect(() => {
     const load = () => {
+      if (!isTabActive()) return;
       api.get('/admin/dashboard-live-stats')
         .then(r => setStats(r.data))
         .catch(() => {});

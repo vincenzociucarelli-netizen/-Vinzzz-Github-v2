@@ -624,3 +624,17 @@ Scelte utente: domanda "già tesserato" SOLO per minorenni; adulti = certificato
 - Bug preesistente corretto: get_society_settings NON restituiva has_logo/has_sport_image/has_stamp_signature (persi nel rebuild del dict) → il frontend poteva ricaricare sempre le versioni pesanti. Ora inclusi.
 - Verificato: pytest tests/test_settings_society_image_compression.py 9/9, iteration_102/103.json. Backend-only → serve Deploy.
 - NB: se dopo il deploy nessuna immagine è grande e la lentezza persiste, la causa residua è probabilmente l'hosting (Render cold start/RAM) o latenza DB — da investigare sui log del backend deployato.
+
+### Performance 18/08/2026 — Vera causa lentezza produzione: troppe richieste + PIL bloccante
+- **Diagnosi (dai DevTools Network dell'utente su /admin/society-profile)**: l'endpoint `certificate-override-status` (0,4 kB) impiegava ~7,3s x4 e `/admin/notifications` veniva chiamato 15+ volte. NON è la dimensione delle immagini: è il **numero di richieste** dei poller globali che satura le ~6 connessioni del browser + il singolo worker Render → richieste in coda per secondi.
+- **Fix 1 — Riduzione traffico poller (frontend)**: nuovo modulo `src/services/pollGate.ts` con:
+  - `getPrimaryAdminStatusCached()` → una sola chiamata a `/admin/primary-admin/status` ogni 60s condivisa dai 3 componenti che la usavano (CertificateOverridePopup 10s, GlobalOverrideStatusPopup 30s, PrimaryAdminDeclarationModal 60s) + dedup delle chiamate in volo.
+  - `isTabActive()` → i poller saltano le richieste quando la scheda del browser non è in primo piano.
+  - `CertificateOverridePopup`: intervallo 10s → 30s.
+  - Applicato pausa-scheda anche ad `AdminLiveStats` (30s) e `AdminNotesButton` (60s).
+  - Bug preesistente corretto in GlobalOverrideStatusPopup: `setVisible` inesistente → `setPopupVisible`.
+- **Fix 2 — Compressione PIL fuori dall'event loop (backend)**: `compress_base64_image` su path GET caldi (get_athlete, get_team, get_society_settings?include_images, GET /auth/me?include_images) ora gira in thread separato via `asyncio.to_thread`. Prima, comprimere un'immagine grande bloccava l'intero worker Render, congelando tutte le richieste in coda (spiega gli stalli da 7s su endpoint minuscoli).
+- **Diagnostica aggiunta**: middleware `RequestTimingMiddleware` in server.py → logga `⏱️ SLOW GET /api/... in Xms` (>1s) e aggiunge header `X-Response-Time-ms` a ogni risposta. Utile per confermare sui log Render quale endpoint è lento.
+- **Conteggio squadre multi-team**: verificato che `/teams/athletes-count/all` usa già UNA sola aggregazione (efficiente) e `/teams` esclude le immagini pesanti → non è la causa della lentezza squadre; la causa è il traffico poller comune a tutte le pagine admin.
+- **NB DEPLOY**: frontend → Vercel; backend → Render. Le migliorie hanno effetto solo dopo il deploy.
+

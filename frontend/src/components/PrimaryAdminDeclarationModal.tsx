@@ -27,6 +27,7 @@ import {
   ScrollView,
 } from 'react-native';
 import api from '../services/api';
+import { getPrimaryAdminStatusCached, invalidatePrimaryAdminStatus, isTabActive } from '../services/pollGate';
 import { Ionicons } from './Icon';
 
 type DeclarationType = 'legal_representative' | 'authorized_delegate';
@@ -46,12 +47,12 @@ export default function PrimaryAdminDeclarationModal() {
   };
 
   const checkStatus = useCallback(async () => {
+    if (!isTabActive()) return;
     try {
-      const res = await api.get('/admin/primary-admin/status');
-      const d = res.data || {};
+      const d = await getPrimaryAdminStatusCached();
       // New logic: show popup to ANY admin while no legal representative is registered
       // (and current user hasn't signed yet). Backend computes this via `should_show_declaration_popup`.
-      if (d.should_show_declaration_popup) {
+      if (d?.should_show_declaration_popup) {
         setVisible(true);
         setAccountIsSociety(Boolean(d.account_looks_like_society));
       } else {
@@ -83,6 +84,7 @@ export default function PrimaryAdminDeclarationModal() {
         declaration_type: selected,
         confirmed: true,
       });
+      invalidatePrimaryAdminStatus();
       setVisible(false);
       showMsg(
         '✅ Dichiarazione registrata',

@@ -144,7 +144,11 @@ async def get_team(team_id: str, current_user = Depends(get_current_user)):
     for _imgk in ('team_photo', 'team_logo'):
         _val = team.get(_imgk)
         if isinstance(_val, str) and len(_val) > 500_000:
-            _compressed = compress_base64_image(_val)
+            # 🚀 18/08/2026 — Compressione OFF dall'event loop (thread separato):
+            # su Render (1 worker) la compressione sincrona bloccava tutte le altre
+            # richieste finché non finiva.
+            import asyncio as _asyncio_team
+            _compressed = await _asyncio_team.to_thread(compress_base64_image, _val)
             if _compressed and _compressed != _val and len(_compressed) < len(_val):
                 team[_imgk] = _compressed
                 try:

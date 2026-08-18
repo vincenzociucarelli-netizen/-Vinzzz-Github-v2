@@ -22,6 +22,7 @@ import {
   Alert,
 } from 'react-native';
 import api from '../services/api';
+import { getPrimaryAdminStatusCached, isTabActive } from '../services/pollGate';
 import { Ionicons } from './Icon';
 
 interface PendingOverrideNotification {
@@ -40,7 +41,7 @@ interface PendingOverrideNotification {
   created_at?: string;
 }
 
-const POLL_INTERVAL_MS = 10000; // 10 seconds
+const POLL_INTERVAL_MS = 30000; // 30s (era 10s): riduce il traffico verso Render
 
 export default function CertificateOverridePopup() {
   const [pending, setPending] = useState<PendingOverrideNotification | null>(null);
@@ -51,11 +52,13 @@ export default function CertificateOverridePopup() {
   const pollingRef = useRef<any>(null);
 
   const fetchPending = useCallback(async () => {
+    // ⏸️ Salta il polling quando la scheda del browser non è in primo piano
+    if (!isTabActive()) return;
     try {
       // Skip if any admin still needs to sign declaration (let that modal take priority)
       try {
-        const paRes = await api.get('/admin/primary-admin/status');
-        if (paRes.data?.should_show_declaration_popup) {
+        const pa = await getPrimaryAdminStatusCached();
+        if (pa?.should_show_declaration_popup) {
           setPending(null);
           return;
         }

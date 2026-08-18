@@ -23,6 +23,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../services/api';
+import { getPrimaryAdminStatusCached, isTabActive } from '../services/pollGate';
 import { Ionicons } from './Icon';
 
 interface OverrideStatus {
@@ -89,12 +90,14 @@ export default function GlobalOverrideStatusPopup() {
   };
 
   const fetchStatus = useCallback(async () => {
+    // ⏸️ Salta il polling quando la scheda del browser non è in primo piano
+    if (!isTabActive()) return;
     try {
       // Skip if any admin still needs to sign declaration (let that modal take priority)
       try {
-        const paRes = await api.get('/admin/primary-admin/status');
-        if (paRes.data?.should_show_declaration_popup) {
-          setVisible(false);
+        const pa = await getPrimaryAdminStatusCached();
+        if (pa?.should_show_declaration_popup) {
+          setPopupVisible(false);
           return;
         }
       } catch {}
