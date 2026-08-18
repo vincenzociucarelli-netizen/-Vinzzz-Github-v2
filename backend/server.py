@@ -34951,7 +34951,24 @@ async def get_preseason_share_page(campaign_id: str, request: Request):
     - Regular browsers are redirected (meta refresh + JS) to the SPA route
       `/preseason/{campaign_id}` for the real landing page.
     """
-    campaign = await db.preseason_campaigns.find_one({"id": campaign_id}, {"_id": 0})
+    # ⚡ 06/2026 PERF — Anteprima WhatsApp non mostrava titolo/locandina perché questo
+    # endpoint era LENTISSIMO (~12s): la find_one caricava l'INTERO documento campagna
+    # (incluso il cover_image base64 multi-MB) e per giunta rifaceva l'elaborazione PIL
+    # (_process_cover_for_og) a OGNI richiesta. I crawler social (WhatsApp/FB) scadono
+    # dopo pochi secondi → nessuna preview. Ora: aggregazione leggera che NON trasferisce
+    # il base64 (solo un booleano has_cover_b64) e nessun PIL nel path della richiesta.
+    _agg = await db.preseason_campaigns.aggregate([
+        {"$match": {"id": campaign_id}},
+        {"$project": {
+            "_id": 0,
+            "title": 1, "season": 1, "description": 1, "event_info": 1,
+            "society_id": 1, "society_name": 1,
+            "cover_storage_path": 1, "cover_width": 1, "cover_height": 1,
+            "has_cover_b64": {"$gt": [{"$strLenBytes": {"$ifNull": ["$cover_image", ""]}}, 0]},
+        }},
+        {"$limit": 1},
+    ]).to_list(1)
+    campaign = _agg[0] if _agg else None
 
     # Fallback HTML if campaign missing / inactive — keep generic but still redirect
     if not campaign:
@@ -34968,15 +34985,29 @@ async def get_preseason_share_page(campaign_id: str, request: Request):
             status_code=200,
         )
 
-    # Resolve society for branding
+    # Resolve society for branding.
+    # ⚡ 06/2026 PERF — Proiezione leggera: NON caricare il logo base64 (fino a ~519KB),
+    # basta sapere SE esiste (has_logo_b64) + il nome. Il logo è servito via /logo.png.
+    _soc_proj = {
+        "_id": 0, "name": 1, "society_id": 1, "logo_storage_path": 1,
+        "has_logo_b64": {"$gt": [{"$strLenBytes": {"$ifNull": ["$logo", ""]}}, 0]},
+    }
     society = None
     if campaign.get("society_id"):
-        society = await db.settings.find_one({"society_id": campaign["society_id"], "type": "society"})
+        _s = await db.settings.aggregate([
+            {"$match": {"society_id": campaign["society_id"], "type": "society"}},
+            {"$project": _soc_proj}, {"$limit": 1},
+        ]).to_list(1)
+        society = _s[0] if _s else None
     if not society:
-        society = await db.settings.find_one({"type": "society"})  # noqa: multitenancy-ok — fallback branding pubblico dopo tentativo mirato
+        _s = await db.settings.aggregate([
+            {"$match": {"type": "society"}},  # noqa: multitenancy-ok — fallback branding pubblico dopo tentativo mirato
+            {"$project": _soc_proj}, {"$limit": 1},
+        ]).to_list(1)
+        society = _s[0] if _s else None
 
     society_name = campaign.get("society_name") or (society.get("name") if society else "") or "Società Sportiva"
-    has_logo = bool(society and (society.get("logo") or society.get("logo_storage_path")))
+    has_logo = bool(society and (society.get("has_logo_b64") or society.get("logo_storage_path")))
     society_id = (society or {}).get("society_id") or campaign.get("society_id") or ""
 
     # Construct absolute logo URL (required by WhatsApp/OG crawlers).
@@ -34995,24 +35026,15 @@ async def get_preseason_share_page(campaign_id: str, request: Request):
     og_img_width = 512
     og_img_height = 512
     og_img_type = "image/png"
-    has_cover = bool(campaign.get("cover_image")) or bool(campaign.get("cover_storage_path"))
+    has_cover = bool(campaign.get("has_cover_b64")) or bool(campaign.get("cover_storage_path"))
     if has_cover and backend_url:
         logo_url = f"{backend_url}/api/preseason/public/{campaign_id}/cover.jpg"
         og_img_type = "image/jpeg"
-        # Dimensioni reali DOPO normalizzazione (max 1200px) — coerenti con cover.jpg servito
-        try:
-            _cov = campaign.get("cover_image")
-            if _cov and isinstance(_cov, str) and _cov.startswith("data:"):
-                _cov_bytes, _cov_w, _cov_h = _process_cover_for_og(_cov)
-                if _cov_bytes and _cov_w and _cov_h:
-                    og_img_width = _cov_w
-                    og_img_height = _cov_h
-            else:
-                # servita da object storage (JPEG standard 1200x630 per OG)
-                og_img_width = 1200
-                og_img_height = 630
-        except Exception:
-            pass
+        # ⚡ Niente PIL qui (era la causa della lentezza). Usa le dimensioni salvate se
+        # presenti, altrimenti il formato OG standard 1200×630 (WhatsApp usa comunque
+        # i byte reali dell'immagine servita da cover.jpg; le dimensioni sono solo un hint).
+        og_img_width = campaign.get("cover_width") or 1200
+        og_img_height = campaign.get("cover_height") or 630
     elif has_logo and backend_url:
         if society_id:
             logo_url = f"{backend_url}/api/settings/society/logo.png?society_id={society_id}"

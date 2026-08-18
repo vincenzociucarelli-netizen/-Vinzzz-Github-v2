@@ -852,3 +852,13 @@ Implementazione:
 - Campi export disponibili: Cognome, Nome, Data nascita, Sesso, Luogo/Prov. nascita, Codice Fiscale, Email, Tel atleta/padre/madre, Indirizzo, CAP, Città, Provincia, Squadra, Ruolo, Altezza, Peso, Elevazione, Stato, Tesserato, Codice atleta, Data iscrizione, Scad. certificato, Cert. verificato, Copia originale.
 - Test: pytest 4/4 + frontend OK (iteration 112), download reale .xlsx/.csv catturato.
 
+
+### 06/2026 — FIX anteprima WhatsApp (titolo + locandina non visibili)
+Sintomo: condividendo il link `/api/preseason/share/{id}` WhatsApp mostrava solo il dominio, senza titolo né locandina.
+Causa: l'endpoint `get_preseason_share_page` era LENTO (~12s in prod, misurato): (a) `find_one` senza proiezione caricava l'intero doc campagna col `cover_image` base64 multi-MB; (b) rifaceva `_process_cover_for_og` (PIL decode/resize) a OGNI richiesta; (c) caricava anche il logo società base64 (~519KB). I crawler social scadono dopo pochi secondi → nessuna preview.
+Fix (server.py, endpoint /preseason/share/{id}):
+- Campagna letta con aggregazione leggera (solo title/season/description/event_info/society_*, cover_storage_path, cover_width/height + booleano `has_cover_b64` via $strLenBytes) — NON trasferisce il base64.
+- Società letta con aggregazione leggera (name, society_id, logo_storage_path + `has_logo_b64`) — NON carica il logo base64.
+- Rimosso il PIL dal path della richiesta: dimensioni OG = cover_width/height salvate o default 1200×630 (l'immagine reale è servita da cover.jpg).
+- Risultato preview: ~7ms (verificato) con og:title + og:image corretti.
+IMPORTANTE: fix nel codice → richiede REDEPLOY per attivarsi in produzione. WhatsApp inoltre cache-a le preview per URL (ri-condividere/attendere; opz. Facebook Sharing Debugger). Cold start Render free tier resta un fattore per la primissima apertura dopo inattività.
