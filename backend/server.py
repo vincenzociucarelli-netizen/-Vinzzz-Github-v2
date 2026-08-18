@@ -1279,6 +1279,42 @@ def create_token(user_id: str, role: str, athlete_id: str = None) -> str:
         payload["athlete_id"] = athlete_id
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
+import time as _auth_time
+
+# ============================================================
+# ⚡ 18/08/2026 — Cache autenticazione per ridurre il carico su MongoDB Atlas M0.
+# ------------------------------------------------------------
+# PROBLEMA: ogni pagina del dashboard spara ~10 richieste in parallelo; ognuna
+# eseguiva in get_current_user 1 LETTURA utente + 1 SCRITTURA (last_active_at).
+# Su Atlas M0 (throughput molto limitato) il burst di ~20 operazioni si accoda
+# e ogni richiesta finiva per impiegare 7-9s (anche endpoint banali come
+# /seasons/current-name da 0.3kB).
+# SOLUZIONE: cache in-process del documento utente (TTL breve) + throttle della
+# scrittura last_active_at (max 1 volta/60s per utente). Sotto burst passiamo da
+# ~20 operazioni Mongo a 1-2. La staleness max è pari al TTL (accettabile per
+# ruolo/status/assigned_teams in un gestionale).
+_AUTH_USER_CACHE = {}          # user_id -> (expires_at_monotonic, user_projection_dict)
+_AUTH_CACHE_TTL = 8            # secondi — sufficiente a deduplicare il burst di richieste
+                              # del caricamento pagina (10-15 in ~1-2s) con staleness trascurabile
+_LAST_ACTIVE_WRITTEN = {}      # user_id -> last_write_monotonic
+_LAST_ACTIVE_MIN_INTERVAL = 60 # secondi
+
+def _auth_cache_get(user_id: str):
+    entry = _AUTH_USER_CACHE.get(user_id)
+    if entry and entry[0] > _auth_time.monotonic():
+        return entry[1]
+    return None
+
+def _auth_cache_set(user_id: str, user_doc: dict):
+    _AUTH_USER_CACHE[user_id] = (_auth_time.monotonic() + _AUTH_CACHE_TTL, user_doc)
+    # Bound memory: evita crescita illimitata della cache
+    if len(_AUTH_USER_CACHE) > 5000:
+        _AUTH_USER_CACHE.clear()
+
+def invalidate_auth_cache(user_id: str):
+    """Da chiamare quando cambiano ruolo/status/assigned_teams/permessi di un utente."""
+    _AUTH_USER_CACHE.pop(user_id, None)
+
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
         token = credentials.credentials
@@ -1288,6 +1324,9 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         
         # Minor role: user_id is the athlete_id, no user document
         if role == "minor":
+            cached = _auth_cache_get(f"minor:{user_id}")
+            if cached is not None:
+                return cached
             # Projection: exclude heavy base64 fields and _id
             athlete = await db.athletes.find_one(
                 {"id": user_id},
@@ -1295,7 +1334,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             )
             if not athlete:
                 raise HTTPException(status_code=401, detail="Atleta non trovato")
-            return {
+            result = {
                 "id": user_id,
                 "role": "minor",
                 "email": "",
@@ -1305,48 +1344,58 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                 "society_id": athlete.get("society_id"),
                 "athlete_id": user_id,
             }
+            _auth_cache_set(f"minor:{user_id}", result)
+            return result
 
-        # Projection: fetch only the fields we actually need.
-        # This avoids transferring heavy base64 image fields (profile_photo,
-        # profile_photo_artistic, etc.) on EVERY authenticated request.
-        user = await db.users.find_one(
-            {"id": user_id},
-            {
-                "_id": 0,
-                "email": 1,
-                "full_name": 1,
-                "assigned_teams": 1,
-                "status": 1,
-                "society_id": 1,
-                "athlete_id": 1,
-                "coach_id": 1,
-                "coordinator_permissions": 1,
-            },
-        )
-        if not user:
-            raise HTTPException(status_code=401, detail="User not found")
-
-        # 🆕 03/07/2026 — Traccia "utenti online" (aggiornamento fire-and-forget del last_active_at)
-        try:
-            import asyncio as _asyncio
-            _asyncio.create_task(db.users.update_one(
+        # ⚡ Cache: evita la lettura utente su OGNI richiesta (vedi nota sopra).
+        user = _auth_cache_get(user_id)
+        if user is None:
+            # Projection: fetch only the fields we actually need.
+            # This avoids transferring heavy base64 image fields (profile_photo,
+            # profile_photo_artistic, etc.) on EVERY authenticated request.
+            user = await db.users.find_one(
                 {"id": user_id},
-                {"$set": {"last_active_at": datetime.utcnow().isoformat()}},
-            ))
-        except Exception:
-            pass
+                {
+                    "_id": 0,
+                    "email": 1,
+                    "full_name": 1,
+                    "assigned_teams": 1,
+                    "status": 1,
+                    "society_id": 1,
+                    "athlete_id": 1,
+                    "coach_id": 1,
+                    "coordinator_permissions": 1,
+                },
+            )
+            if not user:
+                raise HTTPException(status_code=401, detail="User not found")
+            _auth_cache_set(user_id, user)
+
+        # 🆕 03/07/2026 — Traccia "utenti online" (last_active_at) MA con throttle:
+        # al massimo una scrittura ogni 60s per utente, per non saturare Atlas M0.
+        _now_mono = _auth_time.monotonic()
+        if _now_mono - _LAST_ACTIVE_WRITTEN.get(user_id, 0.0) > _LAST_ACTIVE_MIN_INTERVAL:
+            _LAST_ACTIVE_WRITTEN[user_id] = _now_mono
+            try:
+                import asyncio as _asyncio
+                _asyncio.create_task(db.users.update_one(
+                    {"id": user_id},
+                    {"$set": {"last_active_at": datetime.utcnow().isoformat()}},
+                ))
+            except Exception:
+                pass
 
         return {
             "id": user_id, 
             "role": role, 
             "email": user["email"], 
             "full_name": user["full_name"],
-            "assigned_teams": user.get("assigned_teams", []),
+            "assigned_teams": list(user.get("assigned_teams", [])),
             "status": user.get("status", "pending"),
             "society_id": user.get("society_id"),
             "athlete_id": user.get("athlete_id"),  # For athlete role
             "coach_id": user.get("coach_id"),      # For coach role
-            "coordinator_permissions": user.get("coordinator_permissions") or [],
+            "coordinator_permissions": list(user.get("coordinator_permissions") or []),
         }
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")

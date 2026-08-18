@@ -400,6 +400,25 @@ Vedi `/app/memory/test_credentials.md`
 - `/app/frontend/src/utils/fiscalReceipt.ts`
 
 
+## Changelog — 18/08/2026 (c) — PERF: latenza uniforme 7-9s in PRODUZIONE (Render+Atlas M0)
+### Sintomo
+- In produzione quasi tutte le cartelle admin caricano in 7-9s, ANCHE endpoint banali (es. /seasons/current-name, 0.3kB). Risposte piccole (projection OK) ma latenza alta e uniforme → costo per-richiesta CONDIVISO amplificato dal burst di ~10-15 richieste simultanee del dashboard su Atlas M0 (shared, throughput/CPU limitati).
+### Analisi
+- Collo di bottiglia = `get_current_user` eseguito su OGNI richiesta: 1 lettura utente + 1 scrittura fire-and-forget (last_active_at). Con 10-15 richieste in parallelo → ~20-30 operazioni Mongo per ogni caricamento pagina su M0 che throttla.
+- Indici su `users.id`/`athletes.id` presenti (no collection scan). In PREVIEW i tempi sono 3-28ms (misurati). I 7-9s sono infra di produzione (Atlas M0 shared + eventuale Render free tier), NON riproducibili in preview.
+### Fix (server.py, get_current_user)
+- Cache in-process del documento utente per `user_id` (TTL 8s): deduplica il burst → 1 lettura invece di 10-15 per caricamento pagina. Chiave = user_id dal JWT (nessun leak inter-utente; role preso dal JWT non dalla cache). `invalidate_auth_cache(user_id)` disponibile.
+- Throttle scrittura `last_active_at`: max 1 volta/60s per utente (prima: ad ogni richiesta).
+- Liste mutabili (`assigned_teams`, `coordinator_permissions`) copiate nel dict restituito per non corrompere la cache.
+### Verifica (testing agent, iteration_106) — 16/16 PASS
+- Auth per tutti i ruoli OK, isolamento multi-tenant intatto, header X-Response-Time-ms presente, nessun leak inter-utente sotto 20+ richieste concorrenti interleaved, flusso certificato genitore OK.
+### Raccomandazioni per l'utente (infra)
+- Dopo il redeploy su Render, controllare l'header di risposta `X-Response-Time-ms` nella tab Network: se ~7000ms → collo di bottiglia lato server/DB (Atlas M0); se piccolo (<200ms) ma "Time" alto → rete/coda/tier Render.
+- Causa più probabile: **MongoDB Atlas M0 (shared)**. Upgrade a un tier dedicato (M10) elimina il throttling. Anche Render free tier introduce throttling CPU.
+### Backlog frontend (non fatto)
+- Deduplicare le richieste identiche in parallelo (nello screenshot /athletes chiamata 4x contemporaneamente): shared in-flight promise / cache lato client per ridurre il numero di richieste per caricamento.
+
+
 ## Changelog — 18/08/2026 (b) — BUGFIX 403 "Non hai i permessi per aggiornare certificati" (genitore)
 ### Root cause
 - `POST /api/certificates/simple` rifiutava l'utente sulla WHITELIST DI RUOLO (`["admin","dirigente","viewer","athlete","parent"]`) PRIMA di controllare la relazione. Genitori reali collegati come `parent_id`/`second_parent_id` ma con ruolo diverso da "parent" (es. coach/coordinatore/dual-role) ricevevano 403.
