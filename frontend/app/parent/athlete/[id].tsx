@@ -46,6 +46,29 @@ function CertificateDateForm({ athleteId, certificate, onSaved }: { athleteId?: 
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
+  // 🐛 18/08/2026 — Il certificato viene caricato in modo asincrono DOPO il mount
+  // di questo componente: gli initializer di useState (issueDate/validityMonths)
+  // giravano quando `certificate` era ancora null → "Mesi di Validità" restava
+  // vuoto, la scadenza non si calcolava e il pulsante Salva restava DISABILITATO.
+  // Risultato: il genitore inseriva la nuova data ma il salvataggio non partiva.
+  // Ora ri-sincronizziamo i campi quando arriva/cambia il certificato (solo se il
+  // form non è aperto, per non sovrascrivere ciò che l'utente sta digitando).
+  useEffect(() => {
+    if (showForm) return;
+    setIssueDate(certificate?.issue_date ? format(new Date(certificate.issue_date), 'dd/MM/yyyy') : '');
+    let vm = certificate?.validity_months ? certificate.validity_months.toString() : '';
+    if (!vm && certificate?.issue_date && certificate?.expiry_date) {
+      // Deriva i mesi di validità da emissione↔scadenza (scad = emiss + mesi - 1g)
+      const i = new Date(certificate.issue_date);
+      const e = new Date(certificate.expiry_date);
+      if (!isNaN(i.getTime()) && !isNaN(e.getTime())) {
+        const months = Math.round((e.getTime() - i.getTime()) / (1000 * 60 * 60 * 24 * 30.4375));
+        if (months > 0) vm = months.toString();
+      }
+    }
+    setValidityMonths(vm);
+  }, [certificate, showForm]);
+
   const formatDateInput = (value: string) => {
     const digits = value.replace(/\D/g, '');
     let formatted = '';
@@ -105,7 +128,7 @@ function CertificateDateForm({ athleteId, certificate, onSaved }: { athleteId?: 
         <TouchableOpacity
           style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 6 }}
           onPress={() => setShowForm(true)}
-          data-testid="modify-certificate-dates-btn"
+          testID="modify-certificate-dates-btn"
         >
           <Ionicons name="create-outline" size={16} color="#7B1FA2" />
           <Text style={{ color: '#7B1FA2', fontSize: 13, fontWeight: '500' }}>Modifica date certificato</Text>
@@ -121,7 +144,7 @@ function CertificateDateForm({ athleteId, certificate, onSaved }: { athleteId?: 
           borderWidth: 1, borderColor: '#CE93D8',
         }}
         onPress={() => setShowForm(true)}
-        data-testid="insert-certificate-dates-btn"
+        testID="insert-certificate-dates-btn"
       >
         <Ionicons name="calendar-outline" size={18} color="#7B1FA2" />
         <Text style={{ color: '#7B1FA2', fontWeight: '600', fontSize: 14 }}>
@@ -145,7 +168,7 @@ function CertificateDateForm({ athleteId, certificate, onSaved }: { athleteId?: 
         onChangeText={(text) => setIssueDate(formatDateInput(text))}
         keyboardType="numeric"
         maxLength={10}
-        data-testid="cert-issue-date-input"
+        testID="cert-issue-date-input"
       />
       
       {/* Mesi di validità */}
@@ -158,7 +181,7 @@ function CertificateDateForm({ athleteId, certificate, onSaved }: { athleteId?: 
         onChangeText={setValidityMonths}
         keyboardType="numeric"
         maxLength={2}
-        data-testid="cert-validity-months-input"
+        testID="cert-validity-months-input"
       />
       
       {/* Scadenza calcolata - sempre visibile */}
@@ -181,7 +204,7 @@ function CertificateDateForm({ athleteId, certificate, onSaved }: { athleteId?: 
           style={{ flex: 1, backgroundColor: calculatedExpiry ? '#1565C0' : '#90CAF9', borderRadius: 8, padding: 12, alignItems: 'center', opacity: calculatedExpiry ? 1 : 0.6 }}
           onPress={handleSave}
           disabled={!calculatedExpiry || saving}
-          data-testid="cert-save-btn"
+          testID="cert-save-btn"
         >
           {saving ? (
             <ActivityIndicator size="small" color="#fff" />
@@ -1711,6 +1734,7 @@ export default function AthleteDetail() {
       <ScrollView
         ref={scrollViewRef}
         style={styles.content}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }

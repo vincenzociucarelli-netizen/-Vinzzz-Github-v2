@@ -8,6 +8,7 @@
 - Email: armida.raschi@gmail.com
 - Password: Test1234 (resettata 03/08/2026 per test fix privacy minorenni in registrazione)
 - Società: Pallavolo Perugia
+- 🆕 18/08/2026: collegata come parent_id all'atleta minorenne "MAURI LENA" (id 6a5ec7347c201d9cb7eb70d2, nessun certificato, data_password rimossa) PER TEST FLUSSO CERTIFICATO GENITORE (bug "data certificato non memorizzata").
 
 ## Dirigente (LELLA MARZO)
 - Email: lella@dir.com

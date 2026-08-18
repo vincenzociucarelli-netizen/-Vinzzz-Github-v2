@@ -13044,7 +13044,24 @@ async def upload_certificate_base64(
     )
     
     await db.certificates.insert_one(certificate.dict())
-    
+
+    # 🐛 18/08/2026 — Sincronizza i campi medical_certificate_* sull'atleta.
+    # Prima l'upload del PDF scriveva SOLO nella collezione `certificates`, quindi
+    # la nuova data di emissione/scadenza NON veniva "memorizzata" sul documento
+    # atleta usato da admin, scheduler scadenze e gate onboarding.
+    _now_cert = datetime.utcnow()
+    await db.athletes.update_one(
+        {"id": data.athlete_id},
+        {"$set": {
+            "medical_certificate_issue_date": issue_dt.isoformat(),
+            "medical_certificate_expiry": expiry_dt.isoformat(),
+            "medical_certificate_updated_at": _now_cert.isoformat(),
+            "medical_certificate_updated_by": current_user["id"],
+            "medical_certificate_updated_by_name": current_user.get("full_name", current_user.get("email", "")),
+            "medical_certificate_updated_by_role": current_user["role"],
+        }}
+    )
+
     return {"message": "Certificato caricato con successo", "expiry_date": expiry_dt.isoformat()}
 
 
@@ -13661,11 +13678,25 @@ async def get_certificate(athlete_id: str, current_user = Depends(get_current_us
     if not certificate:
         # Fallback: check athlete's medical_certificate fields
         if athlete and athlete.get("medical_certificate_expiry"):
+            _iss = athlete.get("medical_certificate_issue_date") or athlete.get("medical_certificate_date")
+            _exp = athlete.get("medical_certificate_expiry")
+            # Deriva validity_months da emissione↔scadenza per pre-compilare il form
+            _vm = None
+            try:
+                if _iss and _exp:
+                    _i = datetime.fromisoformat(str(_iss).replace('Z', '+00:00'))
+                    _e = datetime.fromisoformat(str(_exp).replace('Z', '+00:00'))
+                    _months = round((_e - _i).days / 30.4375)
+                    if _months > 0:
+                        _vm = _months
+            except Exception:
+                _vm = None
             return {
                 "id": f"athlete-cert-{athlete_id}",
                 "athlete_id": athlete_id,
-                "issue_date": athlete.get("medical_certificate_date"),
-                "expiry_date": athlete.get("medical_certificate_expiry"),
+                "issue_date": _iss,
+                "expiry_date": _exp,
+                "validity_months": _vm,
                 "verified": athlete.get("medical_certificate_verified", False),
                 "uploaded_by": athlete.get("medical_certificate_updated_by_name"),
                 "created_at": athlete.get("medical_certificate_inserted_at"),

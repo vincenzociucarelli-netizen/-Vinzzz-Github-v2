@@ -400,6 +400,21 @@ Vedi `/app/memory/test_credentials.md`
 - `/app/frontend/src/utils/fiscalReceipt.ts`
 
 
+## Changelog — 18/08/2026 — BUGFIX certificato medico "non memorizzato" (lato genitore)
+### Root cause (verificata dal testing agent, backend + UI)
+- La ScrollView della pagina genitore `/parent/athlete/[id].tsx` NON aveva `keyboardShouldPersistTaps="handled"`: su mobile il primo tap su "Salva" con tastiera numerica aperta chiudeva solo la tastiera senza attivare il pulsante → il salvataggio non partiva.
+### Fix applicati
+- `keyboardShouldPersistTaps="handled"` sulla ScrollView principale del genitore.
+- `CertificateDateForm`: nuovo `useEffect` che ri-sincronizza `issueDate`/`validityMonths` quando il certificato viene caricato in modo asincrono (prima "Mesi di Validità" restava vuoto → Salva disabilitato); deriva la validità da emissione↔scadenza se assente.
+- Backend `POST /certificates/upload-base64`: ora sincronizza i campi `medical_certificate_*` sul documento atleta (prima scriveva solo la collezione `certificates`).
+- Backend `GET /certificates/{athlete_id}` fallback: corretto nome campo (`medical_certificate_issue_date`) + aggiunto `validity_months` derivato.
+- 5 prop `data-testid` → `testID` in CertificateDateForm (RN-Web mappa solo testID).
+### Verifica
+- Testing agent: 4/4 test backend green + flusso UI genitore (armida.raschi@gmail.com su atleta MAURI LENA) OK, persistenza confermata dopo reload, form modifica pre-compilato.
+### Test data
+- Atleta minorenne MAURI LENA (id 6a5ec7347c201d9cb7eb70d2) collegata a genitore ARMIDA (parent_id), data_password rimossa — vedi test_credentials.md.
+
+
 ## Changelog — 18/08/2026 (fork continuazione) — PERF cartella EVENTI (~30s → ~10ms)
 ### Root cause
 - `GET /preseason/campaigns` restituiva l'intero documento campagna INCLUSO `cover_image` (locandina base64 multi-MB). Con più campagne la lista scaricava decine di MB → ~30s di caricamento della cartella "Eventi in programma".
