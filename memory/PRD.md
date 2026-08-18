@@ -648,3 +648,15 @@ Tutti gli endpoint lenti condividevano una causa: **scaricavano immagini base64 
 - Verifica locale: i 3 endpoint ora rispondono in ~3-7ms (prima 7,3s / 1,5s in prod). Da confermare in produzione dopo DEPLOY su Render.
 - NB: `whatsapp/pending-count` (1,8s) è già mitigato da cache in-memory 60s → lasciato così.
 - Lezione: le immagini base64 dentro i documenti Mongo rendono lento OGNI `find` senza projection. Fix definitivo futuro: spostare le immagini su Object Storage.
+
+### Performance 18/08/2026 (ter) — Liste che scaricavano base64 (le "altre cartelle" 7-8s)
+Dopo il fix su settings, Squadre e Profilo Società andavano bene ma le altre cartelle restavano a 7-8s.
+Causa: le liste scaricavano documenti completi con foto/immagini base64. Aggiunte projection:
+- `GET /athletes` (server.py ~8320): escludeva già le foto nella risposta ma le SCARICAVA (fino a 5000 atleti con base64). Projection di ESCLUSIONE campi pesanti (athlete_photo, *_artistic, doc_*, id_*, document_*, privacy_signature, receipt_signature_base64, privacy_pdf_snapshot). → cartella "Atleti".
+- `GET /users/parents` (server.py ~6301): projection INCLUSIVA soli campi usati (no profile_photo). → cartella "Genitori".
+- `GET /payments/registro-stagione` (~14082) e `GET /payments/solleciti` (~14127): projection esclusione base64 su athletes (fino a 10000). Anche settings.find_one del registro con projection immagini.
+- `GET /certificates/expiring` (~13439): projection {id, full_name, medical_certificate_expiry}.
+- `GET /documents/signed`: già OK (projection {pdf_base64:0}).
+- Staff (dirigenti/coaches/collaboratori): la risposta INCLUDE profile_photo (card con foto) → NON toccati per non rompere la UI (liste piccole).
+- Verifica locale: tutti gli endpoint ora 3-28ms.
+- TODO futuro: spostare le foto su Object Storage per eliminare il problema alla radice; risolvere N+1 in /payments/solleciti (una find payments per atleta).

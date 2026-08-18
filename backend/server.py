@@ -6298,7 +6298,12 @@ async def get_parents(current_user = Depends(get_current_user)):
             {"active_seasons": {"$exists": False}},
         ],
     }
-    parents = await db.users.find(q).to_list(5000)
+    # 🚀 18/08/2026 PERF — projection: solo i campi usati (NIENTE profile_photo base64).
+    parents = await db.users.find(q, {
+        "_id": 0, "id": 1, "email": 1, "full_name": 1, "role": 1, "status": 1,
+        "created_at": 1, "approved_at": 1, "phone": 1, "fiscal_code": 1,
+        "active_seasons": 1,
+    }).to_list(5000)
 
     # 3. Self-heal silenzioso: genitori collegati ad atleti attivi ma senza
     #    active_seasons=current_season → riporta in stagione (idempotente).
@@ -8324,6 +8329,17 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
             {"rollover_decision": {"$ne": "removed"}},
             {"rollover_decision_season": {"$ne": _current_season}},
         ],
+    }, {
+        # 🚀 18/08/2026 PERF — Escludi i campi base64 pesanti: la risposta di questa
+        # lista NON li usa (costruisce un dict con soli campi anagrafici/pagamenti).
+        # Prima venivano scaricati fino a 5000 atleti CON le foto → 7-8s sulla
+        # cartella "Atleti". Ora solo i dati necessari.
+        "athlete_photo": 0, "athlete_photo_artistic": 0,
+        "doc_back_image": 0, "doc_front_image": 0,
+        "id_back": 0, "id_front": 0,
+        "document_back": 0, "document_front": 0,
+        "privacy_signature": 0, "receipt_signature_base64": 0,
+        "privacy_pdf_snapshot": 0,
     }).to_list(5000)
 
     # Self-heal silenzioso: aggiungi la stagione corrente ad active_seasons
@@ -14051,7 +14067,9 @@ async def get_registro_stagione(current_user = Depends(get_current_user)):
     society_id = current_user.get("society_id")
     now = datetime.utcnow()
     
-    settings = await db.settings.find_one({"type": "society", "society_id": society_id}) if society_id else await db.settings.find_one({"type": "society"})
+    # 🚀 18/08/2026 PERF — projection: escludi le immagini base64 (qui servono solo season_start_*).
+    _settings_img_excl = {"logo": 0, "sport_image": 0, "stamp_signature": 0}
+    settings = await db.settings.find_one({"type": "society", "society_id": society_id}, _settings_img_excl) if society_id else await db.settings.find_one({"type": "society"}, _settings_img_excl)
     season_start_month = settings.get("season_start_month", 7) if settings else 7
     season_start_day = settings.get("season_start_day", 1) if settings else 1
     season_start_this_year = datetime(now.year, season_start_month, season_start_day)
@@ -14063,7 +14081,14 @@ async def get_registro_stagione(current_user = Depends(get_current_user)):
     season_end = datetime(season_start.year + 1, season_start_month, season_start_day)
     season_str = f"{season_start.year % 100:02d}/{season_end.year % 100:02d}"
     
-    athletes = await db.athletes.find({"society_id": society_id, "is_withdrawn": {"$ne": True}}).to_list(10000)
+    # 🚀 18/08/2026 PERF — projection: escludi le foto base64 (registro usa solo nome/cognome).
+    athletes = await db.athletes.find(
+        {"society_id": society_id, "is_withdrawn": {"$ne": True}},
+        {"athlete_photo": 0, "athlete_photo_artistic": 0, "doc_back_image": 0,
+         "doc_front_image": 0, "id_back": 0, "id_front": 0, "document_back": 0,
+         "document_front": 0, "privacy_signature": 0, "receipt_signature_base64": 0,
+         "privacy_pdf_snapshot": 0},
+    ).to_list(10000)
     athlete_map = {a["id"]: a for a in athletes}
     athlete_ids = list(athlete_map.keys())
     
@@ -14108,7 +14133,14 @@ async def get_solleciti(current_user = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Solo admin")
     
     society_id = current_user.get("society_id")
-    athletes = await db.athletes.find({"society_id": society_id, "is_withdrawn": {"$ne": True}}).to_list(10000)
+    # 🚀 18/08/2026 PERF — projection: escludi le foto base64 pesanti.
+    athletes = await db.athletes.find(
+        {"society_id": society_id, "is_withdrawn": {"$ne": True}},
+        {"athlete_photo": 0, "athlete_photo_artistic": 0, "doc_back_image": 0,
+         "doc_front_image": 0, "id_back": 0, "id_front": 0, "document_back": 0,
+         "document_front": 0, "privacy_signature": 0, "receipt_signature_base64": 0,
+         "privacy_pdf_snapshot": 0},
+    ).to_list(10000)
     _teams_q = {"society_id": society_id} if society_id else {}
     teams = await db.teams.find(_teams_q).to_list(100)
     team_map = {t["id"]: t.get("name", "") for t in teams}
