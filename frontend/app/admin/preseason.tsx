@@ -186,6 +186,11 @@ export default function PreseasonAdmin() {
   const [newEventInfo, setNewEventInfo] = useState('');  // 🆕 27/02/2026
   // 🆕 27/02/2026 — Immagine di copertina campagna (base64 data URI) per anteprima social
   const [newCoverImage, setNewCoverImage] = useState('');
+  // 🐛 18/08/2026 — In MODIFICA inviamo cover_image nel PATCH SOLO se l'utente l'ha
+  // effettivamente cambiata/rimossa. Prima veniva inviata sempre (anche vuota) e,
+  // se il base64 non era ancora stato ricaricato, azzerava la copertina esistente
+  // (causa delle anteprime evento sparite nei link WhatsApp).
+  const [coverChanged, setCoverChanged] = useState(false);
 
   // 🆕 29/06/2026 — Ref per textarea (necessari per leggere selectionStart su Web)
   const eventInfoRef = useRef<TextInput | null>(null);
@@ -312,11 +317,15 @@ export default function PreseasonAdmin() {
         season: newSeason.trim(),
         description: newDesc.trim(),
         event_info: newEventInfo.trim() || null,
-        // 🆕 27/02/2026 — Cover image per anteprima social. Passa "" per rimuovere.
-        cover_image: newCoverImage || '',
         open_date: null,
         close_date: closeIso,
       };
+      // 🐛 18/08/2026 — Includi cover_image SOLO in creazione oppure se l'utente
+      // l'ha davvero cambiata in modifica. In modifica senza modifiche alla
+      // copertina, NON inviarla: il PATCH (exclude_unset) la lascia intatta.
+      if (!editingId || coverChanged) {
+        payload.cover_image = newCoverImage || '';
+      }
       if (editingId) {
         await api.patch(`/preseason/campaigns/${editingId}`, payload);
       } else {
@@ -326,6 +335,7 @@ export default function PreseasonAdmin() {
       setEditingId(null);
       setNewTitle(''); setNewSeason(''); setNewDesc(''); setNewEventInfo(''); setNewOpenDate(''); setNewCloseDate('');
       setNewCoverImage('');
+      setCoverChanged(false);
       loadCampaigns();
       showAlert('Successo', editingId ? 'Campagna aggiornata!' : 'Campagna creata!');
     } catch (err: any) {
@@ -345,8 +355,11 @@ export default function PreseasonAdmin() {
     setNewOpenDate(isoToItalianDate(campaign.open_date));
     setNewCloseDate(isoToItalianDate(campaign.close_date));
     setShowCreate(true);
+    setCoverChanged(false);
     // ⚡ 15/08/2026 — La lista non porta più il base64 della copertina (performance).
-    // In modifica lo recuperiamo dal dettaglio così il salvataggio non la cancella.
+    // In modifica lo recuperiamo dal dettaglio (solo per l'ANTEPRIMA nel modal).
+    // Il salvataggio NON invia cover_image a meno che coverChanged sia true,
+    // quindi anche se questo fetch fallisce la copertina non viene mai cancellata.
     if (campaign.has_cover) {
       setNewCoverImage('');
       try {
@@ -374,7 +387,7 @@ export default function PreseasonAdmin() {
             return;
           }
           const reader = new FileReader();
-          reader.onload = () => setNewCoverImage(String(reader.result || ''));
+          reader.onload = () => { setNewCoverImage(String(reader.result || '')); setCoverChanged(true); };
           reader.readAsDataURL(file);
         };
         input.click();
@@ -397,6 +410,7 @@ export default function PreseasonAdmin() {
         const asset = res.assets[0];
         const dataUri = `data:image/${asset.uri.endsWith('.png') ? 'png' : 'jpeg'};base64,${asset.base64}`;
         setNewCoverImage(dataUri);
+        setCoverChanged(true);
       }
     } catch (e: any) {
       showAlert('Errore', 'Impossibile caricare l\'immagine: ' + (e?.message || 'errore sconosciuto'));
@@ -1361,7 +1375,7 @@ export default function PreseasonAdmin() {
                       <Text style={{ color: '#1976D2', fontWeight: '700', fontSize: 13 }}>Cambia</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      onPress={() => setNewCoverImage('')}
+                      onPress={() => { setNewCoverImage(''); setCoverChanged(true); }}
                       style={{ flex: 1, backgroundColor: '#FFEBEE', borderColor: '#C62828', borderWidth: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}
                       data-testid="cover-image-remove-btn"
                     >
@@ -1442,7 +1456,7 @@ export default function PreseasonAdmin() {
         elevation: 8,
         zIndex: 100,
       }}
-      onPress={() => { setEditingId(null); setNewTitle(''); setNewSeason(''); setNewDesc(''); setNewEventInfo(''); setNewOpenDate(''); setNewCloseDate(''); setShowCreate(true); }}
+      onPress={() => { setEditingId(null); setNewTitle(''); setNewSeason(''); setNewDesc(''); setNewEventInfo(''); setNewOpenDate(''); setNewCloseDate(''); setNewCoverImage(''); setCoverChanged(false); setShowCreate(true); }}
       data-testid="create-campaign-btn"
     >
       <Ionicons name="add-circle" size={22} color="#fff" />

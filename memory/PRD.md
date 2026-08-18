@@ -400,6 +400,20 @@ Vedi `/app/memory/test_credentials.md`
 - `/app/frontend/src/utils/fiscalReceipt.ts`
 
 
+## Changelog — 18/08/2026 (d) — REGRESSIONE FIX: copertine eventi cancellate (anteprime WhatsApp senza immagine)
+### Sintomo
+- I link di condivisione campagne (/api/preseason/share/{id}) non mostravano più l'immagine evento su WhatsApp: solo logo società o nessuna immagine.
+### Root cause (regressione introdotta dall'ottimizzazione performance Eventi del 15/08)
+- Il frontend, in MODIFICA campagna, inviava SEMPRE `cover_image` nel PATCH (anche stringa vuota). Dopo aver escluso `cover_image` dalla lista (performance), se il base64 non era ricaricato (o mismatch deploy FE/BE) il salvataggio azzerava la copertina → dato perso.
+### Fix (frontend admin/preseason.tsx)
+- Nuovo flag `coverChanged`: `cover_image` incluso nel payload SOLO in creazione, oppure in modifica se l'utente ha davvero cambiato/rimosso l'immagine (pick/remove). Modifiche a data/descrizione NON toccano più la copertina (PATCH exclude_unset la lascia intatta). Difesa in profondità: se il precarico del base64 in modifica fallisce, `coverChanged` resta false → nessuna sovrascrittura.
+- Reset stato copertina anche su FAB "Nuova Campagna".
+### Verifica (testing agent, iteration_107) — backend 10/10 + frontend Playwright
+- Modifica descrizione senza toccare cover → cover_len 6134 identico prima/dopo, cover.jpg 200. PATCH senza cover=intatta; PATCH cover=""=azzerata; create con cover=salvata; share og:image punta a cover.jpg.
+### ⚠️ Dato perso in produzione
+- Le copertine già azzerate in PROD NON sono recuperabili (nessun backup): l'utente deve RI-CARICARE la copertina sulle campagne interessate (una volta sola). Da ora la modifica non le cancella più. Richiede redeploy Vercel del frontend.
+
+
 ## Changelog — 18/08/2026 (c) — PERF: latenza uniforme 7-9s in PRODUZIONE (Render+Atlas M0)
 ### Sintomo
 - In produzione quasi tutte le cartelle admin caricano in 7-9s, ANCHE endpoint banali (es. /seasons/current-name, 0.3kB). Risposte piccole (projection OK) ma latenza alta e uniforme → costo per-richiesta CONDIVISO amplificato dal burst di ~10-15 richieste simultanee del dashboard su Atlas M0 (shared, throughput/CPU limitati).
