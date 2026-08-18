@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
+import { sharedGet } from '../../src/services/sharedGet';
 import { Ionicons } from '../../src/components/Icon';
 import { exportToExcel } from '../../src/utils/excelExport';
 
@@ -79,7 +80,7 @@ export default function DirigentiScreen() {
         api.get('/users/dirigenti'),
         api.get('/users/pending'),
         api.get('/settings/society'),
-        api.get('/seasons/current-name').catch(() => ({ data: { season: '' } })),
+        sharedGet('/seasons/current-name', 30000).catch(() => ({ data: { season: '' } })),
       ]);
       setDirigenti(dirigentiRes.data);
       setSocietyName(societyRes.data.name || 'Società');

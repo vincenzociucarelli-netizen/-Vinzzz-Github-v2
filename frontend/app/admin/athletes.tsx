@@ -346,7 +346,7 @@ export default function AdminAthletes() {
         api.get('/teams'),
         api.get('/societies/invite-code').catch(() => ({ data: { invite_code: '', society_name: '' } })),
         api.get('/admin/deletion-requests/pending-summary').catch(() => ({ data: { by_athlete: {} } })),
-        api.get('/seasons/current-name').catch(() => ({ data: { season: '' } })),
+        sharedGet('/seasons/current-name', 30000).catch(() => ({ data: { season: '' } })),
       ]);
 
       setAthletes(athletesRes.data);

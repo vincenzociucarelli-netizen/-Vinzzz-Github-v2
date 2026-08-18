@@ -400,6 +400,12 @@ Vedi `/app/memory/test_credentials.md`
 - `/app/frontend/src/utils/fiscalReceipt.ts`
 
 
+## Nota diagnostica — 18/08/2026 — PROVA che i 7s sono costo auth (non immagini)
+- Screenshot utente (PRIMA del deploy dell'auth-cache): `/seasons/current-name` (0.3kB) impiega 7,3s ed è chiamata 3 volte; `dirigenti` 1.6kB 7.7s; `coaches` 1.4kB 7.5s; `stats` 0.4kB 7.3s. Endpoint minuscoli a 7s ⇒ collo di bottiglia = costo per-richiesta CONDIVISO (lettura utente in get_current_user su Atlas M0), NON payload/immagini.
+- Conclusione: l'auth-cache (già in codice, TTL 8s) è LA fix; va deployato per vederne l'effetto. `society?include_images=true` (519kB, 2x) è l'unico payload pesante → beneficerà della migrazione logo (Fase B resto).
+- Dedup estesa (sharedGet) a: /athletes, /users/parents, /users/coaches, /seasons/current-name (TTL 30s) su athletes/coaches/collaboratori/dirigenti — riduce le richieste duplicate viste in Network. Smoke test OK (cartelle caricano).
+
+
 ## Changelog — 18/08/2026 (f) — Fase B trial: copertine eventi → Emergent Object Storage
 ### Bug utente
 - "Ho messo nuove copertine sugli eventi ma non si salvano, appare solo il logo": (a) il frontend RIFIUTAVA immagini >3MB; (b) il base64 pesante non veniva salvato/appesantiva Mongo.

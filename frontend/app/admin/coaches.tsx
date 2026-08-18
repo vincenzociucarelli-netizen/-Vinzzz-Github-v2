@@ -17,6 +17,7 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '../../src/components/Icon';
 import api from '../../src/services/api';
+import { sharedGet } from '../../src/services/sharedGet';
 import { Team } from '../../src/types';
 import { exportToExcel } from '../../src/utils/excelExport';
 
@@ -98,10 +99,10 @@ export default function CoachesScreen() {
   const loadData = async () => {
     try {
       const [coachesRes, pendingRes, teamsRes, seasonRes] = await Promise.all([
-        api.get('/users/coaches'),
+        sharedGet('/users/coaches'),
         api.get('/users/pending'),
         api.get('/teams'),
-        api.get('/seasons/current-name').catch(() => ({ data: { season: '' } })),
+        sharedGet('/seasons/current-name', 30000).catch(() => ({ data: { season: '' } })),
       ]);
       setCoaches(coachesRes.data);
       setTeams(teamsRes.data);
