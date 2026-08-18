@@ -22,6 +22,7 @@ import {
   Alert,
 } from 'react-native';
 import api from '../services/api';
+import { sharedGet } from '../services/sharedGet';
 import { getPrimaryAdminStatusCached, isTabActive } from '../services/pollGate';
 import { Ionicons } from './Icon';
 
@@ -63,7 +64,7 @@ export default function CertificateOverridePopup() {
           return;
         }
       } catch {}
-      const res = await api.get('/admin/notifications');
+      const res = await sharedGet('/admin/notifications', 20000);
       const list: PendingOverrideNotification[] = res.data || [];
       // Find first pending expired_cert_scan notification not yet dismissed in this session
       const next = list.find(

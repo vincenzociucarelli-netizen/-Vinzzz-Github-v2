@@ -14,6 +14,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Animated, Easing } from 'reac
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import api from '../services/api';
+import { sharedGet } from '../services/sharedGet';
 import { isTabActive } from '../services/pollGate';
 
 interface AdminNoteSummary {
@@ -46,7 +47,7 @@ export const AdminNotesButton: React.FC = () => {
 
   const load = useCallback(async () => {
     try {
-      const res = await api.get('/admin/notes');
+      const res = await sharedGet('/admin/notes', 15000);
       setNotes(res.data || []);
     } catch {
       // non admin: nasconde silenziosamente

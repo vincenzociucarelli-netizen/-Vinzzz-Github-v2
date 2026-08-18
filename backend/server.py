@@ -1298,6 +1298,8 @@ _AUTH_CACHE_TTL = 8            # secondi — sufficiente a deduplicare il burst 
                               # del caricamento pagina (10-15 in ~1-2s) con staleness trascurabile
 _LAST_ACTIVE_WRITTEN = {}      # user_id -> last_write_monotonic
 _LAST_ACTIVE_MIN_INTERVAL = 60 # secondi
+_AUTH_INFLIGHT = {}            # user_id -> Future: dedup delle letture CONCORRENTI
+                              # (il burst di ~30 richieste simultanee condivide 1 sola query)
 
 def _auth_cache_get(user_id: str):
     entry = _AUTH_USER_CACHE.get(user_id)
@@ -1350,23 +1352,34 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         # ⚡ Cache: evita la lettura utente su OGNI richiesta (vedi nota sopra).
         user = _auth_cache_get(user_id)
         if user is None:
-            # Projection: fetch only the fields we actually need.
-            # This avoids transferring heavy base64 image fields (profile_photo,
-            # profile_photo_artistic, etc.) on EVERY authenticated request.
-            user = await db.users.find_one(
-                {"id": user_id},
-                {
-                    "_id": 0,
-                    "email": 1,
-                    "full_name": 1,
-                    "assigned_teams": 1,
-                    "status": 1,
-                    "society_id": 1,
-                    "athlete_id": 1,
-                    "coach_id": 1,
-                    "coordinator_permissions": 1,
-                },
-            )
+            # ⚡ In-flight dedup: se una lettura per questo user_id è già in corso,
+            # le richieste concorrenti attendono LA STESSA query invece di lanciarne
+            # una ciascuna (fondamentale per non saturare Atlas M0 durante il burst
+            # di apertura pagina, quando ~30 richieste arrivano insieme).
+            import asyncio as _aio_auth
+            _fut = _AUTH_INFLIGHT.get(user_id)
+            if _fut is None:
+                _fut = _aio_auth.ensure_future(db.users.find_one(
+                    {"id": user_id},
+                    {
+                        "_id": 0,
+                        "email": 1,
+                        "full_name": 1,
+                        "assigned_teams": 1,
+                        "status": 1,
+                        "society_id": 1,
+                        "athlete_id": 1,
+                        "coach_id": 1,
+                        "coordinator_permissions": 1,
+                    },
+                ))
+                _AUTH_INFLIGHT[user_id] = _fut
+                try:
+                    user = await _fut
+                finally:
+                    _AUTH_INFLIGHT.pop(user_id, None)
+            else:
+                user = await _fut
             if not user:
                 raise HTTPException(status_code=401, detail="User not found")
             _auth_cache_set(user_id, user)

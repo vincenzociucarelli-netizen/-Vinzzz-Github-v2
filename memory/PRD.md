@@ -400,6 +400,23 @@ Vedi `/app/memory/test_credentials.md`
 - `/app/frontend/src/utils/fiscalReceipt.ts`
 
 
+## Diagnosi DEFINITIVA lentezza — 18/08/2026 (dopo deploy utente)
+### Misure oggettive
+- Chrome Timing su richiesta lenta: 99% del tempo su "Waiting for server response" (TTFB ~9s); Stalled/Queueing pochi ms. ~93 richieste per apertura pagina.
+- Test diretto backend PROD (registrateam-backend.onrender.com): singola richiesta unauth 3ms, pagina pubblica con query DB 12ms. Server+DB VELOCI in isolamento.
+- render.yaml: `plan: free` + `uvicorn server:app` (1 worker). 
+### Conclusione
+- Il ritardo NON è codice né singola query: è CODA lato server/DB sotto il FLUSSO di ~90 richieste concorrenti generate dalla dashboard (liste + molti popup in polling), su infra GRATUITA (Render free 1 worker + Atlas M0 condiviso che throttla le operazioni concorrenti). Pagine con poche richieste (Squadre/Società) sono veloci; pagine con burst grande vanno in coda.
+### Mitigazioni CODE fatte (riducono le operazioni per burst)
+- Auth: cache utente (TTL 8s) + IN-FLIGHT dedup (burst condivide 1 sola lettura) + throttle last_active_at (1/60s).
+- Frontend dedup (sharedGet): /athletes, /users/parents, /users/coaches, /seasons/current-name(30s), /admin/notes(button), /admin/notifications(popup 20s).
+### Soluzione DEFINITIVA (infra, NON crediti Emergent)
+- Render: free → starter ($7/mese: no sleep + più CPU; opz. `--workers 2`).
+- MongoDB Atlas: M0 (shared, throttled) → tier dedicato (es. M10): elimina la coda delle operazioni concorrenti. Questo è il vero collo di bottiglia.
+### Nota produzione storage
+- render.yaml NON contiene INTEGRATION_PROXY_URL; EMERGENT_LLM_KEY è sync:false. Verificare che siano impostati su Render, altrimenti l'upload cover→storage in PROD userà il fallback base64 (funziona ma non alleggerisce). Da confermare col deploy Emergent.
+
+
 ## Nota diagnostica — 18/08/2026 — PROVA che i 7s sono costo auth (non immagini)
 - Screenshot utente (PRIMA del deploy dell'auth-cache): `/seasons/current-name` (0.3kB) impiega 7,3s ed è chiamata 3 volte; `dirigenti` 1.6kB 7.7s; `coaches` 1.4kB 7.5s; `stats` 0.4kB 7.3s. Endpoint minuscoli a 7s ⇒ collo di bottiglia = costo per-richiesta CONDIVISO (lettura utente in get_current_user su Atlas M0), NON payload/immagini.
 - Conclusione: l'auth-cache (già in codice, TTL 8s) è LA fix; va deployato per vederne l'effetto. `society?include_images=true` (519kB, 2x) è l'unico payload pesante → beneficerà della migrazione logo (Fase B resto).
