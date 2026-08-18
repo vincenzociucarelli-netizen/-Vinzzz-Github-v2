@@ -660,3 +660,17 @@ Causa: le liste scaricavano documenti completi con foto/immagini base64. Aggiunt
 - Staff (dirigenti/coaches/collaboratori): la risposta INCLUDE profile_photo (card con foto) → NON toccati per non rompere la UI (liste piccole).
 - Verifica locale: tutti gli endpoint ora 3-28ms.
 - TODO futuro: spostare le foto su Object Storage per eliminare il problema alla radice; risolvere N+1 in /payments/solleciti (una find payments per atleta).
+
+### Bug 18/08/2026 — Solleciti "Fine prova" falsi (prova non ancora iniziata)
+Segnalazione utente: nei Solleciti WhatsApp comparivano atlete con "Fine prova" (es. 15/08, 17/08)
+anche se gli allenamenti non erano iniziati; e alcune erano senza certificato → non avrebbero potuto
+fare la prova.
+Causa: in `get_pending_reminders` (server.py ~35914) i casi "trial ended" (b: no certificato,
+c: no privacy, d: no decisione) scattavano SOLO in base a `trial_end_date <= oggi`, senza verificare
+se la prova fosse davvero iniziata. Alcuni flussi di registrazione impostano `trial_end_date`
+(= registrazione + 7gg) SUBITO alla creazione, lasciando `trial_start_date = None`. `trial_start_date`
+invece viene valorizzata SOLO al primo scan QR (primo allenamento).
+Fix: la guardia ora è `if ts and te and te <= today:` → "Fine prova" scatta solo se la prova è
+realmente iniziata (trial_start_date valorizzata). Aggiunta anche projection base64 su athletes in
+questa funzione (alimenta il badge solleciti in polling).
+Da confermare in produzione dopo DEPLOY.

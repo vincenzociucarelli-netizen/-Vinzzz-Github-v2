@@ -35847,7 +35847,13 @@ async def get_pending_reminders(current_user=Depends(get_current_user)):
         ath_q["$or"] = [{"team_id": {"$in": coach_team_ids}}, {"team_id_2": {"$in": coach_team_ids}}]
 
     cases: List[Dict[str, Any]] = []
-    athletes = await db.athletes.find(ath_q).to_list(5000)
+    # 🚀 18/08/2026 PERF — projection: escludi le foto base64 (non servono qui).
+    athletes = await db.athletes.find(ath_q, {
+        "athlete_photo": 0, "athlete_photo_artistic": 0, "doc_back_image": 0,
+        "doc_front_image": 0, "id_back": 0, "id_front": 0, "document_back": 0,
+        "document_front": 0, "privacy_signature": 0, "receipt_signature_base64": 0,
+        "privacy_pdf_snapshot": 0,
+    }).to_list(5000)
 
     # Pre-fetch ALL users of this society in a single query to build a phone cache
     # (avoids N+1 lookups inside _wa_get_phones for each athlete's parent_id)
@@ -35911,7 +35917,14 @@ async def get_pending_reminders(current_user=Depends(get_current_user)):
                     })
 
         # (b/c/d) trial ended
-        if te and te <= today:
+        # 🐛 18/08/2026 FIX — La prova può essere "finita" SOLO se è davvero
+        # iniziata: `trial_start_date` viene valorizzata unicamente al primo scan
+        # QR (primo allenamento). Alcuni flussi di registrazione impostano invece
+        # `trial_end_date` (registrazione + 7gg) SUBITO, lasciando trial_start=None:
+        # senza questa guardia comparivano solleciti "Fine prova" per atleti che
+        # NON hanno mai iniziato la prova (allenamenti non ancora partiti / nessun
+        # certificato → non avrebbero potuto fare la prova). Ora richiediamo `ts`.
+        if ts and te and te <= today:
             days_since_end = (today - te).days
 
             # (b) no certificate
