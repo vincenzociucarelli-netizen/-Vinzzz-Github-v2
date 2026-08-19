@@ -2675,8 +2675,11 @@ export default function AdminAthleteDetail() {
                 </TouchableOpacity>
               )}
               {/* 🆕 06/2026 — Copia ORIGINALE cartacea ricevuta (requisito FIPAV). Indipendente
-                  dalla convalida (che può avvenire su foto anticipata dal genitore). */}
-              {certificate && (
+                  dalla convalida (che può avvenire su foto anticipata dal genitore).
+                  🐛 06/2026 — Condizione resa robusta: mostra il pulsante se il certificato
+                  esiste da QUALSIASI fonte (documento separato OPPURE campi sull'atleta), così
+                  non manca mai quando è presente "Certificato verificato". */}
+              {(certificate || athlete?.medical_certificate_expiry) && (
                 <>
                   <TouchableOpacity
                     testID="cert-original-toggle"

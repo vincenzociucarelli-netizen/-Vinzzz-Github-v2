@@ -27112,7 +27112,17 @@ async def get_prime_squadre_athletes(current_user = Depends(get_current_user)):
         _u_q_coach["society_id"] = _sid
         _u_q_dir["society_id"] = _sid
         _t_q["society_id"] = _sid
-    athletes = await db.athletes.find(_a_q).to_list(100)
+    # 🚀 06/2026 PERF — Escludi i campi base64 pesanti (foto/documenti) NON usati da
+    # questa lista: prima scaricava le foto di tutti gli atleti/coach → cartella "Atleti
+    # Pro" lenta. Projection = solo dati necessari.
+    _excl_a = {
+        "athlete_photo": 0, "athlete_photo_artistic": 0,
+        "doc_back_image": 0, "doc_front_image": 0, "id_back": 0, "id_front": 0,
+        "document_back": 0, "document_front": 0, "privacy_signature": 0,
+        "receipt_signature_base64": 0, "privacy_pdf_snapshot": 0,
+    }
+    _excl_u = {"profile_photo": 0, "profile_photo_artistic": 0, "signature": 0}
+    athletes = await db.athletes.find(_a_q, _excl_a).to_list(100)
     clean_mongo_docs(athletes)
 
     # 🛡️ Filtro difensivo minorenni: usa la stessa logica dell'app.
@@ -27139,19 +27149,30 @@ async def get_prime_squadre_athletes(current_user = Depends(get_current_user)):
     # come atleta nella stessa lista → evita doppioni. I loro compensi coach sono
     # comunque tracciati nel record atleta per soglie 5k/15k.
     _u_q_coach["linked_athlete_id"] = {"$in": [None, ""]}
-    coaches = await db.users.find(_u_q_coach).to_list(50)
+    coaches = await db.users.find(_u_q_coach, _excl_u).to_list(50)
     clean_mongo_docs(coaches)
     
     # Get dirigenti (admin or viewer) with is_compensated = True
-    dirigenti = await db.users.find(_u_q_dir).to_list(50)
+    dirigenti = await db.users.find(_u_q_dir, _excl_u).to_list(50)
     clean_mongo_docs(dirigenti)
     
     # Get all teams for lookup
-    teams = await db.teams.find(_t_q).to_list(100)
+    teams = await db.teams.find(_t_q, {"_id": 0, "id": 1, "name": 1}).to_list(100)
     teams_dict = {t["id"]: t["name"] for t in teams}
     
     # Get their compensation records for the current year
     current_year = datetime.utcnow().year
+
+    # 🚀 06/2026 PERF — Elimina l'N+1: prima si faceva UNA query atleta_pro_compensations
+    # PER OGNI atleta (N round-trip ad Atlas → lentissimo su Render). Ora UNA sola query
+    # con $in su tutti gli id, poi raggruppamento in memoria.
+    _ath_ids = [a["id"] for a in athletes]
+    _all_comp = await db.atleta_pro_compensations.find({
+        "atleta_id": {"$in": _ath_ids}, "year": current_year,
+    }).to_list(5000)
+    _comp_by_ath: dict = {}
+    for _r in _all_comp:
+        _comp_by_ath.setdefault(_r.get("atleta_id"), []).append(_r)
     
     # Process athletes
     for athlete in athletes:
@@ -27161,10 +27182,7 @@ async def get_prime_squadre_athletes(current_user = Depends(get_current_user)):
         if team_id:
             athlete["team_name"] = teams_dict.get(team_id, "")
         
-        records = await db.atleta_pro_compensations.find({
-            "atleta_id": athlete["id"],
-            "year": current_year
-        }).to_list(12)
+        records = _comp_by_ath.get(athlete["id"], [])
         
         yearly_total = sum(r.get("amount_gross", 0) for r in records if r.get("receipt_signed"))
         months_received = len([r for r in records if r.get("receipt_signed")])
@@ -38542,6 +38560,8 @@ async def ensure_mongodb_indexes():
                 await db.payments.create_index([("society_id", 1), ("athlete_id", 1)])
                 await db.payments.create_index("id")
                 await db.payments.create_index("athlete_id")
+                # 🚀 06/2026 — cartella ATLETI: query {athlete_id:$in, paid:True}
+                await db.payments.create_index([("athlete_id", 1), ("paid", 1)])
             except Exception:
                 pass
             # 🚀 06/2026 — Indici mancanti su collezioni CALDE che finora facevano
@@ -38579,6 +38599,9 @@ async def ensure_mongodb_indexes():
             await _safe_idx(db.atleta_pro_compensations, "atleta_id")
             await _safe_idx(db.atleta_pro_compensations, "athlete_id")
             await _safe_idx(db.atleta_pro_compensations, "society_id")
+            # 🚀 06/2026 — cartella ATLETI PRO
+            await _safe_idx(db.atleta_pro_compensations, [("atleta_id", 1), ("year", 1)])
+            await _safe_idx(db.athletes, [("society_id", 1), ("is_compensated", 1)])
             await _safe_idx(db.athlete_compensations, "athlete_id")
             await _safe_idx(db.athlete_compensations, "society_id")
             await _safe_idx(db.athlete_compensation_receipts, "athlete_id")

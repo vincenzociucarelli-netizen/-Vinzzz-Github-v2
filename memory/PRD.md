@@ -875,3 +875,13 @@ Aggiunti in `ensure_mongodb_indexes` (helper `_safe_idx`, idempotente, non blocc
 Verificato: creati correttamente, log "MongoDB indexes ensured.". NB: in produzione servono dopo REDEPLOY (gli indici si creano allo startup del backend).
 
 NOTA button "Copia originale" mancante in produzione = feature non ancora deployata (in preview presente). Richiede redeploy.
+
+### 06/2026 — Perf cartelle ATLETI / ATLETI PRO + robustezza pulsante Copia originale
+Segnalazione utente: ATLETI e ATLETI PRO lente; pulsante "Copia originale" mancante su alcuni atleti.
+Fix ATLETI PRO (GET /prime-squadre/athletes):
+- Eliminato N+1: prima 1 query atleta_pro_compensations PER atleta → ora UNA query con $in + raggruppamento in memoria.
+- Projection: esclusi campi base64 pesanti (foto/documenti) da athletes/users; teams solo id+name.
+Fix ATLETI (GET /athletes): già projection base64 esclusa; aggiunto indice payments [athlete_id, paid].
+Indici nuovi: atleta_pro_compensations [atleta_id, year]; athletes [society_id, is_compensated]; payments [athlete_id, paid].
+Pulsante Copia originale (admin/athlete/[id].tsx): condizione resa robusta → mostra il pulsante se il certificato esiste da QUALSIASI fonte (documento `certificate` OPPURE `athlete.medical_certificate_expiry`), così non manca mai quando è presente "Certificato verificato". Verificato visivamente su atleta Test REACT.
+NB: tutte le modifiche (indici + query + pulsante) si attivano in produzione dopo REDEPLOY.
