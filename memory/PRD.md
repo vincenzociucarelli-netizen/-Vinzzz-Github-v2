@@ -919,3 +919,10 @@ Frontend: prime-squadre.tsx (loadAllAthletes) e parents.tsx ora usano `/athletes
 Verificato via curl: coaches/dirigenti/collaboratorees/parents veloci, profile_photo=null (base64 escluso). Smoke test frontend: le 4 cartelle renderizzano senza errori.
 NB: attivo in produzione dopo REDEPLOY. Piano: dopo il deploy, l'utente verifica la velocità reale su Render.
 Roadmap: foto SQUADRA (unica immagine) → thumbnail + espandi al click su Object Storage (da fare).
+
+### 06/2026 — VERA causa lentezza cartelle: settings+logo caricato ad OGNI richiesta
+Contesto: utente segnala 6s in PRODUZIONE anche con ?light=true. Verificato che gli indici richiesti (users: id, society_id, role, [society_id,role]; athletes: id, society_id, ...; teams: id, society_id; settings: [type,society_id]) ESISTONO GIÀ → non erano loro il problema.
+Root cause: `utils.get_current_season_for_society(db, society_id)` è chiamata a OGNI endpoint di lista e faceva `db.settings.find_one({type,society_id})` SENZA projection → trascinava il LOGO base64 (fino a ~519KB, in produzione non ancora migrato) ad ogni apertura cartella. La modalità light NON lo evitava (chiamava comunque questa funzione) → ecco perché in prod non era bastata.
+Fix (utils.py): (1) projection {season_start_month, season_start_day} → niente logo; (2) cache in-process `_SEASON_CFG_CACHE` per società, TTL 600s → azzera le query ripetute durante i burst. Verificato: stagione corretta (2026-2027), prima call ~3ms, cached ~0.01ms.
+Nota: il log ripetuto "Pre-season reminder scheduler started" è un artefatto del reloader uvicorn in PREVIEW (--reload), NON un loop di produzione (in prod parte una sola volta).
+`get_current_user` è già proiettato+cache (non carica logo). NB: attivo in produzione dopo REDEPLOY.

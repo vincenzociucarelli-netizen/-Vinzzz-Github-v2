@@ -14,6 +14,10 @@ MONTH_NAMES = {
     9: "Settembre", 10: "Ottobre", 11: "Novembre", 12: "Dicembre"
 }
 
+# 🚀 06/2026 — Cache in-process della configurazione stagione per società:
+# { society_id: (season_start_month, season_start_day, expiry_epoch) }. TTL 600s.
+_SEASON_CFG_CACHE: dict = {}
+
 
 def to_rome_time(dt: datetime) -> datetime:
     """Convert UTC datetime to Rome timezone (CET/CEST handling DST)."""
@@ -107,27 +111,40 @@ async def get_current_season_for_society(db, society_id: str) -> str:
     """🆕 30/06/2026 — Stagione corrente leggendo `season_start_month`/`season_start_day`
     dalle impostazioni della società. Cade su luglio/1 se non configurato.
     🆕 01/07/2026 — Usa ora di Roma (Europe/Rome, CET/CEST) per la data odierna,
-    NON UTC. Così alle 01:00 del 1° luglio (ora italiana) la stagione è già la nuova."""
+    NON UTC. Così alle 01:00 del 1° luglio (ora italiana) la stagione è già la nuova.
+    🚀 06/2026 PERF — Due ottimizzazioni CRITICHE (questa funzione è chiamata a OGNI
+    richiesta di lista): (1) PROJECTION → legge solo season_start_month/day e NON
+    trascina il logo base64 (fino a ~519KB) del doc settings ad ogni richiesta;
+    (2) CACHE in-process per società (TTL 10 min) → azzera le query ripetute durante
+    i burst di apertura cartelle. La stagione cambia solo al confine stagionale."""
     now = to_rome_time(datetime.utcnow())
-    settings = None
-    if society_id:
-        try:
-            settings = await db.settings.find_one({"type": "society", "society_id": society_id})
-        except Exception:
-            settings = None
-        # Fallback to legacy single-tenant settings if no society-scoped doc
-        if not settings:
+
+    # Cache: (season_start_month, season_start_day) per società — TTL 600s.
+    import time as _t
+    _key = society_id or "__default__"
+    _cached = _SEASON_CFG_CACHE.get(_key)
+    if _cached and _cached[2] > _t.time():
+        season_start_month, season_start_day = _cached[0], _cached[1]
+    else:
+        _proj = {"_id": 0, "season_start_month": 1, "season_start_day": 1}
+        settings = None
+        if society_id:
             try:
-                settings = await db.settings.find_one({"type": "society"})
+                settings = await db.settings.find_one({"type": "society", "society_id": society_id}, _proj)
             except Exception:
                 settings = None
-    season_start_month = (settings or {}).get("season_start_month", 7)
-    season_start_day = (settings or {}).get("season_start_day", 1)
-    try:
-        season_start_month = int(season_start_month or 7)
-        season_start_day = int(season_start_day or 1)
-    except Exception:
-        season_start_month, season_start_day = 7, 1
+            if not settings:
+                try:
+                    settings = await db.settings.find_one({"type": "society"}, _proj)
+                except Exception:
+                    settings = None
+        try:
+            season_start_month = int((settings or {}).get("season_start_month", 7) or 7)
+            season_start_day = int((settings or {}).get("season_start_day", 1) or 1)
+        except Exception:
+            season_start_month, season_start_day = 7, 1
+        _SEASON_CFG_CACHE[_key] = (season_start_month, season_start_day, _t.time() + 600)
+
     try:
         season_start_this_year = datetime(now.year, season_start_month, season_start_day)
     except Exception:
