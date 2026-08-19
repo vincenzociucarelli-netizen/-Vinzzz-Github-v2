@@ -12710,8 +12710,11 @@ async def request_athlete_deletion(athlete_id: str, current_user = Depends(get_c
         }
     )
     
-    # Notification to admin
-    society_id = current_user.get("society_id") or athlete.get("society_id")
+    # Notification to admin.
+    # 🔒 06/2026 — La notifica deve andare agli admin della società DELL'ATLETA (dove
+    # risiedono i dati da cancellare), non a quella del richiedente (che potrebbe essersi
+    # spostato in un'altra società). Priorità: società dell'atleta.
+    society_id = athlete.get("society_id") or current_user.get("society_id")
     if society_id:
         admin_users = await db.users.find({"society_id": society_id, "role": "admin"}).to_list(100)
         for admin_user in admin_users:

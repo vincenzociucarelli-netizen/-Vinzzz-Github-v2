@@ -36,8 +36,10 @@ async def get_admin_notifications(current_user = Depends(get_current_user)):
     if role not in (UserRole.ADMIN, "coordinatore"):
         raise HTTPException(status_code=403, detail="Solo admin può vedere le notifiche")
 
-    # Il coordinatore vede solo le notifiche della propria società (multi-tenant safe)
-    _q = {} if role == UserRole.ADMIN else {"society_id": current_user.get("society_id")}
+    # 🔒 06/2026 FIX multi-tenant: PRIMA per l'admin la query era {} → vedeva le
+    # notifiche di TUTTE le società (una richiesta cancellazione fatta su una società
+    # compariva in un'altra). Ora SEMPRE filtrata per la società dell'utente.
+    _q = {"society_id": current_user.get("society_id")}
     notifications = await db.admin_notifications.find(_q).sort("created_at", -1).to_list(100)
     result = []
     for n in notifications:
@@ -58,7 +60,9 @@ async def get_unread_notifications_count(current_user = Depends(get_current_user
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può vedere le notifiche")
     
-    count = await db.admin_notifications.count_documents({"read": False})
+    count = await db.admin_notifications.count_documents({
+        "read": False, "society_id": current_user.get("society_id"),
+    })
     return {"count": count}
 
 
@@ -69,7 +73,7 @@ async def mark_notification_read(notification_id: str, current_user = Depends(ge
         raise HTTPException(status_code=403, detail="Solo admin può gestire le notifiche")
     
     result = await db.admin_notifications.update_one(
-        {"id": notification_id},
+        {"id": notification_id, "society_id": current_user.get("society_id")},
         {"$set": {"read": True}}
     )
     if result.modified_count == 0:
@@ -84,7 +88,7 @@ async def mark_all_notifications_read(current_user = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Solo admin può gestire le notifiche")
     
     await db.admin_notifications.update_many(
-        {"read": False},
+        {"read": False, "society_id": current_user.get("society_id")},
         {"$set": {"read": True}}
     )
     return {"message": "Tutte le notifiche segnate come lette"}
@@ -96,7 +100,9 @@ async def delete_notification(notification_id: str, current_user = Depends(get_c
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può gestire le notifiche")
     
-    result = await db.admin_notifications.delete_one({"id": notification_id})
+    result = await db.admin_notifications.delete_one({
+        "id": notification_id, "society_id": current_user.get("society_id"),
+    })
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Notifica non trovata")
     return {"message": "Notifica eliminata"}
@@ -121,7 +127,9 @@ async def authorize_certificate_override_from_notification(
     if not data.reason or len(data.reason.strip()) < 5:
         raise HTTPException(status_code=400, detail="Motivo obbligatorio (minimo 5 caratteri)")
 
-    notification = await db.admin_notifications.find_one({"id": notification_id})
+    notification = await db.admin_notifications.find_one({
+        "id": notification_id, "society_id": current_user.get("society_id"),
+    })
     if not notification:
         raise HTTPException(status_code=404, detail="Notifica non trovata")
     if notification.get("type") != "expired_cert_scan":
@@ -208,7 +216,9 @@ async def deny_certificate_override_from_notification(
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può rifiutare l'override")
 
-    notification = await db.admin_notifications.find_one({"id": notification_id})
+    notification = await db.admin_notifications.find_one({
+        "id": notification_id, "society_id": current_user.get("society_id"),
+    })
     if not notification:
         raise HTTPException(status_code=404, detail="Notifica non trovata")
     if notification.get("type") != "expired_cert_scan":

@@ -885,3 +885,10 @@ Fix ATLETI (GET /athletes): già projection base64 esclusa; aggiunto indice paym
 Indici nuovi: atleta_pro_compensations [atleta_id, year]; athletes [society_id, is_compensated]; payments [athlete_id, paid].
 Pulsante Copia originale (admin/athlete/[id].tsx): condizione resa robusta → mostra il pulsante se il certificato esiste da QUALSIASI fonte (documento `certificate` OPPURE `athlete.medical_certificate_expiry`), così non manca mai quando è presente "Certificato verificato". Verificato visivamente su atleta Test REACT.
 NB: tutte le modifiche (indici + query + pulsante) si attivano in produzione dopo REDEPLOY.
+
+### 06/2026 — 🔒 FIX multi-tenant: notifiche admin visibili tra società diverse (GDPR)
+Segnalazione utente: in Sirio comparivano notifiche di "Richiesta cancellazione dati" fatte su Pallavolo Perugia.
+Causa (routes/notifications.py): `GET /admin/notifications` per role ADMIN usava query `{}` → restituiva le admin_notifications di TUTTE le società. Stesso problema (mancava filtro society_id) su: unread-count, mark read, mark-all-read, delete, authorize/deny override.
+Fix: TUTTE le query/mutazioni su admin_notifications ora filtrate per `society_id = current_user.society_id`.
+Inoltre server.py request-deletion: la notifica ora è indirizzata alla società DELL'ATLETA (`athlete.society_id`) e non a quella del richiedente (che poteva essersi spostato in altra società).
+Verificato in preview: /admin/notifications e unread-count restituiscono solo la società dell'utente. NB: attivo in produzione dopo REDEPLOY. Nessuna pulizia dati necessaria: le notifiche hanno già il society_id corretto, prima venivano solo mostrate a tutti.
