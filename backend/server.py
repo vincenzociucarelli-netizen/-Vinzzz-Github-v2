@@ -5830,6 +5830,17 @@ class UserUpdateStatus(BaseModel):
 class CoachAssignTeams(BaseModel):
     team_ids: List[str]
 
+# 🚀 06/2026 PERF — Proiezione per le LISTE staff/utenti: esclude i campi base64
+# pesanti (foto profilo, firme, scansioni documenti) che NON sono usati dalle liste
+# admin (usano avatar emoji) e non vengono mai rimandati indietro in modifica.
+# Alleggerisce drasticamente il payload delle cartelle Coach/Dirigenti/Collaboratori.
+_USER_LIST_EXCL = {
+    "profile_photo": 0, "profile_photo_artistic": 0, "signature": 0,
+    "document_front_image": 0, "document_back_image": 0,
+    "doc_front_image": 0, "doc_back_image": 0, "id_front": 0, "id_back": 0,
+    "privacy_pdf_snapshot": 0, "contract_pdf_base64": 0,
+}
+
 @api_router.get("/users/dirigenti")
 async def get_dirigenti(current_user = Depends(get_current_user)):
     """Get all dirigenti (admin, viewer, dirigente roles) - accessible by admin, coach, collaboratore e atleti"""
@@ -5874,7 +5885,7 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
     if exclude_owner_id:
         query["id"] = {"$ne": exclude_owner_id}
     
-    dirigenti = await db.users.find(query).to_list(1000)
+    dirigenti = await db.users.find(query, _USER_LIST_EXCL).to_list(1000)
 
     # 🆕 16/07/2026 — Self-heal silenzioso: staff visibile ma senza active_seasons
     # aggiornato → aggiungi la stagione corrente (idempotente). Così contratti,
@@ -5906,7 +5917,7 @@ async def get_dirigenti(current_user = Depends(get_current_user)):
     dirigenti = filtered
     
     # Get all teams for this society to resolve team names
-    teams = await db.teams.find({"society_id": society_id}).to_list(1000)
+    teams = await db.teams.find({"society_id": society_id}, {"_id": 0, "id": 1, "name": 1}).to_list(1000)
     team_dict = {t["id"]: t["name"] for t in teams}
     
     result = []
@@ -5969,7 +5980,7 @@ async def get_coaches(current_user = Depends(get_current_user)):
             {"rollover_decision": {"$ne": "removed"}},
             {"rollover_decision_season": {"$ne": _current_season}},
         ],
-    }).to_list(1000)
+    }, _USER_LIST_EXCL).to_list(1000)
 
     # Self-heal silenzioso
     _coaches_needing_heal = [
@@ -6034,7 +6045,7 @@ async def get_collaboratori(current_user = Depends(get_current_user)):
             {"rollover_decision": {"$ne": "removed"}},
             {"rollover_decision_season": {"$ne": _current_season}},
         ],
-    }).to_list(1000)
+    }, _USER_LIST_EXCL).to_list(1000)
 
     _needing_heal = [c["id"] for c in collaboratori if _current_season not in (c.get("active_seasons") or [])]
     if _needing_heal:
@@ -6106,7 +6117,7 @@ async def get_collaboratorees(current_user = Depends(get_current_user)):
             {"rollover_decision": {"$ne": "removed"}},
             {"rollover_decision_season": {"$ne": _current_season}},
         ],
-    }).to_list(1000)
+    }, _USER_LIST_EXCL).to_list(1000)
 
     # Self-heal silenzioso
     _collab_needing_heal = [
@@ -8435,6 +8446,7 @@ async def get_all_athletes(light: bool = False, current_user = Depends(get_curre
             "team_id": 1, "status": 1, "athlete_type": 1, "is_compensated": 1,
             "is_withdrawn": 1, "is_trial": 1, "athlete_code": 1, "date_of_birth": 1,
             "review_dismissed_season": 1, "privacy_pending_renewal": 1,
+            "parent_id": 1, "second_parent_id": 1,
         }
         athletes_l = await db.athletes.find(_base_query, _light_proj).to_list(5000)
         team_ids_l = list({a.get("team_id") for a in athletes_l if a.get("team_id")})
@@ -8455,6 +8467,8 @@ async def get_all_athletes(light: bool = False, current_user = Depends(get_curre
                 "team_id": a.get("team_id"),
                 "team_name": team_names_l.get(a.get("team_id"), ""),
                 "status": a.get("status", "pending"),
+                "parent_id": a.get("parent_id"),
+                "second_parent_id": a.get("second_parent_id"),
                 "date_of_birth": a.get("date_of_birth"),
                 "athlete_type": a.get("athlete_type", "quota"),
                 "is_compensated": a.get("is_compensated", False),

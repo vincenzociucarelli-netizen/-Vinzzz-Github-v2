@@ -902,3 +902,20 @@ Fix: nuovo parametro `GET /athletes?light=true`:
 - SALTA la scrittura self-heal.
 Frontend admin/athletes.tsx: usa `sharedGet('/athletes?light=true')`. Il badge "sovrapagamento" (payment-derived) semplicemente non compare in lista (dettaglio pagamenti resta nella scheda atleta). Nessun filtro/ordinamento dipende dai campi pagamento → nessuna regressione.
 La modalità piena resta default per gli altri consumer (athlete-search usa i campi anagrafici estesi). Payload lista ~3× più leggero; verificato lista renderizza (nomi/squadra/stato/sezioni). NB: attivo in produzione dopo REDEPLOY.
+
+### 06/2026 — NOTA IMPORTANTE utente (correzione roadmap immagini)
+- ⚠️ Su RegistraTEAM NON esistono foto profilo ATLETI. L'unica immagine "atleta-correlata" è la FOTO SQUADRA (team_photo).
+- Requisito per il futuro: la foto squadra va mostrata come MINIATURA (thumbnail) e, al click, si espande a schermo intero. Da migrare su Object Storage con questo pattern (thumbnail + full).
+- Piano concordato performance: 1) attendere il DEPLOY su Render e verificare la cartella ATLETI con la modalità light; 2) se ok, ESTENDERE la modalità light (dati minimi in lista, dettagli pesanti solo su click) a TUTTE le cartelle (Genitori, Staff/Coach, Dirigenti, ecc.).
+
+### 06/2026 — Modalità LIGHT estesa a tutte le cartelle staff/utenti
+Richiesta utente: alleggerire ATLETI 18+ PRO, GENITORI, DIRIGENTI, COACH, COLLABORATORI (come fatto per ATLETI).
+Backend:
+- Costante `_USER_LIST_EXCL` (esclude base64: profile_photo, profile_photo_artistic, signature, scansioni doc, privacy_pdf_snapshot, contract_pdf_base64) applicata ai find di: /users/coaches, /users/collaboratori, /users/collaboratorees, /users/dirigenti. Le liste usano avatar EMOJI (non la foto) e le PATCH inviano solo campi specifici → nessun rischio di wipe foto.
+- /users/dirigenti: anche il find teams ora proiettato a {id,name} (niente team_photo base64).
+- /users/parents: era già light (projection 18/08).
+- GET /athletes?light=true: aggiunti parent_id/second_parent_id alla projection/response (servono a parents.tsx per mappare i figli).
+Frontend: prime-squadre.tsx (loadAllAthletes) e parents.tsx ora usano `/athletes?light=true`.
+Verificato via curl: coaches/dirigenti/collaboratorees/parents veloci, profile_photo=null (base64 escluso). Smoke test frontend: le 4 cartelle renderizzano senza errori.
+NB: attivo in produzione dopo REDEPLOY. Piano: dopo il deploy, l'utente verifica la velocità reale su Render.
+Roadmap: foto SQUADRA (unica immagine) → thumbnail + espandi al click su Object Storage (da fare).

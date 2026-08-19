@@ -161,7 +161,7 @@ export default function PrimeSquadrePage() {
     try {
       // Load both athletes and coaches
       const [athletesRes, coachesRes] = await Promise.all([
-        sharedGet('/athletes'),
+        sharedGet('/athletes?light=true'),
         api.get('/users/coaches'),
       ]);
       

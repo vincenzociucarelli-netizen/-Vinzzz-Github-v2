@@ -62,7 +62,7 @@ export default function ParentsScreen() {
       const [parentsRes, pendingRes, athletesRes] = await Promise.all([
         sharedGet('/users/parents'),
         api.get('/users/pending'),
-        sharedGet('/athletes'),
+        sharedGet('/athletes?light=true'),
       ]);
       
       // All parents with their athletes
