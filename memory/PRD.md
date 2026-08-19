@@ -862,3 +862,16 @@ Fix (server.py, endpoint /preseason/share/{id}):
 - Rimosso il PIL dal path della richiesta: dimensioni OG = cover_width/height salvate o default 1200×630 (l'immagine reale è servita da cover.jpg).
 - Risultato preview: ~7ms (verificato) con og:title + og:image corretti.
 IMPORTANTE: fix nel codice → richiede REDEPLOY per attivarsi in produzione. WhatsApp inoltre cache-a le preview per URL (ri-condividere/attendere; opz. Facebook Sharing Debugger). Cold start Render free tier resta un fattore per la primissima apertura dopo inattività.
+
+### 06/2026 — Indici MongoDB aggiuntivi (performance apertura cartelle)
+Segnalazione utente: app lenta nel caricare le cartelle. Analisi: molte collezioni CALDE erano SENZA indici → collection scan.
+Aggiunti in `ensure_mongodb_indexes` (helper `_safe_idx`, idempotente, non bloccante):
+- `societies` (id, society_id, invite_code) — 61 query, prima full-scan (impatto alto)
+- `preseason_campaigns` (id, society_id), `preseason_responses` (id, campaign_id, society_id)
+- `certificates` (id, athlete_id, society_id), `medical_certificates_archive` (id, athlete_id, society_id)
+- compensi: coach/collaboratore/dirigente/atleta_pro/athlete/external_compensations + athlete_compensation_receipts + threshold_declarations (person_id + society_id)
+- role_change_requests, deletion_requests, athlete_invitations (token), audit_logs
+- payments (id, athlete_id single), login_attempts/login_rate_limits (email)
+Verificato: creati correttamente, log "MongoDB indexes ensured.". NB: in produzione servono dopo REDEPLOY (gli indici si creano allo startup del backend).
+
+NOTA button "Copia originale" mancante in produzione = feature non ancora deployata (in preview presente). Richiede redeploy.

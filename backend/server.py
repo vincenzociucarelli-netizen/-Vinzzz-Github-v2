@@ -38540,8 +38540,65 @@ async def ensure_mongodb_indexes():
             # payments
             try:
                 await db.payments.create_index([("society_id", 1), ("athlete_id", 1)])
+                await db.payments.create_index("id")
+                await db.payments.create_index("athlete_id")
             except Exception:
                 pass
+            # 🚀 06/2026 — Indici mancanti su collezioni CALDE che finora facevano
+            # collection scan → lentezza nell'aprire le cartelle (società, eventi,
+            # certificati, compensi, richieste). Tutti idempotenti e non-bloccanti.
+            async def _safe_idx(coll, keys, **kw):
+                try:
+                    await coll.create_index(keys, **kw)
+                except Exception:
+                    pass
+            # societies: 61 query (id/society_id/invite_code) — era SENZA indici.
+            await _safe_idx(db.societies, "id")
+            await _safe_idx(db.societies, "society_id")
+            await _safe_idx(db.societies, "invite_code")
+            # preseason (eventi/pre-iscrizioni)
+            await _safe_idx(db.preseason_campaigns, "id")
+            await _safe_idx(db.preseason_campaigns, "society_id")
+            await _safe_idx(db.preseason_responses, "id")
+            await _safe_idx(db.preseason_responses, "campaign_id")
+            await _safe_idx(db.preseason_responses, "society_id")
+            # certificati (usati nella scheda atleta)
+            await _safe_idx(db.certificates, "id")
+            await _safe_idx(db.certificates, "athlete_id")
+            await _safe_idx(db.certificates, "society_id")
+            await _safe_idx(db.medical_certificates_archive, "id")
+            await _safe_idx(db.medical_certificates_archive, "athlete_id")
+            await _safe_idx(db.medical_certificates_archive, "society_id")
+            # compensi (Riforma Sport / pregresso)
+            await _safe_idx(db.coach_compensations, "coach_id")
+            await _safe_idx(db.coach_compensations, "society_id")
+            await _safe_idx(db.collaboratore_compensations, "collaboratore_id")
+            await _safe_idx(db.collaboratore_compensations, "society_id")
+            await _safe_idx(db.dirigente_compensations, "dirigente_id")
+            await _safe_idx(db.dirigente_compensations, "society_id")
+            await _safe_idx(db.atleta_pro_compensations, "atleta_id")
+            await _safe_idx(db.atleta_pro_compensations, "athlete_id")
+            await _safe_idx(db.atleta_pro_compensations, "society_id")
+            await _safe_idx(db.athlete_compensations, "athlete_id")
+            await _safe_idx(db.athlete_compensations, "society_id")
+            await _safe_idx(db.athlete_compensation_receipts, "athlete_id")
+            await _safe_idx(db.athlete_compensation_receipts, "society_id")
+            await _safe_idx(db.external_compensations, "society_id")
+            await _safe_idx(db.threshold_declarations, "society_id")
+            await _safe_idx(db.threshold_declarations, "user_id")
+            # richieste / inviti / audit
+            await _safe_idx(db.role_change_requests, "id")
+            await _safe_idx(db.role_change_requests, "user_id")
+            await _safe_idx(db.role_change_requests, "society_id")
+            await _safe_idx(db.deletion_requests, "id")
+            await _safe_idx(db.deletion_requests, "society_id")
+            await _safe_idx(db.athlete_invitations, "token")
+            await _safe_idx(db.athlete_invitations, "society_id")
+            await _safe_idx(db.audit_logs, "society_id")
+            # auth: velocizza il rate-limiting su login (lookup per email/ip)
+            await _safe_idx(db.login_attempts, "email")
+            await _safe_idx(db.login_rate_limits, "email")
+
             # 🚀 16/08/2026 — Pre-compressione una-tantum delle immagini pesanti su
             # collezioni PICCOLE (settings/societies): così la primissima apertura della
             # pagina Società / biglietto da visita è già veloce dopo il deploy, senza
