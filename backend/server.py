@@ -1307,6 +1307,30 @@ _LAST_ACTIVE_MIN_INTERVAL = 60 # secondi
 _AUTH_INFLIGHT = {}            # user_id -> Future: dedup delle letture CONCORRENTI
                               # (il burst di ~30 richieste simultanee condivide 1 sola query)
 
+# 🚀 06/2026 — Cache generica a tempo (TTL 10 min) per risultati costosi tipo le
+# statistiche Prime Squadre: { key: (expires_at_monotonic, value) }.
+_TTL_RESULT_CACHE = {}
+
+def _ttl_cache_get(key: str):
+    entry = _TTL_RESULT_CACHE.get(key)
+    if entry and entry[0] > _auth_time.monotonic():
+        return entry[1]
+    return None
+
+def _ttl_cache_set(key: str, value, ttl: int = 600):
+    _TTL_RESULT_CACHE[key] = (_auth_time.monotonic() + ttl, value)
+    if len(_TTL_RESULT_CACHE) > 2000:
+        _TTL_RESULT_CACHE.clear()
+
+def invalidate_ttl_cache(prefix: str = ""):
+    """Invalida le voci della cache TTL che iniziano con `prefix` (o tutte se vuoto)."""
+    if not prefix:
+        _TTL_RESULT_CACHE.clear()
+        return
+    for k in [k for k in _TTL_RESULT_CACHE if k.startswith(prefix)]:
+        _TTL_RESULT_CACHE.pop(k, None)
+
+
 def _auth_cache_get(user_id: str):
     entry = _AUTH_USER_CACHE.get(user_id)
     if entry and entry[0] > _auth_time.monotonic():
@@ -3139,6 +3163,11 @@ async def register_adult_athlete(data: AdultAthleteRegister):
     Creates both a user account and an athlete record.
     Account requires email verification before activation.
     """
+    # 🐛 Fix "iscrizione fantasma": valida il formato email PRIMA di qualunque
+    # scrittura su DB. Un'email malformata deve fallire subito con 400.
+    if not is_valid_email(data.email):
+        raise HTTPException(status_code=400, detail="Indirizzo email non valido. Controlla e riprova.")
+    
     # Check if email already exists
     existing_user = await db.users.find_one({"email": data.email.lower()})
     if existing_user:
@@ -9018,6 +9047,10 @@ async def create_adult_athlete(data: AdultAthleteCreate, current_user = Depends(
     """Registra un atleta maggiorenne direttamente dall'admin - form semplificato"""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin possono registrare atleti maggiorenni")
+    
+    # 🐛 Fix "iscrizione fantasma": se l'email è fornita, deve essere valida
+    if data.email and not is_valid_email(data.email):
+        raise HTTPException(status_code=400, detail="Indirizzo email non valido. Controlla e riprova.")
     
     # Get admin's society_id
     admin_user = await db.users.find_one({"id": current_user["id"]})
@@ -28015,30 +28048,49 @@ async def get_athlete_threshold_status(athlete_id: str, year: int, current_user 
 
 @api_router.get("/prime-squadre/stats")
 async def get_prime_squadre_stats(current_user = Depends(get_current_user)):
-    """Get statistics for Prime Squadre module"""
+    """Get statistics for Prime Squadre module.
+    🚀 06/2026 PERF — Era ~5.8s. Cause: (a) find_one settings SENZA projection →
+    caricava il logo base64; (b) count_documents NON filtrato per società (scan +
+    leak multi-tenant); (c) find compensi non scoped. Ora: projection, conteggi/somme
+    scoped per società (usano gli indici), somma via aggregazione e CACHE 10 min."""
     if current_user["role"] != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin può visualizzare le statistiche")
-    
-    # Check if pro_enabled — 🐛 08/07/2026 fix multi-tenancy
+
+    import time as _t
     _sid_pro = current_user.get("society_id")
-    settings = await db.settings.find_one({"type": "society", "society_id": _sid_pro}) if _sid_pro else await db.settings.find_one({"type": "society"})
+    _ck = f"prime_stats:{_sid_pro or '__default__'}"
+    _cached = _ttl_cache_get(_ck)
+    if _cached is not None:
+        return _cached
+
+    # pro_enabled: projection minima (NIENTE logo)
+    settings = None
+    if _sid_pro:
+        settings = await db.settings.find_one({"type": "society", "society_id": _sid_pro}, {"_id": 0, "pro_enabled": 1})
+    if not settings:
+        settings = await db.settings.find_one({"type": "society"}, {"_id": 0, "pro_enabled": 1})
     pro_enabled = settings.get("pro_enabled", False) if settings else False
-    
-    # Count members
-    total_members = await db.athletes.count_documents({"is_compensated": True})
+
+    # Atleti compensati della SOCIETÀ (usa indice [society_id, is_compensated])
+    _ath_ids = [a["id"] async for a in db.athletes.find(
+        {"society_id": _sid_pro, "is_compensated": True}, {"_id": 0, "id": 1}
+    )]
+    total_members = len(_ath_ids)
     max_members = 50
-    
-    # Get current year totals
+
     current_year = datetime.utcnow().year
-    yearly_records = await db.atleta_pro_compensations.find({
-        "year": current_year,
-        "receipt_signed": True
-    }).to_list(1000)
-    
-    total_compensations = sum(r.get("amount_gross", 0) for r in yearly_records)
-    total_receipts = len(yearly_records)
-    
-    return {
+    total_compensations = 0
+    total_receipts = 0
+    if _ath_ids:
+        _agg = await db.atleta_pro_compensations.aggregate([
+            {"$match": {"atleta_id": {"$in": _ath_ids}, "year": current_year, "receipt_signed": True}},
+            {"$group": {"_id": None, "total": {"$sum": "$amount_gross"}, "cnt": {"$sum": 1}}},
+        ]).to_list(1)
+        if _agg:
+            total_compensations = _agg[0].get("total", 0)
+            total_receipts = _agg[0].get("cnt", 0)
+
+    result = {
         "pro_enabled": pro_enabled,
         "total_members": total_members,
         "max_members": max_members,
@@ -28046,9 +28098,11 @@ async def get_prime_squadre_stats(current_user = Depends(get_current_user)):
         "current_year": current_year,
         "yearly_stats": {
             "total_compensations": total_compensations,
-            "total_receipts": total_receipts
-        }
+            "total_receipts": total_receipts,
+        },
     }
+    _ttl_cache_set(_ck, result, ttl=600)
+    return result
 
 
 # ==================== GESTIONE ATLETI - GENITORI ====================

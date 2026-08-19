@@ -656,15 +656,22 @@ export default function AdminAthleteDetail() {
       
       // Load available roles and characteristics from settings
       try {
-        const settingsRes = await api.get('/settings/society?include_images=true');
+        // 🚀 06/2026 PERF — Apertura atleta lenta: prima si scaricava SEMPRE il logo
+        // base64 (include_images, ~519KB) bloccando l'apertura. Ora carichiamo le
+        // impostazioni LEGGERE (ruoli/caratteristiche/stagione + campi testo) senza
+        // bloccare, e recuperiamo logo/timbro IN BACKGROUND (servono solo ai PDF).
+        const settingsRes = await api.get('/settings/society');
         setAvailableRoles(settingsRes.data.athlete_roles || []);
         setAvailableCharacteristics(settingsRes.data.athlete_characteristics || []);
-        setSocietyData(settingsRes.data); // Save full society data for receipt
-        // 🆕 05/07/2026 — Salva anche data inizio stagione sportiva
+        setSocietyData(settingsRes.data); // dati testuali società (per ricevuta)
         setSocietySettings({
           season_start_month: settingsRes.data?.season_start_month,
           season_start_day: settingsRes.data?.season_start_day,
         });
+        // Logo/timbro per i PDF: caricati in background, NON bloccano l'apertura scheda.
+        api.get('/settings/society?include_images=true')
+          .then((imgRes) => setSocietyData(imgRes.data))
+          .catch(() => {});
       } catch (e) {
         console.log('Could not load settings');
       }

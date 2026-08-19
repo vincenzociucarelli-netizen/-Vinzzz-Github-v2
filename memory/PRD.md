@@ -384,6 +384,19 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - Frontend `register-athlete.tsx`: rendering condizionale su `isMinorAthlete` (da data nascita GG/MM/AAAA) — minore→box "periodo di prova" senza checkbox privacy; maggiorenne→sezione consensi con "presa visione" obbligatoria.
   - Backlog confermato (opzione B, rimandata): macchina a 6 stati completa (IN ATTESA → IN ATTESA D'INIZIO PROVA solo dopo validazione certificato admin + gate QR → IN PROVA → ATTIVO dopo firma privacy).
 
+## Changelog — 19/08/2026 — Fix "iscrizione fantasma" su email non valida (P1)
+### Root cause
+- `POST /auth/register-adult-athlete` e `POST /athletes/adult` (admin) NON validavano il formato email prima di scrivere su DB. Un'email malformata (es. `mario@18+.com`) creava record atleta/utente e poi un passaggio successivo falliva → iscrizione "fantasma" + errore generico.
+### Fix (server.py)
+- `register_adult_athlete`: aggiunta `is_valid_email(data.email)` come PRIMISSIMO controllo → 400 "Indirizzo email non valido. Controlla e riprova." prima di qualunque insert.
+- `create_adult_athlete` (admin): se `data.email` fornita e non valida → stesso 400 prima di qualunque insert.
+- Il helper `is_valid_email` esisteva già (definito 03/08/2026) ma non era mai chiamato.
+### Verifica (curl + ispezione DB)
+- `mario@18+.com` → 400; `notanemail` → 400; email valida + invito errato → 400 su invito (validazione email passa prima). Nessun record fantasma creato (users=0, athletes=0 per tutte le email di test).
+### Deploy
+- Solo backend → Render.
+
+
 ## Testing Credentials
 Vedi `/app/memory/test_credentials.md`
 
@@ -926,3 +939,14 @@ Root cause: `utils.get_current_season_for_society(db, society_id)` è chiamata a
 Fix (utils.py): (1) projection {season_start_month, season_start_day} → niente logo; (2) cache in-process `_SEASON_CFG_CACHE` per società, TTL 600s → azzera le query ripetute durante i burst. Verificato: stagione corretta (2026-2027), prima call ~3ms, cached ~0.01ms.
 Nota: il log ripetuto "Pre-season reminder scheduler started" è un artefatto del reloader uvicorn in PREVIEW (--reload), NON un loop di produzione (in prod parte una sola volta).
 `get_current_user` è già proiettato+cache (non carica logo). NB: attivo in produzione dopo REDEPLOY.
+
+### 06/2026 — Ottimizzazione stats Atleti PRO + apertura singolo atleta (VERIFICATO iter 113)
+Segnalazione: GET /prime-squadre/stats lentissima (5.8s) rallentava la cartella Atleti PRO; apertura singolo atleta ancora lenta.
+Fix stats (server.py get_prime_squadre_stats):
+- projection su settings (niente logo base64); count atleti compensati SCOPED per società (usa indice [society_id,is_compensated]) → prima count_documents({is_compensated:True}) NON scoped (scan + leak multi-tenant);
+- somma compensi via AGGREGAZIONE $group scoped agli atleti della società (niente pull di documenti);
+- CACHE TTL 600s: nuova cache generica `_TTL_RESULT_CACHE` + `_ttl_cache_get/set/invalidate_ttl_cache`.
+- Risultato: 5.8s → ~0.2s (verificato ~27x).
+Fix apertura singolo atleta (admin/athlete/[id].tsx): il fetch `/settings/society?include_images=true` (logo ~519KB) NON blocca più l'apertura: si caricano prima le settings LEGGERE (ruoli/caratteristiche/stagione + campi testo), poi logo/timbro in BACKGROUND (servono solo ai PDF ricevuta/tessera). `/users` è chiamato solo su azione "collega genitore", non all'apertura.
+Collegamento PRO↔normali: i PRO sono atleti is_compensated=True; dopo il fix N+1 (prime-squadre/athletes, una query $in) e stats (una aggregazione) NON ci sono loop pesanti sul DB.
+Verificato testing agent iter 113 (7/7 backend + frontend, nessuna regressione su athletes/coaches/dirigenti/parents). NB: attivo in produzione dopo REDEPLOY.
