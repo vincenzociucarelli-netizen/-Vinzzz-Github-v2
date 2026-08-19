@@ -342,7 +342,7 @@ export default function AdminAthletes() {
   const loadData = async () => {
     try {
       const [athletesRes, teamsRes, codeRes, delRes, seasonRes] = await Promise.all([
-        sharedGet('/athletes'),
+        sharedGet('/athletes?light=true'),
         api.get('/teams'),
         api.get('/societies/invite-code').catch(() => ({ data: { invite_code: '', society_name: '' } })),
         api.get('/admin/deletion-requests/pending-summary').catch(() => ({ data: { by_athlete: {} } })),

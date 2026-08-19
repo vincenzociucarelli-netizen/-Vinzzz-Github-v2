@@ -8395,8 +8395,13 @@ async def save_federation_preferences(data: dict, current_user = Depends(get_cur
 # ==================== ATHLETE ENDPOINTS ====================
 
 @api_router.get("/athletes")
-async def get_all_athletes(current_user = Depends(get_current_user)):
+async def get_all_athletes(light: bool = False, current_user = Depends(get_current_user)):
     """Get all athletes - admin only.
+    🚀 06/2026 — Modalità `light=true`: per la LISTA atleti restituisce solo i dati
+    minimi (nome/cognome/squadra/stato) SENZA il "join" sui pagamenti, SENZA la
+    scrittura self-heal e con proiezione POSITIVA (solo i campi usati dalla lista).
+    I dettagli pesanti (pagamenti, documenti, storico) si caricano solo aprendo
+    l'atleta. La modalità piena resta il default per gli altri consumer.
     🆕 01/07/2026 — Filtro clean-slate: solo atleti della stagione corrente.
     🐛 16/07/2026 — HOTFIX "Atleti spariti dopo rollover stagione":
     stesso pattern dei bug "Genitori vuoti" (10/07) e "Dirigenti spariti"
@@ -8412,14 +8417,56 @@ async def get_all_athletes(current_user = Depends(get_current_user)):
     society_id = current_user.get("society_id")
     from utils import get_current_season_for_society as _get_cs
     _current_season = await _get_cs(db, society_id)
-    athletes = await db.athletes.find({
+
+    _base_query = {
         "society_id": society_id,
         # Escludi solo chi è stato esplicitamente rimosso dalla stagione corrente
         "$or": [
             {"rollover_decision": {"$ne": "removed"}},
             {"rollover_decision_season": {"$ne": _current_season}},
         ],
-    }, {
+    }
+
+    # 🚀 06/2026 — FAST PATH per la lista: proiezione positiva minima, NIENTE join
+    # pagamenti, NIENTE self-heal write. Riduce drasticamente peso e tempo di risposta.
+    if light:
+        _light_proj = {
+            "_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1,
+            "team_id": 1, "status": 1, "athlete_type": 1, "is_compensated": 1,
+            "is_withdrawn": 1, "is_trial": 1, "athlete_code": 1, "date_of_birth": 1,
+            "review_dismissed_season": 1, "privacy_pending_renewal": 1,
+        }
+        athletes_l = await db.athletes.find(_base_query, _light_proj).to_list(5000)
+        team_ids_l = list({a.get("team_id") for a in athletes_l if a.get("team_id")})
+        teams_l = await db.teams.find(
+            {"id": {"$in": team_ids_l}}, {"_id": 0, "id": 1, "name": 1}
+        ).to_list(200)
+        team_names_l = {t["id"]: t.get("name", "") for t in teams_l}
+        out = []
+        for a in athletes_l:
+            full_name = a.get("full_name", "")
+            if a.get("last_name") or a.get("first_name"):
+                full_name = f"{a.get('last_name', '')} {a.get('first_name', '')}".strip()
+            out.append({
+                "id": a["id"],
+                "full_name": full_name,
+                "first_name": a.get("first_name", ""),
+                "last_name": a.get("last_name", ""),
+                "team_id": a.get("team_id"),
+                "team_name": team_names_l.get(a.get("team_id"), ""),
+                "status": a.get("status", "pending"),
+                "date_of_birth": a.get("date_of_birth"),
+                "athlete_type": a.get("athlete_type", "quota"),
+                "is_compensated": a.get("is_compensated", False),
+                "is_withdrawn": a.get("is_withdrawn", False),
+                "is_trial": a.get("is_trial", False),
+                "athlete_code": a.get("athlete_code"),
+                "review_dismissed_season": a.get("review_dismissed_season"),
+                "privacy_pending_renewal": a.get("privacy_pending_renewal", False),
+            })
+        return out
+
+    athletes = await db.athletes.find(_base_query, {
         # 🚀 18/08/2026 PERF — Escludi i campi base64 pesanti: la risposta di questa
         # lista NON li usa (costruisce un dict con soli campi anagrafici/pagamenti).
         # Prima venivano scaricati fino a 5000 atleti CON le foto → 7-8s sulla

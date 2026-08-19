@@ -892,3 +892,13 @@ Causa (routes/notifications.py): `GET /admin/notifications` per role ADMIN usava
 Fix: TUTTE le query/mutazioni su admin_notifications ora filtrate per `society_id = current_user.society_id`.
 Inoltre server.py request-deletion: la notifica ora è indirizzata alla società DELL'ATLETA (`athlete.society_id`) e non a quella del richiedente (che poteva essersi spostato in altra società).
 Verificato in preview: /admin/notifications e unread-count restituiscono solo la società dell'utente. NB: attivo in produzione dopo REDEPLOY. Nessuna pulizia dati necessaria: le notifiche hanno già il society_id corretto, prima venivano solo mostrate a tutti.
+
+### 06/2026 — Lista atleti lenta: modalità LIGHT (dati minimi)
+Richiesta utente: la lista atleti carichi solo dati minimi (nome/cognome/squadra), i dettagli pesanti solo aprendo l'atleta; niente join inutili.
+Analisi GET /athletes (default): oltre alla find, faceva (a) self-heal update_many a OGNI load, (b) "join" pagamenti `payments.find({athlete_id:$in, paid:True}).to_list(10000)` + calcolo residuo per atleta, (c) proiezione negativa (restituiva TUTTI i campi non-base64).
+Fix: nuovo parametro `GET /athletes?light=true`:
+- proiezione POSITIVA minima (id, full_name/first/last, team_id, status, athlete_type, is_compensated, is_withdrawn, is_trial, athlete_code, date_of_birth, review_dismissed_season, privacy_pending_renewal) + enrich team_name;
+- SALTA il join pagamenti e il calcolo residuo (payment_residual/has_overpayment non inclusi);
+- SALTA la scrittura self-heal.
+Frontend admin/athletes.tsx: usa `sharedGet('/athletes?light=true')`. Il badge "sovrapagamento" (payment-derived) semplicemente non compare in lista (dettaglio pagamenti resta nella scheda atleta). Nessun filtro/ordinamento dipende dai campi pagamento → nessuna regressione.
+La modalità piena resta default per gli altri consumer (athlete-search usa i campi anagrafici estesi). Payload lista ~3× più leggero; verificato lista renderizza (nomi/squadra/stato/sezioni). NB: attivo in produzione dopo REDEPLOY.
