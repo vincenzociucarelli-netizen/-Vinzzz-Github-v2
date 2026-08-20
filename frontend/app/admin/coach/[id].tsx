@@ -748,14 +748,16 @@ export default function AdminCoachDetail() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))}>
-            <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
-          </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.replace('/admin')} testID="header-home-btn" style={{ marginLeft: 8 }}>
-          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
-        </TouchableOpacity>
-          <Text style={styles.headerTitle}>Caricamento...</Text>
-          <View style={{ width: 24 }} />
+          <View style={styles.headerTopRow}>
+            <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))}>
+              <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.replace('/admin')} testID="header-home-btn" style={{ marginLeft: 8 }}>
+              <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
+            </TouchableOpacity>
+            <View style={{ flex: 1 }} />
+          </View>
+          <Text style={styles.headerName}>Caricamento...</Text>
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#FF9500" />
@@ -768,14 +770,16 @@ export default function AdminCoachDetail() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))}>
-            <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
-          </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.replace('/admin')} testID="header-home-btn" style={{ marginLeft: 8 }}>
-          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
-        </TouchableOpacity>
-          <Text style={styles.headerTitle}>Errore</Text>
-          <View style={{ width: 24 }} />
+          <View style={styles.headerTopRow}>
+            <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))}>
+              <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.replace('/admin')} testID="header-home-btn" style={{ marginLeft: 8 }}>
+              <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
+            </TouchableOpacity>
+            <View style={{ flex: 1 }} />
+          </View>
+          <Text style={styles.headerName}>Errore</Text>
         </View>
         <View style={styles.loadingContainer}>
           <Text>Coach non trovato</Text>

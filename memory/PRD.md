@@ -384,6 +384,16 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - Frontend `register-athlete.tsx`: rendering condizionale su `isMinorAthlete` (da data nascita GG/MM/AAAA) — minore→box "periodo di prova" senza checkbox privacy; maggiorenne→sezione consensi con "presa visione" obbligatoria.
   - Backlog confermato (opzione B, rimandata): macchina a 6 stati completa (IN ATTESA → IN ATTESA D'INIZIO PROVA solo dopo validazione certificato admin + gate QR → IN PROVA → ATTIVO dopo firma privacy).
 
+## Changelog — 20/08/2026 (3) — Fix "doppia banda bianca" durante il caricamento schede
+### Root cause
+- Cambiando `styles.header` da `row` a `column`, gli header degli stati "Caricamento..." / "Errore" (che avevano ancora i due pulsanti back/home fuori da `headerTopRow`) stiravano i `TouchableOpacity` a tutta larghezza (alignItems stretch di default) → i due bottoni bianchi apparivano come due bande bianche piene, poi sparivano al termine del load.
+### Fix (frontend)
+- `coach/[id].tsx`, `dirigente/[id].tsx`, `athlete/[id].tsx`: negli stati loading ed errore i pulsanti back/home sono ora dentro `headerTopRow` (riga) e il titolo ("Caricamento..."/"Errore") usa `headerName` sotto. Convertiti anche i residui `data-testid`→`testID` in athlete.
+- Collaboratore: nessun problema (lo stato loading non renderizza l'header).
+### Verifica
+- Stato "Errore" (id inesistente) mostra i due pulsantini tondi in alto + testo sotto, senza bande bianche. Lint pulito.
+
+
 ## Changelog — 20/08/2026 (2) — Rifinitura intestazioni: squadra sotto il nome + collaboratore compatto
 ### Richieste utente
 - Dirigente e Collaboratore mostrano GIÀ squadre e palestre nella card "Stagione" → NON duplicare nel corpo.
