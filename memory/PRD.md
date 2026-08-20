@@ -384,6 +384,19 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - Frontend `register-athlete.tsx`: rendering condizionale su `isMinorAthlete` (da data nascita GG/MM/AAAA) — minore→box "periodo di prova" senza checkbox privacy; maggiorenne→sezione consensi con "presa visione" obbligatoria.
   - Backlog confermato (opzione B, rimandata): macchina a 6 stati completa (IN ATTESA → IN ATTESA D'INIZIO PROVA solo dopo validazione certificato admin + gate QR → IN PROVA → ATTIVO dopo firma privacy).
 
+## Changelog — 20/08/2026 (4) — Fix consensi immagini atleta MAGGIORENNE non visibili all'Admin
+### Bug (segnalato da utente)
+- Un'atleta 18+ concede i consensi immagini dal proprio profilo (salvati su `athletes.consents`, endpoint `/athletes/{id}/consents`), ma nella scheda Admin (`AdminConsentView`) risultavano "Non ancora espresso".
+### Root cause (frontend `src/components/AdminConsentView.tsx`)
+- `renderImageRow` calcolava `hasExpressed` solo dalla presenza di `final_consents[type].per_parent`. Per un maggiorenne NON ci sono genitori → `per_parent` vuoto → il codice forzava `finalValue = null` ("Non ancora espresso"), ignorando `final_value`/il consenso diretto.
+### Fix
+- Se `per_parent` ha voci (minore con genitori) → usa `final_value` + `denied_by` come prima. Altrimenti (maggiorenne/senza genitori) legge il consenso diretto da `consents[type]`: presente → Dato/Negato, assente → Non ancora espresso.
+### Verifica (screenshot preview)
+- Atleta adulto Test REACT con consensi diretti a `true`: Admin mostra "Dato" per uso interno e promozionale (prima "Non ancora espresso"). Dati di test ripristinati. Lint pulito.
+### Deploy
+- Solo frontend.
+
+
 ## Changelog — 20/08/2026 (3) — Fix "doppia banda bianca" durante il caricamento schede
 ### Root cause
 - Cambiando `styles.header` da `row` a `column`, gli header degli stati "Caricamento..." / "Errore" (che avevano ancora i due pulsanti back/home fuori da `headerTopRow`) stiravano i `TouchableOpacity` a tutta larghezza (alignItems stretch di default) → i due bottoni bianchi apparivano come due bande bianche piene, poi sparivano al termine del load.

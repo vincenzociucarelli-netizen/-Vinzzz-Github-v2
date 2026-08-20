@@ -93,11 +93,19 @@ export const AdminConsentView: React.FC<AdminConsentViewProps> = ({
     // final value from backend (athlete). For users read direct key.
     let finalValue: boolean | null;
     let deniedCount = 0;
-    if (entityType === 'athlete' && fc) {
-      const perParent = fc.per_parent || {};
-      const hasExpressed = Object.keys(perParent).length > 0;
-      finalValue = hasExpressed ? !!fc.final_value : null;
-      deniedCount = (fc.denied_by || []).length;
+    if (entityType === 'athlete') {
+      const perParent = (fc && fc.per_parent) || {};
+      if (Object.keys(perParent).length > 0) {
+        // Minore con genitori: lo stato finale deriva dai consensi dei genitori
+        finalValue = !!(fc && fc.final_value);
+        deniedCount = ((fc && fc.denied_by) || []).length;
+      } else {
+        // 🐛 Fix: atleta MAGGIORENNE (nessun genitore) esprime il consenso in prima
+        // persona. Prima il pannello ignorava fc.final_value se per_parent era vuoto
+        // e mostrava sempre "Non ancora espresso". Ora legge il consenso diretto.
+        const raw = consents[type];
+        finalValue = raw === undefined || raw === null ? null : _val(raw);
+      }
     } else {
       finalValue = _val(consents[type]);
     }
