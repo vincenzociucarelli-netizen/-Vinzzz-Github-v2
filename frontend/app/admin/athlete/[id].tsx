@@ -2246,19 +2246,19 @@ export default function AdminAthleteDetail() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))}>
-          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.replace('/admin')} data-testid="header-home-btn" style={{ marginLeft: 8 }}>
-          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          {/* Mini QR Code in header */}
+        <View style={styles.headerTopRow}>
+          <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))}>
+            <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.replace('/admin')} testID="header-home-btn" style={{ marginLeft: 8 }}>
+            <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
+          </TouchableOpacity>
+          <View style={{ flex: 1 }} />
           {athlete.qr_code && (
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => setQrModalVisible(true)}
               style={styles.miniQrButton}
-              data-testid="mini-qr-button"
+              testID="mini-qr-button"
             >
               <Image
                 source={{ uri: athlete.qr_code.startsWith('data:') ? athlete.qr_code : `data:image/png;base64,${athlete.qr_code}` }}
@@ -2267,14 +2267,13 @@ export default function AdminAthleteDetail() {
               />
             </TouchableOpacity>
           )}
-          <Text style={styles.headerTitle} numberOfLines={1}>{athlete.full_name}</Text>
+          {activeTab === 'dati' && (
+            <TouchableOpacity onPress={() => setEditing(!editing)}>
+              <Ionicons name={editing ? "close" : "create"} size={24} color="#fff" />
+            </TouchableOpacity>
+          )}
         </View>
-        {activeTab === 'dati' && (
-          <TouchableOpacity onPress={() => setEditing(!editing)}>
-            <Ionicons name={editing ? "close" : "create"} size={24} color="#fff" />
-          </TouchableOpacity>
-        )}
-        {activeTab !== 'dati' && <View style={{ width: 24 }} />}
+        <Text style={styles.headerName} numberOfLines={2}>{athlete.full_name}</Text>
       </View>
 
       {/* Tab Selector */}
@@ -6104,12 +6103,12 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#007AFF',
     paddingTop: 50,
-    paddingBottom: 20,
+    paddingBottom: 18,
     paddingHorizontal: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'column',
   },
+  headerTopRow: { flexDirection: 'row', alignItems: 'center' },
+  headerName: { fontSize: 22, fontWeight: 'bold', color: '#fff', marginTop: 12, textAlign: 'left' },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff', flex: 1, textAlign: 'center', marginHorizontal: 10 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   tabContainer: { flexDirection: 'row', backgroundColor: '#fff', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#e0e0e0' },

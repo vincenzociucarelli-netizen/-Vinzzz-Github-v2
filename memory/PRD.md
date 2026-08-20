@@ -384,6 +384,21 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - Frontend `register-athlete.tsx`: rendering condizionale su `isMinorAthlete` (da data nascita GG/MM/AAAA) — minore→box "periodo di prova" senza checkbox privacy; maggiorenne→sezione consensi con "presa visione" obbligatoria.
   - Backlog confermato (opzione B, rimandata): macchina a 6 stati completa (IN ATTESA → IN ATTESA D'INIZIO PROVA solo dopo validazione certificato admin + gate QR → IN PROVA → ATTIVO dopo firma privacy).
 
+## Changelog — 20/08/2026 — Intestazione schede utente: nome leggibile (no troncamento)
+### Richiesta utente
+- Nelle schede di dettaglio (atleta, coach, dirigente, collaboratore) il nome nel banner d'intestazione veniva troncato ("STENTELLA FRANCE...", "GUARINO GIAD...", "CARROZZA GI...").
+### Fix (frontend — 4 file)
+- Header ricostruito a COLONNA: prima riga con i pulsanti (indietro/home + eventuali azioni a destra: QR atleta, chiave collaboratore, matita atleta), poi il NOME su riga propria, allineato a sinistra, `numberOfLines={2}` (fontSize 22) → banner più alto e nome sempre leggibile.
+- `athlete/[id].tsx`, `coach/[id].tsx`, `dirigente/[id].tsx`: nuovo `headerTopRow` + `headerName`; header da `row` a `column`; convertiti `data-testid`→`testID` (QR + home) in athlete.
+- `collaboratore/[id].tsx` (Foto 3):
+  - (C) prima l'header mostrava "Dettaglio Collaboratore"; ora mostra il NOME come gli altri utenti (chiave reset password spostata in alto a destra).
+  - (D) al posto del nome nel corpo, ora l'elenco delle SQUADRE assegnate su più righe, carattere piccolo (fallback "Nessuna squadra assegnata").
+### Verifica (screenshot preview, login admin)
+- Collaboratore PAOLI PAOLO: header "PAOLI PAOLO" + corpo con 6 squadre multi-riga (Under 14/16/MiniVolley/Starter Group/Under 18/Serie D). Coach RICA FEDE e atleta Test REACT: nome su riga propria, banner più alto, QR atleta preservato. Lint pulito.
+### Deploy
+- Solo frontend → Save to Github/Vercel (nessuna modifica backend).
+
+
 ## Changelog — 19/08/2026 — Fix "iscrizione fantasma" su email non valida (P1)
 ### Root cause
 - `POST /auth/register-adult-athlete` e `POST /athletes/adult` (admin) NON validavano il formato email prima di scrivere su DB. Un'email malformata (es. `mario@18+.com`) creava record atleta/utente e poi un passaggio successivo falliva → iscrizione "fantasma" + errore generico.

@@ -594,16 +594,19 @@ export default function AdminCollaboratoreDetail() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))} style={[styles.backButton, { backgroundColor: 'transparent' }]}>
-          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#7B1FA2" /></View>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.replace('/admin')} testID="header-home-btn" style={{ marginLeft: 8 }}>
-          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Dettaglio Collaboratore</Text>
-        <TouchableOpacity onPress={() => setResetPasswordVisible(true)} style={{ backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 20, padding: 8 }}>
-          <Ionicons name="key" size={24} color="#fff" />
-        </TouchableOpacity>
+        <View style={styles.headerTopRow}>
+          <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))} style={[styles.backButton, { backgroundColor: 'transparent' }]}>
+            <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#7B1FA2" /></View>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.replace('/admin')} testID="header-home-btn" style={{ marginLeft: 8 }}>
+            <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
+          </TouchableOpacity>
+          <View style={{ flex: 1 }} />
+          <TouchableOpacity onPress={() => setResetPasswordVisible(true)} style={{ backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 20, padding: 8 }}>
+            <Ionicons name="key" size={24} color="#fff" />
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.headerName} numberOfLines={2}>{collaboratore.full_name}</Text>
       </View>
 
       {/* 🆕 23/02/2026 — Tab Navigator STICKY fuori dalla ScrollView */}
@@ -676,9 +679,21 @@ export default function AdminCollaboratoreDetail() {
           </TouchableOpacity>
         )}
 
-        {/* Header con nome e contatti */}
+        {/* Sezione profilo: al posto del nome (ora nell'header) mostriamo le squadre assegnate */}
         <View style={styles.profileSection}>
-          <Text style={styles.profileName}>{collaboratore.full_name}</Text>
+          {(() => {
+            const assigned = teams.filter((t) => (collaboratore.assigned_teams || []).includes(t.id));
+            if (assigned.length === 0) {
+              return <Text style={styles.profileTeamsEmpty}>Nessuna squadra assegnata</Text>;
+            }
+            return (
+              <View style={styles.profileTeams}>
+                {assigned.map((t) => (
+                  <Text key={t.id} style={styles.profileTeamLine}>{t.name}</Text>
+                ))}
+              </View>
+            );
+          })()}
           <View style={[styles.statusBadge, { backgroundColor: collaboratore.status === 'approved' ? '#34C759' : '#FF9500' }]}>
             <Text style={styles.statusBadgeText}>{collaboratore.status === 'approved' ? 'ATTIVO' : 'IN ATTESA'}</Text>
           </View>
@@ -2202,18 +2217,21 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
     backgroundColor: '#FF5722',
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
-    paddingBottom: 15,
+    paddingBottom: 16,
     paddingHorizontal: 15,
   },
+  headerTopRow: { flexDirection: 'row', alignItems: 'center' },
+  headerName: { fontSize: 22, fontWeight: 'bold', color: '#fff', marginTop: 12, textAlign: 'left' },
   backButton: { padding: 5 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
   content: { flex: 1 },
   profileSection: { alignItems: 'center', paddingVertical: 20 },
+  profileTeams: { alignItems: 'center', marginBottom: 4 },
+  profileTeamLine: { fontSize: 13, color: '#555', lineHeight: 19, fontWeight: '500' },
+  profileTeamsEmpty: { fontSize: 13, color: '#999', fontStyle: 'italic', marginBottom: 4 },
   profilePhoto: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#e0e0e0' },
   profilePhotoPlaceholder: { justifyContent: 'center', alignItems: 'center' },
   profileName: { fontSize: 22, fontWeight: 'bold', marginTop: 12, color: '#333' },

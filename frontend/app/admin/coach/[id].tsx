@@ -787,14 +787,16 @@ export default function AdminCoachDetail() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))} style={styles.backButton}>
-          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.replace('/admin')} testID="header-home-btn" style={{ marginLeft: 8 }}>
-          <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>{coach.full_name}</Text>
-        <View style={{ width: 28 }} />
+        <View style={styles.headerTopRow}>
+          <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))} style={styles.backButton}>
+            <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.replace('/admin')} testID="header-home-btn" style={{ marginLeft: 8 }}>
+            <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
+          </TouchableOpacity>
+          <View style={{ flex: 1 }} />
+        </View>
+        <Text style={styles.headerName} numberOfLines={2}>{coach.full_name}</Text>
       </View>
 
       {/* 🆕 23/02/2026 — Tab Navigator STICKY fuori dalla ScrollView */}
@@ -2682,12 +2684,12 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#FF9500',
     paddingTop: 50,
-    paddingBottom: 20,
+    paddingBottom: 18,
     paddingHorizontal: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'column',
   },
+  headerTopRow: { flexDirection: 'row', alignItems: 'center' },
+  headerName: { fontSize: 22, fontWeight: 'bold', color: '#fff', marginTop: 12, textAlign: 'left' },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff', flex: 1, textAlign: 'center', marginHorizontal: 10 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { flex: 1 },
