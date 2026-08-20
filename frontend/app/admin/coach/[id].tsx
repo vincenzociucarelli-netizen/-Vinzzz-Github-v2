@@ -797,6 +797,10 @@ export default function AdminCoachDetail() {
           <View style={{ flex: 1 }} />
         </View>
         <Text style={styles.headerName} numberOfLines={2}>{coach.full_name}</Text>
+        {(() => {
+          const names = teams.filter((t) => (coach.assigned_teams || []).includes(t.id)).map((t) => t.name);
+          return names.length > 0 ? <Text style={styles.headerTeams} numberOfLines={2}>{names.join('  ·  ')}</Text> : null;
+        })()}
       </View>
 
       {/* 🆕 23/02/2026 — Tab Navigator STICKY fuori dalla ScrollView */}
@@ -2690,6 +2694,7 @@ const styles = StyleSheet.create({
   },
   headerTopRow: { flexDirection: 'row', alignItems: 'center' },
   headerName: { fontSize: 22, fontWeight: 'bold', color: '#fff', marginTop: 12, textAlign: 'left' },
+  headerTeams: { fontSize: 13, color: 'rgba(255,255,255,0.9)', marginTop: 4, fontWeight: '500' },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff', flex: 1, textAlign: 'center', marginHorizontal: 10 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { flex: 1 },

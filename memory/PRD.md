@@ -384,6 +384,21 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - Frontend `register-athlete.tsx`: rendering condizionale su `isMinorAthlete` (da data nascita GG/MM/AAAA) — minore→box "periodo di prova" senza checkbox privacy; maggiorenne→sezione consensi con "presa visione" obbligatoria.
   - Backlog confermato (opzione B, rimandata): macchina a 6 stati completa (IN ATTESA → IN ATTESA D'INIZIO PROVA solo dopo validazione certificato admin + gate QR → IN PROVA → ATTIVO dopo firma privacy).
 
+## Changelog — 20/08/2026 (2) — Rifinitura intestazioni: squadra sotto il nome + collaboratore compatto
+### Richieste utente
+- Dirigente e Collaboratore mostrano GIÀ squadre e palestre nella card "Stagione" → NON duplicare nel corpo.
+- Collaboratore: WhatsApp ridotto e messo in riga con "ATTIVO", in fondo a destra.
+- Atleti / atleti pro / coach: non avevano l'indicazione della squadra → aggiungerla SUBITO SOTTO IL NOME nel banner (max ~3 squadre).
+### Fix (frontend)
+- `collaboratore/[id].tsx`: rimossa la riga squadre dal corpo (annullato il punto D precedente); ora `statusRow` con badge "ATTIVO/IN ATTESA" a sinistra e pulsante WhatsApp compatto (size 16, padding ridotti) a destra (`justifyContent: space-between`).
+- `coach/[id].tsx` e `athlete/[id].tsx`: aggiunto `headerTeams` sotto `headerName` nel banner con l'elenco squadre (join " · ", `numberOfLines={2}`, testo bianco translucido). Coach: da `assigned_teams` + lista `teams`. Atleta: da `team_ids` (fallback `team_id`/`team_id_2`/`team_name`) + `allTeams`.
+- Dirigente: nessuna modifica al corpo (già ha Stagione), nessuna squadra nel banner.
+### Verifica (screenshot preview)
+- Coach RICA FEDE: banner "RICA FEDE" + "Under 16 · Under 18 · Serie D · Under 17 · Serie C". Atleta Test REACT: "Under 14" sotto il nome. Collaboratore PAOLI PAOLO: ATTIVO + WhatsApp compatto sulla stessa riga, nessuna squadra nel corpo. Lint pulito.
+### Deploy
+- Solo frontend.
+
+
 ## Changelog — 20/08/2026 — Intestazione schede utente: nome leggibile (no troncamento)
 ### Richiesta utente
 - Nelle schede di dettaglio (atleta, coach, dirigente, collaboratore) il nome nel banner d'intestazione veniva troncato ("STENTELLA FRANCE...", "GUARINO GIAD...", "CARROZZA GI...").

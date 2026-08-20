@@ -679,45 +679,38 @@ export default function AdminCollaboratoreDetail() {
           </TouchableOpacity>
         )}
 
-        {/* Sezione profilo: al posto del nome (ora nell'header) mostriamo le squadre assegnate */}
+        {/* Sezione profilo: ATTIVO a sinistra, WhatsApp (ridotto) a destra sulla stessa riga.
+            Le squadre/palestre sono già mostrate nella card "Stagione" più sotto. */}
         <View style={styles.profileSection}>
-          {(() => {
-            const assigned = teams.filter((t) => (collaboratore.assigned_teams || []).includes(t.id));
-            if (assigned.length === 0) {
-              return <Text style={styles.profileTeamsEmpty}>Nessuna squadra assegnata</Text>;
-            }
-            return (
-              <Text style={styles.profileTeamLine}>{assigned.map((t) => t.name).join('  ·  ')}</Text>
-            );
-          })()}
-          <View style={[styles.statusBadge, { backgroundColor: collaboratore.status === 'approved' ? '#34C759' : '#FF9500' }]}>
-            <Text style={styles.statusBadgeText}>{collaboratore.status === 'approved' ? 'ATTIVO' : 'IN ATTESA'}</Text>
+          <View style={styles.statusRow}>
+            <View style={[styles.statusBadge, { backgroundColor: collaboratore.status === 'approved' ? '#34C759' : '#FF9500' }]}>
+              <Text style={styles.statusBadgeText}>{collaboratore.status === 'approved' ? 'ATTIVO' : 'IN ATTESA'}</Text>
+            </View>
+
+            {/* WhatsApp Button (compatto) */}
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: collaboratore.phone ? '#25D366' : '#ccc',
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 20,
+              }}
+              onPress={() => {
+                if (!collaboratore.phone) {
+                  Alert.alert('Telefono non disponibile', 'Questo collaboratore non ha un numero di telefono registrato');
+                  return;
+                }
+                const phone = collaboratore.phone?.replace(/\D/g, '');
+                const phoneWithCountry = phone?.startsWith('39') ? phone : `39${phone}`;
+                Linking.openURL(`https://wa.me/${phoneWithCountry}`);
+              }}
+            >
+              <Ionicons name="logo-whatsapp" size={16} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 6, fontSize: 13 }}>WhatsApp</Text>
+            </TouchableOpacity>
           </View>
-          
-          {/* WhatsApp Button */}
-          <TouchableOpacity
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: collaboratore.phone ? '#25D366' : '#ccc',
-              paddingHorizontal: 20,
-              paddingVertical: 10,
-              borderRadius: 25,
-              marginTop: 12,
-            }}
-            onPress={() => {
-              if (!collaboratore.phone) {
-                Alert.alert('Telefono non disponibile', 'Questo collaboratore non ha un numero di telefono registrato');
-                return;
-              }
-              const phone = collaboratore.phone?.replace(/\D/g, '');
-              const phoneWithCountry = phone?.startsWith('39') ? phone : `39${phone}`;
-              Linking.openURL(`https://wa.me/${phoneWithCountry}`);
-            }}
-          >
-            <Ionicons name="logo-whatsapp" size={20} color="#fff" />
-            <Text style={{ color: '#fff', fontWeight: '600', marginLeft: 8 }}>WhatsApp</Text>
-          </TouchableOpacity>
         </View>
 
         {/* 🆕 19/06/2026 — Tab Navigator: Da fare / Anagrafica / Compensi (ora sticky FUORI ScrollView) */}
@@ -2224,10 +2217,8 @@ const styles = StyleSheet.create({
   backButton: { padding: 5 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
   content: { flex: 1 },
-  profileSection: { alignItems: 'center', paddingVertical: 20 },
-  profileTeams: { alignItems: 'center', marginBottom: 4 },
-  profileTeamLine: { fontSize: 13, color: '#555', fontWeight: '500', textAlign: 'center', marginBottom: 4, paddingHorizontal: 12 },
-  profileTeamsEmpty: { fontSize: 13, color: '#999', fontStyle: 'italic', marginBottom: 4 },
+  profileSection: { paddingVertical: 16, paddingHorizontal: 16 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   profilePhoto: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#e0e0e0' },
   profilePhotoPlaceholder: { justifyContent: 'center', alignItems: 'center' },
   profileName: { fontSize: 22, fontWeight: 'bold', marginTop: 12, color: '#333' },
