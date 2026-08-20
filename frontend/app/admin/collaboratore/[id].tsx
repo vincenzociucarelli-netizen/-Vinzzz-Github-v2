@@ -687,11 +687,7 @@ export default function AdminCollaboratoreDetail() {
               return <Text style={styles.profileTeamsEmpty}>Nessuna squadra assegnata</Text>;
             }
             return (
-              <View style={styles.profileTeams}>
-                {assigned.map((t) => (
-                  <Text key={t.id} style={styles.profileTeamLine}>{t.name}</Text>
-                ))}
-              </View>
+              <Text style={styles.profileTeamLine}>{assigned.map((t) => t.name).join('  ·  ')}</Text>
             );
           })()}
           <View style={[styles.statusBadge, { backgroundColor: collaboratore.status === 'approved' ? '#34C759' : '#FF9500' }]}>
@@ -2230,7 +2226,7 @@ const styles = StyleSheet.create({
   content: { flex: 1 },
   profileSection: { alignItems: 'center', paddingVertical: 20 },
   profileTeams: { alignItems: 'center', marginBottom: 4 },
-  profileTeamLine: { fontSize: 13, color: '#555', lineHeight: 19, fontWeight: '500' },
+  profileTeamLine: { fontSize: 13, color: '#555', fontWeight: '500', textAlign: 'center', marginBottom: 4, paddingHorizontal: 12 },
   profileTeamsEmpty: { fontSize: 13, color: '#999', fontStyle: 'italic', marginBottom: 4 },
   profilePhoto: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#e0e0e0' },
   profilePhotoPlaceholder: { justifyContent: 'center', alignItems: 'center' },
