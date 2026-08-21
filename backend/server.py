@@ -980,6 +980,7 @@ class Athlete(BaseModel):
     iban: Optional[str] = None  # IBAN per pagamento compensi
     bank_name: Optional[str] = None  # Nome banca
     iban_holder: Optional[str] = None  # Intestatario conto (nome completo)
+    account_holder: Optional[str] = None  # Intestatario conto (usato dal profilo atleta)
     iban_holder_first_name: Optional[str] = None  # Nome intestatario conto (legacy)
     iban_holder_last_name: Optional[str] = None  # Cognome intestatario conto (legacy)
     # Documenti identità (per atleti maggiorenni con compenso)
@@ -36009,7 +36010,7 @@ async def get_consent_history_admin(
         raise HTTPException(status_code=403, detail="Solo admin")
     
     if entity_type == "user":
-        entity = await db.users.find_one({"id": entity_id}, {"_id": 0, "consents": 1, "consent_history": 1, "full_name": 1, "email": 1, "role": 1})
+        entity = await db.users.find_one({"id": entity_id}, {"_id": 0, "consents": 1, "consent_history": 1, "full_name": 1, "email": 1, "role": 1, "linked_athlete_id": 1})
     elif entity_type == "athlete":
         entity = await db.athletes.find_one({"id": entity_id}, {"_id": 0, "consents": 1, "consent_history": 1, "full_name": 1, "first_name": 1, "last_name": 1})
     else:
@@ -36018,14 +36019,40 @@ async def get_consent_history_admin(
     if not entity:
         raise HTTPException(status_code=404, detail="Entità non trovata")
     
+    consents = entity.get("consents")
+    consent_history = entity.get("consent_history", [])
+
+    # 🐛 Fix doppio incarico: uno staff promosso da atleta firma privacy/consensi
+    # immagine sul record ATLETA collegato. Per la vista di dettaglio riempiamo le
+    # chiavi mancanti (privacy_viewed / images_*) dal record atleta collegato.
+    if entity_type == "user" and entity.get("linked_athlete_id"):
+        la = await db.athletes.find_one(
+            {"id": entity["linked_athlete_id"]},
+            {"_id": 0, "consents": 1, "consent_history": 1, "privacy_accepted": 1},
+        )
+        if la:
+            merged = dict(consents or {})
+            la_cons = la.get("consents") or {}
+            for k in ("privacy_viewed", "images_internal", "images_promo"):
+                cur = merged.get(k)
+                cur_val = cur.get("value") if isinstance(cur, dict) else cur
+                if cur_val is None and la_cons.get(k) is not None:
+                    merged[k] = la_cons[k]
+            # privacy_accepted dell'atleta implica presa visione informativa
+            if merged.get("privacy_viewed") is None and la.get("privacy_accepted"):
+                merged["privacy_viewed"] = {"value": True}
+            consents = merged
+            if not consent_history:
+                consent_history = la.get("consent_history", [])
+
     return {
         "entity_type": entity_type,
         "entity_id": entity_id,
         "full_name": entity.get("full_name") or f'{entity.get("last_name", "")} {entity.get("first_name", "")}',
         "email": entity.get("email"),
         "role": entity.get("role"),
-        "consents": entity.get("consents"),
-        "consent_history": entity.get("consent_history", []),
+        "consents": consents,
+        "consent_history": consent_history,
     }
 
 @api_router.get("/admin/all-consents")
@@ -37078,20 +37105,44 @@ async def admin_list_image_consents(
         nav_prefix = {"coach": "coach", "dirigente": "dirigente", "admin": "dirigente", "collaboratore": "collaboratore"}
         staff_users = await db.users.find(
             {"society_id": society_id, "role": {"$in": STAFF_ROLES}},
-            {"_id": 0, "id": 1, "full_name": 1, "email": 1, "role": 1, "consents": 1, "is_institutional": 1},
+            {"_id": 0, "id": 1, "full_name": 1, "email": 1, "role": 1, "consents": 1, "is_institutional": 1, "linked_athlete_id": 1},
         ).to_list(5000)
+
+        # 🐛 03/08/2026 (fix doppio incarico) — Lo staff promosso da atleta firma
+        # privacy e consensi immagine sul record ATLETA collegato (linked_athlete_id),
+        # non sul record utente. Carichiamo quei record per usarli come fallback,
+        # così un coach che è anche atleta non risulta erroneamente "senza consenso".
+        linked_ids = [u.get("linked_athlete_id") for u in staff_users if u.get("linked_athlete_id")]
+        linked_athletes: dict = {}
+        if linked_ids:
+            for la in await db.athletes.find(
+                {"id": {"$in": linked_ids}},
+                {"_id": 0, "id": 1, "consents": 1, "privacy_accepted": 1},
+            ).to_list(5000):
+                linked_athletes[la["id"]] = la
+
         staff_by_label: dict = {}
         for u in staff_users:
             if u.get("is_institutional"):
                 continue  # l'account istituzionale non firma consensi immagine
             consents = u.get("consents") or {}
             raw_v = _extract(consents.get(consent_type))
+            privacy_raw = consents.get("privacy_viewed")
+            priv_signed = (_extract(privacy_raw) is True)
+
+            # Fallback su atleta collegato (doppio incarico)
+            la = linked_athletes.get(u.get("linked_athlete_id")) if u.get("linked_athlete_id") else None
+            if la is not None:
+                la_cons = la.get("consents") or {}
+                if raw_v is None:
+                    raw_v = _extract(la_cons.get(consent_type))
+                if not priv_signed:
+                    priv_signed = _privacy_signed(la)
+
             final_value = bool(raw_v) if raw_v is not None else False
             has_record = raw_v is not None
             if only_denied and final_value:
                 continue
-            privacy_raw = consents.get("privacy_viewed")
-            priv_signed = (_extract(privacy_raw) is True)
             label = role_label.get(u.get("role"), "Staff")
             entry = {
                 "athlete_id": u.get("id"),

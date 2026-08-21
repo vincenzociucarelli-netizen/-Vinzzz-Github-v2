@@ -384,6 +384,30 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - Frontend `register-athlete.tsx`: rendering condizionale su `isMinorAthlete` (da data nascita GG/MM/AAAA) — minore→box "periodo di prova" senza checkbox privacy; maggiorenne→sezione consensi con "presa visione" obbligatoria.
   - Backlog confermato (opzione B, rimandata): macchina a 6 stati completa (IN ATTESA → IN ATTESA D'INIZIO PROVA solo dopo validazione certificato admin + gate QR → IN PROVA → ATTIVO dopo firma privacy).
 
+## Changelog — 21/08/2026 (2) — Dati Bancari (sola lettura) nella scheda Atleta (Anagrafica)
+### Richiesta utente
+- Non si vedevano i dati bancari di un atleta 18+ Pro nella scheda Atleta (erano visibili solo lato Coach per il doppio incarico). La scheda Atleta non aveva alcuna sezione bancaria.
+### Fix
+- `app/admin/athlete/[id].tsx`: aggiunta card "🏦 Dati Bancari" (sola lettura) nel tab **Anagrafica**, subito dopo la card Anagrafica. Mostra IBAN, Intestatario, Banca. Card visibile solo se almeno un campo è presente. Intestatario con fallback `iban_holder || account_holder || (cognome+nome legacy)`.
+- `server.py`: aggiunto `account_holder` al modello `Athlete` (il GET usa `response_model=Athlete` e prima non esponeva il campo salvato dal profilo atleta).
+### Verifica (screenshot preview)
+- Atleta Test REACT con IBAN/Intestatario/Banca di test: la card compare in Anagrafica con i valori corretti. Dati di test rimossi. Lint pulito.
+### Deploy
+- Frontend + backend (nuovo campo nel modello).
+
+
+## Changelog — 21/08/2026 — Fix consensi doppio incarico (atleta 18+ Pro + staff)
+### Bug (segnalato)
+- Persona con doppio incarico (es. GUARINO GIADA: atleta 18+ Pro + Coach): firma privacy e consensi immagine come ATLETA (salvati sul record atleta), ma nel riepilogo "Consensi Immagini" compariva sotto Staff·Coach come "In attesa di firma privacy / senza consenso" (letto solo dal record utente).
+### Root cause
+- `GET /admin/athletes/image-consents` (sezione staff) e `GET /admin/consent-history/user/{id}` leggevano SOLO `users.consents`, ignorando il record atleta collegato (`users.linked_athlete_id`).
+### Fix (server.py, backend-only)
+- `admin_list_image_consents`: per gli staff con `linked_athlete_id`, se il consenso/privacy non è espresso sul record utente, fallback sul record ATLETA collegato (consenso diretto adulto + `privacy_accepted`).
+- `get_consent_history_admin` (entity user): unisce nelle chiavi mancanti (`privacy_viewed`, `images_internal`, `images_promo`) i valori dal record atleta collegato; `privacy_accepted` atleta ⇒ presa visione. Così anche il pannello "Consensi Privacy" nella scheda Coach/Dirigente/Collaboratore mostra correttamente.
+### Verifica (curl, scenario di test poi ripristinato)
+- Coach senza consensi propri, collegato a un atleta con consensi True: `consent-history/user` → privacy/internal/promo = True; `image-consents?only_denied=true` → il coach NON compare più tra i "senza consenso"; `only_denied=false` → "Staff · Coach" consent_given=True, privacy_signed=True.
+
+
 ## Changelog — 20/08/2026 (4) — Fix consensi immagini atleta MAGGIORENNE non visibili all'Admin
 ### Bug (segnalato da utente)
 - Un'atleta 18+ concede i consensi immagini dal proprio profilo (salvati su `athletes.consents`, endpoint `/athletes/{id}/consents`), ma nella scheda Admin (`AdminConsentView`) risultavano "Non ancora espresso".

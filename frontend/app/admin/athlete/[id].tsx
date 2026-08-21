@@ -3183,6 +3183,36 @@ export default function AdminAthleteDetail() {
               )}
             </View>
 
+            {/* 🆕 21/08/2026 — Dati Bancari (sola lettura). Utile per atleti 18+ PRO/compensati.
+                I dati sono salvati sul record atleta e sincronizzati sul record Coach (doppio incarico). */}
+            {(() => {
+              const a: any = athlete;
+              const holder = a.iban_holder || a.account_holder
+                || [a.iban_holder_last_name, a.iban_holder_first_name].filter(Boolean).join(' ').trim()
+                || '';
+              const iban = a.iban || '';
+              const bank = a.bank_name || '';
+              if (!iban && !holder && !bank) return null;
+              return (
+                <View style={styles.card}>
+                  <Text style={styles.cardTitle}>🏦 Dati Bancari</Text>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>IBAN</Text>
+                    <Text style={[styles.value, styles.valueSmall]}>{iban || '-'}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Intestatario</Text>
+                    <Text style={styles.value}>{holder ? String(holder).toUpperCase() : '-'}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Banca</Text>
+                    <Text style={styles.value}>{bank || '-'}</Text>
+                  </View>
+                </View>
+              );
+            })()}
+
+
             {/* 🔀 20/07/2026 — Tesseramento spostato QUI, subito dopo Anagrafica */}
             <View style={styles.card}>
               <Text style={styles.cardTitle}>🏅 Tesseramento</Text>
