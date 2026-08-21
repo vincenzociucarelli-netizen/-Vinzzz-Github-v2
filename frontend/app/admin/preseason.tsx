@@ -1265,6 +1265,25 @@ export default function PreseasonAdmin() {
                   </Text>
                 )}
 
+                {/* Pulsante WhatsApp — contatta la famiglia iscritta all'evento */}
+                {(() => {
+                  const rawPhone = selectedResponse.phone_parent || selectedResponse.phone_athlete;
+                  if (!rawPhone) return null;
+                  const digits = String(rawPhone).replace(/\D/g, '');
+                  const phoneWithCountry = digits.startsWith('39') ? digits : `39${digits}`;
+                  const waLabel = selectedResponse.phone_parent ? 'WhatsApp Genitore' : 'WhatsApp Atleta';
+                  return (
+                    <TouchableOpacity
+                      testID="preseason-whatsapp-btn"
+                      onPress={() => Linking.openURL(`https://wa.me/${phoneWithCountry}`)}
+                      style={{ backgroundColor: '#25D366', paddingVertical: 12, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8, marginBottom: 4 }}
+                    >
+                      <Ionicons name="logo-whatsapp" size={20} color="#fff" />
+                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>{waLabel}</Text>
+                    </TouchableOpacity>
+                  );
+                })()}
+
                 {/* Action buttons */}
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 8, marginBottom: 16 }}>
                   {Platform.OS === 'web' && (

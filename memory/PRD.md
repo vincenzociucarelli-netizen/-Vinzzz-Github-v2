@@ -384,6 +384,17 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - Frontend `register-athlete.tsx`: rendering condizionale su `isMinorAthlete` (da data nascita GG/MM/AAAA) — minore→box "periodo di prova" senza checkbox privacy; maggiorenne→sezione consensi con "presa visione" obbligatoria.
   - Backlog confermato (opzione B, rimandata): macchina a 6 stati completa (IN ATTESA → IN ATTESA D'INIZIO PROVA solo dopo validazione certificato admin + gate QR → IN PROVA → ATTIVO dopo firma privacy).
 
+## Changelog — 21/08/2026 (3) — Pulsante WhatsApp nel dettaglio pre-iscrizione evento
+### Richiesta utente
+- Poter avvertire via WhatsApp le famiglie iscritte a un evento, dal modale che si apre cliccando sul nome dell'iscritto.
+### Fix (frontend)
+- `app/admin/preseason.tsx`: nel modale `selectedResponse` aggiunto pulsante verde "WhatsApp Genitore" (o "WhatsApp Atleta" se manca il telefono genitore), sopra i pulsanti Condividi/Stampa. Apre `https://wa.me/39<numero>` con `Linking.openURL`. Visibile solo se c'è un telefono. Numero normalizzato (solo cifre) con prefisso 39.
+### Verifica (screenshot preview)
+- Modale di una risposta con telefono genitore: pulsante "WhatsApp Genitore" presente e correttamente posizionato. Lint: solo warning pre-esistenti.
+### Deploy
+- Solo frontend.
+
+
 ## Changelog — 21/08/2026 (2) — Dati Bancari (sola lettura) nella scheda Atleta (Anagrafica)
 ### Richiesta utente
 - Non si vedevano i dati bancari di un atleta 18+ Pro nella scheda Atleta (erano visibili solo lato Coach per il doppio incarico). La scheda Atleta non aveva alcuna sezione bancaria.
