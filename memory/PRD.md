@@ -384,6 +384,20 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - Frontend `register-athlete.tsx`: rendering condizionale su `isMinorAthlete` (da data nascita GG/MM/AAAA) — minore→box "periodo di prova" senza checkbox privacy; maggiorenne→sezione consensi con "presa visione" obbligatoria.
   - Backlog confermato (opzione B, rimandata): macchina a 6 stati completa (IN ATTESA → IN ATTESA D'INIZIO PROVA solo dopo validazione certificato admin + gate QR → IN PROVA → ATTIVO dopo firma privacy).
 
+## Changelog — 22/08/2026 — Fix Certificato Medico: errore convalida + scadenza -1 giorno
+### Issue 1 — Errore salvataggio quando l'admin mette la CONVALIDA (P1)
+- Sintomo: admin corregge la data scadenza e mette il flag "Certificato verificato dall'admin" → "Errore nel salvataggio"; senza convalida salva.
+- Root cause (server.py `create_certificate_simple`): con `verified=true` e stato `pending_certificate` la riga confrontava `expiry_dt` (timezone-AWARE, da `fromisoformat('+00:00')`) con `datetime.utcnow()` (NAIVE) → `TypeError` → 500. Con convalida OFF il branch non partiva → salvava.
+- Fix: `datetime.utcnow()` → `datetime.now(timezone.utc)` nel confronto; inoltre `expiry_dt` reso sempre tz-aware dopo il parsing.
+- Verifica curl: atleta in `pending_certificate` + `verified=true` → HTTP 200 e stato → `pending_trial` (prima 500).
+### Issue 2 — Scadenza "2 giorni prima" quando inserisce il GENITORE (P2)
+- Regola corretta: scadenza = emissione + validità − 1 giorno (un anno dopo, il giorno prima dell'emissione).
+- Root cause (frontend `app/parent/athlete/[id].tsx`): le date erano create a MEZZANOTTE locale (`new Date(y,m,d)`); `toISOString()` in fuso Italia (UTC+1/+2) slittava al giorno precedente in UTC → scadenza salvata un giorno prima (apparendo "2 giorni prima" sommato al −1). Admin/dirigente/atleta usavano già le 12:00.
+- Fix: costruttori data del form genitore portati a `12,0,0` (mezzogiorno) come le altre viste (righe ~85, ~100, ~102). Nessun altro ruolo era affetto.
+### Deploy
+- Frontend + backend.
+
+
 ## Changelog — 21/08/2026 (3) — Pulsante WhatsApp nel dettaglio pre-iscrizione evento
 ### Richiesta utente
 - Poter avvertire via WhatsApp le famiglie iscritte a un evento, dal modale che si apre cliccando sul nome dell'iscritto.

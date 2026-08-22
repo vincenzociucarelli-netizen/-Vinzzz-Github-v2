@@ -82,7 +82,7 @@ function CertificateDateForm({ athleteId, certificate, onSaved }: { athleteId?: 
     if (issueDate && validityMonths) {
       const parts = issueDate.split('/');
       if (parts.length === 3 && parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
-        const dt = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        const dt = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]), 12, 0, 0);
         const months = parseInt(validityMonths) || 0;
         if (!isNaN(dt.getTime()) && months > 0) {
           const expiry = subDays(addMonths(dt, months), 1);
@@ -97,9 +97,9 @@ function CertificateDateForm({ athleteId, certificate, onSaved }: { athleteId?: 
   const handleSave = async () => {
     if (!athleteId || !issueDate || !calculatedExpiry) return;
     const parts = issueDate.split('/');
-    const issueDt = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    const issueDt = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]), 12, 0, 0);
     const expiryParts = calculatedExpiry.split('/');
-    const expiryDt = new Date(parseInt(expiryParts[2]), parseInt(expiryParts[1]) - 1, parseInt(expiryParts[0]));
+    const expiryDt = new Date(parseInt(expiryParts[2]), parseInt(expiryParts[1]) - 1, parseInt(expiryParts[0]), 12, 0, 0);
     
     setSaving(true);
     try {

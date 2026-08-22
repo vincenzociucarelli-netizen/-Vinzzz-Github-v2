@@ -13442,6 +13442,8 @@ async def create_certificate_simple(
     # Parse dates
     try:
         expiry_dt = datetime.fromisoformat(data.expiry_date.replace('Z', '+00:00'))
+        if expiry_dt.tzinfo is None:
+            expiry_dt = expiry_dt.replace(tzinfo=timezone.utc)
     except:
         raise HTTPException(status_code=400, detail="Formato data scadenza non valido")
     
@@ -13491,7 +13493,7 @@ async def create_certificate_simple(
     # l'atleta era in ATTESA per il certificato (pending_certificate), passa a
     # ATTESA INIZIO PROVA (pending_trial): la prova partirà alla 1ª scansione QR.
     if verified_value and athlete.get("status") == "pending_certificate":
-        exp_ok = expiry_dt >= datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        exp_ok = expiry_dt >= datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
         if exp_ok:
             await db.athletes.update_one(
                 {"id": data.athlete_id, "status": "pending_certificate"},
