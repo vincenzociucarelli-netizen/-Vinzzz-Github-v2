@@ -60,6 +60,7 @@ interface FipavState {
   birth_year: string | null;
   gender: string | null;
   category_championships: string[];
+  eligible_categories?: string[];
   camp3_presences_count: number;
   weekly_games_count: number;
   upper_league_name: string;
@@ -223,7 +224,18 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
 
   const addCategoryChampionship = () => {
     if (!state || !newChampionship.trim()) return;
-    const list = [...(state.category_championships || []), newChampionship.trim()];
+    const val = newChampionship.trim();
+    // 🆕 Fase 1: valida che la categoria scelta sia tra quelle ammesse per età (femminile)
+    const eligible = state.eligible_categories || [];
+    if (eligible.length > 0) {
+      const m = val.match(/[Uu](?:nder)?\s*\.?\s*(\d{2})/);
+      const cat = m ? `Under ${parseInt(m[1], 10)}` : null;
+      if (cat && !eligible.includes(cat)) {
+        showAlert('Categoria non ammessa', `${val} non è tra le categorie ammesse per l'età dell'atleta.\n\nAmmesse: ${eligible.join(', ')}.`);
+        return;
+      }
+    }
+    const list = [...(state.category_championships || []), val];
     if (list.length > 2) {
       showAlert('Limite raggiunto', 'Massimo 2 campionati di categoria (norma FIPAV U17).');
       return;
@@ -397,6 +409,12 @@ export default function FipavAthleteRulesPanel({ athleteId, readOnly = false }: 
         )}
         {eligibleU17 && (
           <>
+            {(state.eligible_categories || []).length > 0 && (
+              <View style={styles.eligibleBox}>
+                <Text style={styles.eligibleTitle}>Categorie ammesse per età</Text>
+                <Text style={styles.eligibleValue}>{(state.eligible_categories || []).join('  ·  ')}</Text>
+              </View>
+            )}
             <Text style={styles.label}>Campionati di categoria a cui partecipa ({catCount}/2)</Text>
             {(state.category_championships || []).map((c, i) => (
               <View key={i} style={styles.champRow}>
@@ -666,6 +684,9 @@ const styles = StyleSheet.create({
   },
   printBtnText: { color: '#1E3A8A', fontWeight: '700', fontSize: 12 },
   ruleDesc: { fontSize: 11, color: '#4B5563', marginTop: 2, marginBottom: 6, lineHeight: 15 },
+  eligibleBox: { backgroundColor: '#EFF6FF', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 12, marginBottom: 8, borderWidth: 1, borderColor: '#BFDBFE' },
+  eligibleTitle: { fontSize: 11, fontWeight: '700', color: '#1E40AF', marginBottom: 2 },
+  eligibleValue: { fontSize: 14, fontWeight: '700', color: '#1D4ED8' },
   miniLabel: { fontSize: 11, fontWeight: '600', color: '#374151', marginBottom: 4 },
   addPresenceBox: {
     backgroundColor: '#F8FAFC', borderRadius: 8, padding: 10, marginTop: 8, marginBottom: 10,

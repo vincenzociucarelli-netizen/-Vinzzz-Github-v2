@@ -1947,6 +1947,45 @@ def _fipav_under_17_cutoff_year(current_season: str) -> Optional[int]:
     return None
 
 
+# 🆕 22/08/2026 — Fase 1 regole FIPAV: fasce d'età per CATEGORIA (SETTORE FEMMINILE).
+# Offset relativi al 2° anno di stagione (year2): la fascia scala di +1 ogni stagione.
+#   anno_più_vecchio = year2 - oldest_offset   |   anno_più_giovane = year2 - youngest_offset
+# Ammesso se: (year2 - oldest_offset) <= anno_nascita <= (year2 - youngest_offset).
+# Le fasce NON sono derogabili (limiti fissi su entrambi i lati).
+# Esempio (2026/2027 → year2=2027): nata 2012 ammessa SOLO in U15 (2012-2015) e U17 (2010-2013).
+FIPAV_FEMALE_CATEGORY_AGE_OFFSETS = {
+    "Under 12": (12, 11),  # 2015-2016
+    "Under 13": (13, 11),  # 2014-2016
+    "Under 14": (14, 12),  # 2013-2015
+    "Under 15": (15, 12),  # 2012-2015
+    "Under 17": (17, 14),  # 2010-2013
+    "Under 19": (19, 16),  # 2008-2011
+}
+
+
+def _fipav_eligible_categories(birth_year: Optional[int], gender: Optional[str], season_year2: Optional[int]) -> List[str]:
+    """Ritorna le categorie Under ammesse per età (Fase 1: solo settore FEMMINILE)."""
+    if birth_year is None or season_year2 is None:
+        return []
+    g = (gender or "").lower()
+    if not g.startswith("f"):
+        return []  # Maschile: da configurare in un futuro upgrade
+    out = []
+    for label, (old_off, young_off) in FIPAV_FEMALE_CATEGORY_AGE_OFFSETS.items():
+        oldest = season_year2 - old_off
+        youngest = season_year2 - young_off
+        if oldest <= birth_year <= youngest:
+            out.append(label)
+    out.sort(key=lambda lbl: int(re.search(r"(\d+)", lbl).group(1)) if re.search(r"(\d+)", lbl) else 0)
+    return out
+
+
+def _fipav_category_from_label(s: str) -> Optional[str]:
+    """Estrae 'Under NN' da una stringa libera (es. 'U15 F', 'Under 15 Femm.'). None se non è una categoria."""
+    m = re.search(r"[Uu](?:nder)?\s*\.?\s*(\d{2})", s or "")
+    return f"Under {int(m.group(1))}" if m else None
+
+
 class FipavAthleteRulesUpdate(BaseModel):
     """Update dei contatori FIPAV per un atleta (manuale da admin)."""
     upper_league_name: Optional[str] = None  # es. "Serie C", "Serie D", "1^ Div F"
@@ -2044,6 +2083,10 @@ async def get_athlete_fipav_rules(athlete_id: str, current_user = Depends(get_cu
     )
     _elig_u17 = _by_int is not None and _by_int >= _u17_min
     _season_label = _season.replace("-", "/")
+    # 🆕 22/08/2026 — Fase 1: categorie Under ammesse per età (settore femminile)
+    _eligible_categories = _fipav_eligible_categories(
+        _by_int, ath.get("gender") or ath.get("sex"), _season_year2
+    )
 
     return {
         "athlete_id": athlete_id,
@@ -2053,6 +2096,8 @@ async def get_athlete_fipav_rules(athlete_id: str, current_user = Depends(get_cu
         # Feature A - campionati di categoria (U17)
         "category_championships": list(ath.get("category_championships") or []),
         "camp3_presences_count": total_pres,
+        # 🆕 Fase 1: categorie ammesse per età (femminile). Lista vuota se non calcolabile.
+        "eligible_categories": _eligible_categories,
         "weekly_games_count": max_week,
         # Feature B - presenze serie superiore
         "upper_league_name": ath.get("upper_league_name") or "",
@@ -2103,6 +2148,28 @@ async def update_athlete_fipav_rules(
         if len(clean_list) > 2:
             raise HTTPException(status_code=400, detail="Massimo 2 campionati di categoria consentiti (norma FIPAV U17)")
         data.category_championships = clean_list
+
+        # 🆕 22/08/2026 — Fase 1: i campionati di categoria scelti devono essere tra
+        # quelli ammessi per l'età dell'atleta (settore femminile). Le voci "serie"
+        # (senza pattern "Under NN") non vengono vincolate qui.
+        _dob_raw_p = ath.get("date_of_birth") or ath.get("birth_date") or ""
+        _dob_str_p = _dob_raw_p.isoformat() if hasattr(_dob_raw_p, "isoformat") else str(_dob_raw_p)
+        _by_p = int(_dob_str_p[:4]) if _dob_str_p[:4].isdigit() else None
+        from utils import get_current_season_for_society as _get_cs_p
+        _season_p = await _get_cs_p(db, current_user.get("society_id"))
+        try:
+            _season2_p = int(_season_p.replace("/", "-").split("-")[1])
+        except Exception:
+            _season2_p = None
+        _eligible_p = _fipav_eligible_categories(_by_p, ath.get("gender") or ath.get("sex"), _season2_p)
+        if _eligible_p:
+            for _c in clean_list:
+                _cat = _fipav_category_from_label(_c)
+                if _cat and _cat not in _eligible_p:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"'{_c}' non è tra le categorie ammesse per l'età dell'atleta. Ammesse: {', '.join(_eligible_p)}.",
+                    )
     
     update_dict = {}
     for field in ["upper_league_name", "upper_league_presences", "category_championships",

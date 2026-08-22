@@ -384,6 +384,25 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - Frontend `register-athlete.tsx`: rendering condizionale su `isMinorAthlete` (da data nascita GG/MM/AAAA) — minore→box "periodo di prova" senza checkbox privacy; maggiorenne→sezione consensi con "presa visione" obbligatoria.
   - Backlog confermato (opzione B, rimandata): macchina a 6 stati completa (IN ATTESA → IN ATTESA D'INIZIO PROVA solo dopo validazione certificato admin + gate QR → IN PROVA → ATTIVO dopo firma privacy).
 
+## Changelog — 22/08/2026 (4) — FIPAV Fase 1: categorie ammesse per età (femminile) + validazione 2 campionati
+### Richiesta utente
+- Regola FIPAV "2 campionati di categoria": prima fase → mostrare le categorie ammesse per età e validare che i 2 campionati scelti siano ammessi. Solo SETTORE FEMMINILE (l'utente usa solo il femminile).
+### Implementazione (server.py)
+- Tabella `FIPAV_FEMALE_CATEGORY_AGE_OFFSETS` (U12..U19) con offset relativi al 2° anno di stagione (fasce NON derogabili, scalano +1 ogni stagione). Es. 2026/2027: U12=2015-16, U13=2014-16, U14=2013-15, U15=2012-15, U17=2010-13, U19=2008-11.
+- Helper `_fipav_eligible_categories(birth_year, gender, season_year2)` (solo femminile in Fase 1) e `_fipav_category_from_label`.
+- `GET /admin/athletes/{id}/fipav-rules`: nuovo campo `eligible_categories`.
+- `PATCH .../fipav-rules`: oltre a max 2, valida che ogni campionato di categoria scelto (pattern "Under NN") sia tra le categorie ammesse per età → 400 con messaggio chiaro se non lo è.
+### Frontend (`src/components/FipavAthleteRulesPanel.tsx`)
+- Box blu "Categorie ammesse per età" (es. "Under 15 · Under 17").
+- Validazione client in `addCategoryChampionship` (blocca categorie non ammesse prima del salvataggio).
+### Verifica (curl + screenshot)
+- 2012 F, stagione 2026/2027 → eligible = Under 15, Under 17 (coincide col caso reale). PATCH "Under 14" → 400; "Under 15/17" → 200; 3 categorie → 400. Box visibile nel tab Presenze. Dati di test ripristinati.
+### Note
+- Fase 2 (lock automatico via distinte/camp3) e settore MASCHILE rimandati (upgrade futuro), come concordato.
+### Deploy
+- Frontend + backend.
+
+
 ## Changelog — 22/08/2026 (3) — Dati bancari dual-role (atleta 18+ PRO ↔ coach)
 ### Richiesta utente
 - Applicare ai dati bancari lo stesso collegamento tra profili Atleta e Coach usato per i consensi.
