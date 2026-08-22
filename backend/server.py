@@ -13579,6 +13579,7 @@ async def create_certificate_simple(
     
     # Check if end-trial flow can be completed
     activated = False
+    activated_as_pro = False
     if verified_value and athlete.get("end_trial_requested"):
         activated = await check_and_activate_if_ready(data.athlete_id)
 
@@ -13587,11 +13588,14 @@ async def create_certificate_simple(
     # e acquistati per la stagione, quindi NON hanno periodo di prova.
     # Quando l'Admin valida il loro certificato medico li portiamo direttamente
     # a status='active' (skippando pending/trial).
+    # 🐛 22/08/2026 — Guardia età: un minorenne NON può essere "18+ PRO" anche se
+    # per errore ha athlete_type='compensated'. Evita attivazioni PRO errate sui minori.
     if (
         verified_value
         and not activated
         and current_user["role"] == UserRole.ADMIN
         and athlete.get("athlete_type") == "compensated"
+        and not _compute_is_minor(athlete)
         and athlete.get("status") not in (AthleteStatus.ACTIVE, AthleteStatus.BLOCKED)
     ):
         await db.athletes.update_one(
@@ -13605,6 +13609,7 @@ async def create_certificate_simple(
             }},
         )
         activated = True
+        activated_as_pro = True
         logging.info(
             f"[AUTO-ACTIVATE-PRO] athlete_id={data.athlete_id} attivato automaticamente "
             f"da admin={current_user.get('email')} dopo validazione certificato medico "
@@ -13619,6 +13624,7 @@ async def create_certificate_simple(
         "updated_by": current_user.get("full_name", ""),
         "message": "Certificato salvato con successo" + (" - Atleta attivato!" if activated else ""),
         "athlete_activated": activated,
+        "activated_as_pro": activated_as_pro,
     }
 
 # 🆕 06/2026 — Flag "copia originale ricevuta" (requisito FIPAV).

@@ -384,6 +384,21 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - Frontend `register-athlete.tsx`: rendering condizionale su `isMinorAthlete` (da data nascita GG/MM/AAAA) — minore→box "periodo di prova" senza checkbox privacy; maggiorenne→sezione consensi con "presa visione" obbligatoria.
   - Backlog confermato (opzione B, rimandata): macchina a 6 stati completa (IN ATTESA → IN ATTESA D'INIZIO PROVA solo dopo validazione certificato admin + gate QR → IN PROVA → ATTIVO dopo firma privacy).
 
+## Changelog — 22/08/2026 (2) — Fix messaggio/attivazione "18+ PRO" errata su minore
+### Bug (segnalato)
+- Validando il certificato di una MINORE (nata 2012) l'app mostrava "Atleta 18+ PRO attivato automaticamente (nessun periodo di prova)".
+### Root cause
+- Frontend (`admin/athlete/[id].tsx`): il messaggio "18+ PRO" veniva mostrato ogni volta che `athlete_activated=true`, anche quando l'attivazione derivava dal flusso fine-prova di un minore.
+- Backend (`create_certificate_simple`): la branch di auto-attivazione PRO controllava solo `athlete_type=='compensated'` senza verificare l'età → un minore con athlete_type erroneamente 'compensated' poteva essere attivato come PRO.
+### Fix
+- Backend: aggiunta guardia `not _compute_is_minor(athlete)` alla branch PRO (un minore non può essere 18+ PRO). Aggiunto flag di risposta `activated_as_pro`.
+- Frontend: messaggio "18+ PRO (nessun periodo di prova)" mostrato SOLO se `activated_as_pro=true`; altrimenti messaggio generico "Atleta attivato".
+### Verifica (curl)
+- A) minore 2012 compensato + verified=true → `activated_as_pro=false`, nessuna attivazione PRO (status→pending_trial, flusso normale). B) adulto 2000 compensato → `activated_as_pro=true`, status→active. Dati di test ripristinati.
+### Deploy
+- Frontend + backend.
+
+
 ## Changelog — 22/08/2026 — Fix Certificato Medico: errore convalida + scadenza -1 giorno
 ### Issue 1 — Errore salvataggio quando l'admin mette la CONVALIDA (P1)
 - Sintomo: admin corregge la data scadenza e mette il flag "Certificato verificato dall'admin" → "Errore nel salvataggio"; senza convalida salva.

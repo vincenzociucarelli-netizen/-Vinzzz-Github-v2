@@ -1388,8 +1388,11 @@ export default function AdminAthleteDetail() {
       // 🆕 31/07/2026 — Se il backend ha auto-attivato un atleta 18+ PRO (no periodo di prova),
       // avvisiamo l'admin con un messaggio dedicato.
       const activated = !!resp?.data?.athlete_activated;
+      const activatedAsPro = !!resp?.data?.activated_as_pro;
       if (newVerified && activated) {
-        showAlert('Atleta attivato', 'Certificato verificato. Atleta 18+ PRO attivato automaticamente (nessun periodo di prova).');
+        showAlert('Atleta attivato', activatedAsPro
+          ? 'Certificato verificato. Atleta 18+ PRO attivato automaticamente (nessun periodo di prova).'
+          : 'Certificato verificato. Atleta attivato.');
       } else {
         showAlert('Successo', newVerified ? 'Certificato verificato' : 'Verifica rimossa');
       }
@@ -1461,7 +1464,9 @@ export default function AdminAthleteDetail() {
       setCertVerified(false);
       // 🆕 31/07/2026 — Messaggio dedicato se atleta 18+ PRO auto-attivato
       if (response?.data?.athlete_activated) {
-        showAlert('Atleta attivato', 'Certificato salvato. Atleta 18+ PRO attivato automaticamente (nessun periodo di prova).');
+        showAlert('Atleta attivato', response?.data?.activated_as_pro
+          ? 'Certificato salvato. Atleta 18+ PRO attivato automaticamente (nessun periodo di prova).'
+          : 'Certificato salvato. Atleta attivato.');
       } else {
         showAlert('Successo', 'Certificato medico salvato');
       }
