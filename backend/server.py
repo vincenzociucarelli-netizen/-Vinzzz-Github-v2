@@ -11585,6 +11585,39 @@ async def get_athlete(athlete_id: str, current_user = Depends(get_current_user))
         if not athlete.get("date_of_birth") and user.get("date_of_birth"):
             athlete["date_of_birth"] = user["date_of_birth"]
     
+    # 🆕 22/08/2026 — Dati bancari dual-role: se l'atleta (18+ PRO) è anche staff
+    # (coach/dirigente/collaboratore) e i suoi campi bancari sono vuoti, ereditali
+    # dal record utente collegato. Stesso collegamento tra profili usato per i consensi.
+    _bank_empty = (
+        not (athlete.get("iban") or "").strip()
+        and not (athlete.get("bank_name") or "").strip()
+        and not (athlete.get("account_holder") or "").strip()
+        and not (athlete.get("iban_holder") or "").strip()
+    )
+    if _bank_empty:
+        _bank_proj = {"_id": 0, "iban": 1, "bank_name": 1, "account_holder": 1,
+                      "iban_holder": 1, "iban_holder_first_name": 1, "iban_holder_last_name": 1}
+        linked_staff = None
+        if athlete.get("linked_coach_user_id"):
+            linked_staff = await db.users.find_one({"id": athlete["linked_coach_user_id"]}, _bank_proj)
+        if not linked_staff:
+            linked_staff = await db.users.find_one(
+                {"linked_athlete_id": athlete_id, "role": {"$in": ["coach", "dirigente", "collaboratore"]}},
+                _bank_proj,
+            )
+        if linked_staff:
+            if linked_staff.get("iban"):
+                athlete["iban"] = linked_staff["iban"]
+            if linked_staff.get("bank_name"):
+                athlete["bank_name"] = linked_staff["bank_name"]
+            _holder = (
+                linked_staff.get("iban_holder")
+                or linked_staff.get("account_holder")
+                or " ".join([x for x in [linked_staff.get("iban_holder_last_name"), linked_staff.get("iban_holder_first_name")] if x]).strip()
+            )
+            if _holder and not athlete.get("account_holder"):
+                athlete["account_holder"] = _holder
+    
     return Athlete(**athlete)
 
 @api_router.get("/athletes/{athlete_id}/technical-data")

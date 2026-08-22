@@ -384,6 +384,20 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - Frontend `register-athlete.tsx`: rendering condizionale su `isMinorAthlete` (da data nascita GG/MM/AAAA) — minore→box "periodo di prova" senza checkbox privacy; maggiorenne→sezione consensi con "presa visione" obbligatoria.
   - Backlog confermato (opzione B, rimandata): macchina a 6 stati completa (IN ATTESA → IN ATTESA D'INIZIO PROVA solo dopo validazione certificato admin + gate QR → IN PROVA → ATTIVO dopo firma privacy).
 
+## Changelog — 22/08/2026 (3) — Dati bancari dual-role (atleta 18+ PRO ↔ coach)
+### Richiesta utente
+- Applicare ai dati bancari lo stesso collegamento tra profili Atleta e Coach usato per i consensi.
+### Contesto
+- Esisteva già il verso coach→atleta (il GET utente coach eredita i dati bancari dall'atleta collegato). Mancava il verso opposto per la nuova card "Dati Bancari" nella scheda Atleta.
+### Fix (server.py, GET /athletes/{id})
+- Se i campi bancari dell'atleta (iban/bank_name/account_holder/iban_holder) sono vuoti e l'atleta ha `linked_coach_user_id` (o esiste uno staff con `linked_athlete_id` = atleta), eredita iban/bank_name/intestatario dal record utente collegato. Intestatario ricomposto da `iban_holder || account_holder || (cognome+nome)`.
+- Nessuna modifica frontend (la card legge già i campi dalla risposta del GET).
+### Verifica (curl)
+- Coach con IBAN/banca/intestatario + atleta collegato con campi vuoti → il GET atleta restituisce iban/account_holder/bank_name ereditati dal coach. Dati di test ripristinati.
+### Deploy
+- Solo backend.
+
+
 ## Changelog — 22/08/2026 (2) — Fix messaggio/attivazione "18+ PRO" errata su minore
 ### Bug (segnalato)
 - Validando il certificato di una MINORE (nata 2012) l'app mostrava "Atleta 18+ PRO attivato automaticamente (nessun periodo di prova)".
