@@ -6474,16 +6474,32 @@ async def get_parents(current_user = Depends(get_current_user)):
     # 1. Atleti attivi in stagione corrente + loro parent_id / second_parent_id
     current_athletes = await db.athletes.find(
         {"society_id": society_id, "active_seasons": _cs},
-        {"_id": 0, "id": 1, "parent_id": 1, "second_parent_id": 1},
+        {"_id": 0, "id": 1, "parent_id": 1, "second_parent_id": 1,
+         "phone_father": 1, "phone_mother": 1, "phone": 1, "phone_athlete": 1},
     ).to_list(5000)
 
     linked_parent_ids: set = set()
     counts_dict: dict = {}
+    # 🆕 22/08/2026 — Fallback telefono: alcuni genitori hanno il numero salvato solo
+    # sulla scheda ATLETA (phone_father/phone_mother), non sul record utente → il
+    # pulsante WhatsApp non compariva. Costruiamo una mappa parent_id → telefono famiglia.
+    parent_phone_map: dict = {}
+    def _first_phone(*vals):
+        for v in vals:
+            if v and str(v).strip():
+                return str(v).strip()
+        return ""
     for a in current_athletes:
         for pid in [a.get("parent_id"), a.get("second_parent_id")]:
             if pid:
                 linked_parent_ids.add(pid)
                 counts_dict[pid] = counts_dict.get(pid, 0) + 1
+        pf = a.get("phone_father"); pm = a.get("phone_mother")
+        ph = a.get("phone"); pa = a.get("phone_athlete")
+        if a.get("parent_id") and not parent_phone_map.get(a["parent_id"]):
+            parent_phone_map[a["parent_id"]] = _first_phone(pf, pm, ph, pa)
+        if a.get("second_parent_id") and not parent_phone_map.get(a["second_parent_id"]):
+            parent_phone_map[a["second_parent_id"]] = _first_phone(pm, pf, ph, pa)
 
     # 2. Genitori: quelli collegati agli atleti attivi ∪ quelli con active_seasons=current
     #    ∪ quelli senza active_seasons (legacy fallback)
@@ -6535,7 +6551,7 @@ async def get_parents(current_user = Depends(get_current_user)):
             "athletes_count": counts_dict.get(p["id"], 0),
             "created_at": p.get("created_at"),
             "approved_at": p.get("approved_at"),
-            "phone": p.get("phone", ""),
+            "phone": (p.get("phone") or "").strip() or parent_phone_map.get(p["id"], ""),
             "fiscal_code": p.get("fiscal_code", ""),
         })
 

@@ -384,6 +384,19 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - Frontend `register-athlete.tsx`: rendering condizionale su `isMinorAthlete` (da data nascita GG/MM/AAAA) — minore→box "periodo di prova" senza checkbox privacy; maggiorenne→sezione consensi con "presa visione" obbligatoria.
   - Backlog confermato (opzione B, rimandata): macchina a 6 stati completa (IN ATTESA → IN ATTESA D'INIZIO PROVA solo dopo validazione certificato admin + gate QR → IN PROVA → ATTIVO dopo firma privacy).
 
+## Changelog — 22/08/2026 (5) — Pulsante WhatsApp genitori mancante su alcuni (fallback telefono da scheda atleta)
+### Bug (segnalato)
+- Nel dettaglio Genitore il pulsante WhatsApp compariva solo per alcuni, pur avendo il numero.
+### Root cause
+- `GET /users/parents` restituiva solo `user.phone`. Alcuni genitori hanno il numero salvato solo sulla scheda ATLETA (`phone_father`/`phone_mother`), non sul record utente → `phone` vuoto → pulsante nascosto (condizionato a `selectedParent.phone`).
+### Fix (server.py)
+- Esteso il fetch degli atleti attivi con `phone_father/phone_mother/phone/phone_athlete` e costruita mappa `parent_id → telefono famiglia`. Nel risultato: `phone = user.phone (se presente) altrimenti telefono dal record atleta collegato` (padre→parent_id, madre→second_parent_id, con fallback incrociato). Nessuna modifica frontend.
+### Verifica (curl)
+- Genitore RASCI ARMANDA (user.phone=None, atleta MAURI LENA phone_father) → API ora restituisce 3393216547. Su 24 genitori in stagione: 0 senza telefono (prima 8 vuoti). Migliora anche la ricerca per telefono.
+### Deploy
+- Solo backend.
+
+
 ## Changelog — 22/08/2026 (4) — FIPAV Fase 1: categorie ammesse per età (femminile) + validazione 2 campionati
 ### Richiesta utente
 - Regola FIPAV "2 campionati di categoria": prima fase → mostrare le categorie ammesse per età e validare che i 2 campionati scelti siano ammessi. Solo SETTORE FEMMINILE (l'utente usa solo il femminile).
