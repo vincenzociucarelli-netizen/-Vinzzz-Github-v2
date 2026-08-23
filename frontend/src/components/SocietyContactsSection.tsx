@@ -12,7 +12,6 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
-import MiniSocietyLogo from './MiniSocietyLogo';
 
 interface Contact {
   id: string;
@@ -142,9 +141,6 @@ export default function SocietyContactsSection({ currentUserId, show }: Props) {
 
   return (
     <View>
-      <View style={{ alignItems: 'center', paddingVertical: 20 }}>
-        <MiniSocietyLogo size={140} variant="flat" />
-      </View>
       {wantDir && renderAccordion('dirigenti', 'Dirigenti della Societa', 'Contatta i dirigenti tramite WhatsApp', dirigenti, 'people-outline', 'Nessun dirigente trovato')}
       {wantCoa && renderAccordion('coaches', 'Allenatori della Societa', 'I coach della societa', coaches, 'fitness-outline', 'Nessun allenatore trovato')}
       {wantCol && renderAccordion('collaboratori', 'Collaboratori della Societa', 'Groundskeepers, segreteria, ecc.', collaboratori, 'construct-outline', 'Nessun collaboratore trovato')}

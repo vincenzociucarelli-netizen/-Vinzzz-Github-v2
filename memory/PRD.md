@@ -384,6 +384,17 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - Frontend `register-athlete.tsx`: rendering condizionale su `isMinorAthlete` (da data nascita GG/MM/AAAA) — minore→box "periodo di prova" senza checkbox privacy; maggiorenne→sezione consensi con "presa visione" obbligatoria.
   - Backlog confermato (opzione B, rimandata): macchina a 6 stati completa (IN ATTESA → IN ATTESA D'INIZIO PROVA solo dopo validazione certificato admin + gate QR → IN PROVA → ATTIVO dopo firma privacy).
 
+## Changelog — 23/08/2026 — Rimosso logo società centrato dal blocco "Società"
+### Richiesta utente
+- Il logo grande centrato (140px) in mezzo alle dashboard (Dirigente/Coach/Collaboratore) sembrava "sospeso" → rimuoverlo.
+### Fix (frontend `src/components/SocietyContactsSection.tsx`)
+- Rimosso il blocco `<MiniSocietyLogo size={140} />` in cima alla sezione; ora restano solo gli accordion contatti (Dirigenti/Allenatori/Collaboratori). Rimosso import inutilizzato. Vale per tutte le dashboard che usano il componente.
+### Verifica (screenshot preview)
+- Dashboard dirigente: nessun logo centrato, si passa direttamente agli elenchi contatti. Lint pulito.
+### Deploy
+- Solo frontend.
+
+
 ## Changelog — 22/08/2026 (5) — Pulsante WhatsApp genitori mancante su alcuni (fallback telefono da scheda atleta)
 ### Bug (segnalato)
 - Nel dettaglio Genitore il pulsante WhatsApp compariva solo per alcuni, pur avendo il numero.
