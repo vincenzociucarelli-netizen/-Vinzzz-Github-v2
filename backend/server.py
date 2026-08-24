@@ -884,6 +884,53 @@ def cert_required_for_active(cert_type: str) -> bool:
     """Il certificato serve per il tesseramento definitivo (diventare ATTIVO)?"""
     return cert_type != "none"
 
+def compute_pending_reason(a: dict) -> Optional[str]:
+    """🆕 24/08/2026 — Motivo dell'"ATTESA" di un atleta, in linguaggio chiaro per
+    l'admin (cosa sollecitare al genitore / all'atleta 18+). Ritorna None se
+    l'atleta è ATTIVO / ritirato / bloccato (nessun sollecito necessario)."""
+    if a.get("is_withdrawn"):
+        return None
+    status = a.get("status") or "pending"
+    if status in ("blocked", "rejected"):
+        return None
+    is_minor = _compute_is_minor(a)
+    priv = bool(a.get("privacy_accepted"))
+    cert = bool(a.get("medical_certificate_verified"))
+    has_team = bool(a.get("team_id"))
+    trial_started = bool(a.get("trial_start_date"))
+
+    # ATTIVO: nessun sollecito, salvo che manchi la squadra (la lista lo mostra
+    # comunque come "In attesa" finché non è assegnato a una squadra).
+    if status == "active":
+        return None if has_team else "In attesa: assegnazione a una squadra"
+
+    # Non ancora accettato dalla società
+    if status in ("pending", "pending_email"):
+        return "In attesa: approvazione della società (accetta o rifiuta l'iscrizione)"
+
+    parts = []
+    if not has_team:
+        parts.append("assegnazione a una squadra")
+    if is_minor:
+        # MINORENNI: la prova parte con la 1ª presenza (QR). Certificato/privacy
+        # del genitore servono al TERMINE della prova, non per iniziarla → li
+        # segnaliamo solo quando l'onboarding è bloccato su quel passo specifico.
+        if status == "pending_certificate" and not cert:
+            parts.append("certificato medico convalidato dalla società")
+        elif status in ("pending_trial", "trial") and not trial_started:
+            parts.append("prima presenza in palestra (scansione QR) per avviare la prova")
+        elif status == "pending_privacy" and not priv:
+            parts.append("firma della privacy da parte del genitore")
+    else:
+        # ADULTI (18+): niente prova → serve privacy firmata + certificato convalidato
+        if not priv:
+            parts.append("firma della privacy da parte dell'atleta")
+        if not cert:
+            parts.append("certificato medico convalidato dalla società")
+    if not parts:
+        return None
+    return "In attesa: " + " + ".join(parts)
+
 class Athlete(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
     society_id: Optional[str] = None  # ID della società (multi-tenancy)
@@ -8579,6 +8626,9 @@ async def get_all_athletes(light: bool = False, current_user = Depends(get_curre
             "is_withdrawn": 1, "is_trial": 1, "athlete_code": 1, "date_of_birth": 1,
             "review_dismissed_season": 1, "privacy_pending_renewal": 1,
             "parent_id": 1, "second_parent_id": 1,
+            # 🆕 24/08/2026 — campi per calcolare il MOTIVO dell'attesa (pending_reason)
+            "is_minor": 1, "privacy_accepted": 1, "medical_certificate_verified": 1,
+            "trial_start_date": 1,
         }
         athletes_l = await db.athletes.find(_base_query, _light_proj).to_list(5000)
         team_ids_l = list({a.get("team_id") for a in athletes_l if a.get("team_id")})
@@ -8609,6 +8659,7 @@ async def get_all_athletes(light: bool = False, current_user = Depends(get_curre
                 "athlete_code": a.get("athlete_code"),
                 "review_dismissed_season": a.get("review_dismissed_season"),
                 "privacy_pending_renewal": a.get("privacy_pending_renewal", False),
+                "pending_reason": compute_pending_reason(a),
             })
         return out
 
@@ -39068,6 +39119,27 @@ async def run_data_migrations():
         logger.info(f"Migration compensation_accepted sync: {synced}/{len(accepted_users)} atleti aggiornati")
     except Exception as exc:
         logger.warning(f"Migration compensation_accepted sync failed: {exc}")
+
+    # 🆕 24/08/2026 — Backfill "no prova per 18+": attiva retroattivamente gli atleti
+    # MAGGIORENNI che sono già a posto (privacy firmata + certificato convalidato)
+    # ma erano rimasti in uno stato di attesa (trial/pending_*). Idempotente.
+    try:
+        adult_ready_q = {
+            "is_minor": {"$ne": True},
+            "is_withdrawn": {"$ne": True},
+            "status": {"$nin": ["active", "blocked", "rejected"]},
+            "privacy_accepted": True,
+            "medical_certificate_verified": True,
+            "medical_certificate_expiry": {"$exists": True, "$ne": None},
+        }
+        activated_backfill = 0
+        candidates = await db.athletes.find(adult_ready_q, {"_id": 0, "id": 1}).to_list(20000)
+        for c in candidates:
+            if await maybe_activate_adult_athlete(c["id"]):
+                activated_backfill += 1
+        logger.info(f"Migration 18+ no-prova backfill: {activated_backfill}/{len(candidates)} atleti maggiorenni attivati")
+    except Exception as exc:
+        logger.warning(f"Migration 18+ no-prova backfill failed: {exc}")
 
     # 🆕 01/07/2026 — Migrazione one-shot `active_seasons`: modello "clean slate" per rinnovi.
     # Ogni user/athlete diventa "membro di una stagione". La lista operativa filtra per

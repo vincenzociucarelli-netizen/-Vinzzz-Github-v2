@@ -1166,3 +1166,17 @@ Frontend:
 
 Verifica: testata via API reale (register→approve→privacy→cert) in 3 scenari (quota cert-first, quota privacy-first, PRO) → tutti raggiungono `active` correttamente; minori non impattati. UI adulto verificata via screenshot (badge "Attesa Certificato", testo corretto, card Privacy firmabile).
 
+
+
+### 24/08/2026 — Motivo dell'ATTESA in lista atleti + backfill attivazione 18+
+Richiesta utente: (1) molti atleti in "ATTESA" senza sapere il perché → non sa cosa sollecitare; (2) dopo la modifica "no prova 18+" alcuni adulti già a posto (privacy+cert) restavano in attesa.
+
+Fix:
+- Nuovo helper `compute_pending_reason(athlete)` (server.py): ritorna una frase chiara ("In attesa: approvazione della società / firma privacy / certificato convalidato / assegnazione squadra / prima presenza QR…"). Distingue minori vs adulti. Attivi senza squadra → "assegnazione a una squadra".
+- `GET /athletes?light=true`: aggiunti alla proiezione i campi privacy_accepted, medical_certificate_verified, is_minor, trial_start_date e restituito `pending_reason` per ogni atleta.
+- Frontend `app/admin/athletes.tsx`: riga "⏳ In attesa: …" sotto ogni atleta in onboarding (stile `pendingReasonHint`).
+- Backfill startup (`run_data_migrations`): attiva retroattivamente gli atleti MAGGIORENNI con privacy firmata + certificato convalidato (non scaduto) rimasti in stato di attesa. Idempotente. In PREVIEW 0/0; in PRODUZIONE si applica al primo redeploy.
+
+Verifica: lista admin mostra i motivi corretti (screenshot); backfill loggato "Migration 18+ no-prova backfill: N/N".
+IMPORTANTE per l'utente: la correzione retroattiva sugli atleti reali avviene in PRODUZIONE solo dopo REDEPLOY (Publish).
+

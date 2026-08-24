@@ -655,6 +655,13 @@ export default function AdminAthletes() {
             </TouchableOpacity>
           )}
         </View>
+        {/* 🆕 24/08/2026 — Motivo dell'ATTESA: dice all'admin cosa sollecitare
+            (approvazione, firma privacy, certificato, squadra, prima presenza…). */}
+        {!!(item as any).pending_reason && (
+          <Text style={styles.pendingReasonHint} numberOfLines={3} data-testid={`athlete-pending-reason-${item.id}`}>
+            ⏳ {(item as any).pending_reason}
+          </Text>
+        )}
         {/* 🆕 04/07/2026 — Snapshot squadra precedente (post-riconferma bulk) */}
         {(item as any).team_id_previous_season && !item.team_id && (
           <Text style={styles.previousSeasonHint} numberOfLines={1} data-testid={`athlete-prev-team-${item.id}`}>
@@ -1319,6 +1326,13 @@ const styles = StyleSheet.create({
     color: '#9E9E9E',
     fontStyle: 'italic',
     marginTop: 2,
+  },
+  pendingReasonHint: {
+    fontSize: 11.5,
+    color: '#AD1457',
+    fontWeight: '600',
+    marginTop: 3,
+    lineHeight: 15,
   },
   athleteCard: {
     backgroundColor: '#fff',
