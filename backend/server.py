@@ -1035,6 +1035,7 @@ class Athlete(BaseModel):
     # Documento identità - RIMOSSO per privacy (solo metadati gestiti in sede)
     # Campi dinamici (non persistiti, aggiunti nelle risposte)
     team_name: Optional[str] = None  # Nome squadra (riempito dinamicamente)
+    pending_reason: Optional[str] = None  # 🆕 Motivo dell'ATTESA (calcolato, non persistito)
     # Certificato medico - SOLO metadati, niente file
     medical_certificate_expiry: Optional[str] = None  # Scadenza certificato medico
     medical_certificate_issue_date: Optional[str] = None  # Data emissione certificato
@@ -11786,6 +11787,10 @@ async def get_athlete(athlete_id: str, current_user = Depends(get_current_user))
             )
             if _holder and not athlete.get("account_holder"):
                 athlete["account_holder"] = _holder
+    
+    # 🆕 24/08/2026 — Motivo dell'ATTESA (visibile anche a genitore/atleta: sa cosa
+    # manca per andare "in attività").
+    athlete["pending_reason"] = compute_pending_reason(athlete)
     
     return Athlete(**athlete)
 

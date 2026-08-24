@@ -1771,6 +1771,26 @@ export default function AthleteDetail() {
           </View>
         </View>
 
+        {/* 🆕 24/08/2026 — Banner "Per essere in attività": mostra al GENITORE il
+            motivo dell'attesa (cosa manca per rendere attivo il figlio). */}
+        {!!(athlete as any)?.pending_reason && (
+          <TouchableOpacity
+            style={{ backgroundColor: '#FFF8E1', padding: 12, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: '#F9A825' }}
+            onPress={() => setActiveTab('dafare')}
+            data-testid="parent-pending-reason-banner"
+          >
+            <Text style={{ color: '#E65100', fontWeight: '700', fontSize: 13 }}>
+              🎯 Per rendere attivo {athlete.first_name || 'tuo figlio/a'} manca ancora:
+            </Text>
+            <Text style={{ color: '#E65100', fontSize: 12.5, marginTop: 3, lineHeight: 17 }}>
+              {((athlete as any)?.pending_reason || '').replace(/^In attesa:\s*/i, '')}
+            </Text>
+            <Text style={{ color: '#BF360C', fontSize: 11, marginTop: 4, fontStyle: 'italic' }}>
+              Tocca qui per andare a "Da fare" →
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {/* 🆕 24/02/2026 — TabBar uniformata all'admin */}
         <View style={{ flexDirection: 'row', backgroundColor: '#fff', borderRadius: 12, marginBottom: 12, padding: 4, borderWidth: 1, borderColor: '#e0e0e0' }} data-testid="parent-athlete-tab-bar">
           {([

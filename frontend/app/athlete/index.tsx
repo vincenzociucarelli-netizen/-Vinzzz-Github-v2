@@ -628,32 +628,30 @@ export default function AthleteScreen() {
             </View>
           )}
           
-          {/* Pending Privacy Banner */}
-          {!isMinor && profile?.status === 'pending_privacy' && !profile?.privacy_accepted && (
+          {/* 🆕 24/08/2026 — Banner unico "Per essere in attività": mostra all'atleta
+              (18+) il MOTIVO dell'attesa e cosa manca, così sa cosa fare. Tocca per
+              firmare la privacy (se manca) o completare l'anagrafica/certificato. */}
+          {!isMinor && !!(profile as any)?.pending_reason && (
             <TouchableOpacity 
-              style={{ backgroundColor: '#E3F2FD', padding: 10, borderRadius: 8, marginTop: 10, borderWidth: 1, borderColor: '#1976D2' }}
-              onPress={handleStayAndSignPrivacy}
+              style={{ backgroundColor: '#FFF8E1', padding: 12, borderRadius: 8, marginTop: 10, borderWidth: 1, borderColor: '#F9A825' }}
+              onPress={() => {
+                const reason = ((profile as any)?.pending_reason || '').toLowerCase();
+                if (reason.includes('privacy') && !profile?.privacy_accepted) {
+                  handleStayAndSignPrivacy();
+                } else {
+                  router.push('/athlete/profile');
+                }
+              }}
+              data-testid="pending-reason-banner"
             >
-              <Text style={{ color: '#1976D2', fontWeight: '600', fontSize: 13, textAlign: 'center' }}>
-                Devi accettare la Privacy per continuare - Clicca qui
+              <Text style={{ color: '#E65100', fontWeight: '700', fontSize: 13 }}>
+                🎯 Per essere «in attività» ti manca ancora:
               </Text>
-            </TouchableOpacity>
-          )}
-
-          {/* 🆕 08/08/2026 — Banner "Attesa Certificato": l'atleta deve caricare/aggiornare
-              il certificato medico nella tab Anagrafica. ADULTI (18+): nessun periodo di
-              prova → sarà "in forza" solo con privacy firmata + certificato convalidato. */}
-          {!isMinor && profile?.status === 'pending_certificate' && (
-            <TouchableOpacity 
-              style={{ backgroundColor: '#FCE4EC', padding: 12, borderRadius: 8, marginTop: 10, borderWidth: 1, borderColor: '#AD1457' }}
-              onPress={() => router.push('/athlete/profile')}
-              data-testid="pending-certificate-banner"
-            >
-              <Text style={{ color: '#AD1457', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>
-                🩺 Certificato medico richiesto
+              <Text style={{ color: '#E65100', fontSize: 12.5, marginTop: 3, lineHeight: 17 }}>
+                {((profile as any)?.pending_reason || '').replace(/^In attesa:\s*/i, '')}
               </Text>
-              <Text style={{ color: '#AD1457', fontSize: 12, textAlign: 'center', marginTop: 2 }}>
-                Vai in Anagrafica per inserire il certificato. Sarai «in forza» solo dopo la firma della privacy e la convalida del certificato da parte della società.
+              <Text style={{ color: '#BF360C', fontSize: 11, marginTop: 4, fontStyle: 'italic' }}>
+                Tocca qui per completare →
               </Text>
             </TouchableOpacity>
           )}

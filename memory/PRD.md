@@ -1180,3 +1180,12 @@ Fix:
 Verifica: lista admin mostra i motivi corretti (screenshot); backfill loggato "Migration 18+ no-prova backfill: N/N".
 IMPORTANTE per l'utente: la correzione retroattiva sugli atleti reali avviene in PRODUZIONE solo dopo REDEPLOY (Publish).
 
+
+
+### 24/08/2026 — Motivo dell'attesa visibile anche a GENITORE e ATLETA
+Richiesta utente: mostrare il motivo dell'ATTESA anche al genitore/atleta così sanno cosa fare per andare "in attività".
+- Backend: `GET /athletes/{id}` ora restituisce `pending_reason` (campo aggiunto al modello Athlete, calcolato con `compute_pending_reason`). Usato sia dalla home atleta 18+ (`/auth/me`→`/athletes/{id}`) sia dalla vista genitore (`/athletes/{id}`).
+- Frontend home atleta (`app/athlete/index.tsx`): sostituiti i 2 banner ad-hoc (privacy/certificato) con UN banner unico "🎯 Per essere «in attività» ti manca ancora: …" (tocca → firma privacy se manca, altrimenti Anagrafica).
+- Frontend genitore (`app/parent/athlete/[id].tsx`): banner "🎯 Per rendere attivo <Nome> manca ancora: …" sotto la card profilo (tocca → tab "Da fare").
+Verificato via screenshot: atleta 18+ (pending_certificate) e genitore del minore MAURI LENA vedono il motivo corretto.
+
