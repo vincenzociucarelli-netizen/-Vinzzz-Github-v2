@@ -432,6 +432,7 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
             <View style={styles.stepContent}>
               <ScrollView 
                 style={styles.privacyScrollView}
+                contentContainerStyle={{ paddingBottom: 24 }}
                 showsVerticalScrollIndicator={true}
               >
                 <Text style={styles.privacyText}>{privacyText}</Text>
@@ -499,7 +500,6 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
                 )}
                 
                 <View style={{ height: 20 }} />
-              </ScrollView>
 
               {/* Checkbox consensi granulari GDPR */}
               <View style={consentStyles.consentSection}>
@@ -611,6 +611,7 @@ Il sottoscritto genitore/tutore dichiara di aver letto e compreso la presente in
                   </Text>
                 </TouchableOpacity>
               )}
+              </ScrollView>
             </View>
           ) : (
             /* STEP 2: Sign */
@@ -859,7 +860,6 @@ const styles = StyleSheet.create({
   },
   privacyScrollView: {
     flex: 1,
-    maxHeight: 380,
   },
   privacyText: {
     fontSize: 12,

@@ -24756,6 +24756,13 @@ async def sign_gdpr_privacy_document(
     # Get society info from settings (has ragione_sociale)
     # 🔥 24/02/2026 — Multi-tenancy fix: filtra per society_id dell'utente corrente
     user_society_id = current_user.get("society_id")
+    # 🐛 23/08/2026 — Fallback società: alcuni utenti ATLETA 18+ non hanno society_id
+    # sul record utente (è solo sul record atleta collegato) → la firma privacy
+    # falliva con 404 "Nessuna società configurata". Recuperiamo dal record atleta.
+    if not user_society_id and current_user.get("athlete_id"):
+        _linked_ath_soc = await db.athletes.find_one({"id": current_user["athlete_id"]}, {"_id": 0, "society_id": 1})
+        if _linked_ath_soc and _linked_ath_soc.get("society_id"):
+            user_society_id = _linked_ath_soc["society_id"]
     society_settings = await db.settings.find_one({"type": "society", "society_id": user_society_id}) if user_society_id else None
     society = await db.societies.find_one({"id": user_society_id}) if user_society_id else None
     if not society and not society_settings:
@@ -24824,10 +24831,19 @@ async def sign_gdpr_privacy_document(
             # 🆕 16/08/2026 — Residenza obbligatoria prima della firma GDPR — SOLO per gli ATLETI adulti
             # (per lo staff/dirigenti/collaboratori non è richiesta).
             if (full_user or {}).get("role") == "athlete":
-                _res_addr = request.signer_address or (full_user or {}).get("address") or ""
-                _res_city = request.signer_city or (full_user or {}).get("city") or ""
-                _res_prov = request.signer_province or (full_user or {}).get("province") or ""
-                _res_cap = (full_user or {}).get("postal_code") or ""
+                # 🐛 23/08/2026 — Fallback residenza dal record ATLETA collegato:
+                # per gli atleti 18+ i dati di residenza (incl. CAP) spesso sono sul
+                # record atleta e non sull'utente → la firma falliva con 400.
+                _ath_res = {}
+                if (full_user or {}).get("athlete_id"):
+                    _ath_res = await db.athletes.find_one(
+                        {"id": full_user["athlete_id"]},
+                        {"_id": 0, "address": 1, "city": 1, "province": 1, "postal_code": 1},
+                    ) or {}
+                _res_addr = request.signer_address or (full_user or {}).get("address") or _ath_res.get("address") or ""
+                _res_city = request.signer_city or (full_user or {}).get("city") or _ath_res.get("city") or ""
+                _res_prov = request.signer_province or (full_user or {}).get("province") or _ath_res.get("province") or ""
+                _res_cap = (full_user or {}).get("postal_code") or _ath_res.get("postal_code") or ""
                 _res_missing = []
                 if not str(_res_addr).strip():
                     _res_missing.append("Indirizzo di residenza")

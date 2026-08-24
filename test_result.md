@@ -201,7 +201,7 @@ test_plan:
 
 agent_communication:
   - agent: "main"
-    message: "Fixed certificate upload: 1) Backend now accepts JSON body with CertificateUploadBase64 model. 2) Frontend uses expo-file-system to read PDF as base64. 3) Added modal UI for date and validity input. Please test the /api/certificates/upload-base64 endpoint with a POST request containing JSON body."
+    message: "23/08/2026 — BUG FIX DA VERIFICARE: la privacy di un atleta 18+ non risultava accettata dopo il salvataggio dell'anagrafica, e non c'era un modo diretto per firmarla. Ho aggiunto nel profilo atleta (app/athlete/profile.tsx) un banner 'Firma Informativa Privacy' (testID='sign-privacy-banner') visibile quando isAdult && !privacyAccepted, che apre il GDPRPrivacyModal. Dopo la firma, handlePrivacySign fa PATCH /auth/me {privacy_accepted:true} che sincronizza anche il record atleta (via user.athlete_id). Verificare il flusso end-to-end."
   - agent: "testing"
     message: "✅ BACKEND TESTING COMPLETE: All high priority backend endpoints tested successfully. Certificate Upload Base64 endpoint (HIGH PRIORITY) working perfectly - accepts JSON body with athlete_id, issue_date, validity_months, pdf_base64 fields. Team Creation endpoint also working correctly with all required and optional fields. Authentication properly enforced on all endpoints. Created comprehensive backend_test.py with full test flow. Both tasks marked as working=true and needs_retesting=false."
   - agent: "testing"

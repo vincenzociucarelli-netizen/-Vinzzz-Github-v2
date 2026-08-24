@@ -384,6 +384,24 @@ Vincenzo ha giustamente notato che le regole FIPAV sono specifiche pallavolo (e 
   - Frontend `register-athlete.tsx`: rendering condizionale su `isMinorAthlete` (da data nascita GG/MM/AAAA) — minore→box "periodo di prova" senza checkbox privacy; maggiorenne→sezione consensi con "presa visione" obbligatoria.
   - Backlog confermato (opzione B, rimandata): macchina a 6 stati completa (IN ATTESA → IN ATTESA D'INIZIO PROVA solo dopo validazione certificato admin + gate QR → IN PROVA → ATTIVO dopo firma privacy).
 
+## Changelog — 24/08/2026 — Firma Privacy atleta 18+ sbloccata su mobile (2 fix) + fallback backend
+### Bug (segnalati da utente, atleta 18+ su mobile registrateam.it)
+1. Nel modal "Informativa Privacy GDPR" Step 1, dopo aver spuntato i consensi, non compariva il pulsante per proseguire: "Ho letto e compreso - Procedi alla firma" era FUORI schermo (Step 1 non interamente scrollabile).
+2. Il TrialEndModal ("rinuncia al periodo di prova e resta"/"Voglio Restare") non faceva nulla su mobile.
+3. (trovati da testing agent, iter_114) l'endpoint firma dava 404 "Nessuna società configurata" e 400 "CAP" per utenti atleta senza society_id/residenza sul record utente.
+### Fix
+- `src/components/GDPRPrivacyModal.tsx`: Step 1 ora interamente dentro una ScrollView (checkbox + "Visualizza Anteprima PDF" + "Procedi alla firma"); rimosso `maxHeight:380` da `privacyScrollView`; aggiunto `contentContainerStyle paddingBottom`.
+- `app/athlete/profile.tsx`: `TrialEndModal.onAcceptPrivacy` ora apre direttamente il modal privacy (`setShowPrivacyModal(true)`), rimosso `Alert.alert` con callback (inaffidabile su web mobile). Aggiunto anche banner "Firma Informativa Privacy" (testID sign-privacy-banner) quando isAdult && !privacyAccepted.
+- `server.py` POST /documents/sign-gdpr-privacy: fallback `society_id` e dati residenza (address/city/province/postal_code) dal record ATLETA collegato (via user.athlete_id).
+- `server.py` GET /athletes/{id} (fix precedente correlato): `account_holder` esposto; e `privacy_accepted` sincronizzato via PATCH /auth/me.
+### Verifica (testing agent iter_115 e iter_116, viewport mobile, NESSUNA patch DB)
+- "Voglio Restare" apre il modal; "Procedi alla firma" raggiungibile scrollando; firma su canvas → POST 200; persistenza `privacy_accepted=true` (user+athlete) verificata via admin API. Fallback society/CAP reggono.
+### Nota aperta (non blocker)
+- Il TrialEndModal è montato solo in `app/athlete/profile.tsx`, non in `app/athlete/index.tsx` (landing post-login): l'atleta vede subito solo il banner Privacy; per il TrialEndModal deve aprire il profilo. Valutare redirect/replica se si vuole mostrarlo subito.
+### Deploy
+- Frontend + backend.
+
+
 ## Changelog — 23/08/2026 — Rimosso logo società centrato dal blocco "Società"
 ### Richiesta utente
 - Il logo grande centrato (140px) in mezzo alle dashboard (Dirigente/Coach/Collaboratore) sembrava "sospeso" → rimuoverlo.

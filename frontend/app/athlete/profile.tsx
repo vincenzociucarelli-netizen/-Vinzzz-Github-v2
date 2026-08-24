@@ -1067,6 +1067,25 @@ export default function AthleteProfile() {
           </View>
         </View>
 
+        {/* 🆕 23/08/2026 — Banner firma Privacy per atleti 18+ non ancora firmata.
+            Dà un modo diretto per firmare senza dover modificare/salvare l'anagrafica. */}
+        {isAdult && !privacyAccepted && (
+          <TouchableOpacity
+            testID="sign-privacy-banner"
+            style={styles.privacyBanner}
+            onPress={() => setShowPrivacyModal(true)}
+          >
+            <Ionicons name="shield-checkmark" size={26} color="#B45309" />
+            <View style={{ flex: 1, marginHorizontal: 12 }}>
+              <Text style={styles.privacyBannerTitle}>Firma Informativa Privacy</Text>
+              <Text style={styles.privacyBannerText}>La tua privacy non risulta ancora accettata. Tocca qui per firmarla ora.</Text>
+            </View>
+            <View style={styles.privacyBannerBtn}>
+              <Text style={styles.privacyBannerBtnText}>Firma</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* Personal & Fiscal Data - Unified Card */}
         <View style={styles.card}>
           <TouchableOpacity 
@@ -1489,12 +1508,9 @@ export default function AthleteProfile() {
           visible={showTrialEndModal}
           onAcceptPrivacy={() => {
             setShowTrialEndModal(false);
-            // Show medical certificate alert first, then privacy modal
-            Alert.alert(
-              'Certificato Medico Richiesto',
-              'Per continuare come atleta tesserato, dovrai consegnare alla società un certificato medico di idoneità sportiva in corso di validità.',
-              [{ text: 'Ho capito, procedi', onPress: () => setShowPrivacyModal(true) }]
-            );
+            // 🐛 24/08/2026 — Su web mobile Alert.alert con callback su bottone è
+            // inaffidabile (non apriva il modal). Apriamo direttamente la firma privacy.
+            setShowPrivacyModal(true);
           }}
           onDeleteData={async () => {
             setDeletingData(true);
@@ -1800,6 +1816,21 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  privacyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    borderColor: '#FCD34D',
+    borderWidth: 1,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 14,
+    borderRadius: 12,
+  },
+  privacyBannerTitle: { fontSize: 14, fontWeight: '700', color: '#92400E' },
+  privacyBannerText: { fontSize: 12, color: '#B45309', marginTop: 2, lineHeight: 16 },
+  privacyBannerBtn: { backgroundColor: '#F59E0B', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  privacyBannerBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   cardTitle: {
     fontSize: 16,
     fontWeight: 'bold',
