@@ -2503,7 +2503,15 @@ async def admin_force_verify_email(user_id: str, current_user = Depends(get_curr
     if user.get("email_verified") and user.get("status") not in ("pending_email", None):
         return {"message": "Utente già verificato", "already_verified": True}
 
-    new_user_status = "pending_trial" if user.get("role") == "athlete" else "approved"
+    # 🆕 ADULTI (18+): niente periodo di prova → dopo verifica restano "pending"
+    # (in attesa di approvazione admin). I minorenni mantengono "pending_trial".
+    _fv_athlete_id = user.get("athlete_id")
+    _fv_athlete = await db.athletes.find_one({"id": _fv_athlete_id}) if _fv_athlete_id else None
+    _fv_is_minor = _compute_is_minor(_fv_athlete) if _fv_athlete else False
+    if user.get("role") == "athlete":
+        new_user_status = "pending_trial" if _fv_is_minor else "pending"
+    else:
+        new_user_status = "approved"
     await db.users.update_one(
         {"id": user_id},
         {"$set": {
@@ -2519,7 +2527,7 @@ async def admin_force_verify_email(user_id: str, current_user = Depends(get_curr
     if athlete_id:
         await db.athletes.update_one(
             {"id": athlete_id},
-            {"$set": {"status": "pending_trial"}}
+            {"$set": {"status": "pending_trial" if _fv_is_minor else "pending"}}
         )
     # For parent, activate the linked minor athlete
     if user.get("role") == "parent":
@@ -3572,8 +3580,16 @@ async def verify_email(token: str):
         return {"message": "Email già verificata. Puoi accedere con le tue credenziali.", "already_verified": True}
     
     # Activate user - set appropriate status based on role
-    new_user_status = "pending_trial" if user.get("role") == "athlete" else "approved"
-    trial_end = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+    # 🆕 ADULTI (18+): niente periodo di prova. Dopo la verifica email l'atleta
+    # adulto resta IN ATTESA di approvazione admin (status "pending"); l'attivazione
+    # avverrà solo con privacy firmata + certificato convalidato.
+    athlete_id = user.get("athlete_id")
+    _verify_athlete = await db.athletes.find_one({"id": athlete_id}) if athlete_id else None
+    _athlete_is_minor = _compute_is_minor(_verify_athlete) if _verify_athlete else False
+    if user.get("role") == "athlete":
+        new_user_status = "pending_trial" if _athlete_is_minor else "pending"
+    else:
+        new_user_status = "approved"
     await db.users.update_one(
         {"id": user["id"]},
         {"$set": {
@@ -3584,13 +3600,12 @@ async def verify_email(token: str):
         }}
     )
     
-    # Also activate the athlete record - set to pending_trial (trial starts at first QR scan)
-    athlete_id = user.get("athlete_id")
+    # Also activate the athlete record
     if athlete_id:
         await db.athletes.update_one(
             {"id": athlete_id},
             {"$set": {
-                "status": "pending_trial",
+                "status": "pending_trial" if _athlete_is_minor else "pending",
             }}
         )
     
@@ -5069,6 +5084,10 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
                     {"id": athlete_id},
                     {"$set": athlete_update}
                 )
+            # 🆕 ADULTI (18+): se la privacy è appena stata firmata e il certificato è
+            # già convalidato, attiva automaticamente l'atleta (nessun periodo di prova).
+            if update_dict.get("privacy_accepted"):
+                await maybe_activate_adult_athlete(athlete_id, current_user)
     
     return {"message": "Profilo aggiornato"}
 
@@ -11200,15 +11219,26 @@ async def update_athlete_approval(athlete_id: str, data: AthleteApprovalUpdate, 
             update_data["is_compensated"] = True
             is_compensated_athlete = True
     
-    # If approving to trial, set trial end date from now
-    if data.status == AthleteStatus.TRIAL:
+    # 🆕 ADULTI (18+): NESSUN periodo di prova. Distinguiamo subito minori/adulti.
+    _is_adult = not _compute_is_minor(athlete)
+
+    # If approving to trial, set trial end date from now — SOLO per i minorenni
+    if data.status == AthleteStatus.TRIAL and not _is_adult:
         update_data["trial_end_date"] = datetime.utcnow() + timedelta(days=7)
 
-    # 🆕 Certificato medico (blocco onboarding) — quando l'admin approva per la PROVA,
-    # l'atleta va in ATTESA INIZIO PROVA (pending_trial). Ma se serve il certificato
-    # (adulti: sempre; salvo squadra 'none') e non è ancora convalidato, resta in
-    # ATTESA (pending_certificate) finché l'admin non convalida il certificato.
-    if data.status == AthleteStatus.TRIAL:
+    if _is_adult and data.status in (AthleteStatus.TRIAL, AthleteStatus.ACTIVE):
+        # 🆕 ADULTI (18+): all'accettazione dell'admin l'atleta NON entra in prova.
+        # Resta IN ATTESA (pending_certificate) finché non ha (privacy firmata E
+        # certificato medico convalidato). Poi diventa ATTIVO automaticamente
+        # (vedi maybe_activate_adult_athlete più sotto).
+        update_data["status"] = "pending_certificate"
+        update_data["is_trial"] = False
+        update_data.pop("trial_end_date", None)
+    elif data.status == AthleteStatus.TRIAL:
+        # 🆕 MINORENNI — Certificato medico (blocco onboarding): quando l'admin
+        # approva per la PROVA, l'atleta va in ATTESA INIZIO PROVA (pending_trial).
+        # Ma se serve il certificato e non è ancora convalidato, resta in ATTESA
+        # (pending_certificate) finché l'admin non convalida il certificato.
         _team = await db.teams.find_one({"id": athlete.get("team_id")}) if athlete.get("team_id") else None
         _cert_type = cert_type_for_team(_team)
         _is_minor = athlete.get("is_minor", False)
@@ -11223,6 +11253,11 @@ async def update_athlete_approval(athlete_id: str, data: AthleteApprovalUpdate, 
         {"id": athlete_id},
         {"$set": update_data}
     )
+
+    # 🆕 ADULTI (18+): se all'accettazione l'atleta ha GIÀ privacy firmata E
+    # certificato convalidato, attivalo subito (nessun periodo di prova).
+    if _is_adult and data.status in (AthleteStatus.TRIAL, AthleteStatus.ACTIVE):
+        await maybe_activate_adult_athlete(athlete_id, current_user)
     
     # AUTO-APPROVE PARENT: When approving an athlete, also approve their parent
     if data.status in [AthleteStatus.TRIAL, AthleteStatus.ACTIVE]:
@@ -13605,18 +13640,27 @@ async def create_certificate_simple(
         {"$set": update_data}
     )
 
-    # 🆕 Avanzamento onboarding: se il certificato è stato CONVALIDATO (verified) e
-    # l'atleta era in ATTESA per il certificato (pending_certificate), passa a
-    # ATTESA INIZIO PROVA (pending_trial): la prova partirà alla 1ª scansione QR.
+    # 🆕 Avanzamento onboarding alla CONVALIDA del certificato:
+    #   • MINORENNI: da pending_certificate → pending_trial (la prova parte al 1° QR)
+    #   • ADULTI (18+): nessuna prova. Se manca ancora la firma privacy → pending_privacy
+    #     ("Firma Privacy"); se la privacy è già firmata verranno attivati sotto.
     if verified_value and athlete.get("status") == "pending_certificate":
         exp_ok = expiry_dt >= datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
         if exp_ok:
-            await db.athletes.update_one(
-                {"id": data.athlete_id, "status": "pending_certificate"},
-                {"$set": {"status": "pending_trial"}}
-            )
-            if athlete.get("user_id"):
-                await db.users.update_one({"id": athlete["user_id"]}, {"$set": {"status": "pending_trial"}})
+            if _compute_is_minor(athlete):
+                await db.athletes.update_one(
+                    {"id": data.athlete_id, "status": "pending_certificate"},
+                    {"$set": {"status": "pending_trial"}}
+                )
+                if athlete.get("user_id"):
+                    await db.users.update_one({"id": athlete["user_id"]}, {"$set": {"status": "pending_trial"}})
+            elif not athlete.get("privacy_accepted"):
+                await db.athletes.update_one(
+                    {"id": data.athlete_id, "status": "pending_certificate"},
+                    {"$set": {"status": "pending_privacy"}}
+                )
+                if athlete.get("user_id"):
+                    await db.users.update_one({"id": athlete["user_id"]}, {"$set": {"status": UserStatus.APPROVED}})
     
     history_entry = {
         "athlete_id": data.athlete_id,
@@ -13699,38 +13743,19 @@ async def create_certificate_simple(
     if verified_value and athlete.get("end_trial_requested"):
         activated = await check_and_activate_if_ready(data.athlete_id)
 
-    # 🆕 31/07/2026 — Auto-attivazione atleti 18+ PRO:
-    # Gli atleti compensati (athlete_type='compensated') sono già stati "scelti"
-    # e acquistati per la stagione, quindi NON hanno periodo di prova.
-    # Quando l'Admin valida il loro certificato medico li portiamo direttamente
-    # a status='active' (skippando pending/trial).
-    # 🐛 22/08/2026 — Guardia età: un minorenne NON può essere "18+ PRO" anche se
-    # per errore ha athlete_type='compensated'. Evita attivazioni PRO errate sui minori.
-    if (
-        verified_value
-        and not activated
-        and current_user["role"] == UserRole.ADMIN
-        and athlete.get("athlete_type") == "compensated"
-        and not _compute_is_minor(athlete)
-        and athlete.get("status") not in (AthleteStatus.ACTIVE, AthleteStatus.BLOCKED)
-    ):
-        await db.athletes.update_one(
-            {"id": data.athlete_id},
-            {"$set": {
-                "status": AthleteStatus.ACTIVE,
-                "is_trial": False,
-                "activated_at": now.isoformat(),
-                "activated_by": current_user["id"],
-                "activated_by_name": current_user.get("full_name", current_user.get("email", "")),
-            }},
-        )
-        activated = True
-        activated_as_pro = True
-        logging.info(
-            f"[AUTO-ACTIVATE-PRO] athlete_id={data.athlete_id} attivato automaticamente "
-            f"da admin={current_user.get('email')} dopo validazione certificato medico "
-            f"(athlete_type=compensated, previous_status={athlete.get('status')})"
-        )
+    # 🆕 ADULTI (18+): nessun periodo di prova. Alla convalida del certificato
+    # medico, se la privacy è già stata firmata, l'atleta diventa ATTIVO
+    # automaticamente. Vale sia per gli atleti "quota" sia per i PRO/compensated.
+    # (La guardia età è dentro maybe_activate_adult_athlete: i minorenni non sono
+    # mai attivati da qui.)
+    if verified_value and not activated and current_user["role"] == UserRole.ADMIN:
+        _adult_activated = await maybe_activate_adult_athlete(data.athlete_id, current_user)
+        if _adult_activated:
+            activated = True
+            _ath_after = await db.athletes.find_one(
+                {"id": data.athlete_id}, {"_id": 0, "athlete_type": 1}
+            )
+            activated_as_pro = bool(_ath_after and _ath_after.get("athlete_type") == "compensated")
 
     return {
         "id": certificate.id,
@@ -25165,6 +25190,9 @@ async def sign_gdpr_privacy_document(
                     **consent_sync
                 }}
             )
+            # 🆕 ADULTI (18+): dopo la firma della privacy, se il certificato è già
+            # convalidato l'atleta diventa ATTIVO automaticamente (nessun periodo di prova).
+            await maybe_activate_adult_athlete(current_user["athlete_id"], current_user)
     
     # Update athlete record with privacy_pdf_url if this is an athlete signing
     if current_user.get("role") == "athlete" and current_user.get("athlete_id"):
@@ -32506,6 +32534,49 @@ async def check_and_activate_if_ready(athlete_id: str):
         )
         return True
     return False
+
+
+async def maybe_activate_adult_athlete(athlete_id: str, actor: dict | None = None) -> bool:
+    """🆕 ADULTI (18+): nessun periodo di prova. Un atleta maggiorenne diventa
+    ATTIVO ("in forza") SOLO quando ha soddisfatto ENTRAMBI i requisiti:
+      (a) privacy firmata  E  (b) certificato medico convalidato dall'admin.
+    Richiamabile dopo la firma della privacy, dopo la convalida del certificato
+    e all'accettazione dell'admin. Ritorna True se l'atleta è stato attivato ora.
+    I MINORENNI non sono mai toccati da questa funzione (mantengono la prova)."""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        return False
+    if _compute_is_minor(athlete):
+        return False
+    if athlete.get("is_withdrawn"):
+        return False
+    if athlete.get("status") in (AthleteStatus.ACTIVE, AthleteStatus.BLOCKED, "rejected"):
+        return False
+    _team = await db.teams.find_one({"id": athlete.get("team_id")}) if athlete.get("team_id") else None
+    _cert_type = cert_type_for_team(_team)
+    cert_ok = has_valid_verified_cert(athlete) if cert_required_for_active(_cert_type) else True
+    privacy_ok = bool(athlete.get("privacy_accepted"))
+    if not (cert_ok and privacy_ok):
+        return False
+    now = datetime.utcnow()
+    upd = {
+        "status": AthleteStatus.ACTIVE,
+        "is_trial": False,
+        "trial_end_date": None,
+        "activated_at": now.isoformat(),
+    }
+    if actor:
+        upd["activated_by"] = actor.get("id")
+        upd["activated_by_name"] = actor.get("full_name", actor.get("email", ""))
+    await db.athletes.update_one({"id": athlete_id}, {"$set": upd})
+    uid = athlete.get("user_id") or athlete.get("linked_user_id")
+    if uid:
+        await db.users.update_one({"id": uid}, {"$set": {"status": UserStatus.APPROVED}})
+    logging.info(
+        f"[AUTO-ACTIVATE-ADULT] athlete_id={athlete_id} attivato (privacy firmata + "
+        f"certificato convalidato, athlete_type={athlete.get('athlete_type')})"
+    )
+    return True
 
 
 @api_router.post("/athletes/{athlete_id}/waive-trial")

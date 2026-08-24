@@ -1142,3 +1142,27 @@ Fix stats (server.py get_prime_squadre_stats):
 Fix apertura singolo atleta (admin/athlete/[id].tsx): il fetch `/settings/society?include_images=true` (logo ~519KB) NON blocca più l'apertura: si caricano prima le settings LEGGERE (ruoli/caratteristiche/stagione + campi testo), poi logo/timbro in BACKGROUND (servono solo ai PDF ricevuta/tessera). `/users` è chiamato solo su azione "collega genitore", non all'apertura.
 Collegamento PRO↔normali: i PRO sono atleti is_compensated=True; dopo il fix N+1 (prime-squadre/athletes, una query $in) e stats (una aggregazione) NON ci sono loop pesanti sul DB.
 Verificato testing agent iter 113 (7/7 backend + frontend, nessuna regressione su athletes/coaches/dirigenti/parents). NB: attivo in produzione dopo REDEPLOY.
+
+
+### 24/08/2026 — ATLETI 18+: RIMOSSO il periodo di prova → attivazione con Privacy + Certificato
+Richiesta utente: un atleta maggiorenne NON ha senso che faccia la "prova" (i 18+PRO sono cercati dalla società per giocare in serie B; i 18+ standard sono accettati previo accordo). Nuova regola: **niente prova per i 18+**. L'atleta diventa **ATTIVO ("in forza") SOLO quando ha (a) firmato la privacy E (b) certificato medico convalidato dall'admin** (a prescindere dall'ordine). I MINORENNI restano invariati (prova + firma genitore).
+
+Ciclo di vita atleta 18+ (quota e PRO):
+1. Registrazione → `pending` (in attesa approvazione admin)
+2. Admin accetta (STD/PRO) → `pending_certificate` (nessun `is_trial`, nessun `trial_end_date`); utente → `approved` (può loggare)
+3. Firma privacy + convalida certificato (in qualsiasi ordine): appena entrambi ok → `active`
+   - Se manca solo la privacy dopo la convalida cert → `pending_privacy` ("Firma Privacy")
+   - Se manca solo il cert → resta `pending_certificate` ("Attesa Certificato")
+
+Backend (server.py):
+- Nuovo helper `maybe_activate_adult_athlete(athlete_id, actor)`: attiva l'adulto se privacy_accepted E cert convalidato (guardia età: i minori non sono mai toccati). Richiamato da: firma privacy (`/documents/sign-gdpr-privacy` e `/auth/me`), convalida certificato (`/certificates/simple`), e approvazione admin (`/athletes/{id}/approval`).
+- `/athletes/{id}/approval`: per gli ADULTI ignora la prova → status `pending_certificate` (rimosso trial_end_date/is_trial); poi tenta attivazione. Minori invariati.
+- `/certificates/simple`: rimosso il vecchio blocco "AUTO-ACTIVATE-PRO" (che attivava i PRO col solo cert, senza privacy) → ora usa l'helper generale (PRO inclusi, richiede anche la privacy). Transizione pending_certificate→pending_privacy per adulti senza privacy; minori→pending_trial come prima.
+- `verify_email` e `force-verify-email`: gli adulti dopo verifica restano `pending` (approvazione admin), i minori `pending_trial`.
+
+Frontend:
+- `app/athlete/index.tsx`: banner "Attesa Certificato" per adulti non parla più di "prova" → «sarai in forza dopo privacy + convalida cert».
+- `app/athlete/profile.tsx`: rimosso il trigger del `TrialEndModal` per adulti (obsoleto). Il banner "Firma Informativa Privacy" (isAdult && !privacyAccepted) resta il punto di firma.
+
+Verifica: testata via API reale (register→approve→privacy→cert) in 3 scenari (quota cert-first, quota privacy-first, PRO) → tutti raggiungono `active` correttamente; minori non impattati. UI adulto verificata via screenshot (badge "Attesa Certificato", testo corretto, card Privacy firmabile).
+

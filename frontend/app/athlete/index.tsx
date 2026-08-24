@@ -641,7 +641,8 @@ export default function AthleteScreen() {
           )}
 
           {/* 🆕 08/08/2026 — Banner "Attesa Certificato": l'atleta deve caricare/aggiornare
-              il certificato medico nella tab Anagrafica prima di poter iniziare la prova. */}
+              il certificato medico nella tab Anagrafica. ADULTI (18+): nessun periodo di
+              prova → sarà "in forza" solo con privacy firmata + certificato convalidato. */}
           {!isMinor && profile?.status === 'pending_certificate' && (
             <TouchableOpacity 
               style={{ backgroundColor: '#FCE4EC', padding: 12, borderRadius: 8, marginTop: 10, borderWidth: 1, borderColor: '#AD1457' }}
@@ -652,7 +653,7 @@ export default function AthleteScreen() {
                 🩺 Certificato medico richiesto
               </Text>
               <Text style={{ color: '#AD1457', fontSize: 12, textAlign: 'center', marginTop: 2 }}>
-                Vai in Anagrafica per inserire il certificato. La prova potrà iniziare solo dopo la convalida della società.
+                Vai in Anagrafica per inserire il certificato. Sarai «in forza» solo dopo la firma della privacy e la convalida del certificato da parte della società.
               </Text>
             </TouchableOpacity>
           )}

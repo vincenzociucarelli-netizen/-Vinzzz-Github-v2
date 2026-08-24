@@ -75,3 +75,10 @@
 ## ⚠️ Note operative
 - Le tabelle `login_rate_limits` bloccano gli account dopo 15 tentativi falliti. Per sbloccare: `db.login_rate_limits.delete_many({})`.
 - Il campo password in `users` è `password_hash` (bcrypt), NON `password`. Reset: `bcrypt.hashpw(b'Test1234', bcrypt.gensalt()).decode()`.
+
+## Atleti 18+ TEST FLUSSO "no prova" (creati 24/08/2026, società Pallavolo Perugia, invite BUZHB0WT)
+- testflow.adult@test.com / Test1234 → stato pending_certificate, privacy NON firmata (per test banner "Attesa Certificato" + firma privacy)
+- testflow.adult2@test.com / Test1234 → ATTIVO (ha completato flusso quota: cert→privacy)
+- testflow.pro@test.com / Test1234 → ATTIVO (flusso PRO/compensated: cert→privacy)
+- Admin persona fisica per approvare/convalidare: vincenzo.ciucarelli@gmail.com / Test1234 (NON usare pallavoloperugia@gmail.com: account società in sola lettura)
+

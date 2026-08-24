@@ -268,23 +268,10 @@ export default function AthleteProfile() {
       const isPrivacyAccepted = data.privacy_accepted || false;
       setPrivacyAccepted(isPrivacyAccepted);
       
-      // Check trial expiration for adult athletes
-      if (isAdultAthlete) {
-        const trialEnd = data.trial_end_date;
-        if (trialEnd) {
-          const trialEndDateObj = new Date(trialEnd);
-          const now = new Date();
-          const isExpired = now > trialEndDateObj;
-          
-          setTrialEndDate(trialEndDateObj.toLocaleDateString('it-IT'));
-          setTrialExpired(isExpired);
-          
-          // If trial expired and privacy not accepted, show trial end modal
-          if (isExpired && !isPrivacyAccepted) {
-            setTimeout(() => setShowTrialEndModal(true), 500);
-          }
-        }
-      }
+      // 🆕 ADULTI (18+): nessun periodo di prova. Non mostriamo più il modale di
+      // "prova terminata"; la firma della privacy avviene tramite il banner "Firma
+      // Informativa Privacy" (vedi banner sign-privacy). L'attivazione ("in forza")
+      // avviene lato backend con privacy firmata + certificato convalidato.
       
       // Load signed receipts
       try {
