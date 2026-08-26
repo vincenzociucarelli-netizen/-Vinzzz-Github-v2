@@ -25,6 +25,8 @@ import SignaturePad from '../../src/components/SignaturePad';
 import { SportIcon } from '../../src/components/SportIcon';
 import { OnboardingTutorial, PARENT_STEPS } from '../../src/components/OnboardingTutorial';
 import ActivityStartBanners from '../../src/components/ActivityStartBanners';
+import DirigenteProposalBanner from '../../src/components/DirigenteProposalBanner';
+import SwitchAccountButton from '../../src/components/SwitchAccountButton';
 
 // Colori vivaci per distinguere i figli
 const ATHLETE_COLORS = [
@@ -93,6 +95,7 @@ export default function ParentDashboard() {
   
   // Link requests state
   const [linkRequestsToApprove, setLinkRequestsToApprove] = useState<any[]>([]);
+  const [switchKey, setSwitchKey] = useState(0);
 
   // Mappa nome atleta -> colore
   const athleteColorMap = useMemo(() => {
@@ -623,6 +626,10 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
       >
         {/* 🆕 02/07/2026 — Banner rifirma privacy nuova stagione */}
         <PrivacyRenewalBanner />
+
+        {/* 🆕 Proposta incarico Dirigente (dual-role genitore↔dirigente) */}
+        <DirigenteProposalBanner onAccepted={() => setSwitchKey((k) => k + 1)} />
+        <SwitchAccountButton key={switchKey} />
 
         {/* Pannello notifiche utente (solleciti, avvisi) */}
         {showUserNotifs && (

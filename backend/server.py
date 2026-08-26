@@ -1106,6 +1106,10 @@ class AthleteCreate(BaseModel):
     second_parent_email: Optional[str] = None  # Email del secondo genitore (per-atleta)
     # 🆕 Solo minorenni: "Ha già giocato a livello agonistico / è già tesserato?"
     already_registered: Optional[bool] = None
+    # 🆕 24/08/2026 — Minorenni: consenso del genitore allo svolgimento del periodo
+    # di prova, raccolto in fase di iscrizione (sostituisce la firma della
+    # "Dichiarazione di Prova" separata). Obbligatorio lato frontend per i minori.
+    trial_authorization: Optional[bool] = None
     
 class AthleteUpdate(BaseModel):
     # Tesseramento (gestito da Admin)
@@ -1450,6 +1454,8 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                         "athlete_id": 1,
                         "coach_id": 1,
                         "coordinator_permissions": 1,
+                        "pending_dirigente_user_id": 1,
+                        "linked_dirigente_user_id": 1,
                     },
                 ))
                 _AUTH_INFLIGHT[user_id] = _fut
@@ -1488,6 +1494,8 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             "athlete_id": user.get("athlete_id"),  # For athlete role
             "coach_id": user.get("coach_id"),      # For coach role
             "coordinator_permissions": list(user.get("coordinator_permissions") or []),
+            "pending_dirigente_user_id": user.get("pending_dirigente_user_id"),
+            "linked_dirigente_user_id": user.get("linked_dirigente_user_id"),
         }
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
@@ -6584,6 +6592,7 @@ async def get_parents(current_user = Depends(get_current_user)):
         "_id": 0, "id": 1, "email": 1, "full_name": 1, "role": 1, "status": 1,
         "created_at": 1, "approved_at": 1, "phone": 1, "fiscal_code": 1,
         "active_seasons": 1,
+        "linked_dirigente_user_id": 1, "pending_dirigente_user_id": 1,
     }).to_list(5000)
 
     # 3. Self-heal silenzioso: genitori collegati ad atleti attivi ma senza
@@ -6620,6 +6629,8 @@ async def get_parents(current_user = Depends(get_current_user)):
             "approved_at": p.get("approved_at"),
             "phone": (p.get("phone") or "").strip() or parent_phone_map.get(p["id"], ""),
             "fiscal_code": p.get("fiscal_code", ""),
+            "linked_dirigente_user_id": p.get("linked_dirigente_user_id"),
+            "pending_dirigente_user_id": p.get("pending_dirigente_user_id"),
         })
 
     return result
@@ -9037,6 +9048,28 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
             reactivate_data["phone_athlete"] = athlete_data.phone_athlete
         if data_password_hash:
             reactivate_data["data_password_hash"] = data_password_hash
+        # 🆕 24/08/2026 — Consenso alla PROVA in fase di (re)iscrizione (minori)
+        if is_minor and getattr(athlete_data, 'trial_authorization', None):
+            _ta_now = datetime.utcnow()
+            reactivate_data["trial_document_generated"] = True
+            reactivate_data["trial_authorized_at_registration"] = True
+            reactivate_data["trial_document_signed_date"] = _ta_now.isoformat()
+            reactivate_data["trial_document_signed_by"] = current_user["id"]
+            reactivate_data["trial_document_signed_by_name"] = current_user.get("full_name", current_user.get("email", ""))
+            _rc = dict(consents or {})
+            _rc["trial_authorization"] = {
+                "value": True, "timestamp": _ta_now.isoformat(), "user_id": current_user["id"],
+                "parent_id": current_user["id"], "child_id": existing_athlete["id"], "ip_address": client_ip,
+                "document_version": document_version, "source": "registration",
+            }
+            reactivate_data["consents"] = _rc
+            _rh = list(consent_history or [])
+            _rh.append({
+                "type": "trial_authorization", "action": "granted", "old_value": None, "new_value": True,
+                "timestamp": _ta_now.isoformat(), "user_id": current_user["id"], "ip_address": client_ip,
+                "source": "registration",
+            })
+            reactivate_data["consent_history"] = _rh
         
         await db.athletes.update_one(
             {"id": existing_athlete["id"]},
@@ -9097,6 +9130,31 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
     athlete_dict = athlete.dict()
     athlete_dict["created_at"] = datetime.utcnow()
     athlete_dict["already_registered"] = _already_reg
+    # 🆕 24/08/2026 — Consenso alla PROVA raccolto in fase di iscrizione (minori):
+    # sostituisce la firma della "Dichiarazione di Prova" separata. Salviamo traccia
+    # (timestamp/IP) e impostiamo trial_document_generated=True così l'onboarding
+    # NON richiede una firma aggiuntiva successiva.
+    if is_minor and getattr(athlete_data, 'trial_authorization', None):
+        _ta_now = datetime.utcnow()
+        athlete_dict["trial_document_generated"] = True
+        athlete_dict["trial_authorized_at_registration"] = True
+        athlete_dict["trial_document_signed_date"] = _ta_now.isoformat()
+        athlete_dict["trial_document_signed_by"] = current_user["id"]
+        athlete_dict["trial_document_signed_by_name"] = current_user.get("full_name", current_user.get("email", ""))
+        _ta_consents = athlete_dict.get("consents") or {}
+        _ta_consents["trial_authorization"] = {
+            "value": True, "timestamp": _ta_now.isoformat(), "user_id": current_user["id"],
+            "parent_id": current_user["id"], "child_id": athlete.id, "ip_address": client_ip,
+            "document_version": document_version, "source": "registration",
+        }
+        athlete_dict["consents"] = _ta_consents
+        _ta_hist = athlete_dict.get("consent_history") or []
+        _ta_hist.append({
+            "type": "trial_authorization", "action": "granted", "old_value": None, "new_value": True,
+            "timestamp": _ta_now.isoformat(), "user_id": current_user["id"], "ip_address": client_ip,
+            "source": "registration",
+        })
+        athlete_dict["consent_history"] = _ta_hist
     await db.athletes.insert_one(athlete_dict)
     
     
@@ -19252,6 +19310,31 @@ async def get_linked_accounts(current_user = Depends(get_current_user)):
                         "email": ath_user.get("email", ""),
                         "label": "Modalità Atleta",
                     })
+    # 🆕 24/08/2026 — Dual-role Genitore ↔ Dirigente (promozione parent→dirigente)
+    if role == "parent":
+        _pu = await db.users.find_one({"id": user_id}, {"_id": 0, "linked_dirigente_user_id": 1})
+        _ldid = (_pu or {}).get("linked_dirigente_user_id")
+        if _ldid:
+            _dir = await db.users.find_one({"id": _ldid}, {"_id": 0, "id": 1, "email": 1, "role": 1})
+            if _dir and _dir.get("id") != user_id:
+                linked.append({
+                    "user_id": _dir["id"],
+                    "role": _dir.get("role", "dirigente"),
+                    "email": _dir.get("email", ""),
+                    "label": "Modalità Dirigente",
+                })
+    if role in ("dirigente", "viewer"):
+        _du = await db.users.find_one({"id": user_id}, {"_id": 0, "linked_parent_user_id": 1})
+        _lpid = (_du or {}).get("linked_parent_user_id")
+        if _lpid:
+            _par = await db.users.find_one({"id": _lpid}, {"_id": 0, "id": 1, "email": 1})
+            if _par and _par.get("id") != user_id:
+                linked.append({
+                    "user_id": _par["id"],
+                    "role": "parent",
+                    "email": _par.get("email", ""),
+                    "label": "Modalità Genitore",
+                })
     return {"current_role": role, "linked_accounts": linked}
 
 
@@ -19376,6 +19459,162 @@ async def switch_to_linked_account(data: dict, current_user = Depends(get_curren
         f"→ {target['id']} ({target.get('role')})"
     )
     return {"token": new_token, "role": target.get("role"), "user_id": target["id"]}
+
+
+@api_router.post("/admin/parents/{parent_user_id}/promote-to-dirigente")
+async def promote_parent_to_dirigente(parent_user_id: str, current_user = Depends(get_current_user)):
+    """🆕 24/08/2026 — PROPONE il ruolo DIRIGENTE a un GENITORE esistente,
+    mantenendo lo stesso login (dual-role genitore↔dirigente). Crea un account
+    dirigente collegato IN ATTESA DI ACCETTAZIONE (`link_status='pending'`).
+    Il collegamento diventa attivo (e compare "Passa a Modalità Dirigente") SOLO
+    dopo che il genitore ACCETTA l'incarico dalla propria dashboard.
+    Rispecchia la promozione Atleta→Coach ma con accettazione dell'interessato."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo gli admin possono promuovere un genitore a dirigente")
+
+    parent = await db.users.find_one({"id": parent_user_id})
+    if not parent:
+        raise HTTPException(status_code=404, detail="Genitore non trovato")
+    if parent.get("role") != "parent":
+        raise HTTPException(status_code=400, detail="L'utente selezionato non è un genitore")
+    if parent.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Il genitore appartiene a un'altra società")
+
+    # Già promosso e accettato?
+    if parent.get("linked_dirigente_user_id"):
+        existing = await db.users.find_one({"id": parent["linked_dirigente_user_id"]})
+        if existing and existing.get("link_status") != "pending":
+            raise HTTPException(status_code=400, detail="Questo genitore è già anche Dirigente")
+
+    # Proposta già inviata e in attesa di accettazione?
+    pending_alias = await db.users.find_one(
+        {"linked_parent_user_id": parent_user_id, "role": {"$in": ["dirigente", "viewer"]}, "link_status": "pending"}
+    )
+    if pending_alias:
+        return {
+            "message": "Proposta già inviata: in attesa che il genitore accetti l'incarico di Dirigente.",
+            "dirigente_user_id": pending_alias["id"],
+            "status": "pending",
+        }
+    active_alias = await db.users.find_one(
+        {"linked_parent_user_id": parent_user_id, "role": {"$in": ["dirigente", "viewer"]}, "link_status": {"$ne": "pending"}}
+    )
+    if active_alias:
+        await db.users.update_one({"id": parent_user_id}, {"$set": {"linked_dirigente_user_id": active_alias["id"]}})
+        return {"message": "Genitore già dirigente (collegamento ripristinato).", "dirigente_user_id": active_alias["id"], "status": "active"}
+
+    parent_email = (parent.get("email") or "").lower().strip()
+    if not parent_email:
+        raise HTTPException(status_code=400, detail="Genitore senza email — impossibile creare l'account dirigente collegato")
+
+    dirigente_user_id = str(uuid.uuid4()).replace("-", "")[:24]
+    dir_doc = {
+        "id": dirigente_user_id,
+        "email": f"{parent_email}#dirigente",  # alias interno (login sempre con l'email reale del genitore)
+        "role": "dirigente",
+        "full_name": parent.get("full_name", ""),
+        "first_name": parent.get("first_name", ""),
+        "last_name": parent.get("last_name", ""),
+        "fiscal_code": parent.get("fiscal_code", ""),
+        "date_of_birth": parent.get("date_of_birth"),
+        "place_of_birth": parent.get("place_of_birth"),
+        "country_of_birth": parent.get("country_of_birth"),
+        "gender": parent.get("gender"),
+        "address": parent.get("address"),
+        "city": parent.get("city"),
+        "postal_code": parent.get("postal_code"),
+        "province": parent.get("province"),
+        "phone": parent.get("phone"),
+        "society_id": parent.get("society_id"),
+        "status": "approved",
+        "link_status": "pending",  # diventa "active" quando il genitore accetta
+        "password_hash": hash_password(uuid.uuid4().hex),  # random, mai usata (login via switch)
+        "linked_parent_user_id": parent_user_id,
+        "promoted_from_parent_id": parent_user_id,
+        "promoted_at": datetime.utcnow(),
+        "promoted_by": current_user["id"],
+        "promoted_by_name": current_user.get("full_name", "Amministrazione"),
+        "created_at": datetime.utcnow(),
+        "privacy_accepted": False,
+    }
+    await db.users.insert_one(dir_doc)
+    # NB: NON impostiamo `linked_dirigente_user_id` finché il genitore non accetta.
+    await db.users.update_one({"id": parent_user_id}, {"$set": {"pending_dirigente_user_id": dirigente_user_id}})
+    invalidate_auth_cache(parent_user_id)
+
+    logging.info(f"[PROMOTE-DIRIGENTE] Proposta incarico Dirigente al genitore {parent_user_id} (alias={dirigente_user_id}) da admin {current_user['id']}")
+    return {
+        "message": "Proposta inviata al genitore. Dovrà accettare l'incarico di Dirigente dalla propria dashboard.",
+        "dirigente_user_id": dirigente_user_id,
+        "status": "pending",
+    }
+
+
+@api_router.get("/parent/dirigente-proposal")
+async def get_parent_dirigente_proposal(current_user = Depends(get_current_user)):
+    """🆕 Ritorna la proposta di incarico Dirigente in attesa per il genitore loggato."""
+    if current_user.get("role") != "parent":
+        return {"pending": False}
+    pid = current_user.get("pending_dirigente_user_id")
+    if not pid:
+        return {"pending": False}
+    dir_doc = await db.users.find_one(
+        {"id": pid, "link_status": "pending"},
+        {"_id": 0, "id": 1, "promoted_by_name": 1, "promoted_at": 1},
+    )
+    if not dir_doc:
+        return {"pending": False}
+    return {
+        "pending": True,
+        "dirigente_user_id": dir_doc["id"],
+        "proposed_by_name": dir_doc.get("promoted_by_name", "Amministrazione"),
+        "proposed_at": dir_doc.get("promoted_at"),
+    }
+
+
+@api_router.post("/parent/dirigente-proposal/accept")
+async def accept_parent_dirigente_proposal(current_user = Depends(get_current_user)):
+    """🆕 Il genitore ACCETTA l'incarico di Dirigente: attiva il collegamento
+    dual-role. Da questo momento vedrà "Passa a Modalità Dirigente"."""
+    if current_user.get("role") != "parent":
+        raise HTTPException(status_code=403, detail="Solo un genitore può accettare l'incarico")
+    pid = current_user.get("pending_dirigente_user_id")
+    if not pid:
+        raise HTTPException(status_code=404, detail="Nessuna proposta di incarico in attesa")
+    dir_doc = await db.users.find_one({"id": pid})
+    if not dir_doc or dir_doc.get("link_status") != "pending":
+        # Pulizia difensiva
+        await db.users.update_one({"id": current_user["id"]}, {"$unset": {"pending_dirigente_user_id": ""}})
+        raise HTTPException(status_code=404, detail="Proposta non più valida")
+    now = datetime.utcnow()
+    await db.users.update_one(
+        {"id": pid},
+        {"$set": {"link_status": "active", "accepted_at": now}},
+    )
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {"$set": {"linked_dirigente_user_id": pid}, "$unset": {"pending_dirigente_user_id": ""}},
+    )
+    invalidate_auth_cache(current_user["id"])
+    logging.info(f"[PROMOTE-DIRIGENTE] Genitore {current_user['id']} HA ACCETTATO l'incarico Dirigente (alias={pid})")
+    return {"message": "Hai accettato l'incarico di Dirigente. Ora puoi passare alla Modalità Dirigente.", "dirigente_user_id": pid}
+
+
+@api_router.post("/parent/dirigente-proposal/reject")
+async def reject_parent_dirigente_proposal(current_user = Depends(get_current_user)):
+    """🆕 Il genitore RIFIUTA l'incarico di Dirigente: elimina l'account collegato in attesa."""
+    if current_user.get("role") != "parent":
+        raise HTTPException(status_code=403, detail="Solo un genitore può rifiutare l'incarico")
+    pid = current_user.get("pending_dirigente_user_id")
+    if not pid:
+        raise HTTPException(status_code=404, detail="Nessuna proposta di incarico in attesa")
+    dir_doc = await db.users.find_one({"id": pid})
+    if dir_doc and dir_doc.get("link_status") == "pending":
+        await db.users.delete_one({"id": pid})
+    await db.users.update_one({"id": current_user["id"]}, {"$unset": {"pending_dirigente_user_id": ""}})
+    invalidate_auth_cache(current_user["id"])
+    logging.info(f"[PROMOTE-DIRIGENTE] Genitore {current_user['id']} HA RIFIUTATO l'incarico Dirigente (alias={pid})")
+    return {"message": "Hai rifiutato l'incarico di Dirigente."}
 
 
 @api_router.post("/admin/athletes/{athlete_id}/promote-to-coach")

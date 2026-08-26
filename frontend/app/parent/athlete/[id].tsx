@@ -2086,32 +2086,14 @@ export default function AthleteDetail() {
                 {athlete.trial_document_generated ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
                     <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
-                    <Text style={{ fontSize: 13, color: '#4CAF50', fontWeight: '600' }}>Dichiarazione di prova firmata</Text>
+                    <Text style={{ fontSize: 13, color: '#4CAF50', fontWeight: '600' }}>Prova autorizzata in fase di iscrizione</Text>
                   </View>
                 ) : (
                   <Text style={{ fontSize: 12, color: '#6A1B9A', lineHeight: 18 }}>
-                    Il periodo di prova inizier{'à'} automaticamente nel momento in cui {athlete.first_name || athlete.full_name?.split(' ').pop() || ''} registrer{'à'} la sua prima presenza in palestra, con la scansione del suo codice QR da parte del coach.{'\n'}Per poter partecipare, dovr{'à'} avere la dichiarazione di prova firmata da un genitore.{'\n'}Per evitare dimenticanze, ti consigliamo di firmare la dichiarazione sin da ora.
+                    Il periodo di prova inizier{'à'} automaticamente nel momento in cui {athlete.first_name || athlete.full_name?.split(' ').pop() || ''} registrer{'à'} la sua prima presenza in palestra, con la scansione del suo codice QR da parte del coach.{'\n'}Ricorda di caricare il certificato medico dalla scheda dell'atleta.
                   </Text>
                 )}
               </View>
-              {!athlete.trial_document_generated && (
-                <TouchableOpacity
-                  style={{
-                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: '#EDE7F6', paddingVertical: 12, borderRadius: 10, gap: 8,
-                  }}
-                  onPress={() => {
-                    setTrialSignature(null);
-                    setShowTrialSignModal(true);
-                  }}
-                  data-testid="trial-download-document-button"
-                >
-                  <Ionicons name="create" size={18} color="#7B1FA2" />
-                  <Text style={{ fontWeight: '600', color: '#7B1FA2', fontSize: 14 }}>
-                    Firma Dichiarazione di Prova
-                  </Text>
-                </TouchableOpacity>
-              )}
             </>
           )}
 
@@ -2173,7 +2155,7 @@ export default function AthleteDetail() {
                 {athlete.trial_document_generated && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
                     <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-                    <Text style={{ fontSize: 13, color: '#4CAF50', fontWeight: '600' }}>Dichiarazione di prova firmata</Text>
+                    <Text style={{ fontSize: 13, color: '#4CAF50', fontWeight: '600' }}>Prova autorizzata in fase di iscrizione</Text>
                   </View>
                 )}
               </View>

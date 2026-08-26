@@ -29,6 +29,8 @@ export default function RegisterAthlete() {
   const [consentPrivacyViewed, setConsentPrivacyViewed] = useState(false);
   const [consentImagesInternal, setConsentImagesInternal] = useState(false);
   const [consentImagesPromo, setConsentImagesPromo] = useState(false);
+  // 🆕 24/08/2026 — Consenso alla prova (minori): raccolto qui, niente firma separata dopo
+  const [trialAuthorized, setTrialAuthorized] = useState(false);
   
   // Dati Anagrafici
   const [firstName, setFirstName] = useState('');
@@ -254,6 +256,12 @@ export default function RegisterAthlete() {
       return;
     }
 
+    // 🆕 24/08/2026 — Minorenni: consenso del genitore allo svolgimento della prova (obbligatorio)
+    if (isMinor && !trialAuthorized) {
+      showAlert('Errore', 'Devi autorizzare lo svolgimento del periodo di prova per iscrivere il minore.');
+      return;
+    }
+
     setLoading(true);
     try {
       const fullName = `${lastName} ${firstName}`;
@@ -292,11 +300,13 @@ export default function RegisterAthlete() {
         consent_privacy_viewed: isMinor ? false : consentPrivacyViewed,
         consent_images_internal: isMinor ? null : consentImagesInternal,
         consent_images_promo: isMinor ? null : consentImagesPromo,
+        // 🆕 24/08/2026 — Minorenni: consenso alla prova raccolto ora (niente firma separata dopo)
+        trial_authorization: isMinor ? trialAuthorized : null,
         data_password: dataPassword || null,
       });
       
       const successMsg = isMinor
-        ? 'Atleta registrato per il periodo di prova! Ora carica il certificato medico e firma la dichiarazione di inizio prova dalla sua scheda.'
+        ? 'Atleta registrato per il periodo di prova! Ora carica il certificato medico dalla sua scheda. La prova partirà alla prima scansione del QR in palestra.'
         : 'Atleta registrato con successo! Troverai il nuovo atleta nella tua area personale.';
       
       showAlert('Successo', successMsg, () => router.replace('/parent'));
@@ -704,13 +714,32 @@ export default function RegisterAthlete() {
               <View style={{ flex: 1, marginLeft: 10 }}>
                 <Text style={styles.trialInfoTitle}>Iscrizione con periodo di prova (7 giorni)</Text>
                 <Text style={styles.trialInfoText}>
-                  Dopo la registrazione: carica il certificato medico e firma la
-                  dichiarazione di inizio prova. La prova parte alla prima scansione del
-                  QR da parte del coach. Al termine potrai firmare la privacy per confermare
-                  l'iscrizione. Nessuna firma privacy è richiesta ora.
+                  Dopo la registrazione: carica il certificato medico dalla scheda
+                  dell'atleta. La prova parte alla prima scansione del QR da parte del
+                  coach. Al termine potrai firmare la privacy per confermare l'iscrizione.
+                  Nessuna firma privacy è richiesta ora.
                 </Text>
               </View>
             </View>
+
+            {/* 🆕 24/08/2026 — Consenso del genitore alla PROVA (obbligatorio, raccolto qui:
+                sostituisce la vecchia "Dichiarazione di Prova" da firmare dopo). */}
+            <TouchableOpacity
+              style={styles.checkboxRow}
+              onPress={() => setTrialAuthorized(!trialAuthorized)}
+              testID="trial-authorization-checkbox"
+            >
+              <View style={[styles.checkbox, trialAuthorized && styles.checkboxChecked]}>
+                {trialAuthorized && <Ionicons name="checkmark" size={16} color="#fff" />}
+              </View>
+              <View style={styles.checkboxTextContainer}>
+                <Text style={styles.checkboxLabel}>Autorizzo lo svolgimento del periodo di prova *</Text>
+                <Text style={styles.checkboxSubtext}>
+                  In qualità di genitore/esercente la responsabilità genitoriale, autorizzo
+                  {firstName ? ` ${firstName}` : ' il minore'} a svolgere il periodo di prova gratuito (obbligatorio)
+                </Text>
+              </View>
+            </TouchableOpacity>
 
             {/* 🆕 Domanda tesseramento (solo minorenni) → determina obbligo certificato medico */}
             <View style={styles.alreadyRegBox} testID="already-registered-question">

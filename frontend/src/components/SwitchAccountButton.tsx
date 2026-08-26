@@ -56,7 +56,8 @@ export default function SwitchAccountButton() {
       // Redirect al dashboard del nuovo ruolo
       const target = newRole === 'coach' ? '/coach'
         : newRole === 'athlete' ? '/athlete'
-        : newRole === 'dirigente' ? '/dirigente'
+        : newRole === 'dirigente' || newRole === 'viewer' ? '/dirigente'
+        : newRole === 'parent' ? '/parent'
         : '/';
       router.replace(target);
     } catch (e: any) {
@@ -69,11 +70,15 @@ export default function SwitchAccountButton() {
   // Colori in base al ruolo target
   const palette = linked.role === 'coach'
     ? { bg: '#E3F2FD', border: '#1976D2', text: '#1976D2', icon: 'school' as const }
+    : (linked.role === 'dirigente' || linked.role === 'viewer')
+    ? { bg: '#E0F7FA', border: '#00838F', text: '#00838F', icon: 'briefcase' as const }
+    : linked.role === 'parent'
+    ? { bg: '#F3E5F5', border: '#7B1FA2', text: '#7B1FA2', icon: 'people' as const }
     : { bg: '#FFF3E0', border: '#E65100', text: '#E65100', icon: 'person' as const };
 
   return (
     <TouchableOpacity
-      data-testid="switch-account-btn"
+      testID="switch-account-btn"
       onPress={handleSwitch}
       disabled={switching}
       style={{

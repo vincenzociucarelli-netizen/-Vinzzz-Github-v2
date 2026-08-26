@@ -36,6 +36,8 @@ interface Parent {
   created_at: string;
   approved_at?: string;
   phone?: string;
+  linked_dirigente_user_id?: string;
+  pending_dirigente_user_id?: string;
 }
 
 export default function ParentsScreen() {
@@ -231,6 +233,30 @@ export default function ParentsScreen() {
     setActionModalVisible(false);
   };
 
+  const handlePromoteToDirigente = async (parent: Parent) => {
+    setActionModalVisible(false);
+    const confirmed = Platform.OS === 'web'
+      ? window.confirm(`Proporre a ${parent.full_name} l'incarico di Dirigente?\n\nIl genitore riceverà una proposta e dovrà ACCETTARLA dalla propria dashboard. Solo dopo l'accettazione potrà passare alla Modalità Dirigente con lo stesso login.`)
+      : await new Promise((resolve) => {
+          Alert.alert(
+            'Promuovi a Dirigente',
+            `Proporre a ${parent.full_name} l'incarico di Dirigente? Il genitore dovrà accettarlo dalla propria dashboard.`,
+            [
+              { text: 'Annulla', onPress: () => resolve(false), style: 'cancel' },
+              { text: 'Proponi', onPress: () => resolve(true) },
+            ]
+          );
+        });
+    if (!confirmed) return;
+    try {
+      const res = await api.post(`/admin/parents/${parent.id}/promote-to-dirigente`);
+      showAlert('Proposta inviata', res.data?.message || 'Proposta di incarico Dirigente inviata al genitore.');
+      await loadData();
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Promozione fallita');
+    }
+  };
+
   const openActionModal = (parent: Parent) => {
     setSelectedParent(parent);
     setActionModalVisible(true);
@@ -324,7 +350,7 @@ export default function ParentsScreen() {
           <Text style={styles.statusText}>{getStatusLabel(item.status)}</Text>
         </View>
       </View>
-      <TouchableOpacity onPress={() => openActionModal(item)}>
+      <TouchableOpacity onPress={() => openActionModal(item)} testID={`parent-actions-${item.id}`}>
         <Ionicons name="ellipsis-vertical" size={20} color="#999" />
       </TouchableOpacity>
     </TouchableOpacity>
@@ -679,7 +705,29 @@ export default function ParentsScreen() {
               <Ionicons name="trash" size={20} color="#fff" />
               <Text style={styles.modalBtnText}>Elimina</Text>
             </TouchableOpacity>
-            
+
+            {/* 🆕 Promozione Genitore → Dirigente (con accettazione dell'interessato) */}
+            {selectedParent?.linked_dirigente_user_id ? (
+              <View style={[styles.modalBtn, { backgroundColor: '#E8F5E9', borderWidth: 1, borderColor: '#2E7D32' }]}>
+                <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
+                <Text style={[styles.modalBtnText, { color: '#2E7D32' }]}>Già Dirigente</Text>
+              </View>
+            ) : selectedParent?.pending_dirigente_user_id ? (
+              <View style={[styles.modalBtn, { backgroundColor: '#FFF3E0', borderWidth: 1, borderColor: '#E65100' }]}>
+                <Ionicons name="hourglass" size={20} color="#E65100" />
+                <Text style={[styles.modalBtnText, { color: '#E65100' }]}>In attesa di accettazione</Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: '#00838F' }]}
+                onPress={() => selectedParent && handlePromoteToDirigente(selectedParent)}
+                testID="promote-to-dirigente-btn"
+              >
+                <Ionicons name="briefcase" size={20} color="#fff" />
+                <Text style={styles.modalBtnText}>Promuovi a Dirigente</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               style={[styles.modalBtn, { backgroundColor: '#9C27B0' }]}
               onPress={() => {

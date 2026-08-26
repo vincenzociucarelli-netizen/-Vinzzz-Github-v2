@@ -59,6 +59,16 @@ SENDER_NAME=RegistraTEAM
 
 ## Status - Completed
 
+### 26/08/2026 - Promozione Genitore→Dirigente CON ACCETTAZIONE + tap nome nel Registro Presenze (VERIFICATO iter_117 backend 10/10, iter_118 frontend PASS)
+- **Dual-role Genitore↔Dirigente con accettazione dell'interessato**: l'admin PROPONE l'incarico Dirigente a un genitore (pulsante "Promuovi a Dirigente" nel menu azioni di `admin/parents.tsx`). Viene creato un account dirigente collegato con `link_status="pending"` e sul genitore `pending_dirigente_user_id` (NON `linked_dirigente_user_id`). Il collegamento diventa attivo SOLO dopo che il genitore ACCETTA dalla propria dashboard.
+  - Backend (`server.py`): `POST /admin/parents/{id}/promote-to-dirigente` ora ritorna `status:"pending"`; nuovi `GET /parent/dirigente-proposal`, `POST /parent/dirigente-proposal/accept`, `POST /parent/dirigente-proposal/reject`. `get_current_user` e `GET /users/parents` estesi con `pending_dirigente_user_id`/`linked_dirigente_user_id`. `invalidate_auth_cache` chiamata in promote/accept/reject.
+  - Frontend: nuovo `src/components/DirigenteProposalBanner.tsx` (banner Accetta/Rifiuta su `/parent`), `SwitchAccountButton` montato su `/parent` (con remount via `switchKey` dopo accept) e su `/dirigente`; palette/redirect estesi per dirigente/genitore. `admin/parents.tsx` mostra 3 stati: "Promuovi a Dirigente" / "In attesa di accettazione" / "Già Dirigente".
+- **Tap sul nome atleta nel Registro Presenze → profilo**: in `admin/team/[id]/attendances.tsx` (→ `/admin/athlete/{id}`) e `coach/team/[id]/attendances.tsx` (→ `/coach/athlete/{id}`) il nome è ora un link (sottolineato, chevron, testID `open-athlete-{id}`).
+- Nota testID: convertiti `data-testid`→`testID` sui nuovi TouchableOpacity (RN-Web forwarda solo `testID`).
+- Genitore di test `armida.raschi@gmail.com` ripristinato a stato pulito dopo il test.
+- **Deploy**: Frontend + backend.
+
+
 ### 01/08/2026 (parte 8) - Menu campionati raggruppato + nascondi FIPAV per coach minivolley
 - **Menu a tendina raggruppato (`FipavAthleteRulesPanel.tsx`)**: nel Registro Presenze il selettore campionato ora mostra due gruppi con intestazioni: "── Campionati di Serie ──" (Serie C, Serie D, 1^ Divisione, **2^ Divisione**) e "── Campionati di Categoria ──" (Under 12/13/14/15/17/19). Le intestazioni (value `__hdr_*`) non sono selezionabili. Eventuali campionati extra dal calendario compaiono sotto "── Altri (da calendario) ──". Classificazione invariata: solo Serie C/D/1^ Divisione contano come Serie Superiore; 2^ Divisione e Under → categoria (contano solo per le 3 gare settimanali).
 - **Nascondi FIPAV per coach minivolley**: nella vista coach (`coach/athlete/[id].tsx`, readOnly) il pannello Regole FIPAV ora si nasconde del tutto se l'atleta non è soggetto ad alcuna regola (`!eligibleUpperLeague && !eligibleU17`) — così i coach del minivolley (bimbi troppo piccoli, sempre non soggetti) non vedono regole irrilevanti. In vista admin resta visibile (con "non soggetto") per supervisione.
@@ -1188,4 +1198,14 @@ Richiesta utente: mostrare il motivo dell'ATTESA anche al genitore/atleta così 
 - Frontend home atleta (`app/athlete/index.tsx`): sostituiti i 2 banner ad-hoc (privacy/certificato) con UN banner unico "🎯 Per essere «in attività» ti manca ancora: …" (tocca → firma privacy se manca, altrimenti Anagrafica).
 - Frontend genitore (`app/parent/athlete/[id].tsx`): banner "🎯 Per rendere attivo <Nome> manca ancora: …" sotto la card profilo (tocca → tab "Da fare").
 Verificato via screenshot: atleta 18+ (pending_certificate) e genitore del minore MAURI LENA vedono il motivo corretto.
+
+
+
+### 24/08/2026 — Consenso alla PROVA raccolto in fase di iscrizione (minori) — niente firma separata
+Scelta utente (1c): il consenso del genitore allo svolgimento della prova si raccoglie all'iscrizione con una spunta obbligatoria, eliminando la "Dichiarazione di Prova" da firmare dopo (i genitori "sbuffano" per le firme). La prova NON è automatica all'iscrizione e NON è bloccata da firma: parte alla 1ª scansione QR. Il vero obbligo di legge resta il certificato medico.
+- Backend: `AthleteCreate.trial_authorization` (bool). In `create_athlete` (nuovo + riattivazione), se minore e consenso dato → salva consenso `consents.trial_authorization` (timestamp/IP/parent_id) + `consent_history`, imposta `trial_document_generated=True` e `trial_authorized_at_registration=True`. Verificato via API.
+- Frontend `app/parent/register-athlete.tsx`: checkbox obbligatoria "Autorizzo lo svolgimento del periodo di prova *" (solo minori); rimosso il riferimento alla firma della dichiarazione; invia `trial_authorization`.
+- Frontend `app/parent/athlete/[id].tsx`: rimosso pulsante "Firma Dichiarazione di Prova"; etichetta → "Prova autorizzata in fase di iscrizione"; testo card senza "dovrà firmare la dichiarazione".
+- Frontend `app/athlete/index.tsx`: rimosso il blocco "Dichiarazione di Prova" (era per adulti, ora dead-code: i 18+ non hanno prova).
+NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungibile dal genitore.
 

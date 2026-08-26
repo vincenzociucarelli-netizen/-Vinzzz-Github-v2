@@ -222,7 +222,15 @@ export default function CoachTeamAttendances() {
               <View key={athlete.athlete_id} style={styles.athleteCard}>
                 <View style={styles.athleteInfo}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={styles.athleteName}>{athlete.athlete_name}</Text>
+                    <TouchableOpacity
+                      onPress={() => router.push(`/coach/athlete/${athlete.athlete_id}`)}
+                      hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                      style={{ flexDirection: 'row', alignItems: 'center' }}
+                      testID={`open-athlete-${athlete.athlete_id}`}
+                    >
+                      <Text style={[styles.athleteName, { color: '#1565C0', textDecorationLine: 'underline' }]}>{athlete.athlete_name}</Text>
+                      <Ionicons name="chevron-forward" size={16} color="#1565C0" style={{ marginLeft: 2 }} />
+                    </TouchableOpacity>
                     {athlete.status === 'trial' && (
                       <View style={{ backgroundColor: '#F3E5F5', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
                         <Text style={{ fontSize: 10, fontWeight: '700', color: '#9C27B0' }}>In prova</Text>

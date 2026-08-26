@@ -6,6 +6,7 @@ import DirigenteTabBar from '../../src/components/dirigente/DirigenteTabBar';
 import GuideButton from '../../src/components/GuideButton';
 import FirstLoginGuideHint from '../../src/components/FirstLoginGuideHint';
 import RoleChangePrompt from '../../src/components/RoleChangePrompt';
+import SwitchAccountButton from '../../src/components/SwitchAccountButton';
 import {
   View,
   Text,
@@ -286,6 +287,9 @@ export default function DirigenteIndex() {
       >
         {/* 🆕 09/08/2026 — Proposta cambio ruolo dall'admin (accetta/rifiuta) */}
         <RoleChangePrompt />
+
+        {/* 🆕 Dual-role genitore↔dirigente: torna alla Modalità Genitore */}
+        <SwitchAccountButton />
 
         {/* Admin Switch Card - only for admin users */}
         {user?.role === 'admin' && (
