@@ -7705,6 +7705,13 @@ async def sync_fipav_matches(current_user = Depends(get_current_user)):
             new_home_away = "home" if is_home else "away"
             if new_home_away != existing.get("home_away"):
                 update_fields["home_away"] = new_home_away
+
+            # 🆕 Aggiorna la città della gara (solo città, no palestra/indirizzo)
+            new_city = (scraped.venue_city or "").strip()
+            if new_city and new_city != (existing.get("venue") or "").strip():
+                update_fields["venue"] = new_city
+                change_details["venue_old"] = existing.get("venue") or "—"
+                change_details["venue_new"] = new_city
             
             if update_fields:
                 update_fields["updated_at"] = datetime.utcnow()
@@ -8088,7 +8095,8 @@ async def preview_federation_import(config: dict, current_user = Depends(get_cur
                     "date": m.date.isoformat(),
                     "home_team": m.home_team,
                     "away_team": m.away_team,
-                    "venue": m.venue,
+                    "venue": m.venue_city or m.venue,
+                    "venue_city": m.venue_city,
                     "result": m.result,
                     "championship": m.championship,
                     "giornata": m.giornata
@@ -8123,7 +8131,8 @@ async def preview_federation_import(config: dict, current_user = Depends(get_cur
                     "date": m.date.isoformat(),
                     "home_team": m.home_team,
                     "away_team": m.away_team,
-                    "venue": m.venue,
+                    "venue": m.venue_city or m.venue,
+                    "venue_city": m.venue_city,
                     "result": m.result,
                     "championship": m.championship,
                     "giornata": m.giornata
@@ -8240,6 +8249,7 @@ async def import_from_federation(config: dict, current_user = Depends(get_curren
                     opponent=opponent,
                     home_away="home" if is_home else "away",
                     result=scraped_match.result,
+                    venue=(scraped_match.venue_city or "").strip(),  # 🆕 Solo la città della gara
                     notes=f"Campionato: {scraped_match.championship}" if scraped_match.championship else None
                 )
                 

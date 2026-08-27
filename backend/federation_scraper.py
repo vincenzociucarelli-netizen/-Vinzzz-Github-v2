@@ -23,6 +23,7 @@ class ScrapedMatch:
     result: Optional[str] = None
     championship: Optional[str] = None
     giornata: Optional[str] = None
+    venue_city: Optional[str] = None  # 🆕 Solo città/località della gara (senza palestra/indirizzo)
 
 
 class FIPAVScraper:
@@ -294,7 +295,9 @@ class FIPAVScraper:
                             result = None
                         
                         # Extract venue from info icon tooltip
+                        # Formato tooltip FIPAV: <p><b>PALESTRA</b><br/>CITTA' PROV<br/>INDIRIZZO</p>
                         venue = None
+                        venue_city = None
                         info_imgs = row.find_all('img', {'alt': 'info'})
                         for img in info_imgs:
                             title = img.get('title', '')
@@ -303,6 +306,17 @@ class FIPAVScraper:
                                 venue_text = tooltip_soup.get_text(separator=', ').strip().strip(',').strip()
                                 if venue_text:
                                     venue = venue_text
+                                # 🆕 Città = seconda riga del tooltip (dopo la palestra, prima dell'indirizzo)
+                                lines = [ln.strip() for ln in tooltip_soup.get_text(separator='\n').split('\n') if ln.strip()]
+                                if len(lines) >= 2:
+                                    city_line = lines[1]
+                                elif lines:
+                                    city_line = lines[0]
+                                else:
+                                    city_line = None
+                                if city_line:
+                                    # Rimuovi la sigla provincia finale (es. " PG") per lasciare solo la città
+                                    venue_city = re.sub(r'\s+[A-Z]{2}$', '', city_line).strip() or city_line
                         
                         # Filter by society name if provided
                         if society_name:
@@ -318,6 +332,7 @@ class FIPAVScraper:
                             result=result,
                             giornata=giornata,
                             venue=venue,
+                            venue_city=venue_city,
                             championship=championship_name
                         )
                         matches.append(match)
@@ -498,13 +513,15 @@ class FIPScraper:
                                 if partita.get('citta_campo_gioco'):
                                     venue_parts.append(partita.get('citta_campo_gioco'))
                                 venue = ', '.join(venue_parts) if venue_parts else None
-                                
+                                venue_city = (partita.get('citta_campo_gioco') or None)
+
                                 match = ScrapedMatch(
                                     match_number=partita.get('numero_gara', f"FIP-{match_date.strftime('%Y%m%d%H%M')}"),
                                     date=match_date,
                                     home_team=home_team,
                                     away_team=away_team,
                                     venue=venue,
+                                    venue_city=venue_city,
                                     result=result,
                                     championship=codice_campionato,
                                     giornata=str(gior)
