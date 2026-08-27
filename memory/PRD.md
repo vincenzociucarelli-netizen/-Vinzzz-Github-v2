@@ -59,6 +59,12 @@ SENDER_NAME=RegistraTEAM
 
 ## Status - Completed
 
+### 27/08/2026 - BUGFIX "Genitore invisibile nella cartella Genitori" (verificato e2e via script)
+- **Causa**: gli atleti neo-iscritti (via `POST /athletes`) venivano creati SENZA `active_seasons`. La lista Genitori (`GET /users/parents`) mostra solo genitori collegati ad atleti con `active_seasons = stagione corrente` (o con fallback stagione), quindi un genitore che aveva appena iscritto la figlia minorenne spariva del tutto (caso reale: MARY MARCHESINI / figlia Martina Pignatta).
+- **Fix radice** (`create_athlete`): ogni atleta (nuovo o riattivato) riceve `active_seasons=[stagione corrente]`; il genitore che iscrive riceve la stagione corrente via `$addToSet`.
+- **Fix dati esistenti** (`GET /users/parents`): la query atleti ora include anche gli atleti non ritirati SENZA `active_seasons` (o lista vuota) e li auto-ripara aggiungendo la stagione corrente; di conseguenza il genitore collegato compare e viene a sua volta auto-riparato. Nessuna modifica frontend.
+
+
 ### 27/08/2026 - Converti PRE-ISCRIZIONE → ISCRIZIONE via invito genitore + fix luogo import calendario (VERIFICATO iter_119 frontend PASS, backend e2e OK)
 - **Invito all'iscrizione**: dal pannello admin Pre-iscrizioni (`/admin/preseason`), l'admin invita il genitore a completare l'iscrizione inserendone l'email. Riusa l'infrastruttura inviti (`athlete_invitations` + `/invite-register`).
   - Backend (`server.py`): nuovo `POST /preseason/responses/{id}/invite` (crea athlete_invitation con `from_preseason_response_id`, `is_minor` calcolato dalla data di nascita, invio email Brevo con messaggio dedicato: 3 allenamenti di prova, certificato medico + foto WhatsApp, adozione gestionale). La pre-iscrizione passa a `status='invited'`. Al completamento via invito, `register_via_invite` marca la response `status='converted'` con `converted_athlete_id`.

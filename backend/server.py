@@ -6561,11 +6561,31 @@ async def get_parents(current_user = Depends(get_current_user)):
     _cs = await _get_cs(db, society_id)
 
     # 1. Atleti attivi in stagione corrente + loro parent_id / second_parent_id
+    #    🐛 27/08/2026 — Includiamo anche gli atleti neo-iscritti SENZA active_seasons
+    #    (o lista vuota): un bug creava gli atleti senza stagione, facendo sparire il
+    #    genitore collegato dalla cartella Genitori. Escludiamo i ritirati/archiviati.
     current_athletes = await db.athletes.find(
-        {"society_id": society_id, "active_seasons": _cs},
-        {"_id": 0, "id": 1, "parent_id": 1, "second_parent_id": 1,
+        {"society_id": society_id, "is_withdrawn": {"$ne": True}, "$or": [
+            {"active_seasons": _cs},
+            {"active_seasons": {"$exists": False}},
+            {"active_seasons": {"$size": 0}},
+        ]},
+        {"_id": 0, "id": 1, "parent_id": 1, "second_parent_id": 1, "active_seasons": 1,
          "phone_father": 1, "phone_mother": 1, "phone": 1, "phone_athlete": 1},
     ).to_list(5000)
+
+    # Self-heal atleti neo-iscritti privi della stagione corrente (idempotente)
+    _ath_needing_season = [
+        a["id"] for a in current_athletes if _cs not in (a.get("active_seasons") or [])
+    ]
+    if _ath_needing_season:
+        try:
+            await db.athletes.update_many(
+                {"id": {"$in": _ath_needing_season}},
+                {"$addToSet": {"active_seasons": _cs}},
+            )
+        except Exception as _e:
+            logging.warning(f"[users/parents] self-heal athlete active_seasons failed: {_e}")
 
     linked_parent_ids: set = set()
     counts_dict: dict = {}
@@ -9019,7 +9039,13 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
     # Get society_id from the user's parent
     parent_user = await db.users.find_one({"id": current_user["id"]})
     society_id = parent_user.get("society_id") if parent_user else None
-    
+
+    # 🆕 27/08/2026 — BUGFIX "genitore invisibile": ogni atleta neo-iscritto DEVE avere
+    # active_seasons = [stagione corrente], altrimenti sparisce dai filtri stagione (atleti
+    # E genitori collegati). Prima veniva creato SENZA active_seasons.
+    from utils import get_current_season_for_society as _get_cs_create
+    _current_season_create = await _get_cs_create(db, society_id) if society_id else None
+
     # Check athlete limit (150 athletes until 30/06/2026)
     ATHLETE_LIMIT = 150
     LIMIT_END_DATE = datetime(2026, 6, 30, 23, 59, 59)
@@ -9100,7 +9126,11 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
             {"id": existing_athlete["id"]},
             {"$set": reactivate_data}
         )
-        
+        # 🆕 Assicura la stagione corrente su atleta + genitore (self-heal collegamento)
+        if _current_season_create:
+            await db.athletes.update_one({"id": existing_athlete["id"]}, {"$addToSet": {"active_seasons": _current_season_create}})
+            await db.users.update_one({"id": current_user["id"]}, {"$addToSet": {"active_seasons": _current_season_create}})
+
         updated = await db.athletes.find_one({"id": existing_athlete["id"]}, {"_id": 0})
         return Athlete(**updated)
     
@@ -9155,6 +9185,9 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
     athlete_dict = athlete.dict()
     athlete_dict["created_at"] = datetime.utcnow()
     athlete_dict["already_registered"] = _already_reg
+    # 🆕 Stagione corrente sull'atleta (evita "genitore invisibile" nella lista Genitori)
+    if _current_season_create:
+        athlete_dict["active_seasons"] = [_current_season_create]
     # 🆕 24/08/2026 — Consenso alla PROVA raccolto in fase di iscrizione (minori):
     # sostituisce la firma della "Dichiarazione di Prova" separata. Salviamo traccia
     # (timestamp/IP) e impostiamo trial_document_generated=True così l'onboarding
@@ -9181,6 +9214,10 @@ async def create_athlete(athlete_data: AthleteCreate, request_obj: Request, curr
         })
         athlete_dict["consent_history"] = _ta_hist
     await db.athletes.insert_one(athlete_dict)
+    # 🆕 Assicura la stagione corrente anche sul GENITORE che iscrive (così compare
+    # subito nella cartella Genitori dell'admin, senza attendere il self-heal).
+    if _current_season_create:
+        await db.users.update_one({"id": current_user["id"]}, {"$addToSet": {"active_seasons": _current_season_create}})
     
     
     # Notifica admin per nuova iscrizione atleta minore
