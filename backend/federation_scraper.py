@@ -306,17 +306,18 @@ class FIPAVScraper:
                                 venue_text = tooltip_soup.get_text(separator=', ').strip().strip(',').strip()
                                 if venue_text:
                                     venue = venue_text
-                                # 🆕 Città = seconda riga del tooltip (dopo la palestra, prima dell'indirizzo)
+                                # 🆕 Palestra + Città (senza indirizzo): "PALESTRA X - CITTA'"
                                 lines = [ln.strip() for ln in tooltip_soup.get_text(separator='\n').split('\n') if ln.strip()]
-                                if len(lines) >= 2:
-                                    city_line = lines[1]
-                                elif lines:
-                                    city_line = lines[0]
-                                else:
-                                    city_line = None
-                                if city_line:
-                                    # Rimuovi la sigla provincia finale (es. " PG") per lasciare solo la città
-                                    venue_city = re.sub(r'\s+[A-Z]{2}$', '', city_line).strip() or city_line
+                                gym_line = lines[0] if len(lines) >= 1 else None
+                                raw_city = lines[1] if len(lines) >= 2 else None
+                                city_clean = re.sub(r'\s+[A-Z]{2}$', '', raw_city).strip() if raw_city else None
+                                city_clean = city_clean or raw_city
+                                if gym_line and city_clean:
+                                    venue_city = f"{gym_line} - {city_clean}"
+                                elif gym_line:
+                                    venue_city = gym_line
+                                elif city_clean:
+                                    venue_city = city_clean
                         
                         # Filter by society name if provided
                         if society_name:
@@ -513,7 +514,9 @@ class FIPScraper:
                                 if partita.get('citta_campo_gioco'):
                                     venue_parts.append(partita.get('citta_campo_gioco'))
                                 venue = ', '.join(venue_parts) if venue_parts else None
-                                venue_city = (partita.get('citta_campo_gioco') or None)
+                                _gym = (partita.get('campo_gioco') or '').strip()
+                                _city = (partita.get('citta_campo_gioco') or '').strip()
+                                venue_city = ' - '.join([p for p in [_gym, _city] if p]) or None
 
                                 match = ScrapedMatch(
                                     match_number=partita.get('numero_gara', f"FIP-{match_date.strftime('%Y%m%d%H%M')}"),
