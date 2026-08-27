@@ -59,6 +59,13 @@ SENDER_NAME=RegistraTEAM
 
 ## Status - Completed
 
+### 27/08/2026 (v2) - CAUSA REALE "Genitore invisibile": migrazione all'avvio (verificato e2e con restart backend)
+- La migrazione one-shot `active_seasons` (startup) assegnava la stagione PRECEDENTE a QUALSIASI record senza `active_seasons`, incluse le iscrizioni NUOVE di questa stagione (che nascevano senza il campo per il bug in `create_athlete`/register). Al redeploy Render il backend riavviava → la migrazione archiviava atleta+genitore nella stagione vecchia → sparivano dalle liste correnti. Ecco perché il fix v1 (solo missing/empty) non bastava dopo il deploy.
+- **Fix migrazione** (startup, ~riga 39689): ora è `created_at`-aware — i record creati DOPO l'inizio della stagione corrente vanno in stagione CORRENTE, gli storici in PRECEDENTE. Aggiunto CORRETTIVO idempotente: i record creati in questa stagione ma erroneamente archiviati SOLO in `[prev]` vengono riportati in `[current]`. Ripara automaticamente i dati già danneggiati al primo riavvio.
+- Verificato: seeded genitore+atleta con `active_seasons=[prev]` creati oggi → dopo restart backend entrambi passano a `[current]` e il genitore compare in `/users/parents`.
+- IMPORTANTE per produzione: al prossimo redeploy Render la migrazione ripara automaticamente MARCHESINI MARY e casi simili.
+
+
 ### 27/08/2026 - BUGFIX "Genitore invisibile nella cartella Genitori" (verificato e2e via script)
 - **Causa**: gli atleti neo-iscritti (via `POST /athletes`) venivano creati SENZA `active_seasons`. La lista Genitori (`GET /users/parents`) mostra solo genitori collegati ad atleti con `active_seasons = stagione corrente` (o con fallback stagione), quindi un genitore che aveva appena iscritto la figlia minorenne spariva del tutto (caso reale: MARY MARCHESINI / figlia Martina Pignatta).
 - **Fix radice** (`create_athlete`): ogni atleta (nuovo o riattivato) riceve `active_seasons=[stagione corrente]`; il genitore che iscrive riceve la stagione corrente via `$addToSet`.

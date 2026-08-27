@@ -39686,7 +39686,37 @@ async def run_data_migrations():
                 }},
             )
 
-            # Migrazione: seed active_seasons alla stagione precedente (per user/athlete già esistenti).
+            # 🆕 27/08/2026 BUGFIX "genitore invisibile": la migrazione assegnava la
+            # stagione PRECEDENTE a QUALSIASI record senza active_seasons, comprese le
+            # iscrizioni NUOVE fatte in questa stagione (che nascevano senza il campo).
+            # Risultato: atleti appena iscritti e i loro genitori finivano archiviati
+            # nella stagione vecchia → sparivano dalle liste correnti.
+            # Ora distinguiamo in base a created_at: chi è stato creato DOPO l'inizio
+            # della stagione corrente entra nella stagione CORRENTE, gli altri (storici)
+            # nella precedente.
+            from datetime import datetime as _dt_mig
+            season_start_dt = None
+            try:
+                _cur_year = int(current_season.split("-")[0])
+                season_start_dt = _dt_mig(_cur_year, start_month, start_day)
+            except Exception:
+                season_start_dt = None
+
+            a_cur = a_prev = u_cur = u_prev = 0
+            if season_start_dt is not None:
+                # Nuove iscrizioni di QUESTA stagione senza campo → stagione CORRENTE
+                _r = await db.athletes.update_many(
+                    {"society_id": sid, "active_seasons": {"$exists": False}, "created_at": {"$gte": season_start_dt}},
+                    {"$set": {"active_seasons": [current_season]}},
+                )
+                a_cur = _r.modified_count
+                _r = await db.users.update_many(
+                    {"society_id": sid, "active_seasons": {"$exists": False}, "created_at": {"$gte": season_start_dt}},
+                    {"$set": {"active_seasons": [current_season]}},
+                )
+                u_cur = _r.modified_count
+
+            # Restanti record storici senza campo → stagione PRECEDENTE
             a_res = await db.athletes.update_many(
                 {"society_id": sid, "active_seasons": {"$exists": False}},
                 {"$set": {"active_seasons": [prev_season]}},
@@ -39695,10 +39725,28 @@ async def run_data_migrations():
                 {"society_id": sid, "active_seasons": {"$exists": False}},
                 {"$set": {"active_seasons": [prev_season]}},
             )
-            if a_res.modified_count or u_res.modified_count:
+            a_prev, u_prev = a_res.modified_count, u_res.modified_count
+
+            # 🩹 CORRETTIVO one-shot idempotente: record CREATI in questa stagione ma
+            # erroneamente archiviati SOLO nella stagione precedente (danneggiati dal bug
+            # prima di questo fix) → riportali nella stagione CORRENTE.
+            a_fix = u_fix = 0
+            if season_start_dt is not None:
+                _r = await db.athletes.update_many(
+                    {"society_id": sid, "active_seasons": [prev_season], "created_at": {"$gte": season_start_dt}},
+                    {"$set": {"active_seasons": [current_season]}},
+                )
+                a_fix = _r.modified_count
+                _r = await db.users.update_many(
+                    {"society_id": sid, "active_seasons": [prev_season], "created_at": {"$gte": season_start_dt}},
+                    {"$set": {"active_seasons": [current_season]}},
+                )
+                u_fix = _r.modified_count
+
+            if a_cur or a_prev or u_cur or u_prev or a_fix or u_fix:
                 logger.info(
-                    f"Migration active_seasons society={sid} prev={prev_season}: "
-                    f"athletes={a_res.modified_count}, users={u_res.modified_count}"
+                    f"Migration active_seasons society={sid} cur={current_season} prev={prev_season}: "
+                    f"athletes(cur={a_cur},prev={a_prev},fix={a_fix}), users(cur={u_cur},prev={u_prev},fix={u_fix})"
                 )
     except Exception as exc:
         logger.warning(f"Migration active_seasons failed: {exc}")
