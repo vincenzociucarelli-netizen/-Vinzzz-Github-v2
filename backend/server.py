@@ -8503,7 +8503,8 @@ async def import_selected_matches(config: dict, current_user = Depends(get_curre
                 date=match_date,
                 opponent=opponent,
                 home_away="home" if is_home else "away",
-                result=result if result and result != '-' else None
+                result=result if result and result != '-' else None,
+                venue=(match_data.get("venue_city") or match_data.get("venue") or "").strip()  # 🆕 Palestra + Città
             )
             
             await db.matches.insert_one(match.dict())
