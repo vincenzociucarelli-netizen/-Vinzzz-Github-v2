@@ -101,6 +101,9 @@ interface ResponseItem {
   notes: string;
   source: string;
   created_at: string;
+  status?: string;
+  email_parent?: string;
+  invited_email?: string;
 }
 
 interface Stats {
@@ -159,6 +162,10 @@ export default function PreseasonAdmin() {
   const [responses, setResponses] = useState<ResponseItem[]>([]);
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [selectedResponse, setSelectedResponse] = useState<ResponseItem | null>(null);
+  // 🆕 Invito all'iscrizione (converte pre-iscrizione → iscrizione via email al genitore)
+  const [inviteTarget, setInviteTarget] = useState<ResponseItem | null>(null);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviting, setInviting] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loadingResponses, setLoadingResponses] = useState(false);
   const [togglingReminders, setTogglingReminders] = useState<string | null>(null);
@@ -624,6 +631,34 @@ export default function PreseasonAdmin() {
     }
   };
 
+  // 🆕 Invito all'iscrizione: converte la pre-iscrizione in iscrizione inviando
+  // al genitore l'email con il link per completare la registrazione completa.
+  const openInvite = (r: ResponseItem) => {
+    setSelectedResponse(null);
+    setInviteEmail((r.email_parent || r.invited_email || '').trim());
+    setInviteTarget(r);
+  };
+
+  const submitInvite = async () => {
+    if (!inviteTarget) return;
+    const email = inviteEmail.trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      showAlert('Email non valida', 'Inserisci un indirizzo email valido del genitore.');
+      return;
+    }
+    setInviting(true);
+    try {
+      const res = await api.post(`/preseason/responses/${inviteTarget.id}/invite`, { email });
+      setResponses((prev) => prev.map((x) => x.id === inviteTarget.id ? { ...x, status: 'invited', invited_email: email } : x));
+      setInviteTarget(null);
+      showAlert(res.data?.email_sent === false ? 'Attenzione' : 'Invito inviato', res.data?.message || 'Invito inviato.');
+    } catch (err: any) {
+      showAlert('Errore', err.response?.data?.detail || 'Invio invito fallito');
+    } finally {
+      setInviting(false);
+    }
+  };
+
   const interestLabel = (level: string) => {
     switch (level) {
       case 'si': return { text: 'Interessato', color: '#2E7D32', bg: '#E8F5E9' };
@@ -1053,8 +1088,19 @@ export default function PreseasonAdmin() {
                     <Text style={{ fontSize: 14, fontWeight: '700', color: '#333' }}>
                       {r.last_name} {r.first_name}
                     </Text>
-                    <View style={{ backgroundColor: il.bg, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: il.color }}>{il.text}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      {r.status === 'converted' ? (
+                        <View style={{ backgroundColor: '#E8F5E9', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}>
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#2E7D32' }}>Iscritta</Text>
+                        </View>
+                      ) : r.status === 'invited' ? (
+                        <View style={{ backgroundColor: '#E3F2FD', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}>
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: '#1565C0' }}>Invitata</Text>
+                        </View>
+                      ) : null}
+                      <View style={{ backgroundColor: il.bg, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: il.color }}>{il.text}</Text>
+                      </View>
                     </View>
                   </View>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 6 }}>
@@ -1084,6 +1130,18 @@ export default function PreseasonAdmin() {
                     </View>
                   )}
                   {r.notes ? <Text style={{ fontSize: 11, color: '#aaa', marginTop: 4, fontStyle: 'italic' }}>Note: {r.notes}</Text> : null}
+                  {r.status !== 'converted' && (
+                    <TouchableOpacity
+                      testID={`preseason-quick-invite-${r.id}`}
+                      onPress={() => openInvite(r)}
+                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: r.status === 'invited' ? '#E3F2FD' : '#1565C0', borderRadius: 8, paddingVertical: 8, marginTop: 10 }}
+                    >
+                      <Ionicons name="person-add" size={15} color={r.status === 'invited' ? '#1565C0' : '#fff'} />
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: r.status === 'invited' ? '#1565C0' : '#fff' }}>
+                        {r.status === 'invited' ? 'Reinvia invito iscrizione' : 'Invita a iscriversi'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </TouchableOpacity>
               );
             })
@@ -1091,6 +1149,53 @@ export default function PreseasonAdmin() {
         </View>
         </ScrollView>
         </View>
+        </Modal>
+      )}
+
+      {/* 🆕 Modal Invito all'iscrizione (email genitore) */}
+      {inviteTarget && (
+        <Modal visible={true} animationType="fade" transparent onRequestClose={() => setInviteTarget(null)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+            <View style={{ backgroundColor: '#fff', borderRadius: 16, width: '100%', maxWidth: 440, padding: 20 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <Ionicons name="person-add" size={22} color="#1565C0" />
+                <Text style={{ fontSize: 17, fontWeight: '800', color: '#1565C0' }}>Invita a iscriversi</Text>
+              </View>
+              <Text style={{ fontSize: 13, color: '#555', lineHeight: 1.5 * 13, marginBottom: 14 }}>
+                Invieremo al genitore di <Text style={{ fontWeight: '700' }}>{inviteTarget.first_name} {inviteTarget.last_name}</Text> un'email
+                con il link per completare l'iscrizione (creazione account, consenso privacy e documenti).
+              </Text>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#333', marginBottom: 6 }}>Email del genitore</Text>
+              <TextInput
+                testID="preseason-invite-email"
+                value={inviteEmail}
+                onChangeText={setInviteEmail}
+                placeholder="genitore@email.it"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoCorrect={false}
+                style={{ borderWidth: 1, borderColor: '#CFD8DC', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, marginBottom: 16 }}
+              />
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity
+                  onPress={() => setInviteTarget(null)}
+                  disabled={inviting}
+                  style={{ flex: 1, backgroundColor: '#ECEFF1', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
+                >
+                  <Text style={{ color: '#546E7A', fontWeight: '700' }}>Annulla</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID="preseason-invite-send"
+                  onPress={submitInvite}
+                  disabled={inviting}
+                  style={{ flex: 1.4, backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, opacity: inviting ? 0.7 : 1 }}
+                >
+                  {inviting ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="send" size={16} color="#fff" />}
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>Invia invito</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
         </Modal>
       )}
 
@@ -1283,6 +1388,30 @@ export default function PreseasonAdmin() {
                     </TouchableOpacity>
                   );
                 })()}
+
+                {/* 🆕 Invito all'iscrizione / stato */}
+                {selectedResponse.status === 'converted' ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#E8F5E9', borderRadius: 10, paddingVertical: 12, marginTop: 8, borderWidth: 1, borderColor: '#2E7D32' }}>
+                    <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
+                    <Text style={{ color: '#2E7D32', fontWeight: '700', fontSize: 14 }}>Iscrizione completata</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    testID="preseason-invite-btn"
+                    onPress={() => openInvite(selectedResponse)}
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 14, marginTop: 8 }}
+                  >
+                    <Ionicons name="person-add" size={20} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>
+                      {selectedResponse.status === 'invited' ? 'Reinvia invito all\'iscrizione' : 'Invita a iscriversi'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {selectedResponse.status === 'invited' && selectedResponse.invited_email ? (
+                  <Text style={{ fontSize: 12, color: '#E65100', textAlign: 'center', marginTop: 6 }}>
+                    Invito inviato a {selectedResponse.invited_email} — in attesa che il genitore completi l'iscrizione
+                  </Text>
+                ) : null}
 
                 {/* Action buttons */}
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 8, marginBottom: 16 }}>

@@ -4084,6 +4084,13 @@ async def register_via_invite(data: InviteRegisterRequest):
             {"token": data.token},
             {"$set": {"status": "completed", "completed_at": datetime.now(timezone.utc).isoformat(), "athlete_id": athlete_id}}
         )
+        # 🆕 Se l'invito nasce da una pre-iscrizione, marcala come CONVERTITA (iscritta)
+        _preseason_rid = invitation.get("from_preseason_response_id")
+        if _preseason_rid:
+            await db.preseason_responses.update_one(
+                {"id": _preseason_rid},
+                {"$set": {"status": "converted", "converted_at": datetime.now(timezone.utc).isoformat(), "converted_athlete_id": athlete_id}}
+            )
         
         # Create notification for admin
         admin_user = await db.users.find_one({"society_id": society_id, "role": "admin"})
@@ -4189,6 +4196,13 @@ async def register_via_invite(data: InviteRegisterRequest):
             {"token": data.token},
             {"$set": {"status": "completed", "completed_at": datetime.now(timezone.utc).isoformat(), "athlete_id": athlete_id}}
         )
+        # 🆕 Se l'invito nasce da una pre-iscrizione, marcala come CONVERTITA (iscritta)
+        _preseason_rid = invitation.get("from_preseason_response_id")
+        if _preseason_rid:
+            await db.preseason_responses.update_one(
+                {"id": _preseason_rid},
+                {"$set": {"status": "converted", "converted_at": datetime.now(timezone.utc).isoformat(), "converted_athlete_id": athlete_id}}
+            )
         
         # Create notification for admin
         admin_user = await db.users.find_one({"society_id": society_id, "role": "admin"})
@@ -35079,6 +35093,7 @@ class PreseasonResponse(BaseModel):
     role_played: Optional[str] = None
     interest_level: str  # "si", "ci_penso", "no"
     notes: Optional[str] = None
+    email_parent: Optional[str] = None  # 🆕 Email genitore (per invito all'iscrizione)
 
 
 @api_router.post("/preseason/campaigns")
@@ -35831,6 +35846,7 @@ async def submit_public_preseason_response(campaign_id: str, data: PreseasonResp
         "role_played": data.role_played or "",
         "interest_level": data.interest_level,
         "notes": data.notes or "",
+        "email_parent": (data.email_parent or "").strip().lower(),
         "is_existing_athlete": False,
         "athlete_id": None,
         "created_at": datetime.now(timezone.utc),
@@ -35879,6 +35895,7 @@ async def submit_authenticated_preseason_response(campaign_id: str, data: Presea
         "role_played": data.role_played or "",
         "interest_level": data.interest_level,
         "notes": data.notes or "",
+        "email_parent": (data.email_parent or "").strip().lower(),
         "is_existing_athlete": True,
         "athlete_id": data.dict().get("athlete_id"),
         "user_id": current_user["id"],
@@ -36038,6 +36055,193 @@ async def convert_preseason_to_trial(response_id: str, current_user = Depends(ge
         "trial_start_date": trial_start.isoformat(),
         "trial_end_date": trial_end.isoformat(),
     }
+
+
+class PreseasonInviteRequest(BaseModel):
+    email: str
+
+
+def _parse_birthdate_any(s: str):
+    """Parse una data di nascita in formato gg/mm/aaaa o ISO (aaaa-mm-gg)."""
+    if not s:
+        return None
+    s = str(s).strip()
+    for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(s[:10], fmt)
+        except ValueError:
+            continue
+    try:
+        return datetime.fromisoformat(s.replace("Z", "+00:00")).replace(tzinfo=None)
+    except Exception:
+        return None
+
+
+@api_router.post("/preseason/responses/{response_id}/invite")
+async def invite_preseason_to_register(response_id: str, data: PreseasonInviteRequest, current_user = Depends(get_current_user)):
+    """🆕 Converte una PRE-ISCRIZIONE in ISCRIZIONE inviando al genitore un invito
+    via email per completare la registrazione completa (account, privacy GDPR, documenti).
+    Riusa l'infrastruttura di invito atleti (`athlete_invitations` + /invite-register)."""
+    if not _has_admin_or_coord_perm(current_user, "events"):
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+
+    email = (data.email or "").strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Email del genitore non valida")
+
+    response = await db.preseason_responses.find_one({"id": response_id})
+    if not response:
+        raise HTTPException(status_code=404, detail="Pre-iscrizione non trovata")
+    if response.get("status") == "converted":
+        raise HTTPException(status_code=400, detail="Pre-iscrizione già iscritta")
+    if response.get("status") in ("withdrawn_keep_contact", "withdrawn_full_delete"):
+        raise HTTPException(status_code=400, detail="Pre-iscrizione annullata, impossibile invitare")
+
+    society_id = response.get("society_id") or current_user.get("society_id", "")
+    society_settings = await db.settings.find_one({"society_id": society_id, "type": "society"})
+    society_name = (society_settings.get("name") if society_settings else "") or "la Società"
+    society_phone = (society_settings.get("phone") if society_settings else "") or ""
+    trial_max_days = (society_settings.get("trial_max_days", 7) if society_settings else 7)
+    trial_max_sessions = (society_settings.get("trial_max_sessions", 3) if society_settings else 3)
+
+    first_name = (response.get("first_name") or "").strip()
+    last_name = (response.get("last_name") or "").strip()
+    athlete_display = f"{first_name} {last_name}".strip() or "l'atleta"
+
+    # Determina se minorenne dalla data di nascita
+    dob = _parse_birthdate_any(response.get("birth_date"))
+    is_minor = True
+    if dob:
+        age = (datetime.now() - dob).days // 365
+        is_minor = age < 18
+
+    # Annulla eventuali inviti pendenti precedenti per questa email/società
+    await db.athlete_invitations.update_many(
+        {"email": email, "society_id": society_id, "status": "pending"},
+        {"$set": {"status": "cancelled"}},
+    )
+
+    token = secrets.token_urlsafe(32)
+    invitation = {
+        "id": str(ObjectId()),
+        "token": token,
+        "email": email,
+        "first_name": first_name,
+        "last_name": last_name,
+        "is_minor": is_minor,
+        "team_id": None,
+        "society_id": society_id,
+        "society_name": society_name,
+        "invited_by": current_user["id"],
+        "invited_by_name": current_user.get("full_name", ""),
+        "status": "pending",
+        "from_preseason_response_id": response_id,  # 🔗 linkage per marcare convertita al completamento
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "expires_at": (datetime.now(timezone.utc) + timedelta(days=14)).isoformat(),
+    }
+    await db.athlete_invitations.insert_one(invitation)
+
+    base_url = os.environ.get("EXPO_PUBLIC_BACKEND_URL", os.environ.get("FRONTEND_URL", ""))
+    register_link = f"{base_url}/invite-register?token={token}"
+
+    wa_line = (
+        f"anticipandola con una foto via WhatsApp al numero <strong>{society_phone}</strong> della Società"
+        if society_phone else
+        "anticipandola con una foto via WhatsApp al responsabile della Società"
+    )
+
+    subject = f"{society_name} — Completa l'iscrizione di {athlete_display}"
+    html_content = f"""
+    <div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: #263238;">
+        <div style="background: linear-gradient(135deg, #1565C0, #1976D2); padding: 28px 24px; border-radius: 12px 12px 0 0; text-align:center;">
+            <h1 style="color:#fff; margin:0; font-size:22px;">{society_name}</h1>
+            <p style="color:#E3F2FD; margin:8px 0 0; font-size:14px;">Invito all'iscrizione</p>
+        </div>
+        <div style="background:#fff; padding:24px; border:1px solid #e0e0e0; border-top:none;">
+            <p style="font-size:15px;">Gentile genitore,</p>
+            <p style="font-size:15px; line-height:1.6;">
+                hai effettuato la <strong>pre-iscrizione</strong> di <strong>{athlete_display}</strong>.
+                Ti invitiamo ora a completare l'<strong>iscrizione</strong> a <strong>{society_name}</strong>.
+            </p>
+
+            <div style="background:#E8F5E9; border-radius:10px; padding:14px 16px; margin:18px 0;">
+                <p style="margin:0; font-size:14px; line-height:1.6; color:#2E7D32;">
+                    L'iscrizione dà diritto a <strong>{trial_max_sessions} allenamenti di prova</strong> in una settimana.
+                    Al termine della prova l'atleta potrà decidere se <strong>restare</strong> nella società oppure
+                    <strong>abbandonare</strong>, con la cancellazione di tutti i suoi dati.
+                </p>
+            </div>
+
+            <div style="background:#FFF3E0; border-radius:10px; padding:14px 16px; margin:18px 0;">
+                <p style="margin:0; font-size:14px; line-height:1.6; color:#E65100;">
+                    ⚠️ Per riprendere l'attività sportiva, oltre all'iscrizione è necessario un
+                    <strong>certificato medico sportivo valido</strong>. In attesa di consegnare la copia originale
+                    alla Società (come richiesto dalla FIPAV), la si dovrà anticipare {wa_line}.
+                </p>
+            </div>
+
+            <p style="font-size:14px; line-height:1.6;">
+                Da quest'anno {society_name} ha adottato il gestionale <strong>RegistraTEAM</strong> per tutti gli atleti,
+                dirigenti, allenatori e collaboratori: <strong>iscrizione</strong>, <strong>consenso privacy</strong> e
+                <strong>pagamenti</strong> si effettuano comodamente tramite RegistraTEAM.
+            </p>
+
+            <div style="text-align:center; margin:28px 0;">
+                <a href="{register_link}" style="background: linear-gradient(135deg,#1565C0,#1976D2); color:#fff; padding:16px 36px; text-decoration:none; border-radius:30px; font-weight:bold; font-size:17px; display:inline-block;">
+                    Completa l'iscrizione ora
+                </a>
+            </div>
+            <p style="text-align:center; font-size:12px; color:#888;">Se il pulsante non funziona, copia e incolla questo link:</p>
+            <p style="text-align:center; font-size:11px; color:#1565C0; word-break:break-all;">{register_link}</p>
+        </div>
+        <div style="background:#f5f7fa; padding:14px 24px; border:1px solid #e0e0e0; border-top:none; border-radius:0 0 12px 12px;">
+            <p style="color:#888; font-size:12px; margin:0;">Questo invito è valido per 14 giorni.</p>
+        </div>
+    </div>
+    """
+
+    email_sent = False
+    email_error = None
+    try:
+        from email_service import send_transactional_email
+        result = await send_transactional_email(
+            to_email=email,
+            subject=subject,
+            html_content=html_content,
+            to_name=athlete_display or None,
+        )
+        email_sent = bool(result and result.get("success"))
+        if not email_sent:
+            email_error = (result or {}).get("error") or "Errore sconosciuto"
+            logging.error(f"[PRESEASON-INVITE] Email fallita per {email}: {email_error}")
+    except Exception as e:
+        email_error = str(e)
+        logging.error(f"[PRESEASON-INVITE] Eccezione invio email: {e}")
+
+    # Aggiorna lo stato della pre-iscrizione a "invitata"
+    await db.preseason_responses.update_one(
+        {"id": response_id},
+        {"$set": {
+            "status": "invited",
+            "invited_at": datetime.now(timezone.utc),
+            "invited_email": email,
+            "invitation_token": token,
+        }},
+    )
+
+    if not email_sent:
+        return {
+            "message": f"Invito registrato ma l'email non è stata inviata ({email_error}). Verifica l'indirizzo.",
+            "email_sent": False,
+            "register_link": register_link,
+            "status": "invited",
+        }
+    return {
+        "message": f"Invito all'iscrizione inviato a {email}.",
+        "email_sent": True,
+        "status": "invited",
+    }
+
 
 
 async def _cleanup_expired_preseason_withdrawals():

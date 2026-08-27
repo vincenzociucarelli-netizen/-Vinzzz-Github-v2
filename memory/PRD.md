@@ -59,6 +59,15 @@ SENDER_NAME=RegistraTEAM
 
 ## Status - Completed
 
+### 27/08/2026 - Converti PRE-ISCRIZIONE → ISCRIZIONE via invito genitore + fix luogo import calendario (VERIFICATO iter_119 frontend PASS, backend e2e OK)
+- **Invito all'iscrizione**: dal pannello admin Pre-iscrizioni (`/admin/preseason`), l'admin invita il genitore a completare l'iscrizione inserendone l'email. Riusa l'infrastruttura inviti (`athlete_invitations` + `/invite-register`).
+  - Backend (`server.py`): nuovo `POST /preseason/responses/{id}/invite` (crea athlete_invitation con `from_preseason_response_id`, `is_minor` calcolato dalla data di nascita, invio email Brevo con messaggio dedicato: 3 allenamenti di prova, certificato medico + foto WhatsApp, adozione gestionale). La pre-iscrizione passa a `status='invited'`. Al completamento via invito, `register_via_invite` marca la response `status='converted'` con `converted_athlete_id`.
+  - Aggiunto campo `email_parent` al modello/salvataggio `PreseasonResponse` e al form pubblico (`preseason/[id].tsx`, facoltativo) per precompilare l'email nell'invito.
+  - Frontend (`admin/preseason.tsx`): pulsante "Invita a iscriversi" nella lista risposte (quick) e nel dettaglio; modal email; badge stato "Invitata"/"Iscritta".
+  - Nota: NON crea un atleta in prova automaticamente (l'endpoint legacy `convert-to-trial` resta ma non è usato dalla UI). L'atleta risulta iscritto solo dopo che il genitore completa registrazione + privacy + certificato medico.
+- **Fix luogo import calendario FIPAV**: l'endpoint realmente usato dalla UI è `/federation/import-selected` (non `/federation/import`), che NON salvava il luogo. Ora salva **Palestra + Città** (`venue_city` dal tooltip FIPAV). Aggiornati anche anteprima (`/federation/preview`) e sync (`/matches/sync-fipav`). Verificato su Serie D Umbria live.
+
+
 ### 26/08/2026 - Promozione Genitore→Dirigente CON ACCETTAZIONE + tap nome nel Registro Presenze (VERIFICATO iter_117 backend 10/10, iter_118 frontend PASS)
 - **Dual-role Genitore↔Dirigente con accettazione dell'interessato**: l'admin PROPONE l'incarico Dirigente a un genitore (pulsante "Promuovi a Dirigente" nel menu azioni di `admin/parents.tsx`). Viene creato un account dirigente collegato con `link_status="pending"` e sul genitore `pending_dirigente_user_id` (NON `linked_dirigente_user_id`). Il collegamento diventa attivo SOLO dopo che il genitore ACCETTA dalla propria dashboard.
   - Backend (`server.py`): `POST /admin/parents/{id}/promote-to-dirigente` ora ritorna `status:"pending"`; nuovi `GET /parent/dirigente-proposal`, `POST /parent/dirigente-proposal/accept`, `POST /parent/dirigente-proposal/reject`. `get_current_user` e `GET /users/parents` estesi con `pending_dirigente_user_id`/`linked_dirigente_user_id`. `invalidate_auth_cache` chiamata in promote/accept/reject.

@@ -88,6 +88,7 @@ export default function PublicPreseasonForm() {
   const [birthDate, setBirthDate] = useState('');
   const [phoneAthlete, setPhoneAthlete] = useState('');
   const [phoneParent, setPhoneParent] = useState('');
+  const [emailParent, setEmailParent] = useState('');
   const [alreadyMember, setAlreadyMember] = useState(false);
   const [previousClub, setPreviousClub] = useState('');
   const [playedVolleyball, setPlayedVolleyball] = useState<boolean | null>(null);
@@ -157,6 +158,7 @@ export default function PublicPreseasonForm() {
         role_played: role.trim(),
         interest_level: interest,
         notes: notes.trim(),
+        email_parent: emailParent.trim(),
       });
       setSubmitted(true);
     } catch (err: any) {
@@ -306,6 +308,12 @@ export default function PublicPreseasonForm() {
               <Text style={labelStyle}>Telefono genitore</Text>
               <TextInput style={inputStyle} value={phoneParent} onChangeText={setPhoneParent} placeholder="Se minorenne" keyboardType="phone-pad" data-testid="preseason-phone-parent" />
             </View>
+          </View>
+
+          {/* Email genitore (facoltativa) — usata per l'invito all'iscrizione */}
+          <View style={{ marginBottom: 14 }}>
+            <Text style={labelStyle}>Email genitore</Text>
+            <TextInput style={inputStyle} value={emailParent} onChangeText={setEmailParent} placeholder="Per ricevere l'invito all'iscrizione (facoltativa)" keyboardType="email-address" autoCapitalize="none" autoCorrect={false} data-testid="preseason-email-parent" />
           </View>
 
           {/* Hai gia giocato a [sport]? */}
