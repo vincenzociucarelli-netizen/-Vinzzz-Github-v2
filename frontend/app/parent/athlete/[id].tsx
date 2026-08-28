@@ -1791,6 +1791,29 @@ export default function AthleteDetail() {
           </TouchableOpacity>
         )}
 
+        {/* 🆕 27/08/2026 — Privacy non firmata sempre tra le "cose da fare": banner
+            cliccabile che porta il genitore direttamente alla firma della privacy. */}
+        {athlete.is_minor && !athlete.privacy_accepted && !endTrialStatus?.end_trial_requested &&
+          (athlete.status === 'active' || (athlete.status === 'trial' && trialHasStarted)) && (
+          <TouchableOpacity
+            style={{ backgroundColor: '#FDECEA', padding: 12, borderRadius: 8, marginBottom: 12, borderWidth: 1, borderColor: '#E53935', flexDirection: 'row', alignItems: 'center', gap: 10 }}
+            onPress={() => setActiveTab('dafare')}
+            data-testid="parent-privacy-todo-banner"
+          >
+            <Ionicons name="shield-outline" size={22} color="#C62828" />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#C62828', fontWeight: '700', fontSize: 13 }}>
+                Da fare: firma del consenso privacy
+              </Text>
+              <Text style={{ color: '#B71C1C', fontSize: 11.5, marginTop: 2, fontStyle: 'italic' }}>
+                Tocca qui per firmare la privacy →
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#C62828" />
+          </TouchableOpacity>
+        )}
+
+
         {/* 🆕 24/02/2026 — TabBar uniformata all'admin */}
         <View style={{ flexDirection: 'row', backgroundColor: '#fff', borderRadius: 12, marginBottom: 12, padding: 4, borderWidth: 1, borderColor: '#e0e0e0' }} data-testid="parent-athlete-tab-bar">
           {([
@@ -2027,8 +2050,31 @@ export default function AthleteDetail() {
 
         {/* === DA FARE TAB === */}
         {activeTab === 'dafare' && (<>
-        {/* Stato e Periodo di Prova - Card unificata */}
-        {/* Banner profilo incompleto */}
+        {/* 🆕 27/08/2026 — "Firma la Privacy" tra le cose da fare, con azione diretta.
+            Mostrata quando la privacy non è firmata e NON siamo nella fase pre-prova
+            (in quel caso il flusso "Rinuncia/Rimani e Firma" più sotto già la gestisce). */}
+        {athlete.is_minor && !athlete.privacy_accepted && !endTrialStatus?.end_trial_requested &&
+          (athlete.status === 'active' || (athlete.status === 'trial' && trialHasStarted)) && (
+          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#E53935' }} data-testid="privacy-todo-card">
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <Ionicons name="shield-outline" size={20} color="#C62828" />
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#C62828' }}>Firma del consenso privacy</Text>
+            </View>
+            <Text style={{ fontSize: 12.5, color: '#795548', lineHeight: 18, marginBottom: 10 }}>
+              Il consenso privacy di {athlete.first_name || 'tuo figlio/a'} non risulta ancora firmato.
+              È necessario firmarlo per completare la posizione dell'atleta.
+            </Text>
+            <TouchableOpacity
+              style={{ backgroundColor: '#C62828', borderRadius: 10, paddingVertical: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }}
+              onPress={() => setPrivacyModalVisible(true)}
+              testID="privacy-todo-sign-btn"
+            >
+              <Ionicons name="create-outline" size={18} color="#fff" />
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Firma la Privacy ora</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {profileCheck && !profileCheck.is_complete && (
           <View style={{ backgroundColor: '#FFF3E0', borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#FF6F00' }} data-testid="profile-incomplete-banner">
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>

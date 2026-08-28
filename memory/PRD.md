@@ -59,6 +59,12 @@ SENDER_NAME=RegistraTEAM
 
 ## Status - Completed
 
+### 28/08/2026 - Privacy sempre tra le "cose da fare" (scheda figlio lato genitore) con link diretto alla firma (verificato via screenshot)
+- Problema: per un minore ATTIVO / in prova già iniziata, se la privacy non era firmata NON compariva nulla nelle "cose da fare" (il `compute_pending_reason` la ometteva in questi stati). L'atleta sembrava "a posto" pur senza privacy firmata.
+- Fix (frontend `parent/athlete/[id].tsx`): aggiunti (a) un BANNER rosso in alto "Da fare: firma del consenso privacy → Tocca qui per firmare" e (b) una CARD nella tab "Da fare" con pulsante "Firma la Privacy ora" che apre direttamente il `GDPRPrivacyModal`. Mostrati quando `is_minor && !privacy_accepted && !end_trial_requested && (status active OR trial già iniziata)`. Stati pre-prova restano gestiti dal flusso "Rinuncia/Rimani e Firma" esistente.
+- Verificato con MAURI LENA (attiva, privacy non firmata) su account genitore armida.raschi: banner + card + pulsante presenti.
+
+
 ### 27/08/2026 (v2) - CAUSA REALE "Genitore invisibile": migrazione all'avvio (verificato e2e con restart backend)
 - La migrazione one-shot `active_seasons` (startup) assegnava la stagione PRECEDENTE a QUALSIASI record senza `active_seasons`, incluse le iscrizioni NUOVE di questa stagione (che nascevano senza il campo per il bug in `create_athlete`/register). Al redeploy Render il backend riavviava → la migrazione archiviava atleta+genitore nella stagione vecchia → sparivano dalle liste correnti. Ecco perché il fix v1 (solo missing/empty) non bastava dopo il deploy.
 - **Fix migrazione** (startup, ~riga 39689): ora è `created_at`-aware — i record creati DOPO l'inizio della stagione corrente vanno in stagione CORRENTE, gli storici in PRECEDENTE. Aggiunto CORRETTIVO idempotente: i record creati in questa stagione ma erroneamente archiviati SOLO in `[prev]` vengono riportati in `[current]`. Ripara automaticamente i dati già danneggiati al primo riavvio.
