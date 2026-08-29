@@ -59,6 +59,13 @@ SENDER_NAME=RegistraTEAM
 
 ## Status - Completed
 
+### 28/08/2026 (v2) - Motivo attesa GUIDATO DAI DATI (non dallo status) — caso "2 sorelle diverse senza certificato" (verificato via screenshot)
+- Chiarimento utente: entrambe le sorelle erano SENZA data del certificato, ma con `status` diverso (una `pending_certificate`, una `pending_trial`), quindi mostravano messaggi diversi. Il calcolo si basava sullo `status` enum (inaffidabile: es. atleta avanzata a pending_trial senza certificato).
+- Fix backend (`compute_pending_reason`, ramo minorenni): iter ora GUIDATO DAI DATI reali con cancelli in ordine — 1) no data certificato → "manca la data di emissione"; 2) data presente non convalidata → "da convalidare"; 3) convalidato ma prova non iniziata → "prima presenza (QR)"; 4) prova in corso → nessun sollecito; 5) prova finita + privacy mancante → "firma privacy". Indipendente dallo status enum → due atlete nello stesso stato documentale mostrano lo STESSO messaggio.
+- Fix frontend (`admin/athlete/[id].tsx`): sostituito il banner status-specifico "Validazione Certificato" con un banner "Cosa manca per l'attivazione" guidato da `athlete.pending_reason` (backend), mostrato per qualsiasi stato non-attivo. Verificato su MAURI LENA (pending_trial, senza data cert) → banner "manca la data di emissione del certificato medico".
+- Verificato: compute_pending_reason identico per pending_certificate e pending_trial senza cert; screenshot admin conferma il banner. Solo backend + 1 file frontend.
+
+
 ### 28/08/2026 - Correzione messaggi "motivo attesa" certificato/prova (compute_pending_reason) — iter confermato dall'utente
 - Iter confermato per MINORENNI (solo under 18 fanno la prova): 1) manca data emissione certificato → "manca la data di emissione del certificato medico"; 2) data presente ma non convalidata → "certificato medico da convalidare dalla società"; 3) certificato convalidato, prova non iniziata → "prima presenza in palestra (QR) per avviare la prova"; 4) prova in corso (status 'trial') → nessun sollecito (badge "In prova"); 5) prova terminata + privacy non firmata → "firma della privacy". Attivo = prova completata + scelta di restare (privacy firmata); il certificato va convalidato PRIMA della prova.
 - Fix (`compute_pending_reason`): aggiunto il caso "manca data emissione" (prima il sistema diceva sempre "da convalidare" anche senza data). Split pending_certificate in due messaggi in base a `medical_certificate_issue_date`/`medical_certificate_date`/`medical_certificate_expiry`. Rimosso il vecchio ramo che univa pending_trial/trial. Adulti invariati (privacy + certificato, niente prova).

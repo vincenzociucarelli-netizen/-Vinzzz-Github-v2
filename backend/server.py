@@ -912,25 +912,28 @@ def compute_pending_reason(a: dict) -> Optional[str]:
     if not has_team:
         parts.append("assegnazione a una squadra")
     if is_minor:
-        # MINORENNI (under 18): unici a fare il PERIODO DI PROVA. Iter confermato:
-        #   1) manca la DATA di emissione del certificato  → "manca la data di emissione"
-        #   2) data presente ma non convalidata            → "certificato da convalidare"
-        #   3) certificato convalidato, prova non iniziata → "prima presenza (QR)"
-        #   4) prova in corso (status 'trial')             → nessun sollecito (badge "In prova")
-        #   5) prova terminata, privacy non firmata        → "firma della privacy"
+        # MINORENNI (under 18): unici a fare il PERIODO DI PROVA.
+        # 🐛 28/08/2026 — Iter GUIDATO DAI DATI REALI (non dallo `status`, che poteva
+        # risultare incoerente: es. due sorelle senza certificato ma con stato diverso).
+        # Ordine dei "cancelli", ognuno blocca il successivo:
+        #   1) manca la DATA di emissione del certificato   → "manca la data di emissione"
+        #   2) data presente ma non convalidata dall'admin  → "certificato da convalidare"
+        #   3) certificato convalidato, prova non iniziata  → "prima presenza (QR)"
+        #   4) prova in corso                                → nessun sollecito (badge "In prova")
+        #   5) prova terminata, privacy non firmata          → "firma della privacy"
         cert_date = (a.get("medical_certificate_issue_date")
                      or a.get("medical_certificate_date")
                      or a.get("medical_certificate_expiry"))
-        if status == "pending_certificate":
-            if not cert_date:
-                parts.append("manca la data di emissione del certificato medico")
-            elif not cert:
-                parts.append("certificato medico da convalidare dalla società")
-        elif status == "pending_trial":
+        if not cert_date:
+            parts.append("manca la data di emissione del certificato medico")
+        elif not cert:
+            parts.append("certificato medico da convalidare dalla società")
+        elif not trial_started:
             parts.append("prima presenza in palestra (scansione QR) per avviare la prova")
-        elif status in ("pending_privacy", "pending_decision") and not priv:
+        elif not priv and status in ("pending_privacy", "pending_decision"):
+            # Prova terminata: manca la scelta di restare (firma privacy)
             parts.append("firma della privacy da parte del genitore")
-        # status == "trial": periodo di prova in corso → nessun sollecito qui
+        # else: prova in corso regolare → nessun sollecito
     else:
         # ADULTI (18+): niente prova → serve privacy firmata + certificato convalidato
         if not priv:

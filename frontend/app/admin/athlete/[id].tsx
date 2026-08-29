@@ -2551,12 +2551,12 @@ export default function AdminAthleteDetail() {
             </View>
 
 
-            {/* 🆕 22/02/2026 — Status Alerts (Email non verificata / Validazione Cert) in card dedicata in cima */}
-            {(athlete.status === 'pending_email' || athlete.status === 'pending_certificate') && (
+            {/* 🆕 22/02/2026 — Status Alerts (Email non verificata / Cosa manca) in card dedicata in cima */}
+            {(athlete.status === 'pending_email' || (!!(athlete as any).pending_reason && athlete.status !== 'active')) && (
               <View style={styles.card}>
                 {/* Box "Forza verifica email" - solo per atleti pending_email */}
                 {athlete.status === 'pending_email' && (
-                  <View style={{ marginBottom: athlete.status === 'pending_certificate' ? 12 : 0 }}>
+                  <View style={{ marginBottom: (athlete as any).pending_reason ? 12 : 0 }}>
                     <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
                       <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', marginBottom: 4 }}>Email non verificata</Text>
                       <Text style={{ fontSize: 13, color: '#666', marginBottom: 10 }}>
@@ -2582,13 +2582,14 @@ export default function AdminAthleteDetail() {
                   </View>
                 )}
 
-                {/* 🐛 28/07/2026 — Fix controsenso: mostravamo "In attesa validazione" anche
-                    quando l'admin aveva già validato il certificato. Il flag corretto è
-                    `athlete.medical_certificate_verified` (non `certificate.verified`). */}
-                {athlete.status === 'pending_certificate' && !athlete?.medical_certificate_verified && (
+                {/* 🐛 28/08/2026 — Banner "cosa manca" GUIDATO DAI DATI (backend pending_reason),
+                    non dallo status: due atlete nello stesso stato documentale mostrano ora lo
+                    stesso messaggio (es. "manca la data di emissione del certificato medico"),
+                    a prescindere dallo status enum (pending_certificate vs pending_trial). */}
+                {!!(athlete as any).pending_reason && athlete.status !== 'active' && (
                   <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#FF9800' }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', marginBottom: 4 }}>Validazione Certificato</Text>
-                    <Text style={{ fontSize: 13, color: '#666' }}>Privacy firmata. In attesa della validazione del certificato medico da parte dell&apos;admin.</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#E65100', marginBottom: 4 }}>Cosa manca per l&apos;attivazione</Text>
+                    <Text style={{ fontSize: 13, color: '#666' }}>{String((athlete as any).pending_reason).replace(/^In attesa:\s*/i, '')}</Text>
                   </View>
                 )}
               </View>
