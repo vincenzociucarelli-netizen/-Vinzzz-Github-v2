@@ -912,15 +912,25 @@ def compute_pending_reason(a: dict) -> Optional[str]:
     if not has_team:
         parts.append("assegnazione a una squadra")
     if is_minor:
-        # MINORENNI: la prova parte con la 1ª presenza (QR). Certificato/privacy
-        # del genitore servono al TERMINE della prova, non per iniziarla → li
-        # segnaliamo solo quando l'onboarding è bloccato su quel passo specifico.
-        if status == "pending_certificate" and not cert:
-            parts.append("certificato medico convalidato dalla società")
-        elif status in ("pending_trial", "trial") and not trial_started:
+        # MINORENNI (under 18): unici a fare il PERIODO DI PROVA. Iter confermato:
+        #   1) manca la DATA di emissione del certificato  → "manca la data di emissione"
+        #   2) data presente ma non convalidata            → "certificato da convalidare"
+        #   3) certificato convalidato, prova non iniziata → "prima presenza (QR)"
+        #   4) prova in corso (status 'trial')             → nessun sollecito (badge "In prova")
+        #   5) prova terminata, privacy non firmata        → "firma della privacy"
+        cert_date = (a.get("medical_certificate_issue_date")
+                     or a.get("medical_certificate_date")
+                     or a.get("medical_certificate_expiry"))
+        if status == "pending_certificate":
+            if not cert_date:
+                parts.append("manca la data di emissione del certificato medico")
+            elif not cert:
+                parts.append("certificato medico da convalidare dalla società")
+        elif status == "pending_trial":
             parts.append("prima presenza in palestra (scansione QR) per avviare la prova")
-        elif status == "pending_privacy" and not priv:
+        elif status in ("pending_privacy", "pending_decision") and not priv:
             parts.append("firma della privacy da parte del genitore")
+        # status == "trial": periodo di prova in corso → nessun sollecito qui
     else:
         # ADULTI (18+): niente prova → serve privacy firmata + certificato convalidato
         if not priv:

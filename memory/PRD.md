@@ -59,6 +59,13 @@ SENDER_NAME=RegistraTEAM
 
 ## Status - Completed
 
+### 28/08/2026 - Correzione messaggi "motivo attesa" certificato/prova (compute_pending_reason) — iter confermato dall'utente
+- Iter confermato per MINORENNI (solo under 18 fanno la prova): 1) manca data emissione certificato → "manca la data di emissione del certificato medico"; 2) data presente ma non convalidata → "certificato medico da convalidare dalla società"; 3) certificato convalidato, prova non iniziata → "prima presenza in palestra (QR) per avviare la prova"; 4) prova in corso (status 'trial') → nessun sollecito (badge "In prova"); 5) prova terminata + privacy non firmata → "firma della privacy". Attivo = prova completata + scelta di restare (privacy firmata); il certificato va convalidato PRIMA della prova.
+- Fix (`compute_pending_reason`): aggiunto il caso "manca data emissione" (prima il sistema diceva sempre "da convalidare" anche senza data). Split pending_certificate in due messaggi in base a `medical_certificate_issue_date`/`medical_certificate_date`/`medical_certificate_expiry`. Rimosso il vecchio ramo che univa pending_trial/trial. Adulti invariati (privacy + certificato, niente prova).
+- Chiarito il caso "2 sorelle diverse": non è un bug di calcolo — una aveva il certificato GIÀ convalidato (→ "inizio prova/QR"), l'altra no (→ "Validazione Certificato"). Il certificato dev'essere convalidato prima di poter iniziare la prova.
+- Verificato con test unitario su tutti gli 8 scenari. Solo backend.
+
+
 ### 28/08/2026 - Privacy sempre tra le "cose da fare" (scheda figlio lato genitore) con link diretto alla firma (verificato via screenshot)
 - Problema: per un minore ATTIVO / in prova già iniziata, se la privacy non era firmata NON compariva nulla nelle "cose da fare" (il `compute_pending_reason` la ometteva in questi stati). L'atleta sembrava "a posto" pur senza privacy firmata.
 - Fix (frontend `parent/athlete/[id].tsx`): aggiunti (a) un BANNER rosso in alto "Da fare: firma del consenso privacy → Tocca qui per firmare" e (b) una CARD nella tab "Da fare" con pulsante "Firma la Privacy ora" che apre direttamente il `GDPRPrivacyModal`. Mostrati quando `is_minor && !privacy_accepted && !end_trial_requested && (status active OR trial già iniziata)`. Stati pre-prova restano gestiti dal flusso "Rinuncia/Rimani e Firma" esistente.
