@@ -944,6 +944,44 @@ def compute_pending_reason(a: dict) -> Optional[str]:
         return None
     return "In attesa: " + " + ".join(parts)
 
+
+def compute_status_badge(a: dict) -> Optional[str]:
+    """🆕 28/08/2026 — Etichetta di STATO coerente per il badge, GUIDATA DAI DATI reali
+    (non dallo `status` enum, che può essere incoerente: due atlete nello stesso stato
+    documentale mostravano badge diversi). Ritorna None per stati gestiti altrove
+    (ritirato/attivo/da approvare) → in quel caso il frontend usa il fallback classico."""
+    if a.get("is_withdrawn"):
+        return None
+    status = a.get("status") or "pending"
+    if status in ("blocked", "rejected", "pending", "pending_email", "active"):
+        return None
+    is_minor = _compute_is_minor(a)
+    priv = bool(a.get("privacy_accepted"))
+    cert = bool(a.get("medical_certificate_verified"))
+    trial_started = bool(a.get("trial_start_date"))
+    cert_date = (a.get("medical_certificate_issue_date")
+                 or a.get("medical_certificate_date")
+                 or a.get("medical_certificate_expiry"))
+    if is_minor:
+        if not cert_date:
+            return "Attesa Certificato"
+        if not cert:
+            return "Validazione Certificato"
+        if not trial_started:
+            return "Attesa Prova"
+        if status in ("pending_privacy", "pending_decision") and not priv:
+            return "Attesa Privacy"
+        if trial_started:
+            return "In Prova"
+        return None
+    else:
+        if not priv:
+            return "Attesa Privacy"
+        if not cert:
+            return "Validazione Certificato"
+        return None
+
+
 class Athlete(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
     society_id: Optional[str] = None  # ID della società (multi-tenancy)
@@ -1049,6 +1087,7 @@ class Athlete(BaseModel):
     # Campi dinamici (non persistiti, aggiunti nelle risposte)
     team_name: Optional[str] = None  # Nome squadra (riempito dinamicamente)
     pending_reason: Optional[str] = None  # 🆕 Motivo dell'ATTESA (calcolato, non persistito)
+    stato_display: Optional[str] = None  # 🆕 Etichetta di stato coerente (calcolata, non persistita)
     # Certificato medico - SOLO metadati, niente file
     medical_certificate_expiry: Optional[str] = None  # Scadenza certificato medico
     medical_certificate_issue_date: Optional[str] = None  # Data emissione certificato
@@ -8699,6 +8738,10 @@ async def get_all_athletes(light: bool = False, current_user = Depends(get_curre
             # 🆕 24/08/2026 — campi per calcolare il MOTIVO dell'attesa (pending_reason)
             "is_minor": 1, "privacy_accepted": 1, "medical_certificate_verified": 1,
             "trial_start_date": 1,
+            # 🆕 28/08/2026 — date certificato (necessarie a pending_reason/stato_display
+            # per distinguere "manca la data" da "da convalidare")
+            "medical_certificate_issue_date": 1, "medical_certificate_date": 1,
+            "medical_certificate_expiry": 1,
         }
         athletes_l = await db.athletes.find(_base_query, _light_proj).to_list(5000)
         team_ids_l = list({a.get("team_id") for a in athletes_l if a.get("team_id")})
@@ -8730,6 +8773,7 @@ async def get_all_athletes(light: bool = False, current_user = Depends(get_curre
                 "review_dismissed_season": a.get("review_dismissed_season"),
                 "privacy_pending_renewal": a.get("privacy_pending_renewal", False),
                 "pending_reason": compute_pending_reason(a),
+                "stato_display": compute_status_badge(a),
             })
         return out
 
@@ -11924,6 +11968,7 @@ async def get_athlete(athlete_id: str, current_user = Depends(get_current_user))
     # 🆕 24/08/2026 — Motivo dell'ATTESA (visibile anche a genitore/atleta: sa cosa
     # manca per andare "in attività").
     athlete["pending_reason"] = compute_pending_reason(athlete)
+    athlete["stato_display"] = compute_status_badge(athlete)
     
     return Athlete(**athlete)
 

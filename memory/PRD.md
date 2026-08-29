@@ -59,6 +59,13 @@ SENDER_NAME=RegistraTEAM
 
 ## Status - Completed
 
+### 28/08/2026 (v3) - Badge di stato coerente guidato dai dati (lista atleti admin) — verificato via API
+- Dopo aver reso coerente il "cosa manca", restava il BADGE incoerente: due atlete nello stesso stato documentale (senza data certificato) mostravano "Validazione Certificato" vs "In attesa" perché il badge rifletteva lo `status` enum.
+- Fix backend: nuova `compute_status_badge(a)` (guidata dai dati, stessi cancelli di pending_reason) → etichette: "Attesa Certificato" / "Validazione Certificato" / "Attesa Prova" / "In Prova" / "Attesa Privacy". Esposta come `stato_display` nella lista atleti (fast-path `light`) e nel GET singolo. Aggiunte le date certificato alla proiezione `light` (prima mancavano → pending_reason poteva sbagliare "manca la data").
+- Fix frontend (`admin/athletes.tsx`): `getStatusInfo`/`getStatusColor` usano `stato_display` quando presente (dopo i check ritirato/senza-team).
+- Verificato via API: due minori stesso team, senza data cert, status diverso (pending_certificate/pending_trial) → badge IDENTICO "Attesa Certificato" + stesso reason.
+
+
 ### 28/08/2026 (v2) - Motivo attesa GUIDATO DAI DATI (non dallo status) — caso "2 sorelle diverse senza certificato" (verificato via screenshot)
 - Chiarimento utente: entrambe le sorelle erano SENZA data del certificato, ma con `status` diverso (una `pending_certificate`, una `pending_trial`), quindi mostravano messaggi diversi. Il calcolo si basava sullo `status` enum (inaffidabile: es. atleta avanzata a pending_trial senza certificato).
 - Fix backend (`compute_pending_reason`, ramo minorenni): iter ora GUIDATO DAI DATI reali con cancelli in ordine — 1) no data certificato → "manca la data di emissione"; 2) data presente non convalidata → "da convalidare"; 3) convalidato ma prova non iniziata → "prima presenza (QR)"; 4) prova in corso → nessun sollecito; 5) prova finita + privacy mancante → "firma privacy". Indipendente dallo status enum → due atlete nello stesso stato documentale mostrano lo STESSO messaggio.

@@ -535,6 +535,9 @@ export default function AdminAthletes() {
     if (item.is_withdrawn) return 'Ritirato';
     // 🆕 05/07/2026 — Se senza team, forza "In attesa" a prescindere dallo status DB
     if (!item.team_id) return 'In attesa';
+    // 🆕 28/08/2026 — Etichetta coerente guidata dai dati (backend), così due atlete
+    // nello stesso stato documentale mostrano lo STESSO badge.
+    if ((item as any).stato_display) return (item as any).stato_display;
     if (item.status === 'pending_trial') return 'In attesa';
     if (item.status === 'trial') {
       return item.trial_start_date ? 'In prova' : 'In attesa';
@@ -549,6 +552,14 @@ export default function AdminAthletes() {
     if (item.is_withdrawn) return '#FF3B30';
     // 🆕 05/07/2026 — colore viola "In attesa" quando manca il team
     if (!item.team_id) return '#9C27B0';
+    // 🆕 28/08/2026 — colore coerente con l'etichetta guidata dai dati (stato_display)
+    const sd = (item as any).stato_display as string | undefined;
+    if (sd) {
+      if (sd === 'Attesa Certificato' || sd === 'Validazione Certificato') return '#FF9800';
+      if (sd === 'Attesa Prova') return '#9C27B0';
+      if (sd === 'In Prova') return '#FF9500';
+      if (sd === 'Attesa Privacy') return '#1976D2';
+    }
     if (item.status === 'pending_trial') return '#9C27B0';
     if (item.status === 'trial') {
       return item.trial_start_date ? '#FF9500' : '#9C27B0';
