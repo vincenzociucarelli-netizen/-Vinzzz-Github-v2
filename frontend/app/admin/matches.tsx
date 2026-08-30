@@ -746,20 +746,42 @@ export default function AdminMatches() {
         </TouchableOpacity>
       </View>
 
-      {/* Compact info row: tappable info icon + Template button */}
-      <View style={styles.instructionCard}>
-        <TouchableOpacity
-          style={styles.infoIconBtn}
-          onPress={() => setTutorialVisible(true)}
-          data-testid="matches-info-btn"
-        >
-          <Ionicons name="information-circle" size={22} color="#007AFF" />
-          <Text style={styles.infoIconLabel}>Info & tutorial</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.templateBtn} onPress={downloadTemplate}>
-          <Ionicons name="share-outline" size={16} color="#fff" />
-          <Text style={styles.templateBtnText}>Template</Text>
-        </TouchableOpacity>
+      {/* Guida import Excel: 2 passi chiari con pulsanti etichettati */}
+      <View style={styles.excelGuideCard}>
+        <View style={styles.excelGuideHeader}>
+          <Ionicons name="grid-outline" size={18} color="#1a1a2e" />
+          <Text style={styles.excelGuideTitle}>Importa gare da Excel in 2 passi</Text>
+          <TouchableOpacity
+            onPress={() => setTutorialVisible(true)}
+            data-testid="matches-info-btn"
+            style={styles.excelGuideInfo}
+          >
+            <Ionicons name="help-circle-outline" size={22} color="#007AFF" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.excelGuideSteps}>
+          <TouchableOpacity
+            style={[styles.excelStepBtn, styles.excelStepBtnTemplate]}
+            onPress={downloadTemplate}
+            data-testid="download-template-btn"
+          >
+            <View style={styles.excelStepNum}><Text style={styles.excelStepNumText}>1</Text></View>
+            <Ionicons name="download-outline" size={18} color="#fff" />
+            <Text style={styles.excelStepBtnText}>Scarica Template</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.excelStepBtn, styles.excelStepBtnImport]}
+            onPress={handleImportExcel}
+            data-testid="import-excel-btn"
+          >
+            <View style={styles.excelStepNum}><Text style={styles.excelStepNumText}>2</Text></View>
+            <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
+            <Text style={styles.excelStepBtnText}>Carica il file</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.excelGuideHint}>
+          Scarica il modello, compilalo con le tue gare e ricaricalo qui. Poi scegli la squadra.
+        </Text>
       </View>
 
       {/* Filter Tabs */}
@@ -1361,6 +1383,75 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
+  },
+  excelGuideCard: {
+    backgroundColor: '#E8F4FD',
+    padding: 12,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#CDE7FA',
+  },
+  excelGuideHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  excelGuideTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1a1a2e',
+  },
+  excelGuideInfo: {
+    padding: 2,
+  },
+  excelGuideSteps: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  excelStepBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    minHeight: 48,
+  },
+  excelStepBtnTemplate: {
+    backgroundColor: '#34C759',
+  },
+  excelStepBtnImport: {
+    backgroundColor: '#007AFF',
+  },
+  excelStepNum: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  excelStepNumText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  excelStepBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  excelGuideHint: {
+    fontSize: 11,
+    color: '#4a6b85',
+    marginTop: 8,
+    lineHeight: 15,
   },
   content: {
     flex: 1,
