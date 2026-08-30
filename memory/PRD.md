@@ -59,6 +59,12 @@ SENDER_NAME=RegistraTEAM
 
 ## Status - Completed
 
+### 29/08/2026 - Fix doppioni Cronologia Atleta (certificato) — verificato via API
+- Causa: la timeline (`GET /athletes/{id}/timeline`) generava gli eventi certificato da DUE fonti → doppioni: "Certificato Medico Caricato" (campi atleta) + "Certificato Inserito" (collezione `certificate_history`), e analogamente "Certificato Medico Convalidato" + "Certificato Verificato".
+- Fix (`get_athlete_timeline`): fetch di `certificate_history` UNA volta a monte; le sezioni 5/6 (eventi da campi atleta) vengono emesse SOLO se lo storico non contiene già l'insert/verify corrispondente. Gli eventi dello storico (sezione 12) mantengono i rinnovi ma con etichette uniformate ("Certificato Medico Caricato"/"Certificato Medico Convalidato").
+- Verificato: atleta sintetico in stile ORSINI ARIANNA (1 upload + 1 convalida, presenti in entrambe le fonti) → timeline con UNA sola riga per movimento, nessun duplicato. Solo backend.
+
+
 ### 28/08/2026 (v3) - Badge di stato coerente guidato dai dati (lista atleti admin) — verificato via API
 - Dopo aver reso coerente il "cosa manca", restava il BADGE incoerente: due atlete nello stesso stato documentale (senza data certificato) mostravano "Validazione Certificato" vs "In attesa" perché il badge rifletteva lo `status` enum.
 - Fix backend: nuova `compute_status_badge(a)` (guidata dai dati, stessi cancelli di pending_reason) → etichette: "Attesa Certificato" / "Validazione Certificato" / "Attesa Prova" / "In Prova" / "Attesa Privacy". Esposta come `stato_display` nella lista atleti (fast-path `light`) e nel GET singolo. Aggiunte le date certificato alla proiezione `light` (prima mancavano → pending_reason poteva sbagliare "manca la data").

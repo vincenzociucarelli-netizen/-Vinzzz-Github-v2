@@ -33736,8 +33736,22 @@ async def get_athlete_timeline(athlete_id: str, current_user = Depends(get_curre
             "date": str(athlete["privacy_accepted_date"]),
         })
     
-    # 5. Medical Certificate Uploaded
-    if athlete.get("medical_certificate_inserted_at"):
+    # 🐛 29/08/2026 — DEDUPE Cronologia: gli eventi certificato venivano generati da DUE
+    # fonti (campi dell'atleta + collezione certificate_history) → doppioni ("Certificato
+    # Medico Caricato" + "Certificato Inserito", e "Convalidato" + "Verificato").
+    # Fetch dello storico UNA volta e usa i flag per non duplicare le sezioni 5/6.
+    cert_history = await db.certificate_history.find(
+        {"athlete_id": athlete_id},
+        {"_id": 0, "action": 1, "changed_at": 1, "changed_by_name": 1, "new_verified": 1, "old_verified": 1, "new_expiry_date": 1}
+    ).sort("changed_at", 1).to_list(20)
+    _hist_has_insert = any(ch.get("action") == "insert" for ch in cert_history)
+    _hist_has_verify = any(
+        ch.get("action") == "update" and ch.get("old_verified") == False and ch.get("new_verified") == True
+        for ch in cert_history
+    )
+
+    # 5. Medical Certificate Uploaded — solo se NON già presente nello storico certificati
+    if athlete.get("medical_certificate_inserted_at") and not _hist_has_insert:
         inserted_by = athlete.get("medical_certificate_inserted_by_name", "")
         events.append({
             "type": "certificate_uploaded",
@@ -33749,8 +33763,8 @@ async def get_athlete_timeline(athlete_id: str, current_user = Depends(get_curre
             "detail": f"Scadenza: {format_date_it(athlete.get('medical_certificate_expiry', ''))}" if athlete.get("medical_certificate_expiry") else None,
         })
     
-    # 6. Medical Certificate Verified
-    if athlete.get("medical_certificate_verified_at"):
+    # 6. Medical Certificate Verified — solo se NON già presente nello storico certificati
+    if athlete.get("medical_certificate_verified_at") and not _hist_has_verify:
         verified_by = athlete.get("medical_certificate_verified_by_name", "")
         events.append({
             "type": "certificate_verified",
@@ -33895,12 +33909,8 @@ async def get_athlete_timeline(athlete_id: str, current_user = Depends(get_curre
             "date": str(ts) if ts else "",
         })
     
-    # 12. Certificate history
-    cert_history = await db.certificate_history.find(
-        {"athlete_id": athlete_id},
-        {"_id": 0, "action": 1, "changed_at": 1, "changed_by_name": 1, "new_verified": 1, "old_verified": 1, "new_expiry_date": 1}
-    ).sort("changed_at", 1).to_list(20)
-    
+    # 12. Certificate history (rinnovi/aggiornamenti). Usa lo storico già caricato sopra.
+    # Etichette uniformate a quelle "canoniche" per coerenza (niente più doppioni).
     for ch in cert_history:
         ts = ch.get("changed_at")
         if isinstance(ts, datetime):
@@ -33908,10 +33918,10 @@ async def get_athlete_timeline(athlete_id: str, current_user = Depends(get_curre
         if ch.get("action") == "insert":
             events.append({
                 "type": "cert_history_insert",
-                "icon": "add-circle",
+                "icon": "medkit",
                 "color": "#FF2D55",
-                "title": "Certificato Inserito",
-                "description": f"Inserito da {ch.get('changed_by_name', '')}",
+                "title": "Certificato Medico Caricato",
+                "description": f"Certificato caricato da {ch.get('changed_by_name', '')}" if ch.get('changed_by_name') else "Certificato medico caricato",
                 "date": str(ts) if ts else "",
                 "detail": f"Scadenza: {format_date_it(ch.get('new_expiry_date', ''))}" if ch.get("new_expiry_date") else None,
             })
@@ -33919,10 +33929,10 @@ async def get_athlete_timeline(athlete_id: str, current_user = Depends(get_curre
             if ch.get("old_verified") == False and ch.get("new_verified") == True:
                 events.append({
                     "type": "cert_history_verified",
-                    "icon": "checkmark-circle",
+                    "icon": "checkmark-done-circle",
                     "color": "#34C759",
-                    "title": "Certificato Verificato",
-                    "description": f"Verificato da {ch.get('changed_by_name', '')}",
+                    "title": "Certificato Medico Convalidato",
+                    "description": f"Convalidato da {ch.get('changed_by_name', '')}" if ch.get('changed_by_name') else "Certificato convalidato dall'admin",
                     "date": str(ts) if ts else "",
                 })
     
