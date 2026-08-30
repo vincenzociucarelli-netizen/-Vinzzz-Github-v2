@@ -7840,6 +7840,16 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
     for row in matches_data:
         if row.get("match_number"):
             match_numbers_to_import.add(row["match_number"])
+
+    # 🆕 30/08/2026 — Scope l'upsert anche per SQUADRA (team_id), non solo per società.
+    # Motivo: squadre diverse possono avere la STESSA numerazione gare (1,2,3...). Senza
+    # lo scope per squadra, importare il calendario della squadra B cancellava le gare
+    # della squadra A con lo stesso numero (es. la "gara 1" spariva). Ora ogni squadra ha
+    # la propria numerazione indipendente.
+    team_ids_to_import = set()
+    for row in matches_data:
+        if row.get("team_id"):
+            team_ids_to_import.add(row["team_id"])
     
     # Pre-calcola quali match_number esistono già nel DB → quelli sono "aggiornamenti"
     # Multi-tenant: scope to current society to avoid touching other tenants' matches.
@@ -7848,6 +7858,8 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
         _existing_query = {"match_number": {"$in": list(match_numbers_to_import)}}
         if society_id_local:
             _existing_query["society_id"] = society_id_local
+        if team_ids_to_import:
+            _existing_query["team_id"] = {"$in": list(team_ids_to_import)}
         existing_cursor = db.matches.find(
             _existing_query,
             {"match_number": 1, "_id": 0}
@@ -7859,20 +7871,17 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
     # If we have match_numbers, delete only those specific matches (upsert logic)
     # Otherwise, fall back to deleting all future matches for those teams
     if match_numbers_to_import:
-        # Delete existing matches with same match_number - scoped by society
+        # Delete existing matches with same match_number - scoped by society AND team
         _del_query = {"match_number": {"$in": list(match_numbers_to_import)}}
         if society_id_local:
             _del_query["society_id"] = society_id_local
+        if team_ids_to_import:
+            _del_query["team_id"] = {"$in": list(team_ids_to_import)}
         result = await db.matches.delete_many(_del_query)
         deleted_count = result.deleted_count
-        logging.info(f"Deleted {deleted_count} existing matches with match_numbers: {match_numbers_to_import}")
+        logging.info(f"Deleted {deleted_count} existing matches with match_numbers: {match_numbers_to_import} (teams: {team_ids_to_import})")
     else:
         # Fallback: delete future matches for teams (old behavior)
-        team_ids_to_import = set()
-        for row in matches_data:
-            if row.get("team_id"):
-                team_ids_to_import.add(row["team_id"])
-        
         if team_ids_to_import:
             now = datetime.utcnow()
             today = now.replace(hour=0, minute=0, second=0, microsecond=0)
