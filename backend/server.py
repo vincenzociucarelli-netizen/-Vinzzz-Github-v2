@@ -17145,7 +17145,11 @@ async def get_coach_commitments(
         return target_date.replace(hour=0, minute=0, second=0, microsecond=0) >= info["start"]
     
     # Get current date info
-    now = datetime.utcnow()
+    # 🆕 30/08/2026 — Usa l'ora ITALIANA (Europe/Rome), non UTC. Il frontend etichetta i
+    # giorni (Oggi/Domani/Dopodomani) con l'ora locale del dispositivo: usando utcnow() qui
+    # nascevano disallineamenti di 1 giorno nelle ore serali/notturne (es. allenamento del
+    # Lunedì che non compariva su "Oggi" e slittava su "Domani").
+    now = now_it().replace(tzinfo=None)
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     tomorrow = today + timedelta(days=1)
     day_after = today + timedelta(days=2)
