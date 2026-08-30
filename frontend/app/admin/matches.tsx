@@ -61,6 +61,8 @@ export default function AdminMatches() {
   const [homeTeamModalVisible, setHomeTeamModalVisible] = useState(false);
   const [homeTeamName, setHomeTeamName] = useState('');
   const [pendingImportData, setPendingImportData] = useState<any[]>([]);
+  // 🆕 Squadra selezionata manualmente per l'import (evita il match fragile su CampionatoNome)
+  const [importTeamId, setImportTeamId] = useState('');
 
   // FIPAV sync state
   const [syncing, setSyncing] = useState(false);
@@ -452,6 +454,8 @@ export default function AdminMatches() {
 
       // Store parsed data and show home team modal
       setPendingImportData(jsonData);
+      // 🆕 Pre-seleziona la squadra se ce n'è una sola
+      setImportTeamId(teams.length === 1 ? teams[0].id : '');
       setImporting(false);
       setHomeTeamModalVisible(true);
       
@@ -465,6 +469,10 @@ export default function AdminMatches() {
 
   // Process import after home team name is provided
   const processImportWithHomeTeam = async () => {
+    if (!importTeamId) {
+      Alert.alert('Errore', 'Seleziona la squadra a cui assegnare le gare');
+      return;
+    }
     if (!homeTeamName.trim()) {
       Alert.alert('Errore', 'Inserisci il nome della squadra di casa per identificare le gare in casa');
       return;
@@ -476,6 +484,11 @@ export default function AdminMatches() {
     try {
       const jsonData = pendingImportData;
       const homeTeamLower = homeTeamName.trim().toLowerCase();
+
+      // 🆕 Squadra scelta manualmente dall'admin: tutte le gare del file appartengono a questa squadra.
+      // Evita il riconoscimento automatico fragile basato su CampionatoNome (che con le amichevoli
+      // contiene valori tipo "Allen_congiunto - B1" non corrispondenti al nome squadra).
+      const selectedTeam = teams.find(t => t.id === importTeamId);
 
       // Map Excel data to matches format
       // Colonne file federazione: CampionatoNome, GaraDataOra, SquadraCasaNome, SquadraOspiteNome, Impianto, ImpiantoIndirizzo
@@ -497,8 +510,8 @@ export default function AdminMatches() {
         // Usa CampionatoNome, poi SquadraCasaNome, poi fallback legacy
         const teamSearchKey = campionato || squadraCasa || teamNameLegacy;
         
-        // Cerca la squadra che contiene l'identificativo del campionato nel nome
-        const team = teams.find(t => {
+        // 🆕 Se l'admin ha selezionato una squadra, usala sempre. Altrimenti prova il match automatico.
+        const team = selectedTeam || teams.find(t => {
           if (!teamSearchKey) return false;
           const tName = t.name.toLowerCase();
           const searchLower = teamSearchKey.toLowerCase();
@@ -1071,6 +1084,27 @@ export default function AdminMatches() {
             </View>
             
             <View style={styles.homeTeamModalBody}>
+              {/* 🆕 Selettore squadra: tutte le gare del file verranno assegnate a questa squadra */}
+              <Text style={styles.homeTeamFieldLabel}>Squadra di destinazione</Text>
+              <Text style={styles.homeTeamDescription}>
+                Seleziona la squadra a cui assegnare tutte le gare del file (es. la tua B1).
+              </Text>
+              <View style={styles.teamPickerWrapper}>
+                <Picker
+                  selectedValue={importTeamId}
+                  onValueChange={(val) => setImportTeamId(val)}
+                  style={styles.teamPicker}
+                >
+                  <Picker.Item label="— Seleziona squadra —" value="" color="#999" />
+                  {teams.map((t) => (
+                    <Picker.Item key={t.id} label={t.name} value={t.id} />
+                  ))}
+                </Picker>
+              </View>
+
+              <View style={styles.homeTeamDivider} />
+
+              <Text style={styles.homeTeamFieldLabel}>Nome società (per Casa/Trasferta)</Text>
               <Text style={styles.homeTeamDescription}>
                 Inserisci il nome (o parte del nome) della tua società come appare nella colonna "SquadraCasaNome" del file Excel.
               </Text>
@@ -1113,9 +1147,9 @@ export default function AdminMatches() {
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
-                  style={[styles.homeTeamConfirmBtn, !homeTeamName.trim() && styles.homeTeamConfirmDisabled]}
+                  style={[styles.homeTeamConfirmBtn, (!homeTeamName.trim() || !importTeamId) && styles.homeTeamConfirmDisabled]}
                   onPress={processImportWithHomeTeam}
-                  disabled={!homeTeamName.trim()}
+                  disabled={!homeTeamName.trim() || !importTeamId}
                 >
                   <Ionicons name="checkmark" size={20} color="#fff" />
                   <Text style={styles.homeTeamConfirmText}>Importa Gare</Text>
@@ -1534,6 +1568,29 @@ const styles = StyleSheet.create({
   },
   homeTeamModalBody: {
     padding: 20,
+  },
+  homeTeamFieldLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1a1a2e',
+    marginBottom: 6,
+  },
+  teamPickerWrapper: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: '#007AFF',
+    marginBottom: 4,
+    overflow: 'hidden',
+  },
+  teamPicker: {
+    height: Platform.OS === 'ios' ? 180 : 50,
+    width: '100%',
+  },
+  homeTeamDivider: {
+    height: 1,
+    backgroundColor: '#eee',
+    marginVertical: 16,
   },
   homeTeamDescription: {
     fontSize: 14,

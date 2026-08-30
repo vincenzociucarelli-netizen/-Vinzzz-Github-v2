@@ -55,7 +55,7 @@ export default function TrialSettings() {
   };
 
   const adjustSessions = (delta: number) => {
-    setMaxSessions(prev => Math.max(1, Math.min(5, prev + delta)));
+    setMaxSessions(prev => Math.max(1, Math.min(10, prev + delta)));
   };
 
   if (!loaded) return null;
@@ -168,15 +168,15 @@ export default function TrialSettings() {
               <Text style={styles.stepUnit}>allenamenti</Text>
             </View>
             <TouchableOpacity 
-              style={[styles.stepBtn, maxSessions >= 5 && styles.stepBtnDisabled]} 
+              style={[styles.stepBtn, maxSessions >= 10 && styles.stepBtnDisabled]} 
               onPress={() => adjustSessions(1)}
-              disabled={maxSessions >= 5}
+              disabled={maxSessions >= 10}
               data-testid="sessions-plus-btn"
             >
-              <Ionicons name="add" size={22} color={maxSessions >= 5 ? '#ccc' : '#FF6F00'} />
+              <Ionicons name="add" size={22} color={maxSessions >= 10 ? '#ccc' : '#FF6F00'} />
             </TouchableOpacity>
           </View>
-          <Text style={styles.range}>min 1 — max 5 allenamenti</Text>
+          <Text style={styles.range}>min 1 — max 10 allenamenti</Text>
           <Text style={styles.hint}>Si consiglia: 2-3 allenamenti</Text>
         </View>
 

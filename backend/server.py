@@ -6026,7 +6026,7 @@ class SocietySettingsUpdate(BaseModel):
     affiliations: Optional[List[dict]] = None  # [{name: str, number: str}]
     # Trial period settings
     trial_max_days: Optional[int] = None  # Max days for trial (3-15, default 7)
-    trial_max_sessions: Optional[int] = None  # Max training sessions (1-5, default 3)
+    trial_max_sessions: Optional[int] = None  # Max training sessions (1-10, default 3)
 
 
 # ==================== STRIPE PAYMENT SETTINGS ====================

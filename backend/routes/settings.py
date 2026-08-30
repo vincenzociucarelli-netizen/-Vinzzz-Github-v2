@@ -549,7 +549,7 @@ async def update_society_settings(request: Request, data: SocietySettingsUpdate,
     if data.trial_max_days is not None:
         update_dict["trial_max_days"] = max(3, min(15, data.trial_max_days))
     if data.trial_max_sessions is not None:
-        update_dict["trial_max_sessions"] = max(1, min(5, data.trial_max_sessions))
+        update_dict["trial_max_sessions"] = max(1, min(10, data.trial_max_sessions))
 
     # ⚡ 06/2026 — Migrazione logo → Emergent Object Storage. Il logo può arrivare
     # come data URI (data:image/...;base64,...) oppure come base64 grezzo (alcuni
