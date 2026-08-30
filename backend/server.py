@@ -7907,7 +7907,7 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
             match_date = None
             if isinstance(date_str, str):
                 # Try different date formats (including HH:MM:SS for federation files)
-                for fmt in ["%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M:%S", "%Y-%m-%d %H:%M", "%d/%m/%Y %H:%M", "%Y-%m-%dT%H:%M", "%d/%m/%Y", "%Y-%m-%d"]:
+                for fmt in ["%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M:%S", "%Y-%m-%d %H:%M", "%d/%m/%Y %H:%M", "%d/%m/%y %H:%M:%S", "%d/%m/%y %H:%M", "%Y-%m-%dT%H:%M", "%d/%m/%Y", "%d/%m/%y", "%Y-%m-%d", "%m/%d/%Y %H:%M:%S", "%m/%d/%Y %H:%M", "%m/%d/%y %H:%M", "%m/%d/%y"]:
                     try:
                         match_date = datetime.strptime(date_str.strip(), fmt)
                         logging.info(f"Date parsed with format {fmt}: {match_date}")

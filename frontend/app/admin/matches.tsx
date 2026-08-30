@@ -445,10 +445,13 @@ export default function AdminMatches() {
       }
 
       // Parse Excel
+      // 🆕 30/08/2026 — cellDates:true + raw:true → le celle data vengono lette come veri oggetti Date
+      // (rispettando il valore memorizzato da Excel), evitando che Excel le stringifichi in formato
+      // americano ambiguo tipo "9/12/26 17:30" che il backend non riconosceva.
       const workbook = XLSX.read(fileContent, { type: 'array', cellDates: true });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { raw: false, dateNF: 'dd/mm/yyyy hh:mm:ss' });
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { raw: true, defval: '' });
       
       console.log('Excel data parsed:', jsonData.slice(0, 2)); // Debug
 
@@ -494,18 +497,24 @@ export default function AdminMatches() {
       // Colonne file federazione: CampionatoNome, GaraDataOra, SquadraCasaNome, SquadraOspiteNome, Impianto, ImpiantoIndirizzo
       const matchesData = jsonData.map((row: any) => {
         console.log('Processing row:', row); // Debug
+        // Helper: converte qualsiasi valore cella in stringa pulita (raw:true può dare numeri/Date)
+        const S = (v: any) => {
+          if (v == null) return '';
+          if (v instanceof Date) return v.toString();
+          return String(v).trim();
+        };
         
         // CampionatoNome - identificativo della squadra (es. "U14 Maschile Campionato")
-        const campionato = row['CampionatoNome'] || row['CAMPIONATONOME'] || row['Campionato'] || '';
+        const campionato = S(row['CampionatoNome'] || row['CAMPIONATONOME'] || row['Campionato'] || '');
         
         // SquadraCasaNome - nome della squadra di casa
-        const squadraCasa = row['SquadraCasaNome'] || row['SQUADRACASANOME'] || row['Squadra Casa'] || '';
+        const squadraCasa = S(row['SquadraCasaNome'] || row['SQUADRACASANOME'] || row['Squadra Casa'] || '');
         
         // SquadraOspiteNome - avversario
-        const squadraOspite = row['SquadraOspiteNome'] || row['SQUADRAOSPITENOME'] || row['Avversario'] || '';
+        const squadraOspite = S(row['SquadraOspiteNome'] || row['SQUADRAOSPITENOME'] || row['Avversario'] || '');
         
         // Fallback al vecchio formato per compatibilità
-        const teamNameLegacy = row['Squadra'] || row['Team'] || '';
+        const teamNameLegacy = S(row['Squadra'] || row['Team'] || '');
         
         // Usa CampionatoNome, poi SquadraCasaNome, poi fallback legacy
         const teamSearchKey = campionato || squadraCasa || teamNameLegacy;
@@ -534,7 +543,8 @@ export default function AdminMatches() {
         
         // Se è un oggetto Date (da Excel), convertilo in stringa
         if (dateTimeStr instanceof Date) {
-          const d = dateTimeStr;
+          // Arrotonda al minuto più vicino (SheetJS può restituire 17:29:59 invece di 17:30)
+          const d = new Date(Math.round(dateTimeStr.getTime() / 60000) * 60000);
           dateTimeStr = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
         }
         
@@ -549,10 +559,10 @@ export default function AdminMatches() {
         const opponent = isHome ? squadraOspite : squadraCasa;
         
         // Impianto - nome palestra
-        const impianto = row['Impianto'] || row['IMPIANTO'] || row['Luogo'] || '';
+        const impianto = S(row['Impianto'] || row['IMPIANTO'] || row['Luogo'] || '');
         
         // ImpiantoIndirizzo - indirizzo completo
-        const indirizzo = row['ImpiantoIndirizzo'] || row['IMPIANTO INDIRIZZO'] || row['Indirizzo'] || '';
+        const indirizzo = S(row['ImpiantoIndirizzo'] || row['IMPIANTO INDIRIZZO'] || row['Indirizzo'] || '');
         
         // Estrai città dall'impianto o dall'indirizzo se contiene un trattino o virgola
         let venue = impianto;
@@ -573,18 +583,27 @@ export default function AdminMatches() {
         // GaraNumero - numero univoco della gara
         const garaNumero = row['GaraNumero'] || row['GARANUMERO'] || row['Gara Numero'] || row['NumeroGara'] || '';
         
+        // Ritrovo - orario ritrovo. Con cellDates un orario "16:00" può arrivare come Date → formatta HH:MM
+        let ritrovo: any = row['Ritrovo'] || '';
+        if (ritrovo instanceof Date) {
+          const rr = new Date(Math.round(ritrovo.getTime() / 60000) * 60000);
+          ritrovo = `${rr.getHours().toString().padStart(2, '0')}:${rr.getMinutes().toString().padStart(2, '0')}`;
+        } else {
+          ritrovo = S(ritrovo);
+        }
+        
         return {
           team_id: team?.id || '',
           team_name: team?.name || teamSearchKey,
-          match_number: garaNumero ? String(garaNumero) : '',
+          match_number: garaNumero ? String(garaNumero).trim() : '',
           date: dateTimeStr,
           opponent: opponent,
           venue: venue || '',
           address: indirizzo,
           city: city,
           home_away: homeAway,
-          meeting_time: row['Ritrovo'] || '',
-          notes: row['Note'] || '',
+          meeting_time: ritrovo,
+          notes: S(row['Note'] || ''),
         };
       });
 
