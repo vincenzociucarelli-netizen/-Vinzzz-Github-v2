@@ -59,6 +59,12 @@ SENDER_NAME=RegistraTEAM
 
 ## Status - Completed
 
+### 29/08/2026 - Rimosso limite allenamenti settimanali per squadra (richiesta Serie B in preparazione) — verificato via screenshot
+- In modifica squadra (`admin/team/[id].tsx`) c'era un blocco "Massimo 5 allenamenti settimanali" in `addTrainingSession` (+ pulsante "Aggiungi Allenamento" nascosto oltre 10). In creazione (`admin/teams.tsx`) c'era un cap a 10.
+- Fix: rimosso il blocco a 5 e i gate `< 10` in entrambi i file; il pulsante "Aggiungi Allenamento" è sempre disponibile (resta solo il minimo di 2). Nessun limite backend (Team.training_sessions è lista libera).
+- Verificato: squadra Under 14 (7 sedute) → aggiunte fino a 10+ senza alert "Limite raggiunto".
+
+
 ### 29/08/2026 - Fix doppioni Cronologia Atleta (certificato) — verificato via API
 - Causa: la timeline (`GET /athletes/{id}/timeline`) generava gli eventi certificato da DUE fonti → doppioni: "Certificato Medico Caricato" (campi atleta) + "Certificato Inserito" (collezione `certificate_history`), e analogamente "Certificato Medico Convalidato" + "Certificato Verificato".
 - Fix (`get_athlete_timeline`): fetch di `certificate_history` UNA volta a monte; le sezioni 5/6 (eventi da campi atleta) vengono emesse SOLO se lo storico non contiene già l'insert/verify corrispondente. Gli eventi dello storico (sezione 12) mantengono i rinnovi ma con etichette uniformate ("Certificato Medico Caricato"/"Certificato Medico Convalidato").

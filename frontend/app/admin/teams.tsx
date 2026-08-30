@@ -117,9 +117,9 @@ export default function TeamsScreen() {
   };
   
   const addTraining = () => {
-    if (trainings.length < 10) {
-      setTrainings([...trainings, { day: '', timeStart: '', timeEnd: '', venue: '' }]);
-    }
+    // 🆕 29/08/2026 — Nessun limite massimo di allenamenti settimanali (richiesta Serie B
+    // in fase di preparazione: possono superare le 5 sedute).
+    setTrainings([...trainings, { day: '', timeStart: '', timeEnd: '', venue: '' }]);
   };
   
   const removeTraining = (index: number) => {
@@ -650,7 +650,7 @@ export default function TeamsScreen() {
               </View>
 
               <Text style={styles.sectionTitle}>🏟️ Allenamenti Settimanali</Text>
-              <Text style={styles.hint}>Minimo 2, massimo 10 allenamenti</Text>
+              <Text style={styles.hint}>Minimo 2 allenamenti (nessun limite massimo)</Text>
 
               {trainings.map((training, index) => (
                 <View key={index} style={styles.trainingRow}>
@@ -725,12 +725,10 @@ export default function TeamsScreen() {
                 </View>
               ))}
 
-              {trainings.length < 10 && (
-                <TouchableOpacity style={styles.addButton} onPress={addTraining}>
-                  <Ionicons name="add" size={20} color="#007AFF" />
-                  <Text style={styles.addButtonText}>Aggiungi Allenamento</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity style={styles.addButton} onPress={addTraining}>
+                <Ionicons name="add" size={20} color="#007AFF" />
+                <Text style={styles.addButtonText}>Aggiungi Allenamento</Text>
+              </TouchableOpacity>
 
               <Text style={styles.sectionTitle}>🏆 Giorno Gara</Text>
               

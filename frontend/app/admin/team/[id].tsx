@@ -423,10 +423,7 @@ export default function TeamDetail() {
   };
 
   const addTrainingSession = () => {
-    if (trainingSessions.length >= 5) {
-      showAlert('Limite raggiunto', 'Massimo 5 allenamenti settimanali');
-      return;
-    }
+    // 🆕 29/08/2026 — Nessun limite massimo (Serie B in preparazione supera le 5 sedute).
     setTrainingSessions([...trainingSessions, { day: 'Giovedì', timeStart: '', timeEnd: '', venue: '' }]);
   };
 
@@ -1113,12 +1110,10 @@ export default function TeamDetail() {
                 </View>
               ))}
               
-              {trainingSessions.length < 10 && (
-                <TouchableOpacity style={styles.addTrainingBtn} onPress={addTrainingSession}>
-                  <Ionicons name="add" size={20} color="#007AFF" />
-                  <Text style={styles.addTrainingText}>Aggiungi Allenamento</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity style={styles.addTrainingBtn} onPress={addTrainingSession}>
+                <Ionicons name="add" size={20} color="#007AFF" />
+                <Text style={styles.addTrainingText}>Aggiungi Allenamento</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Sezione Giorno Gara */}
