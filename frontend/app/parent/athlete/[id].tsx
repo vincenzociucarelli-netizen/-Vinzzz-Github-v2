@@ -230,6 +230,9 @@ export default function AthleteDetail() {
   const [teamSchedule, setTeamSchedule] = useState<{
     training_sessions: any[];
     match_day: any;
+    activity_start_date?: string | null;
+    trainings_provisional?: boolean;
+    team_name?: string;
   } | null>(null);
   const [qrModalVisible, setQrModalVisible] = useState(false);
   const [privacyModalVisible, setPrivacyModalVisible] = useState(false);
@@ -462,6 +465,9 @@ export default function AthleteDetail() {
           setTeamSchedule({
             training_sessions: teamData.training_sessions || [],
             match_day: teamData.match_day || null,
+            activity_start_date: teamData.activity_start_date || null,
+            trainings_provisional: !!teamData.trainings_provisional,
+            team_name: teamData.name || '',
           });
         }
       } catch (error) {
@@ -2050,6 +2056,61 @@ export default function AthleteDetail() {
 
         {/* === DA FARE TAB === */}
         {activeTab === 'dafare' && (<>
+        {/* 🆕 31/08/2026 — Riquadro "Inizio attività + Allenamenti" nel Da Fare.
+            Mostra sempre gli allenamenti settimanali della squadra e, se impostata,
+            la data di inizio attività (con badge "provvisorio"). */}
+        {teamSchedule && teamSchedule.training_sessions && teamSchedule.training_sessions.length > 0 && (
+          <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#BBDEFB' }} data-testid="dafare-trainings-card">
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+              <Ionicons name="barbell-outline" size={20} color="#1565C0" />
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#1565C0' }}>
+                Allenamenti {teamSchedule.team_name || ''}
+              </Text>
+            </View>
+
+            {teamSchedule.activity_start_date ? (
+              <View style={{ backgroundColor: '#E8F5E9', borderRadius: 8, padding: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="flag" size={16} color="#2E7D32" />
+                <Text style={{ fontSize: 13, color: '#2E7D32', fontWeight: '600', flex: 1 }}>
+                  Inizio attività: {(() => {
+                    try {
+                      const d = new Date(String(teamSchedule.activity_start_date));
+                      return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+                    } catch { return String(teamSchedule.activity_start_date); }
+                  })()}
+                </Text>
+                {teamSchedule.trainings_provisional && (
+                  <View style={{ backgroundColor: '#FFF3E0', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#F57C00' }}>PROVVISORIO</Text>
+                  </View>
+                )}
+              </View>
+            ) : (
+              <View style={{ backgroundColor: '#FFF8E1', borderRadius: 8, padding: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="information-circle-outline" size={16} color="#F57C00" />
+                <Text style={{ fontSize: 12.5, color: '#8D6E63', flex: 1 }}>
+                  Attività non ancora avviata. Gli orari qui sotto sono quelli previsti dalla squadra.
+                </Text>
+              </View>
+            )}
+
+            {teamSchedule.training_sessions.map((session: any, idx: number) => (
+              <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderTopWidth: idx === 0 ? 0 : 1, borderTopColor: '#F0F0F0' }}>
+                <View style={{ width: 92, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="calendar-outline" size={15} color="#007AFF" />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#333' }}>{session.day}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, color: '#333' }}>🕐 {session.timeStart} - {session.timeEnd}</Text>
+                  {session.venue ? (
+                    <Text style={{ fontSize: 12, color: '#777', marginTop: 2 }}>📍 {session.venue}</Text>
+                  ) : null}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* 🆕 27/08/2026 — "Firma la Privacy" tra le cose da fare, con azione diretta.
             Mostrata quando la privacy non è firmata e NON siamo nella fase pre-prova
             (in quel caso il flusso "Rinuncia/Rimani e Firma" più sotto già la gestisce). */}

@@ -17,6 +17,18 @@ from models.enums import UserRole
 
 router = APIRouter()
 
+# 🆕 30/08/2026 — Ora italiana (Europe/Rome) per il calcolo di oggi/domani nell'agenda impegni.
+# Il frontend etichetta i giorni con l'ora locale del dispositivo: usare utcnow() causava
+# disallineamenti di 1 giorno nelle ore serali/notturne (UTC ancora al giorno precedente).
+try:
+    from zoneinfo import ZoneInfo
+    _IT_TZ = ZoneInfo("Europe/Rome")
+except Exception:
+    _IT_TZ = timezone(timedelta(hours=2))
+
+def _now_it_naive():
+    return datetime.now(_IT_TZ).replace(tzinfo=None)
+
 
 # ==================== PARENT COMMITMENTS ====================
 
@@ -58,7 +70,7 @@ async def _build_commitments_payload(team_athletes: dict) -> dict:
             return False
         return target_date.replace(hour=0, minute=0, second=0, microsecond=0) >= info["start"]
     
-    now = datetime.utcnow()
+    now = _now_it_naive()
     today = now.replace(hour=0, minute=0, second=0, microsecond=0)
     tomorrow = today + timedelta(days=1)
     day_after = today + timedelta(days=2)
