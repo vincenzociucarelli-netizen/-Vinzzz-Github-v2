@@ -17048,12 +17048,17 @@ async def get_coach_commitments(
     is_athlete_view = False
     athlete_team_id = None
 
-    if athlete_id and current_user.get("role") == UserRole.ADMIN:
+    if athlete_id and current_user.get("role") in (UserRole.ADMIN, UserRole.PARENT):
         ath = await db.athletes.find_one({"id": athlete_id}, {"_id": 0})
         if not ath:
             raise HTTPException(status_code=404, detail="Atleta non trovato")
-        if current_user.get("society_id") and ath.get("society_id") and current_user["society_id"] != ath["society_id"]:
-            raise HTTPException(status_code=403, detail="Atleta di altra società")
+        if current_user.get("role") == UserRole.PARENT:
+            # 🆕 31/08/2026 — Un genitore può vedere gli impegni SOLO dei propri figli.
+            if current_user["id"] not in (ath.get("parent_id"), ath.get("second_parent_id")):
+                raise HTTPException(status_code=403, detail="Non sei genitore di questo atleta")
+        else:
+            if current_user.get("society_id") and ath.get("society_id") and current_user["society_id"] != ath["society_id"]:
+                raise HTTPException(status_code=403, detail="Atleta di altra società")
         is_athlete_view = True
         # 🆕 08/07/2026 — Considera anche team_id_2 (seconda squadra) e team_ids array
         athlete_team_ids: List[str] = []
