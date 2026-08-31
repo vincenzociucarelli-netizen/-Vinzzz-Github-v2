@@ -1274,6 +1274,11 @@ export default function AthleteScreen() {
                         <Text style={[{ fontSize: 14, fontWeight: '600' }, item.cancelled && { textDecorationLine: 'line-through', color: '#888' }]}>
                           {item.type === 'training' ? `Allenamento ${item.team_name}${item.modified ? ' ✏️ Variato' : ''}` : (item.title || `${item.team_name || ''} ${item.opponent ? `vs ${item.opponent}` : ''}`.trim())}
                         </Text>
+                        {item.type === 'training' && item.provisional && (
+                          <View style={{ backgroundColor: '#FFF3E0', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1, borderWidth: 1, borderColor: '#FFB74D' }}>
+                            <Text style={{ fontSize: 9, fontWeight: '700', color: '#E65100' }}>PROVVISORIO</Text>
+                          </View>
+                        )}
                       </View>
                       {section.key === 'upcoming' && (
                         <Text style={{ fontSize: 12, color: '#666' }}>📅 {item.date} - {item.day_name}</Text>

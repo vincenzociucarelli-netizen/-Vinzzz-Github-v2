@@ -306,16 +306,23 @@ async def get_athlete_commitments(current_user = Depends(get_current_user)):
 
 @router.get("/parent/commitments")
 async def get_parent_commitments(current_user = Depends(get_current_user)):
-    """Get commitments (trainings + matches) for parent's children — 7 days."""
-    if current_user["role"] != UserRole.PARENT:
-        raise HTTPException(status_code=403, detail="Solo genitori possono vedere gli impegni")
-    
+    """Get commitments (trainings + matches) for parent's children — 7 days.
+    🆕 31/08/2026 — Gestione DUAL-ROLE: anche uno staff-user (admin/dirigente/
+    coordinatore/coach/collaboratore) che è collegato come genitore (parent_id/
+    second_parent_id) di almeno un atleta deve vedere gli impegni dei figli, esattamente
+    come /athletes/my. Prima l'endpoint accettava SOLO role=='parent' e restituiva 403,
+    quindi il genitore-admin vedeva i figli in lista ma con agenda vuota.
+    La query è comunque isolata: restituisce SOLO i figli collegati all'utente. """
     athletes = await db.athletes.find({
         "$or": [
             {"parent_id": current_user["id"]},
             {"second_parent_id": current_user["id"]}
         ]
-    }).to_list(20)
+    }).to_list(50)
+
+    # Se non è un genitore "puro" e non ha figli collegati → non autorizzato.
+    if current_user["role"] != UserRole.PARENT and not athletes:
+        raise HTTPException(status_code=403, detail="Nessun figlio collegato a questo account")
     
     team_athletes = {}
     for a in athletes:

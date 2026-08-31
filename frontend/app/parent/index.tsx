@@ -749,6 +749,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                       <Text style={[styles.commitmentItemTitle, (item as any).cancelled && { textDecorationLine: 'line-through', color: '#888' }]}>
                         Allenamento {abbreviateTeamName(item.team_name)}
                         {(item as any).modified ? ' ✏️ Variato' : ''}
+                        {(item as any).provisional ? <Text style={{ color: '#E65100', fontWeight: '700', fontSize: 11 }}> · PROVVISORIO</Text> : null}
                         {renderAthleteNames(item.athlete_names)}
                       </Text>
                     ) : (
@@ -829,6 +830,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                       <Text style={[styles.commitmentItemTitle, (item as any).cancelled && { textDecorationLine: 'line-through', color: '#888' }]}>
                         Allenamento {abbreviateTeamName(item.team_name)}
                         {(item as any).modified ? ' ✏️ Variato' : ''}
+                        {(item as any).provisional ? <Text style={{ color: '#E65100', fontWeight: '700', fontSize: 11 }}> · PROVVISORIO</Text> : null}
                         {renderAthleteNames(item.athlete_names)}
                       </Text>
                     ) : (
@@ -909,6 +911,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                       <Text style={[styles.commitmentItemTitle, (item as any).cancelled && { textDecorationLine: 'line-through', color: '#888' }]}>
                         Allenamento {abbreviateTeamName(item.team_name)}
                         {(item as any).modified ? ' ✏️ Variato' : ''}
+                        {(item as any).provisional ? <Text style={{ color: '#E65100', fontWeight: '700', fontSize: 11 }}> · PROVVISORIO</Text> : null}
                         {renderAthleteNames(item.athlete_names)}
                       </Text>
                     ) : (
@@ -998,6 +1001,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
                       <Text style={[styles.commitmentItemTitle, (item as any).cancelled && { textDecorationLine: 'line-through', color: '#888' }]}>
                         Allenamento {abbreviateTeamName(item.team_name)}
                         {(item as any).modified ? ' ✏️ Variato' : ''}
+                        {(item as any).provisional ? <Text style={{ color: '#E65100', fontWeight: '700', fontSize: 11 }}> · PROVVISORIO</Text> : null}
                         {renderAthleteNames(item.athlete_names)}
                       </Text>
                     ) : (
