@@ -1409,6 +1409,22 @@ export default function AdminDashboard() {
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
+          {/* 🆕 31/08/2026 — Elenco Atleti per Squadra (colonne selezionabili + export Excel) */}
+          <TouchableOpacity
+            style={styles.menuCard}
+            onPress={() => router.push('/admin/team-roster')}
+            data-testid="team-roster-menu-card"
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#E3F2FD' }]}>
+              <Text style={{ fontSize: 26 }}>📋</Text>
+            </View>
+            <View style={styles.menuCardContent}>
+              <Text style={styles.menuCardTitle}>Elenco per Squadra</Text>
+              <Text style={styles.menuCardSubtitle}>Lista atleti con colonne a scelta ed export</Text>
+            </View>
+            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
+          </TouchableOpacity>
+
           {/* Atleti Pro - Sezione sbloccata */}
           <TouchableOpacity
             style={[styles.menuCard, { borderWidth: 2, borderColor: '#FFD700' }]}

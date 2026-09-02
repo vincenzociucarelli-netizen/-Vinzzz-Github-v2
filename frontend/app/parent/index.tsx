@@ -132,13 +132,13 @@ export default function ParentDashboard() {
   };
 
   // Funzione per abbreviare il nome della squadra (es: "Under 16" -> "U. 16")
+  // 🆕 31/08/2026 — "Serie" NON viene più abbreviato (l'utente vuole "Serie D", non "S. D").
   const abbreviateTeamName = (name: string) => {
     if (!name) return '';
     return name
       .replace(/Under\s*/i, 'U. ')
       .replace(/Prima\s*/i, '1ª ')
-      .replace(/Seconda\s*/i, '2ª ')
-      .replace(/Serie\s*/i, 'S. ');
+      .replace(/Seconda\s*/i, '2ª ');
   };
 
   // Funzione per formattare il titolo della gara

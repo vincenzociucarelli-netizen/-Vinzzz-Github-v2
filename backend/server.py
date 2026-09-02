@@ -8786,6 +8786,103 @@ async def get_all_athletes(light: bool = False, current_user = Depends(get_curre
             })
         return out
 
+
+@api_router.get("/admin/team-roster")
+async def get_team_roster(team_id: str, current_user = Depends(get_current_user)):
+    """🆕 31/08/2026 — Elenco atleti di UNA squadra con campi selezionabili lato UI
+    (data di nascita, età, tesserato, certificato medico, categoria, genere, CF, stato,
+    genitore). Solo admin/coordinatore. Isolato per società + stagione corrente."""
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.COORDINATORE):
+        raise HTTPException(status_code=403, detail="Solo admin può vedere l'elenco squadra")
+
+    society_id = current_user.get("society_id")
+    from utils import get_current_season_for_society as _get_cs
+    _current_season = await _get_cs(db, society_id)
+
+    team = await db.teams.find_one(
+        {"id": team_id, "society_id": society_id}, {"_id": 0, "id": 1, "name": 1}
+    )
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+
+    _q = {
+        "society_id": society_id,
+        "team_id": team_id,
+        "$or": [
+            {"rollover_decision": {"$ne": "removed"}},
+            {"rollover_decision_season": {"$ne": _current_season}},
+        ],
+    }
+    proj = {
+        "_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1,
+        "date_of_birth": 1, "gender": 1, "fiscal_code": 1, "status": 1,
+        "medical_certificate_expiry": 1, "parent_id": 1, "second_parent_id": 1,
+    }
+    aths = await db.athletes.find(_q, proj).to_list(2000)
+
+    pids = list({a.get("parent_id") for a in aths if a.get("parent_id")})
+    pmap = {}
+    if pids:
+        parents = await db.users.find({"id": {"$in": pids}}, {"_id": 0, "id": 1, "full_name": 1}).to_list(2000)
+        pmap = {p["id"]: p.get("full_name", "") for p in parents}
+
+    today = now_it().replace(tzinfo=None).date()
+
+    def _to_date(v):
+        if not v:
+            return None
+        s = str(v).replace("Z", "").replace("+00:00", "")
+        for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+            try:
+                from datetime import datetime as _dt
+                return _dt.strptime(s[:19] if "T" in s or " " in s else s[:10], fmt).date()
+            except Exception:
+                continue
+        try:
+            from datetime import datetime as _dt
+            return _dt.fromisoformat(s[:10]).date()
+        except Exception:
+            return None
+
+    def _calc_age(d):
+        if not d:
+            return None
+        return today.year - d.year - ((today.month, today.day) < (d.month, d.day))
+
+    out = []
+    for a in aths:
+        dob = _to_date(a.get("date_of_birth"))
+        exp = _to_date(a.get("medical_certificate_expiry"))
+        if not a.get("medical_certificate_expiry"):
+            cert_label, cert_expiry, cert_valid = "Mancante", "", False
+        elif exp is None:
+            cert_label, cert_expiry, cert_valid = "Data non valida", "", False
+        else:
+            cert_valid = exp >= today
+            cert_label = "Valido" if cert_valid else "Scaduto"
+            cert_expiry = exp.strftime("%d/%m/%Y")
+        full_name = (f"{a.get('last_name','')} {a.get('first_name','')}".strip() or a.get("full_name", ""))
+        out.append({
+            "id": a["id"],
+            "full_name": full_name,
+            "last_name": a.get("last_name", ""),
+            "first_name": a.get("first_name", ""),
+            "date_of_birth": dob.strftime("%d/%m/%Y") if dob else "",
+            "age": _calc_age(dob),
+            "tesserato": a.get("status") == "active",
+            "status": a.get("status", "pending"),
+            "cert_label": cert_label,
+            "cert_expiry": cert_expiry,
+            "cert_valid": cert_valid,
+            "gender": a.get("gender", ""),
+            "fiscal_code": a.get("fiscal_code", ""),
+            "category": team.get("name", ""),
+            "parent_name": pmap.get(a.get("parent_id"), ""),
+        })
+    out.sort(key=lambda x: (x.get("full_name") or "").lower())
+    return {"team": team, "count": len(out), "athletes": out}
+
+
     athletes = await db.athletes.find(_base_query, {
         # 🚀 18/08/2026 PERF — Escludi i campi base64 pesanti: la risposta di questa
         # lista NON li usa (costruisce un dict con soli campi anagrafici/pagamenti).
