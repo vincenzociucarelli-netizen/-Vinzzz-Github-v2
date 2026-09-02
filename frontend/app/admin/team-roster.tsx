@@ -23,6 +23,9 @@ interface RosterAthlete {
   gender: string;
   fiscal_code: string;
   category: string;
+  address: string;
+  city: string;
+  cap: string;
   parent_name: string;
 }
 
@@ -40,6 +43,9 @@ const COLUMNS: ColumnDef[] = [
   { key: 'tesserato', label: 'Tesserato', width: 90 },
   { key: 'cert', label: 'Certificato Medico', width: 170 },
   { key: 'category', label: 'Categoria', width: 130 },
+  { key: 'address', label: 'Indirizzo', width: 190 },
+  { key: 'city', label: 'Città', width: 130 },
+  { key: 'cap', label: 'CAP', width: 75 },
   { key: 'gender', label: 'Genere', width: 80 },
   { key: 'fiscal_code', label: 'Codice Fiscale', width: 160 },
   { key: 'status', label: 'Stato', width: 110 },
@@ -102,6 +108,13 @@ export default function TeamRoster() {
       .finally(() => setLoading(false));
   }, [selectedTeam]);
 
+  // Quando si sceglie "Tutta la società", mostra automaticamente la colonna Categoria
+  useEffect(() => {
+    if (selectedTeam === 'ALL') {
+      setSelectedCols(prev => (prev.includes('category') ? prev : [...prev, 'category']));
+    }
+  }, [selectedTeam]);
+
   const toggleCol = (key: string) => {
     const col = COLUMNS.find(c => c.key === key);
     if (col?.always) return;
@@ -121,6 +134,9 @@ export default function TeamRoster() {
       case 'tesserato': return a.tesserato ? 'Sì' : 'No';
       case 'cert': return a.cert_expiry ? `${a.cert_label} · ${a.cert_expiry}` : a.cert_label;
       case 'category': return a.category || '—';
+      case 'address': return a.address || '—';
+      case 'city': return a.city || '—';
+      case 'cap': return a.cap || '—';
       case 'gender': return genderLabel(a.gender);
       case 'fiscal_code': return a.fiscal_code || '—';
       case 'status': return statusLabel(a.status);
@@ -169,6 +185,7 @@ export default function TeamRoster() {
             <View style={styles.pickerWrap}>
               <Picker selectedValue={selectedTeam} onValueChange={setSelectedTeam} style={styles.picker}>
                 {teams.length === 0 && <Picker.Item label="Nessuna squadra" value="" />}
+                <Picker.Item label="🏢 Tutta la società" value="ALL" />
                 {teams.map(t => <Picker.Item key={t.id} label={t.name} value={t.id} />)}
               </Picker>
             </View>

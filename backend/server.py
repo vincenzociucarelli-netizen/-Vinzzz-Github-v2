@@ -8865,31 +8865,45 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
     from utils import get_current_season_for_society as _get_cs
     _current_season = await _get_cs(db, society_id)
 
-    team = await db.teams.find_one(
-        {"id": team_id, "society_id": society_id}, {"_id": 0, "id": 1, "name": 1}
-    )
-    if not team:
-        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    is_all = (team_id or "").upper() == "ALL"
 
-    _q = {
-        "society_id": society_id,
-        "team_id": team_id,
-        "$or": [
-            {"rollover_decision": {"$ne": "removed"}},
-            {"rollover_decision_season": {"$ne": _current_season}},
-        ],
-    }
+    # Mappa team_id -> nome (per la colonna Categoria, specie in modalità "tutta la società")
+    teams_cur = db.teams.find({"society_id": society_id}, {"_id": 0, "id": 1, "name": 1})
+    team_name_map = {t["id"]: t.get("name", "") for t in await teams_cur.to_list(500)}
+
+    if is_all:
+        team = {"id": "ALL", "name": "Tutta la società"}
+        _q = {
+            "society_id": society_id,
+            "$or": [
+                {"rollover_decision": {"$ne": "removed"}},
+                {"rollover_decision_season": {"$ne": _current_season}},
+            ],
+        }
+    else:
+        if team_id not in team_name_map:
+            raise HTTPException(status_code=404, detail="Squadra non trovata")
+        team = {"id": team_id, "name": team_name_map.get(team_id, "")}
+        _q = {
+            "society_id": society_id,
+            "team_id": team_id,
+            "$or": [
+                {"rollover_decision": {"$ne": "removed"}},
+                {"rollover_decision_season": {"$ne": _current_season}},
+            ],
+        }
     proj = {
         "_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1,
         "date_of_birth": 1, "gender": 1, "fiscal_code": 1, "status": 1,
         "medical_certificate_expiry": 1, "parent_id": 1, "second_parent_id": 1,
+        "address": 1, "city": 1, "cap": 1, "team_id": 1, "is_registered": 1,
     }
-    aths = await db.athletes.find(_q, proj).to_list(2000)
+    aths = await db.athletes.find(_q, proj).to_list(5000)
 
     pids = list({a.get("parent_id") for a in aths if a.get("parent_id")})
     pmap = {}
     if pids:
-        parents = await db.users.find({"id": {"$in": pids}}, {"_id": 0, "id": 1, "full_name": 1}).to_list(2000)
+        parents = await db.users.find({"id": {"$in": pids}}, {"_id": 0, "id": 1, "full_name": 1}).to_list(5000)
         pmap = {p["id"]: p.get("full_name", "") for p in parents}
 
     today = now_it().replace(tzinfo=None).date()
@@ -8928,6 +8942,7 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
             cert_label = "Valido" if cert_valid else "Scaduto"
             cert_expiry = exp.strftime("%d/%m/%Y")
         full_name = (f"{a.get('last_name','')} {a.get('first_name','')}".strip() or a.get("full_name", ""))
+        category = team_name_map.get(a.get("team_id"), "") if is_all else team.get("name", "")
         out.append({
             "id": a["id"],
             "full_name": full_name,
@@ -8935,14 +8950,17 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
             "first_name": a.get("first_name", ""),
             "date_of_birth": dob.strftime("%d/%m/%Y") if dob else "",
             "age": _calc_age(dob),
-            "tesserato": a.get("status") == "active",
+            "tesserato": bool(a.get("is_registered")),
             "status": a.get("status", "pending"),
             "cert_label": cert_label,
             "cert_expiry": cert_expiry,
             "cert_valid": cert_valid,
             "gender": a.get("gender", ""),
             "fiscal_code": a.get("fiscal_code", ""),
-            "category": team.get("name", ""),
+            "category": category,
+            "address": a.get("address", "") or "",
+            "city": a.get("city", "") or "",
+            "cap": a.get("cap", "") or "",
             "parent_name": pmap.get(a.get("parent_id"), ""),
         })
     out.sort(key=lambda x: (x.get("full_name") or "").lower())
