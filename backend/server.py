@@ -2718,12 +2718,80 @@ async def validate_invite_code(data: dict):
     }
 
 
+async def _email_is_releasable(existing_user: dict) -> bool:
+    """🆕 31/08/2026 — Multi-società: 'un'appartenenza alla volta'.
+    Ritorna True se l'account collegato a questa email NON ha più un'appartenenza
+    attiva (è uscito/rimosso da tutte le società) → l'email può essere riusata per
+    una nuova registrazione in un'altra società. Lo STORICO (record atleta, pagamenti,
+    presenze) resta comunque archiviato nella società originaria: liberiamo solo il
+    record di LOGIN. Se invece l'account è ancora membro attivo → NON è liberabile
+    (non si può stare in due società contemporaneamente)."""
+    if not existing_user:
+        return True
+    # Account esplicitamente disattivato
+    if existing_user.get("is_active") is False:
+        return True
+    uid = existing_user.get("id")
+    role = existing_user.get("role")
+    _inactive_status = ["withdrawn", "deleted", "removed"]
+    # GENITORE: attivo solo se ha ancora almeno un figlio NON ritirato
+    if role == UserRole.PARENT or role == "parent":
+        active_children = await db.athletes.count_documents({
+            "$or": [{"parent_id": uid}, {"second_parent_id": uid}],
+            "is_withdrawn": {"$ne": True},
+            "status": {"$nin": _inactive_status},
+        })
+        return active_children == 0
+    # ATLETA: attivo se il suo record atleta esiste ed è non ritirato
+    ath_id = existing_user.get("athlete_id")
+    if role in (UserRole.ATHLETE, "athlete", "minor") or ath_id:
+        if ath_id:
+            ath = await db.athletes.find_one({"id": ath_id}, {"_id": 0, "status": 1, "is_withdrawn": 1})
+            if not ath:
+                return True
+            if ath.get("is_withdrawn") is True:
+                return True
+            if ath.get("status") in _inactive_status:
+                return True
+            return False
+        # ruolo atleta senza record collegato → orfano, liberabile
+        return True
+    # STAFF (admin/coach/dirigente/coordinatore/collaboratore/viewer): NON liberiamo
+    # automaticamente (troppo rischioso). Resta bloccato finché è membro.
+    return False
+
+
+async def _release_or_block_email(email_value: str, error_detail: str = "Email già registrata"):
+    """Se l'email esiste ma l'account è 'stale' (uscito da tutte le società) elimina il
+    record di login liberando l'email; se invece è ancora attivo, solleva 400."""
+    existing = await db.users.find_one({"email": email_value})
+    if not existing:
+        # prova anche versione lowercase (le email vengono normalizzate a lower altrove)
+        if email_value != email_value.lower():
+            existing = await db.users.find_one({"email": email_value.lower()})
+    if not existing:
+        return
+    if await _email_is_releasable(existing):
+        await db.users.delete_one({"id": existing["id"]})
+        try:
+            await db.audit_logs.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": existing["id"],
+                "action": "stale_login_released_on_register",
+                "details": {"old_society_id": existing.get("society_id"), "role": existing.get("role")},
+                "created_at": datetime.now(timezone.utc),
+            })
+        except Exception:
+            pass
+        return
+    raise HTTPException(status_code=400, detail=error_detail)
+
+
+
 @api_router.post("/auth/register", response_model=TokenResponse)
 async def register(user_data: UserCreate, request: Request):
-    # Check if user exists
-    existing = await db.users.find_one({"email": user_data.email})
-    if existing:
-        raise HTTPException(status_code=400, detail="Email già registrata")
+    # Check if user exists (🆕 libera l'email se l'account è uscito da tutte le società)
+    await _release_or_block_email(user_data.email)
     
     # Find society by invite code
     society_id = None
@@ -3352,10 +3420,8 @@ async def register_adult_athlete(data: AdultAthleteRegister):
     if not is_valid_email(data.email):
         raise HTTPException(status_code=400, detail="Indirizzo email non valido. Controlla e riprova.")
     
-    # Check if email already exists
-    existing_user = await db.users.find_one({"email": data.email.lower()})
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email già registrata")
+    # Check if email already exists (🆕 libera l'email se l'account è uscito da tutte le società)
+    await _release_or_block_email(data.email.lower())
     
     # Validate invite code and get society
     if not data.invite_code:
