@@ -77,6 +77,7 @@ export default function TeamRoster() {
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [selectedCols, setSelectedCols] = useState<string[]>(DEFAULT_SELECTED);
+  const [selectedCity, setSelectedCity] = useState<string>('');
 
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') { window.alert(`${title}\n${message}`); }
@@ -101,6 +102,7 @@ export default function TeamRoster() {
 
   useEffect(() => {
     if (!selectedTeam) { setAthletes([]); return; }
+    setSelectedCity('');
     setLoading(true);
     api.get('/admin/team-roster', { params: { team_id: selectedTeam } })
       .then((res) => setAthletes(res.data?.athletes || []))
@@ -108,12 +110,32 @@ export default function TeamRoster() {
       .finally(() => setLoading(false));
   }, [selectedTeam]);
 
+  // Elenco città distinte (per il filtro), ordinate alfabeticamente
+  const cityOptions = useMemo(() => {
+    const set = new Set<string>();
+    athletes.forEach(a => { const c = (a.city || '').trim(); if (c) set.add(c); });
+    return Array.from(set).sort((x, y) => x.localeCompare(y, 'it'));
+  }, [athletes]);
+
+  // Atleti filtrati per città (case-insensitive)
+  const filteredAthletes = useMemo(() => {
+    if (!selectedCity) return athletes;
+    return athletes.filter(a => (a.city || '').trim().toLowerCase() === selectedCity.toLowerCase());
+  }, [athletes, selectedCity]);
+
   // Quando si sceglie "Tutta la società", mostra automaticamente la colonna Categoria
   useEffect(() => {
     if (selectedTeam === 'ALL') {
       setSelectedCols(prev => (prev.includes('category') ? prev : [...prev, 'category']));
     }
   }, [selectedTeam]);
+
+  // Quando si filtra per città, mostra automaticamente la colonna Città
+  useEffect(() => {
+    if (selectedCity) {
+      setSelectedCols(prev => (prev.includes('city') ? prev : [...prev, 'city']));
+    }
+  }, [selectedCity]);
 
   const toggleCol = (key: string) => {
     const col = COLUMNS.find(c => c.key === key);
@@ -146,16 +168,17 @@ export default function TeamRoster() {
   };
 
   const handleExport = async () => {
-    if (athletes.length === 0) { showAlert('Nessun dato', 'Non ci sono atleti da esportare.'); return; }
+    if (filteredAthletes.length === 0) { showAlert('Nessun dato', 'Non ci sono atleti da esportare.'); return; }
     setExporting(true);
     try {
-      const rows = athletes.map(a => {
+      const rows = filteredAthletes.map(a => {
         const row: { [k: string]: any } = {};
         visibleColumns.forEach(col => { row[col.label] = cellValue(a, col.key); });
         return row;
       });
       const teamName = teams.find(t => t.id === selectedTeam)?.name || 'Squadra';
-      await exportToExcel(rows, `Elenco_${teamName.replace(/\s+/g, '_')}`);
+      const citySuffix = selectedCity ? `_${selectedCity.replace(/\s+/g, '_')}` : '';
+      await exportToExcel(rows, `Elenco_${teamName.replace(/\s+/g, '_')}${citySuffix}`);
       showAlert('Successo', 'Elenco esportato in Excel.');
     } catch (e: any) {
       showAlert('Errore', e?.message || 'Esportazione non riuscita.');
@@ -192,6 +215,22 @@ export default function TeamRoster() {
           )}
         </View>
 
+        {/* City filter */}
+        {athletes.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.label}>Filtra per Città</Text>
+            <View style={styles.pickerWrap}>
+              <Picker selectedValue={selectedCity} onValueChange={setSelectedCity} style={styles.picker} testID="city-filter-picker">
+                <Picker.Item label={`📍 Tutte le città (${athletes.length})`} value="" />
+                {cityOptions.map(c => {
+                  const n = athletes.filter(a => (a.city || '').trim().toLowerCase() === c.toLowerCase()).length;
+                  return <Picker.Item key={c} label={`${c} (${n})`} value={c} />;
+                })}
+              </Picker>
+            </View>
+          </View>
+        )}
+
         {/* Column chooser */}
         <View style={styles.section}>
           <Text style={styles.label}>Colonne da mostrare</Text>
@@ -220,11 +259,13 @@ export default function TeamRoster() {
 
         {/* Export */}
         <View style={{ paddingHorizontal: 16, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={styles.countText}>{athletes.length} atleti</Text>
+          <Text style={styles.countText}>
+            {filteredAthletes.length} atleti{selectedCity ? ` · ${selectedCity}` : ''}
+          </Text>
           <TouchableOpacity
-            style={[styles.exportBtn, (exporting || athletes.length === 0) && { opacity: 0.5 }]}
+            style={[styles.exportBtn, (exporting || filteredAthletes.length === 0) && { opacity: 0.5 }]}
             onPress={handleExport}
-            disabled={exporting || athletes.length === 0}
+            disabled={exporting || filteredAthletes.length === 0}
             data-testid="roster-export-btn"
           >
             {exporting ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="download-outline" size={18} color="#fff" />}
@@ -235,8 +276,10 @@ export default function TeamRoster() {
         {/* Table */}
         {loading ? (
           <ActivityIndicator color="#1565C0" style={{ marginTop: 30 }} />
-        ) : athletes.length === 0 ? (
-          <Text style={styles.emptyText}>Nessun atleta in questa squadra.</Text>
+        ) : filteredAthletes.length === 0 ? (
+          <Text style={styles.emptyText}>
+            {selectedCity ? `Nessun atleta a ${selectedCity}.` : 'Nessun atleta in questa squadra.'}
+          </Text>
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator style={{ marginTop: 4 }}>
             <View>
@@ -249,7 +292,7 @@ export default function TeamRoster() {
                 ))}
               </View>
               {/* Data rows */}
-              {athletes.map((a, idx) => (
+              {filteredAthletes.map((a, idx) => (
                 <View key={a.id} style={[styles.row, idx % 2 === 1 && styles.rowAlt]}>
                   {visibleColumns.map(col => {
                     let color = '#222';

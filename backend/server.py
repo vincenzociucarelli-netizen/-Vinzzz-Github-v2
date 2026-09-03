@@ -8896,7 +8896,7 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
         "_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1,
         "date_of_birth": 1, "gender": 1, "fiscal_code": 1, "status": 1,
         "medical_certificate_expiry": 1, "parent_id": 1, "second_parent_id": 1,
-        "address": 1, "city": 1, "cap": 1, "team_id": 1, "is_registered": 1,
+        "address": 1, "city": 1, "cap": 1, "postal_code": 1, "team_id": 1, "is_registered": 1,
     }
     aths = await db.athletes.find(_q, proj).to_list(5000)
 
@@ -8960,7 +8960,7 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
             "category": category,
             "address": a.get("address", "") or "",
             "city": a.get("city", "") or "",
-            "cap": a.get("cap", "") or "",
+            "cap": a.get("postal_code", "") or a.get("cap", "") or "",
             "parent_name": pmap.get(a.get("parent_id"), ""),
         })
     out.sort(key=lambda x: (x.get("full_name") or "").lower())

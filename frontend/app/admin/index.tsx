@@ -205,7 +205,7 @@ export default function AdminDashboard() {
         fetchWithRetry('/societies/invite-code', { invite_code: '' }),
         fetchWithRetry('/admin/notifications/unread-count', { count: 0 }),
         // 🆕 27/02/2026 (P2) — Atleti che hanno compiuto 18 anni negli ultimi 30gg
-        fetchWithRetry('/admin/recent-18th-birthdays?days=30', { count: 0, athletes: [] }),
+        fetchWithRetry('/admin/recent-18th-birthdays?days=10', { count: 0, athletes: [] }),
       ]);
       
       setBirthdays(birthdaysRes.data || []);
@@ -716,10 +716,10 @@ export default function AdminDashboard() {
               testId: 'task-notifications',
             },
             {
-              // 🆕 27/02/2026 (P2) — Neo-maggiorenni ultimi 30gg (info GDPR)
+              // 🆕 27/02/2026 (P2) — Neo-maggiorenni ultimi 10gg (info GDPR)
               key: 'recent-18',
               count: recent18?.length || 0,
-              label: 'Neo-maggiorenni (30gg)',
+              label: 'Diventati maggiorenni (ultimi 10gg)',
               icon: '🎂',
               color: '#00838F',
               onPress: () => {
@@ -728,7 +728,7 @@ export default function AdminDashboard() {
                   const notified = a.birthday_18_notified_at ? '✉️ notificato' : '⏳ in coda';
                   return `• ${a.full_name || `${a.first_name} ${a.last_name}`} — 18° il ${a.turned_18_on || '?'} (${notified})`;
                 }).join('\n');
-                showInfo('🎂 Neo-maggiorenni (ultimi 30 giorni)', msg + '\n\nGDPR: la firma dei documenti passa in autonomia all\'atleta.');
+                showInfo('🎂 Diventati maggiorenni (ultimi 10 giorni)', msg + '\n\nGDPR: la firma dei documenti passa in autonomia all\'atleta.');
               },
               testId: 'task-recent-18',
             },
