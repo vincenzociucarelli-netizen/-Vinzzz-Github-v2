@@ -1270,3 +1270,8 @@ Scelta utente (1c): il consenso del genitore allo svolgimento della prova si rac
 - Frontend `app/athlete/index.tsx`: rimosso il blocco "Dichiarazione di Prova" (era per adulti, ora dead-code: i 18+ non hanno prova).
 NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungibile dal genitore.
 
+
+## Changelog — 03/09/2026 — Contatto WhatsApp da scheda atleta (Anagrafica) + fix Tesserato in Elenco Squadra
+- **WhatsApp diretto (admin, `app/admin/athlete/[id].tsx`)**: nella tab Anagrafica, accanto a Tel. Atleta / Tel. Madre / Tel. Padre ora compare un pulsante verde WhatsApp (visibile solo se il numero è presente). Apre `https://wa.me/<intl>` (prefisso 39 auto se manca il +). Helper `openWhatsAppContact`. Stili `phoneValueRow`/`waBtn`. Verificato via screenshot su MAURI LENA (pulsante su Tel. Padre).
+- **Fix colonna "Tesserato" (Elenco Squadra, `GET /admin/team-roster`)**: prima calcolava `tesserato` da `status == "active"` (errato → atlete tesserate ma in prova/attesa risultavano "No"). Ora usa il vero flag `is_registered` (stesso del toggle "Tesserato" nella scheda atleta e dell'export principale). Aggiunto `is_registered` alla projection.
+- **Deploy**: Frontend (Vercel) + Backend (Render).

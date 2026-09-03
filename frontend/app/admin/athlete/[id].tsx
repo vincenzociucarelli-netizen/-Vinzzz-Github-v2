@@ -219,6 +219,20 @@ interface AthleteAttendanceStats {
 export default function AdminAthleteDetail() {
   const router = useRouter();
   const { id, section } = useLocalSearchParams();
+
+  // 🆕 Contatta atleta/genitori via WhatsApp dalla scheda anagrafica
+  const openWhatsAppContact = (phone?: string | null) => {
+    if (!phone) return;
+    const cleanPhone = String(phone).replace(/\s+/g, '').replace(/^0+/, '');
+    const intlPhone = cleanPhone.startsWith('+') ? cleanPhone.replace('+', '') : `39${cleanPhone}`;
+    const url = `https://wa.me/${intlPhone}`;
+    if (Platform.OS === 'web') {
+      window.open(url, '_blank');
+    } else {
+      Linking.openURL(url);
+    }
+  };
+
   const [athlete, setAthlete] = useState<Athlete | null>(null);
   const [team, setTeam] = useState<Team | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -3149,15 +3163,51 @@ export default function AdminAthleteDetail() {
                   </View>
                   <View style={styles.infoRow}>
                     <Text style={styles.label}>Tel. Atleta</Text>
-                    <Text style={styles.value}>{athlete.phone_athlete || '-'}</Text>
+                    <View style={styles.phoneValueRow}>
+                      <Text style={styles.value}>{athlete.phone_athlete || '-'}</Text>
+                      {!!athlete.phone_athlete && (
+                        <TouchableOpacity
+                          testID="wa-athlete"
+                          style={styles.waBtn}
+                          onPress={() => openWhatsAppContact(athlete.phone_athlete)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="logo-whatsapp" size={18} color="#fff" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
                   <View style={styles.infoRow}>
                     <Text style={styles.label}>Tel. Madre</Text>
-                    <Text style={styles.value}>{athlete.phone_mother || '-'}</Text>
+                    <View style={styles.phoneValueRow}>
+                      <Text style={styles.value}>{athlete.phone_mother || '-'}</Text>
+                      {!!athlete.phone_mother && (
+                        <TouchableOpacity
+                          testID="wa-mother"
+                          style={styles.waBtn}
+                          onPress={() => openWhatsAppContact(athlete.phone_mother)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="logo-whatsapp" size={18} color="#fff" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
                   <View style={styles.infoRow}>
                     <Text style={styles.label}>Tel. Padre</Text>
-                    <Text style={styles.value}>{athlete.phone_father || '-'}</Text>
+                    <View style={styles.phoneValueRow}>
+                      <Text style={styles.value}>{athlete.phone_father || '-'}</Text>
+                      {!!athlete.phone_father && (
+                        <TouchableOpacity
+                          testID="wa-father"
+                          style={styles.waBtn}
+                          onPress={() => openWhatsAppContact(athlete.phone_father)}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="logo-whatsapp" size={18} color="#fff" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
                   {/* 🔐 09/08/2026 — Il banner viola "Sono io il genitore" è stato
                       spostato in fondo alla scheda (pulsante discreto) perché troppo
@@ -6173,6 +6223,8 @@ const styles = StyleSheet.create({
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
   label: { fontSize: 14, color: '#666', flex: 1 },
   value: { fontSize: 14, fontWeight: '500', color: '#333', flex: 1, textAlign: 'right' },
+  phoneValueRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flex: 1, gap: 8 },
+  waBtn: { backgroundColor: '#25D366', width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   valueCode: { fontSize: 14, fontWeight: '600', color: '#007AFF', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' },
   valueSmall: { fontSize: 12 },
   input: { backgroundColor: '#f5f5f5', borderRadius: 8, padding: 12, fontSize: 14, borderWidth: 1, borderColor: '#e0e0e0' },
