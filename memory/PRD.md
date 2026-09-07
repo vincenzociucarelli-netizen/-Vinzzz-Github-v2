@@ -1281,3 +1281,15 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - **Filtro per Città (`app/admin/team-roster.tsx`)**: nuovo picker "Filtra per Città" popolato dalle città distinte degli atleti caricati, ognuna con conteggio (es. "PERUGIA (12)"), + opzione "Tutte le città (N)". Il conteggio in alto, la tabella e l'export Excel usano la lista filtrata. Selezionando una città si mostra automaticamente la colonna Città; nome file export con suffisso città.
 - **Neo-maggiorenni dashboard (`app/admin/index.tsx`)**: finestra ridotta da 30 a **10 giorni** (`/admin/recent-18th-birthdays?days=10`). Etichetta card cambiata da "Neo-maggiorenni (30gg)" a **"Diventati maggiorenni (ultimi 10gg)"** e titolo popup coerente, per evitare confusione col compleanno di oggi. La card "🎂 Compleanni di Oggi" (tutti gli atleti nati oggi) resta invariata e separata.
 - **Deploy**: Frontend (Vercel) + Backend (Render, per CAP e roster).
+
+## Changelog — 05/09/2026 — Messaggio WhatsApp a tutta la Squadra (dalla scheda squadra)
+- **Backend (`GET /admin/teams/{team_id}/whatsapp-contacts`)**: ritorna i contatti di tutti gli atleti di una squadra (nome, is_minor, athlete_phone, mother_phone, father_phone), con fallback dei telefoni dai record genitore collegati se i campi sulla scheda atleta sono vuoti. Isolato per società + stagione corrente. Solo admin/coordinatore.
+- **Frontend nuova schermata `app/admin/team-whatsapp.tsx`**: 
+  - Selettore destinatari: **Genitori / Atleta / Entrambi** (con dedupe dei numeri).
+  - Campo **messaggio unico** (testo libero) precompilato in ogni chat.
+  - **Invio "uno per uno"**: lista contatti con pulsante "Invia" (apre wa.me con messaggio precompilato; badge "Inviato" dopo il tap).
+  - **Invio unico via Lista Broadcast**: pulsanti "Copia numeri" (formato +39…) e "Copia messaggio" per creare una lista broadcast su WhatsApp.
+  - Nota: nessun invio massivo automatico (limite WhatsApp non-Business); l'admin conferma ogni invio. WhatsApp Business API resta in backlog.
+- **Pulsante di accesso**: nella scheda squadra (`app/admin/team/[id].tsx`), voce "Messaggio WhatsApp alla Squadra" sotto "Registro Presenze" → naviga a `/admin/team-whatsapp?team_id=&team_name=`.
+- Verificato via curl (endpoint) + screenshot (UI: modalità Atleta, messaggio, Copia numeri (1), pulsante Invia). 
+- **Deploy**: Frontend (Vercel) + Backend (Render).

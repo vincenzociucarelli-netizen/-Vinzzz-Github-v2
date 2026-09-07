@@ -1652,6 +1652,24 @@ export default function TeamDetail() {
               </View>
               <Ionicons name="chevron-forward" size={24} color="#999" />
             </TouchableOpacity>
+
+            {/* Link to Team WhatsApp broadcast */}
+            <TouchableOpacity 
+              style={styles.attendanceLink}
+              onPress={() => router.push(`/admin/team-whatsapp?team_id=${id}&team_name=${encodeURIComponent(team?.name || '')}`)}
+              testID="link-team-whatsapp"
+            >
+              <View style={styles.attendanceLinkContent}>
+                <View style={styles.attendanceLinkIcon}>
+                  <Ionicons name="logo-whatsapp" size={28} color="#25D366" />
+                </View>
+                <View style={styles.attendanceLinkText}>
+                  <Text style={styles.attendanceLinkTitle}>Messaggio WhatsApp alla Squadra</Text>
+                  <Text style={styles.attendanceLinkSubtitle}>Stesso messaggio a genitori e/o atleti</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#999" />
+            </TouchableOpacity>
             
             {/* Link to Training Overrides */}
             <TouchableOpacity 

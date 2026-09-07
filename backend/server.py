@@ -8966,6 +8966,72 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
     out.sort(key=lambda x: (x.get("full_name") or "").lower())
     return {"team": team, "count": len(out), "athletes": out}
 
+@api_router.get("/admin/teams/{team_id}/whatsapp-contacts")
+async def get_team_whatsapp_contacts(team_id: str, current_user = Depends(get_current_user)):
+    """🆕 05/09/2026 — Contatti (telefoni) di tutti gli atleti di UNA squadra per
+    l'invio di un messaggio WhatsApp uguale a tutta la squadra (genitori/atleta).
+    Solo admin/coordinatore. Isolato per società. Ritorna per ciascun atleta:
+    telefono atleta, telefono madre, telefono padre (con fallback dai record
+    genitore collegati se i campi sulla scheda atleta sono vuoti)."""
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.COORDINATORE):
+        raise HTTPException(status_code=403, detail="Solo admin può vedere i contatti squadra")
+
+    society_id = current_user.get("society_id")
+    from utils import get_current_season_for_society as _get_cs
+    _current_season = await _get_cs(db, society_id)
+
+    team = await db.teams.find_one({"id": team_id, "society_id": society_id}, {"_id": 0, "id": 1, "name": 1})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+
+    _q = {
+        "society_id": society_id,
+        "team_id": team_id,
+        "$or": [
+            {"rollover_decision": {"$ne": "removed"}},
+            {"rollover_decision_season": {"$ne": _current_season}},
+        ],
+    }
+    proj = {
+        "_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1,
+        "date_of_birth": 1, "phone_athlete": 1, "phone": 1,
+        "phone_mother": 1, "phone_father": 1, "parent_id": 1, "second_parent_id": 1,
+    }
+    aths = await db.athletes.find(_q, proj).to_list(5000)
+
+    # Fallback telefoni dai record genitore collegati
+    pids = list({p for a in aths for p in (a.get("parent_id"), a.get("second_parent_id")) if p})
+    pmap = {}
+    if pids:
+        parents = await db.users.find({"id": {"$in": pids}}, {"_id": 0, "id": 1, "phone": 1}).to_list(5000)
+        pmap = {p["id"]: (p.get("phone") or "").strip() for p in parents}
+
+    def _clean(v):
+        return (str(v).strip() if v else "")
+
+    out = []
+    for a in aths:
+        full_name = (f"{a.get('last_name','')} {a.get('first_name','')}".strip() or a.get("full_name", ""))
+        athlete_phone = _clean(a.get("phone_athlete")) or _clean(a.get("phone"))
+        mother_phone = _clean(a.get("phone_mother"))
+        father_phone = _clean(a.get("phone_father"))
+        # fallback: se madre/padre vuoti, usa i telefoni dei genitori collegati
+        parent_fallback = _clean(pmap.get(a.get("parent_id"))) or _clean(pmap.get(a.get("second_parent_id")))
+        if not mother_phone and not father_phone and parent_fallback:
+            mother_phone = parent_fallback
+        out.append({
+            "athlete_id": a["id"],
+            "athlete_name": full_name,
+            "is_minor": _compute_is_minor(a),
+            "athlete_phone": athlete_phone,
+            "mother_phone": mother_phone,
+            "father_phone": father_phone,
+        })
+    out.sort(key=lambda x: (x.get("athlete_name") or "").lower())
+    return {"team": team, "count": len(out), "athletes": out}
+
+
+
 
     athletes = await db.athletes.find(_base_query, {
         # 🚀 18/08/2026 PERF — Escludi i campi base64 pesanti: la risposta di questa
