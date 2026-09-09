@@ -46,6 +46,8 @@ class Team(BaseModel):
     championships: Optional[str] = None
     calendar_link: Optional[str] = None
     certificate_type_required: str = "agonistico"
+    # 🆕 Tipo kit abbigliamento applicato alla squadra: "under" | "minivolley" | None
+    kit_type: Optional[str] = None
     # 🆕 12/08/2026 — Data inizio attività + flag allenamenti provvisori
     activity_start_date: Optional[str] = None
     trainings_provisional: Optional[bool] = False
@@ -79,6 +81,7 @@ class TeamCreate(BaseModel):
     certificate_type_required: Optional[str] = None
     activity_start_date: Optional[str] = None
     trainings_provisional: Optional[bool] = False
+    kit_type: Optional[str] = None
 
 
 class TeamUpdate(BaseModel):
@@ -105,6 +108,7 @@ class TeamUpdate(BaseModel):
     certificate_type_required: Optional[str] = None
     activity_start_date: Optional[str] = None
     trainings_provisional: Optional[bool] = None
+    kit_type: Optional[str] = None
 
 
 class AssignmentRequest(BaseModel):

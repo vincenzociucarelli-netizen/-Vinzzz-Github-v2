@@ -371,6 +371,8 @@ async def get_society_settings(request: Request, include_images: bool = False):
             "bank_name": None,
             "affiliations": [],
             "kit_price": None,
+            "kit_price_under": None,
+            "kit_price_minivolley": None,
             "kit_sponsor": None,
         }
     return {
@@ -416,6 +418,8 @@ async def get_society_settings(request: Request, include_images: bool = False):
         "trial_max_days": settings.get("trial_max_days", 7),
         "trial_max_sessions": settings.get("trial_max_sessions", 3),
         "kit_price": settings.get("kit_price"),
+        "kit_price_under": settings.get("kit_price_under", settings.get("kit_price")),
+        "kit_price_minivolley": settings.get("kit_price_minivolley"),
         "kit_sponsor": settings.get("kit_sponsor"),
         # 🐛 16/08/2026 — I flag di esistenza immagini venivano calcolati ma persi nel
         # rebuild del dict di ritorno: senza di essi il frontend non sapeva se le immagini
@@ -447,7 +451,7 @@ async def update_society_settings(request: Request, data: SocietySettingsUpdate,
         "season_start_month", "season_start_day",
         "season_end_month", "season_end_day",
         "iban", "bank_name", "affiliations",
-        "kit_price", "kit_sponsor"
+        "kit_price", "kit_price_under", "kit_price_minivolley", "kit_sponsor"
     ]
     for f in fields:
         v = getattr(data, f, None)

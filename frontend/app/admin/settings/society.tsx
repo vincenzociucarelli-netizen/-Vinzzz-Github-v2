@@ -57,6 +57,7 @@ export default function SocietySettings() {
   const [societyEmail, setSocietyEmail] = useState('');
   const [societyPec, setSocietyPec] = useState('');
   const [kitPrice, setKitPrice] = useState('');
+  const [kitPriceMini, setKitPriceMini] = useState('');
   const [kitSponsor, setKitSponsor] = useState('');
   const [blockExpiredCertificates, setBlockExpiredCertificates] = useState(true);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
@@ -179,7 +180,8 @@ export default function SocietySettings() {
       setPresidentName(response.data.president_name || '');
       setSocietyEmail(response.data.email || '');
       setSocietyPec(response.data.pec || '');
-      setKitPrice(response.data.kit_price != null ? String(response.data.kit_price) : '');
+      setKitPrice(response.data.kit_price_under != null ? String(response.data.kit_price_under) : (response.data.kit_price != null ? String(response.data.kit_price) : ''));
+      setKitPriceMini(response.data.kit_price_minivolley != null ? String(response.data.kit_price_minivolley) : '');
       setKitSponsor(response.data.kit_sponsor || '');
 
       // Lazy-load images AFTER main data renders, so the page appears
@@ -224,6 +226,8 @@ export default function SocietySettings() {
         email: societyEmail,
         pec: societyPec,
         kit_price: kitPrice.trim() ? parseFloat(kitPrice.replace(',', '.')) : null,
+        kit_price_under: kitPrice.trim() ? parseFloat(kitPrice.replace(',', '.')) : null,
+        kit_price_minivolley: kitPriceMini.trim() ? parseFloat(kitPriceMini.replace(',', '.')) : null,
         kit_sponsor: kitSponsor.trim() || null,
         season_start_month: seasonStartMonth,
         season_start_day: seasonStartDay,
@@ -639,9 +643,9 @@ export default function SocietySettings() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>👕 Kit Abbigliamento</Text>
           <Text style={styles.sectionDesc}>
-            Info mostrata a genitori e atleti accanto alla quota (solo informativa, non si paga in app).
+            Info mostrata a genitori e atleti accanto alla quota (solo informativa, non si paga in app). Due prezzi: Under e MiniVolley — nella squadra scegli quale applicare.
           </Text>
-          <Text style={styles.inputLabel}>Prezzo Kit (€)</Text>
+          <Text style={styles.inputLabel}>Prezzo Kit Under (€)</Text>
           <TextInput
             style={styles.input}
             value={kitPrice}
@@ -649,6 +653,15 @@ export default function SocietySettings() {
             placeholder="Es. 80"
             keyboardType="decimal-pad"
             testID="kit-price-input"
+          />
+          <Text style={[styles.inputLabel, { marginTop: 12 }]}>Prezzo Kit MiniVolley (€)</Text>
+          <TextInput
+            style={styles.input}
+            value={kitPriceMini}
+            onChangeText={setKitPriceMini}
+            placeholder="Es. 50"
+            keyboardType="decimal-pad"
+            testID="kit-price-mini-input"
           />
           <Text style={[styles.inputLabel, { marginTop: 12 }]}>Sponsor Tecnico</Text>
           <TextInput

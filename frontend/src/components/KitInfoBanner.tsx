@@ -3,16 +3,44 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from './Icon';
 
 interface Props {
-  kitPrice?: number | string | null;
+  // Prezzi society-wide
+  priceUnder?: number | string | null;
+  priceMinivolley?: number | string | null;
+  // Tipo kit scelto dalla squadra: 'under' | 'minivolley' | null
+  kitType?: string | null;
   kitSponsor?: string | null;
   style?: any;
 }
 
+const toNum = (v?: number | string | null): number | null => {
+  if (v == null) return null;
+  const n = typeof v === 'string' ? parseFloat(v.replace(',', '.')) : v;
+  return isNaN(n as number) ? null : (n as number);
+};
+
 // Banner informativo (society-wide) mostrato accanto alla quota.
 // "Kit abbigliamento € X acquistabile presso il nostro sponsor tecnico Y"
-export default function KitInfoBanner({ kitPrice, kitSponsor, style }: Props) {
-  const price = typeof kitPrice === 'string' ? parseFloat(kitPrice) : kitPrice;
-  const hasPrice = price != null && !isNaN(price as number) && (price as number) > 0;
+// Il prezzo dipende dal tipo kit della squadra (Under o MiniVolley).
+export default function KitInfoBanner({ priceUnder, priceMinivolley, kitType, kitSponsor, style }: Props) {
+  const pUnder = toNum(priceUnder);
+  const pMini = toNum(priceMinivolley);
+  const type = (kitType || '').toLowerCase();
+
+  let price: number | null;
+  let label = '';
+  if (type === 'minivolley') {
+    price = pMini;
+    label = ' (MiniVolley)';
+  } else if (type === 'under') {
+    price = pUnder;
+    label = ' (Under)';
+  } else {
+    // Nessun tipo scelto: mostra il prezzo Under se presente, altrimenti MiniVolley
+    price = pUnder != null ? pUnder : pMini;
+    label = '';
+  }
+
+  const hasPrice = price != null && price > 0;
   const sponsor = (kitSponsor || '').trim();
   if (!hasPrice && !sponsor) return null;
 
@@ -21,7 +49,7 @@ export default function KitInfoBanner({ kitPrice, kitSponsor, style }: Props) {
       <Ionicons name="shirt-outline" size={20} color="#1565C0" style={{ marginTop: 1 }} />
       <Text style={styles.text}>
         <Text style={styles.bold}>Kit abbigliamento</Text>
-        {hasPrice ? <Text> € {Number(price).toFixed(2).replace('.', ',')}</Text> : null}
+        {hasPrice ? <Text> € {Number(price).toFixed(2).replace('.', ',')}{label}</Text> : null}
         {sponsor ? (
           <Text> acquistabile presso il nostro sponsor tecnico <Text style={styles.bold}>{sponsor}</Text></Text>
         ) : null}

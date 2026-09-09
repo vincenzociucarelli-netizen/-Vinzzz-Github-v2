@@ -86,6 +86,7 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
         certificate_type_required=team_data.certificate_type_required or "agonistico",
         activity_start_date=team_data.activity_start_date if team_data.activity_start_date else None,
         trainings_provisional=bool(team_data.trainings_provisional),
+        kit_type=team_data.kit_type if team_data.kit_type else None,
     )
     await db.teams.insert_one(team.dict())
     return team
@@ -423,7 +424,8 @@ async def get_team_payment_info(team_id: str, current_user = Depends(get_current
         "installment_3_amount": team.get("installment_3_amount", 0),
         "installment_3_due_date": team.get("installment_3_due_date"),
         "bank_info": team.get("bank_info", ""),
-        "paypal_email": team.get("paypal_email", "")
+        "paypal_email": team.get("paypal_email", ""),
+        "kit_type": team.get("kit_type"),
     }
 
 

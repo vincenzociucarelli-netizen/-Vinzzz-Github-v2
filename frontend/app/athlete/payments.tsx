@@ -456,7 +456,12 @@ export default function AthletePayments() {
         })()}
 
         {/* 🆕 Kit abbigliamento / sponsor tecnico (informativo) */}
-        <KitInfoBanner kitPrice={societySettings?.kit_price} kitSponsor={societySettings?.kit_sponsor} />
+        <KitInfoBanner
+          priceUnder={societySettings?.kit_price_under}
+          priceMinivolley={societySettings?.kit_price_minivolley}
+          kitType={paymentInfo?.kit_type}
+          kitSponsor={societySettings?.kit_sponsor}
+        />
 
         {/* Quote Section - Compact with expandable payment plan */}
         {paymentInfo && (paymentInfo.total_amount || (paymentInfo.installments && paymentInfo.installments.length > 0)) && (() => {

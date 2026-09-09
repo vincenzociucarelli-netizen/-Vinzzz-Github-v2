@@ -1307,3 +1307,14 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Frontend: in `coach/athlete/[id].tsx`, sezione Statistiche Presenze → pulsante "Convalida presenza (straordinaria)" apre modale con AVVISO (operazione straordinaria, registrata nei log e visibile agli admin), campi Data (GG/MM/AAAA precompilata a oggi Europe/Rome), Ora opzionale, Nota opzionale, bottone "Registra presenza".
 - Testato: iteration_124 (backend 7/7 PASS; frontend banner + modale verificati). test: /app/backend/tests/test_kit_and_manual_attendance.py.
 - **Deploy**: Frontend (Vercel) + Backend (Render).
+
+## Changelog — 05/09/2026 (3) — Kit Abbigliamento: DUE prezzi (Under / MiniVolley) selezionabili per squadra
+- Backend settings (models/settings_models.py + routes/settings.py): aggiunti `kit_price_under` e `kit_price_minivolley` (oltre a `kit_price` legacy=Under) + `kit_sponsor`. GET li restituisce (kit_price_under fallback a kit_price).
+- Backend team (models/team_models.py): nuovo campo `kit_type` ('under' | 'minivolley' | None) su Team/TeamCreate/TeamUpdate. create_team e update_team lo persistono. `GET /teams/{id}/payment-info` ora include `kit_type`.
+- Frontend:
+  - `admin/settings/society.tsx`: due input prezzo (Under / MiniVolley) + Sponsor.
+  - `admin/team/[id].tsx`: selettore Tipo Kit (Nessuno / Under / MiniVolley) nel form modifica (sezione Quote).
+  - `KitInfoBanner.tsx` riscritto: riceve priceUnder, priceMinivolley, kitType, kitSponsor → mostra il prezzo giusto con etichetta "(Under)"/"(MiniVolley)". Se kitType assente, fallback a Under.
+  - Banner integrato in admin team detail (usa team.kit_type), athlete/payments e parent/athlete (usano paymentInfo.kit_type).
+- Verificato: curl (PATCH/GET due prezzi, PATCH team kit_type, payment-info) + screenshot (banner mostra "€ 50,00 (MiniVolley)"; 3 input in Impostazioni).
+- **Deploy**: Frontend (Vercel) + Backend (Render).

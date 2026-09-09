@@ -47,7 +47,10 @@ class SocietySettingsUpdate(BaseModel):
     trial_max_days: Optional[int] = None  # 3-15
     trial_max_sessions: Optional[int] = None  # 1-5
     # 🆕 Kit abbigliamento / sponsor tecnico (society-wide, informativo)
-    kit_price: Optional[float] = None
+    # Due prezzi: Under e MiniVolley. La squadra sceglie quale applicare (kit_type).
+    kit_price: Optional[float] = None  # legacy = prezzo Under
+    kit_price_under: Optional[float] = None
+    kit_price_minivolley: Optional[float] = None
     kit_sponsor: Optional[str] = None
 
 

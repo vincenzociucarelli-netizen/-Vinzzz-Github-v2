@@ -227,7 +227,7 @@ export default function AthleteDetail() {
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [paymentSettings, setPaymentSettings] = useState<any>(null);
-  const [kitInfo, setKitInfo] = useState<{ price?: number | null; sponsor?: string | null }>({});
+  const [kitInfo, setKitInfo] = useState<{ priceUnder?: number | null; priceMini?: number | null; sponsor?: string | null }>({});
   // 🆕 27/07/2026 — Piano ricorrente attivo per questo atleta
   const [recurringPlan, setRecurringPlan] = useState<any>(null);
   const [teamSchedule, setTeamSchedule] = useState<{
@@ -441,7 +441,7 @@ export default function AthleteDetail() {
         const settingsRes = await api.get('/settings/society');
         setSocietyEmail(settingsRes.data?.email || '');
         setSocietyName(settingsRes.data?.name || '');
-        setKitInfo({ price: settingsRes.data?.kit_price ?? null, sponsor: settingsRes.data?.kit_sponsor ?? null });
+        setKitInfo({ priceUnder: settingsRes.data?.kit_price_under ?? null, priceMini: settingsRes.data?.kit_price_minivolley ?? null, sponsor: settingsRes.data?.kit_sponsor ?? null });
       } catch (error) {
         console.log('Could not load society info');
       }
@@ -2594,7 +2594,12 @@ export default function AthleteDetail() {
         })()}
 
         {/* 🆕 Kit abbigliamento / sponsor tecnico (informativo) */}
-        <KitInfoBanner kitPrice={kitInfo.price} kitSponsor={kitInfo.sponsor} />
+        <KitInfoBanner
+          priceUnder={kitInfo.priceUnder}
+          priceMinivolley={kitInfo.priceMini}
+          kitType={paymentSettings?.kit_type}
+          kitSponsor={kitInfo.sponsor}
+        />
 
         {/* 🆕 27/07/2026 — Card Piano Ricorrente Attivo (se presente per questo atleta) */}
         {recurringPlan && (

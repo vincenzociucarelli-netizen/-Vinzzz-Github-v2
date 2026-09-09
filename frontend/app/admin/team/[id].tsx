@@ -82,7 +82,7 @@ export default function TeamDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [team, setTeam] = useState<Team | null>(null);
-  const [kitInfo, setKitInfo] = useState<{ price?: number | null; sponsor?: string | null }>({});
+  const [kitInfo, setKitInfo] = useState<{ priceUnder?: number | null; priceMini?: number | null; sponsor?: string | null }>({});
   const [editing, setEditing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   
@@ -133,6 +133,8 @@ export default function TeamDetail() {
   // 🆕 12/08/2026 — Data inizio attività + flag allenamenti provvisori
   const [activityStartDate, setActivityStartDate] = useState('');
   const [trainingsProvisional, setTrainingsProvisional] = useState(false);
+  // 🆕 Tipo kit abbigliamento: '' | 'under' | 'minivolley'
+  const [kitType, setKitType] = useState('');
   
   // Form fields - payments
   const [totalAmount, setTotalAmount] = useState('');
@@ -194,7 +196,7 @@ export default function TeamDetail() {
       // 🆕 Kit abbigliamento / sponsor tecnico (society-wide, informativo)
       try {
         const settingsRes = await api.get('/settings/society');
-        setKitInfo({ price: settingsRes.data?.kit_price ?? null, sponsor: settingsRes.data?.kit_sponsor ?? null });
+        setKitInfo({ priceUnder: settingsRes.data?.kit_price_under ?? null, priceMini: settingsRes.data?.kit_price_minivolley ?? null, sponsor: settingsRes.data?.kit_sponsor ?? null });
       } catch (_e) { /* non bloccante */ }
       
       // Set coach info (with fallback to empty array)
@@ -299,6 +301,7 @@ export default function TeamDetail() {
         setActivityStartDate('');
       }
       setTrainingsProvisional(!!(teamData as any).trainings_provisional);
+      setKitType((teamData as any).kit_type || '');
       
       // Load training sessions
       if (teamData.training_sessions && teamData.training_sessions.length > 0) {
@@ -484,6 +487,7 @@ export default function TeamDetail() {
         // 🆕 Data inizio attività (ISO) + flag provvisori. Vuoto → null.
         activity_start_date: activityStartDate.trim() ? formatDateToISO(activityStartDate.trim()) : null,
         trainings_provisional: trainingsProvisional,
+        kit_type: kitType || null,
       };
 
       // Se è Prima Squadra, azzera i campi pagamento
@@ -895,6 +899,35 @@ export default function TeamDetail() {
                 placeholder="Es: 450"
                 placeholderTextColor="#999"
               />
+
+              {/* 🆕 Tipo Kit Abbigliamento */}
+              <Text style={styles.inputLabel}>Kit Abbigliamento</Text>
+              <Text style={styles.helperText}>
+                Scegli quale prezzo kit mostrare a genitori e atleti (i prezzi si impostano in Impostazioni → Società).
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 6, marginBottom: 6 }}>
+                {[
+                  { key: '', label: 'Nessuno' },
+                  { key: 'under', label: 'Under' },
+                  { key: 'minivolley', label: 'MiniVolley' },
+                ].map((opt) => {
+                  const active = kitType === opt.key;
+                  return (
+                    <TouchableOpacity
+                      key={opt.key || 'none'}
+                      onPress={() => setKitType(opt.key)}
+                      testID={`kit-type-${opt.key || 'none'}`}
+                      style={{
+                        flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center',
+                        backgroundColor: active ? '#1565C0' : '#F0F2F5',
+                        borderWidth: 1, borderColor: active ? '#1565C0' : '#DDD',
+                      }}
+                    >
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: active ? '#fff' : '#555' }}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
               <Text style={styles.inputLabel}>Rate di Pagamento (max 12)</Text>
               <Text style={styles.helperText}>
@@ -1607,7 +1640,12 @@ export default function TeamDetail() {
             {/* 🆕 Kit abbigliamento / sponsor tecnico (informativo) */}
             {!isPrimaSquadra && (
               <View style={{ marginHorizontal: 16 }}>
-                <KitInfoBanner kitPrice={kitInfo.price} kitSponsor={kitInfo.sponsor} />
+                <KitInfoBanner
+                  priceUnder={kitInfo.priceUnder}
+                  priceMinivolley={kitInfo.priceMini}
+                  kitType={team.kit_type}
+                  kitSponsor={kitInfo.sponsor}
+                />
               </View>
             )}
 
