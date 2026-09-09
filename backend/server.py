@@ -17010,6 +17010,105 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
     
     return response
 
+class ManualAttendanceCreate(BaseModel):
+    date: str  # YYYY-MM-DD
+    time: Optional[str] = None  # HH:MM (opzionale)
+    note: Optional[str] = None
+
+
+@api_router.post("/coach/athletes/{athlete_id}/manual-attendance")
+async def add_manual_attendance(athlete_id: str, data: ManualAttendanceCreate, request: Request, current_user = Depends(get_current_user)):
+    """🆕 05/09/2026 — Presenza STRAORDINARIA inserita manualmente dal coach dal
+    profilo atleta (es. QR non scansionato per errore). Registra la presenza con
+    flag manuale + audit log visibile agli admin. Solo coach assegnato alla
+    squadra dell'atleta (o admin). Isolato per società."""
+    if current_user["role"] not in (UserRole.COACH, UserRole.ADMIN, UserRole.COORDINATORE):
+        raise HTTPException(status_code=403, detail="Operazione riservata a coach/admin")
+
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+
+    # Isolamento multi-tenant
+    if athlete.get("society_id") and athlete.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Atleta di un'altra società")
+
+    team_id = athlete.get("team_id")
+    if not team_id:
+        raise HTTPException(status_code=400, detail="L'atleta non è assegnato a nessuna squadra")
+
+    # Il coach deve essere assegnato alla squadra dell'atleta (admin/coordinatore bypass)
+    if current_user["role"] == UserRole.COACH:
+        assigned = current_user.get("assigned_teams", []) or []
+        if team_id not in assigned:
+            raise HTTPException(status_code=403, detail="Non sei allenatore di questa squadra")
+
+    # Parse data (obbligatoria) e ora (opzionale)
+    try:
+        base_dt = datetime.strptime((data.date or "").strip(), "%Y-%m-%d")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Data non valida (usa GG/MM/AAAA)")
+    hh, mm = 0, 0
+    if data.time and data.time.strip():
+        try:
+            parts = data.time.strip().split(":")
+            hh = int(parts[0]); mm = int(parts[1]) if len(parts) > 1 else 0
+        except Exception:
+            hh, mm = 0, 0
+    check_in = base_dt.replace(hour=hh, minute=mm)
+
+    team = await db.teams.find_one({"id": team_id}, {"_id": 0, "name": 1})
+    athlete_name = athlete.get("full_name") or f"{athlete.get('first_name','')} {athlete.get('last_name','')}".strip()
+    actor_name = current_user.get("full_name") or current_user.get("email")
+
+    attendance_dict = {
+        "id": str(ObjectId()),
+        "athlete_id": athlete_id,
+        "team_id": team_id,
+        "coach_id": current_user["id"],
+        "check_in_time": check_in,
+        "date": data.date,
+        "training_slot": {"time": data.time} if (data.time and data.time.strip()) else None,
+        "status": "allowed",
+        "block_reason": None,
+        "forced": True,
+        "force_note": (data.note or "").strip() or "Presenza inserita manualmente dal coach",
+        "qr_code_used": None,
+        # marcatori presenza manuale (per audit/visibilità admin)
+        "manual_entry": True,
+        "manual_by_id": current_user["id"],
+        "manual_by_name": actor_name,
+        "manual_created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.attendances.insert_one(attendance_dict)
+
+    await log_audit(
+        action="manual_attendance_added",
+        user_id=current_user["id"],
+        user_email=current_user.get("email", ""),
+        society_id=current_user.get("society_id", ""),
+        target_user_id=athlete_id,
+        target_user_name=athlete_name,
+        ip_address=get_real_ip(request),
+        details={
+            "team_name": team.get("name", "") if team else "",
+            "date": data.date,
+            "time": data.time or "",
+            "note": (data.note or "").strip(),
+            "inserted_by": actor_name,
+            "extraordinary": True,
+        },
+    )
+    return {
+        "message": "Presenza registrata manualmente",
+        "attendance_id": attendance_dict["id"],
+        "athlete_name": athlete_name,
+        "date": data.date,
+        "time": data.time or "",
+    }
+
+
+
 @api_router.get("/attendance/athlete/{athlete_id}", response_model=List[Attendance])
 async def get_athlete_attendances(athlete_id: str, current_user = Depends(get_current_user)):
     attendances = await db.attendances.find({"athlete_id": athlete_id}).sort("check_in_time", -1).to_list(1000)

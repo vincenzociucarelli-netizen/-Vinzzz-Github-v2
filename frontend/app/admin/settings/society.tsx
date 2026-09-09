@@ -56,6 +56,8 @@ export default function SocietySettings() {
   const [presidentName, setPresidentName] = useState('');
   const [societyEmail, setSocietyEmail] = useState('');
   const [societyPec, setSocietyPec] = useState('');
+  const [kitPrice, setKitPrice] = useState('');
+  const [kitSponsor, setKitSponsor] = useState('');
   const [blockExpiredCertificates, setBlockExpiredCertificates] = useState(true);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
   const [overrideReason, setOverrideReason] = useState('');
@@ -177,6 +179,8 @@ export default function SocietySettings() {
       setPresidentName(response.data.president_name || '');
       setSocietyEmail(response.data.email || '');
       setSocietyPec(response.data.pec || '');
+      setKitPrice(response.data.kit_price != null ? String(response.data.kit_price) : '');
+      setKitSponsor(response.data.kit_sponsor || '');
 
       // Lazy-load images AFTER main data renders, so the page appears
       // instantly and images appear progressively.
@@ -219,6 +223,8 @@ export default function SocietySettings() {
         stamp_signature: stampSignature,
         email: societyEmail,
         pec: societyPec,
+        kit_price: kitPrice.trim() ? parseFloat(kitPrice.replace(',', '.')) : null,
+        kit_sponsor: kitSponsor.trim() || null,
         season_start_month: seasonStartMonth,
         season_start_day: seasonStartDay,
         season_end_month: seasonEndMonth,
@@ -627,6 +633,31 @@ export default function SocietySettings() {
               </Text>
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Kit Abbigliamento / Sponsor Tecnico */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>👕 Kit Abbigliamento</Text>
+          <Text style={styles.sectionDesc}>
+            Info mostrata a genitori e atleti accanto alla quota (solo informativa, non si paga in app).
+          </Text>
+          <Text style={styles.inputLabel}>Prezzo Kit (€)</Text>
+          <TextInput
+            style={styles.input}
+            value={kitPrice}
+            onChangeText={setKitPrice}
+            placeholder="Es. 80"
+            keyboardType="decimal-pad"
+            testID="kit-price-input"
+          />
+          <Text style={[styles.inputLabel, { marginTop: 12 }]}>Sponsor Tecnico</Text>
+          <TextInput
+            style={styles.input}
+            value={kitSponsor}
+            onChangeText={setKitSponsor}
+            placeholder="Es. Errea Sport - Negozio Rossi (Perugia)"
+            testID="kit-sponsor-input"
+          />
         </View>
 
         {/* Stagione Sportiva */}

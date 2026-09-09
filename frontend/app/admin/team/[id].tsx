@@ -16,6 +16,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import { Ionicons } from '../../../src/components/Icon';
+import KitInfoBanner from '../../../src/components/KitInfoBanner';
 import { Team, TrainingSession, MatchDay } from '../../../src/types';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -81,6 +82,7 @@ export default function TeamDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const [team, setTeam] = useState<Team | null>(null);
+  const [kitInfo, setKitInfo] = useState<{ price?: number | null; sponsor?: string | null }>({});
   const [editing, setEditing] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   
@@ -188,6 +190,12 @@ export default function TeamDetail() {
       const response = await api.get(`/teams/${id}`);
       const teamData = response.data;
       setTeam(teamData);
+
+      // 🆕 Kit abbigliamento / sponsor tecnico (society-wide, informativo)
+      try {
+        const settingsRes = await api.get('/settings/society');
+        setKitInfo({ price: settingsRes.data?.kit_price ?? null, sponsor: settingsRes.data?.kit_sponsor ?? null });
+      } catch (_e) { /* non bloccante */ }
       
       // Set coach info (with fallback to empty array)
       const coaches = teamData.coach_info || [];
@@ -1594,6 +1602,13 @@ export default function TeamDetail() {
                 </View>
               )}
             </View>
+            )}
+
+            {/* 🆕 Kit abbigliamento / sponsor tecnico (informativo) */}
+            {!isPrimaSquadra && (
+              <View style={{ marginHorizontal: 16 }}>
+                <KitInfoBanner kitPrice={kitInfo.price} kitSponsor={kitInfo.sponsor} />
+              </View>
             )}
 
             {/* Bank Info Section - nascosta per Prima Squadra */}

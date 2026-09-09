@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
   Image,
+  Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '../../../src/components/Icon';
@@ -75,6 +76,52 @@ export default function CoachAthleteDetail() {
   const [weight, setWeight] = useState<string>('');
   const [elevation, setElevation] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
+
+  // 🆕 Presenza manuale straordinaria
+  const [manualModal, setManualModal] = useState(false);
+  const [manualDate, setManualDate] = useState('');
+  const [manualTime, setManualTime] = useState('');
+  const [manualNote, setManualNote] = useState('');
+  const [manualSubmitting, setManualSubmitting] = useState(false);
+
+  const showMsg = (title: string, msg: string) => {
+    if (Platform.OS === 'web') window.alert(`${title}\n${msg}`);
+    else Alert.alert(title, msg);
+  };
+
+  const openManualModal = () => {
+    const today = new Date();
+    const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    setManualDate(`${dd}/${mm}/${today.getFullYear()}`);
+    setManualTime('');
+    setManualNote('');
+    setManualModal(true);
+  };
+
+  const submitManualAttendance = async () => {
+    const parts = (manualDate || '').split('/');
+    if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) {
+      showMsg('Data non valida', 'Inserisci la data nel formato GG/MM/AAAA.');
+      return;
+    }
+    const isoDate = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    setManualSubmitting(true);
+    try {
+      await api.post(`/coach/athletes/${id}/manual-attendance`, {
+        date: isoDate,
+        time: manualTime.trim() || null,
+        note: manualNote.trim() || null,
+      });
+      setManualModal(false);
+      showMsg('Presenza registrata', 'La presenza straordinaria è stata registrata e sarà visibile agli admin.');
+      loadData();
+    } catch (e: any) {
+      showMsg('Errore', e?.response?.data?.detail || 'Impossibile registrare la presenza.');
+    } finally {
+      setManualSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -467,6 +514,10 @@ export default function CoachAthleteDetail() {
             <Text style={styles.statsHint}>
               Presenze agli allenamenti registrate via QR/check-in. Le percentuali sono calcolate sugli allenamenti previsti dalla squadra.
             </Text>
+            <TouchableOpacity style={styles.manualBtn} onPress={openManualModal} testID="manual-attendance-btn">
+              <Ionicons name="add-circle-outline" size={20} color="#fff" />
+              <Text style={styles.manualBtnText}>Convalida presenza (straordinaria)</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -521,6 +572,59 @@ export default function CoachAthleteDetail() {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* 🆕 Modale presenza manuale straordinaria */}
+      <Modal visible={manualModal} transparent animationType="fade" onRequestClose={() => setManualModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Convalida presenza</Text>
+            <View style={styles.warnBox}>
+              <Ionicons name="warning-outline" size={20} color="#B26A00" style={{ marginTop: 1 }} />
+              <Text style={styles.warnText}>
+                Operazione <Text style={{ fontWeight: '800' }}>straordinaria</Text>. Da usare solo se la presenza non è stata registrata col QR. L'inserimento viene <Text style={{ fontWeight: '800' }}>registrato nei log e sarà visibile agli admin</Text>.
+              </Text>
+            </View>
+
+            <Text style={styles.modalLabel}>Data allenamento (GG/MM/AAAA) *</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={manualDate}
+              onChangeText={setManualDate}
+              placeholder="04/09/2026"
+              keyboardType={Platform.OS === 'web' ? 'default' : 'numbers-and-punctuation'}
+              testID="manual-date-input"
+            />
+
+            <Text style={styles.modalLabel}>Ora (HH:MM) — opzionale</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={manualTime}
+              onChangeText={setManualTime}
+              placeholder="18:30"
+              testID="manual-time-input"
+            />
+
+            <Text style={styles.modalLabel}>Nota (opzionale)</Text>
+            <TextInput
+              style={[styles.modalInput, { minHeight: 60, textAlignVertical: 'top' }]}
+              value={manualNote}
+              onChangeText={setManualNote}
+              placeholder="Es. QR non funzionante"
+              multiline
+              testID="manual-note-input"
+            />
+
+            <View style={styles.modalBtns}>
+              <TouchableOpacity style={[styles.modalBtn, styles.modalCancel]} onPress={() => setManualModal(false)} disabled={manualSubmitting}>
+                <Text style={styles.modalCancelText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalBtn, styles.modalConfirm]} onPress={submitManualAttendance} disabled={manualSubmitting} testID="manual-confirm-btn">
+                {manualSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalConfirmText}>Registra presenza</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -530,6 +634,27 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  manualBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: '#5856D6', paddingVertical: 12, borderRadius: 10, marginTop: 12,
+  },
+  manualBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', paddingHorizontal: 20 },
+  modalCard: { backgroundColor: '#fff', borderRadius: 14, padding: 18 },
+  modalTitle: { fontSize: 18, fontWeight: '800', color: '#222', marginBottom: 10 },
+  warnBox: {
+    flexDirection: 'row', gap: 8, backgroundColor: '#FFF3E0', borderWidth: 1, borderColor: '#FFE0B2',
+    borderRadius: 10, padding: 10, marginBottom: 14,
+  },
+  warnText: { flex: 1, fontSize: 12.5, color: '#8A5300', lineHeight: 18 },
+  modalLabel: { fontSize: 13, fontWeight: '700', color: '#444', marginBottom: 6, marginTop: 8 },
+  modalInput: { backgroundColor: '#F5F6F8', borderRadius: 8, borderWidth: 1, borderColor: '#E0E0E0', paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#222' },
+  modalBtns: { flexDirection: 'row', gap: 10, marginTop: 18 },
+  modalBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  modalCancel: { backgroundColor: '#ECEFF1' },
+  modalCancelText: { color: '#455A64', fontWeight: '700', fontSize: 14 },
+  modalConfirm: { backgroundColor: '#5856D6' },
+  modalConfirmText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   header: {
     backgroundColor: '#007AFF',
     paddingTop: 50,

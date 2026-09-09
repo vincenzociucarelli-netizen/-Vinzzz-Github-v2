@@ -1293,3 +1293,17 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - **Pulsante di accesso**: nella scheda squadra (`app/admin/team/[id].tsx`), voce "Messaggio WhatsApp alla Squadra" sotto "Registro Presenze" → naviga a `/admin/team-whatsapp?team_id=&team_name=`.
 - Verificato via curl (endpoint) + screenshot (UI: modalità Atleta, messaggio, Copia numeri (1), pulsante Invia). 
 - **Deploy**: Frontend (Vercel) + Backend (Render).
+
+## Changelog — 05/09/2026 (2) — Kit Abbigliamento (society-wide) + Presenza manuale straordinaria coach
+### A) Kit Abbigliamento / Sponsor Tecnico (informativo, society-wide)
+- Backend: `SocietySettingsUpdate` (models/settings_models.py) + GET/PATCH `/settings/society` (routes/settings.py) ora gestiscono `kit_price` (float) e `kit_sponsor` (string).
+- Frontend: nuovo componente `src/components/KitInfoBanner.tsx` → renderizza "Kit abbigliamento € X acquistabile presso il nostro sponsor tecnico Y" solo se valorizzati.
+- Editabile in `admin/settings/society.tsx` (sezione 👕 Kit Abbigliamento: input Prezzo + Sponsor).
+- Mostrato accanto alla quota in: `admin/team/[id].tsx` (sotto Quote, no prima squadra), `athlete/payments.tsx` (sotto Quota Stagionale), `parent/athlete/[id].tsx` (sotto Quota Stagionale). Solo informativo (non entra nel totale da pagare).
+- Fix post-test: in `athlete/payments.tsx` il fetch `/settings/society` è stato spostato FUORI dal blocco `if(athleteId)` così il banner compare sempre.
+
+### B) Presenza manuale straordinaria (coach)
+- Backend: `POST /api/coach/athletes/{athlete_id}/manual-attendance` (server.py, classe `ManualAttendanceCreate`). Body {date:'YYYY-MM-DD', time?:'HH:MM', note?}. Crea record `attendances` con manual_entry=true, forced=true, status='allowed', coach_id; scrive `audit_logs` action='manual_attendance_added' details.extraordinary=true. Ruoli: coach/admin/coordinatore. Coach deve avere il team in assigned_teams (403 altrimenti); isolamento società; 400 data invalida/atleta senza team; 404 atleta inesistente.
+- Frontend: in `coach/athlete/[id].tsx`, sezione Statistiche Presenze → pulsante "Convalida presenza (straordinaria)" apre modale con AVVISO (operazione straordinaria, registrata nei log e visibile agli admin), campi Data (GG/MM/AAAA precompilata a oggi Europe/Rome), Ora opzionale, Nota opzionale, bottone "Registra presenza".
+- Testato: iteration_124 (backend 7/7 PASS; frontend banner + modale verificati). test: /app/backend/tests/test_kit_and_manual_attendance.py.
+- **Deploy**: Frontend (Vercel) + Backend (Render).

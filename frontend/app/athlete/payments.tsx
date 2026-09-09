@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import AthleteTabBar from '../../src/components/athlete/AthleteTabBar';
+import KitInfoBanner from '../../src/components/KitInfoBanner';
 import {
   View,
   Text,
@@ -74,7 +75,15 @@ export default function AthletePayments() {
     try {
       const meRes = await api.get('/auth/me');
       const athleteId = meRes.data.athlete_id;
-      
+
+      // Load society settings (IBAN, Kit abbigliamento) — sempre, anche senza athlete_id
+      try {
+        const societyRes = await api.get('/settings/society');
+        setSocietySettings(societyRes.data);
+      } catch (e) {
+        console.log('No society settings');
+      }
+
       if (athleteId) {
         // Load athlete profile
         const athleteRes = await api.get(`/athletes/${athleteId}`);
@@ -100,14 +109,6 @@ export default function AthletePayments() {
           } catch (e) {
             console.log('No team payment info');
           }
-        }
-        
-        // Load society settings for IBAN
-        try {
-          const societyRes = await api.get('/settings/society');
-          setSocietySettings(societyRes.data);
-        } catch (e) {
-          console.log('No society settings');
         }
       }
     } catch (error) {
@@ -453,6 +454,9 @@ export default function AthletePayments() {
             </View>
           );
         })()}
+
+        {/* 🆕 Kit abbigliamento / sponsor tecnico (informativo) */}
+        <KitInfoBanner kitPrice={societySettings?.kit_price} kitSponsor={societySettings?.kit_sponsor} />
 
         {/* Quote Section - Compact with expandable payment plan */}
         {paymentInfo && (paymentInfo.total_amount || (paymentInfo.installments && paymentInfo.installments.length > 0)) && (() => {

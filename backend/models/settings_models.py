@@ -46,6 +46,9 @@ class SocietySettingsUpdate(BaseModel):
     # Trial period settings
     trial_max_days: Optional[int] = None  # 3-15
     trial_max_sessions: Optional[int] = None  # 1-5
+    # 🆕 Kit abbigliamento / sponsor tecnico (society-wide, informativo)
+    kit_price: Optional[float] = None
+    kit_sponsor: Optional[str] = None
 
 
 class StripeSettingsUpdate(BaseModel):
