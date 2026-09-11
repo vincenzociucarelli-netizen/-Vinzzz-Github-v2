@@ -1318,3 +1318,15 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
   - Banner integrato in admin team detail (usa team.kit_type), athlete/payments e parent/athlete (usano paymentInfo.kit_type).
 - Verificato: curl (PATCH/GET due prezzi, PATCH team kit_type, payment-info) + screenshot (banner mostra "€ 50,00 (MiniVolley)"; 3 input in Impostazioni).
 - **Deploy**: Frontend (Vercel) + Backend (Render).
+
+## Changelog — 06/09/2026 — Presenze: (a) Admin può usare lo scan QR + (b) Registrazione presenze multiple (bulk) admin
+### (a) Admin QR scan
+- Backend `/attendance/check`: role rilassato da solo-COACH a COACH/ADMIN/COORDINATORE + isolamento società (403 se atleta di altra società). Nessun'altra logica cambiata (trial, certificati, ecc.).
+- Frontend nuova schermata `app/admin/scan-attendance.tsx`: scanner QR web (html5-qrcode via nativeID `admin-qr-scanner`) + camera nativa (CameraView, permessi con contract Open Settings) + inserimento manuale codice. Chiama `/attendance/check` e mostra esito (registrata / già registrata / squadra diversa con conferma forzatura / bloccato).
+### (b) Registrazione presenze multiple (bulk)
+- Backend `POST /admin/teams/{team_id}/bulk-attendance` (server.py, classe BulkAttendanceCreate). Body {athlete_ids[], date 'YYYY-MM-DD', time?, note?}. Per ogni atleta: verifica società+team, salta duplicati (stessa data/team/atleta), crea attendance manuale (forced, allowed, manual_entry) e — se in prova (is_trial o status=='trial') — applica il conteggio prova come lo scan QR (set trial_start/end + count=1 al primo, altrimenti $inc trial_sessions_count) così la prova può terminare (trial_expired quando count>=max_sessions). Audit log per atleta (action manual_attendance_added, details.bulk=true). Ruoli admin/coordinatore + coach assegnato.
+- Roster (`/admin/team-roster`): aggiunti `is_trial` e `trial_sessions_count` all'output (+ projection).
+- Frontend nuova schermata `app/admin/team-attendance.tsx`: lista atleti squadra con checkbox + "Seleziona tutti", data (precompilata a oggi) e ora, badge "In prova · N allenamenti", bottone "Registra presenze (N)". Mostra riepilogo registrate/saltate.
+- Entry point: 2 nuovi link nella scheda squadra (`admin/team/[id].tsx`): "Scansiona QR Presenze" e "Registra Presenze (manuale)".
+- Verificato: curl (bulk register + skip duplicato + admin scan role OK) + screenshot (entrambe le schermate). NB: la camera nativa si prova solo su device reale (non in Expo Go web).
+- **Deploy**: Frontend (Vercel) + Backend (Render).

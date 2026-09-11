@@ -1723,6 +1723,43 @@ export default function TeamDetail() {
               </View>
               <Ionicons name="chevron-forward" size={24} color="#999" />
             </TouchableOpacity>
+
+            {/* Link: Scansiona QR presenze (admin) */}
+            <TouchableOpacity 
+              style={styles.attendanceLink}
+              onPress={() => router.push(`/admin/scan-attendance?team_id=${id}&team_name=${encodeURIComponent(team?.name || '')}`)}
+              testID="link-scan-attendance"
+            >
+              <View style={styles.attendanceLinkContent}>
+                <View style={styles.attendanceLinkIcon}>
+                  <Ionicons name="qr-code-outline" size={28} color="#5856D6" />
+                </View>
+                <View style={styles.attendanceLinkText}>
+                  <Text style={styles.attendanceLinkTitle}>Scansiona QR Presenze</Text>
+                  <Text style={styles.attendanceLinkSubtitle}>Registra le presenze con lo scanner QR</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#999" />
+            </TouchableOpacity>
+
+            {/* Link: Registra presenze multiple (manuale) */}
+            <TouchableOpacity 
+              style={styles.attendanceLink}
+              onPress={() => router.push(`/admin/team-attendance?team_id=${id}&team_name=${encodeURIComponent(team?.name || '')}`)}
+              testID="link-bulk-attendance"
+            >
+              <View style={styles.attendanceLinkContent}>
+                <View style={styles.attendanceLinkIcon}>
+                  <Ionicons name="checkbox-outline" size={28} color="#5856D6" />
+                </View>
+                <View style={styles.attendanceLinkText}>
+                  <Text style={styles.attendanceLinkTitle}>Registra Presenze (manuale)</Text>
+                  <Text style={styles.attendanceLinkSubtitle}>Seleziona più atleti, data e ora insieme</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#999" />
+            </TouchableOpacity>
+
             
             {/* Link to Training Overrides */}
             <TouchableOpacity 

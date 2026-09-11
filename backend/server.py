@@ -8897,6 +8897,7 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
         "date_of_birth": 1, "gender": 1, "fiscal_code": 1, "status": 1,
         "medical_certificate_expiry": 1, "parent_id": 1, "second_parent_id": 1,
         "address": 1, "city": 1, "cap": 1, "postal_code": 1, "team_id": 1, "is_registered": 1,
+        "is_trial": 1, "trial_sessions_count": 1,
     }
     aths = await db.athletes.find(_q, proj).to_list(5000)
 
@@ -8952,6 +8953,8 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
             "age": _calc_age(dob),
             "tesserato": bool(a.get("is_registered")),
             "status": a.get("status", "pending"),
+            "is_trial": bool(a.get("is_trial")) or a.get("status") == "trial",
+            "trial_sessions_count": a.get("trial_sessions_count", 0),
             "cert_label": cert_label,
             "cert_expiry": cert_expiry,
             "cert_valid": cert_valid,
@@ -16623,8 +16626,8 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
     - Check duplicato per atleta + squadra + slot + data
     - Supporta forzatura con nota
     """
-    if current_user["role"] != UserRole.COACH:
-        raise HTTPException(status_code=403, detail="Solo coach può registrare presenze")
+    if current_user["role"] not in (UserRole.COACH, UserRole.ADMIN, UserRole.COORDINATORE):
+        raise HTTPException(status_code=403, detail="Non autorizzato a registrare presenze")
     
     qr_code_value = attendance_data.qr_code.strip().upper()
     team_id = attendance_data.team_id
@@ -16644,6 +16647,10 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
     
     if not athlete:
         raise HTTPException(status_code=404, detail="QR code non valido o atleta non trovato")
+    
+    # Isolamento multi-tenant: solo atleti della propria società
+    if athlete.get("society_id") and current_user.get("society_id") and athlete.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Atleta di un'altra società")
     
     athlete_id = athlete["id"]
     athlete_name = athlete.get("full_name", "Atleta")
@@ -17106,6 +17113,145 @@ async def add_manual_attendance(athlete_id: str, data: ManualAttendanceCreate, r
         "date": data.date,
         "time": data.time or "",
     }
+
+
+class BulkAttendanceCreate(BaseModel):
+    athlete_ids: List[str]
+    date: str  # YYYY-MM-DD
+    time: Optional[str] = None  # HH:MM (opzionale)
+    note: Optional[str] = None
+
+
+@api_router.post("/admin/teams/{team_id}/bulk-attendance")
+async def add_bulk_attendance(team_id: str, data: BulkAttendanceCreate, request: Request, current_user = Depends(get_current_user)):
+    """🆕 06/09/2026 — Registrazione presenze MULTIPLE per una squadra da parte
+    dell'admin (o coach assegnato). Seleziona atleti + data/ora e registra la
+    presenza per tutti. Le presenze contano per il periodo di prova (come lo
+    scan QR): incrementano trial_sessions_count così la prova può concludersi.
+    Ogni inserimento è tracciato negli audit log (visibile agli admin)."""
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.COORDINATORE, UserRole.COACH):
+        raise HTTPException(status_code=403, detail="Operazione riservata ad admin/coach")
+
+    society_id = current_user.get("society_id")
+    team = await db.teams.find_one({"id": team_id, "society_id": society_id}, {"_id": 0, "id": 1, "name": 1})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+
+    # Coach: solo squadre assegnate
+    if current_user["role"] == UserRole.COACH:
+        if team_id not in (current_user.get("assigned_teams", []) or []):
+            raise HTTPException(status_code=403, detail="Non sei allenatore di questa squadra")
+
+    if not data.athlete_ids:
+        raise HTTPException(status_code=400, detail="Nessun atleta selezionato")
+
+    # Parse data/ora
+    try:
+        base_dt = datetime.strptime((data.date or "").strip(), "%Y-%m-%d")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Data non valida")
+    hh, mm = 0, 0
+    if data.time and data.time.strip():
+        try:
+            parts = data.time.strip().split(":")
+            hh = int(parts[0]); mm = int(parts[1]) if len(parts) > 1 else 0
+        except Exception:
+            hh, mm = 0, 0
+    check_in = base_dt.replace(hour=hh, minute=mm)
+    actor_name = current_user.get("full_name") or current_user.get("email")
+
+    # Config prova (multi-tenant)
+    society_settings = await db.settings.find_one({"type": "society", "society_id": society_id}) if society_id else await db.settings.find_one({"type": "society"})
+    max_days = society_settings.get("trial_max_days", 7) if society_settings else 7
+
+    registered = []
+    skipped = []
+
+    for aid in data.athlete_ids:
+        athlete = await db.athletes.find_one({"id": aid})
+        if not athlete:
+            skipped.append({"athlete_id": aid, "reason": "non trovato"})
+            continue
+        if athlete.get("society_id") and athlete.get("society_id") != society_id:
+            skipped.append({"athlete_id": aid, "reason": "altra società"})
+            continue
+        if athlete.get("team_id") and athlete.get("team_id") != team_id:
+            skipped.append({"athlete_id": aid, "reason": "non in questa squadra"})
+            continue
+
+        athlete_name = athlete.get("full_name") or f"{athlete.get('first_name','')} {athlete.get('last_name','')}".strip()
+
+        # Evita duplicati stessa data/squadra/atleta
+        dup = await db.attendances.find_one({"athlete_id": aid, "team_id": team_id, "date": data.date})
+        if dup:
+            skipped.append({"athlete_id": aid, "athlete_name": athlete_name, "reason": "già registrata per questa data"})
+            continue
+
+        attendance_dict = {
+            "id": str(ObjectId()),
+            "athlete_id": aid,
+            "team_id": team_id,
+            "coach_id": current_user["id"],
+            "check_in_time": check_in,
+            "date": data.date,
+            "training_slot": {"time": data.time} if (data.time and data.time.strip()) else None,
+            "status": "allowed",
+            "block_reason": None,
+            "forced": True,
+            "force_note": (data.note or "").strip() or "Presenza inserita manualmente (registrazione multipla admin)",
+            "qr_code_used": None,
+            "manual_entry": True,
+            "manual_by_id": current_user["id"],
+            "manual_by_name": actor_name,
+            "manual_created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        await db.attendances.insert_one(attendance_dict)
+
+        # Conteggio prova (come QR): incrementa sessioni così la prova può terminare
+        is_trial = athlete.get("is_trial") or athlete.get("status") == "trial"
+        if is_trial:
+            if not athlete.get("trial_start_date"):
+                trial_start = check_in
+                trial_end = trial_start + timedelta(days=max_days)
+                await db.athletes.update_one(
+                    {"id": aid},
+                    {"$set": {
+                        "trial_start_date": trial_start.isoformat(),
+                        "trial_end_date": trial_end.isoformat(),
+                        "trial_sessions_count": 1,
+                    }}
+                )
+            else:
+                await db.athletes.update_one({"id": aid}, {"$inc": {"trial_sessions_count": 1}})
+
+        await log_audit(
+            action="manual_attendance_added",
+            user_id=current_user["id"],
+            user_email=current_user.get("email", ""),
+            society_id=society_id or "",
+            target_user_id=aid,
+            target_user_name=athlete_name,
+            ip_address=get_real_ip(request),
+            details={
+                "team_name": team.get("name", ""),
+                "date": data.date,
+                "time": data.time or "",
+                "note": (data.note or "").strip(),
+                "inserted_by": actor_name,
+                "extraordinary": True,
+                "bulk": True,
+            },
+        )
+        registered.append({"athlete_id": aid, "athlete_name": athlete_name})
+
+    return {
+        "message": f"{len(registered)} presenze registrate",
+        "registered_count": len(registered),
+        "skipped_count": len(skipped),
+        "registered": registered,
+        "skipped": skipped,
+    }
+
 
 
 
