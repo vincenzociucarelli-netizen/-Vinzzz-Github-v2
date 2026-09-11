@@ -17089,6 +17089,9 @@ async def add_manual_attendance(athlete_id: str, data: ManualAttendanceCreate, r
     }
     await db.attendances.insert_one(attendance_dict)
 
+    # Conteggio prova (come QR): converte pending_trial→trial e conta le sessioni
+    await _recompute_trial_from_attendance(athlete, team_id)
+
     await log_audit(
         action="manual_attendance_added",
         user_id=current_user["id"],
@@ -17120,6 +17123,55 @@ class BulkAttendanceCreate(BaseModel):
     date: str  # YYYY-MM-DD
     time: Optional[str] = None  # HH:MM (opzionale)
     note: Optional[str] = None
+
+
+async def _recompute_trial_from_attendance(athlete: dict, team_id: str):
+    """🆕 Ricalcola lo stato prova dai record di presenza REALI (idempotente e
+    auto-correttivo). Usato dalle presenze manuali (singola e multipla) così la
+    prova parte/avanza come con lo scan QR e si riparano i dati già inseriti:
+    - converte pending_trial → trial
+    - imposta trial_start_date (prima presenza) se mancante
+    - trial_sessions_count = numero di date distinte con presenza."""
+    aid = athlete["id"]
+    status = athlete.get("status")
+    is_trial = bool(athlete.get("is_trial")) or status in ("trial", "pending_trial")
+    if not is_trial:
+        return
+    _sid = athlete.get("society_id")
+    ss = await db.settings.find_one({"type": "society", "society_id": _sid}) if _sid else await db.settings.find_one({"type": "society"})
+    max_days = (ss.get("trial_max_days", 7) if ss else 7) or 7
+    max_sessions = (ss.get("trial_max_sessions", 3) if ss else 3) or 3
+
+    atts = await db.attendances.find({"athlete_id": aid, "team_id": team_id}).to_list(2000)
+    dates = set()
+    earliest = None
+    for at in atts:
+        ci = at.get("check_in_time")
+        d = at.get("date")
+        if not d and isinstance(ci, datetime):
+            d = ci.date().isoformat()
+        if d:
+            dates.add(d)
+        if isinstance(ci, datetime):
+            if earliest is None or ci < earliest:
+                earliest = ci
+
+    set_fields = {
+        "is_trial": True,
+        "trial_sessions_count": len(dates),
+        "trial_max_sessions": max_sessions,
+    }
+    if status == "pending_trial":
+        set_fields["status"] = "trial"
+    if not athlete.get("trial_start_date") and earliest is not None:
+        set_fields["trial_start_date"] = earliest.isoformat()
+        set_fields["trial_end_date"] = (earliest + timedelta(days=max_days)).isoformat()
+
+    await db.athletes.update_one({"id": aid}, {"$set": set_fields})
+    if status == "pending_trial":
+        uid = athlete.get("user_id")
+        if uid:
+            await db.users.update_one({"id": uid}, {"$set": {"status": "trial"}})
 
 
 @api_router.post("/admin/teams/{team_id}/bulk-attendance")
@@ -17184,6 +17236,9 @@ async def add_bulk_attendance(team_id: str, data: BulkAttendanceCreate, request:
         # Evita duplicati stessa data/squadra/atleta
         dup = await db.attendances.find_one({"athlete_id": aid, "team_id": team_id, "date": data.date})
         if dup:
+            # Anche se la presenza per questa data esiste già, ricalcola la prova dai
+            # record reali: ripara gli atleti che risultavano ancora "prima prova".
+            await _recompute_trial_from_attendance(athlete, team_id)
             skipped.append({"athlete_id": aid, "athlete_name": athlete_name, "reason": "già registrata per questa data"})
             continue
 
@@ -17207,22 +17262,9 @@ async def add_bulk_attendance(team_id: str, data: BulkAttendanceCreate, request:
         }
         await db.attendances.insert_one(attendance_dict)
 
-        # Conteggio prova (come QR): incrementa sessioni così la prova può terminare
-        is_trial = athlete.get("is_trial") or athlete.get("status") == "trial"
-        if is_trial:
-            if not athlete.get("trial_start_date"):
-                trial_start = check_in
-                trial_end = trial_start + timedelta(days=max_days)
-                await db.athletes.update_one(
-                    {"id": aid},
-                    {"$set": {
-                        "trial_start_date": trial_start.isoformat(),
-                        "trial_end_date": trial_end.isoformat(),
-                        "trial_sessions_count": 1,
-                    }}
-                )
-            else:
-                await db.athletes.update_one({"id": aid}, {"$inc": {"trial_sessions_count": 1}})
+        # Conteggio prova (come QR): converte pending_trial→trial e conta le sessioni
+        # dai record reali, così la prova parte/avanza e può concludersi.
+        await _recompute_trial_from_attendance(athlete, team_id)
 
         await log_audit(
             action="manual_attendance_added",

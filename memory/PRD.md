@@ -1330,3 +1330,11 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Entry point: 2 nuovi link nella scheda squadra (`admin/team/[id].tsx`): "Scansiona QR Presenze" e "Registra Presenze (manuale)".
 - Verificato: curl (bulk register + skip duplicato + admin scan role OK) + screenshot (entrambe le schermate). NB: la camera nativa si prova solo su device reale (non in Expo Go web).
 - **Deploy**: Frontend (Vercel) + Backend (Render).
+
+## Changelog — 06/09/2026 (2) — FIX: presenze manuali non avviavano il periodo di prova (pending_trial)
+- Bug: atleti in stato `pending_trial` a cui l'admin aveva inserito presenze (bulk manuale) restavano con "prima presenza in palestra per avviare la prova" perché il bulk NON gestiva la conversione pending_trial→trial né impostava `trial_start_date` (condizione precedente: solo `is_trial or status=='trial'`).
+- Fix: nuovo helper `_recompute_trial_from_attendance(athlete, team_id)` in server.py — idempotente e AUTO-CORRETTIVO: se l'atleta è in prova (is_trial o status trial/pending_trial) ricalcola dai record di presenza reali → converte pending_trial→trial (+ user.status), imposta `trial_start_date` (prima presenza) se mancante + `trial_end_date`, e `trial_sessions_count` = numero di date distinte con presenza; imposta `is_trial=True` e `trial_max_sessions`.
+- Applicato in: endpoint bulk `/admin/teams/{id}/bulk-attendance` (anche sui DUPLICATI, così ripara gli atleti già inseriti) e endpoint singolo `/coach/athletes/{id}/manual-attendance`.
+- Effetto: le presenze manuali avviano/avanzano la prova come lo scan QR; quando `trial_sessions_count >= trial_max_sessions` la prova risulta conclusa. RIPARAZIONE dati esistenti: basta ri-registrare (anche stessa data) gli atleti interessati.
+- Verificato via curl: atleta pending_trial con 3 presenze preesistenti → dopo bulk (data duplicata) diventa status=trial, is_trial=true, trial_start_date=prima presenza, trial_sessions_count=3/3.
+- **Deploy**: solo Backend (Render).
