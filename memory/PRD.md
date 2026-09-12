@@ -1345,3 +1345,9 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Frontend `parent/athlete/[id].tsx`: il pulsante "Lascia la Società" (già esistente) ora, per atleti in prova, apre il modale con: avviso IRREVERSIBILE + campo "scrivi il nome dell'atleta" (deve combaciare con first_name, case-insensitive) → pulsante "Elimina tutto" abilitato solo a match. Handler `handleImmediateDelete` chiama self-delete-trial; se parent_deleted esegue logout, altrimenti torna a /parent. Per atleti NON in prova resta il flusso richiesta→admin. Verificato via screenshot.
 - "Resta e firma privacy": invariato (firma resta compito del genitore).
 - **Deploy**: Frontend (Vercel) + Backend (Render).
+
+## Changelog — 06/09/2026 (4) — Auto-riparazione prova alla lettura del profilo atleta
+- Problema (es. CASCIARI CAMILLA U12/13): 3 presenze registrate ma "Cosa manca: prima presenza (scansione QR) per avviare la prova" e prova non terminata. Causa: attendances create dal vecchio bulk (pre-fix) senza impostare trial_start_date; il fix precedente si attivava solo alla ri-registrazione.
+- Fix: in `GET /athletes/{athlete_id}` (server.py ~12227), se status in ('trial','pending_trial') e trial_start_date mancante ma esistono presenze per il team → chiama `_recompute_trial_from_attendance` e aggiorna i campi in memoria + persiste. Auto-riparazione trasparente: basta aprire/aggiornare il profilo dell'atleta.
+- Verificato via curl: atleta in stato "rotto" (pending_trial, 3 presenze, no trial_start) → dopo GET diventa status=trial, is_trial=true, trial_start_date=prima presenza, trial_sessions_count=3/3; pending_reason passa da "prima presenza QR" al passo reale successivo (es. certificato/privacy).
+- **Deploy**: solo Backend (Render). Dopo il deploy, aprire il profilo degli atleti interessati li ripara automaticamente (nessuna ri-registrazione manuale necessaria).

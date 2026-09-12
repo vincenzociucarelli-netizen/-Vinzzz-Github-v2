@@ -12224,6 +12224,25 @@ async def get_athlete(athlete_id: str, current_user = Depends(get_current_user))
             if _holder and not athlete.get("account_holder"):
                 athlete["account_holder"] = _holder
     
+    # 🆕 06/09/2026 — Auto-riparazione prova: se l'atleta è in prova ma la prova
+    # risulta "non avviata" pur avendo presenze registrate (dati creati prima del fix),
+    # ricalcola dai record reali così sparisce "prima presenza per avviare la prova".
+    try:
+        _st = athlete.get("status")
+        if _st in ("trial", "pending_trial") and not athlete.get("trial_start_date"):
+            _tid = athlete.get("team_id")
+            if _tid:
+                _has_att = await db.attendances.find_one({"athlete_id": athlete_id, "team_id": _tid})
+                if _has_att:
+                    await _recompute_trial_from_attendance(athlete, _tid)
+                    _fresh = await db.athletes.find_one({"id": athlete_id})
+                    if _fresh:
+                        for _k in ("status", "is_trial", "trial_start_date", "trial_end_date", "trial_sessions_count", "trial_max_sessions"):
+                            if _k in _fresh:
+                                athlete[_k] = _fresh[_k]
+    except Exception as _rep_err:
+        logging.getLogger(__name__).warning(f"[trial-autofix] {athlete_id}: {_rep_err}")
+
     # 🆕 24/08/2026 — Motivo dell'ATTESA (visibile anche a genitore/atleta: sa cosa
     # manca per andare "in attività").
     athlete["pending_reason"] = compute_pending_reason(athlete)
