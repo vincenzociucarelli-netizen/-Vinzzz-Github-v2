@@ -201,7 +201,7 @@ export default function AdminMatches() {
         matchDate.setHours(0, 0, 0, 0);
         const hasResult = match.result && match.result.trim() !== '' && match.result !== '-';
         if (filterMode === 'upcoming') return matchDate >= today && !hasResult;
-        if (filterMode === 'played') return hasResult;
+        if (filterMode === 'played') return hasResult || matchDate < today;
         return true;
       }).sort((a, b) => {
         const dateA = new Date(a.date).getTime();
@@ -768,7 +768,7 @@ export default function AdminMatches() {
       if (filterMode === 'upcoming') {
         return matchDate >= today && !hasResult;
       } else if (filterMode === 'played') {
-        return hasResult;
+        return hasResult || matchDate < today;
       }
       return true;
     });
