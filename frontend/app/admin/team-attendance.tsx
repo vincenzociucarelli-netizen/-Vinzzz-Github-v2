@@ -28,6 +28,21 @@ export default function AdminTeamAttendance() {
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [repairing, setRepairing] = useState(false);
+
+  const handleRepairTrials = async () => {
+    setRepairing(true);
+    try {
+      const res = await api.post(`/admin/teams/${teamId}/recompute-trials`);
+      showAlert('Prove ricalcolate', `${res.data?.count ?? 0} atleti aggiornati dalle presenze registrate.`);
+      const r = await api.get('/admin/team-roster', { params: { team_id: teamId } });
+      setAthletes((r.data?.athletes || []).filter((a: any) => a.status !== 'withdrawn'));
+    } catch (e: any) {
+      showAlert('Errore', e?.response?.data?.detail || 'Ricalcolo non riuscito.');
+    } finally {
+      setRepairing(false);
+    }
+  };
 
   const showAlert = (title: string, msg: string) => {
     if (Platform.OS === 'web') window.alert(`${title}\n${msg}`);
@@ -132,6 +147,16 @@ export default function AdminTeamAttendance() {
               🔵 {trialCount} atleti in prova: registrando la presenza aumenti gli allenamenti di prova (utile per far terminare il periodo).
             </Text>
           )}
+          {trialCount > 0 && (
+            <TouchableOpacity style={styles.repairBtn} onPress={handleRepairTrials} disabled={repairing} testID="ta-repair-trials">
+              {repairing ? <ActivityIndicator color="#1565C0" /> : (
+                <>
+                  <Ionicons name="build-outline" size={16} color="#1565C0" />
+                  <Text style={styles.repairBtnText}>Ripara prove in blocco (dalle presenze)</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Lista atleti */}
@@ -211,6 +236,8 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: '700', color: '#374151', marginBottom: 6 },
   input: { backgroundColor: '#fff', borderRadius: 8, borderWidth: 1, borderColor: '#D0D5DD', paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#222' },
   trialHint: { fontSize: 12.5, color: '#1565C0', marginTop: 10, lineHeight: 18 },
+  repairBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#90CAF9', backgroundColor: '#E3F2FD' },
+  repairBtnText: { color: '#1565C0', fontWeight: '700', fontSize: 13 },
   listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   selectAll: { color: '#5856D6', fontWeight: '700', fontSize: 13 },
   emptyText: { color: '#888', fontStyle: 'italic', marginTop: 10 },

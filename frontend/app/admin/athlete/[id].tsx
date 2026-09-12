@@ -1350,6 +1350,24 @@ export default function AdminAthleteDetail() {
   };
 
   // 🆕 12/08/2026 — Admin: rinuncia alla prova per minore già in forza
+  // 🆕 06/09/2026 — Admin: termina subito il periodo di prova
+  const handleForceEndTrial = async () => {
+    if (!athlete) return;
+    const name = `${athlete.first_name || ''} ${athlete.last_name || ''}`.trim();
+    const ok = Platform.OS === 'web'
+      ? window.confirm(`Terminare subito il periodo di prova per ${name}?\n\nLa prova risulterà conclusa e la famiglia dovrà scegliere se restare (firma privacy) o lasciare.`)
+      : true;
+    if (!ok) return;
+    try {
+      const r = await api.post(`/athletes/${id}/force-end-trial`);
+      showAlert('Prova conclusa', r.data?.message || 'Periodo di prova terminato.');
+      await loadData();
+    } catch (e: any) {
+      showAlert('Errore', e?.response?.data?.detail || 'Errore durante la chiusura della prova');
+    }
+  };
+
+
   const [waivingTrial, setWaivingTrial] = useState(false);
   const [showWaiveChoice, setShowWaiveChoice] = useState(false);
   const handleAdminWaiveTrial = async () => {
@@ -4648,6 +4666,16 @@ export default function AdminAthleteDetail() {
                     {athlete.trial_document_generated ? 'Dichiarazione di prova firmata' : 'Dichiarazione non ancora firmata'}
                   </Text>
                 </View>
+                {(athlete.status === 'trial' || athlete.status === 'pending_trial') && !(trialStatus && trialStatus.trial_expired) && (
+                  <TouchableOpacity
+                    onPress={handleForceEndTrial}
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12, paddingVertical: 10, borderRadius: 8, backgroundColor: '#FB8C00' }}
+                    testID="force-end-trial-btn"
+                  >
+                    <Ionicons name="flag" size={16} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Termina prova ora</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
             );

@@ -13417,8 +13417,12 @@ async def log_deletion_cancelled(athlete_id: str, current_user = Depends(get_cur
 
 
 
+class SelfDeleteTrialBody(BaseModel):
+    reason: Optional[str] = None
+
+
 @api_router.post("/athletes/{athlete_id}/self-delete-trial")
-async def self_delete_trial_athlete(athlete_id: str, request: Request, current_user = Depends(get_current_user)):
+async def self_delete_trial_athlete(athlete_id: str, request: Request, preview: bool = False, payload: Optional[SelfDeleteTrialBody] = None, current_user = Depends(get_current_user)):
     """🆕 06/09/2026 — Cancellazione IMMEDIATA e irreversibile di un atleta IN PROVA
     da parte del genitore (o atleta adulto in prova). Consentita SOLO se l'atleta è
     in prova/attesa-prova e NON ha obblighi (pagamenti da saldare, documenti fiscali,
@@ -13444,6 +13448,19 @@ async def self_delete_trial_athlete(athlete_id: str, request: Request, current_u
     society_id = athlete.get("society_id")
     athlete_name = athlete.get("full_name") or f"{athlete.get('first_name','')} {athlete.get('last_name','')}".strip()
     parent_id = athlete.get("parent_id")
+    reason = (payload.reason if payload else None) or ""
+    reason = reason.strip()
+
+    # Email genitore + dati società catturati PRIMA della cancellazione (per email di addio)
+    parent_email = None
+    parent_name = None
+    if parent_id:
+        _p = await db.users.find_one({"id": parent_id}, {"_id": 0, "email": 1, "full_name": 1})
+        if _p:
+            parent_email = _p.get("email")
+            parent_name = _p.get("full_name")
+    society_doc = await db.settings.find_one({"type": "society", "society_id": society_id}) if society_id else await db.settings.find_one({"type": "society"})
+    society_name = (society_doc or {}).get("name") if society_doc else None
 
     # Nessun obbligo: pagamenti non saldati, documenti fiscali, compensi
     fiscal_doc_types = ["ricevuta", "receipt", "fattura", "invoice", "fiscal"]
@@ -13452,6 +13469,43 @@ async def self_delete_trial_athlete(athlete_id: str, request: Request, current_u
     comps = await db.collaboratore_compensations.count_documents({"collaboratore_id": athlete_id})
     if unpaid > 0 or fiscal_docs > 0 or comps > 0:
         raise HTTPException(status_code=400, detail="Cancellazione rapida non disponibile: risultano pagamenti o documenti da gestire. Contatta la società.")
+
+    # Conta i dati che verranno eliminati (per il riepilogo nell'email)
+    n_att = await db.attendances.count_documents({"athlete_id": athlete_id})
+    n_docs = await db.signed_documents.count_documents({"related_entity_id": athlete_id})
+    n_cert = await db.certificates.count_documents({"athlete_id": athlete_id})
+
+    # 🛡️ Anteprima di sicurezza (dry-run): con ?preview=1 ritorna il riepilogo
+    # di ciò che verrebbe eliminato SENZA eseguire alcuna cancellazione.
+    parent_will_be_deleted = False
+    if parent_id:
+        remaining_preview = await db.athletes.count_documents({"$or": [{"parent_id": parent_id}, {"second_parent_id": parent_id}]})
+        if remaining_preview <= 1:
+            p_fiscal_prev = await db.signed_documents.count_documents({"signer_id": parent_id, "document_type": {"$in": fiscal_doc_types}})
+            p_comp_prev = await db.collaboratore_compensations.count_documents({"collaboratore_id": parent_id})
+            parent_will_be_deleted = (p_fiscal_prev == 0 and p_comp_prev == 0)
+    if preview:
+        return {
+            "preview": True,
+            "athlete_name": athlete_name,
+            "attendances_count": n_att,
+            "documents_count": n_docs,
+            "certificates_count": n_cert,
+            "parent_will_be_deleted": parent_will_be_deleted,
+        }
+
+    # Registra il MOTIVO di uscita (statistiche società), l'atleta viene poi eliminato
+    try:
+        await db.deletion_reasons.insert_one({
+            "id": str(ObjectId()),
+            "society_id": society_id,
+            "athlete_name": athlete_name,
+            "reason": reason,
+            "context": "trial_leave",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        })
+    except Exception:
+        pass
 
     # Elimina tutti i dati dell'atleta
     await db.signed_documents.delete_many({"related_entity_id": athlete_id})
@@ -13473,6 +13527,7 @@ async def self_delete_trial_athlete(athlete_id: str, request: Request, current_u
             "athlete_name": athlete_name,
             "self_service": True,
             "trial_leave": True,
+            "reason": reason,
         }
     )
 
@@ -13489,6 +13544,35 @@ async def self_delete_trial_athlete(athlete_id: str, request: Request, current_u
                 await db.users.delete_one({"id": parent_id})
                 await db.signed_documents.delete_many({"signer_id": parent_id})
                 parent_deleted = True
+
+    # 🆕 Email di addio con riepilogo dei dati eliminati
+    if parent_email:
+        try:
+            from email_service import send_society_email
+            _sn = society_name or "la Società"
+            html = f"""
+            <div style="font-family:Arial,sans-serif;color:#222;">
+              <h2 style="color:#1565C0;">Conferma cancellazione dati</h2>
+              <p>Ciao {parent_name or ''},</p>
+              <p>Come richiesto, al termine del periodo di prova abbiamo eliminato definitivamente
+              tutti i dati dell'atleta <strong>{athlete_name}</strong> da {_sn}.</p>
+              <p style="margin-top:12px;"><strong>Riepilogo dati eliminati:</strong></p>
+              <ul>
+                <li>Scheda anagrafica dell'atleta</li>
+                <li>{n_att} presenze/registrazioni allenamenti</li>
+                <li>{n_cert} certificati medici</li>
+                <li>{n_docs} documenti</li>
+                {"<li>Account di accesso del genitore</li>" if parent_deleted else ""}
+              </ul>
+              {f"<p><strong>Motivo indicato:</strong> {reason}</p>" if reason else ""}
+              <p style="margin-top:12px;">Grazie per aver provato le nostre attività. Le porte restano aperte: puoi
+              iscriverti di nuovo quando vuoi.</p>
+              <p style="color:#888;font-size:13px;">{_sn}</p>
+            </div>
+            """
+            await send_society_email(society_doc, parent_email, f"Cancellazione dati completata - {athlete_name}", html)
+        except Exception as _mail_err:
+            logging.getLogger(__name__).warning(f"[self-delete email] {_mail_err}")
 
     return {
         "message": f"{athlete_name} e tutti i suoi dati sono stati eliminati.",
@@ -17271,6 +17355,78 @@ async def _recompute_trial_from_attendance(athlete: dict, team_id: str):
         uid = athlete.get("user_id")
         if uid:
             await db.users.update_one({"id": uid}, {"$set": {"status": "trial"}})
+
+
+@api_router.post("/admin/teams/{team_id}/recompute-trials")
+async def recompute_team_trials(team_id: str, current_user = Depends(get_current_user)):
+    """🆕 06/09/2026 — Ripara/ricalcola in blocco la prova di TUTTI gli atleti in
+    prova della squadra, dalle presenze reali. Utile per sistemare gli atleti
+    inseriti col vecchio bulk. Solo admin/coordinatore (o coach assegnato)."""
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.COORDINATORE, UserRole.COACH):
+        raise HTTPException(status_code=403, detail="Operazione riservata ad admin/coach")
+    society_id = current_user.get("society_id")
+    team = await db.teams.find_one({"id": team_id, "society_id": society_id}, {"_id": 0, "id": 1})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    if current_user["role"] == UserRole.COACH and team_id not in (current_user.get("assigned_teams", []) or []):
+        raise HTTPException(status_code=403, detail="Non sei allenatore di questa squadra")
+
+    aths = await db.athletes.find({
+        "society_id": society_id, "team_id": team_id,
+        "$or": [{"is_trial": True}, {"status": {"$in": ["trial", "pending_trial"]}}],
+    }).to_list(2000)
+    fixed = 0
+    for a in aths:
+        await _recompute_trial_from_attendance(a, team_id)
+        fixed += 1
+    return {"message": f"Prova ricalcolata per {fixed} atleti", "count": fixed}
+
+
+@api_router.post("/athletes/{athlete_id}/force-end-trial")
+async def force_end_trial(athlete_id: str, request: Request, current_user = Depends(get_current_user)):
+    """🆕 06/09/2026 — Termina SUBITO il periodo di prova di un atleta (admin):
+    la prova risulta conclusa (raggiunte le sessioni massime) e l'atleta passa alla
+    fase decisionale (resta e firma / lascia). Tracciato negli audit log."""
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.COORDINATORE):
+        raise HTTPException(status_code=403, detail="Operazione riservata ad admin")
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    if athlete.get("society_id") and athlete.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Atleta di un'altra società")
+    if athlete.get("status") not in ("trial", "pending_trial"):
+        raise HTTPException(status_code=400, detail="L'atleta non è in periodo di prova")
+
+    _sid = athlete.get("society_id")
+    ss = await db.settings.find_one({"type": "society", "society_id": _sid}) if _sid else await db.settings.find_one({"type": "society"})
+    max_sessions = (ss.get("trial_max_sessions", 3) if ss else 3) or 3
+    now_it = datetime.now(timezone.utc)
+    start = athlete.get("trial_start_date") or now_it.isoformat()
+    await db.athletes.update_one({"id": athlete_id}, {"$set": {
+        "status": "trial",
+        "is_trial": True,
+        "trial_start_date": start,
+        "trial_end_date": now_it.isoformat(),
+        "trial_sessions_count": max_sessions,
+        "trial_max_sessions": max_sessions,
+    }})
+    uid = athlete.get("user_id")
+    if uid:
+        await db.users.update_one({"id": uid}, {"$set": {"status": "trial"}})
+
+    athlete_name = athlete.get("full_name") or f"{athlete.get('first_name','')} {athlete.get('last_name','')}".strip()
+    await log_audit(
+        action="trial_force_ended",
+        user_id=current_user["id"],
+        user_email=current_user.get("email", ""),
+        society_id=_sid or "",
+        target_user_id=athlete_id,
+        target_user_name=athlete_name,
+        ip_address=get_real_ip(request),
+        details={"executor_name": current_user.get("full_name", "")},
+    )
+    return {"message": f"Periodo di prova concluso per {athlete_name}"}
+
 
 
 @api_router.post("/admin/teams/{team_id}/bulk-attendance")

@@ -191,6 +191,80 @@ export default function AdminMatches() {
     }
   };
 
+  // 🆕 06/09/2026 — Esporta le gare in Excel (.xlsx)
+  const handleExportExcel = async () => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const list = matches.filter((match) => {
+        const matchDate = new Date(match.date);
+        matchDate.setHours(0, 0, 0, 0);
+        const hasResult = match.result && match.result.trim() !== '' && match.result !== '-';
+        if (filterMode === 'upcoming') return matchDate >= today && !hasResult;
+        if (filterMode === 'played') return hasResult;
+        return true;
+      }).sort((a, b) => {
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        return filterMode === 'played' ? dateB - dateA : dateA - dateB;
+      });
+      if (!list || list.length === 0) {
+        Alert.alert('Nessuna gara', 'Non ci sono gare da esportare per il filtro selezionato.');
+        return;
+      }
+      const rows = list.map((m) => {
+        let dataStr = '', oraStr = '';
+        if (m.date) {
+          const d = new Date(m.date);
+          if (!isNaN(d.getTime())) {
+            dataStr = d.toLocaleDateString('it-IT');
+            oraStr = d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+          }
+        }
+        return {
+          'Squadra': m.team_name || '',
+          'Campionato/Gara': m.match_number || '',
+          'Casa/Trasferta': m.home_away === 'home' ? 'Casa' : 'Trasferta',
+          'Avversario': m.opponent || '',
+          'Data': dataStr,
+          'Ora': oraStr,
+          'Impianto': m.venue || '',
+          'Indirizzo': m.address || '',
+          'Città': m.city || '',
+          'Ritrovo': m.meeting_time || '',
+          'Risultato': m.result || '',
+          'Note': m.notes || '',
+        };
+      });
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws['!cols'] = [
+        { wch: 16 }, { wch: 14 }, { wch: 13 }, { wch: 22 }, { wch: 12 }, { wch: 8 },
+        { wch: 26 }, { wch: 32 }, { wch: 16 }, { wch: 10 }, { wch: 12 }, { wch: 20 },
+      ];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Gare');
+
+      if (Platform.OS === 'web') {
+        XLSX.writeFile(wb, 'calendario_gare.xlsx');
+      } else {
+        const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+        const fileUri = FileSystem.documentDirectory + 'calendario_gare.xlsx';
+        await FileSystem.writeAsStringAsync(fileUri, wbout, { encoding: 'base64' as any });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(fileUri, {
+            mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            dialogTitle: 'Esporta Calendario Gare',
+          });
+        } else {
+          Alert.alert('Errore', 'Condivisione non disponibile');
+        }
+      }
+    } catch (e: any) {
+      Alert.alert('Errore', 'Impossibile esportare le gare in Excel');
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       team_id: '',
@@ -733,15 +807,15 @@ export default function AdminMatches() {
         <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace('/admin'))} style={styles.backBtn}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="chevron-back" size={24} color="#007AFF" /></View>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.replace('/admin')} data-testid="header-home-btn" style={{ marginLeft: 8 }}>
+        <TouchableOpacity onPress={() => router.replace('/admin')} testID="header-home-btn" style={{ marginLeft: 8 }}>
           <View style={{ backgroundColor: "#fff", borderRadius: 20, padding: 8, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 5 }}><Ionicons name="home" size={20} color="#007AFF" /></View>
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} data-testid="matches-page-title">Calendario Gare</Text>
+        <Text style={styles.headerTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} testID="matches-page-title">Calendario Gare</Text>
         <TouchableOpacity
           onPress={handleSyncFipav}
           style={[styles.syncBtn, syncing && { opacity: 0.6 }]}
           disabled={syncing}
-          data-testid="sync-fipav-btn"
+          testID="sync-fipav-btn"
         >
           {syncing ? (
             <ActivityIndicator size="small" color="#fff" />
@@ -756,9 +830,17 @@ export default function AdminMatches() {
         <TouchableOpacity
           onPress={handleExportIcs}
           style={[styles.importBtn, { backgroundColor: '#059669' }]}
-          data-testid="export-matches-ics-btn"
+          testID="export-matches-ics-btn"
         >
           <Ionicons name="download-outline" size={20} color="#fff" />
+        </TouchableOpacity>
+        {/* 🆕 06/09/2026 — Esporta gare in Excel (.xlsx) */}
+        <TouchableOpacity
+          onPress={handleExportExcel}
+          style={[styles.importBtn, { backgroundColor: '#217346' }]}
+          testID="export-matches-excel-btn"
+        >
+          <Ionicons name="grid-outline" size={20} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity onPress={openAddModal} style={styles.addBtn}>
           <Ionicons name="add" size={22} color="#fff" />
@@ -772,7 +854,7 @@ export default function AdminMatches() {
           <Text style={styles.excelGuideTitle}>Importa gare da Excel in 2 passi</Text>
           <TouchableOpacity
             onPress={() => setTutorialVisible(true)}
-            data-testid="matches-info-btn"
+            testID="matches-info-btn"
             style={styles.excelGuideInfo}
           >
             <Ionicons name="help-circle-outline" size={22} color="#007AFF" />
@@ -782,7 +864,7 @@ export default function AdminMatches() {
           <TouchableOpacity
             style={[styles.excelStepBtn, styles.excelStepBtnTemplate]}
             onPress={downloadTemplate}
-            data-testid="download-template-btn"
+            testID="download-template-btn"
           >
             <View style={styles.excelStepNum}><Text style={styles.excelStepNumText}>1</Text></View>
             <Ionicons name="download-outline" size={18} color="#fff" />
@@ -791,7 +873,7 @@ export default function AdminMatches() {
           <TouchableOpacity
             style={[styles.excelStepBtn, styles.excelStepBtnImport]}
             onPress={handleImportExcel}
-            data-testid="import-excel-btn"
+            testID="import-excel-btn"
           >
             <View style={styles.excelStepNum}><Text style={styles.excelStepNumText}>2</Text></View>
             <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
@@ -804,7 +886,7 @@ export default function AdminMatches() {
       </View>
 
       {/* Filter Tabs */}
-      <View style={styles.filterBar} data-testid="match-filter-bar">
+      <View style={styles.filterBar} testID="match-filter-bar">
         {([
           { key: 'upcoming', label: 'Da disputare', icon: 'time-outline' },
           { key: 'played', label: 'Giocate', icon: 'trophy-outline' },
@@ -814,7 +896,7 @@ export default function AdminMatches() {
             key={tab.key}
             style={[styles.filterTab, filterMode === tab.key && styles.filterTabActive]}
             onPress={() => setFilterMode(tab.key)}
-            data-testid={`filter-${tab.key}`}
+            testID={`filter-${tab.key}`}
           >
             <Ionicons name={tab.icon as any} size={16} color={filterMode === tab.key ? '#fff' : '#666'} />
             <Text style={[styles.filterTabText, filterMode === tab.key && styles.filterTabTextActive]}>
@@ -1154,7 +1236,7 @@ export default function AdminMatches() {
               </Text>
               
               {homeTeamName.trim().length > 0 && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#E8F5E9', padding: 8, borderRadius: 6, marginTop: 6 }} data-testid="home-team-saved-hint">
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#E8F5E9', padding: 8, borderRadius: 6, marginTop: 6 }} testID="home-team-saved-hint">
                   <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
                   <Text style={{ marginLeft: 6, fontSize: 12, color: '#2E7D32', flex: 1 }}>
                     Nome salvato dall'ultima importazione. Modifica solo se necessario.
@@ -1169,7 +1251,7 @@ export default function AdminMatches() {
                 placeholder="Nome squadra di casa..."
                 placeholderTextColor="#999"
                 autoFocus
-                data-testid="home-team-name-input"
+                testID="home-team-name-input"
               />
               
               <Text style={styles.homeTeamHint}>
@@ -1215,7 +1297,7 @@ export default function AdminMatches() {
               {syncResult && (
                 <>
                   <View style={{ backgroundColor: '#E8F5E9', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#2E7D32', marginBottom: 4 }} data-testid="sync-result-message">
+                    <Text style={{ fontSize: 15, fontWeight: '700', color: '#2E7D32', marginBottom: 4 }} testID="sync-result-message">
                       {syncResult.message}
                     </Text>
                     <Text style={{ fontSize: 13, color: '#666' }}>

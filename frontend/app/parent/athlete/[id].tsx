@@ -371,6 +371,7 @@ export default function AthleteDetail() {
   const [showDeletionConfirm, setShowDeletionConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [immediateDeleting, setImmediateDeleting] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
 
   // Helper function for alerts
   const showAlert = (title: string, message: string) => {
@@ -1540,7 +1541,7 @@ export default function AthleteDetail() {
     if (!athlete) return;
     setImmediateDeleting(true);
     try {
-      const res = await api.post(`/athletes/${athlete.id}/self-delete-trial`);
+      const res = await api.post(`/athletes/${athlete.id}/self-delete-trial`, { reason: deleteReason.trim() || null });
       setShowDeletionConfirm(false);
       setShowEndTrialChoice(false);
       setDeleteConfirmText('');
@@ -3595,12 +3596,21 @@ export default function AthleteDetail() {
                       Per confermare, scrivi il nome dell'atleta: <Text style={{ fontWeight: '700' }}>{athlete?.first_name}</Text>
                     </Text>
                     <TextInput
-                      style={{ borderWidth: 1, borderColor: '#D0D5DD', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, marginBottom: 16, color: '#222' }}
+                      style={{ borderWidth: 1, borderColor: '#D0D5DD', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, marginBottom: 12, color: '#222' }}
                       value={deleteConfirmText}
                       onChangeText={setDeleteConfirmText}
                       placeholder={athlete?.first_name}
                       autoCapitalize="none"
                       data-testid="delete-confirm-name-input"
+                    />
+                    <Text style={{ fontSize: 13, color: '#333', marginBottom: 6 }}>Motivo (facoltativo)</Text>
+                    <TextInput
+                      style={{ borderWidth: 1, borderColor: '#D0D5DD', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, marginBottom: 16, color: '#222', minHeight: 48, textAlignVertical: 'top' }}
+                      value={deleteReason}
+                      onChangeText={setDeleteReason}
+                      placeholder="Es. troppo lontano, altri impegni..."
+                      multiline
+                      data-testid="delete-reason-input"
                     />
                     <View style={{ flexDirection: 'row', gap: 10 }}>
                       <TouchableOpacity
