@@ -12224,12 +12224,13 @@ async def get_athlete(athlete_id: str, current_user = Depends(get_current_user))
             if _holder and not athlete.get("account_holder"):
                 athlete["account_holder"] = _holder
     
-    # 🆕 06/09/2026 — Auto-riparazione prova: se l'atleta è in prova ma la prova
-    # risulta "non avviata" pur avendo presenze registrate (dati creati prima del fix),
-    # ricalcola dai record reali così sparisce "prima presenza per avviare la prova".
+    # 🆕 06/09/2026 — Auto-riparazione prova: ricalcola dai record di presenza reali.
+    # 12/09/2026: esteso anche alle prove GIÀ avviate, così la fine prova viene
+    # anticipata quando si raggiunge il numero massimo di sedute (3/3) anche se la
+    # settimana non è ancora finita.
     try:
         _st = athlete.get("status")
-        if _st in ("trial", "pending_trial") and not athlete.get("trial_start_date"):
+        if _st in ("trial", "pending_trial"):
             _tid = athlete.get("team_id")
             if _tid:
                 _has_att = await db.attendances.find_one({"athlete_id": athlete_id, "team_id": _tid})
@@ -17328,6 +17329,7 @@ async def _recompute_trial_from_attendance(athlete: dict, team_id: str):
     atts = await db.attendances.find({"athlete_id": aid, "team_id": team_id}).to_list(2000)
     dates = set()
     earliest = None
+    date_to_dt: dict = {}  # data (iso) -> primo check-in di quel giorno
     for at in atts:
         ci = at.get("check_in_time")
         d = at.get("date")
@@ -17335,6 +17337,10 @@ async def _recompute_trial_from_attendance(athlete: dict, team_id: str):
             d = ci.date().isoformat()
         if d:
             dates.add(d)
+            if isinstance(ci, datetime):
+                prev = date_to_dt.get(d)
+                if prev is None or ci < prev:
+                    date_to_dt[d] = ci
         if isinstance(ci, datetime):
             if earliest is None or ci < earliest:
                 earliest = ci
@@ -17349,6 +17355,21 @@ async def _recompute_trial_from_attendance(athlete: dict, team_id: str):
     if not athlete.get("trial_start_date") and earliest is not None:
         set_fields["trial_start_date"] = earliest.isoformat()
         set_fields["trial_end_date"] = (earliest + timedelta(days=max_days)).isoformat()
+
+    # 🆕 12/09/2026 (richiesta utente): la prova si CONCLUDE al raggiungimento del
+    # numero massimo di sedute (OR con i giorni). Anticipiamo trial_end_date al
+    # momento della seduta che completa il massimo, così la prova risulta terminata
+    # subito (giorni rimanenti = 0) anche se la settimana non è finita.
+    if len(dates) >= max_sessions:
+        sorted_dates = sorted(dates)
+        completing_date = sorted_dates[max_sessions - 1]
+        completing_dt = date_to_dt.get(completing_date)
+        if completing_dt is None:
+            try:
+                completing_dt = datetime.fromisoformat(completing_date)
+            except Exception:
+                completing_dt = datetime.now()
+        set_fields["trial_end_date"] = completing_dt.isoformat()
 
     await db.athletes.update_one({"id": aid}, {"$set": set_fields})
     if status == "pending_trial":
