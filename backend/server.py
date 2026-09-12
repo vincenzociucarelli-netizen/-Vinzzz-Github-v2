@@ -38207,6 +38207,32 @@ async def get_pending_reminders(current_user=Depends(get_current_user)):
                         "template": settings["trial_start_unsigned"]["template"],
                     })
 
+        # (b) certificato mancante / non convalidato — per TUTTI gli atleti non ritirati
+        # 🆕 12/09/2026 (richiesta utente): il tab "Certif. mancante" deve elencare TUTTI
+        # gli atleti senza certificato valido, a prescindere dal periodo di prova.
+        # "Senza certificato" = manca la data di emissione OPPURE non è ancora convalidato dall'admin.
+        _issue_date = ath.get("medical_certificate_issue_date") or ath.get("medical_certificate_date")
+        _cert_verified = bool(ath.get("medical_certificate_verified"))
+        if (not _issue_date) or (not _cert_verified):
+            ck = _make_case_key("trial_end_no_certificate", athlete_id=ath_id)
+            if ck not in dismissed_keys:
+                last = _wa_last_reminder(reminders_log, "trial_end_no_certificate", ath_id, None)
+                _end_ctx = te.strftime("%d/%m/%Y") if te else ""
+                _overdue = (today - te).days if (te and te <= today) else 0
+                cases.append({
+                    "case": "trial_end_no_certificate",
+                    "case_key": ck,
+                    "label": settings["trial_end_no_certificate"]["label"],
+                    "athlete_id": ath_id,
+                    "athlete_name": full_name,
+                    "team_id": ath.get("team_id"),
+                    "contacts": contacts,
+                    "data_context": {"end_date": _end_ctx},
+                    "days_overdue": _overdue,
+                    "last_reminder_at": (last or {}).get("sent_at"),
+                    "template": settings["trial_end_no_certificate"]["template"],
+                })
+
         # (b/c/d) trial ended
         # 🐛 18/08/2026 FIX — La prova può essere "finita" SOLO se è davvero
         # iniziata: `trial_start_date` viene valorizzata unicamente al primo scan
@@ -38217,27 +38243,6 @@ async def get_pending_reminders(current_user=Depends(get_current_user)):
         # certificato → non avrebbero potuto fare la prova). Ora richiediamo `ts`.
         if ts and te and te <= today:
             days_since_end = (today - te).days
-
-            # (b) no certificate
-            cert_expiry = ath.get("medical_certificate_expiry")
-            has_cert = bool(cert_expiry)
-            if not has_cert and days_since_end >= settings["trial_end_no_certificate"]["threshold_days"]:
-                ck = _make_case_key("trial_end_no_certificate", athlete_id=ath_id)
-                if ck not in dismissed_keys:
-                    last = _wa_last_reminder(reminders_log, "trial_end_no_certificate", ath_id, None)
-                    cases.append({
-                        "case": "trial_end_no_certificate",
-                        "case_key": ck,
-                        "label": settings["trial_end_no_certificate"]["label"],
-                        "athlete_id": ath_id,
-                        "athlete_name": full_name,
-                        "team_id": ath.get("team_id"),
-                        "contacts": contacts,
-                        "data_context": {"end_date": te.strftime("%d/%m/%Y")},
-                        "days_overdue": days_since_end,
-                        "last_reminder_at": (last or {}).get("sent_at"),
-                        "template": settings["trial_end_no_certificate"]["template"],
-                    })
 
             # (c) no privacy
             if not privacy_signed and days_since_end >= settings["trial_end_no_privacy"]["threshold_days"]:

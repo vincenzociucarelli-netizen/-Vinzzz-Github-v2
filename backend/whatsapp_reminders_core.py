@@ -46,11 +46,11 @@ DEFAULT_TEMPLATES = {
         ),
     },
     "trial_end_no_certificate": {
-        "label": "Fine prova — certificato medico mancante",
+        "label": "Certificato medico mancante",
         "threshold_days": 1,
         "template": (
-            "Ciao, il periodo di prova di {atleta} è terminato il {data}. "
-            "Per continuare gli allenamenti è OBBLIGATORIO caricare il certificato medico "
+            "Ciao, per {atleta} manca ancora il certificato medico valido. "
+            "Per poter svolgere gli allenamenti è OBBLIGATORIO caricare il certificato medico "
             "e consegnarne copia alla società. Accedi qui: {link}"
         ),
     },
