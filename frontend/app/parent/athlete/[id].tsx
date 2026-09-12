@@ -369,6 +369,8 @@ export default function AthleteDetail() {
   const [deletionCheck, setDeletionCheck] = useState<any>(null);
   const [requestingDeletion, setRequestingDeletion] = useState(false);
   const [showDeletionConfirm, setShowDeletionConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [immediateDeleting, setImmediateDeleting] = useState(false);
 
   // Helper function for alerts
   const showAlert = (title: string, message: string) => {
@@ -1531,6 +1533,29 @@ export default function AthleteDetail() {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante la richiesta');
     } finally {
       setRequestingDeletion(false);
+    }
+  };
+
+  const handleImmediateDelete = async () => {
+    if (!athlete) return;
+    setImmediateDeleting(true);
+    try {
+      const res = await api.post(`/athletes/${athlete.id}/self-delete-trial`);
+      setShowDeletionConfirm(false);
+      setShowEndTrialChoice(false);
+      setDeleteConfirmText('');
+      if (res.data?.parent_deleted) {
+        // L'account genitore è stato eliminato: esci e torna al login
+        showAlert('Eliminazione completata', 'Tutti i dati sono stati eliminati. Verrai disconnesso.');
+        await logout();
+      } else {
+        showAlert('Eliminazione completata', res.data?.message || 'Tutti i dati sono stati eliminati.');
+        router.replace('/parent');
+      }
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore durante la cancellazione');
+    } finally {
+      setImmediateDeleting(false);
     }
   };
 
@@ -3558,43 +3583,91 @@ export default function AthleteDetail() {
                   )}
                 </View>
 
-                <Text style={{ fontSize: 12, color: '#888', lineHeight: 18, marginBottom: 16, textAlign: 'center' }}>
-                  La richiesta sara inviata all'amministratore per l'approvazione.
-                </Text>
-
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <TouchableOpacity
-                    style={{ flex: 1, backgroundColor: '#E0E0E0', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
-                    onPress={() => { 
-                      // Log the cancellation before closing
-                      api.post(`/athletes/${athlete?.id}/deletion-cancelled`).catch(() => {});
-                      setShowDeletionConfirm(false); 
-                      setShowEndTrialChoice(false); 
-                    }}
-                    data-testid="cancel-deletion-btn"
-                  >
-                    <Text style={{ fontWeight: '600', fontSize: 14, color: '#555' }}>Annulla</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={{
-                      flex: 1, backgroundColor: requestingDeletion ? '#EF9A9A' : '#C62828',
-                      borderRadius: 10, paddingVertical: 12, alignItems: 'center',
-                      flexDirection: 'row', justifyContent: 'center', gap: 6,
-                    }}
-                    onPress={handleRequestDeletion}
-                    disabled={requestingDeletion}
-                    data-testid="confirm-deletion-btn"
-                  >
-                    {requestingDeletion ? (
-                      <ActivityIndicator size="small" color="#fff" />
-                    ) : (
-                      <Ionicons name="trash" size={16} color="#fff" />
-                    )}
-                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
-                      {requestingDeletion ? 'Invio...' : 'Conferma'}
+                {(athlete?.status === 'trial' || athlete?.status === 'pending_trial') ? (
+                  /* 🆕 Cancellazione IMMEDIATA per atleti in prova (con conferma di sicurezza) */
+                  <>
+                    <View style={{ backgroundColor: '#FFEBEE', borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: '#EF9A9A' }}>
+                      <Text style={{ fontSize: 12.5, color: '#B71C1C', lineHeight: 18, fontWeight: '600' }}>
+                        ⚠️ Questa operazione è IRREVERSIBILE: tutti i dati verranno eliminati immediatamente e definitivamente. Non sarà possibile recuperarli.
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 13, color: '#333', marginBottom: 6 }}>
+                      Per confermare, scrivi il nome dell'atleta: <Text style={{ fontWeight: '700' }}>{athlete?.first_name}</Text>
                     </Text>
-                  </TouchableOpacity>
-                </View>
+                    <TextInput
+                      style={{ borderWidth: 1, borderColor: '#D0D5DD', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, marginBottom: 16, color: '#222' }}
+                      value={deleteConfirmText}
+                      onChangeText={setDeleteConfirmText}
+                      placeholder={athlete?.first_name}
+                      autoCapitalize="none"
+                      data-testid="delete-confirm-name-input"
+                    />
+                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                      <TouchableOpacity
+                        style={{ flex: 1, backgroundColor: '#E0E0E0', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
+                        onPress={() => { setShowDeletionConfirm(false); setShowEndTrialChoice(false); setDeleteConfirmText(''); }}
+                        data-testid="cancel-deletion-btn"
+                      >
+                        <Text style={{ fontWeight: '600', fontSize: 14, color: '#555' }}>Annulla</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={{
+                          flex: 1,
+                          backgroundColor: (immediateDeleting || (deleteConfirmText.trim().toLowerCase() !== (athlete?.first_name || '').trim().toLowerCase())) ? '#EF9A9A' : '#C62828',
+                          borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+                          flexDirection: 'row', justifyContent: 'center', gap: 6,
+                        }}
+                        onPress={handleImmediateDelete}
+                        disabled={immediateDeleting || deleteConfirmText.trim().toLowerCase() !== (athlete?.first_name || '').trim().toLowerCase()}
+                        data-testid="confirm-immediate-delete-btn"
+                      >
+                        {immediateDeleting ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="trash" size={16} color="#fff" />}
+                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                          {immediateDeleting ? 'Elimino...' : 'Elimina tutto'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <Text style={{ fontSize: 12, color: '#888', lineHeight: 18, marginBottom: 16, textAlign: 'center' }}>
+                      La richiesta sara inviata all'amministratore per l'approvazione.
+                    </Text>
+
+                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                      <TouchableOpacity
+                        style={{ flex: 1, backgroundColor: '#E0E0E0', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
+                        onPress={() => { 
+                          api.post(`/athletes/${athlete?.id}/deletion-cancelled`).catch(() => {});
+                          setShowDeletionConfirm(false); 
+                          setShowEndTrialChoice(false); 
+                        }}
+                        data-testid="cancel-deletion-btn"
+                      >
+                        <Text style={{ fontWeight: '600', fontSize: 14, color: '#555' }}>Annulla</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={{
+                          flex: 1, backgroundColor: requestingDeletion ? '#EF9A9A' : '#C62828',
+                          borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+                          flexDirection: 'row', justifyContent: 'center', gap: 6,
+                        }}
+                        onPress={handleRequestDeletion}
+                        disabled={requestingDeletion}
+                        data-testid="confirm-deletion-btn"
+                      >
+                        {requestingDeletion ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <Ionicons name="trash" size={16} color="#fff" />
+                        )}
+                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                          {requestingDeletion ? 'Invio...' : 'Conferma'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
               </View>
             )}
           </View>

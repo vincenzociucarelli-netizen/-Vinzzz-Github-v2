@@ -13398,6 +13398,86 @@ async def log_deletion_cancelled(athlete_id: str, current_user = Depends(get_cur
 
 
 
+@api_router.post("/athletes/{athlete_id}/self-delete-trial")
+async def self_delete_trial_athlete(athlete_id: str, request: Request, current_user = Depends(get_current_user)):
+    """🆕 06/09/2026 — Cancellazione IMMEDIATA e irreversibile di un atleta IN PROVA
+    da parte del genitore (o atleta adulto in prova). Consentita SOLO se l'atleta è
+    in prova/attesa-prova e NON ha obblighi (pagamenti da saldare, documenti fiscali,
+    compensi). Elimina tutti i dati; se il genitore resta senza figli e senza obblighi
+    elimina anche il suo account. Tracciato negli audit log."""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+
+    # Permessi: genitore collegato o atleta adulto proprietario
+    is_parent = current_user["role"] == UserRole.PARENT and (
+        athlete.get("parent_id") == current_user["id"] or athlete.get("second_parent_id") == current_user["id"]
+    )
+    is_self_adult = athlete.get("user_id") == current_user["id"]
+    if not (is_parent or is_self_adult):
+        raise HTTPException(status_code=403, detail="Accesso negato")
+
+    # Solo durante il periodo di prova (o attesa prova)
+    status = athlete.get("status")
+    if status not in ("trial", "pending_trial"):
+        raise HTTPException(status_code=400, detail="Cancellazione rapida disponibile solo durante il periodo di prova")
+
+    society_id = athlete.get("society_id")
+    athlete_name = athlete.get("full_name") or f"{athlete.get('first_name','')} {athlete.get('last_name','')}".strip()
+    parent_id = athlete.get("parent_id")
+
+    # Nessun obbligo: pagamenti non saldati, documenti fiscali, compensi
+    fiscal_doc_types = ["ricevuta", "receipt", "fattura", "invoice", "fiscal"]
+    unpaid = await db.payments.count_documents({"athlete_id": athlete_id, "paid": {"$ne": True}})
+    fiscal_docs = await db.signed_documents.count_documents({"related_entity_id": athlete_id, "document_type": {"$in": fiscal_doc_types}})
+    comps = await db.collaboratore_compensations.count_documents({"collaboratore_id": athlete_id})
+    if unpaid > 0 or fiscal_docs > 0 or comps > 0:
+        raise HTTPException(status_code=400, detail="Cancellazione rapida non disponibile: risultano pagamenti o documenti da gestire. Contatta la società.")
+
+    # Elimina tutti i dati dell'atleta
+    await db.signed_documents.delete_many({"related_entity_id": athlete_id})
+    await db.certificates.delete_many({"athlete_id": athlete_id})
+    await db.attendances.delete_many({"athlete_id": athlete_id})
+    await db.payments.delete_many({"athlete_id": athlete_id})
+
+    await log_audit(
+        action="deletion_approved",
+        user_id=current_user["id"],
+        user_email=current_user.get("email", ""),
+        society_id=society_id or "",
+        target_user_id=athlete_id,
+        target_user_name=athlete_name,
+        ip_address=get_real_ip(request),
+        details={
+            "executor_name": current_user.get("full_name", ""),
+            "executor_role": current_user.get("role", ""),
+            "athlete_name": athlete_name,
+            "self_service": True,
+            "trial_leave": True,
+        }
+    )
+
+    await db.athletes.delete_one({"id": athlete_id})
+
+    # Elimina account genitore se rimasto senza figli e senza obblighi
+    parent_deleted = False
+    if parent_id:
+        remaining = await db.athletes.count_documents({"$or": [{"parent_id": parent_id}, {"second_parent_id": parent_id}]})
+        if remaining == 0:
+            p_fiscal = await db.signed_documents.count_documents({"signer_id": parent_id, "document_type": {"$in": fiscal_doc_types}})
+            p_comp = await db.collaboratore_compensations.count_documents({"collaboratore_id": parent_id})
+            if p_fiscal == 0 and p_comp == 0:
+                await db.users.delete_one({"id": parent_id})
+                await db.signed_documents.delete_many({"signer_id": parent_id})
+                parent_deleted = True
+
+    return {
+        "message": f"{athlete_name} e tutti i suoi dati sono stati eliminati.",
+        "parent_deleted": parent_deleted,
+    }
+
+
+
 @api_router.post("/athletes/{athlete_id}/request-deletion")
 async def request_athlete_deletion(athlete_id: str, current_user = Depends(get_current_user)):
     """Request deletion of an athlete - sends notification to admin"""
