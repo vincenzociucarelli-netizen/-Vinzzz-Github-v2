@@ -17450,7 +17450,70 @@ async def force_end_trial(athlete_id: str, request: Request, current_user = Depe
 
 
 
-@api_router.post("/admin/teams/{team_id}/bulk-attendance")
+@api_router.post("/athletes/{athlete_id}/skip-trial-activate")
+async def skip_trial_and_activate(athlete_id: str, request: Request, current_user = Depends(get_current_user)):
+    """🆕 12/09/2026 — Admin: ANNULLA il periodo di prova e ATTIVA SUBITO l'atleta
+    (per i "vecchi tesserati" già confermati). NESSUNA fase decisionale resta/lascia.
+    La privacy NON viene firmata automaticamente: resta da firmare dall'atleta (18+)
+    o dal genitore (18-) tramite il banner privacy esistente. Se il certificato medico
+    è già convalidato → ATTIVO; altrimenti → in attesa certificato. Tracciato in audit."""
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.COORDINATORE):
+        raise HTTPException(status_code=403, detail="Operazione riservata ad admin")
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    if athlete.get("society_id") and athlete.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Atleta di un'altra società")
+    if athlete.get("is_withdrawn"):
+        raise HTTPException(status_code=400, detail="Atleta ritirato")
+    if athlete.get("status") == "active":
+        raise HTTPException(status_code=400, detail="L'atleta è già attivo")
+
+    _team = await db.teams.find_one({"id": athlete.get("team_id")}) if athlete.get("team_id") else None
+    _cert_type = cert_type_for_team(_team)
+    cert_ok = has_valid_verified_cert(athlete) if cert_required_for_active(_cert_type) else True
+    now = datetime.utcnow()
+    upd = {
+        "is_trial": False,
+        "trial_start_date": None,
+        "trial_end_date": None,
+        "end_trial_requested": False,
+        "trial_skipped_by_admin": True,
+    }
+    if cert_ok:
+        upd["status"] = "active"
+        upd["activated_at"] = now.isoformat()
+        upd["activated_by"] = current_user.get("id")
+        upd["activated_by_name"] = current_user.get("full_name", current_user.get("email", ""))
+        new_status = "active"
+    else:
+        upd["status"] = "pending_certificate"
+        new_status = "pending_certificate"
+    await db.athletes.update_one({"id": athlete_id}, {"$set": upd})
+    uid = athlete.get("user_id") or athlete.get("linked_user_id")
+    if uid and cert_ok:
+        await db.users.update_one({"id": uid}, {"$set": {"status": UserStatus.APPROVED}})
+
+    athlete_name = athlete.get("full_name") or f"{athlete.get('first_name','')} {athlete.get('last_name','')}".strip()
+    _sid2 = athlete.get("society_id")
+    await log_audit(
+        action="trial_skipped_activate",
+        user_id=current_user["id"],
+        user_email=current_user.get("email", ""),
+        society_id=_sid2 or "",
+        target_user_id=athlete_id,
+        target_user_name=athlete_name,
+        ip_address=get_real_ip(request),
+        details={"executor_name": current_user.get("full_name", ""), "result_status": new_status, "cert_ok": cert_ok},
+    )
+    privacy_signed = bool(athlete.get("privacy_accepted"))
+    if new_status == "active":
+        msg = f"{athlete_name} è ora ATTIVO (prova annullata)."
+    else:
+        msg = f"Prova annullata per {athlete_name}. Resta in attesa della convalida del certificato medico."
+    if not privacy_signed:
+        msg += " La privacy deve ancora essere firmata."
+    return {"status": new_status, "privacy_required": not privacy_signed, "message": msg}
 async def add_bulk_attendance(team_id: str, data: BulkAttendanceCreate, request: Request, current_user = Depends(get_current_user)):
     """🆕 06/09/2026 — Registrazione presenze MULTIPLE per una squadra da parte
     dell'admin (o coach assegnato). Seleziona atleti + data/ora e registra la

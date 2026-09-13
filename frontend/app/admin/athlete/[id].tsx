@@ -1367,8 +1367,23 @@ export default function AdminAthleteDetail() {
     }
   };
 
-
-  const [waivingTrial, setWaivingTrial] = useState(false);
+  // 🆕 12/09/2026 — Admin: ANNULLA la prova e ATTIVA subito (vecchi tesserati).
+  // Nessuna proposta resta/lascia. La privacy resta da firmare (atleta 18+ / genitore 18-).
+  const handleSkipTrialActivate = async () => {
+    if (!athlete) return;
+    const name = `${athlete.first_name || ''} ${athlete.last_name || ''}`.trim();
+    const ok = Platform.OS === 'web'
+      ? window.confirm(`Annullare il periodo di prova e ATTIVARE subito ${name}?\n\nL'atleta diventa "in forza" senza fase di prova. La privacy dovrà comunque essere firmata dall'atleta (se maggiorenne) o dal genitore (se minorenne). Se il certificato medico non è ancora convalidato, l'atleta resterà in attesa del certificato.`)
+      : true;
+    if (!ok) return;
+    try {
+      const r = await api.post(`/athletes/${id}/skip-trial-activate`);
+      showAlert(r.data?.status === 'active' ? 'Atleta attivato' : 'Prova annullata', r.data?.message || '');
+      await loadData();
+    } catch (e: any) {
+      showAlert('Errore', e?.response?.data?.detail || "Errore durante l'annullamento della prova");
+    }
+  };
   const [showWaiveChoice, setShowWaiveChoice] = useState(false);
   const handleAdminWaiveTrial = async () => {
     if (!athlete) return;
@@ -2513,6 +2528,21 @@ export default function AdminAthleteDetail() {
         {/* DATI TAB */}
         {activeTab === 'dati' && (
           <>
+            {/* 🆕 12/09/2026 — Annulla prova e attiva (vecchi tesserati) — in cima all'Anagrafica */}
+            {(athlete.status === 'trial' || athlete.status === 'pending_trial') && (
+              <TouchableOpacity
+                style={{ backgroundColor: '#2E7D32', borderRadius: 12, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}
+                onPress={handleSkipTrialActivate}
+                testID="skip-trial-activate-btn-anagrafica"
+              >
+                <Ionicons name="checkmark-done" size={30} color="#fff" />
+                <View style={{ marginLeft: 12, flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>Annulla prova e attiva</Text>
+                  <Text style={{ fontSize: 12, color: '#E8F5E9' }}>Per i tesserati confermati: salta la prova. La privacy resta da firmare.</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#fff" />
+              </TouchableOpacity>
+            )}
             {/* Cronologia Atleta Button */}
             <TouchableOpacity 
               style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#AF52DE40' }}
@@ -4674,6 +4704,16 @@ export default function AdminAthleteDetail() {
                   >
                     <Ionicons name="flag" size={16} color="#fff" />
                     <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Termina prova ora</Text>
+                  </TouchableOpacity>
+                )}
+                {(athlete.status === 'trial' || athlete.status === 'pending_trial') && (
+                  <TouchableOpacity
+                    onPress={handleSkipTrialActivate}
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 8, paddingVertical: 10, borderRadius: 8, backgroundColor: '#2E7D32' }}
+                    testID="skip-trial-activate-btn"
+                  >
+                    <Ionicons name="checkmark-done" size={16} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Annulla prova e attiva</Text>
                   </TouchableOpacity>
                 )}
               </View>
