@@ -35505,7 +35505,6 @@ async def export_audit_logs_csv(
         headers={"Content-Disposition": f"attachment; filename=audit_logs_{datetime.now().strftime('%Y%m%d')}.csv", "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
     )
 
-@api_router.get("/export-csv/prima-nota")
 @api_router.get("/promo/flyer")
 async def get_promo_flyer():
     """Serve the promotional flyer HTML"""
@@ -35528,6 +35527,7 @@ async def get_doc(doc_name: str):
     return FileResponse(doc_path, media_type="text/html")
 
 
+@api_router.get("/export-csv/prima-nota")
 async def export_prima_nota_csv(current_user = Depends(get_current_user)):
     """Export Prima Nota Cassa as CSV - Admin only"""
     if current_user["role"] != UserRole.ADMIN:
@@ -35612,7 +35612,7 @@ async def export_prima_nota_csv(current_user = Depends(get_current_user)):
     
     output.seek(0)
     return StreamingResponse(
-        iter([output.getvalue()]),
+        iter(['\ufeff' + output.getvalue()]),
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=prima_nota_cassa_{season_str.replace('/', '-')}_{datetime.now().strftime('%Y%m%d')}.csv", "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
     )
