@@ -17430,6 +17430,7 @@ async def force_end_trial(athlete_id: str, request: Request, current_user = Depe
         "trial_end_date": now_it.isoformat(),
         "trial_sessions_count": max_sessions,
         "trial_max_sessions": max_sessions,
+        "admin_ended_trial": True,
     }})
     uid = athlete.get("user_id")
     if uid:

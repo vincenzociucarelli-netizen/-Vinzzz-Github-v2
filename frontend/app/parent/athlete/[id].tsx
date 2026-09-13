@@ -2334,8 +2334,40 @@ export default function AthleteDetail() {
             </>
           )}
 
+          {/* 🆕 13/09/2026 — BENVENUTO quando l'admin ha chiuso la prova ("Termina prova ora"):
+              niente scelta Rinuncia/Lascia, ma messaggio positivo + firma privacy → attivazione */}
+          {athlete.status === 'trial' && trialHasStarted && athlete.admin_ended_trial && !athlete.privacy_accepted && !endTrialStatus?.end_trial_requested && (
+            <View style={{ backgroundColor: '#E8F5E9', borderRadius: 12, padding: 16, borderLeftWidth: 4, borderLeftColor: '#2E7D32', marginBottom: 12 }} testID="admin-ended-welcome">
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <Ionicons name="hand-right" size={20} color="#2E7D32" />
+                <Text style={{ fontSize: 15, fontWeight: '800', color: '#2E7D32' }}>Ciao {athlete.first_name}, benvenuto/a!</Text>
+              </View>
+              <Text style={{ fontSize: 13, color: '#33691E', lineHeight: 20, marginBottom: 8 }}>
+                Conoscendo già la nostra Società abbiamo velocizzato la tua iscrizione impostandoti subito come «In Attività».{'\n'}
+                Ti chiediamo di completare due passaggi:
+              </Text>
+              <View style={{ marginBottom: 4 }}>
+                <Text style={{ fontSize: 13, color: '#33691E', lineHeight: 20 }}>• <Text style={{ fontWeight: '700' }}>Privacy</Text>: firma del modulo obbligatorio.</Text>
+                <Text style={{ fontSize: 13, color: '#33691E', lineHeight: 20 }}>• <Text style={{ fontWeight: '700' }}>Foto/Video</Text>: seleziona le due spunte per il consenso alle immagini, se hai piacere di comparire nelle foto durante le partite (consensi revocabili in qualsiasi momento).</Text>
+              </View>
+              <Text style={{ fontSize: 12, color: '#558B2F', lineHeight: 18, marginTop: 8, fontStyle: 'italic' }}>
+                Resta sempre valida la possibilità di cancellare l'iscrizione in autonomia dal portale qualora decidessi di non proseguire con noi. Grazie e buon proseguimento!
+              </Text>
+              <TouchableOpacity
+                style={{ marginTop: 14, backgroundColor: '#2E7D32', borderRadius: 10, paddingVertical: 13, alignItems: 'center' }}
+                onPress={() => handleRequestEndTrial()}
+                disabled={requestingEndTrial}
+                testID="admin-ended-sign-privacy-btn"
+              >
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                  {requestingEndTrial ? 'Attendi…' : 'Firma la Privacy e completa'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* SCADUTO (ROSSO) */}
-          {athlete.status === 'trial' && trialHasStarted && trialStatus && trialStatus.trial_expired && !athlete.privacy_accepted && !endTrialStatus?.end_trial_requested && (
+          {athlete.status === 'trial' && trialHasStarted && trialStatus && trialStatus.trial_expired && !athlete.privacy_accepted && !endTrialStatus?.end_trial_requested && !athlete.admin_ended_trial && (
             <View style={{ backgroundColor: '#FFEBEE', borderRadius: 10, padding: 14, borderLeftWidth: 3, borderLeftColor: '#F44336', marginBottom: 12 }} data-testid="trial-status-expired">
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                 <Ionicons name="close-circle" size={18} color="#C62828" />
