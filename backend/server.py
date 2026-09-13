@@ -7213,6 +7213,76 @@ async def delete_user(user_id: str, current_user = Depends(get_current_user)):
     
     return {"message": "Utente eliminato con successo"}
 
+
+@api_router.delete("/admin/parents/{parent_user_id}")
+async def admin_delete_parent_complete(parent_user_id: str, request: Request, current_user = Depends(get_current_user)):
+    """🆕 13/09/2026 — Admin: elimina COMPLETAMENTE un genitore registrato per errore.
+    Cancella l'account utente (così non potrà più fare login nella società) e i figli/atleti
+    collegati con tutti i dati (certificati, pagamenti, presenze, documenti firmati, account lite).
+    Se un figlio ha un SECONDO genitore diverso, l'atleta NON viene eliminato ma solo scollegato
+    da questo genitore, per non danneggiare l'altro genitore. Tracciato negli audit log."""
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.COORDINATORE):
+        raise HTTPException(status_code=403, detail="Operazione riservata ad admin")
+    if parent_user_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Non puoi eliminare il tuo account")
+    user = await db.users.find_one({"id": parent_user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    # Isolamento multi-tenant
+    if user.get("society_id") and current_user.get("society_id") and user.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Utente di un'altra società")
+    if user.get("role") != UserRole.PARENT:
+        raise HTTPException(status_code=400, detail="Questa funzione elimina solo account genitore")
+
+    athletes = await db.athletes.find({"$or": [{"parent_id": parent_user_id}, {"second_parent_id": parent_user_id}]}).to_list(1000)
+    deleted_athletes = 0
+    unlinked_athletes = 0
+    for ath in athletes:
+        aid = ath["id"]
+        is_primary = ath.get("parent_id") == parent_user_id
+        other_parent = ath.get("second_parent_id") if is_primary else ath.get("parent_id")
+        if other_parent:
+            # Il figlio ha un altro genitore → scollega solo questo genitore
+            if is_primary:
+                await db.athletes.update_one({"id": aid}, {"$set": {"parent_id": ath.get("second_parent_id"), "second_parent_id": None}})
+            else:
+                await db.athletes.update_one({"id": aid}, {"$set": {"second_parent_id": None}})
+            unlinked_athletes += 1
+        else:
+            # Unico genitore → elimina atleta e dati collegati
+            await db.certificates.delete_many({"athlete_id": aid})
+            await db.payments.delete_many({"athlete_id": aid})
+            await db.attendances.delete_many({"athlete_id": aid})
+            await db.signed_documents.delete_many({"related_entity_id": aid})
+            ath_uid = ath.get("user_id") or ath.get("linked_user_id")
+            if ath_uid:
+                await db.users.delete_one({"id": ath_uid})
+            await db.athletes.delete_one({"id": aid})
+            deleted_athletes += 1
+
+    # Documenti firmati dal genitore + eventuali account collegati (dirigente) + account principale
+    await db.signed_documents.delete_many({"signer_id": parent_user_id})
+    for _linked_key in ("linked_dirigente_user_id", "pending_dirigente_user_id"):
+        _lid = user.get(_linked_key)
+        if _lid:
+            await db.users.delete_one({"id": _lid})
+    await db.users.delete_one({"id": parent_user_id})
+
+    await log_audit(
+        action=AuditAction.USER_DELETED,
+        user_id=current_user["id"],
+        user_email=current_user.get("email", ""),
+        society_id=current_user.get("society_id", ""),
+        target_user_id=parent_user_id,
+        target_user_name=user.get("full_name"),
+        details={"deleted_role": "parent", "deleted_email": user.get("email"), "deleted_athletes": deleted_athletes, "unlinked_athletes": unlinked_athletes},
+    )
+    msg = f"Genitore eliminato. Atleti eliminati: {deleted_athletes}."
+    if unlinked_athletes:
+        msg += f" Atleti scollegati (con altro genitore): {unlinked_athletes}."
+    return {"message": msg, "deleted_athletes": deleted_athletes, "unlinked_athletes": unlinked_athletes}
+
+
 def _cf_birth_fallback(fiscal_code):
     """Decodifica data (ISO) e luogo di nascita dal codice fiscale.
     Usato come fallback quando i campi anagrafici non sono valorizzati."""

@@ -208,12 +208,15 @@ export default function ParentsScreen() {
   };
 
   const handleDelete = async (parent: Parent) => {
+    const childInfo = (parent.athletes && parent.athletes.length > 0)
+      ? `\n\nVerranno eliminati anche ${parent.athletes.length} atleta/i associato/i e tutti i loro dati (certificati, pagamenti, presenze).`
+      : '';
     const confirmed = Platform.OS === 'web' 
-      ? window.confirm(`Sei sicuro di voler eliminare ${parent.full_name}?\n\nAttenzione: verranno eliminati anche tutti gli atleti associati!`)
+      ? window.confirm(`Eliminare DEFINITIVAMENTE ${parent.full_name} (${parent.email})?${childInfo}\n\nL'account verrà rimosso dal database e non potrà più accedere. Operazione irreversibile.`)
       : await new Promise((resolve) => {
           Alert.alert(
             'Conferma Eliminazione',
-            `Sei sicuro di voler eliminare ${parent.full_name}?\n\nAttenzione: verranno eliminati anche tutti gli atleti associati!`,
+            `Eliminare DEFINITIVAMENTE ${parent.full_name}?${childInfo}\n\nOperazione irreversibile.`,
             [
               { text: 'Annulla', onPress: () => resolve(false), style: 'cancel' },
               { text: 'Elimina', onPress: () => resolve(true), style: 'destructive' },
@@ -223,8 +226,8 @@ export default function ParentsScreen() {
     
     if (confirmed) {
       try {
-        await api.delete(`/users/${parent.id}`);
-        showAlert('Successo', 'Genitore eliminato con successo');
+        const res = await api.delete(`/admin/parents/${parent.id}`);
+        showAlert('Eliminazione completata', res.data?.message || 'Genitore e atleti associati eliminati.');
         await loadData();
       } catch (error: any) {
         showAlert('Errore', error.response?.data?.detail || 'Errore durante l\'eliminazione');
