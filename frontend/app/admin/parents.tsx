@@ -649,6 +649,20 @@ export default function ParentsScreen() {
             )}
             
             <TouchableOpacity
+              style={{ backgroundColor: '#FFEBEE', borderRadius: 10, padding: 14, marginHorizontal: 16, marginBottom: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#EF9A9A' }}
+              onPress={() => {
+                if (!selectedParent) return;
+                const p = selectedParent;
+                setDetailModalVisible(false);
+                handleDelete(p);
+              }}
+              testID="delete-parent-detail-btn"
+            >
+              <Ionicons name="trash" size={18} color="#C62828" />
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#C62828' }}>Elimina genitore</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={styles.closeDetailBtn}
               onPress={() => setDetailModalVisible(false)}
             >
