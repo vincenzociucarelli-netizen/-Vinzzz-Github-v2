@@ -1384,6 +1384,8 @@ export default function AdminAthleteDetail() {
       showAlert('Errore', e?.response?.data?.detail || "Errore durante l'annullamento della prova");
     }
   };
+
+  const [waivingTrial, setWaivingTrial] = useState(false);
   const [showWaiveChoice, setShowWaiveChoice] = useState(false);
   const handleAdminWaiveTrial = async () => {
     if (!athlete) return;
