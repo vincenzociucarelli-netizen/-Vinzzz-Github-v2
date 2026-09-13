@@ -49,9 +49,13 @@ DEFAULT_TEMPLATES = {
         "label": "Certificato medico mancante",
         "threshold_days": 1,
         "template": (
-            "Ciao, per {atleta} manca ancora il certificato medico valido. "
-            "Per poter svolgere gli allenamenti è OBBLIGATORIO caricare il certificato medico "
-            "e consegnarne copia alla società. Accedi qui: {link}"
+            "Sollecito certificato medico per {atleta}\n"
+            "Ciao, ti ricordiamo che per {atleta} non risulta ancora registrato un certificato medico in corso di validità.\n"
+            "Come da regolamento FIPAV, in assenza del documento è tassativamente vietato partecipare agli allenamenti e l'inserimento nelle distinte di gara.\n"
+            "Per regolarizzare la posizione, completa subito questi due passaggi:\n"
+            "1) Accedi a RegistraTEAM ({link}) e carica la data di emissione del nuovo certificato.\n"
+            "2) Invia una foto del certificato via WhatsApp al dirigente responsabile, in attesa di consegnare l'originale cartaceo alla Società.\n"
+            "Grazie per la collaborazione."
         ),
     },
     "trial_end_no_privacy": {
@@ -85,9 +89,13 @@ DEFAULT_TEMPLATES = {
         "label": "Certificato medico in scadenza/scaduto",
         "threshold_days": 14,
         "template": (
-            "Ciao, il certificato medico di {atleta} scade il {data}. "
-            "Carica al più presto il nuovo certificato per non interrompere gli allenamenti. "
-            "Accedi qui: {link}"
+            "Ciao,\n"
+            "ti ricordiamo che il certificato medico di {atleta} scadrà il {data}.\n"
+            "Per evitare l'interruzione degli allenamenti e il blocco del tesseramento FIPAV (che comporterebbe l'esclusione dalle gare di campionato), ti chiediamo di seguire questi passaggi il prima possibile:\n"
+            "1) Registra la data: accedi al portale ({link}) e inserisci la data di emissione del nuovo certificato.\n"
+            "2) Invia l'anticipo: manda una foto del nuovo certificato via WhatsApp al dirigente/corrispondente della Società.\n"
+            "3) Consegna quanto prima l'originale cartaceo del documento alla Società, come richiesto dalla FIPAV.\n"
+            "Grazie per la collaborazione."
         ),
     },
 }
