@@ -41,6 +41,32 @@ def _to_iso(value) -> str:
     return ""
 
 
+def _method_group(pm: str) -> str:
+    """Normalizza il metodo di pagamento in una chiave canonica per il FILTRO:
+    stripe | cash | bank_transfer | other. Copre le etichette italiane salvate
+    dai pagamenti manuali/import (es. 'Bonifico', 'Contanti', 'POS', 'Assegno')."""
+    v = (pm or "").strip().lower()
+    if not v:
+        return "other"
+    if v.startswith("stripe") or v in ("card", "carta", "credit_card", "carta di credito"):
+        return "stripe"
+    if v in ("cash", "contanti", "contante"):
+        return "cash"
+    if v in ("bonifico", "bonifico bancario", "bank", "bank_transfer", "wire", "transfer"):
+        return "bank_transfer"
+    return "other"
+
+
+def _method_display(pm: str) -> str:
+    """Etichetta leggibile per la visualizzazione (mantiene POS/Assegno, ecc.)."""
+    v = (pm or "").strip()
+    if not v:
+        return "Altro"
+    if v.lower().startswith("stripe"):
+        return "Stripe (Carta)"
+    return v
+
+
 def _compute_status(p: dict) -> str:
     """Deriva lo stato del pagamento per la contabilità."""
     amount = float(p.get("amount", 0) or 0)
@@ -112,13 +138,10 @@ async def get_payments_history(
             continue
 
         pm = p.get("payment_method") or ""
-        pm_norm = "stripe" if pm.startswith("stripe") else (pm or "other")
-        # Filtro metodo
-        if method != "all":
-            if method == "stripe" and not pm.startswith("stripe"):
-                continue
-            if method != "stripe" and pm_norm != method:
-                continue
+        pm_group = _method_group(pm)
+        # Filtro metodo (per gruppo canonico)
+        if method != "all" and pm_group != method:
+            continue
 
         athlete = athlete_map.get(p.get("athlete_id"), {})
         athlete_name = f"{athlete.get('last_name','')} {athlete.get('first_name','')}".strip() or "—"
@@ -138,7 +161,7 @@ async def get_payments_history(
             "athlete_name": athlete_name,
             "team_name": team_map.get(athlete.get("team_id"), ""),
             "description": p.get("installment_name") or p.get("description") or "",
-            "method": pm_norm,
+            "method": _method_display(pm),
             "status": st,
             "amount": round(amount, 2),
             "paid_amount": round(paid_amount, 2),
