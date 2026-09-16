@@ -17585,6 +17585,9 @@ async def skip_trial_and_activate(athlete_id: str, request: Request, current_use
     if not privacy_signed:
         msg += " La privacy deve ancora essere firmata."
     return {"status": new_status, "privacy_required": not privacy_signed, "message": msg}
+
+
+@api_router.post("/admin/teams/{team_id}/bulk-attendance")
 async def add_bulk_attendance(team_id: str, data: BulkAttendanceCreate, request: Request, current_user = Depends(get_current_user)):
     """🆕 06/09/2026 — Registrazione presenze MULTIPLE per una squadra da parte
     dell'admin (o coach assegnato). Seleziona atleti + data/ora e registra la

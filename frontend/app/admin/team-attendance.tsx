@@ -30,6 +30,21 @@ export default function AdminTeamAttendance() {
   const [submitting, setSubmitting] = useState(false);
   const [repairing, setRepairing] = useState(false);
 
+  // 🆕 13/09/2026 — Auto-formattazione: inserisce da solo / e : mentre si digitano i numeri
+  const onChangeDate = (txt: string) => {
+    const d = txt.replace(/\D/g, '').slice(0, 8); // GGMMAAAA
+    let out = d.slice(0, 2);
+    if (d.length >= 3) out += '/' + d.slice(2, 4);
+    if (d.length >= 5) out += '/' + d.slice(4, 8);
+    setDate(out);
+  };
+  const onChangeTime = (txt: string) => {
+    const d = txt.replace(/\D/g, '').slice(0, 4); // HHMM
+    let out = d.slice(0, 2);
+    if (d.length >= 3) out += ':' + d.slice(2, 4);
+    setTime(out);
+  };
+
   const handleRepairTrials = async () => {
     setRepairing(true);
     try {
@@ -135,11 +150,11 @@ export default function AdminTeamAttendance() {
           <View style={styles.dateRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>Data allenamento *</Text>
-              <TextInput style={styles.input} value={date} onChangeText={setDate} placeholder="GG/MM/AAAA" testID="ta-date" />
+              <TextInput style={styles.input} value={date} onChangeText={onChangeDate} placeholder="GG/MM/AAAA" keyboardType="number-pad" maxLength={10} testID="ta-date" />
             </View>
             <View style={{ width: 110 }}>
               <Text style={styles.label}>Ora</Text>
-              <TextInput style={styles.input} value={time} onChangeText={setTime} placeholder="18:30" testID="ta-time" />
+              <TextInput style={styles.input} value={time} onChangeText={onChangeTime} placeholder="18:30" keyboardType="number-pad" maxLength={5} testID="ta-time" />
             </View>
           </View>
           {trialCount > 0 && (
