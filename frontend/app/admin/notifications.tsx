@@ -464,6 +464,21 @@ export default function AdminNotifications() {
                             </View>
                           )}
 
+                          {/* 🆕 13/09/2026 — Vai direttamente alla scheda dell'atleta (per inviare WhatsApp, ecc.) */}
+                          {(notification.data?.athlete_id || notification.athlete_id) && (
+                            <TouchableOpacity
+                              style={styles.openAthleteBtn}
+                              onPress={() => router.push(`/admin/athlete/${notification.data?.athlete_id || notification.athlete_id}`)}
+                              testID={`open-athlete-${notification.id}`}
+                            >
+                              <Ionicons name="person-circle" size={16} color="#fff" />
+                              <Text style={styles.openAthleteBtnText}>
+                                Apri scheda atleta{(notification.data?.athlete_name || notification.athlete_name) ? ` (${notification.data?.athlete_name || notification.athlete_name})` : ''}
+                              </Text>
+                              <Ionicons name="chevron-forward" size={16} color="#fff" />
+                            </TouchableOpacity>
+                          )}
+
                           {/* Photo removal request: nota + screenshot */}
                           {notification.type === 'photo_removal_request' && (
                             <View style={styles.photoRemovalBlock} data-testid={`photo-removal-block-${notification.id}`}>
@@ -1052,5 +1067,22 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: '#fff',
     borderRadius: 6,
+  },
+  openAthleteBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 6,
+    marginTop: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    backgroundColor: '#1565C0',
+    borderRadius: 8,
+  },
+  openAthleteBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700' as const,
+    flexShrink: 1,
   },
 });
