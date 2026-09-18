@@ -1709,3 +1709,7 @@ credentials.json
 *.pem
 *.key
 .credentials
+
+# Evita conflitto package manager su Vercel (usiamo yarn)
+frontend/package-lock.json
+package-lock.json
