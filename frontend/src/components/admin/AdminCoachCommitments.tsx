@@ -16,6 +16,10 @@ interface CommitmentItem {
   team_name?: string;
   time_start?: string;
   time_end?: string;
+  time?: string;
+  meeting_time?: string;
+  city?: string;
+  address?: string;
   venue?: string;
   opponent?: string;
   home_away?: 'home' | 'away';
@@ -123,10 +127,18 @@ const DayBlock: React.FC<{ title: string; items: CommitmentItem[]; emoji: string
               <ProvisionalTag show={it.type === 'training' && it.provisional} />
             </View>
             <Text style={styles.itemSubtitle}>
-              {it.time_start || ''}{it.time_end ? `–${it.time_end}` : ''}
+              {it.type === 'match'
+                ? (it.time || it.time_start || '')
+                : `${it.time_start || ''}${it.time_end ? `–${it.time_end}` : ''}`}
               {it.venue ? ` · ${it.venue}` : ''}
               {it.home_away ? ` · ${it.home_away === 'home' ? 'Casa' : 'Trasferta'}` : ''}
             </Text>
+            {it.type === 'match' && it.address ? (
+              <Text style={styles.itemSubtitle}>📍 {it.address}{it.city ? ` · ${it.city}` : ''}</Text>
+            ) : null}
+            {it.type === 'match' && it.meeting_time ? (
+              <Text style={[styles.itemSubtitle, { color: '#E67E22', fontWeight: '700' }]}>⚠️ Ritrovo: {it.meeting_time}</Text>
+            ) : null}
           </View>
         </View>
       ))
@@ -294,9 +306,15 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, athleteId, role
                           {/* 🆕 Giorno della settimana + data */}
                           {(it as any).day_name ? `${(it as any).day_name} ` : ''}
                           {(it as any).date ? `${(it as any).date} · ` : ''}
-                          {it.time_start || ''}{it.time_end ? `–${it.time_end}` : ''}
+                          {it.type === 'match'
+                            ? (it.time || it.time_start || '')
+                            : `${it.time_start || ''}${it.time_end ? `–${it.time_end}` : ''}`}
                           {it.venue ? ` · ${it.venue}` : ''}
+                          {it.type === 'match' && it.home_away ? ` · ${it.home_away === 'home' ? 'Casa' : 'Trasferta'}` : ''}
                         </Text>
+                        {it.type === 'match' && it.meeting_time ? (
+                          <Text style={[styles.itemSubtitle, { color: '#E67E22', fontWeight: '700' }]}>⚠️ Ritrovo: {it.meeting_time}</Text>
+                        ) : null}
                       </View>
                     </View>
                   ))}
