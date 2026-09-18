@@ -271,6 +271,16 @@ export default function TeamAttendances() {
                       {attendances} su {expected} allenamenti
                     </Text>
                   </View>
+                  {(athlete as any).show_balance ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                      <View style={{ backgroundColor: '#E8F5E9', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#2E7D32' }}>Pagato € {Number((athlete as any).balance_paid || 0).toFixed(2)}</Text>
+                      </View>
+                      <View style={{ backgroundColor: (athlete as any).balance_residual > 0 ? '#FFEBEE' : '#E8F5E9', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: (athlete as any).balance_residual > 0 ? '#C62828' : '#2E7D32' }}>Saldo € {Number((athlete as any).balance_residual || 0).toFixed(2)}</Text>
+                      </View>
+                    </View>
+                  ) : null}
                 </View>
                 <View style={styles.percentageContainer}>
                   <View style={[styles.percentageCircle, { borderColor: getPercentageColor(percentage) }]}>
