@@ -15223,10 +15223,25 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
         # 🆕 16/08/2026 — Squadra principale (paga qui) vs aggregata (paga altrove)
         _primary_tid = _primary_team_of(athlete)
         _is_primary = (_primary_tid == team_id)
+        # 🆕 13/09/2026 — Saldo (solo se autorizzato)
+        bal_paid = 0.0
+        bal_due = 0.0
+        if show_balance:
+            async for _p in db.payments.find({"athlete_id": athlete_id}):
+                _amt = float(_p.get("amount") or 0)
+                bal_due += _amt
+                _pa = _p.get("paid_amount")
+                if _pa is not None:
+                    bal_paid += float(_pa or 0)
+                elif _p.get("paid"):
+                    bal_paid += _amt
         stats.append({
             "athlete_id": athlete_id,
             "athlete_name": athlete["full_name"],
             "status": athlete.get("status", "active"),
+            "show_balance": show_balance,
+            "balance_paid": round(bal_paid, 2),
+            "balance_residual": round(bal_due - bal_paid, 2),
             "is_primary_team": _is_primary,
             "primary_team_id": _primary_tid,
             "primary_team_name": _team_name_map.get(_primary_tid, "") if not _is_primary else team["name"],

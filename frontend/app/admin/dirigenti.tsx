@@ -41,6 +41,7 @@ const COORDINATOR_PERM_LABELS: { key: string; label: string }[] = [
   { key: 'events', label: 'Eventi in programma (pre-iscrizioni)' },
   { key: 'certificates', label: 'Certificati medici' },
   { key: 'gdpr_view', label: 'Documenti GDPR (solo lettura)' },
+  { key: 'view_balances', label: 'Vedi saldo atleti nelle presenze' },
 ];
 
 export default function DirigentiScreen() {
@@ -324,7 +325,7 @@ export default function DirigentiScreen() {
               <View style={{ marginLeft: 6, backgroundColor: '#FFF8E1', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 }}
                 data-testid={`coord-perms-count-${item.id}`}>
                 <Text style={{ fontSize: 10, color: '#7A5D00', fontWeight: '700' }}>
-                  {item.coordinator_permissions?.length}/9 sezioni
+                  {item.coordinator_permissions?.length}/{COORDINATOR_PERM_LABELS.length} sezioni
                 </Text>
               </View>
             )}
