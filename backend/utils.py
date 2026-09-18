@@ -183,8 +183,13 @@ async def get_next_receipt_number(db, society_id: str) -> str:
     else:
         season_start_year, season_end_year = now.year - 1, now.year
     prefix = f"RIC-{season_start_year % 100:02d}/{season_end_year % 100:02d}-"
+    # 🆕 13/09/2026 — Numerazione INDIPENDENTE per società (conta solo gli atleti della società)
+    _rq = {"receipt_number": {"$regex": f"^{prefix}"}}
+    if society_id:
+        _ath_ids = [a["id"] for a in await db.athletes.find({"society_id": society_id}, {"_id": 0, "id": 1}).to_list(20000)]
+        _rq["athlete_id"] = {"$in": _ath_ids}
     last_payment = await db.payments.find_one(
-        {"receipt_number": {"$regex": f"^{prefix}"}},
+        _rq,
         sort=[("receipt_number", -1)],
     )
     next_num = 1

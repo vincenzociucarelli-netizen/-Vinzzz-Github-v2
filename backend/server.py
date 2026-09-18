@@ -16327,7 +16327,7 @@ async def update_payment(payment_id: str, update_data: PaymentUpdate, current_us
                 update_dict["payment_method"] = update_data.payment_method
             # Generate receipt number only if not already assigned
             if not payment.get("receipt_number"):
-                receipt_number = await get_next_receipt_number("")
+                receipt_number = await get_next_receipt_number(athlete.get("society_id") or "")
                 update_dict["receipt_number"] = receipt_number
     
     if update_dict:
@@ -16365,13 +16365,14 @@ async def get_next_receipt_number(society_id: str) -> str:
     season_str = f"{season_start_year % 100:02d}/{season_end_year % 100:02d}"
     prefix = f"RIC-{season_str}-"
     
-    # Find the highest receipt number for this season
-    last_payment = await db.payments.find_one(
-        {
-            "receipt_number": {"$regex": f"^{prefix}"},
-        },
-        sort=[("receipt_number", -1)]
-    )
+    # 🆕 13/09/2026 — Numerazione INDIPENDENTE per società: si contano solo le ricevute
+    # dei pagamenti degli atleti di QUESTA società (i pagamenti non salvano society_id,
+    # quindi si passa dagli atleti). Senza society_id resta il comportamento globale.
+    receipt_query = {"receipt_number": {"$regex": f"^{prefix}"}}
+    if society_id:
+        _ath_ids = [a["id"] for a in await db.athletes.find({"society_id": society_id}, {"_id": 0, "id": 1}).to_list(20000)]
+        receipt_query["athlete_id"] = {"$in": _ath_ids}
+    last_payment = await db.payments.find_one(receipt_query, sort=[("receipt_number", -1)])
     
     if last_payment and last_payment.get("receipt_number"):
         # Extract the number and increment
@@ -35690,6 +35691,61 @@ async def export_prima_nota_csv(current_user = Depends(get_current_user)):
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename=prima_nota_cassa_{season_str.replace('/', '-')}_{datetime.now().strftime('%Y%m%d')}.csv", "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"}
     )
+
+@api_router.get("/admin/prima-nota/gaps")
+async def prima_nota_gaps(current_user = Depends(get_current_user)):
+    """🆕 13/09/2026 — Diagnostica dei numeri di ricevuta 'saltati' nella Prima Nota della
+    società: per ogni buco spiega dove è finito il numero (altra società / atleta eliminato /
+    pagamento eliminato)."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    society_id = current_user.get("society_id")
+    settings = await db.settings.find_one({"society_id": society_id, "type": "society"})
+    ssm = int((settings or {}).get("season_start_month", 7) or 7)
+    ssd = int((settings or {}).get("season_start_day", 1) or 1)
+    now = datetime.utcnow()
+    try:
+        season_start_this_year = datetime(now.year, ssm, ssd)
+    except Exception:
+        season_start_this_year = datetime(now.year, 7, 1)
+    if now >= season_start_this_year:
+        sy, ey = now.year, now.year + 1
+    else:
+        sy, ey = now.year - 1, now.year
+    prefix = f"RIC-{sy % 100:02d}/{ey % 100:02d}-"
+
+    ath_list = await db.athletes.find({"society_id": society_id}, {"_id": 0, "id": 1}).to_list(20000)
+    ath_ids = [a["id"] for a in ath_list]
+    mine = await db.payments.find(
+        {"receipt_number": {"$regex": f"^{prefix}"}, "athlete_id": {"$in": ath_ids}},
+        {"_id": 0, "receipt_number": 1},
+    ).to_list(50000)
+    nums = sorted({int(p["receipt_number"].split("-")[-1]) for p in mine if p.get("receipt_number") and p["receipt_number"].split("-")[-1].isdigit()})
+    if not nums:
+        return {"prefix": prefix, "max": 0, "count_present": 0, "gaps": []}
+    mx = nums[-1]
+    present = set(nums)
+    gaps = []
+    for n in range(1, mx + 1):
+        if n in present:
+            continue
+        rn = f"{prefix}{n:04d}"
+        other = await db.payments.find_one({"receipt_number": rn})
+        if other:
+            oa = await db.athletes.find_one({"id": other.get("athlete_id", "")}, {"_id": 0, "society_id": 1, "first_name": 1, "last_name": 1})
+            if oa:
+                if oa.get("society_id") != society_id:
+                    soc = await db.societies.find_one({"id": oa.get("society_id")}, {"_id": 0, "name": 1})
+                    gaps.append({"number": rn, "n": n, "status": "altra_societa", "detail": f"Assegnata a un'altra società ({(soc or {}).get('name', 'altra società')})"})
+                else:
+                    gaps.append({"number": rn, "n": n, "status": "anomalia", "detail": "Presente ma non elencata: verifica manuale"})
+            else:
+                gaps.append({"number": rn, "n": n, "status": "orfano", "detail": "Pagamento orfano: atleta collegato eliminato"})
+        else:
+            gaps.append({"number": rn, "n": n, "status": "eliminato", "detail": "Ricevuta non più presente: pagamento eliminato"})
+    return {"prefix": prefix, "max": mx, "count_present": len(nums), "gaps": gaps}
+
+
 
 @api_router.get("/export-xlsx/registro")
 async def export_registro_xlsx(current_user = Depends(get_current_user)):

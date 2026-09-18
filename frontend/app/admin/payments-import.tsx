@@ -33,6 +33,20 @@ export default function PrimaNotaPagamenti() {
   const [activeSection, setActiveSection] = useState<'import' | 'registro' | 'solleciti'>('import');
   const [resolutions, setResolutions] = useState<Record<number, string>>({});
   const [resolvingImport, setResolvingImport] = useState(false);
+  const [gaps, setGaps] = useState<any>(null);
+  const [loadingGaps, setLoadingGaps] = useState(false);
+
+  const checkGaps = async () => {
+    setLoadingGaps(true);
+    try {
+      const res = await api.get('/admin/prima-nota/gaps');
+      setGaps(res.data);
+    } catch (e: any) {
+      setGaps({ error: e?.response?.data?.detail || 'Errore nel controllo' });
+    } finally {
+      setLoadingGaps(false);
+    }
+  };
 
   useEffect(() => {
     loadAthletesCodes();
@@ -556,11 +570,46 @@ export default function PrimaNotaPagamenti() {
                 <TouchableOpacity 
                   style={[styles.actionBtn, { backgroundColor: '#4CAF50', marginBottom: 16 }]}
                   onPress={downloadRegistro}
-                  data-testid="download-registro-btn"
+                  testID="download-registro-btn"
                 >
                   <Ionicons name="download-outline" size={22} color="#fff" />
                   <Text style={styles.actionBtnText}>Scarica Registro CSV</Text>
                 </TouchableOpacity>
+
+                {/* 🆕 13/09/2026 — Verifica numeri di ricevuta "saltati" e relativa spiegazione */}
+                <TouchableOpacity 
+                  style={[styles.actionBtn, { backgroundColor: '#1565C0', marginBottom: 12 }]}
+                  onPress={checkGaps}
+                  disabled={loadingGaps}
+                  testID="check-gaps-btn"
+                >
+                  <Ionicons name="search" size={20} color="#fff" />
+                  <Text style={styles.actionBtnText}>{loadingGaps ? 'Controllo…' : 'Verifica numeri mancanti'}</Text>
+                </TouchableOpacity>
+
+                {gaps && (
+                  <View style={[styles.card, { marginBottom: 16 }]}>
+                    {gaps.error ? (
+                      <Text style={{ color: '#C62828' }}>{gaps.error}</Text>
+                    ) : (gaps.gaps && gaps.gaps.length > 0) ? (
+                      <>
+                        <Text style={styles.cardTitle}>Numeri di ricevuta mancanti ({gaps.gaps.length})</Text>
+                        {gaps.gaps.map((g: any) => (
+                          <View key={g.number} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#EEE' }}>
+                            <Text style={{ fontWeight: '700', color: '#1565C0', fontSize: 14 }}>{g.number}</Text>
+                            <Text style={{ color: '#555', fontSize: 13, marginTop: 2 }}>{g.detail}</Text>
+                          </View>
+                        ))}
+                      </>
+                    ) : (
+                      <View style={{ alignItems: 'center', paddingVertical: 8 }}>
+                        <Ionicons name="checkmark-circle" size={36} color="#2E7D32" />
+                        <Text style={{ color: '#2E7D32', fontWeight: '700', marginTop: 6 }}>Nessun numero mancante</Text>
+                        <Text style={{ color: '#777', fontSize: 12, marginTop: 2 }}>La numerazione è completa e consecutiva.</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
 
                 {registro.rows.length > 0 ? (
                   <View style={styles.card}>
