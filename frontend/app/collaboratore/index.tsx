@@ -1,3 +1,4 @@
+import SocietyMatchesLink from '../../src/components/SocietyMatchesLink';
 /**
  * 🆕 22/06/2026 — Dashboard Collaboratore (lato user)
  *
@@ -178,6 +179,7 @@ export default function CollaboratoreHome() {
         contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        <SocietyMatchesLink />
         {/* 🆕 09/08/2026 — Proposta cambio ruolo dall'admin (accetta/rifiuta) */}
         <RoleChangePrompt />
 

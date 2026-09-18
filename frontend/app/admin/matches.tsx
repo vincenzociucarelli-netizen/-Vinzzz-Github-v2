@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Picker } from '@react-native-picker/picker';
+import { championshipColor } from '../../src/utils/championshipColor';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
@@ -961,7 +962,7 @@ export default function AdminMatches() {
                       <Ionicons name="trash-outline" size={18} color="#FF3B30" />
                     </TouchableOpacity>
                   </View>
-                  <Text style={styles.matchTeam}>
+                  <Text style={[styles.matchTeam, { color: championshipColor(match.team_name) }]}>
                     {match.team_name}{match.match_number ? ` - gara ${match.match_number}` : ''}
                   </Text>
                   <Text style={styles.matchVs}>vs {match.opponent}</Text>

@@ -448,6 +448,7 @@ COORDINATOR_PERMISSIONS = {
     "events":           "Eventi in programma (pre-iscrizioni)",
     "certificates":     "Certificati medici",
     "gdpr_view":        "Documenti GDPR (solo lettura)",
+    "view_balances":    "Vedi saldo atleti nelle presenze",
 }
 
 class UserStatus:
@@ -7517,6 +7518,20 @@ async def update_user(user_id: str, data: dict, current_user = Depends(get_curre
 # Linee ~5212-5630 — gestione partite/gare interne ed esterne.
 # Pianificato per estrazione → routers/matches.py
 # ═══════════════════════════════════════════════════════════════════════════════
+@api_router.get("/matches/society-view")
+async def get_matches_society_view(current_user = Depends(get_current_user)):
+    """🆕 13/09/2026 — Elenco SOLA LETTURA di tutte le gare della società, accessibile a
+    QUALSIASI utente autenticato (genitori, atleti, coach, collaboratori). Stessa forma del
+    calendario admin ma senza modifica/eliminazione."""
+    society_id = current_user.get("society_id")
+    query = {"society_id": society_id} if society_id else {}
+    matches = await db.matches.find(query).sort("date", 1).to_list(1000)
+    for m in matches:
+        clean_mongo_doc(m)
+    return matches
+
+
+
 @api_router.get("/matches")
 async def get_matches(format: str = "json", current_user = Depends(get_current_user)):
     """Get all matches for admin. `?format=ics` esporta un file .ics con TUTTE le gare

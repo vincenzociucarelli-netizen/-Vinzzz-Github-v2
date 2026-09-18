@@ -1,3 +1,4 @@
+import SocietyMatchesLink from '../../src/components/SocietyMatchesLink';
 import React, { useState, useEffect } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import SocietyContactsSection from '../../src/components/SocietyContactsSection';
@@ -285,6 +286,7 @@ export default function DirigenteIndex() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        <SocietyMatchesLink />
         {/* 🆕 09/08/2026 — Proposta cambio ruolo dall'admin (accetta/rifiuta) */}
         <RoleChangePrompt />
 

@@ -1,3 +1,4 @@
+import SocietyMatchesLink from '../../src/components/SocietyMatchesLink';
 import React, { useState, useEffect, useRef } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import AthleteTabBar from '../../src/components/athlete/AthleteTabBar';
@@ -557,6 +558,7 @@ export default function AthleteScreen() {
         style={styles.container}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#007AFF']} />}
       >
+        <SocietyMatchesLink />
         <View style={styles.header}>
           {/* BRANDING_WRAPPED */}
           <View style={{ flex: 1, marginHorizontal: 8 }}>

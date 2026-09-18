@@ -1,3 +1,4 @@
+import SocietyMatchesLink from '../../src/components/SocietyMatchesLink';
 import React, { useState, useEffect, useRef } from 'react';
 import CoachTabBar from '../../src/components/coach/CoachTabBar';
 import {
@@ -1065,6 +1066,7 @@ export default function CoachScreen() {  const router = useRouter();
           <Ionicons name="qr-code" size={60} color="#007AFF" />
           <Text style={styles.scannerTitle}>Pronto per scansionare</Text>
           <Text style={styles.scannerSubtitle}>Registra le presenze degli atleti</Text>
+          <SocietyMatchesLink />
           
           {/* Toggle Modalità Sostituzione */}
           <TouchableOpacity 

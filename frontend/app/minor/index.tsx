@@ -1,3 +1,4 @@
+import SocietyMatchesLink from '../../src/components/SocietyMatchesLink';
 import React, { useState, useEffect } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import {
@@ -211,6 +212,7 @@ export default function MinorDashboard() {
       style={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadDashboard(); }} colors={['#34C759']} />}
     >
+      <SocietyMatchesLink />
       {/* Header */}
       <View style={styles.header} data-testid="minor-dashboard-header">
         {/* Row 1: Society Name - top center */}

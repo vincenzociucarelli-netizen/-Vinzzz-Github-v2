@@ -1,3 +1,4 @@
+import SocietyMatchesLink from '../../src/components/SocietyMatchesLink';
 import React, { useState, useEffect, useMemo } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import { PrivacyRenewalBanner } from '../../src/components/PrivacyRenewalBanner';
@@ -624,6 +625,7 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+        <SocietyMatchesLink />
         {/* 🆕 02/07/2026 — Banner rifirma privacy nuova stagione */}
         <PrivacyRenewalBanner />
 
