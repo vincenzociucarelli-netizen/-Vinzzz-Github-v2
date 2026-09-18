@@ -15166,6 +15166,13 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
     expected_weekly = count_training_days_in_period(training_sessions, week_start, today_end)
     expected_monthly = count_training_days_in_period(training_sessions, month_start, today_end)
     
+    # 🆕 13/09/2026 — Saldo atleti: visibile all'Admin SEMPRE e ai Coordinatori/collaboratori
+    # con il permesso "view_balances". Mostra Totale pagato € e Saldo residuo sotto il nome.
+    _perms = current_user.get("coordinator_permissions") or []
+    show_balance = (current_user["role"] == UserRole.ADMIN) or (
+        current_user["role"] == UserRole.COORDINATORE and "view_balances" in _perms
+    )
+
     # Calculate stats for each athlete
     stats = []
     for athlete in athletes:
