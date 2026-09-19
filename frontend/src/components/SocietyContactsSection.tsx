@@ -89,19 +89,19 @@ export default function SocietyContactsSection({ currentUserId, show }: Props) {
     (async () => {
       try {
         if (wantDir) {
-          const r = await api.get('/users/dirigenti').catch(() => ({ data: [] }));
+          const r = await api.get('/users/fellow-dirigenti').catch(() => ({ data: [] }));
           setDirigenti(Array.isArray(r.data) ? r.data : (r.data?.items || []));
         }
       } catch { /* silent */ }
       try {
         if (wantCoa) {
-          const r = await api.get('/users/coaches').catch(() => ({ data: [] }));
+          const r = await api.get('/users/fellow-coaches').catch(() => ({ data: [] }));
           setCoaches(Array.isArray(r.data) ? r.data : (r.data?.items || []));
         }
       } catch { /* silent */ }
       try {
         if (wantCol) {
-          const r = await api.get('/collaboratori').catch(() => ({ data: [] }));
+          const r = await api.get('/users/staff-collaboratori').catch(() => ({ data: [] }));
           setCollaboratori(Array.isArray(r.data) ? r.data : (r.data?.items || []));
         }
       } catch { /* silent */ }

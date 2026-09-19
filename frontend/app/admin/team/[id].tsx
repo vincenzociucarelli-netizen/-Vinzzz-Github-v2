@@ -472,6 +472,18 @@ export default function TeamDetail() {
       return;
     }
 
+    // 🆕 19/09/2026 — Validazione anno "Inizio attività": evita typo (es. 2826)
+    // che renderebbero il banner "Inizio allenamenti" perennemente futuro.
+    if (activityStartDate.trim()) {
+      const iso = formatDateToISO(activityStartDate.trim());
+      const yr = iso ? parseInt(iso.slice(0, 4), 10) : NaN;
+      const curYr = new Date().getFullYear();
+      if (!iso || Number.isNaN(yr) || yr < curYr - 1 || yr > curYr + 1) {
+        showAlert('Data non valida', `Controlla l'anno della data inizio attività: deve essere compreso tra ${curYr - 1} e ${curYr + 1}.`);
+        return;
+      }
+    }
+
     try {
       // Step 1: Save team data WITHOUT photo first
       const updateData: any = {
