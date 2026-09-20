@@ -15940,6 +15940,77 @@ async def delete_payment(payment_id: str, current_user = Depends(get_current_use
     
     return {"message": "Pagamento eliminato"}
 
+
+@api_router.get("/admin/payments/duplicates")
+async def get_payment_duplicates(current_user = Depends(get_current_user)):
+    """🆕 20/09/2026 — Igiene dati pagamenti: rileva atleti con RATE DUPLICATE
+    (stessa rata/installment_number presente più volte tra i pagamenti non ricorrenti).
+    Suggerisce quali record eliminare (mantiene quello pagato o il più vecchio)."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    society_id = current_user.get("society_id")
+    athletes = await db.athletes.find(
+        {"society_id": society_id, "is_withdrawn": {"$ne": True}},
+        {"athlete_photo": 0, "athlete_photo_artistic": 0, "doc_back_image": 0,
+         "doc_front_image": 0, "privacy_signature": 0, "privacy_pdf_snapshot": 0},
+    ).to_list(10000)
+    teams = await db.teams.find({"society_id": society_id} if society_id else {}).to_list(200)
+    team_map = {t["id"]: t.get("name", "") for t in teams}
+
+    result = []
+    for a in athletes:
+        payments = await db.payments.find({"athlete_id": a["id"]}).to_list(200)
+        # Raggruppa per numero rata (solo non ricorrenti, con installment_number valorizzato)
+        groups = {}
+        for p in payments:
+            if p.get("recurring_plan_id"):
+                continue
+            key = p.get("installment_number")
+            if key is None:
+                continue
+            groups.setdefault(key, []).append(p)
+
+        dup_groups = []
+        for key in sorted(groups.keys()):
+            plist = groups[key]
+            if len(plist) <= 1:
+                continue
+            # Mantieni: il pagato se esiste, altrimenti il più vecchio. Gli altri = eliminabili.
+            def _sort_key(x):
+                created = x.get("created_at")
+                return (0 if x.get("paid") else 1, str(created))
+            ordered = sorted(plist, key=_sort_key)
+            keep_id = ordered[0].get("id")
+            records = []
+            for p in ordered:
+                records.append({
+                    "id": p.get("id", ""),
+                    "name": p.get("installment_name") or p.get("description") or f"Rata {key}",
+                    "amount": p.get("amount", 0),
+                    "paid": bool(p.get("paid")),
+                    "paid_amount": p.get("paid_amount", 0) or 0,
+                    "suggested_delete": p.get("id") != keep_id,
+                })
+            dup_groups.append({
+                "installment_number": key,
+                "label": (ordered[0].get("installment_name") or ordered[0].get("description") or f"Rata {key}"),
+                "count": len(plist),
+                "records": records,
+            })
+
+        if dup_groups:
+            result.append({
+                "athlete_id": a["id"],
+                "athlete_name": f"{a.get('last_name','')} {a.get('first_name','')}".strip(),
+                "team_name": team_map.get(a.get("team_id"), ""),
+                "groups": dup_groups,
+            })
+
+    result.sort(key=lambda x: x.get("athlete_name", "").upper())
+    return {"count": len(result), "athletes": result}
+
+
 class PaymentUpdate(BaseModel):
     amount: float
     paid_date: str

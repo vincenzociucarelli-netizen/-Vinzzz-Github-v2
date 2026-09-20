@@ -79,7 +79,6 @@ export default function PaymentsHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
-  const [totals, setTotals] = useState({ count: 0, total_amount: 0, total_paid: 0, total_refunded: 0 });
 
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -96,7 +95,6 @@ export default function PaymentsHistoryPage() {
       if (dateTo) params.date_to = dateTo;
       const res = await api.get('/admin/payments/history', { params });
       setRows(res.data.rows || []);
-      setTotals(res.data.totals || { count: 0, total_amount: 0, total_paid: 0, total_refunded: 0 });
     } catch (e: any) {
       console.error('Errore storico pagamenti:', e);
       setError('Impossibile caricare lo storico pagamenti');
@@ -117,29 +115,31 @@ export default function PaymentsHistoryPage() {
   }, [rows, athleteQuery]);
 
   const clientTotals = useMemo(() => {
+    // Struttura per fascia: dovuto, pagato, residuo
+    const mk = () => ({ dovuto: 0, pagato: 0, residuo: 0 });
+    const b: any = { rata1: mk(), rata2: mk(), rata3: mk(), recurring: mk(), other: mk(), totale: mk() };
     let amount = 0, paid = 0, refunded = 0;
-    let outstanding = 0, oRata1 = 0, oRata2 = 0, oRata3 = 0, oRecurring = 0, oOther = 0;
     for (const r of filteredRows) {
       amount += r.amount || 0;
       if (r.status === 'paid' || r.status === 'partial') paid += r.paid_amount || 0;
       refunded += r.refund_amount || 0;
-      // 🆕 Saldo ancora da incassare (residuo), escludendo i rimborsati
-      if (r.status !== 'refunded') {
-        const residual = Math.max((r.amount || 0) - (r.paid_amount || 0), 0);
-        if (residual > 0) {
-          outstanding += residual;
-          if (r.is_recurring) oRecurring += residual;
-          else if (r.installment_number === 1) oRata1 += residual;
-          else if (r.installment_number === 2) oRata2 += residual;
-          else if (r.installment_number === 3) oRata3 += residual;
-          else oOther += residual;
-        }
-      }
+      // Escludi i rimborsati dal calcolo dovuto/residuo
+      if (r.status === 'refunded') continue;
+      const rDovuto = r.amount || 0;
+      const rPagato = r.paid_amount || 0;
+      const rResiduo = Math.max(rDovuto - rPagato, 0);
+      let key: string;
+      if (r.is_recurring) key = 'recurring';
+      else if (r.installment_number === 1) key = 'rata1';
+      else if (r.installment_number === 2) key = 'rata2';
+      else if (r.installment_number === 3) key = 'rata3';
+      else key = 'other';
+      b[key].dovuto += rDovuto; b[key].pagato += rPagato; b[key].residuo += rResiduo;
+      b.totale.dovuto += rDovuto; b.totale.pagato += rPagato; b.totale.residuo += rResiduo;
     }
     return {
       count: filteredRows.length, total_amount: amount, total_paid: paid, total_refunded: refunded,
-      total_outstanding: outstanding, outstanding_rata1: oRata1, outstanding_rata2: oRata2,
-      outstanding_rata3: oRata3, outstanding_recurring: oRecurring, outstanding_other: oOther,
+      total_outstanding: b.totale.residuo, buckets: b,
     };
   }, [filteredRows]);
 
@@ -320,30 +320,46 @@ export default function PaymentsHistoryPage() {
           </View>
         </View>
 
-        {/* 🆕 19/09/2026 — Dettaglio saldo ancora da incassare per fascia (flusso di cassa) */}
-        <View style={styles.summaryRow}>
-          <View style={[styles.summaryBoxSm, { backgroundColor: '#FBE9E7' }]}>
-            <Text style={styles.summaryValueSm} testID="outstanding-rata1">{formatCurrency(clientTotals.outstanding_rata1)}</Text>
-            <Text style={styles.summaryLabelSm}>1ª rata</Text>
+        {/* 🆕 20/09/2026 — Dettaglio per fascia: Dovuto / Pagato / Residuo (flusso di cassa) */}
+        <View style={styles.detailCard}>
+          <Text style={styles.detailTitle}>💰 Dettaglio per fascia</Text>
+          <View style={styles.tRow}>
+            <Text style={[styles.tCellL, styles.tHead]}>Fascia</Text>
+            <Text style={[styles.tCell, styles.tHead]}>Dovuto</Text>
+            <Text style={[styles.tCell, styles.tHead]}>Pagato</Text>
+            <Text style={[styles.tCell, styles.tHead]}>Residuo</Text>
           </View>
-          <View style={[styles.summaryBoxSm, { backgroundColor: '#FBE9E7' }]}>
-            <Text style={styles.summaryValueSm} testID="outstanding-rata2">{formatCurrency(clientTotals.outstanding_rata2)}</Text>
-            <Text style={styles.summaryLabelSm}>2ª rata</Text>
+          {[
+            { key: 'rata1', label: '1ª rata' },
+            { key: 'rata2', label: '2ª rata' },
+            { key: 'rata3', label: '3ª rata' },
+            { key: 'recurring', label: 'Ricorrenti' },
+            { key: 'other', label: 'Altro' },
+          ].map(({ key, label }) => {
+            const bk = clientTotals.buckets[key];
+            if (key === 'other' && bk.dovuto === 0) return null;
+            return (
+              <View style={styles.tRow} key={key} testID={`fascia-${key}`}>
+                <Text style={styles.tCellL}>{label}</Text>
+                <Text style={styles.tCell}>{formatCurrency(bk.dovuto)}</Text>
+                <Text style={[styles.tCell, { color: '#2E7D32' }]}>{formatCurrency(bk.pagato)}</Text>
+                <Text style={[styles.tCell, { color: bk.residuo > 0 ? '#C62828' : '#2E7D32', fontWeight: '700' }]}>{formatCurrency(bk.residuo)}</Text>
+              </View>
+            );
+          })}
+          <View style={[styles.tRow, styles.tRowTotal]}>
+            <Text style={[styles.tCellL, styles.tHead]}>TOTALE</Text>
+            <Text style={[styles.tCell, styles.tHead]}>{formatCurrency(clientTotals.buckets.totale.dovuto)}</Text>
+            <Text style={[styles.tCell, styles.tHead, { color: '#2E7D32' }]}>{formatCurrency(clientTotals.buckets.totale.pagato)}</Text>
+            <Text style={[styles.tCell, styles.tHead, { color: '#C62828' }]} testID="totale-residuo">{formatCurrency(clientTotals.buckets.totale.residuo)}</Text>
           </View>
-          <View style={[styles.summaryBoxSm, { backgroundColor: '#FBE9E7' }]}>
-            <Text style={styles.summaryValueSm} testID="outstanding-rata3">{formatCurrency(clientTotals.outstanding_rata3)}</Text>
-            <Text style={styles.summaryLabelSm}>3ª rata</Text>
-          </View>
-          <View style={[styles.summaryBoxSm, { backgroundColor: '#EDE7F6' }]}>
-            <Text style={styles.summaryValueSm} testID="outstanding-recurring">{formatCurrency(clientTotals.outstanding_recurring)}</Text>
-            <Text style={styles.summaryLabelSm}>Ricorrenti</Text>
-          </View>
-          {clientTotals.outstanding_other > 0 ? (
-            <View style={[styles.summaryBoxSm, { backgroundColor: '#ECEFF1' }]}>
-              <Text style={styles.summaryValueSm} testID="outstanding-other">{formatCurrency(clientTotals.outstanding_other)}</Text>
-              <Text style={styles.summaryLabelSm}>Altro</Text>
-            </View>
-          ) : null}
+          <TouchableOpacity
+            style={styles.hygieneLink}
+            onPress={() => router.push('/admin/payments-hygiene')}
+            testID="link-payments-hygiene"
+          >
+            <Text style={styles.hygieneLinkText}>⚠️ Igiene dati: verifica rate duplicate</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Lista */}
@@ -441,6 +457,15 @@ const styles = StyleSheet.create({
   summaryBoxSm: { flex: 1, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 4, alignItems: 'center' },
   summaryValueSm: { fontSize: 13, fontWeight: '800', color: '#C62828' },
   summaryLabelSm: { fontSize: 10, color: '#555', marginTop: 2 },
+  detailCard: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#eee' },
+  detailTitle: { fontSize: 14, fontWeight: '800', color: '#111827', marginBottom: 8 },
+  tRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+  tRowTotal: { borderTopWidth: 2, borderTopColor: '#ccc', borderBottomWidth: 0, marginTop: 2 },
+  tCellL: { flex: 1.3, fontSize: 12, color: '#333' },
+  tCell: { flex: 1, fontSize: 12, color: '#333', textAlign: 'right' },
+  tHead: { fontWeight: '800', color: '#111827' },
+  hygieneLink: { marginTop: 10, paddingVertical: 8, alignItems: 'center' },
+  hygieneLinkText: { color: '#E65100', fontWeight: '700', fontSize: 13 },
   rowCard: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 10,
     padding: 12, marginBottom: 8,

@@ -1389,3 +1389,26 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 ### DECISIONE APERTA (da chiedere all'utente)
 - Saldo atleti visibile al COORDINATORE nel registro presenze: opzione (a) sempre per tutti i coordinatori, oppure (b) solo con permesso `view_balances`. Al momento è (b) — permesso esistente.
 
+
+
+---
+## Sessione 20/09/2026 (fork) — Riepilogo contabile dettagliato + Igiene dati pagamenti
+
+### Anomalia "820€" (atleta ALLA GWYNETH FRAICHEL)
+- Causa: record **"Iscrizione - Rata 1" DUPLICATO** (250 contato 2 volte: 250+200+120+250=820). L'anagrafica usa la quota squadra (570); i Solleciti/Storico sommano i record reali di pagamento → 820.
+- I flussi di generazione rate (creazione atleta 9863/10057/10233, cambio squadra 12586/12654) fanno delete+insert (non duplicano). Il duplicato singolo nasce da inserimenti extra puntuali → serve strumento di pulizia.
+
+### Storico Pagamenti — Dettaglio per fascia (`/app/frontend/app/admin/payments-history.tsx`)
+- Sostituite le card "solo residuo" con una **tabella**: colonne Fascia | Dovuto | Pagato | Residuo, righe 1ª/2ª/3ª rata + Ricorrenti (+ Altro se >0) + riga **TOTALE**.
+- `clientTotals` calcola i `buckets` lato client (rispetta ricerca atleta). Card in alto invariate (Movimenti/Incassato/Da incassare).
+- Aggiunto link "⚠️ Igiene dati: verifica rate duplicate" → `/admin/payments-hygiene`.
+- Rimosso stato `totals` inutilizzato.
+
+### Igiene dati pagamenti (NUOVO)
+- Backend `GET /admin/payments/duplicates` (server.py, dopo delete_payment ~15942): per la società, raggruppa i pagamenti non ricorrenti per `installment_number`; se una rata compare >1 volta la segnala. Mantiene il record pagato (o il più vecchio), gli altri hanno `suggested_delete=true`.
+- Eliminazione: riusa `DELETE /payments/{payment_id}` (admin-only).
+- Frontend nuova schermata `/app/frontend/app/admin/payments-hygiene.tsx`: lista atleti con rate duplicate, ✅ Mantieni / 🗑️ Elimina (con conferma), pull-to-refresh, empty state.
+- Verificato E2E su preview: totale 820 → dopo eliminazione duplicato torna 570; lista mostra "Nessuna rata duplicata".
+
+### Sessione precedente stessa fork (già fatto): fix contatti dirigente (endpoint leggeri), saldo presenze admin, banner inizio attività (validazione anno), Prima Nota "Mostra tutti", card "Da incassare".
+
