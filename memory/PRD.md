@@ -1363,3 +1363,29 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - **(4) Termina prova rapido**: `POST /athletes/{id}/force-end-trial` (admin) chiude subito la prova (sessioni=max, end=now). Frontend: pulsante `force-end-trial-btn` nella card prova di `admin/athlete/[id].tsx`.
 - Testato: iter.125 (export Excel OK; endpoint 11/12 pytest verdi). NB: durante i test l'atleta MAURI LENA (test) è stato eliminato dal flusso self-delete; parent armida ricreato. Vedi test_credentials.md.
 - **Deploy**: Frontend (Vercel) + Backend (Render).
+
+
+---
+## Sessione 19-20/09/2026 (fork) — Fix contatti dirigente, saldo presenze admin, saldo da incassare, Prima Nota completa
+
+### Deploy Vercel/Render
+- Il warning `package-lock.json found` su Vercel è innocuo (non causa il fallimento).
+- Rimosso `frontend/package-lock.json` (resta solo `yarn.lock`, coerente con `packageManager: yarn`); aggiunto a `.gitignore`.
+- Aggiunto `"engines": { "node": "22.x" }` in `frontend/package.json` (Expo 54 + React 19 richiede Node ≥ 20).
+- Le modifiche vanno in produzione solo dopo Save to GitHub → redeploy.
+
+### Fix/Feature implementate
+1. **Saldo atleti nel registro presenze ADMIN** — Il blocco "Pagato €/Saldo €" era presente solo nella vista coach (`/app/frontend/app/coach/team/[id]/attendances.tsx`) e mancava nella vista admin. Aggiunto anche in `/app/frontend/app/admin/team/[id]/attendances.tsx`. Backend `attendance-stats` già restituisce `show_balance` (admin sempre, coordinatore con permesso `view_balances`).
+2. **Contatti dashboard Dirigente vuoti (bug 403)** — `SocietyContactsSection` chiamava endpoint admin-only → 403 per dirigente/coordinatore → liste a 0. 
+   - Nuovo endpoint leggero backend `GET /users/fellow-dirigenti` (solo nome/telefono/qualifica, accessibile a tutto lo staff).
+   - Esteso guard di `/users/fellow-coaches` e `/users/staff-collaboratori` ai ruoli VIEWER/DIRIGENTE/COORDINATORE.
+   - Frontend `SocietyContactsSection.tsx` ora usa i 3 endpoint leggeri. Verificato: Dirigenti(5)/Allenatori(6)/Collaboratori(3).
+3. **Banner "Inizio allenamenti" persistente** — NON è un bug: il backend già nasconde il banner quando la data è passata (`_start.date() >= today.date()`, tz Italia). Il caso "09/09/2826" è un typo dell'anno. Aggiunta validazione anno nel form squadra (`/app/frontend/app/admin/team/[id].tsx`, handleSave): l'anno deve essere tra annoCorrente-1 e +1.
+4. **Storico Pagamenti — "Saldo ancora da incassare"** — Sostituita la card "Rimborsato" con "Da incassare" + dettaglio per fascia (1ª/2ª/3ª rata, Ricorrenti, Altro se >0). 
+   - Backend `routes/payments_history.py`: aggiunti a `totals` i campi `total_outstanding`, `outstanding_rata1/2/3`, `outstanding_recurring`, `outstanding_other`; aggiunti a ogni row `installment_number` e `is_recurring`. Residuo = amount - paid_amount (escludendo refunded). Classificazione: `recurring_plan_id` → ricorrenti, altrimenti `installment_number` 1/2/3, altrimenti "altro".
+   - Frontend `payments-history.tsx`: `clientTotals` calcola il breakdown lato client (rispetta la ricerca atleta). Verificato con dati di test: totale 350, r1 200, r2 100, r3 0, ricorrenti 50.
+5. **Prima Nota — mostra tutti i pagamenti** — `payments-import.tsx` (tab Registro) mostrava solo `slice(-10)`. Aggiunto toggle "Mostra tutti i N pagamenti" / "Mostra solo ultimi 10" (state `showAllRegistro`). Tutti i dati erano già caricati da `/payments/registro-stagione`.
+
+### DECISIONE APERTA (da chiedere all'utente)
+- Saldo atleti visibile al COORDINATORE nel registro presenze: opzione (a) sempre per tutti i coordinatori, oppure (b) solo con permesso `view_balances`. Al momento è (b) — permesso esistente.
+

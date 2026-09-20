@@ -25,6 +25,7 @@ export default function PrimaNotaPagamenti() {
   const [importResult, setImportResult] = useState<any>(null);
   const [registro, setRegistro] = useState<any>(null);
   const [loadingRegistro, setLoadingRegistro] = useState(false);
+  const [showAllRegistro, setShowAllRegistro] = useState(false);
   const [solleciti, setSolleciti] = useState<any[]>([]);
   const [loadingSolleciti, setLoadingSolleciti] = useState(false);
   const [selectedSolleciti, setSelectedSolleciti] = useState<string[]>([]);
@@ -613,8 +614,8 @@ export default function PrimaNotaPagamenti() {
 
                 {registro.rows.length > 0 ? (
                   <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Ultimi pagamenti registrati</Text>
-                    {registro.rows.slice(-10).reverse().map((row: any, idx: number) => (
+                    <Text style={styles.cardTitle}>{showAllRegistro ? `Tutti i pagamenti registrati (${registro.rows.length})` : 'Ultimi pagamenti registrati'}</Text>
+                    {(showAllRegistro ? [...registro.rows].reverse() : registro.rows.slice(-10).reverse()).map((row: any, idx: number) => (
                       <View key={idx} style={styles.registroRow}>
                         <View style={{ flex: 1 }}>
                           <Text style={styles.registroName}>{row.Cognome} {row.Nome}</Text>
@@ -623,6 +624,17 @@ export default function PrimaNotaPagamenti() {
                         <Text style={styles.registroAmount}>{row.Importo} EUR</Text>
                       </View>
                     ))}
+                    {registro.rows.length > 10 ? (
+                      <TouchableOpacity
+                        style={{ paddingVertical: 12, alignItems: 'center' }}
+                        onPress={() => setShowAllRegistro((v) => !v)}
+                        testID="toggle-show-all-registro"
+                      >
+                        <Text style={{ color: '#1565C0', fontWeight: '700', fontSize: 14 }}>
+                          {showAllRegistro ? 'Mostra solo ultimi 10' : `Mostra tutti i ${registro.rows.length} pagamenti`}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
                   </View>
                 ) : (
                   <View style={styles.emptyCard}>

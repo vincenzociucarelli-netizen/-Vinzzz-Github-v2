@@ -118,12 +118,29 @@ export default function PaymentsHistoryPage() {
 
   const clientTotals = useMemo(() => {
     let amount = 0, paid = 0, refunded = 0;
+    let outstanding = 0, oRata1 = 0, oRata2 = 0, oRata3 = 0, oRecurring = 0, oOther = 0;
     for (const r of filteredRows) {
       amount += r.amount || 0;
       if (r.status === 'paid' || r.status === 'partial') paid += r.paid_amount || 0;
       refunded += r.refund_amount || 0;
+      // 🆕 Saldo ancora da incassare (residuo), escludendo i rimborsati
+      if (r.status !== 'refunded') {
+        const residual = Math.max((r.amount || 0) - (r.paid_amount || 0), 0);
+        if (residual > 0) {
+          outstanding += residual;
+          if (r.is_recurring) oRecurring += residual;
+          else if (r.installment_number === 1) oRata1 += residual;
+          else if (r.installment_number === 2) oRata2 += residual;
+          else if (r.installment_number === 3) oRata3 += residual;
+          else oOther += residual;
+        }
+      }
     }
-    return { count: filteredRows.length, total_amount: amount, total_paid: paid, total_refunded: refunded };
+    return {
+      count: filteredRows.length, total_amount: amount, total_paid: paid, total_refunded: refunded,
+      total_outstanding: outstanding, outstanding_rata1: oRata1, outstanding_rata2: oRata2,
+      outstanding_rata3: oRata3, outstanding_recurring: oRecurring, outstanding_other: oOther,
+    };
   }, [filteredRows]);
 
   const setPreset = (preset: 'all' | 'year' | 'month') => {
@@ -297,10 +314,36 @@ export default function PaymentsHistoryPage() {
             <Text style={styles.summaryValue} testID="summary-paid">{formatCurrency(clientTotals.total_paid)}</Text>
             <Text style={styles.summaryLabel}>Incassato</Text>
           </View>
-          <View style={[styles.summaryBox, { backgroundColor: '#F3E5F5' }]}>
-            <Text style={styles.summaryValue} testID="summary-refunded">{formatCurrency(clientTotals.total_refunded)}</Text>
-            <Text style={styles.summaryLabel}>Rimborsato</Text>
+          <View style={[styles.summaryBox, { backgroundColor: '#FFF3E0' }]}>
+            <Text style={[styles.summaryValue, { color: '#E65100' }]} testID="summary-outstanding">{formatCurrency(clientTotals.total_outstanding)}</Text>
+            <Text style={styles.summaryLabel}>Da incassare</Text>
           </View>
+        </View>
+
+        {/* 🆕 19/09/2026 — Dettaglio saldo ancora da incassare per fascia (flusso di cassa) */}
+        <View style={styles.summaryRow}>
+          <View style={[styles.summaryBoxSm, { backgroundColor: '#FBE9E7' }]}>
+            <Text style={styles.summaryValueSm} testID="outstanding-rata1">{formatCurrency(clientTotals.outstanding_rata1)}</Text>
+            <Text style={styles.summaryLabelSm}>1ª rata</Text>
+          </View>
+          <View style={[styles.summaryBoxSm, { backgroundColor: '#FBE9E7' }]}>
+            <Text style={styles.summaryValueSm} testID="outstanding-rata2">{formatCurrency(clientTotals.outstanding_rata2)}</Text>
+            <Text style={styles.summaryLabelSm}>2ª rata</Text>
+          </View>
+          <View style={[styles.summaryBoxSm, { backgroundColor: '#FBE9E7' }]}>
+            <Text style={styles.summaryValueSm} testID="outstanding-rata3">{formatCurrency(clientTotals.outstanding_rata3)}</Text>
+            <Text style={styles.summaryLabelSm}>3ª rata</Text>
+          </View>
+          <View style={[styles.summaryBoxSm, { backgroundColor: '#EDE7F6' }]}>
+            <Text style={styles.summaryValueSm} testID="outstanding-recurring">{formatCurrency(clientTotals.outstanding_recurring)}</Text>
+            <Text style={styles.summaryLabelSm}>Ricorrenti</Text>
+          </View>
+          {clientTotals.outstanding_other > 0 ? (
+            <View style={[styles.summaryBoxSm, { backgroundColor: '#ECEFF1' }]}>
+              <Text style={styles.summaryValueSm} testID="outstanding-other">{formatCurrency(clientTotals.outstanding_other)}</Text>
+              <Text style={styles.summaryLabelSm}>Altro</Text>
+            </View>
+          ) : null}
         </View>
 
         {/* Lista */}
@@ -395,6 +438,9 @@ const styles = StyleSheet.create({
   summaryBox: { flex: 1, borderRadius: 12, padding: 12, alignItems: 'center' },
   summaryValue: { fontSize: 16, fontWeight: '800', color: '#111827' },
   summaryLabel: { fontSize: 11, color: '#555', marginTop: 2 },
+  summaryBoxSm: { flex: 1, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 4, alignItems: 'center' },
+  summaryValueSm: { fontSize: 13, fontWeight: '800', color: '#C62828' },
+  summaryLabelSm: { fontSize: 10, color: '#555', marginTop: 2 },
   rowCard: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 10,
     padding: 12, marginBottom: 8,

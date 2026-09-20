@@ -120,6 +120,14 @@ async def get_payments_history(
     total_amount = 0.0
     total_paid = 0.0
     total_refunded = 0.0
+    # 🆕 19/09/2026 — Saldo ancora da incassare (residuo) per flusso di cassa,
+    # suddiviso per rata (1/2/3), pagamenti ricorrenti e altro.
+    total_outstanding = 0.0
+    out_rata1 = 0.0
+    out_rata2 = 0.0
+    out_rata3 = 0.0
+    out_recurring = 0.0
+    out_other = 0.0
 
     for p in payments:
         st = _compute_status(p)
@@ -154,6 +162,26 @@ async def get_payments_history(
         total_paid += paid_amount if st in ("paid", "partial") else 0.0
         total_refunded += refund_amount
 
+        # 🆕 19/09/2026 — Residuo ancora da incassare (esclusi i rimborsati).
+        if st != "refunded":
+            residual = amount - paid_amount
+            if residual < 0:
+                residual = 0.0
+            if residual > 0:
+                total_outstanding += residual
+                if p.get("recurring_plan_id"):
+                    out_recurring += residual
+                else:
+                    inum = p.get("installment_number")
+                    if inum == 1:
+                        out_rata1 += residual
+                    elif inum == 2:
+                        out_rata2 += residual
+                    elif inum == 3:
+                        out_rata3 += residual
+                    else:
+                        out_other += residual
+
         rows.append({
             "id": p.get("id"),
             "date": _to_iso(eff_raw),
@@ -169,6 +197,9 @@ async def get_payments_history(
             "refund_reason": p.get("last_refund_reason") or "",
             "receipt_number": p.get("receipt_number") or "",
             "stripe_payment_intent": p.get("stripe_payment_intent") or "",
+            # 🆕 19/09/2026 — Per il calcolo client del saldo da incassare per fascia
+            "installment_number": p.get("installment_number"),
+            "is_recurring": bool(p.get("recurring_plan_id")),
         })
 
     # Ordina per data discendente (record senza data in fondo)
@@ -181,6 +212,12 @@ async def get_payments_history(
             "total_amount": round(total_amount, 2),
             "total_paid": round(total_paid, 2),
             "total_refunded": round(total_refunded, 2),
+            "total_outstanding": round(total_outstanding, 2),
+            "outstanding_rata1": round(out_rata1, 2),
+            "outstanding_rata2": round(out_rata2, 2),
+            "outstanding_rata3": round(out_rata3, 2),
+            "outstanding_recurring": round(out_recurring, 2),
+            "outstanding_other": round(out_other, 2),
         },
     }
 
