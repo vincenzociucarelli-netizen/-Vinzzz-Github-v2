@@ -107,6 +107,19 @@ export default function PaymentsHistoryPage() {
     load();
   }, [load]);
 
+  // 🆕 Riepilogo cassa per fascia (stagione, indipendente dai filtri)
+  const [rateSummary, setRateSummary] = useState<any>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await api.get('/admin/payments/rate-summary');
+        setRateSummary(res.data);
+      } catch (e) {
+        console.error('Errore riepilogo rate:', e);
+      }
+    })();
+  }, []);
+
   // Filtro atleta lato client (ricerca per nome)
   const filteredRows = useMemo(() => {
     const q = athleteQuery.trim().toLowerCase();
@@ -115,32 +128,12 @@ export default function PaymentsHistoryPage() {
   }, [rows, athleteQuery]);
 
   const clientTotals = useMemo(() => {
-    // Struttura per fascia: dovuto, pagato, residuo
-    const mk = () => ({ dovuto: 0, pagato: 0, residuo: 0 });
-    const b: any = { rata1: mk(), rata2: mk(), rata3: mk(), recurring: mk(), other: mk(), totale: mk() };
-    let amount = 0, paid = 0, refunded = 0;
+    // Statistiche della lista filtrata (per caption e CSV)
+    let paid = 0;
     for (const r of filteredRows) {
-      amount += r.amount || 0;
-      if (r.status === 'paid' || r.status === 'partial') paid += r.paid_amount || 0;
-      refunded += r.refund_amount || 0;
-      // Escludi i rimborsati dal calcolo dovuto/residuo
-      if (r.status === 'refunded') continue;
-      const rDovuto = r.amount || 0;
-      const rPagato = r.paid_amount || 0;
-      const rResiduo = Math.max(rDovuto - rPagato, 0);
-      let key: string;
-      if (r.is_recurring) key = 'recurring';
-      else if (r.installment_number === 1) key = 'rata1';
-      else if (r.installment_number === 2) key = 'rata2';
-      else if (r.installment_number === 3) key = 'rata3';
-      else key = 'other';
-      b[key].dovuto += rDovuto; b[key].pagato += rPagato; b[key].residuo += rResiduo;
-      b.totale.dovuto += rDovuto; b.totale.pagato += rPagato; b.totale.residuo += rResiduo;
+      if (r.status === 'paid' || r.status === 'partial') paid += r.paid_amount || r.amount || 0;
     }
-    return {
-      count: filteredRows.length, total_amount: amount, total_paid: paid, total_refunded: refunded,
-      total_outstanding: b.totale.residuo, buckets: b,
-    };
+    return { count: filteredRows.length, total_paid: paid };
   }, [filteredRows]);
 
   const setPreset = (preset: 'all' | 'year' | 'month') => {
@@ -304,55 +297,70 @@ export default function PaymentsHistoryPage() {
           />
         </View>
 
-        {/* Riepilogo */}
+        {/* 🆕 20/09/2026 — Riepilogo cassa stagione (tutti gli atleti, indipendente dai filtri) */}
         <View style={styles.summaryRow}>
           <View style={[styles.summaryBox, { backgroundColor: '#E3F2FD' }]}>
-            <Text style={styles.summaryValue} testID="summary-count">{clientTotals.count}</Text>
-            <Text style={styles.summaryLabel}>Movimenti</Text>
+            <Text style={styles.summaryValue} testID="summary-due">{rateSummary ? formatCurrency(rateSummary.total_due) : '—'}</Text>
+            <Text style={styles.summaryLabel}>Dovuto</Text>
           </View>
           <View style={[styles.summaryBox, { backgroundColor: '#E8F5E9' }]}>
-            <Text style={styles.summaryValue} testID="summary-paid">{formatCurrency(clientTotals.total_paid)}</Text>
+            <Text style={[styles.summaryValue, { color: '#2E7D32' }]} testID="summary-paid">{rateSummary ? formatCurrency(rateSummary.total_paid) : '—'}</Text>
             <Text style={styles.summaryLabel}>Incassato</Text>
           </View>
           <View style={[styles.summaryBox, { backgroundColor: '#FFF3E0' }]}>
-            <Text style={[styles.summaryValue, { color: '#E65100' }]} testID="summary-outstanding">{formatCurrency(clientTotals.total_outstanding)}</Text>
-            <Text style={styles.summaryLabel}>Da incassare</Text>
+            <Text style={[styles.summaryValue, { color: '#E65100' }]} testID="summary-outstanding">{rateSummary ? formatCurrency(rateSummary.total_residuo) : '—'}</Text>
+            <Text style={styles.summaryLabel}>Da riscuotere</Text>
           </View>
         </View>
 
-        {/* 🆕 20/09/2026 — Dettaglio per fascia: Dovuto / Pagato / Residuo (flusso di cassa) */}
+        {/* Dettaglio per fascia: Dovuto / Pagato / Residuo (waterfall 1ª→2ª→3ª) */}
         <View style={styles.detailCard}>
-          <Text style={styles.detailTitle}>💰 Dettaglio per fascia</Text>
+          <Text style={styles.detailTitle}>💰 Riepilogo rate — stagione</Text>
+          <Text style={styles.detailSub}>Tutti gli atleti · l&apos;incassato viene scalato dalla 1ª rata in poi</Text>
           <View style={styles.tRow}>
             <Text style={[styles.tCellL, styles.tHead]}>Fascia</Text>
             <Text style={[styles.tCell, styles.tHead]}>Dovuto</Text>
             <Text style={[styles.tCell, styles.tHead]}>Pagato</Text>
             <Text style={[styles.tCell, styles.tHead]}>Residuo</Text>
           </View>
-          {[
-            { key: 'rata1', label: '1ª rata' },
-            { key: 'rata2', label: '2ª rata' },
-            { key: 'rata3', label: '3ª rata' },
-            { key: 'recurring', label: 'Ricorrenti' },
-            { key: 'other', label: 'Altro' },
-          ].map(({ key, label }) => {
-            const bk = clientTotals.buckets[key];
-            if (key === 'other' && bk.dovuto === 0) return null;
-            return (
-              <View style={styles.tRow} key={key} testID={`fascia-${key}`}>
-                <Text style={styles.tCellL}>{label}</Text>
-                <Text style={styles.tCell}>{formatCurrency(bk.dovuto)}</Text>
-                <Text style={[styles.tCell, { color: '#2E7D32' }]}>{formatCurrency(bk.pagato)}</Text>
-                <Text style={[styles.tCell, { color: bk.residuo > 0 ? '#C62828' : '#2E7D32', fontWeight: '700' }]}>{formatCurrency(bk.residuo)}</Text>
+          {rateSummary ? (
+            <>
+              {rateSummary.rate.map((r: any) => (
+                <View style={styles.tRow} key={r.index} testID={`fascia-${r.index}`}>
+                  <Text style={styles.tCellL}>{r.short}</Text>
+                  <Text style={styles.tCell}>{formatCurrency(r.due)}</Text>
+                  <Text style={[styles.tCell, { color: '#2E7D32' }]}>{formatCurrency(r.paid)}</Text>
+                  <Text style={[styles.tCell, { color: r.residuo > 0 ? '#C62828' : '#2E7D32', fontWeight: '700' }]}>{formatCurrency(r.residuo)}</Text>
+                </View>
+              ))}
+              {(rateSummary.recurring.due > 0 || rateSummary.recurring.paid > 0) ? (
+                <View style={styles.tRow} testID="fascia-recurring">
+                  <Text style={styles.tCellL}>Ricorrenti</Text>
+                  <Text style={styles.tCell}>{formatCurrency(rateSummary.recurring.due)}</Text>
+                  <Text style={[styles.tCell, { color: '#2E7D32' }]}>{formatCurrency(rateSummary.recurring.paid)}</Text>
+                  <Text style={[styles.tCell, { color: rateSummary.recurring.residuo > 0 ? '#C62828' : '#2E7D32', fontWeight: '700' }]}>{formatCurrency(rateSummary.recurring.residuo)}</Text>
+                </View>
+              ) : null}
+              {rateSummary.altro.paid > 0 ? (
+                <View style={styles.tRow} testID="fascia-altro">
+                  <Text style={styles.tCellL}>Altro / extra</Text>
+                  <Text style={styles.tCell}>{formatCurrency(rateSummary.altro.due)}</Text>
+                  <Text style={[styles.tCell, { color: '#2E7D32' }]}>{formatCurrency(rateSummary.altro.paid)}</Text>
+                  <Text style={styles.tCell}>—</Text>
+                </View>
+              ) : null}
+              <View style={[styles.tRow, styles.tRowTotal]}>
+                <Text style={[styles.tCellL, styles.tHead]}>TOTALE</Text>
+                <Text style={[styles.tCell, styles.tHead]}>{formatCurrency(rateSummary.total_due)}</Text>
+                <Text style={[styles.tCell, styles.tHead, { color: '#2E7D32' }]}>{formatCurrency(rateSummary.total_paid)}</Text>
+                <Text style={[styles.tCell, styles.tHead, { color: '#C62828' }]} testID="totale-residuo">{formatCurrency(rateSummary.total_residuo)}</Text>
               </View>
-            );
-          })}
-          <View style={[styles.tRow, styles.tRowTotal]}>
-            <Text style={[styles.tCellL, styles.tHead]}>TOTALE</Text>
-            <Text style={[styles.tCell, styles.tHead]}>{formatCurrency(clientTotals.buckets.totale.dovuto)}</Text>
-            <Text style={[styles.tCell, styles.tHead, { color: '#2E7D32' }]}>{formatCurrency(clientTotals.buckets.totale.pagato)}</Text>
-            <Text style={[styles.tCell, styles.tHead, { color: '#C62828' }]} testID="totale-residuo">{formatCurrency(clientTotals.buckets.totale.residuo)}</Text>
-          </View>
+            </>
+          ) : (
+            <View style={{ paddingVertical: 16, alignItems: 'center' }}>
+              <ActivityIndicator color="#1565C0" />
+            </View>
+          )}
           <TouchableOpacity
             style={styles.hygieneLink}
             onPress={() => router.push('/admin/payments-hygiene')}
@@ -361,6 +369,9 @@ export default function PaymentsHistoryPage() {
             <Text style={styles.hygieneLinkText}>⚠️ Igiene dati: verifica rate duplicate</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Movimenti nella lista filtrata */}
+        <Text style={styles.listCaption}>{clientTotals.count} movimenti nella lista · incassato filtro {formatCurrency(clientTotals.total_paid)}</Text>
 
         {/* Lista */}
         {loading ? (
@@ -458,7 +469,9 @@ const styles = StyleSheet.create({
   summaryValueSm: { fontSize: 13, fontWeight: '800', color: '#C62828' },
   summaryLabelSm: { fontSize: 10, color: '#555', marginTop: 2 },
   detailCard: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#eee' },
-  detailTitle: { fontSize: 14, fontWeight: '800', color: '#111827', marginBottom: 8 },
+  detailTitle: { fontSize: 14, fontWeight: '800', color: '#111827', marginBottom: 2 },
+  detailSub: { fontSize: 11, color: '#777', marginBottom: 8 },
+  listCaption: { fontSize: 11, color: '#777', marginBottom: 8, textAlign: 'center' },
   tRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
   tRowTotal: { borderTopWidth: 2, borderTopColor: '#ccc', borderBottomWidth: 0, marginTop: 2 },
   tCellL: { flex: 1.3, fontSize: 12, color: '#333' },

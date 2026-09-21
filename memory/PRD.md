@@ -1412,3 +1412,27 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 
 ### Sessione precedente stessa fork (già fatto): fix contatti dirigente (endpoint leggeri), saldo presenze admin, banner inizio attività (validazione anno), Prima Nota "Mostra tutti", card "Da incassare".
 
+
+
+---
+## Sessione 20-21/09/2026 (fork) — Correzione riepilogo cassa per fascia (modello dovuto/incassato)
+
+### Chiarimento modello dati pagamenti (IMPORTANTE)
+- I record in `payments` sono di DUE tipi:
+  1. **Scadenzario/rate**: `installment_number` 1/2/3, `paid=False`. Rappresentano il DOVUTO (dal piano `team.installments`).
+  2. **Pagamenti reali** (manuali/Stripe/import): `paid=True`, con `description` libera, **SENZA `installment_number`**. Rappresentano l'INCASSATO.
+- L'anagrafica atleta (`GET /payments/{athlete_id}/summary`): total_due = quota squadra (con sconto sull'ultima rata), total_paid = somma `amount` dei record `paid=True`, residual = due - paid. I pagamenti NON sono taggati per rata: "scalano dal residuo".
+- Bug precedente della tabella "Dettaglio per fascia": sommava `amount` di TUTTI i record come dovuto (contando i pagamenti come dovuto e mettendoli in "Altro"), residuo sovrastimato (non sottraeva l'incassato).
+
+### Fix: nuovo endpoint `GET /admin/payments/rate-summary` (server.py, dopo get_payment_duplicates)
+- Per ogni atleta: costruisce lo scadenzario (`team.installments`, sconto su ultima rata), calcola l'incassato non ricorrente (`paid=True`) e lo **scala in ordine 1ª→2ª→3ª (waterfall)** confermato dall'utente.
+- Ritorna `rate` (dinamico, per posizione, con label/short/due/paid/residuo) + `recurring` + `altro` (incassato oltre scadenzario/atleti senza piano) + totali.
+- Verificato: scadenzario 250/150/200, incassato 300 → 1ª(250/250/0), 2ª(150/50/100), 3ª(200/0/200), TOTALE 600/300/300 (coerente con anagrafica).
+
+### Frontend `payments-history.tsx`
+- Card in alto: **Dovuto / Incassato / Da riscuotere** (stagione, dal nuovo endpoint, indipendenti dai filtri).
+- Tabella "Riepilogo rate — stagione": Dovuto/Pagato/Residuo per rata (dinamico) + Ricorrenti/Altro se presenti + TOTALE.
+- Caption sotto: "N movimenti nella lista · incassato filtro €X" (statistiche della lista filtrata).
+- `clientTotals` semplificato (solo count + incassato lista).
+- Link "⚠️ Igiene dati" invariato → `/admin/payments-hygiene`.
+

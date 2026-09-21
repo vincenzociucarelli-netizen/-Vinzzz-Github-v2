@@ -16011,6 +16011,128 @@ async def get_payment_duplicates(current_user = Depends(get_current_user)):
     return {"count": len(result), "athletes": result}
 
 
+@api_router.get("/admin/payments/rate-summary")
+async def get_rate_summary(current_user = Depends(get_current_user)):
+    """🆕 20/09/2026 — Riepilogo cassa per fascia (stagione, tutti gli atleti).
+    Per ogni atleta: dovuto per rata dallo scadenzario squadra (sconto sull'ultima rata),
+    incassato = somma pagamenti reali (paid=True, non ricorrenti) SCALATO in ordine 1ª→2ª→3ª
+    (waterfall). Ricorrenti gestiti a parte. Restituisce dovuto/pagato/residuo per fascia."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    society_id = current_user.get("society_id")
+    athletes = await db.athletes.find(
+        {"society_id": society_id, "is_withdrawn": {"$ne": True}},
+        {"id": 1, "team_id": 1, "discount_amount": 1},
+    ).to_list(20000)
+    teams = await db.teams.find({"society_id": society_id} if society_id else {}).to_list(300)
+    team_map = {t["id"]: t for t in teams}
+
+    ath_ids = [a["id"] for a in athletes]
+    # Tutti i pagamenti degli atleti della società
+    payments = await db.payments.find({"athlete_id": {"$in": ath_ids}}).to_list(100000)
+    pay_by_ath: dict = {}
+    for p in payments:
+        pay_by_ath.setdefault(p["athlete_id"], []).append(p)
+
+    def _schedule_for(team: dict, discount: float):
+        """Ritorna la lista degli importi dovuti per rata (sconto sull'ultima rata > 0)."""
+        amounts = []
+        dyn = team.get("installments") or []
+        for inst in dyn:
+            try:
+                amt = float(inst.get("amount") or 0)
+            except (TypeError, ValueError):
+                amt = 0
+            if amt > 0:
+                amounts.append(amt)
+        if not amounts:
+            for key in ("installment_1_amount", "installment_2_amount", "installment_3_amount"):
+                amt = team.get(key) or 0
+                try:
+                    amt = float(amt)
+                except (TypeError, ValueError):
+                    amt = 0
+                if amt > 0:
+                    amounts.append(amt)
+        if amounts and discount:
+            amounts[-1] = max(0.0, amounts[-1] - float(discount))
+        return amounts
+
+    max_rate = 0
+    rate_agg: dict = {}   # idx -> {due, paid, residuo}
+    rec = {"due": 0.0, "paid": 0.0, "residuo": 0.0}
+    altro = {"due": 0.0, "paid": 0.0, "residuo": 0.0}
+
+    def _bucket(idx):
+        if idx not in rate_agg:
+            rate_agg[idx] = {"due": 0.0, "paid": 0.0, "residuo": 0.0}
+        return rate_agg[idx]
+
+    for a in athletes:
+        team = team_map.get(a.get("team_id"))
+        discount = a.get("discount_amount", 0) or 0
+        schedule = _schedule_for(team, discount) if team else []
+        max_rate = max(max_rate, len(schedule))
+
+        plist = pay_by_ath.get(a["id"], [])
+        paid_nonrec = 0.0
+        for p in plist:
+            if p.get("status") == "refunded":
+                continue
+            if p.get("recurring_plan_id"):
+                # Ricorrenti: dovuto = amount, pagato se paid
+                amt = float(p.get("amount", 0) or 0)
+                rec["due"] += amt
+                if p.get("paid"):
+                    rec["paid"] += amt
+                else:
+                    rec["residuo"] += amt
+                continue
+            if p.get("paid"):
+                paid_nonrec += float(p.get("amount", 0) or 0)
+
+        # Waterfall dell'incassato sulle rate in ordine
+        remaining = paid_nonrec
+        for idx, due_i in enumerate(schedule):
+            b = _bucket(idx)
+            pay_i = min(remaining, due_i)
+            remaining -= pay_i
+            b["due"] += due_i
+            b["paid"] += pay_i
+            b["residuo"] += max(due_i - pay_i, 0.0)
+        # Eventuale incassato oltre lo scadenzario (o atleti senza piano rate)
+        if remaining > 0.0001:
+            altro["paid"] += remaining
+
+    rate = []
+    for idx in range(max_rate):
+        b = rate_agg.get(idx, {"due": 0.0, "paid": 0.0, "residuo": 0.0})
+        label = "Iscrizione - Rata 1" if idx == 0 else f"Rata {idx + 1}"
+        rate.append({
+            "index": idx,
+            "label": label,
+            "short": f"{idx + 1}ª rata",
+            "due": round(b["due"], 2),
+            "paid": round(b["paid"], 2),
+            "residuo": round(b["residuo"], 2),
+        })
+
+    total_due = round(sum(r["due"] for r in rate) + rec["due"] + altro["due"], 2)
+    total_paid = round(sum(r["paid"] for r in rate) + rec["paid"] + altro["paid"], 2)
+    total_residuo = round(sum(r["residuo"] for r in rate) + rec["residuo"] + altro["residuo"], 2)
+
+    return {
+        "rate": rate,
+        "recurring": {"due": round(rec["due"], 2), "paid": round(rec["paid"], 2), "residuo": round(rec["residuo"], 2)},
+        "altro": {"due": round(altro["due"], 2), "paid": round(altro["paid"], 2), "residuo": round(altro["residuo"], 2)},
+        "total_due": total_due,
+        "total_paid": total_paid,
+        "total_residuo": total_residuo,
+    }
+
+
+
 class PaymentUpdate(BaseModel):
     amount: float
     paid_date: str
