@@ -1445,3 +1445,11 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Verificato: 07:03 UTC → "21 settembre 2026, 09:03"; inverno 07:03 UTC → 08:03. La ricevuta ricorrente usa lo stesso endpoint → corretta anch'essa.
 - Solo backend (HTML), nessun rebuild frontend necessario.
 
+
+
+---
+## Sessione 21/09/2026 (fork) — Piano ricorrente visibile nella pagina Pagamenti atleta
+- Problema: un atleta con piano rateale Stripe attivo (recurring_plans) vedeva nella tab Pagamenti solo il CTA statico "Crea un link di attivazione", senza indicazione del piano esistente.
+- Fix `app/admin/athlete/[id].tsx`: aggiunto stato `recurringPlans`, caricato in `loadData` da `GET /admin/recurring-plans/athlete/{id}`. Il bottone "Piano rate automatiche (Stripe)" ora è condizionale: se esiste un piano (pending/active/paused/completed) mostra badge stato, importo totale, N rate, Progresso done/total, prossimo addebito (se active) o nota "in attesa attivazione" (se pending). Se nessun piano → CTA "Crea".
+- Verificato E2E su preview: piano active 370€, 6 rate, 2/6 → mostra "Attivo · € 370,00 · 6 rate · Progresso 2/6".
+

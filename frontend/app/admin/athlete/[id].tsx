@@ -237,6 +237,8 @@ export default function AdminAthleteDetail() {
   const [team, setTeam] = useState<Team | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [paymentSummary, setPaymentSummary] = useState<PaymentSummary | null>(null);
+  // 🆕 21/09/2026 — Piani ricorrenti Stripe dell'atleta (per mostrare stato piano attivo)
+  const [recurringPlans, setRecurringPlans] = useState<any[]>([]);
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [stats, setStats] = useState<AthleteAttendanceStats | null>(null);
   // 🆕 05/07/2026 — Impostazioni società (per data inizio stagione sportiva)
@@ -570,6 +572,14 @@ export default function AdminAthleteDetail() {
       setAthlete(athleteData);
       setPayments(paymentsRes.data);
       setCertificate(certRes.data);
+
+      // 🆕 21/09/2026 — Carica i piani ricorrenti Stripe dell'atleta
+      try {
+        const plansRes = await api.get(`/admin/recurring-plans/athlete/${id}`);
+        setRecurringPlans(Array.isArray(plansRes.data) ? plansRes.data : []);
+      } catch (e) {
+        setRecurringPlans([]);
+      }
       
       // 🆕 14/08/2026 — Documenti firmati dell'atleta (leggibili direttamente in Anagrafica)
       try {
@@ -3811,27 +3821,85 @@ export default function AdminAthleteDetail() {
                 </TouchableOpacity>
               </View>
 
-              {/* 🆕 27/07/2026 — Bottone piano ricorrente Stripe */}
-              <TouchableOpacity
-                style={{
-                  flexDirection: 'row', alignItems: 'center', gap: 8,
-                  backgroundColor: '#F5F3FF', borderRadius: 8, padding: 12, marginBottom: 10,
-                  borderWidth: 1, borderColor: '#D6D2FF',
-                }}
-                onPress={() => router.push(`/admin/recurring-plan/${id}`)}
-                data-testid="open-recurring-plan-btn"
-              >
-                <Ionicons name="repeat" size={20} color="#635BFF" />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#635BFF' }}>
-                    Piano rate automatiche (Stripe)
-                  </Text>
-                  <Text style={{ fontSize: 11, color: '#666', marginTop: 2 }}>
-                    Crea un link di attivazione da inviare al genitore per addebiti automatici
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color="#635BFF" />
-              </TouchableOpacity>
+              {/* 🆕 27/07/2026 — Piano ricorrente Stripe. 🆕 21/09/2026: mostra stato piano attivo */}
+              {(() => {
+                const activePlan = recurringPlans.find((p: any) =>
+                  ['pending', 'active', 'paused', 'completed'].includes(p.status)
+                );
+                if (activePlan) {
+                  const statusMap: any = {
+                    pending: { label: 'In attesa attivazione', color: '#B8860B', bg: '#FFF8E1', border: '#FFE082' },
+                    active: { label: 'Attivo', color: '#2E7D32', bg: '#E8F5E9', border: '#A5D6A7' },
+                    paused: { label: 'In pausa', color: '#E65100', bg: '#FFF3E0', border: '#FFCC80' },
+                    completed: { label: 'Completato', color: '#1565C0', bg: '#E3F2FD', border: '#90CAF9' },
+                  };
+                  const st = statusMap[activePlan.status] || statusMap.active;
+                  const done = activePlan.charges_completed || 0;
+                  const total = activePlan.installments_count || (activePlan.installment_amounts || []).length || 0;
+                  const nextDate = activePlan.next_charge_date
+                    ? new Date(activePlan.next_charge_date).toLocaleDateString('it-IT')
+                    : null;
+                  return (
+                    <TouchableOpacity
+                      style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 10,
+                        backgroundColor: st.bg, borderRadius: 8, padding: 12, marginBottom: 10,
+                        borderWidth: 1, borderColor: st.border,
+                      }}
+                      onPress={() => router.push(`/admin/recurring-plan/${id}`)}
+                      data-testid="open-recurring-plan-btn"
+                    >
+                      <Ionicons name="repeat" size={20} color={st.color} />
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: '#635BFF' }}>
+                            Piano rate automatiche (Stripe)
+                          </Text>
+                          <View style={{ backgroundColor: st.color, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}>
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff' }}>{st.label}</Text>
+                          </View>
+                        </View>
+                        <Text style={{ fontSize: 12, color: '#333', marginTop: 3, fontWeight: '600' }}>
+                          € {Number(activePlan.total_amount || 0).toFixed(2)} · {total} rate · Progresso {done}/{total}
+                        </Text>
+                        {nextDate && activePlan.status === 'active' ? (
+                          <Text style={{ fontSize: 11, color: '#666', marginTop: 2 }}>
+                            Prossimo addebito: {nextDate}
+                          </Text>
+                        ) : null}
+                        {activePlan.status === 'pending' ? (
+                          <Text style={{ fontSize: 11, color: '#B8860B', marginTop: 2 }}>
+                            In attesa che il genitore attivi il link inviato
+                          </Text>
+                        ) : null}
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={st.color} />
+                    </TouchableOpacity>
+                  );
+                }
+                return (
+                  <TouchableOpacity
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: 8,
+                      backgroundColor: '#F5F3FF', borderRadius: 8, padding: 12, marginBottom: 10,
+                      borderWidth: 1, borderColor: '#D6D2FF',
+                    }}
+                    onPress={() => router.push(`/admin/recurring-plan/${id}`)}
+                    data-testid="open-recurring-plan-btn"
+                  >
+                    <Ionicons name="repeat" size={20} color="#635BFF" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#635BFF' }}>
+                        Piano rate automatiche (Stripe)
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#666', marginTop: 2 }}>
+                        Crea un link di attivazione da inviare al genitore per addebiti automatici
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color="#635BFF" />
+                  </TouchableOpacity>
+                );
+              })()}
               
               {/* Nota esplicativa */}
               <View style={styles.paymentInfoNote}>
