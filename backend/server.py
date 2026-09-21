@@ -15140,11 +15140,13 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
     
     # 🆕 16/08/2026 — Mappa id→nome squadre (per etichetta "Aggregata — paga in [X]")
     _team_name_map = {}
+    _team_total_map = {}  # 🆕 21/09/2026 — id→total_amount (per calcolo saldo corretto)
     async for _t in db.teams.find(
         ({"society_id": _sid} if _sid else {}),
-        {"_id": 0, "id": 1, "name": 1}
+        {"_id": 0, "id": 1, "name": 1, "total_amount": 1}
     ):
         _team_name_map[_t.get("id")] = _t.get("name") or ""
+        _team_total_map[_t.get("id")] = float(_t.get("total_amount") or 0)
     
     def _primary_team_of(a):
         tids = a.get("team_ids") or []
@@ -15257,17 +15259,19 @@ async def get_team_attendance_stats(team_id: str, current_user = Depends(get_cur
         _primary_tid = _primary_team_of(athlete)
         _is_primary = (_primary_tid == team_id)
         # 🆕 13/09/2026 — Saldo (solo se autorizzato)
+        # 🐛 21/09/2026 — FIX: usare la stessa formula dell'anagrafica/summary:
+        # dovuto = quota squadra principale − sconto; pagato = somma dei pagamenti paid.
+        # (Prima sommava TUTTI i record come dovuto → saldo gonfiato, es. 820 invece di 320.)
         bal_paid = 0.0
         bal_due = 0.0
         if show_balance:
-            async for _p in db.payments.find({"athlete_id": athlete_id}):
-                _amt = float(_p.get("amount") or 0)
-                bal_due += _amt
-                _pa = _p.get("paid_amount")
-                if _pa is not None:
-                    bal_paid += float(_pa or 0)
-                elif _p.get("paid"):
-                    bal_paid += _amt
+            _quota = _team_total_map.get(_primary_tid)
+            if _quota is None:
+                _quota = _team_total_map.get(athlete.get("team_id"), 0.0)
+            _disc = float(athlete.get("discount_amount") or 0)
+            bal_due = max(0.0, float(_quota or 0) - _disc)
+            async for _p in db.payments.find({"athlete_id": athlete_id, "paid": True}):
+                bal_paid += float(_p.get("amount") or 0)
         stats.append({
             "athlete_id": athlete_id,
             "athlete_name": athlete["full_name"],

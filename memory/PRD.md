@@ -1453,3 +1453,11 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Fix `app/admin/athlete/[id].tsx`: aggiunto stato `recurringPlans`, caricato in `loadData` da `GET /admin/recurring-plans/athlete/{id}`. Il bottone "Piano rate automatiche (Stripe)" ora è condizionale: se esiste un piano (pending/active/paused/completed) mostra badge stato, importo totale, N rate, Progresso done/total, prossimo addebito (se active) o nota "in attesa attivazione" (se pending). Se nessun piano → CTA "Crea".
 - Verificato E2E su preview: piano active 370€, 6 rate, 2/6 → mostra "Attivo · € 370,00 · 6 rate · Progresso 2/6".
 
+
+
+---
+## Sessione 21/09/2026 (fork) — FIX saldo nel riepilogo di squadra (attendance-stats)
+- Problema: nel riepilogo presenze di squadra il Saldo era gonfiato (es. PACELLA MARGHERITA: Saldo 820 invece di 320; anagrafica corretta 570 dovuto − 250 pagato = 320). Causa: la logica in `GET /teams/{team_id}/attendance-stats` (server.py ~15260) sommava `amount` di TUTTI i record pagamento come dovuto (scadenzario + pagamenti reali), stesso errore di modello già corretto nel riepilogo Storico.
+- Fix: allineato alla formula del summary/anagrafica → `bal_due = team.total_amount(primaria) − discount_amount`, `bal_paid = somma amount dei record paid=True`, `residual = bal_due − bal_paid`. Aggiunta mappa `_team_total_map` (id→total_amount).
+- Verificato: quota 600, pagato 250 → paid 250, residual 350 (prima 600/850). Solo backend, nessun rebuild frontend.
+
