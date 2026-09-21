@@ -1436,3 +1436,12 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - `clientTotals` semplificato (solo count + incassato lista).
 - Link "⚠️ Igiene dati" invariato → `/admin/payments-hygiene`.
 
+
+
+---
+## Sessione 21/09/2026 (fork) — Fix orario ricevuta Stripe (UTC → Europe/Rome)
+- Problema: la ricevuta Stripe (`GET /payments/{payment_id}/receipt`, `_build_nexi_style_receipt_html` in `routes/stripe_payments.py`) mostrava l'orario in UTC (es. 07:03) invece dell'ora italiana (09:03), perché `paid_date` (salvato UTC) veniva formattato con strftime senza conversione fuso.
+- Fix: aggiunto helper `_format_receipt_datetime()` che converte a `ZoneInfo("Europe/Rome")` (DST-aware: +2 estate / +1 inverno) e usa nomi mese in italiano. Sostituito il blocco di formattazione.
+- Verificato: 07:03 UTC → "21 settembre 2026, 09:03"; inverno 07:03 UTC → 08:03. La ricevuta ricorrente usa lo stesso endpoint → corretta anch'essa.
+- Solo backend (HTML), nessun rebuild frontend necessario.
+

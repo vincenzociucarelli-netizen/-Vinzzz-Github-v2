@@ -22,6 +22,34 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timezone, timedelta
+try:
+    from zoneinfo import ZoneInfo
+    _IT_TZ = ZoneInfo("Europe/Rome")
+except Exception:  # pragma: no cover
+    _IT_TZ = None
+
+_IT_MONTHS = [
+    "", "gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
+    "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre",
+]
+
+
+def _format_receipt_datetime(dt) -> str:
+    """🆕 21/09/2026 — Formatta data/ora ricevuta nel fuso ITALIANO (Europe/Rome),
+    con mese in italiano. Accetta datetime (naive=UTC o aware) o stringa ISO."""
+    if isinstance(dt, str):
+        try:
+            dt = datetime.fromisoformat(dt.replace("Z", "+00:00"))
+        except Exception:
+            return dt
+    if not isinstance(dt, datetime):
+        dt = datetime.now(timezone.utc)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    if _IT_TZ is not None:
+        dt = dt.astimezone(_IT_TZ)
+    return f"{dt.day} {_IT_MONTHS[dt.month]} {dt.year}, {dt.strftime('%H:%M')}"
+
 import logging
 import os
 
@@ -578,17 +606,7 @@ def _build_nexi_style_receipt_html(
             paid_amount_total = float(payment.get("paid_amount") or 0)
             residual_after = max(0.0, round(total_amount - paid_amount_total, 2))
     amount = displayed_amount
-    paid_date = payment.get("paid_date")
-    if isinstance(paid_date, datetime):
-        date_str = paid_date.strftime("%d %B %Y, %H:%M")
-    elif isinstance(paid_date, str):
-        try:
-            dt = datetime.fromisoformat(paid_date.replace("Z", "+00:00"))
-            date_str = dt.strftime("%d %B %Y, %H:%M")
-        except Exception:
-            date_str = paid_date
-    else:
-        date_str = datetime.now(timezone.utc).strftime("%d %B %Y, %H:%M")
+    date_str = _format_receipt_datetime(payment.get("paid_date"))
 
     session_id = payment.get("stripe_session_id") or ""
     payment_intent = payment.get("stripe_payment_intent") or ""
