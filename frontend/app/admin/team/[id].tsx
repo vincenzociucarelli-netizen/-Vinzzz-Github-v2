@@ -543,8 +543,12 @@ export default function TeamDetail() {
           updateData.installment_3_due_date = validInstallments[2].due_date;
         }
         
-        if (bankInfo) updateData.bank_info = bankInfo;
-        if (paypalEmail) updateData.paypal_email = paypalEmail;
+        // 🐛 21/09/2026 — FIX: prima venivano inviati SOLO se valorizzati
+        // (`if (bankInfo)`), quindi svuotando il campo la cancellazione NON veniva
+        // mai salvata (email PayPal / IBAN restavano memorizzati). Ora inviamo
+        // sempre il valore, con null quando il campo è vuoto → cancellazione salvata.
+        updateData.bank_info = bankInfo ? bankInfo : null;
+        updateData.paypal_email = paypalEmail ? paypalEmail : null;
       }
 
       await api.patch(`/teams/${id}`, updateData);

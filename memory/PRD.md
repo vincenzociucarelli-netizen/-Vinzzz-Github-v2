@@ -1461,3 +1461,13 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Fix: allineato alla formula del summary/anagrafica → `bal_due = team.total_amount(primaria) − discount_amount`, `bal_paid = somma amount dei record paid=True`, `residual = bal_due − bal_paid`. Aggiunta mappa `_team_total_map` (id→total_amount).
 - Verificato: quota 600, pagato 250 → paid 250, residual 350 (prima 600/850). Solo backend, nessun rebuild frontend.
 
+
+
+---
+## Sessione 21/09/2026 (fork) — FIX cancellazione email PayPal / IBAN non salvata
+- Problema: svuotando l'email PayPal (o i dati Bonifico) nella scheda squadra admin, la cancellazione non veniva memorizzata (il valore restava).
+- Causa (`app/admin/team/[id].tsx` ~546-547): i campi venivano inviati SOLO se valorizzati (`if (bankInfo)...`, `if (paypalEmail)...`), quindi con campo vuoto non venivano mandati al server (`exclude_unset` li ignorava) → mai cancellati. Coinvolgeva ANCHE `bank_info`.
+- Fix: ora si invia sempre il valore, con `null` quando vuoto (`updateData.bank_info = bankInfo ? bankInfo : null; updateData.paypal_email = paypalEmail ? paypalEmail : null;`).
+- Backend già corretto: `bank_info` e `paypal_email` sono in `nullable_fields` (routes/teams.py) e con null azzerano il campo. Verificato E2E: set 'test@paypal.it' → null → None.
+- NB: così l'utente può rimuovere PayPal svuotando l'email e salvando (i display a genitore/atleta sono gated su paypalEmail truthy). Rimozione totale dell'input PayPal dalle UI = eventuale follow-up.
+
