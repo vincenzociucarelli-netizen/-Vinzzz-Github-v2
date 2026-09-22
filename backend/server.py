@@ -9002,12 +9002,16 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
         if team_id not in team_name_map:
             raise HTTPException(status_code=404, detail="Squadra non trovata")
         team = {"id": team_id, "name": team_name_map.get(team_id, "")}
+        # 🐛 22/09/2026 — includere anche gli atleti con questa squadra come SECONDA/TERZA
+        # (team_ids), non solo la principale (team_id). Prima l'elenco risultava vuoto per U17/U19.
         _q = {
             "society_id": society_id,
-            "team_id": team_id,
-            "$or": [
-                {"rollover_decision": {"$ne": "removed"}},
-                {"rollover_decision_season": {"$ne": _current_season}},
+            "$and": [
+                {"$or": [{"team_id": team_id}, {"team_ids": team_id}]},
+                {"$or": [
+                    {"rollover_decision": {"$ne": "removed"}},
+                    {"rollover_decision_season": {"$ne": _current_season}},
+                ]},
             ],
         }
     proj = {

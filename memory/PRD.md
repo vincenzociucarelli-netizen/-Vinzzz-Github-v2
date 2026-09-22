@@ -1491,3 +1491,11 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Verificato E2E su preview (chiave test): elenca 7 charges reali con date corrette. In produzione userà la chiave live della società.
 - NB: serve che Stripe sia abilitato e la chiave configurata per la società.
 
+
+
+---
+## Sessione 22/09/2026 (fork) — Elenco per Squadra: includere squadre secondarie/terze
+- Problema: selezionando U17/U19 in "Elenco per Squadra" (`team-roster.tsx` → `GET /admin/team-roster`), nessun atleta compariva perché la query filtrava solo `team_id` (squadra principale), ignorando le squadre secondarie in `team_ids`.
+- Fix (server.py get_team_roster, ramo squadra singola): query cambiata in `$and` di `{"$or": [{"team_id": team_id}, {"team_ids": team_id}]}` + condizioni rollover. Ora include chi ha la squadra come principale O secondaria/terza.
+- Verificato: atleta con principale Under14 e secondaria Under16 ora compare nell'elenco di Under16 (prima 0). Solo backend.
+
