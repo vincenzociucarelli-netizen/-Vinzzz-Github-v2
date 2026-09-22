@@ -1471,3 +1471,13 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Backend già corretto: `bank_info` e `paypal_email` sono in `nullable_fields` (routes/teams.py) e con null azzerano il campo. Verificato E2E: set 'test@paypal.it' → null → None.
 - NB: così l'utente può rimuovere PayPal svuotando l'email e salvando (i display a genitore/atleta sono gated su paypalEmail truthy). Rimozione totale dell'input PayPal dalle UI = eventuale follow-up.
 
+
+
+---
+## Sessione 21/09/2026 (fork) — FIX perdita pagamenti/ricevute al cambio squadra
+- Problema: "Numeri di ricevuta mancanti" mostrava buchi (es. RIC-26/27-0013/0033/0039) "pagamento eliminato" senza che l'utente avesse cancellato nulla.
+- Causa (server.py 12586 e 12654): al cambio squadra di un atleta quota, `delete_many({"athlete_id": athlete_id})` eliminava TUTTI i pagamenti (anche quelli PAGATI con numero ricevuta), poi ricreava lo scadenzario. → i numeri ricevuta dei pagamenti pagati eliminati diventavano buchi permanenti.
+- Fix: ora elimina SOLO le rate non pagate: `delete_many({"athlete_id": athlete_id, "paid": {"$ne": True}})`. I pagamenti incassati (e le ricevute) vengono preservati.
+- Verificato: pagamento paid con receipt RIC-26/27-9999 sopravvive al cambio squadra; la rata non pagata viene rigenerata per la nuova squadra.
+- NB: i buchi già esistenti in produzione derivano da cambi squadra passati (pagamenti già eliminati, non recuperabili automaticamente). Il fix previene nuovi buchi. Solo backend.
+

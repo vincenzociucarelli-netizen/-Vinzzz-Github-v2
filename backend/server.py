@@ -12582,8 +12582,10 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
             
             # Create payments when team is assigned (for quota athletes)
             if old_team_id != update_data.team_id and athlete.get("athlete_type") == "quota":
-                # Delete old payments if any
-                await db.payments.delete_many({"athlete_id": athlete_id})
+                # 🐛 21/09/2026 — FIX perdita dati/ricevute: eliminare SOLO le rate NON pagate.
+                # Prima eliminava TUTTI i pagamenti (anche quelli pagati con numero ricevuta),
+                # creando "buchi" nella numerazione ricevute al cambio squadra.
+                await db.payments.delete_many({"athlete_id": athlete_id, "paid": {"$ne": True}})
                 
                 # Create new payments based on team installments
                 installments = team.get("installments", [])
@@ -12651,7 +12653,9 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
         if old_team_id != new_primary and athlete.get("athlete_type") == "quota" and new_primary:
             primary_team = await db.teams.find_one({"id": new_primary})
             if primary_team:
-                await db.payments.delete_many({"athlete_id": athlete_id})
+                # 🐛 21/09/2026 — FIX: preservare i pagamenti già incassati (e le ricevute).
+                # Elimina solo le rate NON pagate prima di ricreare lo scadenzario.
+                await db.payments.delete_many({"athlete_id": athlete_id, "paid": {"$ne": True}})
                 installments = primary_team.get("installments", [])
                 for i, installment in enumerate(installments):
                     payment = {
