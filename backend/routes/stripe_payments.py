@@ -82,6 +82,48 @@ async def _get_society_stripe_settings(society_id: str) -> dict:
     return s
 
 
+@router.get("/admin/stripe/received-payments")
+async def stripe_received_payments(limit: int = 100, current_user=Depends(get_current_user)):
+    """🆕 21/09/2026 — Elenca i pagamenti realmente RICEVUTI su Stripe (data, importo,
+    descrizione, cliente, ricevuta). Utile per riconciliare/risalire a incassi il cui
+    record locale è stato eliminato (es. per un cambio squadra in passato)."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    society_id = current_user.get("society_id")
+    settings = await _get_society_stripe_settings(society_id)
+    sk = settings["stripe_secret_key"]
+    try:
+        charges = stripe.Charge.list(api_key=sk, limit=max(1, min(int(limit or 100), 100)))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Errore Stripe: {e}")
+
+    items = []
+    for c in (charges.get("data", []) if isinstance(charges, dict) else charges.data):
+        try:
+            created = datetime.fromtimestamp(c["created"], tz=timezone.utc)
+        except Exception:
+            created = None
+        bd = c.get("billing_details") or {}
+        items.append({
+            "id": c.get("id"),
+            "date": _format_receipt_datetime(created) if created else "",
+            "created_ts": c.get("created"),
+            "amount": round((c.get("amount") or 0) / 100.0, 2),
+            "currency": (c.get("currency") or "eur").upper(),
+            "description": c.get("description") or "",
+            "customer_email": bd.get("email") or c.get("receipt_email") or "",
+            "customer_name": bd.get("name") or "",
+            "status": c.get("status"),
+            "paid": bool(c.get("paid")),
+            "refunded": bool(c.get("refunded")),
+            "receipt_url": c.get("receipt_url") or "",
+            "payment_intent": c.get("payment_intent") or "",
+        })
+    return {"count": len(items), "payments": items}
+
+
+
+
 async def _get_payment_context(payment_id: str, current_user: dict, allow_paid: bool = False) -> tuple[dict, dict, dict]:
     """Restituisce (payment, athlete, society_settings) verificando che l'utente
     corrente sia autorizzato a pagare (genitore collegato, oppure admin di società).

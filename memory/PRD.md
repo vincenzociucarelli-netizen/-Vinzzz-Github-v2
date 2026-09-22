@@ -1481,3 +1481,13 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Verificato: pagamento paid con receipt RIC-26/27-9999 sopravvive al cambio squadra; la rata non pagata viene rigenerata per la nuova squadra.
 - NB: i buchi già esistenti in produzione derivano da cambi squadra passati (pagamenti già eliminati, non recuperabili automaticamente). Il fix previene nuovi buchi. Solo backend.
 
+
+
+---
+## Sessione 22/09/2026 (fork) — Strumento "Pagamenti ricevuti su Stripe" (recupero incassi)
+- Esigenza: i record di alcuni incassi reali erano stati eliminati (bug cambio squadra, già corretto). L'utente deve risalire a data/importo di quei pagamenti da Stripe.
+- Backend `GET /admin/stripe/received-payments` (routes/stripe_payments.py): admin-only, usa la chiave Stripe della società (`_get_society_stripe_settings`), chiama `stripe.Charge.list(limit≤100)` e ritorna per ogni incasso: data (ora italiana via `_format_receipt_datetime`), importo, valuta, descrizione, email/nome cliente, status, refunded, receipt_url, payment_intent.
+- Frontend nuova schermata `/app/frontend/app/admin/stripe-payments.tsx`: lista incassi con data/importo/cliente, badge Incassato/Rimborsato, link "Ricevuta Stripe". Link di accesso aggiunto in `payments-history.tsx` (sotto il link Igiene dati).
+- Verificato E2E su preview (chiave test): elenca 7 charges reali con date corrette. In produzione userà la chiave live della società.
+- NB: serve che Stripe sia abilitato e la chiave configurata per la società.
+

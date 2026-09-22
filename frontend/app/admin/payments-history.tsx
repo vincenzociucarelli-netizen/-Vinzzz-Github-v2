@@ -368,6 +368,13 @@ export default function PaymentsHistoryPage() {
           >
             <Text style={styles.hygieneLinkText}>⚠️ Igiene dati: verifica rate duplicate</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.hygieneLink}
+            onPress={() => router.push('/admin/stripe-payments')}
+            testID="link-stripe-payments"
+          >
+            <Text style={[styles.hygieneLinkText, { color: '#635BFF' }]}>💳 Pagamenti ricevuti su Stripe (data e importo)</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Movimenti nella lista filtrata */}
