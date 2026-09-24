@@ -1532,3 +1532,9 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 
 ## 🎨 24/09/2026 — Export calendario più visibile
 - L'apertura del pannello export (Excel/PDF) era su un'icona a griglia verde poco intuitiva (l'utente non la trovava). Ora è un pulsante verde etichettato "⬇ Scarica" (`styles.exportBtn`/`exportBtnText`). L'export .ics ha un'icona distinta calendario viola.
+
+## 🐛 24/09/2026 — Fix: admin non vedeva i dati bancari salvati dall'atleta 18+ PRO
+- CAUSA: l'atleta salva IBAN/intestatario/banca dal proprio profilo via `PATCH /users/me/bank-details` che scriveva SOLO su `db.users`, mentre l'admin (`GET /athletes/{id}` → tab Anagrafica) legge dal record `db.athletes`. Il fallback esistente (22/08) leggeva solo da user STAFF (coach/dirigente/collaboratore), non dall'account proprio dell'atleta (role="athlete").
+- FIX 1 (server.py `update_my_bank_details`): al salvataggio sincronizza i campi bancari (iban/account_holder/bank_name + iban_holder) anche sul record `athletes` collegato (via athlete_id o euristica user_id/linked_user_id/email) e sull'eventuale coach dual-role.
+- FIX 2 (server.py `get_athlete`): esteso il fallback `_bank_empty` per ereditare i dati bancari anche dall'account proprio dell'atleta (users con athlete_id/user_id/linked_athlete_id == athlete_id). Copre i dati GIÀ salvati in produzione senza richiedere un nuovo salvataggio.
+- Verificato E2E via API su atleta PRO di test: (a) GET admin restituisce iban/holder/bank presi dallo user quando il record athlete è vuoto; (b) dopo PATCH bank-details dell'atleta il record athletes risulta sincronizzato.

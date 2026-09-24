@@ -6861,6 +6861,38 @@ async def update_my_bank_details(data: dict, current_user = Depends(get_current_
             {"id": current_user["id"]},
             {"$set": update_dict}
         )
+
+        # 🐛 24/09/2026 — Sync dei dati bancari sul record ATLETA collegato.
+        # L'atleta salva i dati sul proprio record `users`, ma l'admin li legge dal
+        # record `athletes`: senza questo sync l'admin non vedeva IBAN/intestatario/banca.
+        bank_sync = {k: v for k, v in update_dict.items() if k in ("iban", "account_holder", "bank_name")}
+        if bank_sync:
+            # `account_holder` è letto dall'admin come iban_holder||account_holder → allineiamo entrambi
+            if "account_holder" in bank_sync:
+                bank_sync["iban_holder"] = bank_sync["account_holder"]
+            # Individua il record atleta collegato (per link diretto o euristica user_id/email)
+            athlete_id = current_user.get("athlete_id")
+            athlete_query = None
+            if athlete_id:
+                athlete_query = {"id": athlete_id}
+            else:
+                athlete_query = {"$or": [
+                    {"user_id": current_user["id"]},
+                    {"linked_user_id": current_user["id"]},
+                    {"email": (current_user.get("email") or "").lower()},
+                ]}
+            try:
+                await db.athletes.update_one(athlete_query, {"$set": bank_sync})
+            except Exception as _e:
+                logging.warning(f"[BANK-SYNC] athlete sync failed for user {current_user.get('id')}: {_e}")
+
+            # Dual-role: sincronizza anche l'eventuale record coach collegato
+            try:
+                coach_user_id = current_user.get("linked_coach_user_id")
+                if coach_user_id:
+                    await db.users.update_one({"id": coach_user_id}, {"$set": bank_sync})
+            except Exception as _e:
+                logging.warning(f"[BANK-SYNC] coach sync failed for user {current_user.get('id')}: {_e}")
     
     return {"message": "Dati bancari aggiornati"}
 
@@ -12349,6 +12381,21 @@ async def get_athlete(athlete_id: str, current_user = Depends(get_current_user))
                 {"linked_athlete_id": athlete_id, "role": {"$in": ["coach", "dirigente", "collaboratore"]}},
                 _bank_proj,
             )
+        # 🐛 24/09/2026 — Fallback anche sull'ACCOUNT PROPRIO dell'atleta (role="athlete"):
+        # l'atleta 18+ PRO salva i dati bancari dal proprio profilo tramite
+        # /users/me/bank-details (record `users`), ma l'admin li legge dal record
+        # `athletes`. Se non è dual-role staff, ereditiamo i campi dal suo user.
+        if not linked_staff:
+            _own_user = await db.users.find_one(
+                {"$or": [
+                    {"athlete_id": athlete_id},
+                    {"user_id": athlete_id},
+                    {"linked_athlete_id": athlete_id},
+                ]},
+                _bank_proj,
+            )
+            if _own_user and (_own_user.get("iban") or _own_user.get("bank_name") or _own_user.get("account_holder") or _own_user.get("iban_holder")):
+                linked_staff = _own_user
         if linked_staff:
             if linked_staff.get("iban"):
                 athlete["iban"] = linked_staff["iban"]
