@@ -7887,6 +7887,22 @@ async def delete_match(match_id: str, current_user = Depends(get_current_user)):
     return {"message": "Gara eliminata"}
 
 
+@api_router.delete("/matches/team/{team_id}/all")
+async def delete_all_team_matches(team_id: str, current_user = Depends(get_current_user)):
+    """🆕 22/09/2026 — Cancella IN BLOCCO tutte le partite (calendario) di una squadra.
+    Utile quando si importa per errore un calendario duplicato/errato di una squadra."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può eliminare gare")
+
+    society_id = current_user.get("society_id")
+    filter_q = {"team_id": team_id}
+    if society_id:
+        filter_q["society_id"] = society_id
+    result = await db.matches.delete_many(filter_q)
+    return {"message": "Calendario squadra eliminato", "deleted_count": result.deleted_count}
+
+
+
 @api_router.post("/matches/sync-fipav")
 async def sync_fipav_matches(current_user = Depends(get_current_user)):
     """Sync matches from FIPAV portal - updates dates/results for existing matches"""

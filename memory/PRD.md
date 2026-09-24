@@ -1499,3 +1499,12 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Fix (server.py get_team_roster, ramo squadra singola): query cambiata in `$and` di `{"$or": [{"team_id": team_id}, {"team_ids": team_id}]}` + condizioni rollover. Ora include chi ha la squadra come principale O secondaria/terza.
 - Verificato: atleta con principale Under14 e secondaria Under16 ora compare nell'elenco di Under16 (prima 0). Solo backend.
 
+
+
+---
+## Sessione 22-24/09/2026 (fork) — Cancellazione in blocco calendario di una squadra
+- Esigenza: importato per errore un calendario doppio/errato di una squadra; serve cancellare in blocco tutte le partite di quella squadra.
+- Backend: nuovo `DELETE /matches/team/{team_id}/all` (server.py, dopo delete_match): admin-only, `delete_many({team_id, society_id})`, ritorna deleted_count.
+- Frontend `app/admin/matches.tsx`: in cima alla lista (tab), sezione "🗑️ Svuota calendario di una squadra" che raggruppa le partite caricate per `team_id` (nome + conteggio) con bottone "Elimina tutte" per squadra (conferma web/native). Handler `handleDeleteTeamCalendar`, stato `deletingTeamId`.
+- Verificato E2E: eliminando le partite di una squadra restano intatte quelle delle altre squadre; UI mostra "U.14 Magione · N partite / Elimina tutte".
+

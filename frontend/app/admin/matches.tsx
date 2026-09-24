@@ -396,6 +396,40 @@ export default function AdminMatches() {
     }
   };
 
+  // 🆕 22/09/2026 — Cancellazione IN BLOCCO del calendario di una squadra
+  const [deletingTeamId, setDeletingTeamId] = useState<string | null>(null);
+
+  const handleDeleteTeamCalendar = async (teamId: string, teamName: string, count: number) => {
+    const msg = `Eliminare TUTTE le ${count} partite di "${teamName}"? L'operazione non è reversibile.`;
+    const confirmDelete = Platform.OS === 'web'
+      ? window.confirm(msg)
+      : await new Promise((resolve) => {
+          Alert.alert(
+            'Svuota calendario squadra',
+            msg,
+            [
+              { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Elimina tutto', style: 'destructive', onPress: () => resolve(true) },
+            ]
+          );
+        });
+    if (!confirmDelete) return;
+    setDeletingTeamId(teamId);
+    try {
+      const res = await api.delete(`/matches/team/${teamId}/all`);
+      await loadData();
+      const n = res.data?.deleted_count ?? count;
+      if (Platform.OS === 'web') window.alert(`Eliminate ${n} partite di "${teamName}"`);
+      else Alert.alert('Fatto', `Eliminate ${n} partite di "${teamName}"`);
+    } catch {
+      if (Platform.OS === 'web') window.alert('Impossibile eliminare il calendario');
+      else Alert.alert('Errore', 'Impossibile eliminare il calendario');
+    } finally {
+      setDeletingTeamId(null);
+    }
+  };
+
+
   // Download template Excel con formato standard
   const downloadTemplate = async () => {
     try {
@@ -911,6 +945,39 @@ export default function AdminMatches() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {matches.length > 0 ? (() => {
+          const counts: { [tid: string]: { name: string; count: number } } = {};
+          for (const m of matches) {
+            if (!m.team_id) continue;
+            if (!counts[m.team_id]) counts[m.team_id] = { name: m.team_name || 'Squadra', count: 0 };
+            counts[m.team_id].count += 1;
+          }
+          const rows = Object.entries(counts).sort((a, b) => a[1].name.localeCompare(b[1].name));
+          if (rows.length === 0) return null;
+          return (
+            <View style={styles.bulkCard} testID="bulk-delete-section">
+              <Text style={styles.bulkTitle}>🗑️ Svuota calendario di una squadra</Text>
+              <Text style={styles.bulkHint}>Elimina in blocco tutte le partite importate di una squadra (utile per import errati/doppi).</Text>
+              {rows.map(([tid, info]) => (
+                <View key={tid} style={styles.bulkRow}>
+                  <Text style={styles.bulkTeamName} numberOfLines={1}>{info.name} · {info.count} partite</Text>
+                  <TouchableOpacity
+                    style={[styles.bulkDelBtn, deletingTeamId === tid && { opacity: 0.5 }]}
+                    disabled={deletingTeamId === tid}
+                    onPress={() => handleDeleteTeamCalendar(tid, info.name, info.count)}
+                    testID={`bulk-delete-${tid}`}
+                  >
+                    {deletingTeamId === tid ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <Text style={styles.bulkDelBtnText}>Elimina tutte</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          );
+        })() : null}
         {matches.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="calendar-outline" size={64} color="#ccc" />
@@ -1559,6 +1626,23 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  bulkCard: {
+    backgroundColor: '#FFF8E1',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#FFE082',
+  },
+  bulkTitle: { fontSize: 14, fontWeight: '800', color: '#111827' },
+  bulkHint: { fontSize: 11, color: '#795548', marginTop: 2, marginBottom: 8 },
+  bulkRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 6, gap: 8, borderTopWidth: 1, borderTopColor: '#FFECB3',
+  },
+  bulkTeamName: { flex: 1, fontSize: 13, color: '#333', fontWeight: '600' },
+  bulkDelBtn: { backgroundColor: '#C62828', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, minWidth: 92, alignItems: 'center' },
+  bulkDelBtnText: { color: '#fff', fontWeight: '700', fontSize: 12 },
   emptyContainer: {
     alignItems: 'center',
     paddingTop: 60,
