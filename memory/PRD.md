@@ -1538,3 +1538,13 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - FIX 1 (server.py `update_my_bank_details`): al salvataggio sincronizza i campi bancari (iban/account_holder/bank_name + iban_holder) anche sul record `athletes` collegato (via athlete_id o euristica user_id/linked_user_id/email) e sull'eventuale coach dual-role.
 - FIX 2 (server.py `get_athlete`): esteso il fallback `_bank_empty` per ereditare i dati bancari anche dall'account proprio dell'atleta (users con athlete_id/user_id/linked_athlete_id == athlete_id). Copre i dati GIÀ salvati in produzione senza richiedere un nuovo salvataggio.
 - Verificato E2E via API su atleta PRO di test: (a) GET admin restituisce iban/holder/bank presi dallo user quando il record athlete è vuoto; (b) dopo PATCH bank-details dell'atleta il record athletes risulta sincronizzato.
+
+## 🆕 24/09/2026 — Import calendario da file NON-template (calendari FIPAV/società)
+- Richiesta utente: caricare un file gare Serie B1 non nel template esatto (colonne diverse + righe di titolo).
+- File esempio "Calendario Sirio B1F": header alla riga 4 (2 righe titolo + 1 vuota), colonne: Giornata, Data, Ora (SEPARATE), Sede, Squadra Casa, Squadra Trasferta, Avversario.
+- FIX in `app/admin/matches.tsx handleImportExcel`:
+  1) Rilevamento automatico della RIGA DI INTESTAZIONE (sheet_to_json header:1 → cerca la prima riga con ≥2 token noti tra data/ora/squadra casa/avversario/... e costruisce gli oggetti da lì), così i file con righe di titolo iniziali non falliscono più.
+  2) Merge di una colonna ORA separata con la colonna DATA (prima si perdeva l'orario): gestisce Ora come Date o stringa.
+  Le colonne "Squadra Casa"/"Avversario" erano già riconosciute; l'opponent e home/away si calcolano correttamente col nome squadra di casa inserito dall'admin.
+- Validato con simulazione Node su xlsx reale: 26/26 gare con data+ora, avversario e casa/trasferta corretti.
+- NB: il file non ha impianto/indirizzo → venue/città restano vuoti (compilabili poi a mano). Flusso utente: ☁️ Carica file → scegli squadra (Serie B1) → inserisci nome squadra di casa (es. "SIRIO PERUGIA VOLLEY").

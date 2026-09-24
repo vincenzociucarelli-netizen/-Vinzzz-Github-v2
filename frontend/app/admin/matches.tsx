@@ -678,8 +678,34 @@ export default function AdminMatches() {
       const workbook = XLSX.read(fileContent, { type: 'array', cellDates: true });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { raw: true, defval: '' });
-      
+
+      // 🆕 24/09/2026 — Rilevamento riga di intestazione. Alcuni calendari (FIPAV /
+      // società) hanno righe di titolo/sottotitolo prima delle colonne vere e proprie:
+      // in quel caso sheet_to_json userebbe il titolo come header e l'import fallirebbe.
+      // Leggiamo il foglio come matrice e cerchiamo la prima riga che contiene le
+      // intestazioni note, poi costruiamo gli oggetti da lì in avanti.
+      const aoa: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true, defval: '' });
+      const HEADER_TOKENS = [
+        'data', 'ora', 'orario', 'squadra casa', 'squadra trasferta', 'avversario',
+        'campionatonome', 'garadataora', 'garanumero', 'squadracasanome', 'squadraospitenome',
+        'impianto', 'giornata', 'sede', 'ritrovo',
+      ];
+      let headerIdx = 0;
+      for (let i = 0; i < Math.min(aoa.length, 40); i++) {
+        const cells = (aoa[i] || []).map((c: any) => String(c ?? '').trim().toLowerCase());
+        const score = cells.filter((c: string) => HEADER_TOKENS.includes(c)).length;
+        if (score >= 2) { headerIdx = i; break; }
+      }
+      const headers = (aoa[headerIdx] || []).map((c: any) => String(c ?? '').trim());
+      const jsonData = aoa.slice(headerIdx + 1)
+        .filter((r) => Array.isArray(r) && r.some((c) => String(c ?? '').trim() !== ''))
+        .map((r) => {
+          const obj: any = {};
+          headers.forEach((h: string, idx: number) => { if (h) obj[h] = r[idx]; });
+          return obj;
+        });
+
+      console.log('Excel header row:', headerIdx, headers);
       console.log('Excel data parsed:', jsonData.slice(0, 2)); // Debug
 
       // Store parsed data and show home team modal
@@ -767,17 +793,31 @@ export default function AdminMatches() {
         
         // GaraDataOra - data e ora della gara
         let dateTimeStr = row['GaraDataOra'] || row['DATA'] || row['Data'] || '';
-        
+
+        // 🆕 24/09/2026 — Alcuni calendari FIPAV hanno DATA e ORA in colonne SEPARATE
+        // (es. file "Calendario ... B1"): leggiamo l'orario a parte e lo uniamo alla data.
+        let oraSep: any = row['Ora'] || row['ORA'] || row['Orario'] || row['ORARIO'] || '';
+        if (oraSep instanceof Date) {
+          const oo = new Date(Math.round(oraSep.getTime() / 60000) * 60000);
+          oraSep = `${oo.getHours().toString().padStart(2, '0')}:${oo.getMinutes().toString().padStart(2, '0')}`;
+        } else {
+          oraSep = S(oraSep);
+        }
+
         // Se è un oggetto Date (da Excel), convertilo in stringa
         if (dateTimeStr instanceof Date) {
           // Arrotonda al minuto più vicino (SheetJS può restituire 17:29:59 invece di 17:30)
           const d = new Date(Math.round(dateTimeStr.getTime() / 60000) * 60000);
-          dateTimeStr = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
-        }
-        
-        // Rimuovi secondi se presenti (HH:MM:SS → HH:MM)
-        if (dateTimeStr && typeof dateTimeStr === 'string') {
+          const datePart = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+          // Orario: preferisci la colonna "Ora" separata se presente, altrimenti quello della cella Data
+          const timePart = oraSep || `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+          dateTimeStr = `${datePart} ${timePart}`;
+        } else if (dateTimeStr && typeof dateTimeStr === 'string') {
           dateTimeStr = dateTimeStr.trim();
+          // Se la stringa data non contiene già un orario e abbiamo una colonna Ora separata, uniscili
+          if (oraSep && !/\d{1,2}:\d{2}/.test(dateTimeStr)) {
+            dateTimeStr = `${dateTimeStr} ${oraSep}`;
+          }
         }
         
         // Determina l'avversario in base a casa/trasferta
