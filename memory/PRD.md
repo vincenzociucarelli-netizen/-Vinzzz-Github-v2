@@ -1517,3 +1517,10 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Export Excel filtrabile (`handleExportExcel` + modal opzioni): scelta Squadra (Tutta la società / singola squadra), Gare (Tutte / Casa / Trasferta), Stato (Tutte / Da disputare / Giocate). Nome file dinamico (calendario_<squadra>_<casa|trasferta>.xlsx). Tutto client-side dai dati già caricati (`matches` + `teams`), util XLSX esistente.
 - File: `app/admin/matches.tsx`. Verificato E2E su preview (collassabile, modal ELIMINA con pulsante disabilitato, modal export con picker+segmenti).
 
+
+## 🆕 24/09/2026 — Export Calendario Gare: PDF + fogli per squadra
+- **Excel multi-foglio** (`handleExportExcel` in `app/admin/matches.tsx`): quando l'export è su "Tutta la società" ora genera un foglio "Riepilogo" con TUTTE le squadre (colonna Squadra) + un foglio separato per OGNI squadra. Con singola squadra resta un unico foglio. Nomi foglio sanificati/troncati a 28 char + deduplica (limite XLSX 31 char).
+- **Export PDF** (nuovo `handleExportPDF` + util `src/utils/matchCalendarReport.ts`): stesso set di filtri (squadra/casa-trasferta/stato). Intestazione con logo + nome società (fetch `/settings/society?include_images=true` al mount, stato `societyInfo`) e data di generazione. Layout: A4 landscape, sezione "Riepilogo generale" (tabella continua con colonna Squadra) seguita da una pagina/sezione per ogni squadra con titolo. Pattern print = fipavPresencesReport.ts (window.open+print su web, expo-print+sharing su mobile).
+- **UI**: modal export ora con 3 pulsanti — Annulla / 📄 PDF (rosso) / 📊 Excel (verde). Titolo cambiato in "Esporta calendario".
+- Helper condivisi introdotti: `getExportList()`, `fmtDate()`, `exportSubtitle()`, `exportFileName()`, `groupByTeam()`.
+- Verificato: rebuild `npx expo export -p web` + restart expo; modal render OK su preview con i nuovi pulsanti PDF/Excel.

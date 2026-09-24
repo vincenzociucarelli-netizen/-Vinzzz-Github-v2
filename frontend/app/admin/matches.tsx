@@ -22,6 +22,7 @@ import api from '../../src/services/api';
 import { MultiStepTutorial, TutorialStep } from '../../src/components/MultiStepTutorial';
 import { Ionicons } from '../../src/components/Icon';
 import { SportIcon } from '../../src/components/SportIcon';
+import { downloadMatchCalendarPDF, MatchRow, TeamGroup } from '../../src/utils/matchCalendarReport';
 
 import * as XLSX from 'xlsx';
 
@@ -78,6 +79,9 @@ export default function AdminMatches() {
   const [exportTeamId, setExportTeamId] = useState<string>('all');
   const [exportHomeAway, setExportHomeAway] = useState<'all' | 'home' | 'away'>('all');
   const [exportStatus, setExportStatus] = useState<'all' | 'upcoming' | 'played'>('all');
+
+  // 🆕 24/09/2026 — Info società per intestazione PDF (nome + logo)
+  const [societyInfo, setSocietyInfo] = useState<{ name: string; logo: string | null }>({ name: '', logo: null });
 
   // Multi-step info tutorial (mostrato al tap di "Info & tutorial")
   const [tutorialVisible, setTutorialVisible] = useState(false);
@@ -156,6 +160,10 @@ export default function AdminMatches() {
 
   useEffect(() => {
     loadData();
+    // Carica nome + logo società per l'intestazione del PDF (best-effort)
+    api.get('/settings/society?include_images=true')
+      .then((res) => setSocietyInfo({ name: res.data?.name || '', logo: res.data?.logo || null }))
+      .catch(() => {});
   }, []);
 
   const onRefresh = () => {
@@ -198,71 +206,127 @@ export default function AdminMatches() {
     }
   };
 
-  // 🆕 06/09/2026 — Esporta le gare in Excel (.xlsx)
+  // 🆕 06/09/2026 — Esporta le gare (Excel/PDF)
   // 🆕 24/09/2026 — filtri: squadra (tutte/singola), casa/trasferta, stato
+  //             + un foglio/sezione per ogni squadra e un riepilogo generale
+
+  // Filtra + ordina le gare in base ai filtri correnti dell'export
+  const getExportList = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return matches.filter((match) => {
+      if (exportTeamId !== 'all' && match.team_id !== exportTeamId) return false;
+      if (exportHomeAway !== 'all' && (match.home_away || 'home') !== exportHomeAway) return false;
+      const matchDate = new Date(match.date);
+      matchDate.setHours(0, 0, 0, 0);
+      const hasResult = match.result && match.result.trim() !== '' && match.result !== '-';
+      if (exportStatus === 'upcoming') return matchDate >= today && !hasResult;
+      if (exportStatus === 'played') return hasResult || matchDate < today;
+      return true;
+    }).sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      return exportStatus === 'played' ? dateB - dateA : dateA - dateB;
+    });
+  };
+
+  const fmtDate = (iso?: string) => {
+    if (!iso) return { dataStr: '', oraStr: '' };
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return { dataStr: '', oraStr: '' };
+    return {
+      dataStr: d.toLocaleDateString('it-IT'),
+      oraStr: d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+    };
+  };
+
+  // Descrizione dei filtri applicati (per sottotitolo PDF / nome file)
+  const exportSubtitle = () => {
+    const teamLbl = exportTeamId === 'all'
+      ? 'Tutta la società'
+      : (teams.find((t) => t.id === exportTeamId)?.name || 'Squadra');
+    const haLbl = exportHomeAway === 'home' ? 'Solo casa' : exportHomeAway === 'away' ? 'Solo trasferta' : 'Casa e trasferta';
+    const stLbl = exportStatus === 'upcoming' ? 'Da disputare' : exportStatus === 'played' ? 'Giocate' : 'Tutte le gare';
+    return `${teamLbl} · ${haLbl} · ${stLbl}`;
+  };
+
+  const exportFileName = () => {
+    const teamLabel = exportTeamId === 'all'
+      ? 'societa'
+      : (teams.find((t) => t.id === exportTeamId)?.name || 'squadra').replace(/[^a-zA-Z0-9]+/g, '_');
+    const haLabel = exportHomeAway === 'home' ? '_casa' : exportHomeAway === 'away' ? '_trasferta' : '';
+    return `calendario_${teamLabel}${haLabel}`;
+  };
+
+  // Raggruppa le gare filtrate per squadra (rispettando l'ordinamento globale)
+  const groupByTeam = (list: Match[]) => {
+    const order: string[] = [];
+    const map: { [name: string]: Match[] } = {};
+    list.forEach((m) => {
+      const name = m.team_name || 'Senza squadra';
+      if (!map[name]) { map[name] = []; order.push(name); }
+      map[name].push(m);
+    });
+    return order.map((name) => ({ name, items: map[name] }));
+  };
+
   const handleExportExcel = async () => {
     try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const list = matches.filter((match) => {
-        // filtro squadra
-        if (exportTeamId !== 'all' && match.team_id !== exportTeamId) return false;
-        // filtro casa/trasferta
-        if (exportHomeAway !== 'all' && (match.home_away || 'home') !== exportHomeAway) return false;
-        // filtro stato
-        const matchDate = new Date(match.date);
-        matchDate.setHours(0, 0, 0, 0);
-        const hasResult = match.result && match.result.trim() !== '' && match.result !== '-';
-        if (exportStatus === 'upcoming') return matchDate >= today && !hasResult;
-        if (exportStatus === 'played') return hasResult || matchDate < today;
-        return true;
-      }).sort((a, b) => {
-        const dateA = new Date(a.date).getTime();
-        const dateB = new Date(b.date).getTime();
-        return exportStatus === 'played' ? dateB - dateA : dateA - dateB;
-      });
+      const list = getExportList();
       if (!list || list.length === 0) {
         Alert.alert('Nessuna gara', 'Non ci sono gare da esportare per i filtri selezionati.');
         return;
       }
-      const rows = list.map((m) => {
-        let dataStr = '', oraStr = '';
-        if (m.date) {
-          const d = new Date(m.date);
-          if (!isNaN(d.getTime())) {
-            dataStr = d.toLocaleDateString('it-IT');
-            oraStr = d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-          }
-        }
-        return {
-          'Squadra': m.team_name || '',
-          'Campionato/Gara': m.match_number || '',
-          'Casa/Trasferta': m.home_away === 'home' ? 'Casa' : 'Trasferta',
-          'Avversario': m.opponent || '',
-          'Data': dataStr,
-          'Ora': oraStr,
-          'Impianto': m.venue || '',
-          'Indirizzo': m.address || '',
-          'Città': m.city || '',
-          'Ritrovo': m.meeting_time || '',
-          'Risultato': m.result || '',
-          'Note': m.notes || '',
-        };
+
+      const toRow = (m: Match, withTeam: boolean) => {
+        const { dataStr, oraStr } = fmtDate(m.date);
+        const base: any = {};
+        if (withTeam) base['Squadra'] = m.team_name || '';
+        base['Campionato/Gara'] = m.match_number || '';
+        base['Casa/Trasferta'] = m.home_away === 'home' ? 'Casa' : 'Trasferta';
+        base['Avversario'] = m.opponent || '';
+        base['Data'] = dataStr;
+        base['Ora'] = oraStr;
+        base['Impianto'] = m.venue || '';
+        base['Indirizzo'] = m.address || '';
+        base['Città'] = m.city || '';
+        base['Ritrovo'] = m.meeting_time || '';
+        base['Risultato'] = m.result || '';
+        base['Note'] = m.notes || '';
+        return base;
+      };
+
+      const wb = XLSX.utils.book_new();
+      const groups = groupByTeam(list);
+      const usedNames: { [k: string]: number } = {};
+      const safeSheetName = (raw: string) => {
+        let n = (raw || 'Foglio').replace(/[\\/?*\[\]:]/g, ' ').trim().slice(0, 28) || 'Foglio';
+        if (usedNames[n] != null) { usedNames[n] += 1; n = `${n.slice(0, 25)} ${usedNames[n]}`; }
+        else usedNames[n] = 0;
+        return n;
+      };
+
+      // Foglio riepilogativo con tutte le squadre (solo se più di una squadra)
+      if (groups.length > 1) {
+        const wsAll = XLSX.utils.json_to_sheet(list.map((m) => toRow(m, true)));
+        wsAll['!cols'] = [
+          { wch: 16 }, { wch: 14 }, { wch: 13 }, { wch: 22 }, { wch: 12 }, { wch: 8 },
+          { wch: 26 }, { wch: 32 }, { wch: 16 }, { wch: 10 }, { wch: 12 }, { wch: 20 },
+        ];
+        XLSX.utils.book_append_sheet(wb, wsAll, safeSheetName('Riepilogo'));
+      }
+
+      // Un foglio per ogni squadra
+      groups.forEach((g) => {
+        const ws = XLSX.utils.json_to_sheet(g.items.map((m) => toRow(m, false)));
+        ws['!cols'] = [
+          { wch: 14 }, { wch: 13 }, { wch: 22 }, { wch: 12 }, { wch: 8 },
+          { wch: 26 }, { wch: 32 }, { wch: 16 }, { wch: 10 }, { wch: 12 }, { wch: 20 },
+        ];
+        XLSX.utils.book_append_sheet(wb, ws, safeSheetName(g.name));
       });
 
-      const ws = XLSX.utils.json_to_sheet(rows);
-      ws['!cols'] = [
-        { wch: 16 }, { wch: 14 }, { wch: 13 }, { wch: 22 }, { wch: 12 }, { wch: 8 },
-        { wch: 26 }, { wch: 32 }, { wch: 16 }, { wch: 10 }, { wch: 12 }, { wch: 20 },
-      ];
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Gare');
-
-      const teamLabel = exportTeamId === 'all'
-        ? 'societa'
-        : (list[0]?.team_name || 'squadra').replace(/[^a-zA-Z0-9]+/g, '_');
-      const haLabel = exportHomeAway === 'home' ? '_casa' : exportHomeAway === 'away' ? '_trasferta' : '';
-      const fname = `calendario_${teamLabel}${haLabel}.xlsx`;
+      const fname = `${exportFileName()}.xlsx`;
 
       if (Platform.OS === 'web') {
         XLSX.writeFile(wb, fname);
@@ -282,6 +346,47 @@ export default function AdminMatches() {
       setExportModalVisible(false);
     } catch (e: any) {
       Alert.alert('Errore', 'Impossibile esportare le gare in Excel');
+    }
+  };
+
+  // 🆕 24/09/2026 — Esporta le gare in PDF (riepilogo + una sezione per squadra)
+  const handleExportPDF = async () => {
+    try {
+      const list = getExportList();
+      if (!list || list.length === 0) {
+        Alert.alert('Nessuna gara', 'Non ci sono gare da esportare per i filtri selezionati.');
+        return;
+      }
+      const toRow = (m: Match): MatchRow => {
+        const { dataStr, oraStr } = fmtDate(m.date);
+        return {
+          squadra: m.team_name || '',
+          campionato: m.match_number || '',
+          casaTrasferta: m.home_away === 'home' ? 'Casa' : 'Trasferta',
+          avversario: m.opponent || '',
+          data: dataStr,
+          ora: oraStr,
+          impianto: m.venue || '',
+          citta: m.city || '',
+          ritrovo: m.meeting_time || '',
+          risultato: m.result || '',
+        };
+      };
+      const groups: TeamGroup[] = groupByTeam(list).map((g) => ({
+        teamName: g.name,
+        rows: g.items.map(toRow),
+      }));
+
+      await downloadMatchCalendarPDF({
+        societyName: societyInfo.name || 'RegistraTEAM',
+        societyLogo: societyInfo.logo,
+        subtitle: exportSubtitle(),
+        groups,
+        fileName: exportFileName(),
+      });
+      setExportModalVisible(false);
+    } catch (e: any) {
+      Alert.alert('Errore', 'Impossibile esportare le gare in PDF');
     }
   };
 
@@ -1488,7 +1593,7 @@ export default function AdminMatches() {
       <Modal visible={exportModalVisible} animationType="fade" transparent>
         <View style={styles.confirmOverlay}>
           <View style={styles.confirmBox}>
-            <Text style={styles.confirmTitle}>📥 Esporta calendario in Excel</Text>
+            <Text style={styles.confirmTitle}>📥 Esporta calendario</Text>
 
             <Text style={styles.confirmLabel}>Squadra</Text>
             <View style={styles.exportPickerWrap}>
@@ -1532,8 +1637,11 @@ export default function AdminMatches() {
               <TouchableOpacity style={styles.confirmCancelBtn} onPress={() => setExportModalVisible(false)} testID="export-cancel-btn">
                 <Text style={styles.confirmCancelText}>Annulla</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={[styles.confirmDelBtn, { backgroundColor: '#DC2626' }]} onPress={handleExportPDF} testID="export-pdf-btn">
+                <Text style={styles.confirmDelText}>📄 PDF</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={[styles.confirmDelBtn, { backgroundColor: '#217346' }]} onPress={handleExportExcel} testID="export-confirm-btn">
-                <Text style={styles.confirmDelText}>Scarica Excel</Text>
+                <Text style={styles.confirmDelText}>📊 Excel</Text>
               </TouchableOpacity>
             </View>
           </View>
