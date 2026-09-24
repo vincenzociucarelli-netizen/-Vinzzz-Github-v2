@@ -73,6 +73,12 @@ export default function AdminMatches() {
   // Filter state
   const [filterMode, setFilterMode] = useState<'upcoming' | 'played' | 'all'>('upcoming');
 
+  // 🆕 24/09/2026 — Opzioni export Excel: squadra + casa/trasferta + stato
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [exportTeamId, setExportTeamId] = useState<string>('all');
+  const [exportHomeAway, setExportHomeAway] = useState<'all' | 'home' | 'away'>('all');
+  const [exportStatus, setExportStatus] = useState<'all' | 'upcoming' | 'played'>('all');
+
   // Multi-step info tutorial (mostrato al tap di "Info & tutorial")
   const [tutorialVisible, setTutorialVisible] = useState(false);
   const TUTORIAL_STEPS: TutorialStep[] = [
@@ -193,24 +199,30 @@ export default function AdminMatches() {
   };
 
   // 🆕 06/09/2026 — Esporta le gare in Excel (.xlsx)
+  // 🆕 24/09/2026 — filtri: squadra (tutte/singola), casa/trasferta, stato
   const handleExportExcel = async () => {
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const list = matches.filter((match) => {
+        // filtro squadra
+        if (exportTeamId !== 'all' && match.team_id !== exportTeamId) return false;
+        // filtro casa/trasferta
+        if (exportHomeAway !== 'all' && (match.home_away || 'home') !== exportHomeAway) return false;
+        // filtro stato
         const matchDate = new Date(match.date);
         matchDate.setHours(0, 0, 0, 0);
         const hasResult = match.result && match.result.trim() !== '' && match.result !== '-';
-        if (filterMode === 'upcoming') return matchDate >= today && !hasResult;
-        if (filterMode === 'played') return hasResult || matchDate < today;
+        if (exportStatus === 'upcoming') return matchDate >= today && !hasResult;
+        if (exportStatus === 'played') return hasResult || matchDate < today;
         return true;
       }).sort((a, b) => {
         const dateA = new Date(a.date).getTime();
         const dateB = new Date(b.date).getTime();
-        return filterMode === 'played' ? dateB - dateA : dateA - dateB;
+        return exportStatus === 'played' ? dateB - dateA : dateA - dateB;
       });
       if (!list || list.length === 0) {
-        Alert.alert('Nessuna gara', 'Non ci sono gare da esportare per il filtro selezionato.');
+        Alert.alert('Nessuna gara', 'Non ci sono gare da esportare per i filtri selezionati.');
         return;
       }
       const rows = list.map((m) => {
@@ -246,11 +258,17 @@ export default function AdminMatches() {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Gare');
 
+      const teamLabel = exportTeamId === 'all'
+        ? 'societa'
+        : (list[0]?.team_name || 'squadra').replace(/[^a-zA-Z0-9]+/g, '_');
+      const haLabel = exportHomeAway === 'home' ? '_casa' : exportHomeAway === 'away' ? '_trasferta' : '';
+      const fname = `calendario_${teamLabel}${haLabel}.xlsx`;
+
       if (Platform.OS === 'web') {
-        XLSX.writeFile(wb, 'calendario_gare.xlsx');
+        XLSX.writeFile(wb, fname);
       } else {
         const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-        const fileUri = FileSystem.documentDirectory + 'calendario_gare.xlsx';
+        const fileUri = FileSystem.documentDirectory + fname;
         await FileSystem.writeAsStringAsync(fileUri, wbout, { encoding: 'base64' as any });
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(fileUri, {
@@ -261,6 +279,7 @@ export default function AdminMatches() {
           Alert.alert('Errore', 'Condivisione non disponibile');
         }
       }
+      setExportModalVisible(false);
     } catch (e: any) {
       Alert.alert('Errore', 'Impossibile esportare le gare in Excel');
     }
@@ -397,28 +416,22 @@ export default function AdminMatches() {
   };
 
   // 🆕 22/09/2026 — Cancellazione IN BLOCCO del calendario di una squadra
+  // 🆕 24/09/2026 — sezione collassabile + conferma digitando "ELIMINA"
   const [deletingTeamId, setDeletingTeamId] = useState<string | null>(null);
+  const [bulkExpanded, setBulkExpanded] = useState(false);
+  const [confirmTeam, setConfirmTeam] = useState<{ id: string; name: string; count: number } | null>(null);
+  const [confirmText, setConfirmText] = useState('');
 
-  const handleDeleteTeamCalendar = async (teamId: string, teamName: string, count: number) => {
-    const msg = `Eliminare TUTTE le ${count} partite di "${teamName}"? L'operazione non è reversibile.`;
-    const confirmDelete = Platform.OS === 'web'
-      ? window.confirm(msg)
-      : await new Promise((resolve) => {
-          Alert.alert(
-            'Svuota calendario squadra',
-            msg,
-            [
-              { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
-              { text: 'Elimina tutto', style: 'destructive', onPress: () => resolve(true) },
-            ]
-          );
-        });
-    if (!confirmDelete) return;
+  const confirmDeleteTeamCalendar = async () => {
+    if (!confirmTeam || confirmText.trim().toUpperCase() !== 'ELIMINA') return;
+    const { id: teamId, name: teamName, count } = confirmTeam;
     setDeletingTeamId(teamId);
     try {
       const res = await api.delete(`/matches/team/${teamId}/all`);
       await loadData();
       const n = res.data?.deleted_count ?? count;
+      setConfirmTeam(null);
+      setConfirmText('');
       if (Platform.OS === 'web') window.alert(`Eliminate ${n} partite di "${teamName}"`);
       else Alert.alert('Fatto', `Eliminate ${n} partite di "${teamName}"`);
     } catch {
@@ -869,9 +882,9 @@ export default function AdminMatches() {
         >
           <Ionicons name="download-outline" size={20} color="#fff" />
         </TouchableOpacity>
-        {/* 🆕 06/09/2026 — Esporta gare in Excel (.xlsx) */}
+        {/* 🆕 06/09/2026 — Esporta gare in Excel (.xlsx) — 🆕 24/09/2026 con opzioni */}
         <TouchableOpacity
-          onPress={handleExportExcel}
+          onPress={() => { setExportTeamId('all'); setExportHomeAway('all'); setExportStatus('all'); setExportModalVisible(true); }}
           style={[styles.importBtn, { backgroundColor: '#217346' }]}
           testID="export-matches-excel-btn"
         >
@@ -956,25 +969,38 @@ export default function AdminMatches() {
           if (rows.length === 0) return null;
           return (
             <View style={styles.bulkCard} testID="bulk-delete-section">
-              <Text style={styles.bulkTitle}>🗑️ Svuota calendario di una squadra</Text>
-              <Text style={styles.bulkHint}>Elimina in blocco tutte le partite importate di una squadra (utile per import errati/doppi).</Text>
-              {rows.map(([tid, info]) => (
-                <View key={tid} style={styles.bulkRow}>
-                  <Text style={styles.bulkTeamName} numberOfLines={1}>{info.name} · {info.count} partite</Text>
-                  <TouchableOpacity
-                    style={[styles.bulkDelBtn, deletingTeamId === tid && { opacity: 0.5 }]}
-                    disabled={deletingTeamId === tid}
-                    onPress={() => handleDeleteTeamCalendar(tid, info.name, info.count)}
-                    testID={`bulk-delete-${tid}`}
-                  >
-                    {deletingTeamId === tid ? (
-                      <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                      <Text style={styles.bulkDelBtnText}>Elimina tutte</Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              ))}
+              <TouchableOpacity
+                style={styles.bulkHeader}
+                onPress={() => setBulkExpanded((v) => !v)}
+                testID="bulk-delete-toggle"
+              >
+                <Text style={styles.bulkTitle}>🗑️ Svuota calendario di una squadra</Text>
+                <Ionicons name={bulkExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="#795548" />
+              </TouchableOpacity>
+              {bulkExpanded ? (
+                <>
+                  <Text style={styles.bulkHint}>Elimina in blocco tutte le partite importate di una squadra (utile per import errati/doppi).</Text>
+                  {rows.map(([tid, info]) => (
+                    <View key={tid} style={styles.bulkRow}>
+                      <Text style={styles.bulkTeamName} numberOfLines={1}>{info.name} · {info.count} partite</Text>
+                      <TouchableOpacity
+                        style={[styles.bulkDelBtn, deletingTeamId === tid && { opacity: 0.5 }]}
+                        disabled={deletingTeamId === tid}
+                        onPress={() => { setConfirmTeam({ id: tid, name: info.name, count: info.count }); setConfirmText(''); }}
+                        testID={`bulk-delete-${tid}`}
+                      >
+                        {deletingTeamId === tid ? (
+                          <ActivityIndicator color="#fff" size="small" />
+                        ) : (
+                          <Text style={styles.bulkDelBtnText}>Elimina tutte</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </>
+              ) : (
+                <Text style={styles.bulkHint}>{rows.length} squadre con partite · tocca per gestire</Text>
+              )}
             </View>
           );
         })() : null}
@@ -1407,6 +1433,113 @@ export default function AdminMatches() {
         </View>
       </Modal>
 
+      {/* 🆕 24/09/2026 — Modal conferma eliminazione calendario (digitare ELIMINA) */}
+      <Modal visible={!!confirmTeam} animationType="fade" transparent>
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmTitle}>⚠️ Conferma eliminazione</Text>
+            {confirmTeam ? (
+              <Text style={styles.confirmMsg}>
+                Stai per eliminare TUTTE le {confirmTeam.count} partite di{'\n'}
+                <Text style={{ fontWeight: '800' }}>{confirmTeam.name}</Text>.{'\n'}
+                L&apos;operazione non è reversibile.
+              </Text>
+            ) : null}
+            <Text style={styles.confirmLabel}>Per confermare, scrivi ELIMINA:</Text>
+            <TextInput
+              style={styles.confirmInput}
+              value={confirmText}
+              onChangeText={setConfirmText}
+              placeholder="ELIMINA"
+              autoCapitalize="characters"
+              autoCorrect={false}
+              testID="confirm-delete-input"
+            />
+            <View style={styles.confirmActions}>
+              <TouchableOpacity
+                style={styles.confirmCancelBtn}
+                onPress={() => { setConfirmTeam(null); setConfirmText(''); }}
+                testID="confirm-cancel-btn"
+              >
+                <Text style={styles.confirmCancelText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.confirmDelBtn,
+                  confirmText.trim().toUpperCase() !== 'ELIMINA' && { opacity: 0.4 },
+                ]}
+                disabled={confirmText.trim().toUpperCase() !== 'ELIMINA' || !!deletingTeamId}
+                onPress={confirmDeleteTeamCalendar}
+                testID="confirm-delete-btn"
+              >
+                {deletingTeamId ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.confirmDelText}>Elimina definitivamente</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+
+      {/* 🆕 24/09/2026 — Modal opzioni export Excel (squadra + casa/trasferta + stato) */}
+      <Modal visible={exportModalVisible} animationType="fade" transparent>
+        <View style={styles.confirmOverlay}>
+          <View style={styles.confirmBox}>
+            <Text style={styles.confirmTitle}>📥 Esporta calendario in Excel</Text>
+
+            <Text style={styles.confirmLabel}>Squadra</Text>
+            <View style={styles.exportPickerWrap}>
+              <Picker selectedValue={exportTeamId} onValueChange={(v) => setExportTeamId(v)} testID="export-team-picker">
+                <Picker.Item label="Tutta la società (tutte le squadre)" value="all" />
+                {teams.map((t) => (
+                  <Picker.Item key={t.id} label={t.name} value={t.id} />
+                ))}
+              </Picker>
+            </View>
+
+            <Text style={styles.confirmLabel}>Gare</Text>
+            <View style={styles.segRow}>
+              {([['all', 'Tutte'], ['home', '🏠 Casa'], ['away', '✈️ Trasferta']] as const).map(([val, lbl]) => (
+                <TouchableOpacity
+                  key={val}
+                  style={[styles.segBtn, exportHomeAway === val && styles.segBtnActive]}
+                  onPress={() => setExportHomeAway(val)}
+                  testID={`export-ha-${val}`}
+                >
+                  <Text style={[styles.segText, exportHomeAway === val && styles.segTextActive]}>{lbl}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.confirmLabel}>Stato</Text>
+            <View style={styles.segRow}>
+              {([['all', 'Tutte'], ['upcoming', 'Da disputare'], ['played', 'Giocate']] as const).map(([val, lbl]) => (
+                <TouchableOpacity
+                  key={val}
+                  style={[styles.segBtn, exportStatus === val && styles.segBtnActive]}
+                  onPress={() => setExportStatus(val)}
+                  testID={`export-status-${val}`}
+                >
+                  <Text style={[styles.segText, exportStatus === val && styles.segTextActive]}>{lbl}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.confirmActions}>
+              <TouchableOpacity style={styles.confirmCancelBtn} onPress={() => setExportModalVisible(false)} testID="export-cancel-btn">
+                <Text style={styles.confirmCancelText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.confirmDelBtn, { backgroundColor: '#217346' }]} onPress={handleExportExcel} testID="export-confirm-btn">
+                <Text style={styles.confirmDelText}>Scarica Excel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Syncing overlay */}
       {syncing && (
         <View style={styles.importOverlay}>
@@ -1635,7 +1768,25 @@ const styles = StyleSheet.create({
     borderColor: '#FFE082',
   },
   bulkTitle: { fontSize: 14, fontWeight: '800', color: '#111827' },
+  bulkHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   bulkHint: { fontSize: 11, color: '#795548', marginTop: 2, marginBottom: 8 },
+  confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  confirmBox: { backgroundColor: '#fff', borderRadius: 14, padding: 20, width: '100%', maxWidth: 420 },
+  confirmTitle: { fontSize: 17, fontWeight: '800', color: '#C62828', marginBottom: 10 },
+  confirmMsg: { fontSize: 14, color: '#333', lineHeight: 20, marginBottom: 14 },
+  confirmLabel: { fontSize: 12, color: '#666', marginBottom: 6, fontWeight: '600' },
+  confirmInput: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, letterSpacing: 1 },
+  confirmActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  confirmCancelBtn: { flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: '#EEE', alignItems: 'center' },
+  confirmCancelText: { color: '#333', fontWeight: '700', fontSize: 14 },
+  confirmDelBtn: { flex: 1.4, paddingVertical: 12, borderRadius: 8, backgroundColor: '#C62828', alignItems: 'center' },
+  confirmDelText: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  exportPickerWrap: { borderWidth: 1, borderColor: '#ccc', borderRadius: 8, marginBottom: 4, overflow: 'hidden' },
+  segRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
+  segBtn: { flex: 1, paddingVertical: 9, borderRadius: 8, backgroundColor: '#EEE', alignItems: 'center' },
+  segBtnActive: { backgroundColor: '#1565C0' },
+  segText: { fontSize: 12, color: '#444', fontWeight: '600' },
+  segTextActive: { color: '#fff', fontWeight: '800' },
   bulkRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: 6, gap: 8, borderTopWidth: 1, borderTopColor: '#FFECB3',

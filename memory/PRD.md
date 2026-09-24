@@ -1508,3 +1508,12 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Frontend `app/admin/matches.tsx`: in cima alla lista (tab), sezione "🗑️ Svuota calendario di una squadra" che raggruppa le partite caricate per `team_id` (nome + conteggio) con bottone "Elimina tutte" per squadra (conferma web/native). Handler `handleDeleteTeamCalendar`, stato `deletingTeamId`.
 - Verificato E2E: eliminando le partite di una squadra restano intatte quelle delle altre squadre; UI mostra "U.14 Magione · N partite / Elimina tutte".
 
+
+
+---
+## Sessione 24/09/2026 (fork) — Calendario: protezione eliminazione + export Excel filtrabile
+- Sezione "Svuota calendario squadra" ora COLLASSABILE (chiusa di default, header con chevron, testo "N squadre con partite · tocca per gestire").
+- Protezione eliminazione: click su "Elimina tutte" apre un Modal che richiede di DIGITARE "ELIMINA"; il pulsante "Elimina definitivamente" resta disabilitato finché il testo != ELIMINA. Stati: bulkExpanded, confirmTeam, confirmText; handler confirmDeleteTeamCalendar.
+- Export Excel filtrabile (`handleExportExcel` + modal opzioni): scelta Squadra (Tutta la società / singola squadra), Gare (Tutte / Casa / Trasferta), Stato (Tutte / Da disputare / Giocate). Nome file dinamico (calendario_<squadra>_<casa|trasferta>.xlsx). Tutto client-side dai dati già caricati (`matches` + `teams`), util XLSX esistente.
+- File: `app/admin/matches.tsx`. Verificato E2E su preview (collassabile, modal ELIMINA con pulsante disabilitato, modal export con picker+segmenti).
+
