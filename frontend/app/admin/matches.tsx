@@ -982,18 +982,19 @@ export default function AdminMatches() {
         {/* 🆕 29/07/2026 — Esporta calendario società completo (.ics) */}
         <TouchableOpacity
           onPress={handleExportIcs}
-          style={[styles.importBtn, { backgroundColor: '#059669' }]}
+          style={[styles.importBtn, { backgroundColor: '#7C3AED' }]}
           testID="export-matches-ics-btn"
         >
-          <Ionicons name="download-outline" size={20} color="#fff" />
+          <Ionicons name="calendar-outline" size={20} color="#fff" />
         </TouchableOpacity>
-        {/* 🆕 06/09/2026 — Esporta gare in Excel (.xlsx) — 🆕 24/09/2026 con opzioni */}
+        {/* 🆕 06/09/2026 — Esporta gare in Excel/PDF — 🆕 24/09/2026 con opzioni + PDF */}
         <TouchableOpacity
           onPress={() => { setExportTeamId('all'); setExportHomeAway('all'); setExportStatus('all'); setExportModalVisible(true); }}
-          style={[styles.importBtn, { backgroundColor: '#217346' }]}
+          style={[styles.exportBtn]}
           testID="export-matches-excel-btn"
         >
-          <Ionicons name="grid-outline" size={20} color="#fff" />
+          <Ionicons name="download-outline" size={18} color="#fff" />
+          <Text style={styles.exportBtnText}>Scarica</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={openAddModal} style={styles.addBtn}>
           <Ionicons name="add" size={22} color="#fff" />
@@ -1717,6 +1718,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 8,
   },
+  exportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#217346',
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  exportBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   filterBar: {
     flexDirection: 'row',
     paddingHorizontal: 16,

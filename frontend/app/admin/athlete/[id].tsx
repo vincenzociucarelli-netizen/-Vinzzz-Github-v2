@@ -3274,7 +3274,10 @@ export default function AdminAthleteDetail() {
             </View>
 
             {/* 🆕 21/08/2026 — Dati Bancari (sola lettura). Utile per atleti 18+ PRO/compensati.
-                I dati sono salvati sul record atleta e sincronizzati sul record Coach (doppio incarico). */}
+                I dati sono salvati sul record atleta e sincronizzati sul record Coach (doppio incarico).
+                🐛 24/09/2026 — Per le atlete 18+ PRO la sezione veniva NASCOSTA quando l'IBAN
+                non era ancora stato inserito: ora, come per i coach, resta sempre visibile per gli
+                atleti compensati (mostra "-" finché l'atleta non compila i dati nel proprio profilo). */}
             {(() => {
               const a: any = athlete;
               const holder = a.iban_holder || a.account_holder
@@ -3282,10 +3285,16 @@ export default function AdminAthleteDetail() {
                 || '';
               const iban = a.iban || '';
               const bank = a.bank_name || '';
-              if (!iban && !holder && !bank) return null;
+              const isCompensated = (a.athlete_type === 'compensated') || athleteType === 'compensated';
+              // Atleti QUOTA senza dati bancari → sezione nascosta (non ricevono compensi).
+              // Atleti PRO/compensati → sezione sempre visibile.
+              if (!isCompensated && !iban && !holder && !bank) return null;
               return (
                 <View style={styles.card}>
                   <Text style={styles.cardTitle}>🏦 Dati Bancari</Text>
+                  {isCompensated && (
+                    <Text style={{ fontSize: 12, color: '#888', fontStyle: 'italic', marginBottom: 8 }}>* Dati inseriti dall'atleta nel proprio profilo (necessari per i compensi)</Text>
+                  )}
                   <View style={styles.infoRow}>
                     <Text style={styles.label}>IBAN</Text>
                     <Text style={[styles.value, styles.valueSmall]}>{iban || '-'}</Text>

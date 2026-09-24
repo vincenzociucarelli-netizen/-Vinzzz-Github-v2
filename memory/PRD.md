@@ -1524,3 +1524,11 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - **UI**: modal export ora con 3 pulsanti — Annulla / 📄 PDF (rosso) / 📊 Excel (verde). Titolo cambiato in "Esporta calendario".
 - Helper condivisi introdotti: `getExportList()`, `fmtDate()`, `exportSubtitle()`, `exportFileName()`, `groupByTeam()`.
 - Verificato: rebuild `npx expo export -p web` + restart expo; modal render OK su preview con i nuovi pulsanti PDF/Excel.
+
+## 🐛 24/09/2026 — Fix Dati Bancari mancanti per atlete 18+ PRO (admin)
+- In `app/admin/athlete/[id].tsx` (tab Anagrafica) la card "🏦 Dati Bancari" era nascosta quando IBAN/intestatario/banca erano vuoti (`if (!iban && !holder && !bank) return null`). Per le atlete 18+ PRO senza IBAN ancora inserito, l'admin non vedeva alcuna sezione.
+- Fix: la sezione ora resta SEMPRE visibile per atleti compensati (`athlete_type==='compensated' || athleteType==='compensated'`), mostrando "-" finché l'atleta non compila i dati nel proprio profilo (coerente con la scheda Coach). Per gli atleti QUOTA senza dati resta nascosta. Aggiunta nota "* Dati inseriti dall'atleta nel proprio profilo (necessari per i compensi)".
+- Verificato E2E su atleta PRO di test (admin/athlete/...): la card compare con IBAN/Intestatario/Banca = "-".
+
+## 🎨 24/09/2026 — Export calendario più visibile
+- L'apertura del pannello export (Excel/PDF) era su un'icona a griglia verde poco intuitiva (l'utente non la trovava). Ora è un pulsante verde etichettato "⬇ Scarica" (`styles.exportBtn`/`exportBtnText`). L'export .ics ha un'icona distinta calendario viola.
