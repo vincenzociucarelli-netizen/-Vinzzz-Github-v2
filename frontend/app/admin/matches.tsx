@@ -286,22 +286,34 @@ export default function AdminMatches() {
       // squadra + LOGO società in cima al foglio Riepilogo (come nel PDF).
       const ExcelJS = (await import('exceljs')).default;
 
-      // Ordine colonne (con/senza colonna "Squadra")
+      // 🆕 26/09/2026 — Ordine colonne richiesto dall'utente:
+      //  1) N° progressivo  2) Data (estesa, es. "Sabato 26 settembre 2026")
+      //  3) Ora (HH:mm)  4) Casa/Trasferta  → poi il resto invariato.
       const SUMMARY_COLS: [string, number][] = [
-        ['Squadra', 16], ['Campionato/Gara', 14], ['Casa/Trasferta', 13], ['Avversario', 22],
-        ['Data', 12], ['Ora', 8], ['Impianto', 26], ['Indirizzo', 32], ['Città', 16],
-        ['Ritrovo', 10], ['Risultato', 12], ['Note', 20],
+        ['#', 5], ['Data', 26], ['Ora', 8], ['Casa/Trasferta', 13],
+        ['Squadra', 16], ['Campionato/Gara', 14], ['Avversario', 24], ['Impianto', 26],
+        ['Indirizzo', 30], ['Città', 16], ['Ritrovo', 10], ['Risultato', 12], ['Note', 20],
       ];
       const TEAM_COLS: [string, number][] = SUMMARY_COLS.filter(([h]) => h !== 'Squadra');
 
-      const matchToArray = (m: Match, cols: [string, number][]) => {
-        const { dataStr, oraStr } = fmtDate(m.date);
+      // Data in formato esteso italiano con iniziale maiuscola (timeZone UTC = wall-clock salvato)
+      const fmtDateExtended = (iso?: string) => {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return '';
+        const s = d.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+        return s.charAt(0).toUpperCase() + s.slice(1);
+      };
+
+      const matchToArray = (m: Match, cols: [string, number][], num: number) => {
+        const { oraStr } = fmtDate(m.date);
         const map: { [k: string]: string } = {
+          '#': String(num),
           'Squadra': m.team_name || '',
           'Campionato/Gara': m.match_number || '',
           'Casa/Trasferta': m.home_away === 'home' ? 'Casa' : 'Trasferta',
           'Avversario': m.opponent || '',
-          'Data': dataStr,
+          'Data': fmtDateExtended(m.date),
           'Ora': oraStr,
           'Impianto': m.venue || '',
           'Indirizzo': m.address || '',
@@ -410,12 +422,12 @@ export default function AdminMatches() {
 
       // Foglio riepilogativo con tutte le squadre (solo se più di una squadra) — con LOGO
       if (groups.length > 1) {
-        buildSheet('Riepilogo', SUMMARY_COLS, list.map((m) => matchToArray(m, SUMMARY_COLS)), HEADER_PALETTE[0], true);
+        buildSheet('Riepilogo', SUMMARY_COLS, list.map((m, i) => matchToArray(m, SUMMARY_COLS, i + 1)), HEADER_PALETTE[0], true);
       }
       // Un foglio per ogni squadra — colore intestazione diverso
       groups.forEach((g, idx) => {
         const color = HEADER_PALETTE[idx % HEADER_PALETTE.length];
-        buildSheet(g.name, TEAM_COLS, g.items.map((m) => matchToArray(m, TEAM_COLS)), color, false);
+        buildSheet(g.name, TEAM_COLS, g.items.map((m, i) => matchToArray(m, TEAM_COLS, i + 1)), color, false);
       });
 
       const fname = `${exportFileName()}.xlsx`;

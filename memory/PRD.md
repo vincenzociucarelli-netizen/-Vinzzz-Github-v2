@@ -1578,3 +1578,9 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - CAUSA 1 (tutti i fogli): in exceljs avevo messo `addWorksheet(name, { views: [{ state:'frozen', ySplit:0 }] })` → genera un pannello congelato NON valido (`<pane topLeftCell="A1" state="frozen"/>` senza split) → Excel ripara ogni sheetN.xml. FIX: rimosso completamente il parametro `views`.
 - CAUSA 2 (drawing1.xml, logo): l'estensione dichiarata poteva NON combaciare con i byte reali del logo (es. logo JPEG scritto come .png) → mismatch Content_Types/media → "Forma disegno" da ripristinare. FIX: `logoInfo` ora rileva il tipo dai MAGIC del base64 (iVBORw0KGgo→png, /9j/→jpeg, R0lGOD→gif; fallback mime nel data URL) e passa a `addImage` il base64 GREZZO (senza prefisso data:) con l'estensione corretta; se il tipo è sconosciuto il logo viene saltato (tabella comunque valida).
 - VERIFICATO su file realmente scaricato dall'app con logo JPEG + 2 squadre: media=image1.jpeg (firma FF D8 FF), Content_Types Extension="jpeg", 0 sheetViews, drawing solo su Riepilogo, openpyxl apre i 3 fogli senza eccezioni. Nessun ripristino atteso.
+
+## 🎨 26/09/2026 — Excel export: nuovo ordine colonne + data estesa
+- Richiesta utente (per Riepilogo E ogni foglio squadra): 1ª col = N° progressivo, 2ª = Data estesa (es. "Sabato 26 settembre 2026"), 3ª = Ora HH:mm, 4ª = Casa/Trasferta; il resto invariato.
+- SUMMARY_COLS/TEAM_COLS riordinate: ['#',Data,Ora,Casa/Trasferta, (Squadra solo nel Riepilogo), Campionato/Gara,Avversario,Impianto,Indirizzo,Città,Ritrovo,Risultato,Note].
+- Aggiunto `fmtDateExtended` (it-IT weekday+day+month+year, timeZone UTC, iniziale maiuscola). `matchToArray(m,cols,num)` con '#'=num progressivo per foglio.
+- VERIFICATO su file scaricato reale: row1 header ['#','Data','Ora','Casa/Trasferta','Campionato/Gara'...], righe con # 1..n e date "Giovedì 22 gennaio 2026", ora 18:00.
