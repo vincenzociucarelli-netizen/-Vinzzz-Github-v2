@@ -18097,6 +18097,170 @@ async def get_today_attendances(current_user = Depends(get_current_user)):
     
     return result
 
+# 🆕 26/09/2026 — Presenze di OGGI di una squadra (per annullare registrazioni errate)
+@api_router.get("/teams/{team_id}/attendance/today")
+async def get_team_today_attendances(team_id: str, current_user = Depends(get_current_user)):
+    if current_user["role"] not in (UserRole.COACH, UserRole.ADMIN, UserRole.COORDINATORE):
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    team = await db.teams.find_one({"id": team_id})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    # Isolamento multi-tenant
+    if team.get("society_id") and current_user.get("society_id") and team.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Squadra di un'altra società")
+    italy_tz = timezone(timedelta(hours=2))
+    today = datetime.now(italy_tz).strftime("%Y-%m-%d")
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=2)
+    atts = await db.attendances.find({
+        "team_id": team_id,
+        "$or": [{"date": today}, {"check_in_time": {"$gte": today_start}}],
+    }).sort("check_in_time", -1).to_list(1000)
+    result = []
+    for att in atts:
+        clean_mongo_doc(att)
+        athlete = await db.athletes.find_one({"id": att["athlete_id"]}, {"_id": 0, "full_name": 1, "first_name": 1, "last_name": 1})
+        name = ""
+        if athlete:
+            name = (f"{athlete.get('last_name','')} {athlete.get('first_name','')}".strip()) or athlete.get("full_name", "")
+        result.append({
+            "id": att.get("id"),
+            "athlete_id": att.get("athlete_id"),
+            "athlete_name": name,
+            "check_in_time": att.get("check_in_time"),
+            "date": att.get("date"),
+            "forced": att.get("forced", False),
+        })
+    return result
+
+# 🆕 26/09/2026 — Annulla/elimina una singola presenza (Admin sempre; Allenatore solo in giornata)
+@api_router.delete("/attendances/{attendance_id}")
+async def delete_attendance(attendance_id: str, request: Request, current_user = Depends(get_current_user)):
+    if current_user["role"] not in (UserRole.COACH, UserRole.ADMIN, UserRole.COORDINATORE):
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    att = await db.attendances.find_one({"id": attendance_id})
+    if not att:
+        raise HTTPException(status_code=404, detail="Presenza non trovata")
+    team_id = att.get("team_id")
+    team = await db.teams.find_one({"id": team_id}) if team_id else None
+    # Isolamento multi-tenant
+    _sid = current_user.get("society_id")
+    if _sid and team and team.get("society_id") and team.get("society_id") != _sid:
+        raise HTTPException(status_code=403, detail="Presenza di un'altra società")
+    # Allenatore: solo presenze registrate OGGI
+    if current_user["role"] == UserRole.COACH:
+        italy_tz = timezone(timedelta(hours=2))
+        today = datetime.now(italy_tz).strftime("%Y-%m-%d")
+        att_date = att.get("date")
+        if not att_date and isinstance(att.get("check_in_time"), datetime):
+            att_date = att["check_in_time"].date().isoformat()
+        if att_date != today:
+            raise HTTPException(status_code=403, detail="L'allenatore può annullare solo le presenze registrate oggi. Chiedi all'amministratore per le date passate.")
+    # Snapshot per tracciamento
+    snap = dict(att)
+    snap.pop("_id", None)
+    athlete = await db.athletes.find_one({"id": att.get("athlete_id")})
+    athlete_name = ""
+    if athlete:
+        athlete_name = (f"{athlete.get('last_name','')} {athlete.get('first_name','')}".strip()) or athlete.get("full_name", "")
+    await db.deleted_attendances.insert_one({
+        "attendance": snap,
+        "deleted_by_id": current_user["id"],
+        "deleted_by_name": current_user.get("full_name") or current_user.get("email", ""),
+        "deleted_by_role": current_user["role"],
+        "deleted_at": datetime.utcnow(),
+        "society_id": _sid,
+    })
+    # Elimina la presenza
+    await db.attendances.delete_one({"id": attendance_id})
+    # Ricalcola stato prova dai record reali (idempotente)
+    if athlete and team_id:
+        try:
+            await _recompute_trial_from_attendance(athlete, team_id)
+        except Exception as _e:
+            logging.warning(f"[DELETE-ATT] recompute trial failed: {_e}")
+    # Audit log
+    try:
+        await log_audit(
+            action="attendance_deleted",
+            user_id=current_user["id"],
+            user_email=current_user.get("email", ""),
+            society_id=_sid or "",
+            target_user_id=att.get("athlete_id", ""),
+            target_user_name=athlete_name,
+            ip_address=get_real_ip(request),
+            details={
+                "team_name": team.get("name", "") if team else "",
+                "date": att.get("date", ""),
+                "attendance_id": attendance_id,
+            },
+        )
+    except Exception:
+        pass
+    return {"message": f"Presenza di {athlete_name or 'atleta'} annullata"}
+
+# 🆕 26/09/2026 — Vista MENSILE presenze/assenze di una squadra (griglia)
+@api_router.get("/teams/{team_id}/attendance/monthly")
+async def get_team_monthly_attendance(team_id: str, year: int, month: int, current_user = Depends(get_current_user)):
+    if current_user["role"] not in (UserRole.COACH, UserRole.ADMIN, UserRole.COORDINATORE):
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    team = await db.teams.find_one({"id": team_id})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    _sid = current_user.get("society_id")
+    if _sid and team.get("society_id") and team.get("society_id") != _sid:
+        raise HTTPException(status_code=403, detail="Squadra di un'altra società")
+    import calendar as _cal
+    IT_WD = {"lunedì": 0, "lunedi": 0, "martedì": 1, "martedi": 1, "mercoledì": 2, "mercoledi": 2,
+             "giovedì": 3, "giovedi": 3, "venerdì": 4, "venerdi": 4, "sabato": 5, "domenica": 6}
+    scheduled = set()
+    for s in (team.get("training_sessions") or []):
+        d = str(s.get("day", "")).strip().lower()
+        if d in IT_WD:
+            scheduled.add(IT_WD[d])
+    WD_SHORT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
+    num_days = _cal.monthrange(year, month)[1]
+    days = []
+    for dnum in range(1, num_days + 1):
+        wd = _cal.weekday(year, month, dnum)
+        days.append({"day": dnum, "weekday": WD_SHORT[wd], "is_weekend": wd >= 5, "is_training": wd in scheduled})
+    # Atleti della squadra (principale o secondaria), non ritirati
+    athletes = await db.athletes.find({
+        "$or": [{"team_id": team_id}, {"team_ids": team_id}],
+        "is_withdrawn": {"$ne": True},
+    }, {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1}).to_list(500)
+    def _name(a):
+        return (f"{a.get('last_name','')} {a.get('first_name','')}".strip()) or a.get("full_name", "")
+    athletes.sort(key=lambda a: _name(a).lower())
+    # Presenze del mese
+    prefix = f"{year:04d}-{month:02d}"
+    atts = await db.attendances.find({"team_id": team_id, "date": {"$regex": f"^{prefix}"}},
+                                     {"_id": 0, "athlete_id": 1, "date": 1}).to_list(20000)
+    present: dict = {}
+    for at in atts:
+        d = at.get("date") or ""
+        try:
+            dn = int(d.split("-")[2])
+        except Exception:
+            continue
+        present.setdefault(at.get("athlete_id"), set()).add(dn)
+    rows = []
+    for a in athletes:
+        pset = present.get(a["id"], set())
+        cells = []
+        p_count = 0
+        a_count = 0
+        for d in days:
+            dn = d["day"]
+            if dn in pset:
+                status = "P"; p_count += 1
+            elif d["is_training"]:
+                status = "A"; a_count += 1
+            else:
+                status = ""
+            cells.append(status)
+        rows.append({"athlete_id": a["id"], "name": _name(a), "cells": cells, "present": p_count, "absent": a_count})
+    return {"year": year, "month": month, "team_name": team.get("name", ""), "days": days, "rows": rows}
+
 # ==================== QR IDENTIFIER MANAGEMENT ====================
 
 @api_router.post("/athletes/{athlete_id}/generate-qr-identifier")

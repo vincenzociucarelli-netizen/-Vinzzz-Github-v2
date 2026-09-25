@@ -280,6 +280,53 @@ export default function TeamsScreen() {
     setCertificateTypeRequired('agonistico');
   };
 
+  // 🆕 26/09/2026 — COPIA SQUADRA: pre-compila il form di creazione con i dati di una
+  // squadra esistente (nome = "Copia di ..."), così basta modificare poche info.
+  const toDDMMYYYY = (d?: string | null): string => {
+    if (!d) return '';
+    if (d.includes('-') && d.split('-')[0].length === 4) {
+      const [y, m, dd] = d.split('-');
+      return `${dd}/${m}/${y}`;
+    }
+    return d;
+  };
+
+  const handleCopyTeam = async (team: Team) => {
+    let full: any = team;
+    try {
+      const res = await api.get(`/teams/${team.id}`);
+      if (res.data) full = res.data;
+    } catch { /* fallback all'oggetto in lista */ }
+
+    setName(`Copia di ${full.name || ''}`.trim());
+    setDescription(full.description || '');
+    setIsPrimaSquadra(!!full.is_prima_squadra);
+    setTotalAmount(full.total_amount ? String(full.total_amount) : '');
+    const insts = Array.isArray(full.installments) ? full.installments : [];
+    setInstallments(insts.length ? insts.map((i: any) => ({
+      name: i.name || 'Rata',
+      amount: i.amount != null ? String(i.amount) : '',
+      due_date: toDDMMYYYY(i.due_date),
+    })) : [{ name: 'Iscrizione', amount: '', due_date: '' }]);
+    setBankInfo(full.bank_info || '');
+    setPaypalEmail(full.paypal_email || '');
+    const tr = (Array.isArray(full.trainings) && full.trainings.length ? full.trainings : full.training_sessions) || [];
+    setTrainings(tr.length ? tr.map((t: any) => ({
+      day: t.day || '', timeStart: t.timeStart || '', timeEnd: t.timeEnd || '', venue: t.venue || '',
+    })) : [
+      { day: '', timeStart: '', timeEnd: '', venue: '' },
+      { day: '', timeStart: '', timeEnd: '', venue: '' },
+    ]);
+    const md = full.match_day || {};
+    setMatchDay({ day: md.day || '', time: md.time || '', venue: md.venue || '' });
+    const rf = full.rifinitura || {};
+    setRifinitura({ enabled: !!(rf.timeStart || rf.timeEnd || rf.venue), timeStart: rf.timeStart || '', timeEnd: rf.timeEnd || '', venue: rf.venue || '' });
+    setChampionships(full.championships || '');
+    setCalendarLink(''); // il link calendario NON si copia (è specifico della squadra)
+    setCertificateTypeRequired(full.certificate_type_required || 'agonistico');
+    setModalVisible(true);
+  };
+
   const showAlert = (title: string, message?: string) => {
     if (Platform.OS === 'web') {
       window.alert(message ? `${title}: ${message}` : title);
@@ -510,6 +557,13 @@ export default function TeamsScreen() {
             )}
           </View>
           <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.copyTeamButton}
+          onPress={() => handleCopyTeam(item)}
+          testID={`copy-team-${item.id}`}
+        >
+          <Ionicons name="copy-outline" size={20} color="#5856D6" />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.deleteTeamButton}
@@ -1230,6 +1284,17 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   deleteTeamButton: {
+    backgroundColor: '#fff',
+    padding: 12,
+    marginLeft: 8,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  copyTeamButton: {
     backgroundColor: '#fff',
     padding: 12,
     marginLeft: 8,

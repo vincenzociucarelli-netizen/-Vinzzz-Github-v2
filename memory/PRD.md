@@ -1601,3 +1601,10 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - CAUSA: `compute_pending_reason` calcolava `has_team = bool(a.get('team_id'))` usando SOLO il campo legacy `team_id`. Se le squadre sono solo in `team_ids` (canonical) senza sync del legacy, has_team=False → falso "In attesa".
 - FIX: `has_team = bool(team_id OR primary_team_id OR len(team_ids)>0)`. Inoltre aggiunti `team_ids` e `primary_team_id` alla projection `_light_proj` dell'endpoint `/athletes?light=true` (prima non venivano letti, quindi il calcolo non li vedeva).
 - VERIFICATO su preview: atleta con `team_ids` valorizzato e `team_id` legacy assente → pending_reason ora None (nessun badge "In attesa").
+
+## 🆕 26/09/2026 — Annulla presenza + Vista mensile + COPIA SQUADRA
+### Annulla presenza errata (QR) + vista mensile
+- Backend: `GET /teams/{id}/attendance/today` (presenze oggi con id/nome/ora), `DELETE /attendances/{id}` (Admin sempre; Allenatore solo stesso giorno; tracciamento in `deleted_attendances` + audit_log `attendance_deleted`; ricalcolo prova via `_recompute_trial_from_attendance`), `GET /teams/{id}/attendance/monthly?year&month` (griglia P/A/'' basata su training_sessions weekday + presenze del mese).
+- Frontend: componenti riutilizzabili `src/components/TodayAttendanceList.tsx` (elenco oggi + cestino) e `src/components/MonthlyAttendanceGrid.tsx` (griglia orizzontale nomi×giorni, P verde/A rosso/vuoto, nav mese, totali P/A). Integrati in `coach/team/[id]/attendances.tsx` e `admin/team/[id]/attendances.tsx`. Endpoint testati via curl (today=[], monthly 30 giorni).
+### Copia squadra
+- `admin/teams.tsx`: nuovo pulsante icona "copy-outline" su ogni card (`copy-team-{id}`) → `handleCopyTeam` fa GET `/teams/{id}` e precompila TUTTI gli stati del form di creazione (nome="Copia di ...", descrizione, tipo prima/standard, quota/rate con date→GG/MM/AAAA, bank/paypal, allenamenti da trainings|training_sessions, match_day, rifinitura, championships, certificato). Il calendar_link NON viene copiato. Riusa `handleCreateTeam` → crea una NUOVA squadra. Verificato E2E: form "Nuova Squadra" precompilato "Copia di Serie C" con allenamenti/orari.

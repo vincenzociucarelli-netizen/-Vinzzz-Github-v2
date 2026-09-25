@@ -11,6 +11,8 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../../src/services/api';
 import { Ionicons } from '../../../../src/components/Icon';
+import TodayAttendanceList from '../../../../src/components/TodayAttendanceList';
+import MonthlyAttendanceGrid from '../../../../src/components/MonthlyAttendanceGrid';
 
 interface AthleteStats {
   athlete_id: string;
@@ -145,6 +147,11 @@ export default function TeamAttendances() {
           <Text style={styles.teamName}>{stats.team_name}</Text>
           <Text style={styles.teamAthletes}>{stats.total_athletes} atleti</Text>
         </View>
+
+        {/* 🆕 Presenze di oggi (annulla) + Vista mensile */}
+        <View style={{ height: 12 }} />
+        <TodayAttendanceList teamId={String(id)} onChanged={loadStats} />
+        <MonthlyAttendanceGrid teamId={String(id)} />
 
         {/* View Mode Selector */}
         <View style={styles.viewModeContainer}>
