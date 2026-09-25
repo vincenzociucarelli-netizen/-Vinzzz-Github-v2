@@ -3,7 +3,7 @@
   "buildCommand": "yarn install && npx expo export -p web && node scripts/inject-seo.js",
   "outputDirectory": "dist",
   "framework": null,
-  "installCommand": "yarn install --frozen-lockfile",
+  "installCommand": "yarn install",
   "trailingSlash": false,
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }

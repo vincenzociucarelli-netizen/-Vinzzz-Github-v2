@@ -1565,3 +1565,10 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Web: writeBuffer→Blob→download. Mobile: writeBuffer→base64 (encoder manuale, no btoa)→FileSystem+Sharing.
 - Rimosso import inutilizzato `xlsx-js-style` da matches.tsx (pacchetto resta in package.json ma non più bundlato). `xlsx` classico resta per template download + lettura import.
 - VERIFICATO su file realmente scaricato (2 squadre + logo temporaneo): sheets [Riepilogo(1 img, header FF1F3864, headerRow=4), Under 16(FF1F3864), Serie D(FF7030A0)], font Calibri10 bold white. Orari corretti (18:00/20:30).
+
+## 🚀 25/09/2026 — Fix deploy Vercel (frozen-lockfile)
+- SINTOMO: deploy Vercel falliva con "Your lockfile needs to be updated, but yarn was run with '--frozen-lockfile'" dopo l'aggiunta di exceljs/xlsx-js-style. Ogni "Save to GitHub" creava un branch `conflict_...` e il merge teneva un yarn.lock vecchio → mismatch con package.json.
+- yarn.lock in /app/frontend è coerente (frozen-lockfile passa localmente) e NON è gitignorato (solo package-lock.json lo è), ma il merge GitHub non portava il lockfile aggiornato.
+- FIX ROBUSTO lato codice: in `frontend/vercel.json` cambiato `installCommand` da `yarn install --frozen-lockfile` → `yarn install` (non-frozen). Così Vercel riconcilia automaticamente package.json↔yarn.lock in build, senza bloccarsi anche se il lockfile su GitHub è momentaneamente disallineato.
+- Warning engines node 22.x vs 24.x = non bloccante.
+- AZIONE UTENTE: rifare "Save to GitHub" (per inviare il nuovo vercel.json) e rilanciare il deploy.
