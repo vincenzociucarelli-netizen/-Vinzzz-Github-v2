@@ -733,6 +733,8 @@ class Match(BaseModel):
     team_id: str  # ID della squadra
     team_name: Optional[str] = None  # Nome squadra (denormalizzato per comodità)
     match_number: Optional[str] = None  # Numero gara univoco (es: "2713")
+    championship: Optional[str] = None  # 🆕 Campionato (es. "Serie D")
+    girone: Optional[str] = None  # 🆕 Girone (es. "A")
     date: datetime  # Data e ora della gara
     opponent: str  # Avversario
     venue: Optional[str] = ""  # Luogo della gara (Palestra)
@@ -756,6 +758,8 @@ class MatchCreate(BaseModel):
     meeting_time: Optional[str] = None
     notes: Optional[str] = None
     match_number: Optional[str] = None
+    championship: Optional[str] = None  # 🆕 Campionato
+    girone: Optional[str] = None  # 🆕 Girone
 
 class Team(BaseModel):
     id: str = Field(default_factory=lambda: str(ObjectId()))
@@ -7868,7 +7872,10 @@ async def create_match(match_data: MatchCreate, current_user = Depends(get_curre
         city=match_data.city,
         home_away=match_data.home_away,
         meeting_time=match_data.meeting_time,
-        notes=match_data.notes
+        notes=match_data.notes,
+        match_number=match_data.match_number,
+        championship=match_data.championship,
+        girone=match_data.girone
     )
     
     await db.matches.insert_one(match.dict())
@@ -8167,6 +8174,8 @@ async def import_matches_from_excel(file_data: dict, current_user = Depends(get_
                 team_id=row["team_id"],
                 team_name=team_name,
                 match_number=row.get("match_number"),  # Numero gara univoco
+                championship=row.get("championship"),  # 🆕 Campionato
+                girone=row.get("girone"),  # 🆕 Girone
                 date=match_date,
                 opponent=row["opponent"],
                 venue=row.get("venue", "") or "",

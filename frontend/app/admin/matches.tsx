@@ -31,6 +31,8 @@ interface Match {
   team_id: string;
   team_name: string;
   match_number?: string;
+  championship?: string;
+  girone?: string;
   date: string;
   opponent: string;
   venue: string;
@@ -286,15 +288,18 @@ export default function AdminMatches() {
       // squadra + LOGO società in cima al foglio Riepilogo (come nel PDF).
       const ExcelJS = (await import('exceljs')).default;
 
-      // 🆕 26/09/2026 — Ordine colonne richiesto dall'utente:
-      //  1) N° progressivo  2) Data (estesa, es. "Sabato 26 settembre 2026")
-      //  3) Ora (HH:mm)  4) Casa/Trasferta  → poi il resto invariato.
+      // 🆕 26/09/2026 — Layout definitivo colonne (Riepilogo + ogni squadra):
+      //  # · Data (estesa) · Ora · Casa/Trasferta · [Squadra solo nel Riepilogo] ·
+      //  Gara N. · Campionato · Girone (queste 3 evidenziate in GIALLO) · Avversario ·
+      //  Impianto · Indirizzo · Città · Note. Rimosse "Risultato" e "Ritrovo".
       const SUMMARY_COLS: [string, number][] = [
-        ['#', 5], ['Data', 26], ['Ora', 8], ['Casa/Trasferta', 13],
-        ['Squadra', 16], ['Campionato/Gara', 14], ['Avversario', 24], ['Impianto', 26],
-        ['Indirizzo', 30], ['Città', 16], ['Ritrovo', 10], ['Risultato', 12], ['Note', 20],
+        ['#', 5], ['Data', 26], ['Ora', 8], ['Casa/Trasferta', 13], ['Squadra', 16],
+        ['Gara N.', 10], ['Campionato', 16], ['Girone', 8], ['Avversario', 26],
+        ['Impianto', 28], ['Indirizzo', 28], ['Città', 16], ['Note', 20],
       ];
       const TEAM_COLS: [string, number][] = SUMMARY_COLS.filter(([h]) => h !== 'Squadra');
+      // Colonne con intestazione GIALLA (testo rosso)
+      const YELLOW_HEADERS = new Set(['Gara N.', 'Campionato', 'Girone']);
 
       // Data in formato esteso italiano con iniziale maiuscola (timeZone UTC = wall-clock salvato)
       const fmtDateExtended = (iso?: string) => {
@@ -309,17 +314,17 @@ export default function AdminMatches() {
         const { oraStr } = fmtDate(m.date);
         const map: { [k: string]: string } = {
           '#': String(num),
-          'Squadra': m.team_name || '',
-          'Campionato/Gara': m.match_number || '',
-          'Casa/Trasferta': m.home_away === 'home' ? 'Casa' : 'Trasferta',
-          'Avversario': m.opponent || '',
           'Data': fmtDateExtended(m.date),
           'Ora': oraStr,
+          'Casa/Trasferta': m.home_away === 'home' ? 'Casa' : 'Trasferta',
+          'Squadra': m.team_name || '',
+          'Gara N.': m.match_number || '',
+          'Campionato': m.championship || '',
+          'Girone': m.girone || '',
+          'Avversario': m.opponent || '',
           'Impianto': m.venue || '',
           'Indirizzo': m.address || '',
           'Città': m.city || '',
-          'Ritrovo': m.meeting_time || '',
-          'Risultato': m.result || '',
           'Note': m.notes || '',
         };
         return cols.map(([h]) => map[h] ?? '');
@@ -398,8 +403,9 @@ export default function AdminMatches() {
         cols.forEach(([h], i) => {
           const cell = hr.getCell(i + 1);
           cell.value = h;
-          cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerArgb } };
+          const isYellow = YELLOW_HEADERS.has(h);
+          cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: isYellow ? 'FFC00000' : 'FFFFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isYellow ? 'FFFFFF00' : headerArgb } };
           cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
           cell.border = { top: BORDER, bottom: BORDER, left: BORDER, right: BORDER };
         });
@@ -668,64 +674,86 @@ export default function AdminMatches() {
   };
 
 
-  // Download template Excel con formato standard
+  // Download template Excel — 🆕 26/09/2026: identico al file esportato (stesse colonne/stile)
+  // così gli stampati sono uniformi. Header verde + blocco giallo (Gara N./Campionato/Girone).
   const downloadTemplate = async () => {
     try {
-      // Crea il template con le colonne nel nostro formato standard
-      const templateData = [
-        {
-          'CampionatoNome': 'Under 16 Maschile',
-          'GaraNumero': '2713',
-          'GaraDataOra': '15/03/2026 18:30:00',
-          'SquadraCasaNome': 'PALLAVOLO PERUGIA',
-          'SquadraOspiteNome': 'AVVERSARIO ASD',
-          'Impianto': 'PALESTRA LICEO ALESSI',
-          'ImpiantoIndirizzo': 'Via Roma 123, Perugia (PG)',
-          'Ritrovo': '17:30',
-          'Note': ''
-        },
-        {
-          'CampionatoNome': 'Under 16 Maschile',
-          'GaraNumero': '2714',
-          'GaraDataOra': '22/03/2026 16:00:00',
-          'SquadraCasaNome': 'ALTRA SQUADRA',
-          'SquadraOspiteNome': 'PALLAVOLO PERUGIA',
-          'Impianto': 'PALAZZETTO DELLO SPORT',
-          'ImpiantoIndirizzo': 'Via Verdi 45, Terni (TR)',
-          'Ritrovo': '14:30',
-          'Note': 'Trasferta'
-        }
+      const ExcelJS = (await import('exceljs')).default;
+      const COLS: [string, number][] = [
+        ['#', 5], ['Data', 26], ['Ora', 8], ['Casa/Trasferta', 13],
+        ['Gara N.', 10], ['Campionato', 16], ['Girone', 8], ['Avversario', 26],
+        ['Impianto', 28], ['Indirizzo', 28], ['Città', 16], ['Note', 20],
       ];
+      const YELLOW = new Set(['Gara N.', 'Campionato', 'Girone']);
+      const GREEN = 'FF217346';
+      const ALT = 'FFF2F2F2';
+      const BORDER = { style: 'thin' as const, color: { argb: 'FFD9D9D9' } };
 
-      // Crea workbook
-      const ws = XLSX.utils.json_to_sheet(templateData);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Calendario Gare');
+      // Riga d'esempio (come da richiesta utente)
+      const example: { [k: string]: string } = {
+        '#': '1', 'Data': 'Domenica 25 ottobre 2026', 'Ora': '17:00', 'Casa/Trasferta': 'Casa',
+        'Gara N.': '313', 'Campionato': 'Serie D', 'Girone': 'A',
+        'Avversario': 'POLISPORTIVA DELFINO - IDRO', 'Impianto': 'PALESTRA SCUOLA ELEMENTARE',
+        'Indirizzo': 'SAN FELICIANO', 'Città': 'MAGIONE', 'Note': '',
+      };
 
-      // Imposta larghezza colonne
-      ws['!cols'] = [
-        { wch: 20 }, // CampionatoNome
-        { wch: 12 }, // GaraNumero
-        { wch: 20 }, // GaraDataOra
-        { wch: 25 }, // SquadraCasaNome
-        { wch: 25 }, // SquadraOspiteNome
-        { wch: 25 }, // Impianto
-        { wch: 35 }, // ImpiantoIndirizzo
-        { wch: 10 }, // Ritrovo
-        { wch: 20 }, // Note
-      ];
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Calendario Gare');
+      ws.columns = COLS.map(([, w]) => ({ width: w }));
+
+      // Intestazione
+      const hr = ws.getRow(1);
+      COLS.forEach(([h], i) => {
+        const cell = hr.getCell(i + 1);
+        cell.value = h;
+        const isY = YELLOW.has(h);
+        cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: isY ? 'FFC00000' : 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isY ? 'FFFFFF00' : GREEN } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        cell.border = { top: BORDER, bottom: BORDER, left: BORDER, right: BORDER };
+      });
+      hr.height = 22;
+
+      // 30 righe: la 1ª compilata come esempio, le altre vuote ma numerate
+      const TOTAL = 30;
+      for (let ri = 0; ri < TOTAL; ri++) {
+        const row = ws.getRow(2 + ri);
+        const isAlt = (ri % 2) === 1;
+        COLS.forEach(([h], ci) => {
+          const cell = row.getCell(ci + 1);
+          if (h === '#') cell.value = String(ri + 1);
+          else if (ri === 0) cell.value = example[h] || '';
+          else cell.value = '';
+          cell.font = { name: 'Calibri', size: 10 };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isAlt ? ALT : 'FFFFFFFF' } };
+          cell.alignment = { vertical: 'middle' };
+          cell.border = { top: BORDER, bottom: BORDER, left: BORDER, right: BORDER };
+        });
+      }
+
+      const fname = 'template_calendario_gare.xlsx';
+      const buffer = await wb.xlsx.writeBuffer();
 
       if (Platform.OS === 'web') {
-        // Web: download diretto
-        XLSX.writeFile(wb, 'template_calendario_gare.xlsx');
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fname;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
       } else {
-        // Mobile: salva e condividi
-        const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
-        const fileUri = FileSystem.documentDirectory + 'template_calendario_gare.xlsx';
-        await FileSystem.writeAsStringAsync(fileUri, wbout, {
-          encoding: 'base64' as any,
-        });
-        
+        const bytes = new Uint8Array(buffer as ArrayBuffer);
+        const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        let b64 = '';
+        for (let i = 0; i < bytes.length; i += 3) {
+          const b1 = bytes[i], b2 = bytes[i + 1], b3 = bytes[i + 2];
+          b64 += B64[b1 >> 2];
+          b64 += B64[((b1 & 3) << 4) | ((b2 ?? 0) >> 4)];
+          b64 += i + 1 < bytes.length ? B64[((b2 & 15) << 2) | ((b3 ?? 0) >> 6)] : '=';
+          b64 += i + 2 < bytes.length ? B64[b3 & 63] : '=';
+        }
+        const fileUri = FileSystem.documentDirectory + fname;
+        await FileSystem.writeAsStringAsync(fileUri, b64, { encoding: 'base64' as any });
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(fileUri, {
             mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -809,6 +837,7 @@ export default function AdminMatches() {
         'data', 'ora', 'orario', 'squadra casa', 'squadra trasferta', 'avversario',
         'campionatonome', 'garadataora', 'garanumero', 'squadracasanome', 'squadraospitenome',
         'impianto', 'giornata', 'sede', 'ritrovo',
+        'gara n.', 'campionato', 'girone', 'casa/trasferta', 'indirizzo', 'città', 'citta', 'note',
       ];
       let headerIdx = 0;
       for (let i = 0; i < Math.min(aoa.length, 40); i++) {
@@ -876,6 +905,20 @@ export default function AdminMatches() {
           if (v instanceof Date) return v.toString();
           return String(v).trim();
         };
+
+        // 🆕 26/09/2026 — Converte una data estesa italiana ("Domenica 25 ottobre 2026")
+        // in "gg/mm/aaaa". Se non è estesa, restituisce la stringa originale.
+        const IT_MONTHS: { [k: string]: string } = {
+          gennaio: '01', febbraio: '02', marzo: '03', aprile: '04', maggio: '05', giugno: '06',
+          luglio: '07', agosto: '08', settembre: '09', ottobre: '10', novembre: '11', dicembre: '12',
+        };
+        const parseItalianExtendedDate = (s: string): string => {
+          const m = s.toLowerCase().match(/(\d{1,2})\s+([a-zàèéìòù]+)\s+(\d{4})/);
+          if (m && IT_MONTHS[m[2]]) {
+            return `${m[1].padStart(2, '0')}/${IT_MONTHS[m[2]]}/${m[3]}`;
+          }
+          return s;
+        };
         
         // CampionatoNome - identificativo della squadra (es. "U14 Maschile Campionato")
         const campionato = S(row['CampionatoNome'] || row['CAMPIONATONOME'] || row['Campionato'] || '');
@@ -934,16 +977,33 @@ export default function AdminMatches() {
           dateTimeStr = `${datePart} ${timePart}`;
         } else if (dateTimeStr && typeof dateTimeStr === 'string') {
           dateTimeStr = dateTimeStr.trim();
+          // 🆕 Normalizza eventuale data estesa italiana ("Domenica 25 ottobre 2026")
+          dateTimeStr = parseItalianExtendedDate(dateTimeStr);
           // Se la stringa data non contiene già un orario e abbiamo una colonna Ora separata, uniscili
           if (oraSep && !/\d{1,2}:\d{2}/.test(dateTimeStr)) {
             dateTimeStr = `${dateTimeStr} ${oraSep}`;
           }
         }
         
+        // 🆕 26/09/2026 — Colonna esplicita "Casa/Trasferta" (template RegistraTEAM): se presente,
+        // determina direttamente casa/trasferta ed è più affidabile del match sul nome squadra.
+        const csTxt = S(row['Casa/Trasferta'] || row['Casa/trasferta'] || row['CasaTrasferta'] || row['Sede'] || '').toLowerCase();
+        let homeAwayExplicit: string | null = null;
+        if (csTxt.startsWith('casa')) homeAwayExplicit = 'home';
+        else if (csTxt.startsWith('tras')) homeAwayExplicit = 'away';
+
         // Determina l'avversario in base a casa/trasferta
-        // Se siamo in casa, l'avversario è SquadraOspiteNome
-        // Se siamo in trasferta, l'avversario è SquadraCasaNome
-        const opponent = isHome ? squadraOspite : squadraCasa;
+        // File federazione (con Squadra Casa): opponent = isHome ? ospite : casa.
+        // Template semplice (senza Squadra Casa): opponent = colonna "Avversario" diretta.
+        let opponent: string;
+        let homeAway: string;
+        if (squadraCasa) {
+          opponent = isHome ? squadraOspite : squadraCasa;
+          homeAway = homeAwayExplicit || (isHome ? 'home' : 'away');
+        } else {
+          opponent = squadraOspite; // = row['Avversario']
+          homeAway = homeAwayExplicit || (isHome ? 'home' : 'away');
+        }
         
         // Impianto - nome palestra
         const impianto = S(row['Impianto'] || row['IMPIANTO'] || row['Luogo'] || '');
@@ -951,24 +1011,28 @@ export default function AdminMatches() {
         // ImpiantoIndirizzo - indirizzo completo
         const indirizzo = S(row['ImpiantoIndirizzo'] || row['IMPIANTO INDIRIZZO'] || row['Indirizzo'] || '');
         
-        // Estrai città dall'impianto o dall'indirizzo se contiene un trattino o virgola
+        // 🆕 Città può essere una colonna a sé (template RegistraTEAM)
+        const cittaDirect = S(row['Città'] || row['Citta'] || row['CITTA'] || row['CITTÀ'] || '');
+
+        // Estrai città dall'impianto se contiene un trattino o virgola (file federazione)
         let venue = impianto;
-        let city = '';
-        if (impianto && impianto.includes(' - ')) {
+        let city = cittaDirect;
+        if (!city && impianto && impianto.includes(' - ')) {
           const parts = impianto.split(' - ');
           venue = parts[0].trim();
           city = parts.slice(1).join(' - ').trim();
-        } else if (impianto && impianto.includes(', ')) {
+        } else if (!city && impianto && impianto.includes(', ')) {
           const parts = impianto.split(', ');
           venue = parts[0].trim();
           city = parts.slice(1).join(', ').trim();
         }
         
-        // Casa/Trasferta - usa isHome calcolato
-        const homeAway = isHome ? 'home' : 'away';
-        
-        // GaraNumero - numero univoco della gara
-        const garaNumero = row['GaraNumero'] || row['GARANUMERO'] || row['Gara Numero'] || row['NumeroGara'] || '';
+        // GaraNumero - numero univoco della gara (alias "Gara N." del template)
+        const garaNumero = row['GaraNumero'] || row['GARANUMERO'] || row['Gara Numero'] || row['NumeroGara'] || row['Gara N.'] || row['GaraN'] || '';
+
+        // 🆕 Campionato e Girone (template RegistraTEAM)
+        const championship = S(row['Campionato'] || row['CAMPIONATO'] || '');
+        const girone = S(row['Girone'] || row['GIRONE'] || '');
         
         // Ritrovo - orario ritrovo. Con cellDates un orario "16:00" può arrivare come Date → formatta HH:MM
         let ritrovo: any = row['Ritrovo'] || '';
@@ -983,6 +1047,8 @@ export default function AdminMatches() {
           team_id: team?.id || '',
           team_name: team?.name || teamSearchKey,
           match_number: garaNumero ? String(garaNumero).trim() : '',
+          championship: championship,
+          girone: girone,
           date: dateTimeStr,
           opponent: opponent,
           venue: venue || '',
