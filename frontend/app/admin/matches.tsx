@@ -331,19 +331,25 @@ export default function AdminMatches() {
         return n;
       };
 
-      // Normalizza il logo (base64 con/senza prefisso) e ne deduce l'estensione
+      // Normalizza il logo: rileva il TIPO dai byte (magic base64) così l'estensione
+      // dichiarata coincide SEMPRE con i byte reali (altrimenti Excel segnala il file
+      // come danneggiato → "ripristino del disegno"). Se il tipo non è riconosciuto
+      // si salta il logo (la tabella resta comunque corretta).
       const logoInfo = (() => {
         const raw = societyInfo.logo;
         if (!raw) return null;
-        const hasPrefix = raw.startsWith('data:');
-        let ext: 'png' | 'jpeg' = 'png';
-        if (hasPrefix) {
-          ext = /image\/jpe?g/i.test(raw) ? 'jpeg' : 'png';
-        } else {
-          ext = raw.startsWith('/9j/') ? 'jpeg' : 'png';
-        }
-        const dataUrl = hasPrefix ? raw : `data:image/${ext};base64,${raw}`;
-        return { dataUrl, ext };
+        // estrai il base64 puro (senza eventuale prefisso data:)
+        const b64 = raw.startsWith('data:') ? (raw.split(',')[1] || '') : raw;
+        if (!b64) return null;
+        let ext: 'png' | 'jpeg' | 'gif' | null = null;
+        if (b64.startsWith('iVBORw0KGgo')) ext = 'png';        // PNG signature
+        else if (b64.startsWith('/9j/')) ext = 'jpeg';          // JPEG signature
+        else if (b64.startsWith('R0lGOD')) ext = 'gif';         // GIF signature
+        else if (/image\/png/i.test(raw)) ext = 'png';
+        else if (/image\/jpe?g/i.test(raw)) ext = 'jpeg';
+        else if (/image\/gif/i.test(raw)) ext = 'gif';
+        if (!ext) return null; // tipo non supportato/sconosciuto → niente logo
+        return { b64, ext };
       })();
 
       const buildSheet = (
@@ -353,14 +359,14 @@ export default function AdminMatches() {
         headerArgb: string,
         withLogo: boolean,
       ) => {
-        const ws = wb.addWorksheet(safeSheetName(name), { views: [{ state: 'frozen', ySplit: 0 }] });
+        const ws = wb.addWorksheet(safeSheetName(name));
         ws.columns = cols.map(([, w]) => ({ width: w }));
 
         let headerRowIdx = 1;
         // Logo (+ nome società) in cima, solo dove richiesto
         if (withLogo && logoInfo) {
           try {
-            const imgId = wb.addImage({ base64: logoInfo.dataUrl, extension: logoInfo.ext });
+            const imgId = wb.addImage({ base64: logoInfo.b64, extension: logoInfo.ext });
             ws.addImage(imgId, { tl: { col: 0, row: 0 } as any, ext: { width: 120, height: 56 } });
           } catch { /* se il logo non è valido, prosegui senza */ }
           // Titolo società accanto al logo

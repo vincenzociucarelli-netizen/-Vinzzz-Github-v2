@@ -1572,3 +1572,9 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - FIX ROBUSTO lato codice: in `frontend/vercel.json` cambiato `installCommand` da `yarn install --frozen-lockfile` → `yarn install` (non-frozen). Così Vercel riconcilia automaticamente package.json↔yarn.lock in build, senza bloccarsi anche se il lockfile su GitHub è momentaneamente disallineato.
 - Warning engines node 22.x vs 24.x = non bloccante.
 - AZIONE UTENTE: rifare "Save to GitHub" (per inviare il nuovo vercel.json) e rilanciare il deploy.
+
+## 🐛 25/09/2026 — Fix Excel "danneggiato / da ripristinare" all'apertura
+- SINTOMO (utente): Excel apriva il file esportato solo dopo "ripristino", con record ripristinati su /xl/worksheets/sheetN.xml e /xl/drawings/drawing1.xml (Forma disegno).
+- CAUSA 1 (tutti i fogli): in exceljs avevo messo `addWorksheet(name, { views: [{ state:'frozen', ySplit:0 }] })` → genera un pannello congelato NON valido (`<pane topLeftCell="A1" state="frozen"/>` senza split) → Excel ripara ogni sheetN.xml. FIX: rimosso completamente il parametro `views`.
+- CAUSA 2 (drawing1.xml, logo): l'estensione dichiarata poteva NON combaciare con i byte reali del logo (es. logo JPEG scritto come .png) → mismatch Content_Types/media → "Forma disegno" da ripristinare. FIX: `logoInfo` ora rileva il tipo dai MAGIC del base64 (iVBORw0KGgo→png, /9j/→jpeg, R0lGOD→gif; fallback mime nel data URL) e passa a `addImage` il base64 GREZZO (senza prefisso data:) con l'estensione corretta; se il tipo è sconosciuto il logo viene saltato (tabella comunque valida).
+- VERIFICATO su file realmente scaricato dall'app con logo JPEG + 2 squadre: media=image1.jpeg (firma FF D8 FF), Content_Types Extension="jpeg", 0 sheetViews, drawing solo su Riepilogo, openpyxl apre i 3 fogli senza eccezioni. Nessun ripristino atteso.
