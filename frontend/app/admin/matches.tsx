@@ -25,6 +25,7 @@ import { SportIcon } from '../../src/components/SportIcon';
 import { downloadMatchCalendarPDF, MatchRow, TeamGroup } from '../../src/utils/matchCalendarReport';
 
 import * as XLSX from 'xlsx';
+import * as XLSXStyle from 'xlsx-js-style';
 
 interface Match {
   id: string;
@@ -234,9 +235,13 @@ export default function AdminMatches() {
     if (!iso) return { dataStr: '', oraStr: '' };
     const d = new Date(iso);
     if (isNaN(d.getTime())) return { dataStr: '', oraStr: '' };
+    // 🆕 24/09/2026 — timeZone:'UTC' OBBLIGATORIO: l'app memorizza l'orario gara come
+    // "wall-clock" UTC e lo mostra sempre con timeZone:'UTC' (vedi formatDate della lista).
+    // Senza questo, l'export Excel/PDF mostrerebbe l'orario spostato del fuso del browser
+    // (es. 21:00 → 23:00 a Roma). Così l'orario esportato coincide con quello mostrato.
     return {
-      dataStr: d.toLocaleDateString('it-IT'),
-      oraStr: d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+      dataStr: d.toLocaleDateString('it-IT', { timeZone: 'UTC' }),
+      oraStr: d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }),
     };
   };
 
@@ -296,7 +301,7 @@ export default function AdminMatches() {
         return base;
       };
 
-      const wb = XLSX.utils.book_new();
+      const wb = XLSXStyle.utils.book_new();
       const groups = groupByTeam(list);
       const usedNames: { [k: string]: number } = {};
       const safeSheetName = (raw: string) => {
@@ -306,32 +311,71 @@ export default function AdminMatches() {
         return n;
       };
 
+      // 🆕 24/09/2026 — Stile richiesto dall'utente:
+      //  • Carattere Calibri 10 ovunque
+      //  • Intestazione (1ª riga) blu scuro con testo bianco in grassetto
+      //  • Righe dati alternate bianco / grigio chiaro per leggibilità
+      const HEADER_FILL = '1F3864';   // blu scuro
+      const HEADER_TEXT = 'FFFFFF';   // bianco
+      const ROW_ALT_FILL = 'F2F2F2';  // grigio chiaro
+      const BORDER = { style: 'thin', color: { rgb: 'D9D9D9' } };
+      const styleSheet = (ws: any) => {
+        if (!ws || !ws['!ref']) return;
+        const range = XLSXStyle.utils.decode_range(ws['!ref']);
+        for (let r = range.s.r; r <= range.e.r; r++) {
+          for (let c = range.s.c; c <= range.e.c; c++) {
+            const ref = XLSXStyle.utils.encode_cell({ r, c });
+            if (!ws[ref]) ws[ref] = { t: 's', v: '' };
+            if (r === 0) {
+              ws[ref].s = {
+                font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: HEADER_TEXT } },
+                fill: { patternType: 'solid', fgColor: { rgb: HEADER_FILL } },
+                alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+                border: { top: BORDER, bottom: BORDER, left: BORDER, right: BORDER },
+              };
+            } else {
+              const isAlt = ((r - 1) % 2) === 1; // 1ª riga dati bianca, 2ª grigia, ...
+              ws[ref].s = {
+                font: { name: 'Calibri', sz: 10 },
+                fill: { patternType: 'solid', fgColor: { rgb: isAlt ? ROW_ALT_FILL : 'FFFFFF' } },
+                alignment: { vertical: 'center' },
+                border: { top: BORDER, bottom: BORDER, left: BORDER, right: BORDER },
+              };
+            }
+          }
+        }
+        // Altezza intestazione un po' più alta
+        ws['!rows'] = [{ hpt: 22 }];
+      };
+
       // Foglio riepilogativo con tutte le squadre (solo se più di una squadra)
       if (groups.length > 1) {
-        const wsAll = XLSX.utils.json_to_sheet(list.map((m) => toRow(m, true)));
+        const wsAll = XLSXStyle.utils.json_to_sheet(list.map((m) => toRow(m, true)));
         wsAll['!cols'] = [
           { wch: 16 }, { wch: 14 }, { wch: 13 }, { wch: 22 }, { wch: 12 }, { wch: 8 },
           { wch: 26 }, { wch: 32 }, { wch: 16 }, { wch: 10 }, { wch: 12 }, { wch: 20 },
         ];
-        XLSX.utils.book_append_sheet(wb, wsAll, safeSheetName('Riepilogo'));
+        styleSheet(wsAll);
+        XLSXStyle.utils.book_append_sheet(wb, wsAll, safeSheetName('Riepilogo'));
       }
 
       // Un foglio per ogni squadra
       groups.forEach((g) => {
-        const ws = XLSX.utils.json_to_sheet(g.items.map((m) => toRow(m, false)));
+        const ws = XLSXStyle.utils.json_to_sheet(g.items.map((m) => toRow(m, false)));
         ws['!cols'] = [
           { wch: 14 }, { wch: 13 }, { wch: 22 }, { wch: 12 }, { wch: 8 },
           { wch: 26 }, { wch: 32 }, { wch: 16 }, { wch: 10 }, { wch: 12 }, { wch: 20 },
         ];
-        XLSX.utils.book_append_sheet(wb, ws, safeSheetName(g.name));
+        styleSheet(ws);
+        XLSXStyle.utils.book_append_sheet(wb, ws, safeSheetName(g.name));
       });
 
       const fname = `${exportFileName()}.xlsx`;
 
       if (Platform.OS === 'web') {
-        XLSX.writeFile(wb, fname);
+        XLSXStyle.writeFile(wb, fname);
       } else {
-        const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+        const wbout = XLSXStyle.write(wb, { type: 'base64', bookType: 'xlsx' });
         const fileUri = FileSystem.documentDirectory + fname;
         await FileSystem.writeAsStringAsync(fileUri, wbout, { encoding: 'base64' as any });
         if (await Sharing.isAvailableAsync()) {

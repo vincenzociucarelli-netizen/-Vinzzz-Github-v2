@@ -1548,3 +1548,11 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
   Le colonne "Squadra Casa"/"Avversario" erano già riconosciute; l'opponent e home/away si calcolano correttamente col nome squadra di casa inserito dall'admin.
 - Validato con simulazione Node su xlsx reale: 26/26 gare con data+ora, avversario e casa/trasferta corretti.
 - NB: il file non ha impianto/indirizzo → venue/città restano vuoti (compilabili poi a mano). Flusso utente: ☁️ Carica file → scegli squadra (Serie B1) → inserisci nome squadra di casa (es. "SIRIO PERUGIA VOLLEY").
+
+## 🐛+🎨 25/09/2026 — Orari export + stile Excel calendario gare
+- CONCERN utente "orari +1 ora" nell'export: CAUSA trovata → `fmtDate` (usata da export Excel/PDF) NON usava `timeZone:'UTC'`, mentre l'app memorizza gli orari gara come wall-clock UTC e li mostra sempre con `timeZone:'UTC'` (vedi `formatDate` lista + handleSave che salva `...T{time}:00.000Z`). Quindi l'export spostava l'orario del fuso del browser (es. 21:00→23:00 a Roma).
+  - FIX: `fmtDate` ora usa `timeZone:'UTC'` per data e ora → l'orario esportato coincide con quello mostrato in app.
+  - VERIFICATO round-trip import: POST /matches/import con "17/10/2026 21:00" → GET restituisce `2026-10-17T21:00:00+00:00`; lista mostra 21:00 (timeZone UTC). Import display corretto.
+- STILE Excel export (richiesta utente): installato `xlsx-js-style@1.2.0` (community `xlsx` non supporta gli stili). handleExportExcel ora usa XLSXStyle e applica: Carattere Calibri 10 ovunque; intestazione blu scuro (1F3864) testo bianco grassetto centrato; righe dati alternate bianco/grigio chiaro (F2F2F2); bordi sottili. Applicato a foglio Riepilogo e a ogni foglio squadra.
+  - VERIFICATO su file realmente scaricato dall'app (calendario_societa.xlsx): styles.xml/sheet XML confermano header s=3 (font Calibri10 bold white + fill 1F3864), righe s=4 (bianco)/s=5 (grigio) alternate, orari 18:00/19:15 corretti.
+- NB import: `yarn add` bloccato dal guard + engines node 22.x; installato con `yarn expo install xlsx-js-style` dopo aver aggiunto temporaneamente `--ignore-engines true` in `.yarnrc` (poi ripristinato .yarnrc vuoto). `xlsx` classico resta per template download + lettura import.
