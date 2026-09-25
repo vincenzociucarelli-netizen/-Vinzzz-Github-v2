@@ -25,7 +25,6 @@ import { SportIcon } from '../../src/components/SportIcon';
 import { downloadMatchCalendarPDF, MatchRow, TeamGroup } from '../../src/utils/matchCalendarReport';
 
 import * as XLSX from 'xlsx';
-import * as XLSXStyle from 'xlsx-js-style';
 
 interface Match {
   id: string;
@@ -283,25 +282,46 @@ export default function AdminMatches() {
         return;
       }
 
-      const toRow = (m: Match, withTeam: boolean) => {
+      // 🆕 25/09/2026 — Passati a ExcelJS per: colore intestazione DIVERSO per ogni foglio
+      // squadra + LOGO società in cima al foglio Riepilogo (come nel PDF).
+      const ExcelJS = (await import('exceljs')).default;
+
+      // Ordine colonne (con/senza colonna "Squadra")
+      const SUMMARY_COLS: [string, number][] = [
+        ['Squadra', 16], ['Campionato/Gara', 14], ['Casa/Trasferta', 13], ['Avversario', 22],
+        ['Data', 12], ['Ora', 8], ['Impianto', 26], ['Indirizzo', 32], ['Città', 16],
+        ['Ritrovo', 10], ['Risultato', 12], ['Note', 20],
+      ];
+      const TEAM_COLS: [string, number][] = SUMMARY_COLS.filter(([h]) => h !== 'Squadra');
+
+      const matchToArray = (m: Match, cols: [string, number][]) => {
         const { dataStr, oraStr } = fmtDate(m.date);
-        const base: any = {};
-        if (withTeam) base['Squadra'] = m.team_name || '';
-        base['Campionato/Gara'] = m.match_number || '';
-        base['Casa/Trasferta'] = m.home_away === 'home' ? 'Casa' : 'Trasferta';
-        base['Avversario'] = m.opponent || '';
-        base['Data'] = dataStr;
-        base['Ora'] = oraStr;
-        base['Impianto'] = m.venue || '';
-        base['Indirizzo'] = m.address || '';
-        base['Città'] = m.city || '';
-        base['Ritrovo'] = m.meeting_time || '';
-        base['Risultato'] = m.result || '';
-        base['Note'] = m.notes || '';
-        return base;
+        const map: { [k: string]: string } = {
+          'Squadra': m.team_name || '',
+          'Campionato/Gara': m.match_number || '',
+          'Casa/Trasferta': m.home_away === 'home' ? 'Casa' : 'Trasferta',
+          'Avversario': m.opponent || '',
+          'Data': dataStr,
+          'Ora': oraStr,
+          'Impianto': m.venue || '',
+          'Indirizzo': m.address || '',
+          'Città': m.city || '',
+          'Ritrovo': m.meeting_time || '',
+          'Risultato': m.result || '',
+          'Note': m.notes || '',
+        };
+        return cols.map(([h]) => map[h] ?? '');
       };
 
-      const wb = XLSXStyle.utils.book_new();
+      // Palette colori intestazione: un colore diverso per ogni foglio squadra
+      const HEADER_PALETTE = [
+        'FF1F3864', 'FF7030A0', 'FFC00000', 'FF1F7A3D', 'FFB35C00',
+        'FF0B6E99', 'FF7A1F52', 'FF385723', 'FF9C4A00', 'FF1B5E7A',
+      ];
+      const ALT_FILL = 'FFF2F2F2';
+      const BORDER = { style: 'thin' as const, color: { argb: 'FFD9D9D9' } };
+
+      const wb = new ExcelJS.Workbook();
       const groups = groupByTeam(list);
       const usedNames: { [k: string]: number } = {};
       const safeSheetName = (raw: string) => {
@@ -311,73 +331,111 @@ export default function AdminMatches() {
         return n;
       };
 
-      // 🆕 24/09/2026 — Stile richiesto dall'utente:
-      //  • Carattere Calibri 10 ovunque
-      //  • Intestazione (1ª riga) blu scuro con testo bianco in grassetto
-      //  • Righe dati alternate bianco / grigio chiaro per leggibilità
-      const HEADER_FILL = '1F3864';   // blu scuro
-      const HEADER_TEXT = 'FFFFFF';   // bianco
-      const ROW_ALT_FILL = 'F2F2F2';  // grigio chiaro
-      const BORDER = { style: 'thin', color: { rgb: 'D9D9D9' } };
-      const styleSheet = (ws: any) => {
-        if (!ws || !ws['!ref']) return;
-        const range = XLSXStyle.utils.decode_range(ws['!ref']);
-        for (let r = range.s.r; r <= range.e.r; r++) {
-          for (let c = range.s.c; c <= range.e.c; c++) {
-            const ref = XLSXStyle.utils.encode_cell({ r, c });
-            if (!ws[ref]) ws[ref] = { t: 's', v: '' };
-            if (r === 0) {
-              ws[ref].s = {
-                font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: HEADER_TEXT } },
-                fill: { patternType: 'solid', fgColor: { rgb: HEADER_FILL } },
-                alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
-                border: { top: BORDER, bottom: BORDER, left: BORDER, right: BORDER },
-              };
-            } else {
-              const isAlt = ((r - 1) % 2) === 1; // 1ª riga dati bianca, 2ª grigia, ...
-              ws[ref].s = {
-                font: { name: 'Calibri', sz: 10 },
-                fill: { patternType: 'solid', fgColor: { rgb: isAlt ? ROW_ALT_FILL : 'FFFFFF' } },
-                alignment: { vertical: 'center' },
-                border: { top: BORDER, bottom: BORDER, left: BORDER, right: BORDER },
-              };
-            }
-          }
+      // Normalizza il logo (base64 con/senza prefisso) e ne deduce l'estensione
+      const logoInfo = (() => {
+        const raw = societyInfo.logo;
+        if (!raw) return null;
+        const hasPrefix = raw.startsWith('data:');
+        let ext: 'png' | 'jpeg' = 'png';
+        if (hasPrefix) {
+          ext = /image\/jpe?g/i.test(raw) ? 'jpeg' : 'png';
+        } else {
+          ext = raw.startsWith('/9j/') ? 'jpeg' : 'png';
         }
-        // Altezza intestazione un po' più alta
-        ws['!rows'] = [{ hpt: 22 }];
+        const dataUrl = hasPrefix ? raw : `data:image/${ext};base64,${raw}`;
+        return { dataUrl, ext };
+      })();
+
+      const buildSheet = (
+        name: string,
+        cols: [string, number][],
+        rows: string[][],
+        headerArgb: string,
+        withLogo: boolean,
+      ) => {
+        const ws = wb.addWorksheet(safeSheetName(name), { views: [{ state: 'frozen', ySplit: 0 }] });
+        ws.columns = cols.map(([, w]) => ({ width: w }));
+
+        let headerRowIdx = 1;
+        // Logo (+ nome società) in cima, solo dove richiesto
+        if (withLogo && logoInfo) {
+          try {
+            const imgId = wb.addImage({ base64: logoInfo.dataUrl, extension: logoInfo.ext });
+            ws.addImage(imgId, { tl: { col: 0, row: 0 } as any, ext: { width: 120, height: 56 } });
+          } catch { /* se il logo non è valido, prosegui senza */ }
+          // Titolo società accanto al logo
+          const titleCell = ws.getCell('C1');
+          titleCell.value = societyInfo.name || 'RegistraTEAM';
+          titleCell.font = { name: 'Calibri', size: 14, bold: true, color: { argb: headerArgb } };
+          titleCell.alignment = { vertical: 'middle' };
+          ws.mergeCells(1, 3, 1, cols.length);
+          ws.getRow(1).height = 22;
+          ws.getRow(2).height = 22;
+          ws.getRow(3).height = 8; // riga di stacco
+          headerRowIdx = 4;
+        }
+
+        // Intestazione
+        const hr = ws.getRow(headerRowIdx);
+        cols.forEach(([h], i) => {
+          const cell = hr.getCell(i + 1);
+          cell.value = h;
+          cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerArgb } };
+          cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+          cell.border = { top: BORDER, bottom: BORDER, left: BORDER, right: BORDER };
+        });
+        hr.height = 22;
+
+        // Righe dati (alternate bianco / grigio chiaro)
+        rows.forEach((r, ri) => {
+          const row = ws.getRow(headerRowIdx + 1 + ri);
+          const isAlt = (ri % 2) === 1;
+          r.forEach((v, ci) => {
+            const cell = row.getCell(ci + 1);
+            cell.value = v;
+            cell.font = { name: 'Calibri', size: 10 };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isAlt ? ALT_FILL : 'FFFFFFFF' } };
+            cell.alignment = { vertical: 'middle' };
+            cell.border = { top: BORDER, bottom: BORDER, left: BORDER, right: BORDER };
+          });
+        });
       };
 
-      // Foglio riepilogativo con tutte le squadre (solo se più di una squadra)
+      // Foglio riepilogativo con tutte le squadre (solo se più di una squadra) — con LOGO
       if (groups.length > 1) {
-        const wsAll = XLSXStyle.utils.json_to_sheet(list.map((m) => toRow(m, true)));
-        wsAll['!cols'] = [
-          { wch: 16 }, { wch: 14 }, { wch: 13 }, { wch: 22 }, { wch: 12 }, { wch: 8 },
-          { wch: 26 }, { wch: 32 }, { wch: 16 }, { wch: 10 }, { wch: 12 }, { wch: 20 },
-        ];
-        styleSheet(wsAll);
-        XLSXStyle.utils.book_append_sheet(wb, wsAll, safeSheetName('Riepilogo'));
+        buildSheet('Riepilogo', SUMMARY_COLS, list.map((m) => matchToArray(m, SUMMARY_COLS)), HEADER_PALETTE[0], true);
       }
-
-      // Un foglio per ogni squadra
-      groups.forEach((g) => {
-        const ws = XLSXStyle.utils.json_to_sheet(g.items.map((m) => toRow(m, false)));
-        ws['!cols'] = [
-          { wch: 14 }, { wch: 13 }, { wch: 22 }, { wch: 12 }, { wch: 8 },
-          { wch: 26 }, { wch: 32 }, { wch: 16 }, { wch: 10 }, { wch: 12 }, { wch: 20 },
-        ];
-        styleSheet(ws);
-        XLSXStyle.utils.book_append_sheet(wb, ws, safeSheetName(g.name));
+      // Un foglio per ogni squadra — colore intestazione diverso
+      groups.forEach((g, idx) => {
+        const color = HEADER_PALETTE[idx % HEADER_PALETTE.length];
+        buildSheet(g.name, TEAM_COLS, g.items.map((m) => matchToArray(m, TEAM_COLS)), color, false);
       });
 
       const fname = `${exportFileName()}.xlsx`;
+      const buffer = await wb.xlsx.writeBuffer();
 
       if (Platform.OS === 'web') {
-        XLSXStyle.writeFile(wb, fname);
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fname;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
       } else {
-        const wbout = XLSXStyle.write(wb, { type: 'base64', bookType: 'xlsx' });
+        // ArrayBuffer -> base64 (senza dipendere da btoa)
+        const bytes = new Uint8Array(buffer as ArrayBuffer);
+        const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+        let b64 = '';
+        for (let i = 0; i < bytes.length; i += 3) {
+          const b1 = bytes[i], b2 = bytes[i + 1], b3 = bytes[i + 2];
+          b64 += B64[b1 >> 2];
+          b64 += B64[((b1 & 3) << 4) | ((b2 ?? 0) >> 4)];
+          b64 += i + 1 < bytes.length ? B64[((b2 & 15) << 2) | ((b3 ?? 0) >> 6)] : '=';
+          b64 += i + 2 < bytes.length ? B64[b3 & 63] : '=';
+        }
         const fileUri = FileSystem.documentDirectory + fname;
-        await FileSystem.writeAsStringAsync(fileUri, wbout, { encoding: 'base64' as any });
+        await FileSystem.writeAsStringAsync(fileUri, b64, { encoding: 'base64' as any });
         if (await Sharing.isAvailableAsync()) {
           await Sharing.shareAsync(fileUri, {
             mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

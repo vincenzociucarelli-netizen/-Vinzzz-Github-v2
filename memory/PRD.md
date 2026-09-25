@@ -1556,3 +1556,12 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - STILE Excel export (richiesta utente): installato `xlsx-js-style@1.2.0` (community `xlsx` non supporta gli stili). handleExportExcel ora usa XLSXStyle e applica: Carattere Calibri 10 ovunque; intestazione blu scuro (1F3864) testo bianco grassetto centrato; righe dati alternate bianco/grigio chiaro (F2F2F2); bordi sottili. Applicato a foglio Riepilogo e a ogni foglio squadra.
   - VERIFICATO su file realmente scaricato dall'app (calendario_societa.xlsx): styles.xml/sheet XML confermano header s=3 (font Calibri10 bold white + fill 1F3864), righe s=4 (bianco)/s=5 (grigio) alternate, orari 18:00/19:15 corretti.
 - NB import: `yarn add` bloccato dal guard + engines node 22.x; installato con `yarn expo install xlsx-js-style` dopo aver aggiunto temporaneamente `--ignore-engines true` in `.yarnrc` (poi ripristinato .yarnrc vuoto). `xlsx` classico resta per template download + lettura import.
+
+## 🎨 25/09/2026 — Excel export: colore intestazione per squadra + logo su Riepilogo
+- Migrato l'export Excel da xlsx-js-style a **exceljs@4.4.0** (serve per embeddare immagini, non supportate da xlsx-js-style). Import via `(await import('exceljs')).default` → bundle lazy chunk (~944kB), verificato che Metro lo bundla senza errori.
+- Ogni FOGLIO SQUADRA ha un COLORE INTESTAZIONE diverso (palette di 10 colori, ciclica). Riepilogo usa blu scuro.
+- Foglio RIEPILOGO: LOGO società in alto (come nel PDF) + nome società accanto; header spostato a riga 4. Logo preso da `societyInfo.logo` (fetch /settings/society?include_images=true); estensione png/jpeg auto-rilevata; se logo assente/non valido si prosegue senza.
+- Stile mantenuto: Calibri 10 ovunque, header testo bianco grassetto centrato su fondo colorato, righe dati alternate bianco/grigio (F2F2F2), bordi sottili.
+- Web: writeBuffer→Blob→download. Mobile: writeBuffer→base64 (encoder manuale, no btoa)→FileSystem+Sharing.
+- Rimosso import inutilizzato `xlsx-js-style` da matches.tsx (pacchetto resta in package.json ma non più bundlato). `xlsx` classico resta per template download + lettura import.
+- VERIFICATO su file realmente scaricato (2 squadre + logo temporaneo): sheets [Riepilogo(1 img, header FF1F3864, headerRow=4), Under 16(FF1F3864), Serie D(FF7030A0)], font Calibri10 bold white. Orari corretti (18:00/20:30).
