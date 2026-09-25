@@ -298,8 +298,6 @@ export default function AdminMatches() {
         ['Impianto', 28], ['Indirizzo', 28], ['Città', 16], ['Note', 20],
       ];
       const TEAM_COLS: [string, number][] = SUMMARY_COLS.filter(([h]) => h !== 'Squadra');
-      // Colonne con intestazione GIALLA (testo rosso)
-      const YELLOW_HEADERS = new Set(['Gara N.', 'Campionato', 'Girone']);
 
       // Data in formato esteso italiano con iniziale maiuscola (timeZone UTC = wall-clock salvato)
       const fmtDateExtended = (iso?: string) => {
@@ -403,9 +401,8 @@ export default function AdminMatches() {
         cols.forEach(([h], i) => {
           const cell = hr.getCell(i + 1);
           cell.value = h;
-          const isYellow = YELLOW_HEADERS.has(h);
-          cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: isYellow ? 'FFC00000' : 'FFFFFFFF' } };
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isYellow ? 'FFFFFF00' : headerArgb } };
+          cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerArgb } };
           cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
           cell.border = { top: BORDER, bottom: BORDER, left: BORDER, right: BORDER };
         });
@@ -684,8 +681,7 @@ export default function AdminMatches() {
         ['Gara N.', 10], ['Campionato', 16], ['Girone', 8], ['Avversario', 26],
         ['Impianto', 28], ['Indirizzo', 28], ['Città', 16], ['Note', 20],
       ];
-      const YELLOW = new Set(['Gara N.', 'Campionato', 'Girone']);
-      const GREEN = 'FF217346';
+      const HEADER_BLUE = 'FF1F3864';
       const ALT = 'FFF2F2F2';
       const BORDER = { style: 'thin' as const, color: { argb: 'FFD9D9D9' } };
 
@@ -706,9 +702,8 @@ export default function AdminMatches() {
       COLS.forEach(([h], i) => {
         const cell = hr.getCell(i + 1);
         cell.value = h;
-        const isY = YELLOW.has(h);
-        cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: isY ? 'FFC00000' : 'FFFFFFFF' } };
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isY ? 'FFFFFF00' : GREEN } };
+        cell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: HEADER_BLUE } };
         cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
         cell.border = { top: BORDER, bottom: BORDER, left: BORDER, right: BORDER };
       });

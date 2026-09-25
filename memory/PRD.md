@@ -1592,3 +1592,6 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - IMPORT aggiornato per il nuovo template: legge colonna esplicita "Casa/Trasferta" (Casa→home/Trasferta→away, più affidabile del match sul nome), "Avversario" diretto quando non c'è "Squadra Casa", alias "Gara N." per match_number, "Campionato"/"Girone", "Città" diretta, e PARSER data estesa italiana ("Domenica 25 ottobre 2026"→25/10/2026). HEADER_TOKENS estesi.
 - VERIFICATO su file realmente scaricati dall'app (template + export): intestazioni, colori gialli/verdi, riga esempio, data estesa, # progressivo tutti corretti.
 - Form manuale add/edit gara: NON modificato (championship/girone si popolano via import; per gare manuali restano vuoti).
+
+## 🎨 26/09/2026 (fix) — Intestazioni tutte blu (niente giallo)
+- Il giallo era solo un segno dell'utente per indicare le colonne da aggiungere. Rimosso l'evidenziazione gialla/rossa: nell'EXPORT le 3 colonne Gara N./Campionato/Girone hanno ora la stessa intestazione delle altre (fondo blu scuro 1F3864, testo bianco). Il TEMPLATE download ora ha intestazioni blu scuro 1F3864 testo bianco (prima era verde). Verificato sui file scaricati: un unico colore header FF1F3864, testo FFFFFFFF.
