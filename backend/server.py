@@ -901,7 +901,11 @@ def compute_pending_reason(a: dict) -> Optional[str]:
     is_minor = _compute_is_minor(a)
     priv = bool(a.get("privacy_accepted"))
     cert = bool(a.get("medical_certificate_verified"))
-    has_team = bool(a.get("team_id"))
+    # 🐛 26/09/2026 — la squadra può essere solo in `team_ids` (canonical) senza il
+    # campo legacy `team_id` sincronizzato: consideriamo assegnata l'atleta se ha
+    # almeno una squadra in team_ids OPPURE nel legacy team_id/primary_team_id.
+    _team_ids = a.get("team_ids") or []
+    has_team = bool(a.get("team_id") or a.get("primary_team_id") or (isinstance(_team_ids, list) and len(_team_ids) > 0))
     trial_started = bool(a.get("trial_start_date"))
 
     # ATTIVO: nessun sollecito, salvo che manchi la squadra (la lista lo mostra
@@ -8981,7 +8985,7 @@ async def get_all_athletes(light: bool = False, current_user = Depends(get_curre
     if light:
         _light_proj = {
             "_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1,
-            "team_id": 1, "status": 1, "athlete_type": 1, "is_compensated": 1,
+            "team_id": 1, "team_ids": 1, "primary_team_id": 1, "status": 1, "athlete_type": 1, "is_compensated": 1,
             "is_withdrawn": 1, "is_trial": 1, "athlete_code": 1, "date_of_birth": 1,
             "review_dismissed_season": 1, "privacy_pending_renewal": 1,
             "parent_id": 1, "second_parent_id": 1,

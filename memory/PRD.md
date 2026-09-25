@@ -1595,3 +1595,9 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 
 ## 🎨 26/09/2026 (fix) — Intestazioni tutte blu (niente giallo)
 - Il giallo era solo un segno dell'utente per indicare le colonne da aggiungere. Rimosso l'evidenziazione gialla/rossa: nell'EXPORT le 3 colonne Gara N./Campionato/Girone hanno ora la stessa intestazione delle altre (fondo blu scuro 1F3864, testo bianco). Il TEMPLATE download ora ha intestazioni blu scuro 1F3864 testo bianco (prima era verde). Verificato sui file scaricati: un unico colore header FF1F3864, testo FFFFFFFF.
+
+## 🐛 26/09/2026 — Fix atleta "In attesa: assegnazione a una squadra" pur avendo squadre
+- SINTOMO (KROSI SERENA): scheda mostra Squadra Principale (1ª Divisione) + Squadra 2 (U.19 ELITE), ma nell'elenco appariva "⏳ In attesa: assegnazione a una squadra".
+- CAUSA: `compute_pending_reason` calcolava `has_team = bool(a.get('team_id'))` usando SOLO il campo legacy `team_id`. Se le squadre sono solo in `team_ids` (canonical) senza sync del legacy, has_team=False → falso "In attesa".
+- FIX: `has_team = bool(team_id OR primary_team_id OR len(team_ids)>0)`. Inoltre aggiunti `team_ids` e `primary_team_id` alla projection `_light_proj` dell'endpoint `/athletes?light=true` (prima non venivano letti, quindi il calcolo non li vedeva).
+- VERIFICATO su preview: atleta con `team_ids` valorizzato e `team_id` legacy assente → pending_reason ora None (nessun badge "In attesa").
