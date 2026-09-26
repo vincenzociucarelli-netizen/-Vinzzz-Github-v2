@@ -1612,3 +1612,9 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 ## 🐛 27/09/2026 — Vista mensile: no "Assente" per allenamenti FUTURI
 - SINTOMO: nella griglia mensile i giorni di allenamento ancora da svolgere (es. 29/09) venivano segnati "A" (assente).
 - FIX backend `get_team_monthly_attendance`: aggiunto `is_future` per ogni giorno (date > oggi Europe/Rome); "A" assegnato solo se giorno di allenamento E non futuro. Giorni futuri → cella vuota. Totali A aggiornati di conseguenza. Verificato: giorno futuro='', giorno passato='A'.
+
+## 🆕 27/09/2026 — "Annulla presenza di oggi" nel profilo atleta (coach)
+- Richiesta: mettere il comando di annullo presenza QR accanto alla "Convalida presenza (straordinaria)" nel profilo atleta del coach.
+- Backend: `DELETE /coach/athletes/{athlete_id}/attendance/today` — elimina TUTTE le presenze di oggi dell'atleta (data odierna Europe/Rome o check_in_time >= inizio giornata). Stesse regole permessi del manual-attendance (coach solo squadra assegnata; admin/coord bypass; isolamento società). Tracciato in `deleted_attendances` + audit `attendance_deleted`; ricalcolo prova. 404 se nessuna presenza oggi.
+- Frontend `coach/athlete/[id].tsx`: nuovo pulsante rosso "Annulla presenza di oggi" (testID cancel-today-attendance-btn) subito sotto "Convalida presenza (straordinaria)", con conferma. Handler `cancelTodayAttendance` + stato `cancelSubmitting` + stili cancelPresBtn.
+- VERIFICATO via API: POST manuale oggi → DELETE (deleted:1) → DELETE ripetuto → 404 "Nessuna presenza registrata oggi".

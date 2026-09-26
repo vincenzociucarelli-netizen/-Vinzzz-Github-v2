@@ -17724,6 +17724,69 @@ async def add_manual_attendance(athlete_id: str, data: ManualAttendanceCreate, r
     }
 
 
+# 🆕 27/09/2026 — Annulla la presenza di OGGI di un atleta (gemello della registrazione
+# straordinaria): usato dal profilo atleta del coach per correggere una scansione QR errata.
+@api_router.delete("/coach/athletes/{athlete_id}/attendance/today")
+async def delete_today_attendance_for_athlete(athlete_id: str, request: Request, current_user = Depends(get_current_user)):
+    if current_user["role"] not in (UserRole.COACH, UserRole.ADMIN, UserRole.COORDINATORE):
+        raise HTTPException(status_code=403, detail="Operazione riservata a coach/admin")
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    if athlete.get("society_id") and athlete.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Atleta di un'altra società")
+    team_id = athlete.get("team_id")
+    # Il coach deve essere assegnato alla squadra (admin/coordinatore bypass)
+    if current_user["role"] == UserRole.COACH:
+        assigned = current_user.get("assigned_teams", []) or []
+        if team_id and team_id not in assigned:
+            raise HTTPException(status_code=403, detail="Non sei allenatore di questa squadra")
+    italy_tz = timezone(timedelta(hours=2))
+    today = datetime.now(italy_tz).strftime("%Y-%m-%d")
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=2)
+    # Presenze di oggi dell'atleta (per data stringa o check_in_time)
+    atts = await db.attendances.find({
+        "athlete_id": athlete_id,
+        "$or": [{"date": today}, {"check_in_time": {"$gte": today_start}}],
+    }).to_list(50)
+    if not atts:
+        raise HTTPException(status_code=404, detail="Nessuna presenza registrata oggi per questo atleta")
+    athlete_name = athlete.get("full_name") or f"{athlete.get('first_name','')} {athlete.get('last_name','')}".strip()
+    deleted = 0
+    for att in atts:
+        snap = dict(att); snap.pop("_id", None)
+        await db.deleted_attendances.insert_one({
+            "attendance": snap,
+            "deleted_by_id": current_user["id"],
+            "deleted_by_name": current_user.get("full_name") or current_user.get("email", ""),
+            "deleted_by_role": current_user["role"],
+            "deleted_at": datetime.utcnow(),
+            "society_id": current_user.get("society_id"),
+        })
+        await db.attendances.delete_one({"id": att.get("id")})
+        deleted += 1
+    # Ricalcola stato prova
+    if team_id:
+        try:
+            await _recompute_trial_from_attendance(athlete, team_id)
+        except Exception as _e:
+            logging.warning(f"[DELETE-TODAY-ATT] recompute failed: {_e}")
+    try:
+        await log_audit(
+            action="attendance_deleted",
+            user_id=current_user["id"],
+            user_email=current_user.get("email", ""),
+            society_id=current_user.get("society_id", ""),
+            target_user_id=athlete_id,
+            target_user_name=athlete_name,
+            ip_address=get_real_ip(request),
+            details={"date": today, "count": deleted, "source": "coach_athlete_profile"},
+        )
+    except Exception:
+        pass
+    return {"message": f"Presenza di oggi annullata per {athlete_name}", "deleted": deleted}
+
+
 class BulkAttendanceCreate(BaseModel):
     athlete_ids: List[str]
     date: str  # YYYY-MM-DD

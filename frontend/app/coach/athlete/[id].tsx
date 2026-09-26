@@ -83,6 +83,29 @@ export default function CoachAthleteDetail() {
   const [manualTime, setManualTime] = useState('');
   const [manualNote, setManualNote] = useState('');
   const [manualSubmitting, setManualSubmitting] = useState(false);
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
+
+  // 🆕 27/09/2026 — Annulla la presenza di OGGI dell'atleta (correzione QR errato)
+  const cancelTodayAttendance = async () => {
+    const doIt = async () => {
+      setCancelSubmitting(true);
+      try {
+        const res = await api.delete(`/coach/athletes/${id}/attendance/today`);
+        showMsg('Presenza annullata', res?.data?.message || 'La presenza di oggi è stata annullata.');
+        loadData();
+      } catch (e: any) {
+        showMsg('Errore', e?.response?.data?.detail || 'Impossibile annullare la presenza.');
+      } finally {
+        setCancelSubmitting(false);
+      }
+    };
+    const msg = 'Vuoi annullare la presenza registrata OGGI per questo atleta? (usalo se il QR è stato scansionato per errore)';
+    if (Platform.OS === 'web') { if (window.confirm(msg)) await doIt(); }
+    else Alert.alert('Annulla presenza di oggi', msg, [
+      { text: 'No', style: 'cancel' },
+      { text: 'Sì, annulla', style: 'destructive', onPress: doIt },
+    ]);
+  };
 
   const showMsg = (title: string, msg: string) => {
     if (Platform.OS === 'web') window.alert(`${title}\n${msg}`);
@@ -518,6 +541,15 @@ export default function CoachAthleteDetail() {
               <Ionicons name="add-circle-outline" size={20} color="#fff" />
               <Text style={styles.manualBtnText}>Convalida presenza (straordinaria)</Text>
             </TouchableOpacity>
+            {/* 🆕 27/09/2026 — Annulla presenza di oggi (correzione QR errato) */}
+            <TouchableOpacity style={styles.cancelPresBtn} onPress={cancelTodayAttendance} disabled={cancelSubmitting} testID="cancel-today-attendance-btn">
+              {cancelSubmitting ? <ActivityIndicator color="#C62828" /> : (
+                <>
+                  <Ionicons name="close-circle-outline" size={20} color="#C62828" />
+                  <Text style={styles.cancelPresBtnText}>Annulla presenza di oggi</Text>
+                </>
+              )}
+            </TouchableOpacity>
           </View>
         )}
 
@@ -639,6 +671,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#5856D6', paddingVertical: 12, borderRadius: 10, marginTop: 12,
   },
   manualBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  cancelPresBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: '#FFEBEE', borderWidth: 1, borderColor: '#F5C6C6',
+    paddingVertical: 12, borderRadius: 10, marginTop: 10,
+  },
+  cancelPresBtnText: { color: '#C62828', fontWeight: '700', fontSize: 14 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', paddingHorizontal: 20 },
   modalCard: { backgroundColor: '#fff', borderRadius: 14, padding: 18 },
   modalTitle: { fontSize: 18, fontWeight: '800', color: '#222', marginBottom: 10 },
