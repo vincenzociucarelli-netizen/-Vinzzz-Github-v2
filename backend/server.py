@@ -18218,11 +18218,19 @@ async def get_team_monthly_attendance(team_id: str, year: int, month: int, curre
         if d in IT_WD:
             scheduled.add(IT_WD[d])
     WD_SHORT = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
+    # 🐛 27/09/2026 — un allenamento FUTURO non può essere segnato come "Assente".
+    italy_tz = timezone(timedelta(hours=2))
+    today_it = datetime.now(italy_tz).date()
     num_days = _cal.monthrange(year, month)[1]
     days = []
     for dnum in range(1, num_days + 1):
         wd = _cal.weekday(year, month, dnum)
-        days.append({"day": dnum, "weekday": WD_SHORT[wd], "is_weekend": wd >= 5, "is_training": wd in scheduled})
+        try:
+            is_future = date(year, month, dnum) > today_it
+        except Exception:
+            is_future = False
+        days.append({"day": dnum, "weekday": WD_SHORT[wd], "is_weekend": wd >= 5,
+                     "is_training": wd in scheduled, "is_future": is_future})
     # Atleti della squadra (principale o secondaria), non ritirati
     athletes = await db.athletes.find({
         "$or": [{"team_id": team_id}, {"team_ids": team_id}],
@@ -18253,7 +18261,7 @@ async def get_team_monthly_attendance(team_id: str, year: int, month: int, curre
             dn = d["day"]
             if dn in pset:
                 status = "P"; p_count += 1
-            elif d["is_training"]:
+            elif d["is_training"] and not d.get("is_future"):
                 status = "A"; a_count += 1
             else:
                 status = ""

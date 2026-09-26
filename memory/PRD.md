@@ -1608,3 +1608,7 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Frontend: componenti riutilizzabili `src/components/TodayAttendanceList.tsx` (elenco oggi + cestino) e `src/components/MonthlyAttendanceGrid.tsx` (griglia orizzontale nomi×giorni, P verde/A rosso/vuoto, nav mese, totali P/A). Integrati in `coach/team/[id]/attendances.tsx` e `admin/team/[id]/attendances.tsx`. Endpoint testati via curl (today=[], monthly 30 giorni).
 ### Copia squadra
 - `admin/teams.tsx`: nuovo pulsante icona "copy-outline" su ogni card (`copy-team-{id}`) → `handleCopyTeam` fa GET `/teams/{id}` e precompila TUTTI gli stati del form di creazione (nome="Copia di ...", descrizione, tipo prima/standard, quota/rate con date→GG/MM/AAAA, bank/paypal, allenamenti da trainings|training_sessions, match_day, rifinitura, championships, certificato). Il calendar_link NON viene copiato. Riusa `handleCreateTeam` → crea una NUOVA squadra. Verificato E2E: form "Nuova Squadra" precompilato "Copia di Serie C" con allenamenti/orari.
+
+## 🐛 27/09/2026 — Vista mensile: no "Assente" per allenamenti FUTURI
+- SINTOMO: nella griglia mensile i giorni di allenamento ancora da svolgere (es. 29/09) venivano segnati "A" (assente).
+- FIX backend `get_team_monthly_attendance`: aggiunto `is_future` per ogni giorno (date > oggi Europe/Rome); "A" assegnato solo se giorno di allenamento E non futuro. Giorni futuri → cella vuota. Totali A aggiornati di conseguenza. Verificato: giorno futuro='', giorno passato='A'.
