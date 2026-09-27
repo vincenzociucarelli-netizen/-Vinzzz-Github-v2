@@ -128,6 +128,18 @@ export default function TeamsScreen() {
       setTrainings(newTrainings);
     }
   };
+
+  // 🆕 27/09/2026 — Riordino allenamenti: sposta un turno su/giù senza dover
+  // riscrivere tutti gli orari successivi.
+  const moveTraining = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= trainings.length) return;
+    const newTrainings = [...trainings];
+    const tmp = newTrainings[index];
+    newTrainings[index] = newTrainings[target];
+    newTrainings[target] = tmp;
+    setTrainings(newTrainings);
+  };
   
   // Helper function to format time as HH:mm
   const formatTimeInput = (text: string): string => {
@@ -710,11 +722,31 @@ export default function TeamsScreen() {
                 <View key={index} style={styles.trainingRow}>
                   <View style={styles.trainingHeader}>
                     <Text style={styles.trainingLabel}>Allenamento {index + 1}</Text>
-                    {trainings.length > 2 && (
-                      <TouchableOpacity onPress={() => removeTraining(index)}>
-                        <Ionicons name="close-circle" size={24} color="#FF3B30" />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <TouchableOpacity
+                        onPress={() => moveTraining(index, -1)}
+                        disabled={index === 0}
+                        style={{ opacity: index === 0 ? 0.3 : 1, padding: 4 }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        testID={`move-training-up-${index}`}
+                      >
+                        <Ionicons name="arrow-up-circle" size={26} color="#007AFF" />
                       </TouchableOpacity>
-                    )}
+                      <TouchableOpacity
+                        onPress={() => moveTraining(index, 1)}
+                        disabled={index === trainings.length - 1}
+                        style={{ opacity: index === trainings.length - 1 ? 0.3 : 1, padding: 4 }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        testID={`move-training-down-${index}`}
+                      >
+                        <Ionicons name="arrow-down-circle" size={26} color="#007AFF" />
+                      </TouchableOpacity>
+                      {trainings.length > 2 && (
+                        <TouchableOpacity onPress={() => removeTraining(index)} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                          <Ionicons name="close-circle" size={24} color="#FF3B30" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
                   
                   <View style={styles.trainingFields}>

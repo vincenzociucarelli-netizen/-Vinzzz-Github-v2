@@ -1636,3 +1636,11 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Nuovo `GET /athletes/{athlete_id}/qr-code-pdf`: PDF 1 pagina con logo società centrato, nome società, squadra, QR grande (9cm) e nome atleta. Accesso staff (isolamento società) + genitore collegato.
 - Frontend: nuovo `src/components/AthleteQrButton.tsx` ("Stampa QR atleta", testID print-athlete-qr-btn) inserito in `coach/athlete/[id].tsx` sotto "Annulla presenza di oggi". (Admin ha già la sua stampa QR via printQRCode.)
 - VERIFICATO: team PDF text "Presenze: 0% (0/59)" + 1 immagine QR; single PDF con nome società+squadra+atleta; pulsante visibile nella scheda coach (screenshot).
+
+## 🆕 27/09/2026 — Riordino allenamenti (sposta su/giù)
+- Richiesta: poter spostare ogni turno di allenamento nella posizione desiderata senza dover riscrivere tutti gli orari successivi quando se ne inserisce uno in mezzo.
+- Soluzione: frecce ⬆️/⬇️ ("Sposta su/giù") su ogni card allenamento, accanto al cestino. Swap dell'array trainingSessions.
+- File PRINCIPALE: `admin/team/[id].tsx` (form modifica squadra esistente) — nuova `moveTrainingSession(index, dir)` + frecce nell'header di ogni "Allenamento N" (testID move-training-up/down-{index}). Prima freccia su e ultima freccia giù disabilitate.
+- Anche `admin/teams.tsx` (form nuova squadra) ha ricevuto `moveTraining` + frecce per coerenza.
+- Icone: aggiunte 'arrow-up-circle'/'arrow-down-circle' (⬆️/⬇️) alla mappa `src/components/Icon.tsx`.
+- VERIFICATO in preview: squadra Under 14 (7 allenamenti), click "sposta giù" su Allenamento 1 → giorno passa da Lunedì a Martedì (swap con Allenamento 2). Ricordarsi "Salva Modifiche" per persistere.

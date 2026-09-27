@@ -466,6 +466,18 @@ export default function TeamDetail() {
     setTrainingSessions(newSessions);
   };
 
+  // 🆕 27/09/2026 — Riordino allenamenti: sposta un turno su/giù senza dover
+  // riscrivere tutti gli orari successivi.
+  const moveTrainingSession = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= trainingSessions.length) return;
+    const newSessions = [...trainingSessions];
+    const tmp = newSessions[index];
+    newSessions[index] = newSessions[target];
+    newSessions[target] = tmp;
+    setTrainingSessions(newSessions);
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       showAlert('Errore', 'Inserisci il nome della squadra');
@@ -1090,11 +1102,31 @@ export default function TeamDetail() {
                 <View key={index} style={styles.trainingEditRow}>
                   <View style={styles.trainingEditHeader}>
                     <Text style={styles.trainingEditLabel}>Allenamento {index + 1}</Text>
-                    {trainingSessions.length > 2 && (
-                      <TouchableOpacity onPress={() => removeTrainingSession(index)}>
-                        <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <TouchableOpacity
+                        onPress={() => moveTrainingSession(index, -1)}
+                        disabled={index === 0}
+                        style={{ opacity: index === 0 ? 0.3 : 1, padding: 4 }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        testID={`move-training-up-${index}`}
+                      >
+                        <Ionicons name="arrow-up-circle" size={26} color="#007AFF" />
                       </TouchableOpacity>
-                    )}
+                      <TouchableOpacity
+                        onPress={() => moveTrainingSession(index, 1)}
+                        disabled={index === trainingSessions.length - 1}
+                        style={{ opacity: index === trainingSessions.length - 1 ? 0.3 : 1, padding: 4 }}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        testID={`move-training-down-${index}`}
+                      >
+                        <Ionicons name="arrow-down-circle" size={26} color="#007AFF" />
+                      </TouchableOpacity>
+                      {trainingSessions.length > 2 && (
+                        <TouchableOpacity onPress={() => removeTrainingSession(index)} style={{ padding: 4 }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                          <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
                   
                   <View style={styles.trainingEditFields}>
