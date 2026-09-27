@@ -10,9 +10,10 @@ import api from '../services/api';
 
 interface Props {
   teamId: string;
+  teamName?: string;
 }
 
-const TeamQrCodesButton: React.FC<Props> = ({ teamId }) => {
+const TeamQrCodesButton: React.FC<Props> = ({ teamId, teamName }) => {
   const [loading, setLoading] = useState(false);
 
   const handlePress = async () => {
@@ -21,19 +22,18 @@ const TeamQrCodesButton: React.FC<Props> = ({ teamId }) => {
     try {
       const res = await api.get(`/teams/${teamId}/qr-codes-pdf`, { responseType: 'blob' });
       const blob = new Blob([res.data], { type: 'application/pdf' });
+      const safeName = (teamName || 'squadra').replace(/[^\w.\-]+/g, '_');
+      const fileName = `QR_${safeName}.pdf`;
       if (Platform.OS === 'web') {
         // @ts-ignore
         const url = URL.createObjectURL(blob);
+        // Scarica il file col nome della squadra
         // @ts-ignore
-        const win = window.open(url, '_blank', 'noopener,noreferrer');
-        if (!win) {
-          // @ts-ignore
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'QR_squadra.pdf';
-          // @ts-ignore
-          document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        }
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        // @ts-ignore
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(url), 30000);
       } else {
         Alert.alert('QR Code', 'Apri l\'app dal browser per scaricare il PDF dei QR.');

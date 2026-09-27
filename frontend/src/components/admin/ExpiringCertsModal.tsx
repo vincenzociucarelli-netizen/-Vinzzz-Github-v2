@@ -5,16 +5,18 @@
  */
 import React, { useMemo, useState } from 'react';
 import {
-  Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform, useWindowDimensions,
+  Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet, Platform, Linking, useWindowDimensions,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '../Icon';
+import api from '../../services/api';
 
 interface CertItem {
   id?: string;
   athlete_name?: string;
   expiry_date?: string;
   days_until_expiry?: number | null;
+  phone?: string;
 }
 
 interface Props {
@@ -49,6 +51,7 @@ const ExpiringCertsModal: React.FC<Props> = ({
 }) => {
   const { height } = useWindowDimensions();
   const [copied, setCopied] = useState(false);
+  const [sending, setSending] = useState<string | null>(null);
 
   const plainText = useMemo(() => {
     const lines: string[] = ['CERTIFICATI IN SCADENZA', ''];
@@ -78,6 +81,45 @@ const ExpiringCertsModal: React.FC<Props> = ({
     } catch {
       // no-op
     }
+  };
+
+  // 🆕 27/09/2026 — Sollecito WhatsApp immediato per il singolo atleta.
+  const normalizePhone = (raw: string) => {
+    let phone = (raw || '').replace(/\D/g, '');
+    if (phone.startsWith('00')) phone = phone.substring(2);
+    if (phone.startsWith('0') && phone.length <= 11) phone = '39' + phone.replace(/^0+/, '');
+    if (!phone.startsWith('39') && (phone.length === 9 || phone.length === 10)) phone = '39' + phone;
+    return phone;
+  };
+
+  const sendWhatsApp = async (item: CertItem) => {
+    if (!item.phone) return;
+    setSending(item.id || item.athlete_name || '');
+    let message = `Ciao, ricordiamo che il certificato medico di ${item.athlete_name || ''} è in scadenza${item.expiry_date ? ` il ${formatDate(item.expiry_date)}` : ''}. Ti preghiamo di rinnovarlo.`;
+    try {
+      const r = await api.get('/admin/whatsapp/render', {
+        params: { case: 'certificate_expiring', athlete_id: item.id, contact_name: item.athlete_name || '' },
+      });
+      if (r?.data?.message) message = r.data.message;
+    } catch { /* usa messaggio di default */ }
+
+    const phone = normalizePhone(item.phone);
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    try {
+      await api.post('/admin/whatsapp/log-sent', {
+        case: 'certificate_expiring',
+        target_athlete_id: item.id || null,
+        target_phone: item.phone,
+        message_sent: message,
+      });
+    } catch { /* non bloccante */ }
+    if (Platform.OS === 'web') {
+      // @ts-ignore
+      window.open(url, '_blank');
+    } else {
+      Linking.openURL(url);
+    }
+    setSending(null);
   };
 
   const total = countToday + count30Days;
@@ -126,6 +168,17 @@ const ExpiringCertsModal: React.FC<Props> = ({
                       {c.athlete_name || '—'}
                       {c.expiry_date ? `  ·  ${formatDate(c.expiry_date)}` : ''}
                     </Text>
+                    {!!c.phone && (
+                      <TouchableOpacity
+                        style={styles.waBtn}
+                        onPress={() => sendWhatsApp(c)}
+                        disabled={sending === (c.id || c.athlete_name)}
+                        testID={`wa-cert-${c.id || i}`}
+                      >
+                        <Ionicons name="logo-whatsapp" size={16} color="#fff" />
+                        <Text style={styles.waBtnText}>Sollecita</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 ))}
               </>
@@ -145,6 +198,17 @@ const ExpiringCertsModal: React.FC<Props> = ({
                       {c.days_until_expiry != null ? `  (${daysLabel(c.days_until_expiry)})` : ''}
                       {c.expiry_date ? `  ·  ${formatDate(c.expiry_date)}` : ''}
                     </Text>
+                    {!!c.phone && (
+                      <TouchableOpacity
+                        style={styles.waBtn}
+                        onPress={() => sendWhatsApp(c)}
+                        disabled={sending === (c.id || c.athlete_name)}
+                        testID={`wa-cert-soon-${c.id || i}`}
+                      >
+                        <Ionicons name="logo-whatsapp" size={16} color="#fff" />
+                        <Text style={styles.waBtnText}>Sollecita</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 ))}
               </>
@@ -208,6 +272,16 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, gap: 8 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   rowText: { fontSize: 14, color: '#111', flex: 1 },
+  waBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#25D366',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  waBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   emptyText: { fontSize: 14, color: '#666', textAlign: 'center', paddingVertical: 24 },
   footer: {
     flexDirection: 'row',

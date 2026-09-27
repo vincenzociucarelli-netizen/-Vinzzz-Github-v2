@@ -50,6 +50,7 @@ const iconMap: { [key: string]: string } = {
   'trash-outline': '🗑️',
   'copy': '📋',
   'copy-outline': '📋',
+  'logo-whatsapp': '💬',
   'share': '↗️',
   'share-outline': '↗️',
   'share-social': '📤',

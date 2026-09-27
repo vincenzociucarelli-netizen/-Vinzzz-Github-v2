@@ -14930,9 +14930,22 @@ async def get_expiring_certificates(current_user = Depends(get_current_user)):
     # 🚀 18/08/2026 PERF — projection: solo i campi necessari (NIENTE foto base64).
     athletes = await db.athletes.find(
         {"society_id": society_id},
-        {"_id": 0, "id": 1, "full_name": 1, "medical_certificate_expiry": 1},
+        {"_id": 0, "id": 1, "full_name": 1, "medical_certificate_expiry": 1,
+         "phone": 1, "athlete_phone": 1, "parent_id": 1},
     ).to_list(2000)
-    
+
+    # 🆕 27/09/2026 — Mappa parent_id → telefono famiglia (per il sollecito WhatsApp
+    # dal popup certificati: se l'atleta è minorenne usiamo il numero del genitore).
+    _parent_ids = list({a.get("parent_id") for a in athletes if a.get("parent_id")})
+    _parent_phones = {}
+    if _parent_ids:
+        async for _p in db.users.find(
+            {"id": {"$in": _parent_ids}},
+            {"_id": 0, "id": 1, "phone": 1},
+        ):
+            if _p.get("phone"):
+                _parent_phones[_p["id"]] = _p["phone"]
+
     for athlete in athletes:
         expiry_str = athlete.get("medical_certificate_expiry")
         if not expiry_str:
@@ -14948,11 +14961,14 @@ async def get_expiring_certificates(current_user = Depends(get_current_user)):
         except:
             continue
         
+        _phone = athlete.get("phone") or athlete.get("athlete_phone") \
+            or _parent_phones.get(athlete.get("parent_id")) or ""
         athlete_info = {
             "id": athlete.get("id"),
             "athlete_name": athlete.get("full_name"),
             "expiry_date": expiry_date.isoformat(),
-            "days_until_expiry": (expiry_date - today).days
+            "days_until_expiry": (expiry_date - today).days,
+            "phone": _phone,
         }
         
         # Check if expiring today

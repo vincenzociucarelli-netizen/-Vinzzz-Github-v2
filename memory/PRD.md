@@ -1650,3 +1650,10 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Soluzione: nuovo componente `src/components/admin/ExpiringCertsModal.tsx` (Modal grande, maxHeight 88% schermo, maxWidth 620). Mostra badge riepilogo (Scaduti/Oggi + Prossimi 30gg), elenco COMPLETO scorrevole con testo `selectable` (selezione/copia manuale) e pulsante "Copia elenco" (expo-clipboard) che copia tutta la lista formattata. Nome atleta + giorni alla scadenza + data (formato IT, UTC).
 - Wiring in `admin/index.tsx`: rimossi i 2 `showInfo(...)` per i certificati; ora entrambi (quick-stat "Scadenze" + task "Certificati in scadenza") aprono `setShowCertsModal(true)`. Dati da state `expiringCerts` (endpoint `/certificates/expiring`).
 - VERIFICATO in preview: modal con badge 0/1, sezione "Prossimi 30 giorni (1)", "Test REACT (tra 25 giorni) · 22/10/2026", pulsanti Copia elenco/Chiudi (testID copy-certs-btn).
+
+## 🆕 27/09/2026 — Sollecito WhatsApp da popup certificati + nome file PDF QR
+- (1) Sollecito da popup: `ExpiringCertsModal` ora ha un pulsante verde "Sollecita" (WhatsApp) per ogni atleta con certificato in scadenza. Recupera il messaggio da `/admin/whatsapp/render?case=certificate_expiring&athlete_id=`, normalizza il numero (prefisso 39), apre wa.me e registra l'invio via `/admin/whatsapp/log-sent`.
+  - Backend: `/certificates/expiring` ora include `phone` per ogni atleta (athlete.phone/athlete_phone, fallback telefono del genitore via mappa parent_id→phone).
+  - VERIFICATO: endpoint restituisce phone; render endpoint restituisce messaggio certificato; pulsante "Sollecita" visibile nel popup (testID wa-cert-*).
+- (2) Nome file PDF QR: `TeamQrCodesButton` ora accetta `teamName` e forza il download con nome `QR_<NomeSquadra>.pdf` (anchor download invece di window.open). Passato `stats?.team_name` da coach/admin attendances.
+- Icona `logo-whatsapp` (💬) aggiunta a `src/components/Icon.tsx`.

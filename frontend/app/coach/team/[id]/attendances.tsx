@@ -144,7 +144,7 @@ export default function CoachTeamAttendances() {
 
         {/* 🆕 Presenze di oggi (annulla registrazioni errate) + Vista mensile */}
         <View style={{ height: 12 }} />
-        <TeamQrCodesButton teamId={String(id)} />
+        <TeamQrCodesButton teamId={String(id)} teamName={stats?.team_name} />
         <TodayAttendanceList teamId={String(id)} onChanged={loadStats} />
         <MonthlyAttendanceGrid teamId={String(id)} />
 
