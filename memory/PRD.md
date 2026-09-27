@@ -1624,3 +1624,9 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Fix `admin_dashboard_live_stats` in server.py: `privacy_pending_count` = atleti non ritirati la cui prossima azione è la firma privacy (via `compute_pending_reason` → contiene "firma della privacy") + genitori con ri-firma rinnovo pendente.
 - VERIFICATO via API: società di test passata da 0 → 2 (coerente con i solleciti "In attesa: firma della privacy" dell'elenco atleti).
 - Chiarito all'utente: "Ritiri reversibili" = atleti ritirati per rinuncia genitore alla ri-firma privacy nuova stagione, ancora nella finestra di 15gg entro cui il ritiro è annullabile (soft-delete recuperabile).
+
+## 🆕 27/09/2026 — PDF Codici QR squadra (pagina Presenze, coach + admin)
+- Richiesta: pulsante nella pagina Presenze (zona sopra "Presenze di oggi", visibile anche al Coach) che genera un PDF con: titolo = nome squadra, i QR code degli atleti, il nome dell'atleta sotto ciascun QR.
+- Backend: `GET /teams/{team_id}/qr-codes-pdf` (reportlab). Ruoli: admin/coach/viewer/dirigente/coordinatore, isolamento società. Griglia 3x3 per pagina, header viola col nome squadra + "Codici QR presenze • N atleti" + paginazione. QR generato da `qr_identifier` (fallback `athlete_code`). Ordina per nome. Atleti non ritirati.
+- Frontend: nuovo componente `src/components/TeamQrCodesButton.tsx` (scarica blob → apre PDF in nuova scheda su web). Inserito in `coach/team/[id]/attendances.tsx` e `admin/team/[id]/attendances.tsx` subito sopra `TodayAttendanceList`.
+- VERIFICATO: PDF valido (%PDF, multipagina), analisi conferma titolo squadra + QR + nome sotto. Pulsante visibile in preview (testID download-team-qr-pdf-btn).

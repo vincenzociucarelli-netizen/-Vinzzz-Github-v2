@@ -14,6 +14,7 @@ import { Ionicons } from '../../../../src/components/Icon';
 import SocietyBranding from '../../../../src/components/SocietyBranding';
 import TodayAttendanceList from '../../../../src/components/TodayAttendanceList';
 import MonthlyAttendanceGrid from '../../../../src/components/MonthlyAttendanceGrid';
+import TeamQrCodesButton from '../../../../src/components/TeamQrCodesButton';
 
 interface AthleteStats {
   athlete_id: string;
@@ -143,6 +144,7 @@ export default function CoachTeamAttendances() {
 
         {/* 🆕 Presenze di oggi (annulla registrazioni errate) + Vista mensile */}
         <View style={{ height: 12 }} />
+        <TeamQrCodesButton teamId={String(id)} />
         <TodayAttendanceList teamId={String(id)} onChanged={loadStats} />
         <MonthlyAttendanceGrid teamId={String(id)} />
 
