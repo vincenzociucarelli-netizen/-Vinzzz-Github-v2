@@ -25,6 +25,7 @@ import GuideButton from '../../src/components/GuideButton';
 import FirstLoginGuideHint from '../../src/components/FirstLoginGuideHint';
 import { SeasonBadge } from '../../src/services/SeasonBadge';
 import CompensationExportModal from '../../src/components/admin/CompensationExportModal';
+import ExpiringCertsModal from '../../src/components/admin/ExpiringCertsModal';
 
 // Emoji icons for reliable cross-platform support
 const Icons = {
@@ -122,6 +123,7 @@ export default function AdminDashboard() {
   const [waCount, setWaCount] = useState<number>(0);
   // 🆕 13/06/2026 — Modal export Riepilogo Compensi Annuale
   const [showCompensationExport, setShowCompensationExport] = useState(false);
+  const [showCertsModal, setShowCertsModal] = useState(false);
   // Optimistic logo rendering: try to load the image first; only hide on real error.
   // This avoids issues with HEAD probes failing on some backend versions while
   // GET requests work fine.
@@ -607,23 +609,7 @@ export default function AdminDashboard() {
               onPress={() => {
                 const total = expiringCerts.count_today + expiringCerts.count_30_days;
                 if (total > 0) {
-                  let message = '';
-                  if (expiringCerts.count_today > 0) {
-                    message += `⚠️ OGGI: ${expiringCerts.count_today} certificati\n`;
-                    expiringCerts.expiring_today.forEach((c: any) => {
-                      message += `• ${c.athlete_name}\n`;
-                    });
-                  }
-                  if (expiringCerts.count_30_days > 0) {
-                    message += `\n📋 Prossimi 30 giorni: ${expiringCerts.count_30_days}\n`;
-                    expiringCerts.expiring_soon.slice(0, 5).forEach((c: any) => {
-                      message += `• ${c.athlete_name} (${c.days_until_expiry}g)\n`;
-                    });
-                    if (expiringCerts.count_30_days > 5) {
-                      message += `... e altri ${expiringCerts.count_30_days - 5}`;
-                    }
-                  }
-                  showInfo('📋 Certificati in Scadenza', message);
+                  setShowCertsModal(true);
                 }
               }}
             >
@@ -679,21 +665,7 @@ export default function AdminDashboard() {
               icon: '📄',
               color: '#EF6C00',
               onPress: () => {
-                let message = '';
-                if ((expiringCerts?.count_today || 0) > 0) {
-                  message += `⚠️ SCADUTI/OGGI: ${expiringCerts.count_today}\n`;
-                  (expiringCerts.expiring_today || []).forEach((c: any) => {
-                    message += `• ${c.athlete_name}\n`;
-                  });
-                  message += '\n';
-                }
-                if ((expiringCerts?.count_30_days || 0) > 0) {
-                  message += `📋 Prossimi 30 giorni: ${expiringCerts.count_30_days}\n`;
-                  (expiringCerts.expiring_soon || []).forEach((c: any) => {
-                    message += `• ${c.athlete_name}${c.days_until_expiry != null ? ` (tra ${c.days_until_expiry}g)` : ''}\n`;
-                  });
-                }
-                showInfo('📄 Certificati in Scadenza', message.trim() || 'Nessun certificato in scadenza.');
+                setShowCertsModal(true);
               },
               testId: 'task-expiring-certs',
             },
@@ -864,6 +836,15 @@ export default function AdminDashboard() {
         <CompensationExportModal
           visible={showCompensationExport}
           onClose={() => setShowCompensationExport(false)}
+        />
+
+        <ExpiringCertsModal
+          visible={showCertsModal}
+          onClose={() => setShowCertsModal(false)}
+          countToday={expiringCerts.count_today}
+          count30Days={expiringCerts.count_30_days}
+          expiringToday={expiringCerts.expiring_today || []}
+          expiringSoon={expiringCerts.expiring_soon || []}
         />
 
 

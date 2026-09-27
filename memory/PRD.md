@@ -1644,3 +1644,9 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Anche `admin/teams.tsx` (form nuova squadra) ha ricevuto `moveTraining` + frecce per coerenza.
 - Icone: aggiunte 'arrow-up-circle'/'arrow-down-circle' (⬆️/⬇️) alla mappa `src/components/Icon.tsx`.
 - VERIFICATO in preview: squadra Under 14 (7 allenamenti), click "sposta giù" su Allenamento 1 → giorno passa da Lunedì a Martedì (swap con Allenamento 2). Ricordarsi "Salva Modifiche" per persistere.
+
+## 🆕 27/09/2026 — Popup "Certificati in Scadenza" ridimensionato + copia
+- Problema: cliccando su "Scadenze"/"Certificati in scadenza" si apriva un alert() nativo del browser, non ridimensionabile né copiabile (troncava la lista).
+- Soluzione: nuovo componente `src/components/admin/ExpiringCertsModal.tsx` (Modal grande, maxHeight 88% schermo, maxWidth 620). Mostra badge riepilogo (Scaduti/Oggi + Prossimi 30gg), elenco COMPLETO scorrevole con testo `selectable` (selezione/copia manuale) e pulsante "Copia elenco" (expo-clipboard) che copia tutta la lista formattata. Nome atleta + giorni alla scadenza + data (formato IT, UTC).
+- Wiring in `admin/index.tsx`: rimossi i 2 `showInfo(...)` per i certificati; ora entrambi (quick-stat "Scadenze" + task "Certificati in scadenza") aprono `setShowCertsModal(true)`. Dati da state `expiringCerts` (endpoint `/certificates/expiring`).
+- VERIFICATO in preview: modal con badge 0/1, sezione "Prossimi 30 giorni (1)", "Test REACT (tra 25 giorni) · 22/10/2026", pulsanti Copia elenco/Chiudi (testID copy-certs-btn).
