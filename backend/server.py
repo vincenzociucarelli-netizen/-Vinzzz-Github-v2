@@ -6682,11 +6682,33 @@ async def admin_dashboard_live_stats(current_user = Depends(get_current_user)):
         "society_id": sid,
         "last_active_at": {"$gte": five_min_ago},
     })
-    privacy_pending_count = await db.users.count_documents({
+    # 🐛 Fix: "Privacy da firmare" contava SOLO le ri-firme di rinnovo stagione
+    # (privacy_pending_renewal). Ora conta TUTTE le privacy in sospeso:
+    #   (a) atleti il cui prossimo passo è la FIRMA della privacy (mai firmata)
+    #   (b) genitori con ri-firma privacy per il rinnovo della nuova stagione
+    renewal_pending_count = await db.users.count_documents({
         "society_id": sid,
         "role": UserRole.PARENT,
         "privacy_pending_renewal": True,
     })
+    # (a) Atleti non ritirati con firma privacy ancora da fare (usa la stessa
+    # logica dell'elenco atleti: compute_pending_reason → "firma della privacy").
+    initial_pending_count = 0
+    _pa_cursor = db.athletes.find(
+        {"society_id": sid, "is_withdrawn": {"$ne": True}},
+        {
+            "_id": 0, "status": 1, "date_of_birth": 1, "privacy_accepted": 1,
+            "medical_certificate_verified": 1, "medical_certificate_issue_date": 1,
+            "medical_certificate_date": 1, "medical_certificate_expiry": 1,
+            "team_id": 1, "primary_team_id": 1, "team_ids": 1,
+            "trial_start_date": 1, "is_withdrawn": 1,
+        },
+    )
+    async for _a in _pa_cursor:
+        _reason = compute_pending_reason(_a)
+        if _reason and "firma della privacy" in _reason:
+            initial_pending_count += 1
+    privacy_pending_count = initial_pending_count + renewal_pending_count
     withdrawn_reversible_count = await db.athletes.count_documents({
         "society_id": sid,
         "is_withdrawn": True,

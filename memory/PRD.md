@@ -1618,3 +1618,9 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Backend: `DELETE /coach/athletes/{athlete_id}/attendance/today` — elimina TUTTE le presenze di oggi dell'atleta (data odierna Europe/Rome o check_in_time >= inizio giornata). Stesse regole permessi del manual-attendance (coach solo squadra assegnata; admin/coord bypass; isolamento società). Tracciato in `deleted_attendances` + audit `attendance_deleted`; ricalcolo prova. 404 se nessuna presenza oggi.
 - Frontend `coach/athlete/[id].tsx`: nuovo pulsante rosso "Annulla presenza di oggi" (testID cancel-today-attendance-btn) subito sotto "Convalida presenza (straordinaria)", con conferma. Handler `cancelTodayAttendance` + stato `cancelSubmitting` + stili cancelPresBtn.
 - VERIFICATO via API: POST manuale oggi → DELETE (deleted:1) → DELETE ripetuto → 404 "Nessuna presenza registrata oggi".
+
+## 🐛 27/09/2026 — Fix conteggio "Privacy da firmare" (widget dashboard admin)
+- Problema: il widget "Privacy da firmare" (AdminLiveStats) mostrava sempre 0 anche con tante privacy pendenti. Contava SOLO i genitori con `privacy_pending_renewal=True` (ri-firma per rinnovo stagione), non gli atleti che non hanno mai firmato il consenso iniziale.
+- Fix `admin_dashboard_live_stats` in server.py: `privacy_pending_count` = atleti non ritirati la cui prossima azione è la firma privacy (via `compute_pending_reason` → contiene "firma della privacy") + genitori con ri-firma rinnovo pendente.
+- VERIFICATO via API: società di test passata da 0 → 2 (coerente con i solleciti "In attesa: firma della privacy" dell'elenco atleti).
+- Chiarito all'utente: "Ritiri reversibili" = atleti ritirati per rinuncia genitore alla ri-firma privacy nuova stagione, ancora nella finestra di 15gg entro cui il ritiro è annullabile (soft-delete recuperabile).
