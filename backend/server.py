@@ -15236,7 +15236,8 @@ async def get_team_qr_codes_pdf(team_id: str, current_user = Depends(get_current
     athletes = await db.athletes.find(
         _q,
         {"_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1,
-         "qr_identifier": 1, "athlete_code": 1},
+         "qr_identifier": 1, "athlete_code": 1,
+         "registration_date": 1, "created_at": 1},
     ).to_list(1000)
 
     def _name_of(a):
@@ -15245,17 +15246,63 @@ async def get_team_qr_codes_pdf(team_id: str, current_user = Depends(get_current
             n = f"{a.get('last_name') or ''} {a.get('first_name') or ''}".strip()
         return n or "—"
 
+    # 🆕 Percentuale presenze (totale stagione): stesse regole del "Registro Presenze"
+    # = presenze / allenamenti previsti dalla registrazione ad oggi (per orario squadra).
+    training_sessions = team.get("training_sessions", [])
+    now = datetime.now()
+    today_end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+    activity_start = None
+    _asd = team.get("activity_start_date")
+    if _asd:
+        try:
+            activity_start = datetime.fromisoformat(str(_asd).replace('Z', '').replace('+00:00', '')).replace(hour=0, minute=0, second=0, microsecond=0)
+        except Exception:
+            activity_start = None
+
+    async def _attendance_pct(athlete):
+        reg_date = athlete.get("registration_date") or athlete.get("created_at") or now
+        if isinstance(reg_date, str):
+            try:
+                reg_date = datetime.fromisoformat(reg_date.replace('Z', '+00:00'))
+            except Exception:
+                reg_date = now
+        if getattr(reg_date, "tzinfo", None) is not None:
+            reg_date = reg_date.replace(tzinfo=None)
+        if activity_start and reg_date < activity_start:
+            reg_date = activity_start
+        expected_total = count_training_days_in_period(training_sessions, reg_date, today_end)
+        _att_q = {"athlete_id": athlete["id"]}
+        if activity_start:
+            _att_q["check_in_time"] = {"$gte": activity_start}
+        done = await db.attendances.count_documents(_att_q)
+        pct = round((done / max(expected_total, 1)) * 100, 1)
+        return min(pct, 100), done, expected_total
+
     # Solo atleti con un codice QR valido
     items = []
     for a in athletes:
         code = a.get("qr_identifier") or a.get("athlete_code")
         if code:
-            items.append((_name_of(a), str(code)))
+            pct, done, exp = await _attendance_pct(a)
+            items.append((_name_of(a), str(code), pct, done, exp))
     items.sort(key=lambda x: x[0].lower())
 
     team_name = team.get("name") or "Squadra"
 
     from reportlab.lib.utils import ImageReader
+
+    # 🆕 Logo società (per l'intestazione del PDF)
+    _society = await db.societies.find_one({"id": _sid}) if _sid else None
+    _logo_reader = None
+    try:
+        _logo_b64 = await _settings_logo_b64(_society) if _society else ""
+        if _logo_b64:
+            if _logo_b64.startswith("data:"):
+                _logo_b64 = _logo_b64.split(",", 1)[1]
+            _logo_bytes = base64.b64decode(_logo_b64)
+            _logo_reader = ImageReader(io.BytesIO(_logo_bytes))
+    except Exception:
+        _logo_reader = None
 
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -15265,23 +15312,43 @@ async def get_team_qr_codes_pdf(team_id: str, current_user = Depends(get_current
     cols, rows = 3, 3
     per_page = cols * rows
     margin_x = 1.5 * cm
-    top_area = height - 3.0 * cm  # spazio per titolo
+    band_h = 2.6 * cm
+    top_area = height - band_h - 0.5 * cm  # spazio per titolo
     grid_w = width - 2 * margin_x
     cell_w = grid_w / cols
     cell_h = (top_area - 1.5 * cm) / rows
-    qr_size = min(cell_w, cell_h) - 1.4 * cm
+    qr_size = min(cell_w, cell_h) - 1.6 * cm
+
+    def _pct_color(p):
+        if p >= 80:
+            return colors.HexColor("#2E7D32")
+        if p >= 50:
+            return colors.HexColor("#EF6C00")
+        return colors.HexColor("#C62828")
 
     def draw_header(page_no, total_pages):
         c.setFillColor(colors.HexColor("#5856D6"))
-        c.rect(0, height - 2.2 * cm, width, 2.2 * cm, fill=1, stroke=0)
+        c.rect(0, height - band_h, width, band_h, fill=1, stroke=0)
+        # Logo in alto a destra dentro la fascia
+        logo_w = 0
+        if _logo_reader is not None:
+            logo_side = 1.7 * cm
+            try:
+                c.drawImage(_logo_reader, width - margin_x - logo_side,
+                            height - band_h + (band_h - logo_side) / 2,
+                            width=logo_side, height=logo_side,
+                            preserveAspectRatio=True, mask='auto')
+                logo_w = logo_side + 0.4 * cm
+            except Exception:
+                logo_w = 0
         c.setFillColor(colors.white)
         c.setFont("Helvetica-Bold", 20)
         c.drawString(margin_x, height - 1.5 * cm, team_name)
         c.setFont("Helvetica", 10)
-        c.drawString(margin_x, height - 2.0 * cm,
-                     f"Codici QR presenze  •  {len(items)} atleti")
+        c.drawString(margin_x, height - 2.1 * cm,
+                     f"Codici QR presenze  -  {len(items)} atleti")
         if total_pages > 1:
-            c.drawRightString(width - margin_x, height - 2.0 * cm,
+            c.drawRightString(width - margin_x - logo_w, height - 2.1 * cm,
                               f"Pag. {page_no}/{total_pages}")
 
     total_pages = max(1, (len(items) + per_page - 1) // per_page)
@@ -15293,7 +15360,7 @@ async def get_team_qr_codes_pdf(team_id: str, current_user = Depends(get_current
         c.drawCentredString(width / 2, height / 2, "Nessun atleta con codice QR in questa squadra.")
         c.showPage()
     else:
-        for idx, (name, code) in enumerate(items):
+        for idx, (name, code, pct, done, exp) in enumerate(items):
             pos_in_page = idx % per_page
             if pos_in_page == 0:
                 if idx > 0:
@@ -15313,15 +15380,21 @@ async def get_team_qr_codes_pdf(team_id: str, current_user = Depends(get_current
             img.save(qbuf, format="PNG")
             qbuf.seek(0)
             qr_x = cell_x + (cell_w - qr_size) / 2
-            qr_y = cell_y + (cell_h - qr_size) / 2 + 0.5 * cm
+            qr_y = cell_y + (cell_h - qr_size) / 2 + 0.7 * cm
             c.drawImage(ImageReader(qbuf), qr_x, qr_y, width=qr_size, height=qr_size,
                         preserveAspectRatio=True, mask='auto')
 
             # Nome sotto il QR
             c.setFillColor(colors.HexColor("#111111"))
             c.setFont("Helvetica-Bold", 9)
-            _label = name if len(name) <= 30 else (name[:29] + "…")
+            _label = name if len(name) <= 28 else (name[:27] + "…")
             c.drawCentredString(cell_x + cell_w / 2, qr_y - 0.45 * cm, _label)
+
+            # 🆕 Percentuale presenze sotto il nome
+            c.setFillColor(_pct_color(pct))
+            c.setFont("Helvetica-Bold", 9)
+            c.drawCentredString(cell_x + cell_w / 2, qr_y - 0.90 * cm,
+                                f"Presenze: {pct:g}%  ({done}/{exp})")
         c.showPage()
 
     c.save()
@@ -15336,6 +15409,129 @@ async def get_team_qr_codes_pdf(team_id: str, current_user = Depends(get_current
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
         },
     )
+
+
+@api_router.get("/athletes/{athlete_id}/qr-code-pdf")
+async def get_athlete_qr_code_pdf(athlete_id: str, current_user = Depends(get_current_user)):
+    """🆕 Genera un PDF (una pagina) con il QR di un singolo atleta: logo società,
+    nome squadra, QR grande centrato e nome atleta sotto. Stampabile dalla scheda.
+    Accessibile a staff (admin/coach/viewer/dirigente/coordinatore, isolamento società)
+    e al genitore collegato all'atleta."""
+    if not HAS_PDF_GENERATION:
+        raise HTTPException(status_code=500, detail="Generazione PDF non disponibile")
+
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    _sid = current_user.get("society_id")
+    role = current_user["role"]
+    is_staff = role in [UserRole.ADMIN, UserRole.COACH, UserRole.VIEWER,
+                        UserRole.DIRIGENTE, UserRole.COORDINATORE]
+    is_parent = (role == UserRole.PARENT and athlete.get("parent_id") == current_user["id"])
+    if not (is_staff or is_parent):
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    if _sid and athlete.get("society_id") and athlete.get("society_id") != _sid and not is_parent:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+
+    code = athlete.get("qr_identifier") or athlete.get("athlete_code")
+    if not code:
+        raise HTTPException(status_code=404, detail="Questo atleta non ha ancora un codice QR")
+
+    name = (athlete.get("full_name") or "").strip() or \
+        f"{athlete.get('last_name') or ''} {athlete.get('first_name') or ''}".strip() or "—"
+
+    # Nome squadra (principale)
+    team_name = ""
+    _tid = None
+    _tids = athlete.get("team_ids") or []
+    if _tids:
+        _tid = _tids[0]
+    _tid = _tid or athlete.get("primary_team_id") or athlete.get("team_id")
+    if _tid:
+        _t = await db.teams.find_one({"id": _tid}, {"_id": 0, "name": 1})
+        if _t:
+            team_name = _t.get("name") or ""
+
+    _society_id = athlete.get("society_id") or _sid
+    _society = await db.societies.find_one({"id": _society_id}) if _society_id else None
+    society_name = (_society or {}).get("name") or ""
+
+    from reportlab.lib.utils import ImageReader
+
+    _logo_reader = None
+    try:
+        _logo_b64 = await _settings_logo_b64(_society) if _society else ""
+        if _logo_b64:
+            if _logo_b64.startswith("data:"):
+                _logo_b64 = _logo_b64.split(",", 1)[1]
+            _logo_reader = ImageReader(io.BytesIO(base64.b64decode(_logo_b64)))
+    except Exception:
+        _logo_reader = None
+
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+
+    # Logo centrato in alto
+    y = height - 3 * cm
+    if _logo_reader is not None:
+        logo_side = 3 * cm
+        try:
+            c.drawImage(_logo_reader, (width - logo_side) / 2, y - logo_side,
+                        width=logo_side, height=logo_side,
+                        preserveAspectRatio=True, mask='auto')
+            y -= (logo_side + 0.6 * cm)
+        except Exception:
+            pass
+
+    if society_name:
+        c.setFillColor(colors.HexColor("#333333"))
+        c.setFont("Helvetica-Bold", 14)
+        c.drawCentredString(width / 2, y, society_name)
+        y -= 1.0 * cm
+
+    if team_name:
+        c.setFillColor(colors.HexColor("#5856D6"))
+        c.setFont("Helvetica-Bold", 16)
+        c.drawCentredString(width / 2, y, team_name)
+        y -= 1.2 * cm
+
+    # QR grande centrato
+    qr = qrcode.QRCode(version=1, box_size=10, border=1)
+    qr.add_data(str(code))
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    qbuf = io.BytesIO()
+    img.save(qbuf, format="PNG")
+    qbuf.seek(0)
+    qr_size = 9 * cm
+    qr_y = y - qr_size
+    c.drawImage(ImageReader(qbuf), (width - qr_size) / 2, qr_y,
+                width=qr_size, height=qr_size, preserveAspectRatio=True, mask='auto')
+
+    # Nome atleta sotto il QR
+    c.setFillColor(colors.HexColor("#111111"))
+    c.setFont("Helvetica-Bold", 20)
+    c.drawCentredString(width / 2, qr_y - 1.2 * cm, name)
+
+    c.setFillColor(colors.HexColor("#888888"))
+    c.setFont("Helvetica", 10)
+    c.drawCentredString(width / 2, qr_y - 1.9 * cm, "Scansiona per registrare la presenza")
+
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    import re as _re
+    _fname = _re.sub(r"[^\w.\-]", "_", f"QR_{name}.pdf")
+    return StreamingResponse(
+        io.BytesIO(buffer.getvalue()),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{_fname}"',
+            "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        },
+    )
+
 
 
 

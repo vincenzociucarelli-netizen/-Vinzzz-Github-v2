@@ -22,7 +22,7 @@ import { SportIcon } from '../../../src/components/SportIcon';
 // 🐛 28/07/2026 — Read-only panel per il coach: vede i contatori FIPAV ma non
 // può modificarli (l'edit resta sull'admin).
 import FipavAthleteRulesPanel from '../../../src/components/FipavAthleteRulesPanel';
-
+import AthleteQrButton from '../../../src/components/AthleteQrButton';
 interface TechnicalData {
   id: string;
   full_name: string;
@@ -550,6 +550,8 @@ export default function CoachAthleteDetail() {
                 </>
               )}
             </TouchableOpacity>
+            {/* 🆕 27/09/2026 — Stampa QR del singolo atleta */}
+            {id && typeof id === 'string' && <AthleteQrButton athleteId={id} />}
           </View>
         )}
 
