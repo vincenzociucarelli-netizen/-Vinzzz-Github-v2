@@ -1657,3 +1657,11 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
   - VERIFICATO: endpoint restituisce phone; render endpoint restituisce messaggio certificato; pulsante "Sollecita" visibile nel popup (testID wa-cert-*).
 - (2) Nome file PDF QR: `TeamQrCodesButton` ora accetta `teamName` e forza il download con nome `QR_<NomeSquadra>.pdf` (anchor download invece di window.open). Passato `stats?.team_name` da coach/admin attendances.
 - Icona `logo-whatsapp` (💬) aggiunta a `src/components/Icon.tsx`.
+
+## 🐛 28/09/2026 — FIX download PDF QR su mobile (errore "Unmatched Route")
+- Problema: il download del PDF QR (squadra e singolo) usava un blob: URL lato client. Su mobile il blob: non è apribile/condivisibile → condividendo il link su WhatsApp si otteneva `blob:https://www.registrateam.it/...` che apriva "Unmatched Route".
+- Soluzione: NIENTE più blob. Ora si apre un URL REALE del server.
+  - Backend: nuova dependency `get_current_user_pdf` (accetta auth via header O via `?token=` query). Nuovo endpoint `GET /pdf-download-token` che rilascia un token firmato a vita breve (30', purpose=pdf_download, scoped a society_id+role). I due endpoint PDF (`/teams/{id}/qr-codes-pdf`, `/athletes/{id}/qr-code-pdf`) ora usano `get_current_user_pdf` e servono il file come `Content-Disposition: attachment` col nome squadra/atleta.
+  - Frontend: `TeamQrCodesButton` e `AthleteQrButton` ora fanno GET `/pdf-download-token` e aprono `${BACKEND}/api/.../qr-...-pdf?token=...` (web: window.open, native: Linking.openURL).
+- VERIFICATO via curl: `/pdf-download-token` ok; PDF scaricabile SOLO con token in query (senza auth → 401); header `content-disposition: attachment; filename="QR_Under_14.pdf"`. Auth via header ancora funzionante.
+- NOTA: fix presente in preview; l'errore che l'utente vedeva era su PRODUZIONE (registrateam.it) col codice vecchio → serve "Save to GitHub" per aggiornare la produzione.

@@ -15218,8 +15218,61 @@ def count_training_days_in_period(training_sessions: list, start_date: datetime,
     
     return count
 
+async def get_current_user_pdf(request: Request, token: Optional[str] = None):
+    """🆕 27/09/2026 — Auth flessibile per i PDF (QR squadra/atleta).
+    Accetta il token via header Authorization OPPURE via query param `?token=`
+    (token dedicato al download, a vita breve). Questo permette di APRIRE il PDF
+    con un URL reale del server anche su mobile (i blob: non sono apribili/condivisibili).
+    """
+    # 1) Token dedicato al download passato in query
+    if token:
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        except Exception:
+            raise HTTPException(status_code=401, detail="Link scaduto o non valido")
+        if payload.get("purpose") == "pdf_download":
+            return {
+                "role": payload.get("role", UserRole.ADMIN),
+                "society_id": payload.get("society_id"),
+                "id": payload.get("user_id"),
+                "_pdf_download": True,
+            }
+        raise HTTPException(status_code=401, detail="Token non valido per il download")
+    # 2) Header Authorization standard
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=auth.split(" ", 1)[1])
+        return await get_current_user(creds)
+    raise HTTPException(status_code=401, detail="Non autenticato")
+
+
+def _create_pdf_download_token(current_user: dict, minutes: int = 30) -> str:
+    """Token firmato a vita breve, monouso per il download PDF (non è il JWT di sessione)."""
+    payload = {
+        "purpose": "pdf_download",
+        "role": current_user.get("role"),
+        "society_id": current_user.get("society_id"),
+        "user_id": current_user.get("id"),
+        "exp": datetime.utcnow() + timedelta(minutes=minutes),
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
+@api_router.get("/pdf-download-token")
+async def get_pdf_download_token(current_user = Depends(get_current_user)):
+    """🆕 Restituisce un token a vita breve (30') da usare come `?token=` per aprire
+    i PDF (QR squadra/atleta) con un URL reale del server, apribile anche su mobile."""
+    if current_user["role"] not in [
+        UserRole.ADMIN, UserRole.COACH, UserRole.VIEWER,
+        UserRole.DIRIGENTE, UserRole.COORDINATORE, UserRole.PARENT,
+    ]:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    return {"token": _create_pdf_download_token(current_user)}
+
+
+
 @api_router.get("/teams/{team_id}/qr-codes-pdf")
-async def get_team_qr_codes_pdf(team_id: str, current_user = Depends(get_current_user)):
+async def get_team_qr_codes_pdf(team_id: str, current_user = Depends(get_current_user_pdf)):
     """🆕 Genera un PDF con TUTTI i codici QR degli atleti di una squadra.
     Titolo = nome squadra, griglia di QR con il nome dell'atleta sotto ciascuno.
     Accessibile ad Admin/Coach/Dirigente/Coordinatore (isolamento per società)."""
@@ -15421,14 +15474,14 @@ async def get_team_qr_codes_pdf(team_id: str, current_user = Depends(get_current
         io.BytesIO(buffer.getvalue()),
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'inline; filename="{_fname}"',
+            "Content-Disposition": f'attachment; filename="{_fname}"',
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
         },
     )
 
 
 @api_router.get("/athletes/{athlete_id}/qr-code-pdf")
-async def get_athlete_qr_code_pdf(athlete_id: str, current_user = Depends(get_current_user)):
+async def get_athlete_qr_code_pdf(athlete_id: str, current_user = Depends(get_current_user_pdf)):
     """🆕 Genera un PDF (una pagina) con il QR di un singolo atleta: logo società,
     nome squadra, QR grande centrato e nome atleta sotto. Stampabile dalla scheda.
     Accessibile a staff (admin/coach/viewer/dirigente/coordinatore, isolamento società)
@@ -15543,7 +15596,7 @@ async def get_athlete_qr_code_pdf(athlete_id: str, current_user = Depends(get_cu
         io.BytesIO(buffer.getvalue()),
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'inline; filename="{_fname}"',
+            "Content-Disposition": f'attachment; filename="{_fname}"',
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
         },
     )

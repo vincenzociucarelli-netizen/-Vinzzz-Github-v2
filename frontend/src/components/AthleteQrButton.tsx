@@ -4,9 +4,11 @@
  * Visibile nella scheda atleta (coach/admin/genitore).
  */
 import React, { useState } from 'react';
-import { TouchableOpacity, Text, ActivityIndicator, Alert, Platform, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, ActivityIndicator, Alert, Platform, Linking, StyleSheet } from 'react-native';
 import { Ionicons } from './Icon';
 import api from '../services/api';
+
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 interface Props {
   athleteId: string;
@@ -19,32 +21,18 @@ const AthleteQrButton: React.FC<Props> = ({ athleteId }) => {
     if (loading) return;
     setLoading(true);
     try {
-      const res = await api.get(`/athletes/${athleteId}/qr-code-pdf`, { responseType: 'blob' });
-      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const res = await api.get('/pdf-download-token');
+      const dt = res?.data?.token;
+      if (!dt) throw new Error('token');
+      const url = `${BACKEND_URL}/api/athletes/${athleteId}/qr-code-pdf?token=${encodeURIComponent(dt)}`;
       if (Platform.OS === 'web') {
         // @ts-ignore
-        const url = URL.createObjectURL(blob);
-        // @ts-ignore
-        const win = window.open(url, '_blank', 'noopener,noreferrer');
-        if (!win) {
-          // @ts-ignore
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'QR_atleta.pdf';
-          // @ts-ignore
-          document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        }
-        setTimeout(() => URL.revokeObjectURL(url), 30000);
+        window.open(url, '_blank', 'noopener,noreferrer');
       } else {
-        Alert.alert('QR Code', 'Apri l\'app dal browser per scaricare il PDF del QR.');
+        await Linking.openURL(url);
       }
     } catch (e: any) {
-      let msg = 'Impossibile generare il PDF del QR';
-      if (e?.response?.data instanceof Blob) {
-        try { const t = await e.response.data.text(); const j = JSON.parse(t); msg = j.detail || msg; } catch {}
-      } else if (e?.response?.data?.detail) {
-        msg = e.response.data.detail;
-      }
+      const msg = e?.response?.data?.detail || 'Impossibile generare il PDF del QR';
       Alert.alert('Errore', msg);
     } finally {
       setLoading(false);
