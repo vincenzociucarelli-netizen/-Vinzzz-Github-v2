@@ -1665,3 +1665,10 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
   - Frontend: `TeamQrCodesButton` e `AthleteQrButton` ora fanno GET `/pdf-download-token` e aprono `${BACKEND}/api/.../qr-...-pdf?token=...` (web: window.open, native: Linking.openURL).
 - VERIFICATO via curl: `/pdf-download-token` ok; PDF scaricabile SOLO con token in query (senza auth → 401); header `content-disposition: attachment; filename="QR_Under_14.pdf"`. Auth via header ancora funzionante.
 - NOTA: fix presente in preview; l'errore che l'utente vedeva era su PRODUZIONE (registrateam.it) col codice vecchio → serve "Save to GitHub" per aggiornare la produzione.
+
+## 🆕 28/09/2026 — (a) Rimosso sollecito "Firma inizio prova" + (b) PDF QR apre inline
+- (a) Il caso di sollecito WhatsApp `trial_start_unsigned` ("Firma inizio periodo di prova") è stato ELIMINATO: la firma di inizio prova non è più richiesta (consenso raccolto con spunta obbligatoria all'iscrizione). 
+  - Backend `get_pending_reminders` (server.py ~39413): rimosso il blocco che generava il caso.
+  - Frontend: rimosso da `whatsapp-reminders.tsx` (CASE_COLORS, fallback, shortLabel) → il tab "Firma prova" non appare più; e da `whatsapp-settings.tsx` (CASE_ORDER).
+  - VERIFICATO: pending-reminders non restituisce più trial_start_unsigned; pagina Solleciti mostra tab "Tutti / Certif. mancante / Privacy / Decisione..." senza "Firma prova".
+- (b) I PDF QR (squadra e singolo atleta) ora sono serviti come `Content-Disposition: inline` (prima era attachment): il file si APRE nel visualizzatore PDF del browser invece di scaricarsi in automatico; coach/admin decidono se salvarlo o stamparlo. Il download resta via URL reale del server con token (fix "Unmatched Route" del 28/09 mantenuto).

@@ -11,7 +11,6 @@ import SocietyBranding from '../../src/components/SocietyBranding';
 const API = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 const CASE_ORDER = [
-  'trial_start_unsigned',
   'trial_end_no_certificate',
   'trial_end_no_privacy',
   'trial_end_no_decision',

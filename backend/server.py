@@ -15474,7 +15474,7 @@ async def get_team_qr_codes_pdf(team_id: str, current_user = Depends(get_current
         io.BytesIO(buffer.getvalue()),
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'attachment; filename="{_fname}"',
+            "Content-Disposition": f'inline; filename="{_fname}"',
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
         },
     )
@@ -15596,7 +15596,7 @@ async def get_athlete_qr_code_pdf(athlete_id: str, current_user = Depends(get_cu
         io.BytesIO(buffer.getvalue()),
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'attachment; filename="{_fname}"',
+            "Content-Disposition": f'inline; filename="{_fname}"',
             "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
         },
     )
@@ -39410,26 +39410,10 @@ async def get_pending_reminders(current_user=Depends(get_current_user)):
         te = _to_date(trial_end)
         ts = _to_date(trial_start)
 
-        # (a) trial_start_unsigned — trial active but trial document never signed
-        if is_in_trial and ts and not trial_doc_signed:
-            days_since = (today - ts).days
-            if days_since >= settings["trial_start_unsigned"]["threshold_days"]:
-                ck = _make_case_key("trial_start_unsigned", athlete_id=ath_id)
-                if ck not in dismissed_keys:
-                    last = _wa_last_reminder(reminders_log, "trial_start_unsigned", ath_id, None)
-                    cases.append({
-                        "case": "trial_start_unsigned",
-                        "case_key": ck,
-                        "label": settings["trial_start_unsigned"]["label"],
-                        "athlete_id": ath_id,
-                        "athlete_name": full_name,
-                        "team_id": ath.get("team_id"),
-                        "contacts": contacts,
-                        "data_context": {"start_date": ts.strftime("%d/%m/%Y")},
-                        "days_overdue": days_since,
-                        "last_reminder_at": (last or {}).get("sent_at"),
-                        "template": settings["trial_start_unsigned"]["template"],
-                    })
+        # (a) [RIMOSSO 28/09/2026] Il sollecito "Firma inizio periodo di prova"
+        # (trial_start_unsigned) è stato eliminato: la firma di inizio prova non è
+        # più richiesta (il consenso alla prova si raccoglie con la spunta obbligatoria
+        # in fase di iscrizione). Nessun sollecito viene più generato per questo caso.
 
         # (b) certificato mancante / non convalidato — per TUTTI gli atleti non ritirati
         # 🆕 12/09/2026 (richiesta utente): il tab "Certif. mancante" deve elencare TUTTI

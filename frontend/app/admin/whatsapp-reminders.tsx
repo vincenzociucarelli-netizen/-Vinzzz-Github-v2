@@ -11,7 +11,6 @@ import SocietyBranding from '../../src/components/SocietyBranding';
 const API = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 const CASE_COLORS: Record<string, { bg: string; fg: string; icon: string }> = {
-  trial_start_unsigned:    { bg: '#FFF8E1', fg: '#F57F17', icon: 'create-outline' },
   trial_end_no_certificate:{ bg: '#FFEBEE', fg: '#C62828', icon: 'medkit-outline' },
   trial_end_no_privacy:    { bg: '#FFEBEE', fg: '#C62828', icon: 'shield-outline' },
   trial_end_no_decision:   { bg: '#FFF3E0', fg: '#EF6C00', icon: 'help-circle-outline' },
@@ -225,7 +224,7 @@ export default function WhatsAppRemindersPage() {
               <Text style={styles.emptySub}>Nessun sollecito da inviare al momento.</Text>
             </View>
           ) : filtered.map((row, idx) => {
-            const c = CASE_COLORS[row.case] || CASE_COLORS.trial_start_unsigned;
+            const c = CASE_COLORS[row.case] || CASE_COLORS.certificate_expiring;
             const lastRem = formatRelative(row.last_reminder_at);
             return (
               <View key={idx} style={[styles.caseCard, { borderLeftColor: c.fg }]}>
@@ -360,7 +359,6 @@ export default function WhatsAppRemindersPage() {
 
 function shortLabel(case_key: string): string {
   const map: Record<string, string> = {
-    trial_start_unsigned: 'Firma prova',
     trial_end_no_certificate: 'Certif. mancante',
     trial_end_no_privacy: 'Privacy',
     trial_end_no_decision: 'Decisione',
