@@ -1691,3 +1691,10 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
   - `admin_get_prior_compensation`, `get_my_prior_compensation_status`, `_require_prior_compensation_declared` ora usano `_resolve_prior_comp_doc` → leggono la firma dal record collegato più valido.
 - VERIFICATO E2E (testflow.pro@test.com): atleta firma €0 → admin (lettura via athlete_id) vede signed=True, amount=0, has_signature=True.
 - BONUS: risolve anche i casi ESISTENTI (es. Matilde) senza migrazione dati, perché il resolver legge la firma già presente sul record `users` collegato.
+
+## 🆕 28/09/2026 — Controllo orari globale (UTC→Europe/Rome)
+- Contesto: il container backend gira in UTC; molti timestamp sono salvati come ISO "naive" (senza 'Z') = UTC. Il frontend li mostrava sfasati (ora UTC, ~2h indietro rispetto a Roma).
+- Nuova utility condivisa `src/utils/datetime.ts`: `formatRomeDateTime/formatRomeTime/formatRomeDate/formatRomeDateLong`. Regola: se la stringa non ha fuso, append 'Z' (UTC), poi format con timeZone 'Europe/Rome' (gestisce DST estate +2 / inverno +1). Verificato via node: 05:22 UTC → 07:22 (estate), 06:22 (inverno).
+- Applicata a: `AdminPriorCompensationPanel` (già 28/09), `AdminNotesBoard` (created/updated), timeline atleta/genitore/admin (`athlete|parent/athlete|admin/athlete/timeline.tsx` → orari eventi in ora di Roma).
+- NON toccati di proposito: orari PARTITE (salvati come wall-clock UTC e mostrati con timeZone:'UTC'), date di nascita, campi data-only.
+- IN SOSPESO: orari PRESENZE (`check_in_time`) — caso MISTO: QR = istante UTC (utcnow), manuale = orario inserito dal coach (wall-clock Rome salvato naive). Non distinguibili a display → conversione cieca romperebbe uno dei due. Richiede fix BACKEND (convertire il manuale in UTC alla scrittura) prima di uniformare. Da concordare con l'utente.

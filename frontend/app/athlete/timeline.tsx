@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import { formatRomeDateLong, formatRomeTime } from '../../src/utils/datetime';
 import {
   View,
   Text,
@@ -25,25 +26,11 @@ interface TimelineEvent {
 }
 
 const formatDate = (dateStr: string) => {
-  if (!dateStr) return '';
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr.substring(0, 10);
-    return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' });
-  } catch {
-    return dateStr.substring(0, 10);
-  }
+  return formatRomeDateLong(dateStr, dateStr ? dateStr.substring(0, 10) : '');
 };
 
 const formatTime = (dateStr: string) => {
-  if (!dateStr) return '';
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return '';
-    return d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
-  } catch {
-    return '';
-  }
+  return formatRomeTime(dateStr, '');
 };
 
 export default function AthleteTimelinePage() {

@@ -19,6 +19,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator,
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { formatRomeDate, formatRomeDateTime } from '../utils/datetime';
 
 type Priority = 'high' | 'medium' | 'low';
 
@@ -64,25 +65,11 @@ function confirmAction(msg: string): Promise<boolean> {
 }
 
 function formatDate(iso?: string | null): string {
-  if (!iso) return '';
-  try {
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return '';
-    return d.toLocaleDateString('it-IT');
-  } catch {
-    return '';
-  }
+  return formatRomeDate(iso, '');
 }
 
 function formatDateTime(iso?: string | null): string {
-  if (!iso) return '';
-  try {
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return '';
-    return `${d.toLocaleDateString('it-IT')} ${d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`;
-  } catch {
-    return '';
-  }
+  return formatRomeDateTime(iso, '');
 }
 
 function dueDateStatus(due?: string | null): { label: string; color: string; bg: string } | null {
