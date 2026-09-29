@@ -9,7 +9,7 @@
  * Replica grafica del Dirigente user e si usa in tutte le viste compenso
  * (user collaboratore/coach/atleta-pro + admin dirigente/collaboratore/coach/atleta-pro).
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
@@ -93,6 +93,24 @@ export default function CompensationSummaryCard({
   const [showPriorModal, setShowPriorModal] = useState(false);
   const [checkingPrior, setCheckingPrior] = useState(false);
 
+  // 🆕 28/09/2026 — Stato firma pregresso nella vista PERSONALE (non admin/readOnly):
+  // se il compenso è già accettato ma il pregresso NON è ancora firmato, l'utente
+  // deve poterlo firmare ORA (anche se è €0). Mostriamo un pulsante dedicato.
+  const isSelfView = !adminUserId && !readOnly;
+  const [priorSigned, setPriorSigned] = useState<boolean | null>(null);
+
+  const refreshPriorStatus = React.useCallback(async () => {
+    if (!isSelfView) return;
+    try {
+      const res = await api.get('/me/prior-compensation/status');
+      setPriorSigned(!!res.data?.signed);
+    } catch {
+      setPriorSigned(null);
+    }
+  }, [isSelfView]);
+
+  useEffect(() => { refreshPriorStatus(); }, [refreshPriorStatus]);
+
   const handleAcceptClick = async () => {
     if (!onAcceptCompensation) return;
     // Prima di accettare, verifica lo status della dichiarazione pregresso
@@ -116,8 +134,10 @@ export default function CompensationSummaryCard({
 
   const handleDeclared = () => {
     setShowPriorModal(false);
-    // Dopo la firma, procede automaticamente con l'accettazione
+    setPriorSigned(true);
+    // Dopo la firma, procede automaticamente con l'accettazione (se non già accettato)
     onAcceptCompensation?.();
+    refreshPriorStatus();
     // 🆕 27/07/2026 — Forza refresh su Web così la pagina padre ricarica il pregresso
     //                 aggiornato (evita mostrare €0 nel box "Pregresso dichiarato" dopo firma).
     //                 Il reload avviene solo se il caller non gestisce la propagazione.
@@ -194,6 +214,27 @@ export default function CompensationSummaryCard({
             </TouchableOpacity>
           </View>
         )
+      )}
+
+      {/* 🆕 28/09/2026 — Firma pregresso ORA (vista personale): visibile quando il
+          pregresso non è ancora firmato. Utile se il compenso è già stato accettato
+          (o accettato dall'admin) e manca solo l'autocertificazione del pregresso. */}
+      {isSelfView && priorSigned === false && (
+        <View style={{ marginBottom: 12 }}>
+          <View style={{ backgroundColor: '#FFF3CD', padding: 12, borderRadius: 8, marginBottom: 8, borderLeftWidth: 3, borderLeftColor: '#FF9500' }}>
+            <Text style={{ color: '#856404', fontSize: 13, fontWeight: '500' }}>
+              📋 Devi firmare la Dichiarazione Pregresso (compensi già percepiti da altre ASD/SSD quest&apos;anno). Se non hai percepito nulla, dichiara <Text style={{ fontWeight: '700' }}>€0</Text>.
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1E3A8A', padding: 12, borderRadius: 8 }}
+            onPress={() => setShowPriorModal(true)}
+            data-testid="sign-prior-comp-btn"
+          >
+            <Ionicons name="create" size={18} color="#fff" />
+            <Text style={{ color: '#fff', fontWeight: 'bold', marginLeft: 8 }}>Firma Dichiarazione Pregresso</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Periodo Contratto */}

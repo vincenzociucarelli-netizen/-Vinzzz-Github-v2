@@ -1672,3 +1672,13 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
   - Frontend: rimosso da `whatsapp-reminders.tsx` (CASE_COLORS, fallback, shortLabel) → il tab "Firma prova" non appare più; e da `whatsapp-settings.tsx` (CASE_ORDER).
   - VERIFICATO: pending-reminders non restituisce più trial_start_unsigned; pagina Solleciti mostra tab "Tutti / Certif. mancante / Privacy / Decisione..." senza "Firma prova".
 - (b) I PDF QR (squadra e singolo atleta) ora sono serviti come `Content-Disposition: inline` (prima era attachment): il file si APRE nel visualizzatore PDF del browser invece di scaricarsi in automatico; coach/admin decidono se salvarlo o stamparlo. Il download resta via URL reale del server con token (fix "Unmatched Route" del 28/09 mantenuto).
+
+## 🐛 28/09/2026 — Fix orario "Dichiarazione Pregresso" (UTC→Europe/Rome)
+- Bug: nel modal "Dichiarazione Pregresso" (AdminPriorCompensationPanel) i timestamp "Storia modifiche admin" e "Firmato il" mostravano l'ora UTC (es. 05:22) invece di Roma (07:22). Causa: `changed_at`/`signed_at` salvati come UTC naive (senza 'Z'); il frontend li parsava come locali.
+- Fix `formatDateTime` in `AdminPriorCompensationPanel.tsx`: se manca il fuso appende 'Z' (forza UTC) poi `toLocaleString('it-IT', { timeZone:'Europe/Rome', ... })`.
+- IN SOSPESO (decisione utente a/b/c): firma pregresso. Chiarito che "Modifica importo (admin)" ≠ firma legale; l'accettazione compenso fatta dall'admin salta il controllo pregresso (server.py:11298 `if not is_admin`). Matilde risulta "Non firmato" perché non ha mai firmato dal suo profilo. In attesa di scelta: a) lasciare firma atleta, b) pulsante admin "Segna dichiarato €0", c) firma admin per conto atleta.
+
+## 🆕 28/09/2026 — Firma pregresso ORA dal profilo atleta (anche se compenso già accettato)
+- Richiesta: consentire a Matilde (18+ PRO) di firmare il pregresso = €0 anche se il compenso è già stato accettato (dall'admin). Prima il modal di firma appariva SOLO tramite il pulsante "Accetta compenso", che sparisce dopo l'accettazione → nessun modo di firmare.
+- Fix `CompensationSummaryCard.tsx`: in vista PERSONALE (non adminUserId, non readOnly) recupera `/me/prior-compensation/status`; se `signed=false` mostra banner + pulsante "Firma Dichiarazione Pregresso" (testID sign-prior-comp-btn) che apre `PriorCompensationDeclarationModal` (importo €0 ammesso). `handleDeclared` aggiorna lo stato firmato e ricarica.
+- VERIFICATO in preview con testflow.pro@test.com (compensation_accepted=True, pregresso non firmato): pulsante "Firma Dichiarazione Pregresso" visibile sotto "Compenso Accettato: ✓ Sì" nel tab Compensi. Stato test ripristinato.

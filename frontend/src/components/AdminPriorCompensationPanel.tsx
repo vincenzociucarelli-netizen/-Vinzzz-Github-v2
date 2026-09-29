@@ -72,13 +72,17 @@ const formatCurrency = (n: number) => {
 const formatDateTime = (iso: string | null | undefined) => {
   if (!iso) return '—';
   try {
-    const d = new Date(iso);
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const hh = String(d.getHours()).padStart(2, '0');
-    const mi = String(d.getMinutes()).padStart(2, '0');
-    return `${dd}/${mm}/${d.getFullYear()} ${hh}:${mi}`;
-  } catch { return iso; }
+    // I timestamp sono salvati in UTC (spesso senza suffisso 'Z'): se manca il
+    // fuso, lo forziamo a UTC e poi convertiamo a Europe/Rome per la visualizzazione.
+    let s = String(iso);
+    if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(s)) s = s + 'Z';
+    const d = new Date(s);
+    return d.toLocaleString('it-IT', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+      timeZone: 'Europe/Rome',
+    });
+  } catch { return String(iso); }
 };
 
 export default function AdminPriorCompensationPanel({ userId, compact = false }: Props) {
