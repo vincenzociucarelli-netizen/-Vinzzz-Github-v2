@@ -16,6 +16,7 @@ import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { useAuthStore } from '../../src/store/authStore';
 import SocietyBranding from '../../src/components/SocietyBranding';
+import { formatRomeTime } from '../../src/utils/datetime';
 
 interface AttendanceWithAthlete {
   id: string;
@@ -81,7 +82,7 @@ export default function CoachHistory() {
         <View style={styles.athleteInfo}>
           <Text style={styles.athleteName}>{item.athlete_name}</Text>
           <Text style={styles.time}>
-            {format(new Date(item.check_in_time), 'HH:mm', { locale: it })}
+            {formatRomeTime(item.check_in_time, '')}
           </Text>
         </View>
         {item.status === 'allowed' ? (

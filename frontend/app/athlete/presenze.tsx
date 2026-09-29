@@ -19,6 +19,7 @@ import { it } from 'date-fns/locale';
 // 🆕 29/07/2026 — Card Calendario Gare per l'atleta 18+: consente
 // export .ics del proprio calendario personale.
 import AthleteMatchesCard from '../../src/components/AthleteMatchesCard';
+import { formatRomeTime, formatRomeWeekdayLong } from '../../src/utils/datetime';
 
 interface Attendance {
   id: string;
@@ -90,23 +91,9 @@ export default function AthletePresenze() {
     loadData();
   };
 
-  const formatDate = (dateStr: string) => {
-    try {
-      const date = new Date(dateStr);
-      return format(date, "EEEE d MMMM yyyy", { locale: it });
-    } catch {
-      return dateStr;
-    }
-  };
+  const formatDate = (dateStr: string) => formatRomeWeekdayLong(dateStr, dateStr || '');
 
-  const formatTime = (dateStr: string) => {
-    try {
-      const date = new Date(dateStr);
-      return format(date, "HH:mm", { locale: it });
-    } catch {
-      return '';
-    }
-  };
+  const formatTime = (dateStr: string) => formatRomeTime(dateStr, '');
 
   if (loading) {
     return (

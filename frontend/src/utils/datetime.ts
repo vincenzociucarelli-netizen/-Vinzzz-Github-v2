@@ -72,3 +72,13 @@ export const formatRomeDateLong = (value: any, fallback = '—'): string => {
     timeZone: ROME,
   });
 };
+
+/** Data con giorno settimana in ora di Roma: "lunedì 29 settembre 2026" */
+export const formatRomeWeekdayLong = (value: any, fallback = '—'): string => {
+  const d = toDate(value);
+  if (!d) return fallback;
+  return d.toLocaleDateString('it-IT', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    timeZone: ROME,
+  });
+};

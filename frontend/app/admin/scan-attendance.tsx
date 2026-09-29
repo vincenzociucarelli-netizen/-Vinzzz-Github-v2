@@ -8,6 +8,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '../../src/components/Icon';
 import api from '../../src/services/api';
+import { formatRomeTime } from '../../src/utils/datetime';
 
 // Web QR scanner (html5-qrcode) — importato dinamicamente solo su web
 let Html5QrcodeScanner: any = null;
@@ -53,7 +54,7 @@ export default function AdminScanAttendance() {
       });
       const att = res.data;
       if (att.status === 'already_registered') {
-        const t = att.check_in_time ? new Date(att.check_in_time).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '';
+        const t = att.check_in_time ? formatRomeTime(att.check_in_time, '') : '';
         setLastResult({ ok: false, text: `⚠️ ${att.athlete_name || 'Atleta'} già registrato/a oggi${t ? ' alle ' + t : ''}` });
         showAlert('⚠️ Già registrata', `${att.athlete_name || 'Atleta'} è già stato/a registrato/a oggi.`);
       } else if (att.status === 'wrong_team') {

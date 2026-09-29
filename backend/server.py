@@ -18151,6 +18151,11 @@ async def add_manual_attendance(athlete_id: str, data: ManualAttendanceCreate, r
         except Exception:
             hh, mm = 0, 0
     check_in = base_dt.replace(hour=hh, minute=mm)
+    # 🆕 28/09/2026 — orario inserito dal coach in ora di Roma → salviamo in UTC (naive)
+    try:
+        check_in = check_in.replace(tzinfo=_IT_TZ).astimezone(timezone.utc).replace(tzinfo=None)
+    except Exception:
+        pass
 
     team = await db.teams.find_one({"id": team_id}, {"_id": 0, "name": 1})
     athlete_name = athlete.get("full_name") or f"{athlete.get('first_name','')} {athlete.get('last_name','')}".strip()
@@ -18520,6 +18525,11 @@ async def add_bulk_attendance(team_id: str, data: BulkAttendanceCreate, request:
         except Exception:
             hh, mm = 0, 0
     check_in = base_dt.replace(hour=hh, minute=mm)
+    # 🆕 28/09/2026 — orario inserito dal coach in ora di Roma → salviamo in UTC (naive)
+    try:
+        check_in = check_in.replace(tzinfo=_IT_TZ).astimezone(timezone.utc).replace(tzinfo=None)
+    except Exception:
+        pass
     actor_name = current_user.get("full_name") or current_user.get("email")
 
     # Config prova (multi-tenant)

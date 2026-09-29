@@ -35,6 +35,7 @@ import SocietyBranding from '../../src/components/SocietyBranding';
 import MiniSocietyLogo from '../../src/components/MiniSocietyLogo';
 import SwitchAccountButton from '../../src/components/SwitchAccountButton';
 import ActivityStartBanners from '../../src/components/ActivityStartBanners';
+import { formatRomeTime } from '../../src/utils/datetime';
 
 // Web QR Scanner
 let Html5QrcodeScanner: any = null;
@@ -383,7 +384,7 @@ export default function CoachScreen() {  const router = useRouter();
     const athleteName = attendanceData?.athlete_name || 'Atleta';
     const isWrongTeam = attendanceData?.status === 'wrong_team';
     const checkInTime = attendanceData?.check_in_time ? 
-      new Date(attendanceData.check_in_time).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : 
+      formatRomeTime(attendanceData.check_in_time, '') : 
       '';
     const teamName = attendanceData?.team_name || '';
     
@@ -557,7 +558,7 @@ export default function CoachScreen() {  const router = useRouter();
       if (attendance.status === 'already_registered') {
         // Already registered for THIS team today - simple info message, no force needed
         const existingTime = attendance.check_in_time 
-          ? new Date(attendance.check_in_time).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+          ? formatRomeTime(attendance.check_in_time, '')
           : '';
         showAlert(
           '⚠️ GIÀ REGISTRATA',
@@ -1263,7 +1264,7 @@ export default function CoachScreen() {  const router = useRouter();
               <Text style={styles.modalSubtitle}>
                 {pendingAttendance?.status === 'wrong_team' 
                   ? `${pendingAttendance?.block_reason || `${pendingAttendance?.athlete_name || 'Atleta'} non appartiene a questa squadra`}`
-                  : `${pendingAttendance?.athlete_name || 'Atleta'} è già stato/a registrato/a oggi${pendingAttendance?.check_in_time ? ` alle ${new Date(pendingAttendance.check_in_time).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}` : ''}${pendingAttendance?.team_name ? ` per ${pendingAttendance.team_name}` : ''}.`
+                  : `${pendingAttendance?.athlete_name || 'Atleta'} è già stato/a registrato/a oggi${pendingAttendance?.check_in_time ? ` alle ${formatRomeTime(pendingAttendance.check_in_time, '')}` : ''}${pendingAttendance?.team_name ? ` per ${pendingAttendance.team_name}` : ''}.`
                 }
                 {'\n\n'}
                 Se fa allenamento con due squadre diverse, puoi forzare la registrazione.

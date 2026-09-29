@@ -19,6 +19,7 @@ import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import AthleteMatchesCard from '../../src/components/AthleteMatchesCard';
 import ActivityStartBanners from '../../src/components/ActivityStartBanners';
+import { formatRomeTime } from '../../src/utils/datetime';
 
 const DAYS_IT: { [key: string]: string } = {
   'monday': 'Lunedi',
@@ -195,14 +196,7 @@ export default function MinorDashboard() {
     } catch { return dateStr || '-'; }
   };
 
-  const formatTime = (dateStr: string) => {
-    if (!dateStr) return '';
-    try {
-      const d = new Date(dateStr);
-      if (isNaN(d.getTime())) return '';
-      return d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
-    } catch { return ''; }
-  };
+  const formatTime = (dateStr: string) => formatRomeTime(dateStr, '');
 
   const avatarEmoji = getAvatarEmoji(data.athlete.lite_emoji);
   const accentColor = data.athlete.lite_color || '#007AFF';

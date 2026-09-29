@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert, ActivityIndicator } from 'react-native';
 import { Ionicons } from './Icon';
 import api from '../services/api';
+import { formatRomeTime } from '../utils/datetime';
 
 interface TodayItem {
   id: string;
@@ -60,12 +61,7 @@ export default function TodayAttendanceList({ teamId, onChanged }: { teamId: str
     }
   };
 
-  const fmtTime = (iso?: string) => {
-    if (!iso) return '';
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return '';
-    return d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
-  };
+  const fmtTime = (iso?: string) => formatRomeTime(iso, '');
 
   return (
     <View style={styles.card}>

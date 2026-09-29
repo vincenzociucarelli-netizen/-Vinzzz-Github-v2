@@ -1698,3 +1698,9 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Applicata a: `AdminPriorCompensationPanel` (già 28/09), `AdminNotesBoard` (created/updated), timeline atleta/genitore/admin (`athlete|parent/athlete|admin/athlete/timeline.tsx` → orari eventi in ora di Roma).
 - NON toccati di proposito: orari PARTITE (salvati come wall-clock UTC e mostrati con timeZone:'UTC'), date di nascita, campi data-only.
 - IN SOSPESO: orari PRESENZE (`check_in_time`) — caso MISTO: QR = istante UTC (utcnow), manuale = orario inserito dal coach (wall-clock Rome salvato naive). Non distinguibili a display → conversione cieca romperebbe uno dei due. Richiede fix BACKEND (convertire il manuale in UTC alla scrittura) prima di uniformare. Da concordare con l'utente.
+
+## 🆕 28/09/2026 — Orari PRESENZE allineati a Europe/Rome
+- Backend: nelle presenze MANUALI (endpoint `/coach/athletes/{id}/manual-attendance` e quello bulk) l'orario inserito dal coach (ora di Roma) viene ora convertito in UTC prima del salvataggio (`check_in.replace(tzinfo=_IT_TZ).astimezone(timezone.utc)`). Le presenze QR usavano già `datetime.now()`=UTC (container UTC). Ora TUTTE le presenze sono istanti UTC coerenti.
+- Frontend: tutte le viste di `check_in_time` ora usano `formatRomeTime/formatRomeDateTime` (UTC→Roma): TodayAttendanceList, minor/index, admin/scan-attendance, coach/index (3 punti), coach/history, admin/attendances, athlete/presenze (anche formatDate→formatRomeWeekdayLong). Aggiunto `formatRomeWeekdayLong` all'utility.
+- VERIFICATO E2E: presenza manuale 18:00 (Roma) → salvata 16:00 UTC → visualizzata 18:00.
+- ⚠️ NOTA MIGRAZIONE PRODUZIONE: le presenze MANUALI storiche (vecchio codice) sono salvate come wall-clock Roma naive; dopo il deploy potrebbero apparire +2h. Le presenze QR storiche invece ora si visualizzano correttamente. Valutare eventuale migrazione una-tantum se ci sono molte presenze manuali passate (usare training_slot.time come riferimento).

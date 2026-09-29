@@ -12,6 +12,7 @@ import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { formatRomeDateTime } from '../../src/utils/datetime';
 
 interface AttendanceWithAthlete {
   id: string;
@@ -53,7 +54,7 @@ export default function AdminAttendances() {
         <View style={styles.athleteInfo}>
           <Text style={styles.athleteName}>{item.athlete_name}</Text>
           <Text style={styles.time}>
-            {format(new Date(item.check_in_time), 'HH:mm - dd/MM/yyyy', { locale: it })}
+            {formatRomeDateTime(item.check_in_time, '')}
           </Text>
         </View>
         {item.status === 'allowed' ? (
