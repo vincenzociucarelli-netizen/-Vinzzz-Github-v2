@@ -1682,3 +1682,12 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Richiesta: consentire a Matilde (18+ PRO) di firmare il pregresso = €0 anche se il compenso è già stato accettato (dall'admin). Prima il modal di firma appariva SOLO tramite il pulsante "Accetta compenso", che sparisce dopo l'accettazione → nessun modo di firmare.
 - Fix `CompensationSummaryCard.tsx`: in vista PERSONALE (non adminUserId, non readOnly) recupera `/me/prior-compensation/status`; se `signed=false` mostra banner + pulsante "Firma Dichiarazione Pregresso" (testID sign-prior-comp-btn) che apre `PriorCompensationDeclarationModal` (importo €0 ammesso). `handleDeclared` aggiorna lo stato firmato e ricarica.
 - VERIFICATO in preview con testflow.pro@test.com (compensation_accepted=True, pregresso non firmato): pulsante "Firma Dichiarazione Pregresso" visibile sotto "Compenso Accettato: ✓ Sì" nel tab Compensi. Stato test ripristinato.
+
+## 🐛 28/09/2026 — Fix pregresso firmato NON visibile all'admin (sync users↔athletes)
+- Bug: l'atleta 18+ PRO firma il pregresso via `/me/prior-compensation/declare` (scrive sul record `users`, id=current_user["id"]). L'admin legge il pregresso passando `adminUserId={athlete.id}` → `/admin/users/{athlete_id}/prior-compensation` → `_get_user_or_athlete` trovava il record `athletes` (NON aggiornato) → mostrava "Non firmato" anche dopo la firma.
+- Fix (server.py): 
+  - helper `_get_linked_prior_comp_docs` (collega users↔athletes via user.athlete_id), `_sync_prior_compensation` (scrive su entrambi), `_resolve_prior_comp_doc` (legge dal record col miglior stato firma).
+  - `declare_my_prior_compensation` e `admin_edit_prior_compensation` ora sincronizzano su entrambi i record.
+  - `admin_get_prior_compensation`, `get_my_prior_compensation_status`, `_require_prior_compensation_declared` ora usano `_resolve_prior_comp_doc` → leggono la firma dal record collegato più valido.
+- VERIFICATO E2E (testflow.pro@test.com): atleta firma €0 → admin (lettura via athlete_id) vede signed=True, amount=0, has_signature=True.
+- BONUS: risolve anche i casi ESISTENTI (es. Matilde) senza migrazione dati, perché il resolver legge la firma già presente sul record `users` collegato.

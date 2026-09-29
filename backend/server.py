@@ -11092,6 +11092,53 @@ async def _get_user_or_athlete(user_id: str) -> tuple:
     return None, None
 
 
+# 🆕 28/09/2026 — Il pregresso può essere firmato dall'atleta sul record `users`
+# ma l'admin lo legge dal record `athletes` (adminUserId = athlete.id). Per evitare
+# il disallineamento ("Non firmato" lato admin), sincronizziamo i due record collegati
+# (user.athlete_id ↔ athlete.id), come già fatto per i Dati Bancari.
+async def _get_linked_prior_comp_docs(user_id: str) -> list:
+    """Ritorna [(doc, collection), ...] dei record collegati: users + athletes."""
+    out = []
+    u = await db.users.find_one({"id": user_id})
+    if u:
+        out.append((u, db.users))
+        aid = u.get("athlete_id")
+        if aid:
+            a = await db.athletes.find_one({"id": aid})
+            if a:
+                out.append((a, db.athletes))
+    else:
+        a = await db.athletes.find_one({"id": user_id})
+        if a:
+            out.append((a, db.athletes))
+            lu = await db.users.find_one({"athlete_id": user_id})
+            if lu:
+                out.append((lu, db.users))
+    return out
+
+
+async def _sync_prior_compensation(user_id: str, update_dict: dict) -> None:
+    """Applica update_dict a TUTTI i record collegati (users + athletes)."""
+    for doc, coll in await _get_linked_prior_comp_docs(user_id):
+        await coll.update_one({"id": doc["id"]}, {"$set": update_dict})
+
+
+async def _resolve_prior_comp_doc(user_id: str) -> Optional[dict]:
+    """Tra i record collegati, restituisce quello che rappresenta lo stato di firma
+    più valido (firmato anno corrente > firmato > primo disponibile)."""
+    docs = await _get_linked_prior_comp_docs(user_id)
+    if not docs:
+        return None
+    cy = _current_fiscal_year()
+    for doc, _ in docs:
+        if doc.get("other_annual_compensation_signed") and doc.get("other_annual_compensation_signed_year") == cy:
+            return doc
+    for doc, _ in docs:
+        if doc.get("other_annual_compensation_signed"):
+            return doc
+    return docs[0][0]
+
+
 def _prior_compensation_status_from_doc(doc: dict) -> dict:
     """Estrae lo stato della dichiarazione pregresso da un doc user/athlete."""
     signed = bool(doc.get("other_annual_compensation_signed") or False)
@@ -11118,7 +11165,8 @@ async def _require_prior_compensation_declared(user_id: str) -> None:
     doc, _ = await _get_user_or_athlete(user_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Utente non trovato")
-    status = _prior_compensation_status_from_doc(doc)
+    best = await _resolve_prior_comp_doc(user_id) or doc
+    status = _prior_compensation_status_from_doc(best)
     if not status["signed"]:
         raise HTTPException(
             status_code=403,
@@ -11137,7 +11185,8 @@ async def get_my_prior_compensation_status(current_user = Depends(get_current_us
     doc, _ = await _get_user_or_athlete(current_user["id"])
     if not doc:
         raise HTTPException(status_code=404, detail="Utente non trovato")
-    return _prior_compensation_status_from_doc(doc)
+    best = await _resolve_prior_comp_doc(current_user["id"]) or doc
+    return _prior_compensation_status_from_doc(best)
 
 
 class PriorCompensationDeclareRequest(BaseModel):
@@ -11185,6 +11234,8 @@ async def declare_my_prior_compensation(
     }
     coll = db.users if coll_name == "users" else db.athletes
     await coll.update_one({"id": current_user["id"]}, {"$set": update_dict})
+    # 🆕 28/09/2026 — sincronizza sul record collegato (users↔athletes) così l'admin vede "Firmato"
+    await _sync_prior_compensation(current_user["id"], update_dict)
     
     return {
         "success": True,
@@ -11240,6 +11291,11 @@ async def admin_edit_prior_compensation(
             "other_annual_compensation_admin_history": history,
         }}
     )
+    # 🆕 28/09/2026 — sincronizza importo + storia sul record collegato (users↔athletes)
+    await _sync_prior_compensation(user_id, {
+        "other_annual_compensation": new_amount,
+        "other_annual_compensation_admin_history": history,
+    })
     return {
         "success": True,
         "old_amount": old_amount,
@@ -11261,14 +11317,16 @@ async def admin_get_prior_compensation(
         raise HTTPException(status_code=404, detail="Utente/atleta non trovato")
     if doc.get("society_id") and doc.get("society_id") != current_user.get("society_id"):
         raise HTTPException(status_code=403, detail="Utente non appartiene alla tua società")
-    
-    status = _prior_compensation_status_from_doc(doc)
+
+    # 🆕 28/09/2026 — legge lo stato firma dal record collegato più valido (users↔athletes)
+    best = await _resolve_prior_comp_doc(user_id) or doc
+    status = _prior_compensation_status_from_doc(best)
     return {
         **status,
-        "signature_base64": doc.get("other_annual_compensation_signature"),
-        "ip": doc.get("other_annual_compensation_ip"),
-        "user_agent": doc.get("other_annual_compensation_user_agent"),
-        "admin_history": doc.get("other_annual_compensation_admin_history") or [],
+        "signature_base64": best.get("other_annual_compensation_signature"),
+        "ip": best.get("other_annual_compensation_ip"),
+        "user_agent": best.get("other_annual_compensation_user_agent"),
+        "admin_history": best.get("other_annual_compensation_admin_history") or doc.get("other_annual_compensation_admin_history") or [],
         "user_full_name": doc.get("full_name") or f"{doc.get('first_name','')} {doc.get('last_name','')}".strip(),
         "user_email": doc.get("email"),
         "user_role": doc.get("role"),
