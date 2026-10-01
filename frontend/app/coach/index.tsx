@@ -899,9 +899,9 @@ export default function CoachScreen() {  const router = useRouter();
       onPress={() => router.push(`/coach/team/${team.id}`)}
     >
       <View style={styles.teamCardHeader}>
-        {(team as any).team_photo ? (
+        {(team as any).team_photo_url ? (
           <Image 
-            source={{ uri: `data:image/jpeg;base64,${(team as any).team_photo}` }}
+            source={{ uri: (team as any).team_photo_url }}
             style={{ width: 44, height: 44, borderRadius: 8, marginRight: 10 }}
           />
         ) : null}

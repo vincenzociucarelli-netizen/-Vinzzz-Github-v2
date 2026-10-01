@@ -25,6 +25,9 @@ class Team(BaseModel):
     name: str
     description: Optional[str] = None
     team_photo: Optional[str] = None
+    # 🆕 Foto squadra su Object Storage (path) + URL pubblico calcolato nelle risposte
+    team_photo_storage_path: Optional[str] = None
+    team_photo_url: Optional[str] = None
     is_prima_squadra: bool = False
     created_by_admin_id: str
     created_at: datetime = Field(default_factory=datetime.utcnow)

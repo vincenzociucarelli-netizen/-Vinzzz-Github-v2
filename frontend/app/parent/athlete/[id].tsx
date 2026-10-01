@@ -2804,6 +2804,20 @@ export default function AthleteDetail() {
                   { name: nameByIdx(2), amount: paymentSettings.installment_3_amount || 0, due_date: paymentSettings.installment_3_due_date },
                 ].filter(i => i.amount > 0);
             
+            // 🆕 28/09/2026 — Applica lo sconto sull'ULTIMA rata (come backend/admin),
+            // così lato genitore la rata scontata mostra l'importo giusto (es. €95) con
+            // etichetta "(con sconto)", coerente con il Residuo Dovuto.
+            const discountAmt = (athlete?.discount_amount && athlete.discount_amount > 0) ? athlete.discount_amount : 0;
+            const origInstallmentsTotal = installments.reduce((s: number, i: any) => s + i.amount, 0);
+            if (installments.length > 0 && discountAmt > 0) {
+              const li = installments.length - 1;
+              installments[li] = {
+                ...installments[li],
+                amount: Math.max(0, installments[li].amount - discountAmt),
+                discounted: true,
+              };
+            }
+            
             // Cumulative: sum all paid payments
             const totalPaid = payments.filter(p => p.paid || p.paid_date).reduce((sum, p) => sum + (p.amount || 0), 0);
             let remaining = totalPaid;
@@ -2824,7 +2838,7 @@ export default function AthleteDetail() {
             
             // Find next due installment
             const nextDue = rateWithStatus.find((r: any) => r.status !== 'paid');
-            const totalAmount = paymentSettings.total_amount || installments.reduce((s: number, i: any) => s + i.amount, 0);
+            const totalAmount = paymentSettings.total_amount || origInstallmentsTotal;
             const residuo = totalAmount - (athlete?.discount_amount || 0) - totalPaid;
             
             return (
@@ -2971,7 +2985,7 @@ export default function AthleteDetail() {
                       <Text style={[
                         styles.paymentTitle,
                         rate.status === 'paid' && { color: '#999' }
-                      ]}>{rate.name}</Text>
+                      ]}>{rate.name}{rate.discounted ? ' (con sconto)' : ''}</Text>
                       {rate.status === 'paid' && (
                         <Text style={{ fontSize: 12, color: '#34C759', fontWeight: '500' }}>Pagata</Text>
                       )}

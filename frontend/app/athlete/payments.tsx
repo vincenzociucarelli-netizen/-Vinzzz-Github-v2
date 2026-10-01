@@ -471,11 +471,21 @@ export default function AthletePayments() {
           
           // Build installment plan with cumulative payment status
           const installments = (paymentInfo.installments || []).filter((inst: any) => parseFloat(inst.amount) > 0);
+          // 🆕 28/09/2026 — Applica lo sconto sull'ULTIMA rata (come backend/admin)
+          const discountForRate = paymentInfo.discount_amount || profile?.discount_amount || 0;
+          if (installments.length > 0 && discountForRate > 0) {
+            const li = installments.length - 1;
+            installments[li] = {
+              ...installments[li],
+              amount: Math.max(0, (parseFloat(installments[li].amount) || 0) - discountForRate),
+              discounted: true,
+            };
+          }
           let remainingPaid = totalPaidAmount;
           
           const planItems = installments.map((inst: any, index: number) => {
             const amount = parseFloat(inst.amount) || 0;
-            const name = inst.name || (index === 0 ? 'Quota iscrizione' : `Rata ${index}`);
+            const name = (inst.name || (index === 0 ? 'Quota iscrizione' : `Rata ${index}`)) + (inst.discounted ? ' (con sconto)' : '');
             const dueDate = inst.due_date;
             
             let status: 'paid' | 'partial' | 'unpaid';

@@ -117,8 +117,10 @@ export default function TeamDetail() {
   const [selectedAccompanyingIds, setSelectedAccompanyingIds] = useState<string[]>([]);
   const [selectedRefereeIds, setSelectedRefereeIds] = useState<string[]>([]);
 
-  // Team photo
-  const [teamPhoto, setTeamPhoto] = useState<string | null>(null);
+  // Team photo (🆕 Object Storage: URL salvato + eventuale nuova foto base64 da caricare)
+  const [teamPhotoUrl, setTeamPhotoUrl] = useState<string | null>(null);
+  const [teamPhotoNew, setTeamPhotoNew] = useState<string | null>(null);
+  const [teamPhotoRemoved, setTeamPhotoRemoved] = useState(false);
   const [teamPhotoModal, setTeamPhotoModal] = useState(false);
   
   // Form fields - basic info
@@ -225,10 +227,10 @@ export default function TeamDetail() {
       setRefereesInfo(ref);
       setSelectedRefereeIds(ref.map((c: CoachInfo) => c.id).filter(Boolean));
 
-      // Set team photo
-      if (teamData.team_photo) {
-        setTeamPhoto(teamData.team_photo);
-      }
+      // Set team photo (🆕 URL servito da object storage / fallback base64)
+      setTeamPhotoUrl(teamData.team_photo_url || null);
+      setTeamPhotoNew(null);
+      setTeamPhotoRemoved(false);
       
       // Populate form
       setName(teamData.name);
@@ -419,7 +421,8 @@ export default function TeamDetail() {
         if (base64Size > 500000) { // ~500KB
           showAlert('Attenzione', 'La foto è molto grande. Potrebbe richiedere più tempo per il caricamento.');
         }
-        setTeamPhoto(result.assets[0].base64);
+        setTeamPhotoNew(result.assets[0].base64);
+        setTeamPhotoRemoved(false);
       }
     } catch (error) {
       console.error('Error picking team photo:', error);
@@ -565,14 +568,16 @@ export default function TeamDetail() {
 
       await api.patch(`/teams/${id}`, updateData);
       
-      // Step 2: Save team photo separately (if changed)
-      if (teamPhoto !== team?.team_photo) {
-        try {
-          await api.patch(`/teams/${id}`, { team_photo: teamPhoto });
-        } catch (photoError) {
-          console.error('Error saving team photo:', photoError);
-          // Don't fail the whole save, just log it
+      // Step 2: Save team photo separately (🆕 Object Storage)
+      try {
+        if (teamPhotoNew) {
+          await api.post(`/teams/${id}/photo`, { image: teamPhotoNew });
+        } else if (teamPhotoRemoved) {
+          await api.delete(`/teams/${id}/photo`);
         }
+      } catch (photoError) {
+        console.error('Error saving team photo:', photoError);
+        // Don't fail the whole save, just log it
       }
       
       // Assign coaches to team (send as JSON object with ids array)
@@ -678,9 +683,15 @@ export default function TeamDetail() {
                 style={styles.teamPhotoUploadContainer}
                 onPress={pickTeamPhoto}
               >
-                {teamPhoto ? (
+                {teamPhotoNew ? (
                   <Image 
-                    source={{ uri: `data:image/jpeg;base64,${teamPhoto}` }}
+                    source={{ uri: `data:image/jpeg;base64,${teamPhotoNew}` }}
+                    style={styles.teamPhotoEditPreview}
+                    resizeMode="cover"
+                  />
+                ) : (teamPhotoUrl && !teamPhotoRemoved) ? (
+                  <Image 
+                    source={{ uri: teamPhotoUrl }}
                     style={styles.teamPhotoEditPreview}
                     resizeMode="cover"
                   />
@@ -691,10 +702,10 @@ export default function TeamDetail() {
                   </View>
                 )}
               </TouchableOpacity>
-              {teamPhoto && (
+              {(teamPhotoNew || (teamPhotoUrl && !teamPhotoRemoved)) && (
                 <TouchableOpacity 
                   style={styles.removePhotoBtn}
-                  onPress={() => setTeamPhoto(null)}
+                  onPress={() => { setTeamPhotoNew(null); setTeamPhotoRemoved(true); }}
                 >
                   <Ionicons name="trash-outline" size={16} color="#FF3B30" />
                   <Text style={styles.removePhotoBtnText}>Rimuovi foto</Text>
@@ -1396,15 +1407,15 @@ export default function TeamDetail() {
               <Text style={styles.sectionTitle}>📸 Foto Squadra</Text>
               <TouchableOpacity 
                 onPress={() => {
-                  if (teamPhoto) {
+                  if (teamPhotoUrl) {
                     setTeamPhotoModal(true);
                   }
                 }}
                 style={styles.teamPhotoContainer}
               >
-                {teamPhoto ? (
+                {teamPhotoUrl ? (
                   <Image 
-                    source={{ uri: `data:image/jpeg;base64,${teamPhoto}` }}
+                    source={{ uri: teamPhotoUrl }}
                     style={styles.teamPhotoImage}
                     resizeMode="cover"
                   />
@@ -2022,7 +2033,7 @@ export default function TeamDetail() {
       {/* Team Photo Viewer */}
       <PhotoViewer
         visible={teamPhotoModal}
-        photo={teamPhoto}
+        photo={teamPhotoUrl}
         title={`Foto Squadra - ${name}`}
         onClose={() => setTeamPhotoModal(false)}
       />

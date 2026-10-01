@@ -530,9 +530,9 @@ export default function TeamsScreen() {
           onPress={() => router.push(`/admin/team/${item.id}`)}
         >
           <View style={styles.teamIcon}>
-            {item.team_photo ? (
+            {item.team_photo_url ? (
               <Image 
-                source={{ uri: `data:image/jpeg;base64,${item.team_photo}` }}
+                source={{ uri: item.team_photo_url }}
                 style={{ width: 48, height: 48, borderRadius: 10 }}
               />
             ) : (

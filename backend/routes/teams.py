@@ -94,14 +94,27 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
 
 @router.get("/teams", response_model=List[Team])
 async def get_teams(current_user = Depends(get_current_user)):
+    import os as _os
     society_id = current_user.get("society_id")
     # Exclude heavy base64 image fields from the list response to keep it small.
-    # Dedicated endpoint /teams/{team_id}/photo.png serves the image when needed.
+    # Dedicated endpoint /teams/{team_id}/photo.jpg serves the image when needed.
     teams = await db.teams.find(
         {"society_id": society_id},
         {"team_photo": 0, "team_logo": 0},
     ).to_list(1000)
     clean_mongo_docs(teams)
+    # 🆕 Foto squadra servita via URL (object storage o fallback base64 legacy).
+    # Query leggera: id delle squadre con base64 legacy (il campo è escluso sopra).
+    legacy_photo_ids = set()
+    async for t in db.teams.find(
+        {"society_id": society_id, "team_photo": {"$exists": True, "$nin": [None, ""]}},
+        {"_id": 0, "id": 1},
+    ):
+        legacy_photo_ids.add(t["id"])
+    base_url = _os.environ.get("EXPO_PUBLIC_BACKEND_URL") or _os.environ.get("FRONTEND_URL") or ""
+    for team in teams:
+        if team.get("team_photo_storage_path") or team["id"] in legacy_photo_ids:
+            team["team_photo_url"] = f"{base_url}/api/teams/{team['id']}/photo.jpg" if base_url else None
     return [Team(**team) for team in teams]
 
 
@@ -223,6 +236,13 @@ async def get_team(team_id: str, current_user = Depends(get_current_user)):
 
     team_obj = Team(**team)
     team_dict = team_obj.dict()
+    # 🆕 Foto squadra servita via URL (object storage o fallback base64 legacy).
+    import os as _os
+    _has_photo = bool(team.get("team_photo_storage_path")) or bool(team.get("team_photo"))
+    _base_url = _os.environ.get("EXPO_PUBLIC_BACKEND_URL") or _os.environ.get("FRONTEND_URL") or ""
+    team_dict["team_photo_url"] = (f"{_base_url}/api/teams/{team_id}/photo.jpg" if (_has_photo and _base_url) else None)
+    # Non inviare il base64 pesante: il client usa team_photo_url
+    team_dict["team_photo"] = None
     team_dict["coach_info"] = coach_info
     team_dict["dirigenti_info"] = dirigenti_info
     team_dict["collaboratori_info"] = collaboratori_info

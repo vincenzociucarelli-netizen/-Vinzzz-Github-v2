@@ -32,6 +32,7 @@ interface Team {
   name: string;
   description?: string;
   team_photo?: string;
+  team_photo_url?: string;
 }
 
 export default function CoachTeamAthletes() {
@@ -206,10 +207,10 @@ export default function CoachTeamAthletes() {
         {/* Team Info */}
         {team && (
           <View style={styles.teamInfo}>
-            {team.team_photo ? (
+            {team.team_photo_url ? (
               <TouchableOpacity onPress={() => setShowTeamPhoto(true)} data-testid="coach-team-photo">
               <Image 
-                source={{ uri: `data:image/jpeg;base64,${team.team_photo}` }}
+                source={{ uri: team.team_photo_url }}
                 style={{ width: 80, height: 80, borderRadius: 12, alignSelf: 'center', marginBottom: 8 }}
               />
               </TouchableOpacity>
@@ -279,7 +280,7 @@ export default function CoachTeamAthletes() {
       {/* Team Photo Viewer */}
       <PhotoViewer
         visible={showTeamPhoto}
-        photo={team?.team_photo || null}
+        photo={team?.team_photo_url || null}
         title={`Foto Squadra - ${team?.name || ''}`}
         onClose={() => setShowTeamPhoto(false)}
       />

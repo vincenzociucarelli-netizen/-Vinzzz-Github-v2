@@ -194,12 +194,15 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Foto Squadra su Object Storage"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
+  - agent: "main"
+    message: "01/10/2026 — FEATURE DA VERIFICARE (Foto Squadra su Object Storage). Migrata la foto squadra da base64 in Mongo a Emergent Object Storage. NUOVI endpoint backend: POST /api/teams/{id}/photo (admin, body {image: base64|dataURI} -> comprime e salva su storage, set team_photo_storage_path, rimuove base64); DELETE /api/teams/{id}/photo; GET /api/teams/{id}/photo.jpg (pubblico, dual-read storage->fallback base64 legacy con migrazione lazy). GET /api/teams e GET /api/teams/{id} e GET /api/coach/my-teams ora ritornano team_photo_url (NON più base64). Frontend: admin/team/[id].tsx (upload in edit mode, miniatura in view, espandibile via PhotoViewer), admin/teams.tsx (miniatura lista), coach/index.tsx + coach/team/[id]/index.tsx (miniatura + espandibile). TEST FLOW: come admin vincenzo.ciucarelli@gmail.com/Test1234, apri Squadre -> le foto devono apparire come miniature; apri una squadra -> foto visibile e cliccabile per espandere; in modifica carica/rimuovi foto e salva. Squadra con foto: Under 16/Serie C/Serie D/Under 18/Under 17 (legacy migrate). Under 14 ha una foto di test (checkerboard). MiniVolley senza foto (placeholder)."
   - agent: "main"
     message: "30/08/2026 — DA VERIFICARE (BACKEND): 1) POST /api/matches/import ora riceve dal frontend un team_id SCELTO manualmente dall'admin (menù a tendina) e deve salvare le gare con QUEL team_id. 2) Funzione 'gara annulla allenamento': GET /api/coach/commitments deve NASCONDERE l'allenamento di una squadra nel giorno in cui quella squadra ha una gara (casa O trasferta). Requisiti: la squadra deve avere activity_start_date impostata e training_sessions; il coach deve avere assigned_teams. 3) Impostazioni trial: trial_max_sessions ora può arrivare fino a 10 (prima max 5). Admin persona fisica: vincenzo.ciucarelli@gmail.com / Test1234 (società Pallavolo Perugia)."
   - agent: "main"

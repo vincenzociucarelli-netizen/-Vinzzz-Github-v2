@@ -18967,9 +18967,23 @@ async def get_coach_teams(current_user = Depends(get_current_user)):
     _q_teams = {"id": {"$in": assigned_team_ids}}
     if _sid:
         _q_teams["society_id"] = _sid
-    teams = await db.teams.find(_q_teams).to_list(100)
+    # Escludi base64 pesante; la foto è servita via URL (object storage / fallback)
+    teams = await db.teams.find(_q_teams, {"team_photo": 0, "team_logo": 0}).to_list(100)
     clean_mongo_docs(teams)
-    return [Team(**team) for team in teams]
+    legacy_photo_ids = set()
+    async for t in db.teams.find(
+        {**_q_teams, "team_photo": {"$exists": True, "$nin": [None, ""]}},
+        {"_id": 0, "id": 1},
+    ):
+        legacy_photo_ids.add(t["id"])
+    _base_url = os.environ.get("EXPO_PUBLIC_BACKEND_URL") or os.environ.get("FRONTEND_URL") or ""
+    result = []
+    for team in teams:
+        t = Team(**team).dict()
+        if _base_url and (team.get("team_photo_storage_path") or team["id"] in legacy_photo_ids):
+            t["team_photo_url"] = f"{_base_url}/api/teams/{team['id']}/photo.jpg"
+        result.append(t)
+    return result
 
 
 @api_router.get("/coach/my-stats")
@@ -37752,6 +37766,122 @@ async def _store_cover_from_datauri(society_id, campaign_id, data_uri):
     except Exception as e:
         logger.warning(f"[storage] upload cover fallito per {campaign_id}: {e}")
         return None
+
+
+async def _store_team_photo_from_datauri(society_id, team_id, data_uri):
+    """Comprime la foto squadra (JPEG) e la carica su object storage.
+    Ritorna lo storage_path oppure None (fallback: si tiene il base64)."""
+    jpeg_bytes, _w, _h = _process_cover_for_og(data_uri, max_dim=1400, target_kb=450)
+    if not jpeg_bytes:
+        return None
+    path = f"{_STORAGE_APP}/uploads/{society_id or 'shared'}/teams/{team_id}.jpg"
+    try:
+        await _run_in_threadpool(_storage_put_sync, path, jpeg_bytes, "image/jpeg")
+        return path
+    except Exception as e:
+        logger.warning(f"[storage] upload team photo fallito per {team_id}: {e}")
+        return None
+
+
+def _team_photo_url(team_id: str) -> str:
+    """URL pubblico per servire la foto squadra (object storage o fallback base64)."""
+    base_url = os.environ.get("EXPO_PUBLIC_BACKEND_URL") or os.environ.get("FRONTEND_URL") or ""
+    return f"{base_url}/api/teams/{team_id}/photo.jpg" if base_url else ""
+
+
+class TeamPhotoUpload(BaseModel):
+    image: str  # data URI oppure base64 raw
+
+
+@api_router.post("/teams/{team_id}/photo")
+async def upload_team_photo(team_id: str, body: TeamPhotoUpload, current_user = Depends(get_current_user)):
+    """🆕 Carica la FOTO SQUADRA su Emergent Object Storage (no base64 in Mongo).
+    Solo admin. Isolata per società."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può modificare la foto squadra")
+    team = await db.teams.find_one({"id": team_id}, {"_id": 0, "id": 1, "society_id": 1})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    if team.get("society_id") and team.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Accesso negato")
+
+    raw = (body.image or "").strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Immagine mancante")
+    data_uri = raw if raw.startswith("data:") else f"data:image/jpeg;base64,{raw}"
+
+    storage_path = await _store_team_photo_from_datauri(
+        team.get("society_id") or current_user.get("society_id"), team_id, data_uri
+    )
+    if not storage_path:
+        raise HTTPException(status_code=400, detail="Immagine non valida o non elaborabile")
+
+    # Salva lo storage_path e rimuove il base64 pesante dal documento
+    await db.teams.update_one(
+        {"id": team_id},
+        {"$set": {"team_photo_storage_path": storage_path}, "$unset": {"team_photo": ""}},
+    )
+    return {"success": True, "team_photo_url": _team_photo_url(team_id)}
+
+
+@api_router.delete("/teams/{team_id}/photo")
+async def delete_team_photo(team_id: str, current_user = Depends(get_current_user)):
+    """Rimuove la foto squadra (storage path + eventuale base64 legacy)."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può modificare la foto squadra")
+    team = await db.teams.find_one({"id": team_id}, {"_id": 0, "id": 1, "society_id": 1})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    if team.get("society_id") and team.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Accesso negato")
+    await db.teams.update_one(
+        {"id": team_id}, {"$unset": {"team_photo_storage_path": "", "team_photo": ""}}
+    )
+    return {"success": True}
+
+
+@api_router.get("/teams/{team_id}/photo.jpg")
+async def get_team_photo_image(team_id: str):
+    """Serve la foto squadra come JPEG. Dual-read: object storage → fallback base64 legacy."""
+    team = await db.teams.find_one(
+        {"id": team_id}, {"_id": 0, "team_photo": 1, "team_photo_storage_path": 1, "society_id": 1}
+    )
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    from fastapi.responses import Response
+    _sp = team.get("team_photo_storage_path")
+    if _sp:
+        try:
+            _content, _ctype = await _run_in_threadpool(_storage_get_sync, _sp)
+            return Response(content=_content, media_type=_ctype or "image/jpeg", headers={"Cache-Control": "public, max-age=300"})
+        except Exception as e:
+            logger.warning(f"[storage] get team photo fallito {team_id}: {e}")
+    # Fallback base64 legacy (raw, senza prefisso data:)
+    b64 = team.get("team_photo")
+    if b64 and isinstance(b64, str):
+        try:
+            import base64 as _b64
+            data_uri = b64 if b64.startswith("data:") else f"data:image/jpeg;base64,{b64}"
+            # 🆕 Migrazione lazy: comprimi e sposta su object storage alla prima lettura,
+            # così le vecchie foto base64 pesanti si alleggeriscono nel tempo.
+            jpeg_bytes, _w, _h = _process_cover_for_og(data_uri, max_dim=1400, target_kb=450)
+            if jpeg_bytes:
+                path = f"{_STORAGE_APP}/uploads/{(team.get('society_id') or 'shared')}/teams/{team_id}.jpg"
+                try:
+                    await _run_in_threadpool(_storage_put_sync, path, jpeg_bytes, "image/jpeg")
+                    await db.teams.update_one(
+                        {"id": team_id},
+                        {"$set": {"team_photo_storage_path": path}, "$unset": {"team_photo": ""}},
+                    )
+                except Exception as _e:
+                    logger.warning(f"[storage] migrazione lazy foto squadra fallita {team_id}: {_e}")
+                return Response(content=jpeg_bytes, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=300"})
+            raw = data_uri.split(",", 1)[1]
+            return Response(content=_b64.b64decode(raw), media_type="image/jpeg", headers={"Cache-Control": "public, max-age=300"})
+        except Exception:
+            pass
+    raise HTTPException(status_code=404, detail="Foto squadra non presente")
+
 
 
 

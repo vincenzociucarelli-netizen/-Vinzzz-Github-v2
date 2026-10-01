@@ -1704,3 +1704,21 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Frontend: tutte le viste di `check_in_time` ora usano `formatRomeTime/formatRomeDateTime` (UTC→Roma): TodayAttendanceList, minor/index, admin/scan-attendance, coach/index (3 punti), coach/history, admin/attendances, athlete/presenze (anche formatDate→formatRomeWeekdayLong). Aggiunto `formatRomeWeekdayLong` all'utility.
 - VERIFICATO E2E: presenza manuale 18:00 (Roma) → salvata 16:00 UTC → visualizzata 18:00.
 - ⚠️ NOTA MIGRAZIONE PRODUZIONE: le presenze MANUALI storiche (vecchio codice) sono salvate come wall-clock Roma naive; dopo il deploy potrebbero apparire +2h. Le presenze QR storiche invece ora si visualizzano correttamente. Valutare eventuale migrazione una-tantum se ci sono molte presenze manuali passate (usare training_slot.time come riferimento).
+
+## 🐛 28/09/2026 — Sconto non conteggiato per-rata lato USER (genitore + atleta)
+- Bug: nella vista ADMIN la rata scontata mostrava l'importo corretto (es. €95 "con sconto") via `installments_list` dal backend, ma lato GENITORE (`parent/athlete/[id].tsx`) e ATLETA (`athlete/payments.tsx`) le rate erano calcolate CLIENT-SIDE dalle impostazioni grezze della squadra, senza applicare lo sconto all'ultima rata → mostrava l'importo pieno (es. €120) anche se il Residuo era corretto.
+- Fix: in entrambe le viste, dopo aver costruito l'array `installments`, lo sconto (`athlete.discount_amount`) viene ora applicato all'ULTIMA rata > 0 (come backend `get_payment_summary`), con etichetta "(con sconto)". Il totale usa l'importo originale per evitare doppio sconto.
+- VERIFICATO backend `/payments/{id}/summary`: total 600, discount 25 → ultima rata 175 flag discounted. Client replica la stessa logica (lint pulito). E2E UI non verificato per instabilità login preview.
+
+## 📸 01/10/2026 — Foto Squadra migrata su Emergent Object Storage (VERIFICATO testing agent: backend 8/8, frontend 4/4 flussi)
+- Richiesta utente: caricare SOLO foto squadra (niente foto profilo individuali atleti), mostrate come miniatura ed espandibili al click. Migrazione da base64 in Mongo → Object Storage per alleggerire i documenti.
+- Backend (`server.py`): nuovi endpoint
+  - `POST /api/teams/{id}/photo` (admin, body `{image: base64|dataURI}`): comprime con `_process_cover_for_og` (max 1400px, ~450KB), salva su storage `registrateam/uploads/{society_id}/teams/{id}.jpg`, set `team_photo_storage_path`, rimuove il base64 `team_photo`. Ritorna `{success, team_photo_url}`.
+  - `DELETE /api/teams/{id}/photo` (admin): rimuove storage path + base64 legacy.
+  - `GET /api/teams/{id}/photo.jpg` (pubblico): dual-read storage → fallback base64 legacy CON MIGRAZIONE LAZY (alla prima lettura comprime e sposta su storage, unset base64). 404 se nessuna foto.
+  - Riuso helper storage esistenti `_storage_put_sync`/`_storage_get_sync`/`_run_in_threadpool`/`_STORAGE_APP`.
+- Backend (`routes/teams.py` + `GET /coach/my-teams`): le liste escludono il base64 pesante e aggiungono `team_photo_url` (URL pubblico, fallback `FRONTEND_URL` se `EXPO_PUBLIC_BACKEND_URL` assente). `GET /teams/{id}` ritorna `team_photo=None` + `team_photo_url`.
+- Model `Team`: aggiunti `team_photo_storage_path` + `team_photo_url` (Optional).
+- Frontend: `admin/team/[id].tsx` (stati `teamPhotoUrl`/`teamPhotoNew`/`teamPhotoRemoved`; upload via POST, delete via DELETE; preview edit + view miniatura + PhotoViewer espandibile), `admin/teams.tsx` (miniatura lista da URL), `coach/index.tsx` + `coach/team/[id]/index.tsx` (miniatura + espandibile). `PhotoViewer` già gestisce URL http.
+- NOTA DEPLOY: Save to Github → Vercel (frontend) + deploy Render (backend). Richiede env object storage già configurato (EMERGENT_LLM_KEY + INTEGRATION_PROXY_URL).
+
