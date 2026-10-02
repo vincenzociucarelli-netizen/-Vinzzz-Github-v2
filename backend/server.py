@@ -7982,15 +7982,47 @@ async def sync_fipav_matches(current_user = Depends(get_current_user)):
         
         federation_society_id = "3477"  # Default Pallavolo Perugia
         region = "umbria"
+        season_id = None
         
         if fed_config:
             federation_society_id = fed_config.get("federation_society_id", federation_society_id)
             region = fed_config.get("region", region)
+            # 🐛 01/10/2026 — La sync IGNORAVA la stagione salvata (StId) e chiamava lo
+            # scraper senza season_id → il portale FIPAV restituiva 0 gare ("Gare trovate
+            # sul portale: 0"). Ora riusiamo la stagione dell'ultimo import (come preview/import).
+            season_id = fed_config.get("season_id")
         
         scraper = FIPAVScraper(region=region)
-        scraped_matches = await scraper.scrape_matches(society_id=federation_society_id)
+        # Se non è configurata una stagione, usa quella corrente (prima della lista = più recente).
+        if not season_id:
+            try:
+                seasons = await scraper.get_seasons()
+                if seasons:
+                    season_id = seasons[0]["id"]
+            except Exception as _e:
+                logging.warning(f"FIPAV sync: impossibile determinare la stagione corrente: {_e}")
+        # NB: NON passiamo championship_id così recuperiamo TUTTE le gare della società
+        # (tutti i campionati) e le allineiamo per match_number.
+        scraped_matches = await scraper.scrape_matches(society_id=federation_society_id, season_id=season_id)
+
+        # 🆕 01/10/2026 — Rete di sicurezza: se la stagione configurata non restituisce
+        # gare (es. StId salvato è di una stagione vecchia), riprova con la stagione
+        # corrente (più recente dal portale). Evita "0 gare trovate" quando l'archivio
+        # contiene gare della stagione in corso ma la config punta a una passata.
+        if not scraped_matches:
+            try:
+                seasons = await scraper.get_seasons()
+                current_season_id = seasons[0]["id"] if seasons else None
+                if current_season_id and current_season_id != season_id:
+                    logging.info(f"FIPAV sync: 0 gare con season={season_id}, retry con stagione corrente {current_season_id}")
+                    retry_matches = await scraper.scrape_matches(society_id=federation_society_id, season_id=current_season_id)
+                    if retry_matches:
+                        scraped_matches = retry_matches
+                        season_id = current_season_id
+            except Exception as _e:
+                logging.warning(f"FIPAV sync: retry stagione corrente fallito: {_e}")
         
-        logging.info(f"FIPAV sync: scraped {len(scraped_matches)} matches")
+        logging.info(f"FIPAV sync: scraped {len(scraped_matches)} matches (society={federation_society_id}, season={season_id})")
         
         # Get all existing matches for this society
         existing_matches = await db.matches.find(

@@ -1722,3 +1722,11 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Frontend: `admin/team/[id].tsx` (stati `teamPhotoUrl`/`teamPhotoNew`/`teamPhotoRemoved`; upload via POST, delete via DELETE; preview edit + view miniatura + PhotoViewer espandibile), `admin/teams.tsx` (miniatura lista da URL), `coach/index.tsx` + `coach/team/[id]/index.tsx` (miniatura + espandibile). `PhotoViewer` già gestisce URL http.
 - NOTA DEPLOY: Save to Github → Vercel (frontend) + deploy Render (backend). Richiede env object storage già configurato (EMERGENT_LLM_KEY + INTEGRATION_PROXY_URL).
 
+
+## 🐛 01/10/2026 — Sync FIPAV "0 gare trovate sul portale" (RISOLTO, verificato via curl)
+- Bug (segnalato con screenshot): "Sincronizzazione completata. 0 gare aggiornate su 0 trovate. Gare trovate sul portale: 0" anche se il calendario FIPAV conteneva gare (con spostamenti di data).
+- Causa radice (`POST /api/matches/sync-fipav`): l'endpoint chiamava `scraper.scrape_matches(society_id=...)` SENZA passare `season_id` (StId) né usare quello salvato in `federation_configs`. Il portale `umbria.portalefipav.net` richiede lo StId della stagione: senza, ritorna 0. (Verificato: SIRIO id 5740 + StId 2410 (2026/2027) → 74 gare; senza stagione → 0. Pallavolo Perugia 3477 + StId 2292 (2025/2026) → 35 gare; senza → 0).
+- Fix: la sync ora legge `season_id` (e region, federation_society_id) da `federation_configs` e lo passa allo scraper (come preview/import). Se non configurato, usa la stagione CORRENTE (più recente da `get_seasons`). NON passa `championship_id` così recupera TUTTE le gare della società (tutti i campionati) e le allinea per `match_number`. Rete di sicurezza: se la stagione configurata ritorna 0 gare, riprova con la stagione corrente.
+- Verificato: sync su Pallavolo Perugia → 35 gare trovate, 10 aggiornate (date/risultati/campi) alla prima esecuzione, 0 alla seconda (già allineate). Solo backend.
+- NOTA PRODUZIONE (SIRIO): affinché il fix funzioni, la società deve avere `federation_configs` con il `federation_society_id` SIRIO (5740) e un `season_id` valido — impostati automaticamente al primo import del calendario dalla procedura guidata.
+
