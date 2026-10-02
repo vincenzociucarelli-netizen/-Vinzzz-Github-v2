@@ -1725,7 +1725,17 @@ export default function AdminMatches() {
                       Gare trovate sul portale: {syncResult.scraped_total} | Presenti in archivio: {syncResult.existing_matched}
                     </Text>
                   </View>
-                  {syncResult.changes && syncResult.changes.length > 0 ? (
+                  {syncResult.scraped_total === 0 ? (
+                    <View style={{ backgroundColor: '#FFF3E0', borderRadius: 10, padding: 16, marginBottom: 10, borderLeftWidth: 4, borderLeftColor: '#FB8C00' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                        <Ionicons name="warning-outline" size={20} color="#E65100" />
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#E65100' }}>Nessuna gara trovata sul portale</Text>
+                      </View>
+                      <Text style={{ fontSize: 13, color: '#8D6E63', lineHeight: 19 }}>
+                        Il portale FIPAV non ha restituito gare per la società/stagione configurata. Importa prima il calendario della stagione in corso dalla procedura guidata (pulsante "Importa da Federazione"): così la sincronizzazione userà la società e la stagione corrette.
+                      </Text>
+                    </View>
+                  ) : syncResult.changes && syncResult.changes.length > 0 ? (
                     syncResult.changes.map((change: any, idx: number) => (
                       <View key={idx} style={{ backgroundColor: '#fff', borderRadius: 10, padding: 14, marginBottom: 10, borderLeftWidth: 4, borderLeftColor: change.date_new ? '#FF6F00' : '#4CAF50' }}>
                         <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 6 }}>

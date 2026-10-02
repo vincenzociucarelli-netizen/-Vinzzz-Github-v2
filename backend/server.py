@@ -7993,36 +7993,97 @@ async def sync_fipav_matches(current_user = Depends(get_current_user)):
             season_id = fed_config.get("season_id")
         
         scraper = FIPAVScraper(region=region)
-        # Se non è configurata una stagione, usa quella corrente (prima della lista = più recente).
-        if not season_id:
-            try:
-                seasons = await scraper.get_seasons()
-                if seasons:
-                    season_id = seasons[0]["id"]
-            except Exception as _e:
-                logging.warning(f"FIPAV sync: impossibile determinare la stagione corrente: {_e}")
+
+        # Determina le stagioni da provare: quella configurata + quella corrente.
+        current_season_id = None
+        try:
+            _seasons = await scraper.get_seasons()
+            if _seasons:
+                current_season_id = _seasons[0]["id"]
+        except Exception as _e:
+            logging.warning(f"FIPAV sync: impossibile determinare la stagione corrente: {_e}")
+
+        seasons_to_try = []
+        for _s in [season_id, current_season_id]:
+            if _s and _s not in seasons_to_try:
+                seasons_to_try.append(_s)
+        if not seasons_to_try:
+            seasons_to_try = [None]
+
         # NB: NON passiamo championship_id così recuperiamo TUTTE le gare della società
         # (tutti i campionati) e le allineiamo per match_number.
-        scraped_matches = await scraper.scrape_matches(society_id=federation_society_id, season_id=season_id)
+        scraped_matches = []
+        used_season_id = None
+        for _s in seasons_to_try:
+            scraped_matches = await scraper.scrape_matches(society_id=federation_society_id, season_id=_s)
+            used_season_id = _s
+            if scraped_matches:
+                break
 
-        # 🆕 01/10/2026 — Rete di sicurezza: se la stagione configurata non restituisce
-        # gare (es. StId salvato è di una stagione vecchia), riprova con la stagione
-        # corrente (più recente dal portale). Evita "0 gare trovate" quando l'archivio
-        # contiene gare della stagione in corso ma la config punta a una passata.
+        # 🆕 01/10/2026 — Auto-risoluzione società per NOME.
+        # In produzione il federation_society_id salvato può essere errato/obsoleto
+        # (es. ID di un'altra società o di una stagione passata) → lo scraping resta a 0.
+        # In quel caso cerchiamo la società sul portale confrontando il nome.
+        resolved_society_id = None
+        resolved_society_name = None
         if not scraped_matches:
             try:
-                seasons = await scraper.get_seasons()
-                current_season_id = seasons[0]["id"] if seasons else None
-                if current_season_id and current_season_id != season_id:
-                    logging.info(f"FIPAV sync: 0 gare con season={season_id}, retry con stagione corrente {current_season_id}")
-                    retry_matches = await scraper.scrape_matches(society_id=federation_society_id, season_id=current_season_id)
-                    if retry_matches:
-                        scraped_matches = retry_matches
-                        season_id = current_season_id
+                # Nome di riferimento: quello salvato nell'import, altrimenti il nome società app
+                society_doc = await db.societies.find_one({"id": society_id_local}, {"_id": 0, "name": 1})
+                candidate_names = []
+                if fed_config and fed_config.get("federation_society_name"):
+                    candidate_names.append(fed_config.get("federation_society_name"))
+                if society_doc and society_doc.get("name"):
+                    candidate_names.append(society_doc.get("name"))
+
+                def _norm(s):
+                    import re as _re
+                    s = (s or "").upper()
+                    for junk in ["A.S.D.", "ASD", "S.S.D.", "SSD", "A.D.", "A.P.D.", "APD", "VOLLEY", "PALLAVOLO", "SRL", "S.R.L.", "SPA", "S.P.A."]:
+                        s = s.replace(junk, " ")
+                    s = _re.sub(r"[^A-Z0-9 ]", " ", s)
+                    return set(w for w in s.split() if len(w) > 2)
+
+                for _s in (seasons_to_try or [current_season_id]):
+                    portal_socs = await scraper.get_societies(season_id=_s)
+                    if not portal_socs:
+                        continue
+                    # Punteggio per società (max token-overlap su tutti i nomi candidati)
+                    scored = []
+                    for so in portal_socs:
+                        so_tokens = _norm(so.get("name"))
+                        sc = 0
+                        for cname in candidate_names:
+                            ctokens = _norm(cname)
+                            if ctokens:
+                                sc = max(sc, len(ctokens & so_tokens))
+                        scored.append((sc, so))
+                    scored.sort(key=lambda x: x[0], reverse=True)
+                    best_score = scored[0][0] if scored else 0
+                    best = scored[0][1] if scored else None
+                    second_score = scored[1][0] if len(scored) > 1 else 0
+                    # Accetta SOLO se match univoco (vincitore chiaro) per evitare falsi
+                    # positivi su token generici (es. "PERUGIA" presente in molte società).
+                    if best and best_score >= 1 and best_score > second_score:
+                        retry = await scraper.scrape_matches(society_id=best["id"], season_id=_s)
+                        if retry:
+                            scraped_matches = retry
+                            resolved_society_id = best["id"]
+                            resolved_society_name = best["name"]
+                            used_season_id = _s
+                            # Persisti l'ID corretto per le sync future
+                            await db.federation_configs.update_one(
+                                {"society_id": society_id_local, "federation": "fipav"},
+                                {"$set": {"federation_society_id": best["id"], "federation_society_name": best["name"], "season_id": _s, "region": region}},
+                                upsert=True,
+                            )
+                            logging.info(f"FIPAV sync: società risolta per nome -> {best} (score {best_score} vs {second_score})")
+                            break
             except Exception as _e:
-                logging.warning(f"FIPAV sync: retry stagione corrente fallito: {_e}")
-        
-        logging.info(f"FIPAV sync: scraped {len(scraped_matches)} matches (society={federation_society_id}, season={season_id})")
+                logging.warning(f"FIPAV sync: auto-risoluzione società per nome fallita: {_e}")
+
+        season_id = used_season_id
+        logging.info(f"FIPAV sync: scraped {len(scraped_matches)} matches (society={resolved_society_id or federation_society_id}, season={season_id})")
         
         # Get all existing matches for this society
         existing_matches = await db.matches.find(
@@ -8037,7 +8098,21 @@ async def sync_fipav_matches(current_user = Depends(get_current_user)):
         
         updated_count = 0
         changes = []
-        
+
+        # 🆕 Token del NOSTRO nome società per determinare casa/trasferta in modo dinamico
+        # (prima era hardcoded "pallavolo perugia" → errato per altre società es. SIRIO).
+        def _name_tokens(s):
+            import re as _re
+            s = (s or "").upper()
+            for junk in ["A.S.D.", "ASD", "S.S.D.", "SSD", "A.D.", "A.P.D.", "APD", "SRL", "S.R.L.", "SPA", "S.P.A."]:
+                s = s.replace(junk, " ")
+            s = _re.sub(r"[^A-Z0-9 ]", " ", s)
+            return set(w for w in s.split() if len(w) > 2)
+        _our_society_doc = await db.societies.find_one({"id": society_id_local}, {"_id": 0, "name": 1})
+        our_name_tokens = set()
+        for _n in [resolved_society_name, (fed_config or {}).get("federation_society_name") if fed_config else None, (_our_society_doc or {}).get("name")]:
+            our_name_tokens |= _name_tokens(_n)
+
         for scraped in scraped_matches:
             if not scraped.match_number:
                 continue
@@ -8079,7 +8154,8 @@ async def sync_fipav_matches(current_user = Depends(get_current_user)):
                 change_details["result_new"] = scraped_result
             
             # Compare opponent name (might have changed)
-            is_home = "pallavolo perugia" in scraped.home_team.lower()
+            _home_tokens = _name_tokens(scraped.home_team)
+            is_home = bool(our_name_tokens & _home_tokens) if our_name_tokens else ("pallavolo perugia" in scraped.home_team.lower())
             new_opponent = scraped.away_team if is_home else scraped.home_team
             if new_opponent and new_opponent != existing.get("opponent"):
                 update_fields["opponent"] = new_opponent
@@ -8110,7 +8186,14 @@ async def sync_fipav_matches(current_user = Depends(get_current_user)):
             "scraped_total": len(scraped_matches),
             "updated": updated_count,
             "existing_matched": len(existing_by_number),
-            "changes": changes
+            "changes": changes,
+            "debug": {
+                "federation_society_id": resolved_society_id or federation_society_id,
+                "federation_society_name": resolved_society_name or ((fed_config or {}).get("federation_society_name") if fed_config else None),
+                "season_id": season_id,
+                "region": region,
+                "resolved_by_name": bool(resolved_society_id),
+            },
         }
     
     except Exception as e:

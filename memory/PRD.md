@@ -1730,3 +1730,15 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Verificato: sync su Pallavolo Perugia → 35 gare trovate, 10 aggiornate (date/risultati/campi) alla prima esecuzione, 0 alla seconda (già allineate). Solo backend.
 - NOTA PRODUZIONE (SIRIO): affinché il fix funzioni, la società deve avere `federation_configs` con il `federation_society_id` SIRIO (5740) e un `season_id` valido — impostati automaticamente al primo import del calendario dalla procedura guidata.
 
+
+## 🔧 02/10/2026 — Sync FIPAV robustezza (produzione SIRIO ancora 0 dopo deploy)
+- Contesto: in produzione (società SIRIO PERUGIA VOLLEY ASD) la sync continuava a dare 0 anche dopo il primo fix. Probabile causa: `federation_configs.federation_society_id` errato/obsoleto (es. ereditato da Pallavolo 3477) oppure `season_id` di stagione passata.
+- Migliorie a `POST /api/matches/sync-fipav`:
+  1. Prova più stagioni in ordine: quella in config + quella CORRENTE (seasons[0]).
+  2. AUTO-RISOLUZIONE SOCIETÀ PER NOME: se con l'ID configurato lo scraping dà 0, recupera `get_societies(season)` dal portale e fa match per nome (token overlap, rimuove ASD/SSD/VOLLEY/PALLAVOLO ecc.) con `federation_society_name` (config) o il nome società app. Accetta SOLO match univoco (vincitore con score > secondo) per evitare falsi positivi su "PERUGIA". Trovato l'ID giusto, aggiorna `federation_configs` (id+nome+season) per le sync future.
+  3. Fix bug casa/trasferta hardcoded: `is_home` non è più `"pallavolo perugia" in home_team` (errato per SIRIO) ma confronta i token del NOSTRO nome società.
+  4. Risposta sync arricchita con `debug`: {federation_society_id, federation_society_name, season_id, region, resolved_by_name}.
+- Frontend `admin/matches.tsx`: se `scraped_total==0` mostra avviso arancione che invita a reimportare il calendario della stagione corrente.
+- Verificato in preview: con config id BOGUS (99999) + nome "SIRIO PERUGIA VOLLEY ASD" → auto-risolve a id 5740, stagione 2410, scrape 74 gare, persiste config. Con config corretta Pallavolo 3477/2292 → 35 gare come prima.
+- AZIONE UTENTE PRODUZIONE: dopo redeploy Render, rieseguire la sync. Se ancora 0, inviare il campo `debug` della risposta (visibile anche rifacendo l'import del calendario 2026/2027 dalla procedura guidata, che imposta id SIRIO 5740 + stagione corretta).
+
