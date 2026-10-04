@@ -8133,25 +8133,75 @@ async def sync_fipav_matches(current_user = Depends(get_current_user)):
             if our_primary:
                 break
 
-        def _determine_is_home(home_team, away_team):
-            """Ritorna True (siamo in casa), False (trasferta) oppure None (ambiguo → non toccare).
-            Confronta quale colonna (casa/ospite) combacia di più col NOSTRO nome; in caso di
-            parità usa il token distintivo del club (es. SIRIO)."""
-            if not our_name_tokens:
-                return None
-            h = _name_tokens(home_team)
-            a = _name_tokens(away_team)
-            ov_h = len(our_name_tokens & h)
-            ov_a = len(our_name_tokens & a)
-            if ov_h != ov_a:
-                return ov_h > ov_a
-            # parità: usa il token distintivo del club
-            if our_primary:
-                in_h = our_primary in h
-                in_a = our_primary in a
-                if in_h != in_a:
-                    return in_h
-            return None
+        def _norm_name(s):
+            import re as _re
+            s = (s or "").upper()
+            s = _re.sub(r"[^A-Z0-9 ]", " ", s)
+            return " ".join(s.split())
+
+        # 🆕 Nome ESATTO delle NOSTRE squadre sul portale, per team_id (dai team_mappings
+        # salvati in fase di import). È il segnale più affidabile per distinguere casa/trasferta
+        # anche nei DERBY tra due nostre squadre (es. SIRIO ROSSA vs SIRIO ARANCIO).
+        team_portal_names = {}   # {local_team_id: set(nomi normalizzati)}
+        all_our_portal_names = set()
+        for _m in ((fed_config or {}).get("team_mappings") or []):
+            _fn = _norm_name(_m.get("federation_team_name"))
+            _lid = _m.get("local_team_id")
+            if _fn:
+                all_our_portal_names.add(_fn)
+                if _lid:
+                    team_portal_names.setdefault(_lid, set()).add(_fn)
+
+        def _side_is_us(name_norm, team_id):
+            """True se questa colonna (casa/ospite) è una NOSTRA squadra.
+            Prima prova il nome ESATTO della squadra del match (team_id), poi gli altri
+            nostri nomi portale, infine i token del nome società."""
+            if not name_norm:
+                return False
+            own = team_portal_names.get(team_id) or set()
+            for n in own:
+                if n and (n == name_norm or n in name_norm or name_norm in n):
+                    return True
+            for n in all_our_portal_names:
+                if n and (n == name_norm or n in name_norm or name_norm in n):
+                    return True
+            return False
+
+        def _classify(home_team, away_team, team_id):
+            """Ritorna (is_home, opponent) oppure (None, None) se ambiguo.
+            GARANZIA: l'avversario non è MAI una nostra squadra."""
+            h_norm = _norm_name(home_team)
+            a_norm = _norm_name(away_team)
+            # 1) Match ESATTO per nome squadra sul portale (gestisce anche i derby)
+            if team_portal_names.get(team_id):
+                own = team_portal_names[team_id]
+                h_exact = any(n == h_norm for n in own)
+                a_exact = any(n == a_norm for n in own)
+                if h_exact and not a_exact:
+                    return True, away_team
+                if a_exact and not h_exact:
+                    return False, home_team
+            # 2) "Noi stessi": se una colonna è una nostra squadra e l'altra NO → l'altra è l'avversario
+            h_us = _side_is_us(h_norm, team_id)
+            a_us = _side_is_us(a_norm, team_id)
+            if h_us and not a_us:
+                return True, away_team
+            if a_us and not h_us:
+                return False, home_team
+            # 3) Overlap di token col nome società (distintivo)
+            if our_name_tokens:
+                ov_h = len(our_name_tokens & _name_tokens(home_team))
+                ov_a = len(our_name_tokens & _name_tokens(away_team))
+                if ov_h != ov_a:
+                    is_home = ov_h > ov_a
+                    return is_home, (away_team if is_home else home_team)
+                # 4) tie-break token distintivo del club
+                if our_primary:
+                    in_h = our_primary in _name_tokens(home_team)
+                    in_a = our_primary in _name_tokens(away_team)
+                    if in_h != in_a:
+                        return in_h, (away_team if in_h else home_team)
+            return None, None
 
         for scraped in scraped_matches:
             if not scraped.match_number:
@@ -8197,13 +8247,12 @@ async def sync_fipav_matches(current_user = Depends(get_current_user)):
             # ⚠️ Aggiorniamo opponent/home_away SOLO se riusciamo a stabilire con certezza
             # qual è la NOSTRA squadra (altrimenti NON tocchiamo i campi: evita di scrivere
             # noi stessi come avversario in caso di ambiguità).
-            _is_home = _determine_is_home(scraped.home_team, scraped.away_team)
+            _is_home, _opp = _classify(scraped.home_team, scraped.away_team, existing.get("team_id"))
             if _is_home is not None:
-                new_opponent = scraped.away_team if _is_home else scraped.home_team
-                if new_opponent and new_opponent != existing.get("opponent"):
-                    update_fields["opponent"] = new_opponent
+                if _opp and _opp != existing.get("opponent"):
+                    update_fields["opponent"] = _opp
                     change_details["opponent_old"] = existing.get("opponent") or "—"
-                    change_details["opponent_new"] = new_opponent
+                    change_details["opponent_new"] = _opp
                 new_home_away = "home" if _is_home else "away"
                 if new_home_away != existing.get("home_away"):
                     update_fields["home_away"] = new_home_away

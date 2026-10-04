@@ -1779,3 +1779,15 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Verificato in preview: la schermata mostra i nuovi gruppi (wait su "Contabilità e Compensi" ok). Lint ok, bundle ricompilato.
 - NOTA DEPLOY: è una modifica FRONTEND → va ridistribuito il frontend su Vercel (non basta Render).
 
+
+## ✅ 04/10/2026 — Sync FIPAV: classificazione casa/trasferta/avversario DEFINITIVA (4 errori residui)
+- Persistevano 4 gare su 103 con avversario = una NOSTRA squadra (es. U.17 Rossa → "SIRIO PALLAVOLO ROSSA"): il metodo a token restava ambiguo nei casi "noi stessi" e nei derby tra due squadre SIRIO.
+- Nuova funzione `_classify(home, away, team_id)` nel sync, multi-livello:
+  1. Nome ESATTO della NOSTRA squadra sul portale per quel `team_id` (dai `team_mappings` salvati all'import) con UGUAGLIANZA esatta → gestisce correttamente anche i DERBY (opponent = l'ALTRA squadra SIRIO).
+  2. "Noi stessi": se una colonna è una nostra squadra e l'altra no → l'altra è l'avversario (GARANZIA: l'avversario non è mai noi stessi).
+  3. Overlap token nome società (distintivo) + 4) tie-break token club (es. SIRIO). Se ambiguo → non tocca i campi.
+- `change_details` ora include opponent_old/opponent_new.
+- Test standalone 8/8 PASS (casa/trasferta normali, "noi stessi" corrotto, derby ROSSA↔ARANCIO, sottostringhe tipo "SIRIO PALLAVOLO" vs "...ROSSA", avversari con "PERUGIA"). Verificato anche via endpoint su dato corrotto (3272 "PALLAVOLO PERUGIA" → "SCHOOL VOLLEY PERUGIA VERDE").
+- Nota: i casi "avversario = nostra squadra" vengono corretti anche se i team_mappings fossero generici (via token). I DERBY veri richiedono team_mappings per-squadra (SIRIO li ha). Un derby mostra correttamente l'ALTRA squadra SIRIO: NON è un errore.
+- AZIONE UTENTE: deploy backend su Render, poi ri-eseguire "Sincronizza FIPAV" → i 4 errori si correggono. Se restano, inviare i match_number per analisi sui dati reali.
+
