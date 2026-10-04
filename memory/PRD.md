@@ -1742,3 +1742,15 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Verificato in preview: con config id BOGUS (99999) + nome "SIRIO PERUGIA VOLLEY ASD" → auto-risolve a id 5740, stagione 2410, scrape 74 gare, persiste config. Con config corretta Pallavolo 3477/2292 → 35 gare come prima.
 - AZIONE UTENTE PRODUZIONE: dopo redeploy Render, rieseguire la sync. Se ancora 0, inviare il campo `debug` della risposta (visibile anche rifacendo l'import del calendario 2026/2027 dalla procedura guidata, che imposta id SIRIO 5740 + stagione corretta).
 
+
+## 🎛️ 04/10/2026 — "Stanza dei Bottoni" + Fine periodo prove massivo (verificato via curl + screenshot)
+- Richiesta utente: (1) pulsante che chiude TUTTE le prove ancora in essere (tutti devono firmare privacy + pagare quota + inserire dati certificato medico); (2) una "Stanza dei Bottoni" che raccoglie le operazioni occasionali con breve descrizione, per sfoltire la dashboard.
+- Backend (`server.py`):
+  - `GET /api/admin/trials/active-count`: conta le prove ANCORA IN CORSO (status trial/pending_trial, non ritirati, `admin_ended_trial`!=True, `end_trial_requested`!=True).
+  - `POST /api/admin/trials/close-all` (admin/coordinatore): termina in blocco tutte le prove in corso della società applicando la STESSA logica di `force-end-trial` (status trial, is_trial True, trial_end_date=now, trial_sessions_count=max, admin_ended_trial=True; user.status=trial). Esclude ritirati, già attivi e prove già concluse. Audit log `trial_close_all`. Ritorna {closed, names, message}.
+  - Verificato ciclo completo con atleta usa-e-getta: count 1 → close-all (closed 1) → count 0; campi post = admin_ended_trial True, trial_end_date valorizzata.
+- Frontend:
+  - NUOVO `app/admin/stanza-bottoni.tsx`: hub con sezioni (Periodo di Prova, Inizio/Fine Stagione, Calendario Gare FIPAV, Manutenzione Dati). Ogni operazione ha icona, "a cosa serve" e "come si fa". Operazioni: Fine periodo prove (azione, con modale di conferma + badge "N in prova"), Nuova Stagione, Riconferma Stagione, Pre-Stagione/Eventi, Importa Calendario, Sincronizza FIPAV (azione diretta con risultato), Igiene Pagamenti, Diagnostica. Modali di conferma/risultato custom (web+native).
+  - `app/admin/index.tsx`: la card "Importa Calendario" in dashboard è stata SOSTITUITA dalla card "Stanza dei Bottoni" (riduce l'elenco; l'import è ora dentro la stanza).
+- Nota: le altre card occasionali in dashboard (es. EVENTI/preseason) restano per ora; su richiesta utente si possono spostare ulteriori card nella stanza per snellire ancora.
+

@@ -18537,6 +18537,81 @@ async def force_end_trial(athlete_id: str, request: Request, current_user = Depe
     return {"message": f"Periodo di prova concluso per {athlete_name}"}
 
 
+@api_router.get("/admin/trials/active-count")
+async def active_trials_count(current_user = Depends(get_current_user)):
+    """Conta gli atleti attualmente in periodo di prova (per il pulsante "Fine periodo prove")."""
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.COORDINATORE):
+        raise HTTPException(status_code=403, detail="Operazione riservata ad admin")
+    sid = current_user.get("society_id")
+    query = {"status": {"$in": ["trial", "pending_trial"]}, "is_withdrawn": {"$ne": True},
+             "admin_ended_trial": {"$ne": True}, "end_trial_requested": {"$ne": True}}
+    if sid:
+        query["society_id"] = sid
+    count = await db.athletes.count_documents(query)
+    return {"count": count}
+
+
+
+@api_router.post("/admin/trials/close-all")
+async def close_all_trials(request: Request, current_user = Depends(get_current_user)):
+    """🆕 02/10/2026 — "Fine periodo prove": termina IN BLOCCO tutte le prove ancora
+    attive della società. Ogni atleta in prova entra nella fase decisionale
+    (resta e firma privacy + quota + certificato / oppure lascia), esattamente come
+    il pulsante "Termina prova" sul singolo atleta. Esclude ritirati e già attivi.
+    Tracciato negli audit log."""
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.COORDINATORE):
+        raise HTTPException(status_code=403, detail="Operazione riservata ad admin")
+    sid = current_user.get("society_id")
+    query = {
+        "status": {"$in": ["trial", "pending_trial"]},
+        "is_withdrawn": {"$ne": True},
+        "admin_ended_trial": {"$ne": True},
+        "end_trial_requested": {"$ne": True},
+    }
+    if sid:
+        query["society_id"] = sid
+    athletes = await db.athletes.find(query).to_list(5000)
+
+    # Numero massimo di sessioni di prova (impostazioni società)
+    ss = await db.settings.find_one({"type": "society", "society_id": sid}) if sid else await db.settings.find_one({"type": "society"})
+    max_sessions = (ss.get("trial_max_sessions", 3) if ss else 3) or 3
+    now_it = datetime.now(timezone.utc)
+
+    closed_names = []
+    for athlete in athletes:
+        start = athlete.get("trial_start_date") or now_it.isoformat()
+        await db.athletes.update_one({"id": athlete["id"]}, {"$set": {
+            "status": "trial",
+            "is_trial": True,
+            "trial_start_date": start,
+            "trial_end_date": now_it.isoformat(),
+            "trial_sessions_count": max_sessions,
+            "trial_max_sessions": max_sessions,
+            "admin_ended_trial": True,
+        }})
+        uid = athlete.get("user_id")
+        if uid:
+            await db.users.update_one({"id": uid}, {"$set": {"status": "trial"}})
+        closed_names.append(athlete.get("full_name") or f"{athlete.get('first_name','')} {athlete.get('last_name','')}".strip())
+
+    await log_audit(
+        action="trial_close_all",
+        user_id=current_user["id"],
+        user_email=current_user.get("email", ""),
+        society_id=sid or "",
+        target_user_id="",
+        target_user_name=f"{len(closed_names)} atleti",
+        ip_address=get_real_ip(request),
+        details={"executor_name": current_user.get("full_name", ""), "closed_count": len(closed_names)},
+    )
+    return {
+        "message": f"Periodo di prova concluso per {len(closed_names)} atleti" if closed_names else "Nessuna prova attiva da chiudere",
+        "closed": len(closed_names),
+        "names": closed_names,
+    }
+
+
+
 
 @api_router.post("/athletes/{athlete_id}/skip-trial-activate")
 async def skip_trial_and_activate(athlete_id: str, request: Request, current_user = Depends(get_current_user)):

@@ -1239,18 +1239,18 @@ export default function AdminDashboard() {
             </View>
           </TouchableOpacity>
 
-          {/* Importa Calendario Federazione */}
+          {/* Stanza dei Bottoni — operazioni occasionali raggruppate */}
           <TouchableOpacity
             style={styles.menuCard}
-            onPress={() => router.push('/admin/import-calendar')}
-            data-testid="import-calendar-btn"
+            onPress={() => router.push('/admin/stanza-bottoni')}
+            data-testid="stanza-bottoni-btn"
           >
-            <View style={[styles.menuIcon, { backgroundColor: '#E3F2FD' }]}>
-              <Text style={{ fontSize: 26 }}>🌐</Text>
+            <View style={[styles.menuIcon, { backgroundColor: '#ECEFF1' }]}>
+              <Ionicons name="construct" size={26} color="#37474F" />
             </View>
             <View style={styles.menuCardContent}>
-              <Text style={styles.menuCardTitle}>Importa Calendario</Text>
-              <Text style={styles.menuCardSubtitle}>Da FIPAV e altre federazioni</Text>
+              <Text style={styles.menuCardTitle}>Stanza dei Bottoni</Text>
+              <Text style={styles.menuCardSubtitle}>Fine prove, nuova stagione, import/sync FIPAV, igiene dati…</Text>
             </View>
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
