@@ -1764,3 +1764,18 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Verificato in preview: corrotto match 3272 (home) opponent → "PALLAVOLO PERUGIA" (noi stessi); dopo sync → ripristinato a "SCHOOL VOLLEY PERUGIA VERDE" (avversario reale), pur contenendo l'opponent anch'esso "PERUGIA".
 - AZIONE UTENTE: deploy ultimo codice su Render, poi eseguire "Sincronizza FIPAV" (Stanza dei Bottoni) → gli avversari delle partite in casa vengono corretti. In alternativa re-import del calendario dalla procedura guidata (usa i team_mappings espliciti → opponent corretti).
 
+
+## 🎛️ 04/10/2026 — Stanza dei Bottoni: aggiunte voci + nuovi macro-gruppi (sfoltita dashboard)
+- Richiesta utente: spostare nella Stanza dei Bottoni anche: Report Rimborsi, Storico Stagioni, Storico Presenze, Archivio Documenti, Riepilogo Consensi Annuali, Compensi Esterni, Quietanze (rinominata in "QUIETANZE SPECIALI"). Con descrizioni e suddivise in macro-gruppi.
+- `app/admin/stanza-bottoni.tsx` — gruppi finali:
+  - Periodo di Prova: Fine periodo prove (azione)
+  - Inizio / Fine Stagione: Nuova Stagione, Riconferma Stagione, Pre-Stagione ed Eventi, Storico Stagioni (/admin/seasons)
+  - Calendario Gare (FIPAV): Importa Calendario, Sincronizza FIPAV (azione)
+  - Contabilità e Compensi: Report Rimborsi (/admin/refunds-report), Compensi Esterni (/admin/external-compensations), Quietanze Speciali (/admin/quietanze)
+  - Archivi e Consensi: Storico Presenze (/admin/attendances), Archivio Documenti (/admin/documents-archive), Riepilogo Consensi Annuali (/admin/image-consents)
+  - Manutenzione Dati: Igiene Pagamenti, Diagnostica
+  Ogni voce ha icona, "a cosa serve" e "come si fa".
+- `app/admin/index.tsx` — RIMOSSE dalla dashboard le 7 card ora nella Stanza (Quietanze, Compensi Esterni, Archivio Documenti, Consensi Immagini, Storico Presenze, Archivio Stagioni, Report Rimborsi). Aggiornato il sottotitolo della card "Stanza dei Bottoni". Mantenute in dashboard: Riepilogo Compensi Annuale, Copie Originali Certificati, Ricerca Avanzata, Prima Nota Pagamenti, Storico Pagamenti.
+- Verificato in preview: la schermata mostra i nuovi gruppi (wait su "Contabilità e Compensi" ok). Lint ok, bundle ricompilato.
+- NOTA DEPLOY: è una modifica FRONTEND → va ridistribuito il frontend su Vercel (non basta Render).
+

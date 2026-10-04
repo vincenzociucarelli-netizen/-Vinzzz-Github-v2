@@ -1250,7 +1250,7 @@ export default function AdminDashboard() {
             </View>
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>Stanza dei Bottoni</Text>
-              <Text style={styles.menuCardSubtitle}>Fine prove, nuova stagione, import/sync FIPAV, igiene dati…</Text>
+              <Text style={styles.menuCardSubtitle}>Fine prove, stagioni, FIPAV, compensi, archivi, consensi…</Text>
             </View>
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
@@ -1427,39 +1427,7 @@ export default function AdminDashboard() {
             </View>
           </TouchableOpacity>
 
-          {/* Report Mensile Quietanze - Per Coach e Collaboratori */}
-          <TouchableOpacity
-            style={styles.menuCard}
-            onPress={() => router.push('/admin/quietanze')}
-            data-testid="quietanze-menu-card"
-          >
-            <View style={[styles.menuIcon, { backgroundColor: '#E8F5E9' }]}>
-              <Text style={{ fontSize: 26 }}>📋</Text>
-            </View>
-            <View style={styles.menuCardContent}>
-              <Text style={styles.menuCardTitle}>Quietanze</Text>
-              <Text style={styles.menuCardSubtitle}>Report e gestione compensi</Text>
-            </View>
-            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
-          </TouchableOpacity>
-
-          {/* Riepilogo Compensi Esterni (altre ASD/SSD) */}
-          <TouchableOpacity
-            style={styles.menuCard}
-            onPress={() => router.push('/admin/external-compensations')}
-            data-testid="external-compensations-menu-card"
-          >
-            <View style={[styles.menuIcon, { backgroundColor: '#FFF3E0' }]}>
-              <Text style={{ fontSize: 26 }}>🏢</Text>
-            </View>
-            <View style={styles.menuCardContent}>
-              <Text style={styles.menuCardTitle}>Compensi Esterni</Text>
-              <Text style={styles.menuCardSubtitle}>Riepilogo dichiarazioni da altre Società</Text>
-            </View>
-            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
-          </TouchableOpacity>
-
-          {/* 🆕 13/06/2026 — Riepilogo Compensi Annuale (Export XLSX) */}
+          {/* Riepilogo Compensi Annuale (Export XLSX) */}
           <TouchableOpacity
             style={styles.menuCard}
             onPress={() => setShowCompensationExport(true)}
@@ -1475,39 +1443,7 @@ export default function AdminDashboard() {
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
 
-          {/* Archivio Documenti Firmati */}
-          <TouchableOpacity
-            style={styles.menuCard}
-            onPress={() => router.push('/admin/documents-archive')}
-            data-testid="documents-archive-menu-card"
-          >
-            <View style={[styles.menuIcon, { backgroundColor: '#F3E5F5' }]}>
-              <Text style={{ fontSize: 26 }}>📁</Text>
-            </View>
-            <View style={styles.menuCardContent}>
-              <Text style={styles.menuCardTitle}>Archivio Documenti</Text>
-              <Text style={styles.menuCardSubtitle}>Quietanze e documenti firmati</Text>
-            </View>
-            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
-          </TouchableOpacity>
-
-          {/* Consensi Immagini */}
-          <TouchableOpacity
-            style={styles.menuCard}
-            onPress={() => router.push('/admin/image-consents')}
-            data-testid="image-consents-menu-card"
-          >
-            <View style={[styles.menuIcon, { backgroundColor: '#FCE4EC' }]}>
-              <Text style={{ fontSize: 26 }}>📸</Text>
-            </View>
-            <View style={styles.menuCardContent}>
-              <Text style={styles.menuCardTitle}>Consensi Immagini</Text>
-              <Text style={styles.menuCardSubtitle}>Atleti senza consenso foto promozionali / uso interno</Text>
-            </View>
-            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
-          </TouchableOpacity>
-
-          {/* 🆕 06/2026 — Copie Originali Certificati (dopo gli elenchi privacy) */}
+          {/* Copie Originali Certificati (dopo gli elenchi privacy) */}
           <TouchableOpacity
             style={styles.menuCard}
             onPress={() => router.push('/admin/certificate-originals')}
@@ -1534,36 +1470,6 @@ export default function AdminDashboard() {
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>Ricerca Avanzata</Text>
               <Text style={styles.menuCardSubtitle}>Filtra atleti per ruolo, anno, CAP, altezza</Text>
-            </View>
-            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
-          </TouchableOpacity>
-
-          {/* Storico Presenze */}
-          <TouchableOpacity
-            style={styles.menuCard}
-            onPress={() => router.push('/admin/attendances')}
-          >
-            <View style={[styles.menuIcon, { backgroundColor: '#F0EFFF' }]}>
-              <Text style={{ fontSize: 26 }}>{Icons.clipboard}</Text>
-            </View>
-            <View style={styles.menuCardContent}>
-              <Text style={styles.menuCardTitle}>Storico Presenze</Text>
-              <Text style={styles.menuCardSubtitle}>Presenze di oggi: {stats?.today_attendances || 0}</Text>
-            </View>
-            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
-          </TouchableOpacity>
-          
-          {/* Archivio Stagioni */}
-          <TouchableOpacity
-            style={styles.menuCard}
-            onPress={() => router.push('/admin/seasons')}
-          >
-            <View style={[styles.menuIcon, { backgroundColor: '#FBE9E7' }]}>
-              <Text style={{ fontSize: 26 }}>{Icons.archive}</Text>
-            </View>
-            <View style={styles.menuCardContent}>
-              <Text style={styles.menuCardTitle}>Archivio Stagioni</Text>
-              <Text style={styles.menuCardSubtitle}>Storico atleti, coach e campionati</Text>
             </View>
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
@@ -1595,22 +1501,6 @@ export default function AdminDashboard() {
             <View style={styles.menuCardContent}>
               <Text style={styles.menuCardTitle}>Storico Pagamenti</Text>
               <Text style={styles.menuCardSubtitle}>Filtri per data/stato/atleta ed export CSV</Text>
-            </View>
-            <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
-          </TouchableOpacity>
-
-          {/* 🆕 01/08/2026 — Report Rimborsi Stripe */}
-          <TouchableOpacity
-            style={styles.menuCard}
-            onPress={() => router.push('/admin/refunds-report')}
-            testID="refunds-report-menu-card"
-          >
-            <View style={[styles.menuIcon, { backgroundColor: '#F3E5F5' }]}>
-              <Text style={{ fontSize: 26 }}>↩️</Text>
-            </View>
-            <View style={styles.menuCardContent}>
-              <Text style={styles.menuCardTitle}>Report Rimborsi</Text>
-              <Text style={styles.menuCardSubtitle}>Rimborsi Stripe con motivo, data e admin · CSV</Text>
             </View>
             <Text style={{ fontSize: 18, color: '#999' }}>{Icons.chevron}</Text>
           </TouchableOpacity>
