@@ -1754,3 +1754,13 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
   - `app/admin/index.tsx`: la card "Importa Calendario" in dashboard è stata SOSTITUITA dalla card "Stanza dei Bottoni" (riduce l'elenco; l'import è ora dentro la stanza).
 - Nota: le altre card occasionali in dashboard (es. EVENTI/preseason) restano per ora; su richiesta utente si possono spostare ulteriori card nella stanza per snellire ancora.
 
+
+## 🐛 04/10/2026 — Export CSV/Excel gare: "avversario = noi stessi" nelle partite in casa (CAUSA + FIX)
+- Segnalazione: nell'export calendario, per molte partite in CASA la colonna "Avversario" mostrava la NOSTRA squadra (es. "SIRIO PALLAVOLO ARANCIO") invece dell'avversaria.
+- Causa radice: il campo `opponent` delle gare era stato CORROTTO dal vecchio sync FIPAV che aveva `is_home` hardcoded su "pallavolo perugia". Per una società diversa (SIRIO) `is_home` risultava sempre False → `opponent = home_team` = la nostra squadra. L'export mostra fedelmente `m.opponent` (nessun bug lato export).
+- Fix (già introdotto + irrobustito in `POST /api/matches/sync-fipav`):
+  - Nuova funzione `_determine_is_home(home, away)`: decide casa/trasferta confrontando quale colonna combacia di più col NOSTRO nome (token overlap su più fonti: resolved_society_name, federation_society_name, nome società). Tie-break sul token distintivo del club (primo token non generico, es. "SIRIO"). Se ambiguo → ritorna None e NON tocca opponent/home_away (evita ri-corruzione). Token generici ignorati: VOLLEY, PALLAVOLO, ASD, SSD, TEAM, ecc.
+  - Il sync ora RIPARA i dati esistenti al ri-lancio: ricalcola opponent e home_away corretti per ogni gara (match_number) e li aggiorna. `changes` include opponent_old/opponent_new.
+- Verificato in preview: corrotto match 3272 (home) opponent → "PALLAVOLO PERUGIA" (noi stessi); dopo sync → ripristinato a "SCHOOL VOLLEY PERUGIA VERDE" (avversario reale), pur contenendo l'opponent anch'esso "PERUGIA".
+- AZIONE UTENTE: deploy ultimo codice su Render, poi eseguire "Sincronizza FIPAV" (Stanza dei Bottoni) → gli avversari delle partite in casa vengono corretti. In alternativa re-import del calendario dalla procedura guidata (usa i team_mappings espliciti → opponent corretti).
+

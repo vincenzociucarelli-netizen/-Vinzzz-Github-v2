@@ -8101,6 +8101,11 @@ async def sync_fipav_matches(current_user = Depends(get_current_user)):
 
         # 🆕 Token del NOSTRO nome società per determinare casa/trasferta in modo dinamico
         # (prima era hardcoded "pallavolo perugia" → errato per altre società es. SIRIO).
+        _GENERIC_TOKENS = {
+            "VOLLEY", "PALLAVOLO", "PALLAVOLISTICA", "VOLLEYBALL", "TEAM", "CLUB",
+            "SPORT", "SPORTIVA", "SPORTIVO", "POLISPORTIVA", "ASSOCIAZIONE",
+            "DILETTANTISTICA", "GSD", "ASD", "SSD", "APD", "CITY", "ACADEMY",
+        }
         def _name_tokens(s):
             import re as _re
             s = (s or "").upper()
@@ -8108,10 +8113,45 @@ async def sync_fipav_matches(current_user = Depends(get_current_user)):
                 s = s.replace(junk, " ")
             s = _re.sub(r"[^A-Z0-9 ]", " ", s)
             return set(w for w in s.split() if len(w) > 2)
+        def _ordered_tokens(s):
+            import re as _re
+            s = (s or "").upper()
+            s = _re.sub(r"[^A-Z0-9 ]", " ", s)
+            return [w for w in s.split() if len(w) > 2]
         _our_society_doc = await db.societies.find_one({"id": society_id_local}, {"_id": 0, "name": 1})
         our_name_tokens = set()
-        for _n in [resolved_society_name, (fed_config or {}).get("federation_society_name") if fed_config else None, (_our_society_doc or {}).get("name")]:
+        _our_name_sources = [resolved_society_name, (fed_config or {}).get("federation_society_name") if fed_config else None, (_our_society_doc or {}).get("name")]
+        for _n in _our_name_sources:
             our_name_tokens |= _name_tokens(_n)
+        # Token distintivo del club (primo token NON generico, es. "SIRIO") per il tie-break
+        our_primary = None
+        for _n in _our_name_sources:
+            for _t in _ordered_tokens(_n):
+                if _t not in _GENERIC_TOKENS:
+                    our_primary = _t
+                    break
+            if our_primary:
+                break
+
+        def _determine_is_home(home_team, away_team):
+            """Ritorna True (siamo in casa), False (trasferta) oppure None (ambiguo → non toccare).
+            Confronta quale colonna (casa/ospite) combacia di più col NOSTRO nome; in caso di
+            parità usa il token distintivo del club (es. SIRIO)."""
+            if not our_name_tokens:
+                return None
+            h = _name_tokens(home_team)
+            a = _name_tokens(away_team)
+            ov_h = len(our_name_tokens & h)
+            ov_a = len(our_name_tokens & a)
+            if ov_h != ov_a:
+                return ov_h > ov_a
+            # parità: usa il token distintivo del club
+            if our_primary:
+                in_h = our_primary in h
+                in_a = our_primary in a
+                if in_h != in_a:
+                    return in_h
+            return None
 
         for scraped in scraped_matches:
             if not scraped.match_number:
@@ -8153,17 +8193,20 @@ async def sync_fipav_matches(current_user = Depends(get_current_user)):
                 change_details["result_old"] = existing_result or "—"
                 change_details["result_new"] = scraped_result
             
-            # Compare opponent name (might have changed)
-            _home_tokens = _name_tokens(scraped.home_team)
-            is_home = bool(our_name_tokens & _home_tokens) if our_name_tokens else ("pallavolo perugia" in scraped.home_team.lower())
-            new_opponent = scraped.away_team if is_home else scraped.home_team
-            if new_opponent and new_opponent != existing.get("opponent"):
-                update_fields["opponent"] = new_opponent
-            
-            # Update home/away
-            new_home_away = "home" if is_home else "away"
-            if new_home_away != existing.get("home_away"):
-                update_fields["home_away"] = new_home_away
+            # Compare opponent name (might have changed) + casa/trasferta.
+            # ⚠️ Aggiorniamo opponent/home_away SOLO se riusciamo a stabilire con certezza
+            # qual è la NOSTRA squadra (altrimenti NON tocchiamo i campi: evita di scrivere
+            # noi stessi come avversario in caso di ambiguità).
+            _is_home = _determine_is_home(scraped.home_team, scraped.away_team)
+            if _is_home is not None:
+                new_opponent = scraped.away_team if _is_home else scraped.home_team
+                if new_opponent and new_opponent != existing.get("opponent"):
+                    update_fields["opponent"] = new_opponent
+                    change_details["opponent_old"] = existing.get("opponent") or "—"
+                    change_details["opponent_new"] = new_opponent
+                new_home_away = "home" if _is_home else "away"
+                if new_home_away != existing.get("home_away"):
+                    update_fields["home_away"] = new_home_away
 
             # 🆕 Aggiorna la città della gara (solo città, no palestra/indirizzo)
             new_city = (scraped.venue_city or "").strip()
