@@ -9000,90 +9000,122 @@ async def import_selected_matches(config: dict, current_user = Depends(get_curre
         
         imported_count = 0
         skipped_count = 0
-        
-        # Build a mapping dict for quick lookup
-        mapping_dict = {}
+
+        # 🆕 06/2026 — Classificazione ROBUSTA casa/trasferta + avversario.
+        # Fonte di verità: il portale FIPAV indica GIÀ chi è in casa (home_team) e chi ospite
+        # (away_team). Dobbiamo solo capire QUALE lato è una NOSTRA squadra (via team_mappings)
+        # e, nei DERBY tra due nostre squadre, creare un record per CIASCUNA (avversario = l'altra).
+        # Questo elimina i bug "giochiamo contro noi stessi" e casa/trasferta invertite.
+        def _norm_tn(s):
+            import re as _re
+            s = (s or "").upper()
+            s = _re.sub(r"[^A-Z0-9 ]", " ", s)
+            return " ".join(s.split())
+
+        # [(nome_federale_normalizzato, local_team_id)] dal più specifico (lungo) al più generico
+        team_fed_map = []
         for mapping in team_mappings:
-            fed_name = mapping.get("federation_team_name", "").lower()
-            local_id = mapping.get("local_team_id")
-            if fed_name and local_id:
-                mapping_dict[fed_name] = local_id
-        
-        # Also add society_name variations
-        if society_name:
-            for mapping in team_mappings:
-                local_id = mapping.get("local_team_id")
-                if local_id:
-                    mapping_dict[society_name.lower()] = local_id
-        
+            fn = _norm_tn(mapping.get("federation_team_name"))
+            lid = mapping.get("local_team_id")
+            if fn and lid:
+                team_fed_map.append((fn, lid))
+        team_fed_map.sort(key=lambda x: len(x[0]), reverse=True)
+
+        def _side_team(side_norm):
+            """local_team_id se questo lato è una NOSTRA squadra.
+            Match ESATTO prioritario; poi il nome federale PIÙ SPECIFICO contenuto nel lato
+            (o viceversa). Così 'SIRIO PALLAVOLO ROSSA' non viene confuso con 'SIRIO PALLAVOLO'."""
+            if not side_norm:
+                return None
+            for fn, lid in team_fed_map:
+                if fn == side_norm:
+                    return lid
+            for fn, lid in team_fed_map:
+                if fn and (fn in side_norm or side_norm in fn):
+                    return lid
+            return None
+
+        # Cache dei documenti squadra locali (per mostrare l'avversario di un derby col nome interno)
+        _teams_cache = {}
+        async def _team_doc(tid):
+            if tid not in _teams_cache:
+                _teams_cache[tid] = await db.teams.find_one({"id": tid})
+            return _teams_cache[tid]
+
         for match_data in matches:
             home_team = match_data.get("home_team", "")
             away_team = match_data.get("away_team", "")
             match_number = match_data.get("match_number", "")
             match_date_str = match_data.get("date", "")
             result = match_data.get("result")
-            
+
             # Parse date
             try:
                 match_date = datetime.fromisoformat(match_date_str.replace('Z', '+00:00'))
             except:
                 skipped_count += 1
                 continue
-            
-            # Determine which team this match is for
-            local_team_id = None
-            is_home = False
-            
-            # Check home team
-            home_lower = home_team.lower()
-            for key, value in mapping_dict.items():
-                if key in home_lower or home_lower in key:
-                    local_team_id = value
-                    is_home = True
-                    break
-            
-            # Check away team if not found in home
-            if not local_team_id:
-                away_lower = away_team.lower()
-                for key, value in mapping_dict.items():
-                    if key in away_lower or away_lower in key:
-                        local_team_id = value
-                        is_home = False
-                        break
-            
-            if not local_team_id:
+
+            h_team = _side_team(_norm_tn(home_team))
+            a_team = _side_team(_norm_tn(away_team))
+
+            # Piani di creazione: (local_team_id, is_home, opponent_raw, opponent_local_id)
+            plans = []
+            if h_team and a_team and h_team != a_team:
+                # DERBY tra due NOSTRE squadre → un record per ciascuna
+                plans.append((h_team, True, away_team, a_team))
+                plans.append((a_team, False, home_team, h_team))
+            elif h_team:
+                plans.append((h_team, True, away_team, a_team if a_team and a_team != h_team else None))
+            elif a_team:
+                plans.append((a_team, False, home_team, h_team if h_team and h_team != a_team else None))
+            else:
                 skipped_count += 1
                 continue
-            
-            # Get team info
-            team = await db.teams.find_one({"id": local_team_id})
-            team_name = team.get("name", "") if team else ""
-            
-            # Determine opponent
-            opponent = away_team if is_home else home_team
-            
-            # Delete existing match with same match_number
-            if match_number:
-                await db.matches.delete_one({
-                    "match_number": match_number,
-                    "society_id": society_id_local
+
+            venue_val = (match_data.get("venue_city") or match_data.get("venue") or "").strip()
+            championship_val = match_data.get("championship")
+            girone_val = match_data.get("girone")
+
+            for idx, (local_team_id, is_home, opponent_raw, opp_local_id) in enumerate(plans):
+                # Avversario: se è una nostra squadra (derby) usa il nome INTERNO, altrimenti il nome federale
+                opponent = opponent_raw
+                if opp_local_id:
+                    od = await _team_doc(opp_local_id)
+                    if od and od.get("name"):
+                        opponent = od["name"]
+
+                team = await _team_doc(local_team_id)
+                team_name = team.get("name", "") if team else ""
+
+                # Numero gara: il record principale mantiene il numero reale; il mirror del derby usa suffisso
+                rec_number = match_number or f"FIPAV-{match_date.strftime('%Y%m%d%H%M')}"
+                if idx > 0:
+                    rec_number = f"{rec_number}-D"
+
+                # Upsert scoped per società + SQUADRA + numero gara (non tocca altre squadre)
+                await db.matches.delete_many({
+                    "match_number": rec_number,
+                    "society_id": society_id_local,
+                    "team_id": local_team_id,
                 })
-            
-            # Create match
-            match = Match(
-                society_id=society_id_local,
-                team_id=local_team_id,
-                team_name=team_name,
-                match_number=match_number or f"FIPAV-{match_date.strftime('%Y%m%d%H%M')}",
-                date=match_date,
-                opponent=opponent,
-                home_away="home" if is_home else "away",
-                result=result if result and result != '-' else None,
-                venue=(match_data.get("venue_city") or match_data.get("venue") or "").strip()  # 🆕 Palestra + Città
-            )
-            
-            await db.matches.insert_one(match.dict())
-            imported_count += 1
+
+                match = Match(
+                    society_id=society_id_local,
+                    team_id=local_team_id,
+                    team_name=team_name,
+                    match_number=rec_number,
+                    championship=championship_val,
+                    girone=girone_val,
+                    date=match_date,
+                    opponent=opponent,
+                    home_away="home" if is_home else "away",
+                    result=result if result and result != '-' else None,
+                    venue=venue_val,  # 🆕 Palestra + Città
+                )
+
+                await db.matches.insert_one(match.dict())
+                imported_count += 1
         
         return {
             "message": f"Importate {imported_count} partite",
@@ -9289,6 +9321,11 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
         team = {"id": "ALL", "name": "Tutta la società"}
         _q = {
             "society_id": society_id,
+            # 🆕 05/10/2026 — Escludi gli atleti RITIRATI (is_withdrawn) dall'elenco squadra,
+            # dal conteggio e da "Registra Presenze" (prima comparivano ancora perché il
+            # filtro era solo su status/rollover e alcuni ritirati hanno is_withdrawn=True
+            # ma status diverso).
+            "is_withdrawn": {"$ne": True},
             "$or": [
                 {"rollover_decision": {"$ne": "removed"}},
                 {"rollover_decision_season": {"$ne": _current_season}},
@@ -9302,6 +9339,7 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
         # (team_ids), non solo la principale (team_id). Prima l'elenco risultava vuoto per U17/U19.
         _q = {
             "society_id": society_id,
+            "is_withdrawn": {"$ne": True},  # 🆕 esclude i ritirati (vedi nota sopra)
             "$and": [
                 {"$or": [{"team_id": team_id}, {"team_ids": team_id}]},
                 {"$or": [

@@ -59,6 +59,14 @@ SENDER_NAME=RegistraTEAM
 
 ## Status - Completed
 
+### 06/2026 - FIX DEFINITIVO Import FIPAV "giochiamo contro noi stessi" + casa/trasferta invertite (verificato e2e via HTTP)
+- **Bug (Vincenzo)**: 4 gare importate dal calendario FIPAV mostravano come avversario la NOSTRA stessa squadra (es. team "U.17 - Rossa" con opponent "SIRIO PALLAVOLO ROSSA") e con casa/trasferta invertite.
+- **Root cause** (`POST /federation/import-selected`): la classificazione usava matching a substring su un `mapping_dict` inquinato da una riga "society_name variations" che SOVRASCRIVEVA le chiavi (ultima squadra vince). Inoltre un nome federale corto ("SIRIO PALLAVOLO") è substring di uno lungo ("SIRIO PALLAVOLO ROSSA") → lato assegnato alla squadra sbagliata e avversario = noi stessi.
+- **Fix**: riscritta la classificazione. Il portale FIPAV è fonte di verità per casa(home_team)/ospite(away_team): dobbiamo solo capire QUALE lato è una nostra squadra via `team_mappings`, con match ESATTO prioritario + nome federale più SPECIFICO (ordinamento per lunghezza desc). Rimosso il blocco "society_name variations". Gestione DERBY: se entrambi i lati sono nostre squadre → crea un record per CIASCUNA (avversario = l'altra, col nome interno), mirror con match_number `-D`. Delete/upsert scoped per società + squadra + numero gara. Salva anche championship/girone. Garanzia: l'avversario non è MAI la squadra a cui è assegnato il record.
+- **Verificato e2e** (HTTP su test_database): casa, trasferta, nome esatto non confuso col più lungo, derby a 2 record, estranei skippati — tutti corretti.
+- **Azione utente**: per correggere le 4 gare esistenti, RE-importare i calendari delle squadre interessate (il re-import ora cancella+ricrea correttamente). In Step 2 assegnare nomi federali DISTINTIVI per squadra (es. "SIRIO PALLAVOLO ROSSA" → U.17 Rossa, "SIRIO PALLAVOLO" → U.19 Elite). Deploy: solo backend (Render).
+
+
 ### 29/08/2026 - Rimosso limite allenamenti settimanali per squadra (richiesta Serie B in preparazione) — verificato via screenshot
 - In modifica squadra (`admin/team/[id].tsx`) c'era un blocco "Massimo 5 allenamenti settimanali" in `addTrainingSession` (+ pulsante "Aggiungi Allenamento" nascosto oltre 10). In creazione (`admin/teams.tsx`) c'era un cap a 10.
 - Fix: rimosso il blocco a 5 e i gate `< 10` in entrambi i file; il pulsante "Aggiungi Allenamento" è sempre disponibile (resta solo il minimo di 2). Nessun limite backend (Team.training_sessions è lista libera).
@@ -1810,3 +1818,10 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Fix: in _classify il token DISTINTIVO del club (our_primary, es. SIRIO) ora e PRIORITARIO sui token generici. Nuovo ordine: 1) nome esatto squadra (team_mappings) 2) "noi stessi" via portal names 3) token club distintivo (solo un lato lo contiene -> quello siamo noi) 4) overlap SOLO su token distintivi (esclusi _GENERIC: VOLLEY/PALLAVOLO/ecc.).
 - Verificato standalone sui 4 record reali anche con team_mappings GENERICI (caso peggiore): 4/4 PASS. Sync Pallavolo preview: 35 trovate, 0 update, nessun errore.
 - AZIONE UTENTE: deploy Render, poi Sincronizza FIPAV -> le 4 gare si correggono.
+
+## 🔔 05/10/2026 — Atleta RITIRATA compariva ancora negli elenchi squadra
+- Segnalazione: atleta con is_withdrawn=True (badge "Ritirato") compariva ancora nella tabella "N atleti" (/admin/team-roster) e in "Registra Presenze" (team-attendance.tsx).
+- Causa: /admin/team-roster filtrava solo rollover_decision=="removed" e il frontend attendance filtrava status!=="withdrawn"; ma gli atleti ritirati hanno is_withdrawn=True con status spesso diverso (es. trial) -> non venivano esclusi.
+- Fix (backend, server.py /admin/team-roster): aggiunto is_withdrawn:{$ne:True} a entrambe le query (ALL e per squadra). Esclude i ritirati da elenco, conteggio e registrazione presenze (schermate che usano team-roster).
+- Verificato preview: roster ALL 5 -> marco un atleta withdrawn -> 4 -> ripristinato. Solo backend -> redeploy Render.
+- Nota: nella lista Atleti (admin/athletes.tsx) i ritirati restano visibili con nome barrato + badge "Ritirato" (informativo, voluto). Se si vuole nasconderli anche li, chiedere conferma.
