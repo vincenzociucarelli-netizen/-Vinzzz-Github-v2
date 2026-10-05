@@ -8188,19 +8188,25 @@ async def sync_fipav_matches(current_user = Depends(get_current_user)):
                 return True, away_team
             if a_us and not h_us:
                 return False, home_team
-            # 3) Overlap di token col nome società (distintivo)
-            if our_name_tokens:
-                ov_h = len(our_name_tokens & _name_tokens(home_team))
-                ov_a = len(our_name_tokens & _name_tokens(away_team))
+            # 3) Token DISTINTIVO del club (es. "SIRIO") — PRIORITARIO sui token generici:
+            #    se solo UN lato contiene il nome-club distintivo, quello siamo noi.
+            #    (Evita l'errore in cui un avversario che condivide città/sport comuni —
+            #    es. "SCHOOL VOLLEY PERUGIA" vs "SIRIO PALLAVOLO" con società "SIRIO PERUGIA
+            #    VOLLEY" — otteneva più overlap e ci faceva passare per avversari.)
+            if our_primary:
+                in_h = our_primary in _name_tokens(home_team)
+                in_a = our_primary in _name_tokens(away_team)
+                if in_h != in_a:
+                    return in_h, (away_team if in_h else home_team)
+            # 4) Overlap token nome società SOLO su token DISTINTIVI (ignora i generici
+            #    tipo VOLLEY/PALLAVOLO per non farsi confondere dai nomi degli avversari)
+            distinctive = our_name_tokens - _GENERIC_TOKENS
+            if distinctive:
+                ov_h = len(distinctive & (_name_tokens(home_team) - _GENERIC_TOKENS))
+                ov_a = len(distinctive & (_name_tokens(away_team) - _GENERIC_TOKENS))
                 if ov_h != ov_a:
                     is_home = ov_h > ov_a
                     return is_home, (away_team if is_home else home_team)
-                # 4) tie-break token distintivo del club
-                if our_primary:
-                    in_h = our_primary in _name_tokens(home_team)
-                    in_a = our_primary in _name_tokens(away_team)
-                    if in_h != in_a:
-                        return in_h, (away_team if in_h else home_team)
             return None, None
 
         for scraped in scraped_matches:

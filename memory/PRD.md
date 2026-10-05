@@ -1803,3 +1803,10 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Fix frontend (app/admin/notifications.tsx): markAllAsRead ricarica dal server. La dashboard gia ricarica il conteggio su focus.
 - Verificato in preview: 14 non lette -> tutte in lista -> mark-all-read -> 0.
 - Nota: esiste qualche admin_notification orfana con society_id=None (non conteggiata per societa); non impatta il badge. Modifiche frontend+backend -> redeploy Vercel + Render.
+
+## ✅ 05/10/2026 — Sync FIPAV: FIX DEFINITIVO 4 gare "contro noi stessi" (token distintivo prioritario)
+- Dati reali dal portale (SIRIO 5740/2410): gara 956 SCHOOL VOLLEY PERUGIA vs SIRIO PALLAVOLO; 984 inverso; 1105 SIRIO PALLAVOLO ROSSA vs PERUGIA VOLLEY TEAM...; 1120 inverso. Nessun derby.
+- Causa reale: il layer "overlap token" di _classify dava PIU punti allavversario che condivide token GENERICI/citta col nome societa (es. SCHOOL VOLLEY PERUGIA vs societa SIRIO PERUGIA VOLLEY -> PERUGIA+VOLLEY=2) rispetto al nostro vero lato SIRIO PALLAVOLO (SIRIO=1) -> ci identificava come avversari. Confermato: lo stato errato in produzione combacia ESATTAMENTE con loutput del vecchio overlap -> la sync raggiunge le gare, era la logica sbagliata.
+- Fix: in _classify il token DISTINTIVO del club (our_primary, es. SIRIO) ora e PRIORITARIO sui token generici. Nuovo ordine: 1) nome esatto squadra (team_mappings) 2) "noi stessi" via portal names 3) token club distintivo (solo un lato lo contiene -> quello siamo noi) 4) overlap SOLO su token distintivi (esclusi _GENERIC: VOLLEY/PALLAVOLO/ecc.).
+- Verificato standalone sui 4 record reali anche con team_mappings GENERICI (caso peggiore): 4/4 PASS. Sync Pallavolo preview: 35 trovate, 0 update, nessun errore.
+- AZIONE UTENTE: deploy Render, poi Sincronizza FIPAV -> le 4 gare si correggono.
