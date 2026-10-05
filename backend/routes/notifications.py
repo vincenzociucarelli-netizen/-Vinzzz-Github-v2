@@ -40,7 +40,12 @@ async def get_admin_notifications(current_user = Depends(get_current_user)):
     # notifiche di TUTTE le società (una richiesta cancellazione fatta su una società
     # compariva in un'altra). Ora SEMPRE filtrata per la società dell'utente.
     _q = {"society_id": current_user.get("society_id")}
-    notifications = await db.admin_notifications.find(_q).sort("created_at", -1).to_list(100)
+    # 🆕 05/10/2026 — Ordina le NON LETTE per prime (poi per data desc) e alza il limite,
+    # così tutte le non lette sono sempre visibili e segnabili come lette (prima, se erano
+    # più vecchie delle 100 più recenti, restavano invisibili e il badge non si azzerava).
+    notifications = await db.admin_notifications.find(_q).sort(
+        [("read", 1), ("created_at", -1)]
+    ).to_list(300)
     result = []
     for n in notifications:
         clean_mongo_doc(n)
@@ -61,7 +66,7 @@ async def get_unread_notifications_count(current_user = Depends(get_current_user
         raise HTTPException(status_code=403, detail="Solo admin può vedere le notifiche")
     
     count = await db.admin_notifications.count_documents({
-        "read": False, "society_id": current_user.get("society_id"),
+        "read": {"$ne": True}, "society_id": current_user.get("society_id"),
     })
     return {"count": count}
 
@@ -88,7 +93,7 @@ async def mark_all_notifications_read(current_user = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Solo admin può gestire le notifiche")
     
     await db.admin_notifications.update_many(
-        {"read": False, "society_id": current_user.get("society_id")},
+        {"read": {"$ne": True}, "society_id": current_user.get("society_id")},
         {"$set": {"read": True}}
     )
     return {"message": "Tutte le notifiche segnate come lette"}

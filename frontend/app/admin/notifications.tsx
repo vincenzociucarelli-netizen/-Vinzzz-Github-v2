@@ -139,6 +139,8 @@ export default function AdminNotifications() {
     try {
       await api.patch('/admin/notifications/mark-all-read');
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      // Ricarica dal server per riflettere lo stato reale (azzera il badge in dashboard)
+      loadNotifications();
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }

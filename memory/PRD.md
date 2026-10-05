@@ -1796,3 +1796,10 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Causa: lexport Excel/PDF genera il file dopo vari await e lo scarica via URL.createObjectURL + click anchor. Senza blocco anti doppio-click, lutente premeva piu volte (screenshot: stesso file scaricato 5 volte) -> Chrome classifica come "download automatici" e chiede/ blocca lautorizzazione.
 - Fix (frontend app/admin/matches.tsx): stato `exporting` (excel/pdf/ics) che disabilita i pulsanti e mostra "Attendere…" durante la generazione -> un solo download per volta. Aggiunto guard `if (exporting) return` + finally reset in tutti e 3 gli handler.
 - NOTA: se Chrome ha gia impostato il permesso "Download automatici" su blocca/chiedi per il sito, lutente deve riabilitarlo (icona nella barra indirizzi / lucchetto -> Impostazioni sito -> Download automatici -> Consenti). Modifica solo frontend -> redeploy Vercel.
+
+## 🔔 05/10/2026 — Badge notifiche non si azzera ("2 non lette" dopo averle lette)
+- Causa: la lista /admin/notifications era limitata a 100 ordinate per data. Le non lette piu vecchie restavano fuori dalla lista -> non espandibili (si marcano lette solo espandendo) e il pulsante "Segna tutte lette" non compariva (visibilita basata sulle non lette CARICATE). Il badge usa il conteggio backend globale -> restava >0.
+- Fix backend (routes/notifications.py): lista ordina NON LETTE per prime (read asc, created_at desc) e limite alzato a 300; unread-count e mark-all-read usano {read: {$ne: True}} per allineare conteggio e azzeramento (gestisce anche read mancante/null).
+- Fix frontend (app/admin/notifications.tsx): markAllAsRead ricarica dal server. La dashboard gia ricarica il conteggio su focus.
+- Verificato in preview: 14 non lette -> tutte in lista -> mark-all-read -> 0.
+- Nota: esiste qualche admin_notification orfana con society_id=None (non conteggiata per societa); non impatta il badge. Modifiche frontend+backend -> redeploy Vercel + Render.
