@@ -1791,3 +1791,8 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Nota: i casi "avversario = nostra squadra" vengono corretti anche se i team_mappings fossero generici (via token). I DERBY veri richiedono team_mappings per-squadra (SIRIO li ha). Un derby mostra correttamente l'ALTRA squadra SIRIO: NON è un errore.
 - AZIONE UTENTE: deploy backend su Render, poi ri-eseguire "Sincronizza FIPAV" → i 4 errori si correggono. Se restano, inviare i match_number per analisi sui dati reali.
 
+
+## 📥 05/10/2026 — Export calendario: Chrome chiede "autorizzazione al download"
+- Causa: lexport Excel/PDF genera il file dopo vari await e lo scarica via URL.createObjectURL + click anchor. Senza blocco anti doppio-click, lutente premeva piu volte (screenshot: stesso file scaricato 5 volte) -> Chrome classifica come "download automatici" e chiede/ blocca lautorizzazione.
+- Fix (frontend app/admin/matches.tsx): stato `exporting` (excel/pdf/ics) che disabilita i pulsanti e mostra "Attendere…" durante la generazione -> un solo download per volta. Aggiunto guard `if (exporting) return` + finally reset in tutti e 3 gli handler.
+- NOTA: se Chrome ha gia impostato il permesso "Download automatici" su blocca/chiedi per il sito, lutente deve riabilitarlo (icona nella barra indirizzi / lucchetto -> Impostazioni sito -> Download automatici -> Consenti). Modifica solo frontend -> redeploy Vercel.

@@ -81,6 +81,9 @@ export default function AdminMatches() {
   const [exportTeamId, setExportTeamId] = useState<string>('all');
   const [exportHomeAway, setExportHomeAway] = useState<'all' | 'home' | 'away'>('all');
   const [exportStatus, setExportStatus] = useState<'all' | 'upcoming' | 'played'>('all');
+  // 🆕 Blocco anti doppio-click: evita download multipli (che fanno scattare il
+  // permesso "download automatici" di Chrome). Un solo export alla volta.
+  const [exporting, setExporting] = useState<false | 'excel' | 'pdf' | 'ics'>(false);
 
   // 🆕 24/09/2026 — Info società per intestazione PDF (nome + logo)
   const [societyInfo, setSocietyInfo] = useState<{ name: string; logo: string | null }>({ name: '', logo: null });
@@ -189,6 +192,8 @@ export default function AdminMatches() {
 
   // 🆕 29/07/2026 — Esporta calendario completo società in .ics
   const handleExportIcs = async () => {
+    if (exporting) return;
+    setExporting('ics');
     try {
       const res = await api.get('/matches', { params: { format: 'ics' }, responseType: 'blob' });
       const blob = new Blob([res.data], { type: 'text/calendar' });
@@ -205,6 +210,8 @@ export default function AdminMatches() {
       }
     } catch (e: any) {
       Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile esportare il calendario');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -277,6 +284,8 @@ export default function AdminMatches() {
   };
 
   const handleExportExcel = async () => {
+    if (exporting) return;
+    setExporting('excel');
     try {
       const list = getExportList();
       if (!list || list.length === 0) {
@@ -469,11 +478,15 @@ export default function AdminMatches() {
       setExportModalVisible(false);
     } catch (e: any) {
       Alert.alert('Errore', 'Impossibile esportare le gare in Excel');
+    } finally {
+      setExporting(false);
     }
   };
 
   // 🆕 24/09/2026 — Esporta le gare in PDF (riepilogo + una sezione per squadra)
   const handleExportPDF = async () => {
+    if (exporting) return;
+    setExporting('pdf');
     try {
       const list = getExportList();
       if (!list || list.length === 0) {
@@ -510,6 +523,8 @@ export default function AdminMatches() {
       setExportModalVisible(false);
     } catch (e: any) {
       Alert.alert('Errore', 'Impossibile esportare le gare in PDF');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -1203,7 +1218,8 @@ export default function AdminMatches() {
         {/* 🆕 29/07/2026 — Esporta calendario società completo (.ics) */}
         <TouchableOpacity
           onPress={handleExportIcs}
-          style={[styles.importBtn, { backgroundColor: '#7C3AED' }]}
+          disabled={!!exporting}
+          style={[styles.importBtn, { backgroundColor: '#7C3AED', opacity: exporting ? 0.6 : 1 }]}
           testID="export-matches-ics-btn"
         >
           <Ionicons name="calendar-outline" size={20} color="#fff" />
@@ -1866,14 +1882,14 @@ export default function AdminMatches() {
             </View>
 
             <View style={styles.confirmActions}>
-              <TouchableOpacity style={styles.confirmCancelBtn} onPress={() => setExportModalVisible(false)} testID="export-cancel-btn">
+              <TouchableOpacity style={styles.confirmCancelBtn} onPress={() => setExportModalVisible(false)} disabled={!!exporting} testID="export-cancel-btn">
                 <Text style={styles.confirmCancelText}>Annulla</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.confirmDelBtn, { backgroundColor: '#DC2626' }]} onPress={handleExportPDF} testID="export-pdf-btn">
-                <Text style={styles.confirmDelText}>📄 PDF</Text>
+              <TouchableOpacity style={[styles.confirmDelBtn, { backgroundColor: '#DC2626', opacity: exporting ? 0.6 : 1 }]} onPress={handleExportPDF} disabled={!!exporting} testID="export-pdf-btn">
+                <Text style={styles.confirmDelText}>{exporting === 'pdf' ? '⏳ Attendere…' : '📄 PDF'}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.confirmDelBtn, { backgroundColor: '#217346' }]} onPress={handleExportExcel} testID="export-confirm-btn">
-                <Text style={styles.confirmDelText}>📊 Excel</Text>
+              <TouchableOpacity style={[styles.confirmDelBtn, { backgroundColor: '#217346', opacity: exporting ? 0.6 : 1 }]} onPress={handleExportExcel} disabled={!!exporting} testID="export-confirm-btn">
+                <Text style={styles.confirmDelText}>{exporting === 'excel' ? '⏳ Attendere…' : '📊 Excel'}</Text>
               </TouchableOpacity>
             </View>
           </View>
