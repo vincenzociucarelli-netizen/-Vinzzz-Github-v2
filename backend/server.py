@@ -9077,6 +9077,18 @@ async def import_selected_matches(config: dict, current_user = Depends(get_curre
             championship_val = match_data.get("championship")
             girone_val = match_data.get("girone")
 
+            # 🆕 Pulizia PRE-insert: rimuove eventuali record vecchi/errati di QUESTA gara
+            # (numero base + mirror derby "-D") per TUTTE le nostre squadre coinvolte, a
+            # prescindere da chi era casa/trasferta. Evita duplicati e ripara i record
+            # legacy con avversario sbagliato (es. "noi stessi").
+            base_number = match_number or f"FIPAV-{match_date.strftime('%Y%m%d%H%M')}"
+            plan_team_ids = list({p[0] for p in plans})
+            await db.matches.delete_many({
+                "match_number": {"$in": [base_number, f"{base_number}-D"]},
+                "society_id": society_id_local,
+                "team_id": {"$in": plan_team_ids},
+            })
+
             for idx, (local_team_id, is_home, opponent_raw, opp_local_id) in enumerate(plans):
                 # Avversario: se è una nostra squadra (derby) usa il nome INTERNO, altrimenti il nome federale
                 opponent = opponent_raw
@@ -9089,16 +9101,7 @@ async def import_selected_matches(config: dict, current_user = Depends(get_curre
                 team_name = team.get("name", "") if team else ""
 
                 # Numero gara: il record principale mantiene il numero reale; il mirror del derby usa suffisso
-                rec_number = match_number or f"FIPAV-{match_date.strftime('%Y%m%d%H%M')}"
-                if idx > 0:
-                    rec_number = f"{rec_number}-D"
-
-                # Upsert scoped per società + SQUADRA + numero gara (non tocca altre squadre)
-                await db.matches.delete_many({
-                    "match_number": rec_number,
-                    "society_id": society_id_local,
-                    "team_id": local_team_id,
-                })
+                rec_number = base_number if idx == 0 else f"{base_number}-D"
 
                 match = Match(
                     society_id=society_id_local,
@@ -9116,7 +9119,33 @@ async def import_selected_matches(config: dict, current_user = Depends(get_curre
 
                 await db.matches.insert_one(match.dict())
                 imported_count += 1
-        
+
+        # 🆕 06/2026 — Persisti i team_mappings nella config federazione (merge, non azzerare).
+        # Serve alla SYNC per riconoscere casa/trasferta e correggere i derby (nome ESATTO
+        # della squadra sul portale). import-selected prima NON li salvava → sync "cieca".
+        if team_mappings:
+            existing_cfg = await db.federation_configs.find_one(
+                {"society_id": society_id_local, "federation": "fipav"}
+            ) or {}
+            merged = {}
+            for _m in (existing_cfg.get("team_mappings") or []):
+                k = (_m.get("federation_team_name"), _m.get("local_team_id"))
+                if k[0] and k[1]:
+                    merged[k] = _m
+            for _m in team_mappings:
+                k = (_m.get("federation_team_name"), _m.get("local_team_id"))
+                if k[0] and k[1]:
+                    merged[k] = _m
+            await db.federation_configs.update_one(
+                {"society_id": society_id_local, "federation": "fipav"},
+                {"$set": {
+                    "team_mappings": list(merged.values()),
+                    "federation_society_name": society_name or existing_cfg.get("federation_society_name"),
+                    "last_import": datetime.utcnow(),
+                }},
+                upsert=True,
+            )
+
         return {
             "message": f"Importate {imported_count} partite",
             "imported": imported_count,
