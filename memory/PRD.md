@@ -59,6 +59,13 @@ SENDER_NAME=RegistraTEAM
 
 ## Status - Completed
 
+### 06/2026 - Pulsante PRIVACY sempre visibile nell'account genitore (verificato via screenshot)
+- **Richiesta**: molti genitori non trovavano come firmare la privacy → un pulsante fisso "PRIVACY" che, se già firmata, mostra la data; altrimenti porta alla firma.
+- **Fix (frontend `app/parent/index.tsx`)**: aggiunto un pulsante viola "PRIVACY — Consenso privacy dei tuoi figli" (testID `parent-privacy-button`) subito sotto il saluto, sempre visibile. Al tap apre un modal che elenca ogni figlio con lo stato: "✅ Già firmata in data GG/MM/AAAA" (da `privacy_accepted` + `privacy_accepted_date`) oppure "⚠️ Da firmare" con pulsante "Firma ora" che apre la scheda del figlio (`/parent/athlete/{id}`), dove il flusso esistente (GDPRPrivacyModal + controlli profilo) gestisce la firma.
+- **Backend**: nessuna modifica (`/athletes/my` ritorna già `privacy_accepted` e `privacy_accepted_date`).
+- **Verificato**: login genitore → pulsante visibile → modal "Consenso Privacy" si apre. Deploy: solo frontend (Vercel).
+
+
 ### 06/2026 - FIX DEFINITIVO Import FIPAV "giochiamo contro noi stessi" + casa/trasferta invertite (verificato e2e via HTTP)
 - **Bug (Vincenzo)**: 4 gare importate dal calendario FIPAV mostravano come avversario la NOSTRA stessa squadra (es. team "U.17 - Rossa" con opponent "SIRIO PALLAVOLO ROSSA") e con casa/trasferta invertite.
 - **Root cause** (`POST /federation/import-selected`): la classificazione usava matching a substring su un `mapping_dict` inquinato da una riga "society_name variations" che SOVRASCRIVEVA le chiavi (ultima squadra vince). Inoltre un nome federale corto ("SIRIO PALLAVOLO") è substring di uno lungo ("SIRIO PALLAVOLO ROSSA") → lato assegnato alla squadra sbagliata e avversario = noi stessi.

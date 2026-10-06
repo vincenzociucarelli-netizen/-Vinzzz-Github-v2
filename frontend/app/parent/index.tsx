@@ -98,6 +98,15 @@ export default function ParentDashboard() {
   const [linkRequestsToApprove, setLinkRequestsToApprove] = useState<any[]>([]);
   const [switchKey, setSwitchKey] = useState(0);
 
+  // 🆕 Pulsante PRIVACY sempre visibile: modal con stato firma per ogni figlio
+  const [privacyStatusVisible, setPrivacyStatusVisible] = useState(false);
+  const fmtPrivacyDate = (iso?: string | null) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
   // Mappa nome atleta -> colore
   const athleteColorMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -671,6 +680,25 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
             {(user?.first_name || user?.full_name?.split(' ')[0] || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
           </Text>
         </View>
+
+        {/* 🆕 Pulsante PRIVACY sempre visibile */}
+        <TouchableOpacity
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 10,
+            backgroundColor: '#5E35B1', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16,
+            marginHorizontal: 16, marginBottom: 12,
+            shadowColor: '#5E35B1', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 4,
+          }}
+          onPress={() => setPrivacyStatusVisible(true)}
+          testID="parent-privacy-button"
+        >
+          <Ionicons name="shield-checkmark" size={24} color="#fff" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: 0.5 }}>PRIVACY</Text>
+            <Text style={{ fontSize: 12, color: '#EDE7F6', marginTop: 1 }}>Consenso privacy dei tuoi figli</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </TouchableOpacity>
 
         {/* Banner: Completa anagrafica se manca il codice fiscale */}
         {user && !user.fiscal_code && (
@@ -1353,14 +1381,82 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
         </View>
       </Modal>
 
+      {/* 🆕 Modal stato PRIVACY per ogni figlio */}
+      <Modal
+        visible={privacyStatusVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setPrivacyStatusVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="shield-checkmark" size={22} color="#5E35B1" />
+                <Text style={styles.modalTitle}>Consenso Privacy</Text>
+              </View>
+              <TouchableOpacity onPress={() => setPrivacyStatusVisible(false)} testID="privacy-modal-close">
+                <Ionicons name="close" size={24} color="#999" />
+              </TouchableOpacity>
+            </View>
+
+            {athletes.length === 0 ? (
+              <Text style={{ fontSize: 14, color: '#888', fontStyle: 'italic', paddingVertical: 20, textAlign: 'center' }}>
+                Nessun atleta registrato.
+              </Text>
+            ) : (
+              <ScrollView style={{ maxHeight: 420 }}>
+                {athletes.map((a: any) => {
+                  const signed = !!a.privacy_accepted;
+                  return (
+                    <View
+                      key={a.id}
+                      style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 10,
+                        paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0F0',
+                      }}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 15, fontWeight: '700', color: '#333' }}>{a.full_name}</Text>
+                        {signed ? (
+                          <Text style={{ fontSize: 13, color: '#2E7D32', fontWeight: '600', marginTop: 3 }}>
+                            ✅ Già firmata{a.privacy_accepted_date ? ` in data ${fmtPrivacyDate(a.privacy_accepted_date)}` : ''}
+                          </Text>
+                        ) : (
+                          <Text style={{ fontSize: 13, color: '#C62828', fontWeight: '600', marginTop: 3 }}>
+                            ⚠️ Da firmare
+                          </Text>
+                        )}
+                      </View>
+                      {!signed && (
+                        <TouchableOpacity
+                          style={{ backgroundColor: '#5E35B1', borderRadius: 8, paddingVertical: 9, paddingHorizontal: 14 }}
+                          onPress={() => { setPrivacyStatusVisible(false); router.push(`/parent/athlete/${a.id}`); }}
+                          testID={`privacy-sign-${a.id}`}
+                        >
+                          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Firma ora</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            )}
+
+            <Text style={{ fontSize: 11, color: '#999', marginTop: 12, lineHeight: 16 }}>
+              Il consenso privacy si firma nella scheda del figlio/a. Tocca «Firma ora» per aprirla e completare la firma.
+            </Text>
+          </View>
+        </View>
+      </Modal>
+
       {/* Trial Period Expired Modal */}
       <Modal
         visible={trialModalVisible}
         animationType="fade"
         transparent={true}
         onRequestClose={() => setTrialModalVisible(false)}
-      >
-        <View style={styles.trialModalOverlay}>
+      >        <View style={styles.trialModalOverlay}>
           <View style={styles.trialModalContent}>
             {/* Close button */}
             <TouchableOpacity 
