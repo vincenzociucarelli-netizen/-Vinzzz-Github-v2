@@ -6,7 +6,7 @@
  * il 22/06/2026 in server.py).
  */
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
 
@@ -155,6 +155,21 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, athleteId, role
   const [upcomingOpen, setUpcomingOpen] = useState(false);
   // 🆕 Retry automatico (una volta) + pulsante "Riprova" per errori transitori (cold start)
   const retriedRef = React.useRef(false);
+
+  // 🔍 06/2026 — Diagnostica: perché un allenamento non compare?
+  const [diagOpen, setDiagOpen] = useState(false);
+  const [diagLoading, setDiagLoading] = useState(false);
+  const [diagData, setDiagData] = useState<any>(null);
+  const loadDiag = () => {
+    if (!userId) return;
+    setDiagOpen(true);
+    setDiagLoading(true);
+    setDiagData(null);
+    api.get('/coach/commitments-debug', { params: { user_id: userId } })
+      .then((r) => setDiagData(r.data))
+      .catch(() => setDiagData({ error: 'Impossibile eseguire la diagnostica' }))
+      .finally(() => setDiagLoading(false));
+  };
 
   const load = React.useCallback(() => {
     setLoading(true);
@@ -325,6 +340,70 @@ export const AdminCoachCommitments: React.FC<Props> = ({ userId, athleteId, role
           })()}
         </>
       )}
+
+      {/* 🔍 Diagnostica (solo admin che vede un coach) */}
+      {userId ? (
+        <TouchableOpacity
+          onPress={loadDiag}
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 10, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#D1D5DB', backgroundColor: '#F9FAFB' }}
+          testID="coach-commitments-diag-btn"
+        >
+          <Ionicons name="search" size={15} color="#374151" style={{ marginRight: 6 }} />
+          <Text style={{ fontSize: 12, fontWeight: '700', color: '#374151' }}>Perché non vedo tutti gli allenamenti?</Text>
+        </TouchableOpacity>
+      ) : null}
+
+      <Modal visible={diagOpen} animationType="slide" transparent onRequestClose={() => setDiagOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16, maxHeight: '85%' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: '#111827' }}>🔍 Diagnostica allenamenti</Text>
+              <TouchableOpacity onPress={() => setDiagOpen(false)} testID="coach-commitments-diag-close">
+                <Ionicons name="close" size={24} color="#999" />
+              </TouchableOpacity>
+            </View>
+            {diagLoading ? (
+              <View style={{ paddingVertical: 24 }}>
+                <ActivityIndicator color="#1565C0" />
+                <Text style={styles.loadingText}>Analisi in corso…</Text>
+              </View>
+            ) : diagData?.error ? (
+              <Text style={{ color: '#C0392B', fontSize: 13 }}>{diagData.error}</Text>
+            ) : diagData ? (
+              <ScrollView style={{ maxHeight: 520 }}>
+                <Text style={{ fontSize: 12, color: '#6B7280', marginBottom: 10 }}>
+                  Coach: {diagData.coach_name} · Oggi: {diagData.today}
+                </Text>
+                {(diagData.teams || []).map((t: any, i: number) => (
+                  <View key={i} style={{ borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, padding: 10, marginBottom: 10 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: '#111827' }}>{t.name || t.team_id}</Text>
+                    <Text style={{ fontSize: 12, marginTop: 4, color: t.esito?.startsWith('✅') ? '#2E7D32' : '#C0392B', fontWeight: '600' }}>
+                      {t.esito}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#6B7280', marginTop: 6 }}>
+                      Data inizio attività: {t.activity_start_date_parsed || '—'} ({t.activity_start_date_desc})
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>
+                      Allenamenti configurati: {t.num_training_sessions ?? 0}
+                      {Array.isArray(t.training_days) && t.training_days.length > 0 ? ` → ${t.training_days.join(', ')}` : ''}
+                    </Text>
+                    {Array.isArray(t.matches_this_week) && t.matches_this_week.length > 0 ? (
+                      <Text style={{ fontSize: 11, color: '#E67E22', marginTop: 2 }}>
+                        Gare questa settimana: {t.matches_this_week.join(', ')}
+                      </Text>
+                    ) : null}
+                    {t.society_match === false ? (
+                      <Text style={{ fontSize: 11, color: '#C0392B', marginTop: 2 }}>
+                        ⚠️ Società squadra: {t.team_society_id} ≠ società coach: {diagData.coach_society_id}
+                      </Text>
+                    ) : null}
+                  </View>
+                ))}
+              </ScrollView>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };

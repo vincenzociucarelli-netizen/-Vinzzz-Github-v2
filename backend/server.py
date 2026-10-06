@@ -19848,7 +19848,115 @@ async def get_coach_commitments(
 
     return result
 
-@api_router.get("/coach/team/{team_id}/athletes")
+@api_router.get("/coach/commitments-debug")
+async def get_coach_commitments_debug(
+    user_id: str,
+    current_user = Depends(get_current_user),
+):
+    """🔍 06/2026 — Diagnostica: spiega PERCHÉ un allenamento compare o NON compare
+    negli impegni di un coach. Solo admin. Analizza i dati reali delle squadre assegnate."""
+    if current_user.get("role") != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    coach = await db.users.find_one({"id": user_id}, {"_id": 0})
+    if not coach:
+        raise HTTPException(status_code=404, detail="Coach non trovato")
+    if current_user.get("society_id") and coach.get("society_id") and current_user["society_id"] != coach["society_id"]:
+        raise HTTPException(status_code=403, detail="Coach di altra società")
+
+    coach_sid = coach.get("society_id")
+    assigned = coach.get("assigned_teams", []) or []
+
+    days_map = {0: "Lunedì", 1: "Martedì", 2: "Mercoledì", 3: "Giovedì", 4: "Venerdì", 5: "Sabato", 6: "Domenica"}
+    now = now_it().replace(tzinfo=None)
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_of_week = today + timedelta(days=7)
+
+    def _parse_asd(val):
+        if not val:
+            return None, "vuota"
+        try:
+            if isinstance(val, datetime):
+                return val.replace(hour=0, minute=0, second=0, microsecond=0), f"datetime {val.isoformat()}"
+            if isinstance(val, str):
+                d = datetime.fromisoformat(val.replace('Z', '').replace('+00:00', ''))
+                return d.replace(hour=0, minute=0, second=0, microsecond=0), f"stringa '{val}'"
+        except Exception as e:
+            return None, f"NON parsabile ('{val}': {e})"
+        return None, f"tipo non gestito ({type(val).__name__})"
+
+    report = {
+        "coach_name": coach.get("full_name") or coach.get("name") or coach.get("email"),
+        "coach_society_id": coach_sid,
+        "today": today.strftime("%d/%m/%Y (%A)"),
+        "assigned_team_ids": assigned,
+        "teams": [],
+    }
+
+    for tid in assigned:
+        entry = {"team_id": tid}
+        # Cerca la squadra SENZA filtro società per capire se è una questione di scoping
+        team = await db.teams.find_one({"id": tid}, {"_id": 0})
+        if not team:
+            entry["esito"] = "❌ SQUADRA NON TROVATA: l'id in assigned_teams non corrisponde a nessuna squadra (id obsoleto)."
+            report["teams"].append(entry)
+            continue
+        entry["name"] = team.get("name")
+        entry["team_society_id"] = team.get("society_id")
+        society_ok = (not coach_sid) or (not team.get("society_id")) or (coach_sid == team.get("society_id"))
+        entry["society_match"] = society_ok
+
+        asd_raw = team.get("activity_start_date")
+        asd_parsed, asd_desc = _parse_asd(asd_raw)
+        entry["activity_start_date_raw"] = str(asd_raw)
+        entry["activity_start_date_parsed"] = asd_parsed.strftime("%d/%m/%Y") if asd_parsed else None
+        entry["activity_start_date_desc"] = asd_desc
+
+        sessions = team.get("training_sessions", []) or []
+        entry["num_training_sessions"] = len(sessions)
+        entry["training_days"] = [f"{s.get('day')!r} {s.get('timeStart','')}-{s.get('timeEnd','')}" for s in sessions]
+
+        # Gare nei prossimi 7 giorni per questa squadra
+        tms = await db.matches.find({"team_id": tid}).to_list(200)
+        match_days = []
+        for m in tms:
+            d = m.get("date")
+            if isinstance(d, str):
+                try:
+                    d = datetime.fromisoformat(d.replace("Z", "").replace("+00:00", ""))
+                except Exception:
+                    continue
+            if d and today <= d < end_of_week:
+                match_days.append(f"{days_map[d.weekday()]} {d.strftime('%d/%m %H:%M')} ({m.get('home_away')})")
+        entry["matches_this_week"] = match_days
+
+        # Valuta la visibilità per ciascuno dei prossimi 7 giorni
+        valid_day_names = set(days_map.values())
+        session_day_values = {s.get("day") for s in sessions}
+        unknown_days = [d for d in session_day_values if d not in valid_day_names]
+        entry["training_days_non_riconosciuti"] = unknown_days
+
+        reasons = []
+        if not society_ok:
+            reasons.append("ESCLUSA dal filtro società (society_id squadra diverso da quello del coach)")
+        if not asd_parsed:
+            reasons.append(f"Data inizio attività {asd_desc} → allenamenti NASCOSTI")
+        elif asd_parsed > today:
+            reasons.append(f"Data inizio attività nel FUTURO ({asd_parsed.strftime('%d/%m/%Y')}) → ancora nascosti")
+        if len(sessions) == 0:
+            reasons.append("NESSUN allenamento configurato nella squadra")
+        if unknown_days:
+            reasons.append(f"Giorni non riconosciuti (accento/maiuscole?): {unknown_days}")
+        if match_days:
+            reasons.append(f"Gare che possono nascondere l'allenamento del giorno: {match_days}")
+
+        entry["problemi"] = reasons
+        entry["esito"] = "✅ Dovrebbe comparire" if not reasons else "⚠️ " + " | ".join(reasons)
+        report["teams"].append(entry)
+
+    return report
+
+
 async def get_coach_team_athletes(team_id: str, current_user = Depends(get_current_user)):
     """Get athletes for a team (coach view - limited info)"""
     if current_user["role"] != UserRole.COACH:
