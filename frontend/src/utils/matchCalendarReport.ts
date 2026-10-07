@@ -1,8 +1,8 @@
 /**
  * Calendario Gare — Export PDF stampabile.
  * 🆕 24/09/2026. Genera un PDF del calendario gare (intera società o singola
- * squadra), con intestazione (logo + nome società + data), un riepilogo
- * generale con tutte le gare e una sezione/pagina separata per ogni squadra.
+ * squadra), con intestazione (logo + nome società + data) e UN'UNICA lista
+ * di tutte le gare in ordine cronologico (come il foglio Riepilogo dell'Excel).
  * Segue lo stesso pattern print di fipavPresencesReport.ts
  * (window.open + print su web, expo-print su mobile).
  */
@@ -21,16 +21,11 @@ export interface MatchRow {
   risultato: string;
 }
 
-export interface TeamGroup {
-  teamName: string;
-  rows: MatchRow[];
-}
-
 export interface MatchCalendarPDFData {
   societyName: string;
   societyLogo?: string | null; // base64 (con o senza prefisso data:)
   subtitle: string; // descrizione filtri applicati
-  groups: TeamGroup[]; // una voce per squadra
+  rows: MatchRow[]; // 🆕 tutte le gare in ordine cronologico (unica lista, come il Riepilogo Excel)
   fileName: string;
 }
 
@@ -46,62 +41,34 @@ const logoSrc = (logo?: string | null): string => {
   return logo.startsWith('data:') ? logo : `data:image/jpeg;base64,${logo}`;
 };
 
-const summaryTable = (rows: MatchRow[]): string => {
+// 🆕 Unica tabella cronologica con tutte le gare (stesso layout del foglio Riepilogo Excel).
+const matchesTable = (rows: MatchRow[]): string => {
   const body = rows.length
     ? rows.map((r, i) => `
       <tr>
         <td style="text-align:center;">${i + 1}</td>
+        <td>${esc(r.data)}</td>
+        <td style="text-align:center;">${esc(r.ora)}</td>
+        <td style="text-align:center;">${esc(r.casaTrasferta)}</td>
         <td>${esc(r.squadra)}</td>
-        <td>${esc(r.data)}</td>
-        <td style="text-align:center;">${esc(r.ora)}</td>
-        <td style="text-align:center;">${esc(r.casaTrasferta)}</td>
-        <td>${esc(r.avversario)}</td>
-        <td>${esc(r.impianto)}</td>
-        <td>${esc(r.citta)}</td>
-        <td style="text-align:center;">${esc(r.risultato)}</td>
-      </tr>`).join('')
-    : `<tr><td colspan="9" style="text-align:center; color:#666; font-style:italic;">Nessuna gara</td></tr>`;
-  return `<table>
-    <thead><tr>
-      <th style="width:26px; text-align:center;">#</th>
-      <th style="width:110px;">Squadra</th>
-      <th style="width:78px;">Data</th>
-      <th style="width:44px; text-align:center;">Ora</th>
-      <th style="width:70px; text-align:center;">Casa/Tras.</th>
-      <th>Avversario</th>
-      <th>Impianto</th>
-      <th style="width:90px;">Città</th>
-      <th style="width:64px; text-align:center;">Risult.</th>
-    </tr></thead>
-    <tbody>${body}</tbody>
-  </table>`;
-};
-
-const teamTable = (rows: MatchRow[]): string => {
-  const body = rows.length
-    ? rows.map((r, i) => `
-      <tr>
-        <td style="text-align:center;">${i + 1}</td>
-        <td>${esc(r.data)}</td>
-        <td style="text-align:center;">${esc(r.ora)}</td>
-        <td style="text-align:center;">${esc(r.casaTrasferta)}</td>
         <td>${esc(r.avversario)}</td>
         <td>${esc(r.impianto)}</td>
         <td>${esc(r.citta)}</td>
         <td style="text-align:center;">${esc(r.ritrovo)}</td>
         <td style="text-align:center;">${esc(r.risultato)}</td>
       </tr>`).join('')
-    : `<tr><td colspan="9" style="text-align:center; color:#666; font-style:italic;">Nessuna gara</td></tr>`;
+    : `<tr><td colspan="10" style="text-align:center; color:#666; font-style:italic;">Nessuna gara</td></tr>`;
   return `<table>
     <thead><tr>
       <th style="width:26px; text-align:center;">#</th>
-      <th style="width:80px;">Data</th>
+      <th style="width:78px;">Data</th>
       <th style="width:44px; text-align:center;">Ora</th>
       <th style="width:70px; text-align:center;">Casa/Tras.</th>
+      <th style="width:110px;">Squadra</th>
       <th>Avversario</th>
       <th>Impianto</th>
-      <th style="width:100px;">Città</th>
-      <th style="width:60px; text-align:center;">Ritrovo</th>
+      <th style="width:90px;">Città</th>
+      <th style="width:56px; text-align:center;">Ritrovo</th>
       <th style="width:64px; text-align:center;">Risult.</th>
     </tr></thead>
     <tbody>${body}</tbody>
@@ -112,22 +79,8 @@ export const generateMatchCalendarHTML = (d: MatchCalendarPDFData): string => {
   const today = new Date();
   const todayStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
 
-  const allRows: MatchRow[] = d.groups.reduce((acc, g) => acc.concat(g.rows), [] as MatchRow[]);
-  const multiTeam = d.groups.length > 1;
-
-  const summarySection = multiTeam
-    ? `<h2 class="sec">Riepilogo generale <span class="count">(${allRows.length} gare)</span></h2>
-       ${summaryTable(allRows)}`
-    : '';
-
-  const teamSections = d.groups.map((g, idx) => {
-    // Se c'è il riepilogo (multi-squadra) ogni squadra parte in una nuova pagina.
-    const brk = (multiTeam || idx > 0) ? 'page-break' : '';
-    return `<div class="${brk}">
-      <h2 class="sec">${esc(g.teamName)} <span class="count">(${g.rows.length} gare)</span></h2>
-      ${teamTable(g.rows)}
-    </div>`;
-  }).join('');
+  const section = `<h2 class="sec">Tutte le gare in ordine cronologico <span class="count">(${d.rows.length} gare)</span></h2>
+    ${matchesTable(d.rows)}`;
 
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=1123">
@@ -149,7 +102,8 @@ export const generateMatchCalendarHTML = (d: MatchCalendarPDFData): string => {
   th, td { border:1px solid #D1D5DB; padding:4px 6px; font-size:10.5px; vertical-align:top; }
   th { background:#1E3A8A; color:#fff; text-align:left; font-size:10px; }
   tbody tr:nth-child(even) { background:#F3F4F6; }
-  .page-break { page-break-before: always; }
+  thead { display: table-header-group; }
+  tr { page-break-inside: avoid; }
   .foot { margin-top:20px; font-size:9.5px; color:#888; text-align:center; }
 </style></head>
 <body>
@@ -164,8 +118,7 @@ export const generateMatchCalendarHTML = (d: MatchCalendarPDFData): string => {
     <div class="society">${esc(d.societyName)}<span class="gen">Generato il ${esc(todayStr)}</span></div>
   </div>
 
-  ${summarySection}
-  ${teamSections}
+  ${section}
 
   <div class="foot">Documento generato automaticamente da RegistraTEAM.</div>
 </body></html>`;

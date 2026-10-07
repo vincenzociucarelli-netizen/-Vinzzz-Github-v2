@@ -22,7 +22,7 @@ import api from '../../src/services/api';
 import { MultiStepTutorial, TutorialStep } from '../../src/components/MultiStepTutorial';
 import { Ionicons } from '../../src/components/Icon';
 import { SportIcon } from '../../src/components/SportIcon';
-import { downloadMatchCalendarPDF, MatchRow, TeamGroup } from '../../src/utils/matchCalendarReport';
+import { downloadMatchCalendarPDF, MatchRow } from '../../src/utils/matchCalendarReport';
 
 import * as XLSX from 'xlsx';
 
@@ -376,6 +376,22 @@ export default function AdminMatches() {
         return { b64, ext };
       })();
 
+      // 🆕 Dimensioni reali del logo (per NON deformarlo in Excel): lo inseriamo in un
+      // riquadro di altezza fissa (LOGO_H) calcolando la larghezza in proporzione.
+      const LOGO_H = 80;
+      const logoSize = await (async (): Promise<{ width: number; height: number }> => {
+        if (!logoInfo || Platform.OS !== 'web' || typeof Image === 'undefined') return { width: LOGO_H, height: LOGO_H };
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            const w = img.naturalWidth || 1, h = img.naturalHeight || 1;
+            resolve({ width: Math.round(LOGO_H * (w / h)), height: LOGO_H });
+          };
+          img.onerror = () => resolve({ width: LOGO_H, height: LOGO_H });
+          img.src = `data:image/${logoInfo.ext};base64,${logoInfo.b64}`;
+        });
+      })();
+
       const buildSheet = (
         name: string,
         cols: [string, number][],
@@ -391,16 +407,18 @@ export default function AdminMatches() {
         if (withLogo && logoInfo) {
           try {
             const imgId = wb.addImage({ base64: logoInfo.b64, extension: logoInfo.ext });
-            ws.addImage(imgId, { tl: { col: 0, row: 0 } as any, ext: { width: 120, height: 56 } });
+            // Ancorato in A1 con dimensioni proporzionate (nessuna deformazione)
+            ws.addImage(imgId, { tl: { col: 0, row: 0 } as any, ext: logoSize });
           } catch { /* se il logo non è valido, prosegui senza */ }
-          // Titolo società accanto al logo
+          // Titolo società accanto al logo — grande e ben leggibile
           const titleCell = ws.getCell('C1');
           titleCell.value = societyInfo.name || 'RegistraTEAM';
-          titleCell.font = { name: 'Calibri', size: 14, bold: true, color: { argb: headerArgb } };
-          titleCell.alignment = { vertical: 'middle' };
-          ws.mergeCells(1, 3, 1, cols.length);
-          ws.getRow(1).height = 22;
-          ws.getRow(2).height = 22;
+          titleCell.font = { name: 'Calibri', size: 24, bold: true, color: { argb: headerArgb } };
+          titleCell.alignment = { vertical: 'middle', horizontal: 'left' };
+          ws.mergeCells(1, 3, 2, cols.length);
+          // Due righe alte quanto basta a contenere il logo (altezza in punti ≈ px * 0.75)
+          ws.getRow(1).height = Math.ceil((LOGO_H * 0.75) / 2) + 2;
+          ws.getRow(2).height = Math.ceil((LOGO_H * 0.75) / 2) + 2;
           ws.getRow(3).height = 8; // riga di stacco
           headerRowIdx = 4;
         }
@@ -508,16 +526,12 @@ export default function AdminMatches() {
           risultato: m.result || '',
         };
       };
-      const groups: TeamGroup[] = groupByTeam(list).map((g) => ({
-        teamName: g.name,
-        rows: g.items.map(toRow),
-      }));
-
+      // 🆕 Unica lista cronologica (list è già ordinata per data)
       await downloadMatchCalendarPDF({
         societyName: societyInfo.name || 'RegistraTEAM',
         societyLogo: societyInfo.logo,
         subtitle: exportSubtitle(),
-        groups,
+        rows: list.map(toRow),
         fileName: exportFileName(),
       });
       setExportModalVisible(false);

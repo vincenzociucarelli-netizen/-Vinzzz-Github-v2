@@ -1832,3 +1832,8 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 - Fix (backend, server.py /admin/team-roster): aggiunto is_withdrawn:{$ne:True} a entrambe le query (ALL e per squadra). Esclude i ritirati da elenco, conteggio e registrazione presenze (schermate che usano team-roster).
 - Verificato preview: roster ALL 5 -> marco un atleta withdrawn -> 4 -> ripristinato. Solo backend -> redeploy Render.
 - Nota: nella lista Atleti (admin/athletes.tsx) i ritirati restano visibili con nome barrato + badge "Ritirato" (informativo, voluto). Se si vuole nasconderli anche li, chiedere conferma.
+
+
+## Aggiornamento export gare (giugno 2026)
+- PDF Calendario Gare: ora UN'UNICA lista cronologica di tutte le gare (colonne: #, Data, Ora, Casa/Tras., Squadra, Avversario, Impianto, Città, Ritrovo, Risultato) — rimosse le sezioni per squadra. Intestazione tabella ripetuta su ogni pagina.
+- Excel Riepilogo: logo società inserito con proporzioni reali (altezza 80px, larghezza calcolata dall'immagine), titolo società a 24pt su due righe unite.
