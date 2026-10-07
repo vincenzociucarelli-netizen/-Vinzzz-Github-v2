@@ -515,7 +515,9 @@ export default function AdminMatches() {
         const { dataStr, oraStr } = fmtDate(m.date);
         return {
           squadra: m.team_name || '',
-          campionato: m.match_number || '',
+          garaN: m.match_number || '',
+          campionato: m.championship || '',
+          girone: m.girone || '',
           casaTrasferta: m.home_away === 'home' ? 'Casa' : 'Trasferta',
           avversario: m.opponent || '',
           data: dataStr,

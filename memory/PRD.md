@@ -1835,5 +1835,5 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 
 
 ## Aggiornamento export gare (giugno 2026)
-- PDF Calendario Gare: ora UN'UNICA lista cronologica di tutte le gare (colonne: #, Data, Ora, Casa/Tras., Squadra, Avversario, Impianto, Città, Ritrovo, Risultato) — rimosse le sezioni per squadra. Intestazione tabella ripetuta su ogni pagina.
+- PDF Calendario Gare: ora UN'UNICA lista cronologica di tutte le gare (colonne: #, Data, Ora, Casa/Tras., Squadra, Gara N., Campionato, Girone (evidenziate in giallo), Avversario, Impianto, Città, Ritrovo, Risultato) — rimosse le sezioni per squadra. Intestazione tabella ripetuta su ogni pagina.
 - Excel Riepilogo: logo società inserito con proporzioni reali (altezza 80px, larghezza calcolata dall'immagine), titolo società a 24pt su due righe unite.
