@@ -11439,6 +11439,13 @@ def _prior_compensation_status_from_doc(doc: dict) -> dict:
     }
 
 
+async def _require_pension_declared(ids: list) -> None:
+    """🆕 Dichiarazione posizione previdenziale obbligatoria prima di completare
+    l'accettazione dell'accordo (vedi routes/pension_declarations.py)."""
+    from routes.pension_declarations import require_pension_declared
+    await require_pension_declared(ids)
+
+
 async def _require_prior_compensation_declared(user_id: str) -> None:
     """Raise HTTPException 403 se l'utente non ha dichiarato il pregresso
     per l'anno fiscale corrente. Da chiamare prima di ogni accept-compensation."""
@@ -11635,6 +11642,8 @@ async def accept_athlete_compensation(athlete_id: str, current_user = Depends(ge
     # 🆕 27/07/2026 — Blocca se pregresso non dichiarato (Riforma Sport)
     if not is_admin:
         await _require_prior_compensation_declared(athlete_id)
+        # 🆕 Blocca se manca la Dichiarazione posizione previdenziale (firma separata)
+        await _require_pension_declared([athlete_id, current_user["id"]])
     
     # Update athlete record
     now = datetime.utcnow()
@@ -20364,6 +20373,8 @@ async def accept_coach_compensation(coach_id: str, current_user = Depends(get_cu
     
     # 🆕 27/07/2026 — Blocca se pregresso non dichiarato (Riforma Sport)
     await _require_prior_compensation_declared(coach_id)
+    # 🆕 Blocca se manca la Dichiarazione posizione previdenziale (firma separata)
+    await _require_pension_declared([coach_id])
     
     # Update coach record
     now = datetime.utcnow()
@@ -28595,6 +28606,8 @@ async def accept_dirigente_compensation(dirigente_id: str, current_user = Depend
     
     # 🆕 27/07/2026 — Blocca se pregresso non dichiarato (Riforma Sport)
     await _require_prior_compensation_declared(dirigente_id)
+    # 🆕 Blocca se manca la Dichiarazione posizione previdenziale (firma separata)
+    await _require_pension_declared([dirigente_id])
     
     # Update dirigente record
     now = datetime.utcnow()
@@ -39654,6 +39667,8 @@ from routes.stripe_payments import router as stripe_payments_router  # 🆕 16/0
 from routes.recurring_payments import router as recurring_payments_router  # 🆕 27/07/2026 (Piani ricorrenti Stripe off-session)
 from routes.admin_notes import router as admin_notes_router  # 🆕 19/07/2026 (Bacheca note admin)
 from routes.payments_history import router as payments_history_router  # 🆕 01/08/2026 (Storico pagamenti admin)
+from routes.pension_declarations import router as pension_declarations_router  # 🆕 Dichiarazione posizione previdenziale
+api_router.include_router(pension_declarations_router)
 api_router.include_router(notifications_router)
 api_router.include_router(settings_router)
 api_router.include_router(seasons_router)

@@ -15,6 +15,9 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
 import PriorCompensationDeclarationModal from '../PriorCompensationDeclarationModal';
 import AdminPriorCompensationPanel from '../AdminPriorCompensationPanel';
+import PensionDeclarationModal from '../PensionDeclarationModal';
+import PensionDeclarationCard from '../PensionDeclarationCard';
+import AdminPensionDeclarationPanel from '../AdminPensionDeclarationPanel';
 
 interface Props {
   fullName: string;
@@ -111,6 +114,31 @@ export default function CompensationSummaryCard({
 
   useEffect(() => { refreshPriorStatus(); }, [refreshPriorStatus]);
 
+  // 🆕 Dichiarazione posizione previdenziale (firma SEPARATA, obbligatoria prima
+  // di completare l'accettazione dell'accordo). Flusso: pregresso → previdenziale → accetta.
+  const [showPensionModal, setShowPensionModal] = useState(false);
+  const [pensionCardKey, setPensionCardKey] = useState(0);
+
+  const isPensionDeclared = async (): Promise<boolean> => {
+    try {
+      const res = await api.get('/me/pension-declaration/status');
+      return !!res.data?.declared;
+    } catch {
+      return true; // errore di rete: lascia procedere, il backend blocca comunque
+    }
+  };
+
+  const proceedAfterDeclarations = () => {
+    onAcceptCompensation?.();
+    refreshPriorStatus();
+    // 🆕 27/07/2026 — Forza refresh su Web così la pagina padre ricarica il pregresso
+    //                 aggiornato (evita mostrare €0 nel box "Pregresso dichiarato" dopo firma).
+    //                 Il reload avviene solo se il caller non gestisce la propagazione.
+    if (typeof window !== 'undefined' && (window as any)?.location?.reload) {
+      setTimeout(() => { try { (window as any).location.reload(); } catch { /* noop */ } }, 900);
+    }
+  };
+
   const handleAcceptClick = async () => {
     if (!onAcceptCompensation) return;
     // Prima di accettare, verifica lo status della dichiarazione pregresso
@@ -118,8 +146,9 @@ export default function CompensationSummaryCard({
       setCheckingPrior(true);
       const res = await api.get('/me/prior-compensation/status');
       if (res.data?.signed) {
-        // Già firmato → procede direttamente con l'accettazione
-        onAcceptCompensation();
+        // Pregresso già firmato → verifica la dichiarazione previdenziale
+        if (await isPensionDeclared()) onAcceptCompensation();
+        else setShowPensionModal(true);
       } else {
         // Non firmato → apre il modal
         setShowPriorModal(true);
@@ -132,18 +161,19 @@ export default function CompensationSummaryCard({
     }
   };
 
-  const handleDeclared = () => {
+  const handleDeclared = async () => {
     setShowPriorModal(false);
     setPriorSigned(true);
-    // Dopo la firma, procede automaticamente con l'accettazione (se non già accettato)
-    onAcceptCompensation?.();
-    refreshPriorStatus();
-    // 🆕 27/07/2026 — Forza refresh su Web così la pagina padre ricarica il pregresso
-    //                 aggiornato (evita mostrare €0 nel box "Pregresso dichiarato" dopo firma).
-    //                 Il reload avviene solo se il caller non gestisce la propagazione.
-    if (typeof window !== 'undefined' && (window as any)?.location?.reload) {
-      setTimeout(() => { try { (window as any).location.reload(); } catch { /* noop */ } }, 900);
-    }
+    // Dopo la firma del pregresso: se manca la dichiarazione previdenziale, la richiede
+    // (firma separata); altrimenti procede con l'accettazione come prima.
+    if (await isPensionDeclared()) proceedAfterDeclarations();
+    else setShowPensionModal(true);
+  };
+
+  const handlePensionDeclared = () => {
+    setShowPensionModal(false);
+    setPensionCardKey((k) => k + 1);
+    proceedAfterDeclarations();
   };
 
   return (
@@ -292,10 +322,19 @@ export default function CompensationSummaryCard({
       </View>
       )}
 
+      {/* 🆕 Posizione previdenziale — vista personale: stato, storico e nuova dichiarazione */}
+      {isSelfView && (
+        <PensionDeclarationCard key={pensionCardKey} userFullName={fullName} />
+      )}
+
       {/* 🆕 27/07/2026 — Pannello admin: dichiarazione pregresso firmata + storia (solo se adminUserId presente) */}
       {adminUserId && (
         <View style={{ marginTop: 12 }}>
           <AdminPriorCompensationPanel userId={adminUserId} />
+          {/* 🆕 Posizione previdenziale dichiarata (sola lettura) */}
+          <View style={{ marginTop: 12 }}>
+            <AdminPensionDeclarationPanel userId={adminUserId} />
+          </View>
         </View>
       )}
 
@@ -306,6 +345,14 @@ export default function CompensationSummaryCard({
         contractStartDate={contractStartDate}
         onClose={() => setShowPriorModal(false)}
         onDeclared={handleDeclared}
+      />
+
+      {/* 🆕 Modal dichiarazione posizione previdenziale (firma separata, prima di accettare) */}
+      <PensionDeclarationModal
+        visible={showPensionModal}
+        userFullName={fullName}
+        onClose={() => setShowPensionModal(false)}
+        onDeclared={handlePensionDeclared}
       />
     </View>
   );

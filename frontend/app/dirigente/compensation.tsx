@@ -22,6 +22,8 @@ import SignaturePadInline from '../../src/components/SignaturePadInline';
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 import { handleAnagraficaError } from '../../src/utils/anagraficaError';
 import ExternalCompensationStep from '../../src/components/ExternalCompensationStep';
+import PensionDeclarationModal from '../../src/components/PensionDeclarationModal';
+import PensionDeclarationCard from '../../src/components/PensionDeclarationCard';
 const MONTH_NAMES = [
   '', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
@@ -146,6 +148,30 @@ export default function DirigenteCompensation() {
   const [signingDeclaration, setSigningDeclaration] = useState(false);
   
   const signatureRef = useRef<any>(null);
+
+  // 🆕 Dichiarazione posizione previdenziale (firma separata) richiesta prima di
+  //    completare l'accettazione dell'accordo.
+  const [showPensionModal, setShowPensionModal] = useState(false);
+  const [pensionCardKey, setPensionCardKey] = useState(0);
+
+  const doAcceptCompensation = async () => {
+    try {
+      await api.patch('/auth/me', { compensation_accepted: true });
+      Alert.alert('Successo', 'Compenso accettato correttamente.');
+      const res = await api.get('/auth/me');
+      setProfile(res.data);
+    } catch (e: any) {
+      Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile accettare il compenso.');
+    }
+  };
+
+  const handleAcceptCompensation = async () => {
+    try {
+      const st = await api.get('/me/pension-declaration/status');
+      if (!st.data?.declared) { setShowPensionModal(true); return; }
+    } catch { /* errore di rete: prosegue, il backend resta la fonte di verità */ }
+    await doAcceptCompensation();
+  };
 
   useEffect(() => {
     loadData();
@@ -1066,16 +1092,7 @@ export default function DirigenteCompensation() {
                 </View>
                 <TouchableOpacity
                   style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#34C759', padding: 12, borderRadius: 8 }}
-                  onPress={async () => {
-                    try {
-                      await api.patch('/auth/me', { compensation_accepted: true });
-                      Alert.alert('Successo', 'Compenso accettato correttamente.');
-                      const res = await api.get('/auth/me');
-                      setProfile(res.data);
-                    } catch (e: any) {
-                      Alert.alert('Errore', e?.response?.data?.detail || 'Impossibile accettare il compenso.');
-                    }
-                  }}
+                  onPress={handleAcceptCompensation}
                   data-testid="accept-compensation-dirigente-btn"
                 >
                   <Ionicons name="checkmark-circle" size={18} color="#fff" />
@@ -1086,6 +1103,17 @@ export default function DirigenteCompensation() {
               </View>
             )
           )}
+
+          {/* 🆕 Posizione previdenziale dichiarata (stato, storico, nuova dichiarazione) */}
+          <View style={{ marginBottom: 12 }}>
+            <PensionDeclarationCard key={pensionCardKey} userFullName={profile?.full_name || ''} />
+          </View>
+          <PensionDeclarationModal
+            visible={showPensionModal}
+            userFullName={profile?.full_name || ''}
+            onClose={() => setShowPensionModal(false)}
+            onDeclared={() => { setShowPensionModal(false); setPensionCardKey((k) => k + 1); doAcceptCompensation(); }}
+          />
 
           {profile?.contract_start_date && profile?.contract_end_date && (
             <View style={{ 

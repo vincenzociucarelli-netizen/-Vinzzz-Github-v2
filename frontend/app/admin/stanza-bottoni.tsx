@@ -192,6 +192,15 @@ export default function StanzaBottoniScreen() {
           route: '/admin/external-compensations',
         },
         {
+          key: 'pension_declarations',
+          icon: 'shield-checkmark',
+          color: '#6D28D9',
+          title: 'Dichiarazioni Previdenziali',
+          what: 'Posizione previdenziale e pregresso dichiarati dai collaboratori, con storico firmato.',
+          how: 'Apri per consultare le dichiarazioni ed esportarle in Excel per il consulente del lavoro.',
+          route: '/admin/pension-declarations',
+        },
+        {
           key: 'quietanze_speciali',
           icon: 'receipt',
           color: '#2E7D32',

@@ -1837,3 +1837,12 @@ NOTA: il modale TrialSignModal legacy resta nel codice ma non è più raggiungib
 ## Aggiornamento export gare (giugno 2026)
 - PDF Calendario Gare: ora UN'UNICA lista cronologica di tutte le gare (colonne: #, Data, Ora, Casa/Tras., Squadra, Gara N., Campionato, Girone (evidenziate in giallo), Avversario, Impianto, Città, Ritrovo, Risultato) — rimosse le sezioni per squadra. Intestazione tabella ripetuta su ogni pagina.
 - Excel Riepilogo: logo società inserito con proporzioni reali (altezza 80px, larghezza calcolata dall'immagine), titolo società a 24pt su due righe unite.
+
+
+## 🆕 Dichiarazione della posizione previdenziale (giugno 2026)
+Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione previdenziale del lavoratore sportivo. Nessun calcolo contributivo/aliquote; soglie €5k/€15k non toccate.
+- Flusso: pregresso (firma 1, invariato) → **Dichiarazione posizione previdenziale (firma 2 separata)** → accettazione accordo. Opzioni A/B/C/D (A e B con tipologia obbligatoria + precisazione facoltativa; D = «Da verificare»).
+- Solo il lavoratore può dichiarare/aggiornare (card "Posizione previdenziale dichiarata" nelle pagine Compensi di atleta PRO/coach/dirigente/collaboratore). Ogni variazione = nuova versione append-only (version_number, previous_declaration_id, text_version, agreement_id, IP/UA/data, firma). Nessuna modifica/cancellazione via app.
+- Admin: sola consultazione. Pannello nelle schede compenso (sotto Dichiarazione Pregresso) + pagina `/admin/pension-declarations` (filtri Firmate/Da verificare/Non dichiarate, storico con firme, export Excel 3 fogli: Riepilogo, Storico, Legenda). Voce in Stanza Bottoni → Contabilità e Compensi. Notifica `admin_notifications` a ogni nuova dichiarazione.
+- Backend: `routes/pension_declarations.py`, collection `pension_declarations`. Endpoint: GET/POST `/me/pension-declaration/{status|declare}`, GET `/admin/users/{id}/pension-declarations`, GET `/admin/pension-declarations/summary`. I 3 endpoint `accept-compensation` (atleta/coach/dirigente) bloccano con 403 `PENSION_DECLARATION_REQUIRED` se manca la dichiarazione (admin escluso).
+- Testi canonici versionati lato backend (`PENSION_TEXT_VERSION = "1.0"`).

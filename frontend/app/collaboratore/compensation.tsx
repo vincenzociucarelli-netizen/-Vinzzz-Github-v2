@@ -22,6 +22,8 @@ import SignaturePadInline from '../../src/components/SignaturePadInline';
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 import { handleAnagraficaError } from '../../src/utils/anagraficaError';
 import ExternalCompensationStep from '../../src/components/ExternalCompensationStep';
+import PensionDeclarationModal from '../../src/components/PensionDeclarationModal';
+import PensionDeclarationCard from '../../src/components/PensionDeclarationCard';
 const MONTH_NAMES = [
   '', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
@@ -223,7 +225,13 @@ export default function CollaboratoreCompensation() {
   };
 
   // 🆕 23/06/2026 — Accettazione compenso (migrato da /collaboratore/profile)
-  const handleAcceptCompensation = async () => {
+  // 🆕 Prima di completare l'accettazione è richiesta la Dichiarazione posizione
+  //    previdenziale (firma separata). Se manca, si apre il modal e l'accettazione
+  //    prosegue automaticamente dopo la firma.
+  const [showPensionModal, setShowPensionModal] = useState(false);
+  const [pensionCardKey, setPensionCardKey] = useState(0);
+
+  const doAcceptCompensation = async () => {
     try {
       setAcceptingComp(true);
       await api.patch('/auth/me', { compensation_accepted: true });
@@ -235,6 +243,19 @@ export default function CollaboratoreCompensation() {
     } finally {
       setAcceptingComp(false);
     }
+  };
+
+  const handleAcceptCompensation = async () => {
+    try {
+      setAcceptingComp(true);
+      const st = await api.get('/me/pension-declaration/status');
+      if (!st.data?.declared) {
+        setAcceptingComp(false);
+        setShowPensionModal(true);
+        return;
+      }
+    } catch { /* errore di rete: prosegue, il backend resta la fonte di verità */ }
+    await doAcceptCompensation();
   };
 
   const loadData = async () => {
@@ -1324,6 +1345,17 @@ export default function CollaboratoreCompensation() {
               </View>
             )
           )}
+
+          {/* 🆕 Posizione previdenziale dichiarata (stato, storico, nuova dichiarazione) */}
+          <View style={{ marginBottom: 12 }}>
+            <PensionDeclarationCard key={pensionCardKey} userFullName={profile?.full_name || ''} />
+          </View>
+          <PensionDeclarationModal
+            visible={showPensionModal}
+            userFullName={profile?.full_name || ''}
+            onClose={() => setShowPensionModal(false)}
+            onDeclared={() => { setShowPensionModal(false); setPensionCardKey((k) => k + 1); doAcceptCompensation(); }}
+          />
           
           {/* Contract Period - Full dates */}
           {profile?.contract_start_date && profile?.contract_end_date && (
