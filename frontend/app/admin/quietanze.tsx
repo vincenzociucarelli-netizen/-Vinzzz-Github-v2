@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/services/api';
+import QuietanzeArchive from '../../src/components/admin/QuietanzeArchive';
 
 const MONTH_NAMES = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
 
@@ -244,7 +245,7 @@ export default function QuietanzePage() {
           onPress={() => setActiveTab('report')}
         >
           <Text style={[styles.tabText, activeTab === 'report' && styles.tabTextActive]}>
-            Report Quietanze
+            Archivio Firmate
           </Text>
         </TouchableOpacity>
       </View>
@@ -433,17 +434,8 @@ export default function QuietanzePage() {
           )}
         </ScrollView>
       ) : (
-        // Report Tab - redirect to existing reports page
-        <View style={styles.reportRedirect}>
-          <TouchableOpacity
-            style={styles.reportBtn}
-            onPress={() => router.push('/admin/reports')}
-          >
-            <Ionicons name="bar-chart" size={40} color="#8E44AD" />
-            <Text style={styles.reportBtnTitle}>Report Quietanze</Text>
-            <Text style={styles.reportBtnSubtitle}>Vai al riepilogo compensi di Coach, Dirigenti e Collaboratori</Text>
-          </TouchableOpacity>
-        </View>
+        // 🆕 Archivio di tutte le quietanze firmate, mese per mese (PDF singolo + ZIP)
+        <QuietanzeArchive />
       )}
       
       {/* Edit Modal */}
@@ -819,32 +811,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#999',
     marginTop: 4,
-    textAlign: 'center',
-  },
-  reportRedirect: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'center',
-  },
-  reportBtn: {
-    backgroundColor: '#fff',
-    padding: 30,
-    borderRadius: 16,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#8E44AD',
-    borderStyle: 'dashed',
-  },
-  reportBtnTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#8E44AD',
-    marginTop: 12,
-  },
-  reportBtnSubtitle: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 6,
     textAlign: 'center',
   },
   // Edit Modal Styles

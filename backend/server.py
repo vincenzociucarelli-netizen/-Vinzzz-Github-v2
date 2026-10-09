@@ -39668,7 +39668,9 @@ from routes.recurring_payments import router as recurring_payments_router  # �
 from routes.admin_notes import router as admin_notes_router  # 🆕 19/07/2026 (Bacheca note admin)
 from routes.payments_history import router as payments_history_router  # 🆕 01/08/2026 (Storico pagamenti admin)
 from routes.pension_declarations import router as pension_declarations_router  # 🆕 Dichiarazione posizione previdenziale
+from routes.quietanze_archive import router as quietanze_archive_router  # 🆕 Archivio quietanze firmate (admin)
 api_router.include_router(pension_declarations_router)
+api_router.include_router(quietanze_archive_router)
 api_router.include_router(notifications_router)
 api_router.include_router(settings_router)
 api_router.include_router(seasons_router)

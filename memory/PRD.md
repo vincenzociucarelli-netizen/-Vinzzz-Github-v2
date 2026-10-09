@@ -1846,3 +1846,10 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - Admin: sola consultazione. Pannello nelle schede compenso (sotto Dichiarazione Pregresso) + pagina `/admin/pension-declarations` (filtri Firmate/Da verificare/Non dichiarate, storico con firme, export Excel 3 fogli: Riepilogo, Storico, Legenda). Voce in Stanza Bottoni → Contabilità e Compensi. Notifica `admin_notifications` a ogni nuova dichiarazione.
 - Backend: `routes/pension_declarations.py`, collection `pension_declarations`. Endpoint: GET/POST `/me/pension-declaration/{status|declare}`, GET `/admin/users/{id}/pension-declarations`, GET `/admin/pension-declarations/summary`. I 3 endpoint `accept-compensation` (atleta/coach/dirigente) bloccano con 403 `PENSION_DECLARATION_REQUIRED` se manca la dichiarazione (admin escluso).
 - Testi canonici versionati lato backend (`PENSION_TEXT_VERSION = "1.0"`).
+
+
+## 🆕 Archivio Quietanze Firmate (giugno 2026)
+- Stanza Bottoni: voce rinominata da "Quietanze Speciali" a **"Quietanze"**.
+- Pagina `/admin/quietanze`, tab "Archivio Firmate" (ex "Report Quietanze" che era solo un link): elenco di TUTTE le quietanze firmate della società (coach/dirigenti/collaboratori/atleti PRO) da `signed_documents`, raggruppate mese per mese, filtri anno + ruolo, totale annuo, PDF singolo (`/documents/download/{id}`), **ZIP del mese / dell'anno** per il commercialista. Link al Report Compensi in fondo.
+- Backend `routes/quietanze_archive.py`: GET `/admin/quietanze/archive?year=`, GET `/admin/quietanze/archive/zip?year=&month=&role=` (riusa la logica di download/rigenerazione PDF di `download_document`).
+- Componente: `src/components/admin/QuietanzeArchive.tsx`.
