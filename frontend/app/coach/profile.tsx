@@ -1294,6 +1294,17 @@ Società sportiva: ${societyName}
             le squadre sono già visibili nella dashboard coach (prima pagina) sotto
             "Le Mie Squadre" → evita duplicazione. */}
 
+        {/* 🆕 Cronologia personale (firme, accordi, quietanze) */}
+        <TouchableOpacity
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#E5E7EB', minHeight: 48 }}
+          onPress={() => router.push('/coach/timeline')}
+          testID="coach-timeline-btn"
+        >
+          <Ionicons name="time-outline" size={20} color="#007AFF" />
+          <Text style={{ color: '#007AFF', fontWeight: '700', fontSize: 14 }}>🕒 Cronologia — firme, accordi e quietanze</Text>
+          <Ionicons name="chevron-forward" size={18} color="#007AFF" />
+        </TouchableOpacity>
+
         {/* I Miei Documenti */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>

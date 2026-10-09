@@ -39782,8 +39782,10 @@ from routes.admin_notes import router as admin_notes_router  # 🆕 19/07/2026 (
 from routes.payments_history import router as payments_history_router  # 🆕 01/08/2026 (Storico pagamenti admin)
 from routes.pension_declarations import router as pension_declarations_router  # 🆕 Dichiarazione posizione previdenziale
 from routes.quietanze_archive import router as quietanze_archive_router  # 🆕 Archivio quietanze firmate (admin)
+from routes.worker_timeline import router as worker_timeline_router  # 🆕 Cronologia coach/dirigenti/collaboratori
 api_router.include_router(pension_declarations_router)
 api_router.include_router(quietanze_archive_router)
+api_router.include_router(worker_timeline_router)
 api_router.include_router(notifications_router)
 api_router.include_router(settings_router)
 api_router.include_router(seasons_router)

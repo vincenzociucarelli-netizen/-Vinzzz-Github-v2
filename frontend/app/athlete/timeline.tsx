@@ -50,11 +50,10 @@ export default function AthleteTimelinePage() {
       // Get athlete_id from user profile
       const meRes = await api.get('/auth/me');
       const athleteId = meRes.data.athlete_record_id || meRes.data.athlete_id;
-      if (!athleteId) {
-        setError('ID atleta non trovato');
-        return;
-      }
-      const res = await api.get(`/athletes/${athleteId}/timeline`);
+      // 🆕 Coach / dirigenti / collaboratori: cronologia personale (/me/timeline)
+      const res = athleteId
+        ? await api.get(`/athletes/${athleteId}/timeline`)
+        : await api.get('/me/timeline');
       setAthleteName(res.data.athlete_name || '');
       setAthleteStatus(res.data.athlete_status || '');
       setEvents(res.data.events || []);
@@ -72,6 +71,10 @@ export default function AthleteTimelinePage() {
 
   const statusLabel: Record<string, string> = {
     active: 'Attivo',
+    coach: 'Coach',
+    dirigente: 'Dirigente',
+    viewer: 'Dirigente',
+    collaboratore: 'Collaboratore',
     trial: 'In Prova',
     inactive: 'Inattivo',
     deletion_requested: 'Cancellazione Richiesta',
@@ -79,6 +82,10 @@ export default function AthleteTimelinePage() {
 
   const statusColor: Record<string, string> = {
     active: '#34C759',
+    coach: '#2196F3',
+    dirigente: '#8E44AD',
+    viewer: '#8E44AD',
+    collaboratore: '#FF9800',
     trial: '#FF9500',
     inactive: '#8E8E93',
     deletion_requested: '#FF3B30',

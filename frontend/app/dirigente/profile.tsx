@@ -1022,6 +1022,17 @@ Società sportiva: ${societyName}
 
         {/* 🆕 24/02/2026 — Card "🏆 Stagione" RIMOSSA: già visibile in tab "Da fare" */}
 
+        {/* 🆕 Cronologia personale (firme, accordi, quietanze) */}
+        <TouchableOpacity
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#E5E7EB', minHeight: 48 }}
+          onPress={() => router.push('/dirigente/timeline')}
+          testID="dirigente-timeline-btn"
+        >
+          <Ionicons name="time-outline" size={20} color="#8E44AD" />
+          <Text style={{ color: '#8E44AD', fontWeight: '700', fontSize: 14 }}>🕒 Cronologia — firme, accordi e quietanze</Text>
+          <Ionicons name="chevron-forward" size={18} color="#8E44AD" />
+        </TouchableOpacity>
+
         {/* I Miei Documenti */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
