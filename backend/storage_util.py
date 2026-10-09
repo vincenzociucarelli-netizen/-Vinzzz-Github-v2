@@ -86,18 +86,32 @@ def _get_sync(path):
     return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
 
 
-def compress_data_uri_to_jpeg(data_uri, max_dim: int = 1024, target_kb: int = 220):
-    """Decodifica un data URI (o raw base64), ridimensiona e comprime a JPEG.
-    Ritorna bytes JPEG oppure None se non decodificabile.
+def compress_data_uri_to_image(data_uri, max_dim: int = 1024, target_kb: int = 220, keep_alpha: bool = False):
+    """Decodifica un data URI (o raw base64) e ridimensiona.
+    - keep_alpha=True e immagine con trasparenza → PNG (trasparenza preservata, es. logo scontornato)
+    - altrimenti → JPEG compresso su sfondo bianco.
+    Ritorna (bytes, content_type) oppure (None, None) se non decodificabile.
     """
     if not _HAS_PIL or not data_uri or not isinstance(data_uri, str):
-        return None
+        return None, None
     try:
         if data_uri.startswith("data:"):
             _, b64 = data_uri.split(",", 1)
         else:
             b64 = data_uri
         img = Image.open(BytesIO(base64.b64decode(b64)))
+        has_alpha = img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info)
+        if keep_alpha and has_alpha:
+            img = img.convert("RGBA")
+            w, h = img.size
+            if max(w, h) > max_dim:
+                if w >= h:
+                    img = img.resize((max_dim, max(1, int(h * max_dim / w))), Image.LANCZOS)
+                else:
+                    img = img.resize((max(1, int(w * max_dim / h)), max_dim), Image.LANCZOS)
+            buf = BytesIO()
+            img.save(buf, format="PNG", optimize=True)
+            return buf.getvalue(), "image/png"
         if img.mode in ("RGBA", "LA", "P"):
             img = img.convert("RGBA")
             bg = Image.new("RGBA", img.size, (255, 255, 255, 255))
@@ -116,21 +130,28 @@ def compress_data_uri_to_jpeg(data_uri, max_dim: int = 1024, target_kb: int = 22
             img.save(buf, format="JPEG", quality=quality, optimize=True)
             data = buf.getvalue()
             if len(data) <= target_kb * 1024 or quality <= 40:
-                return data
+                return data, "image/jpeg"
             quality -= 10
     except Exception:
-        return None
+        return None, None
 
 
-async def store_image_from_datauri(path, data_uri, max_dim: int = 1024, target_kb: int = 220):
-    """Comprime (JPEG) un data URI e lo carica su object storage al path indicato.
+def compress_data_uri_to_jpeg(data_uri, max_dim: int = 1024, target_kb: int = 220):
+    """Compat: ritorna solo i bytes JPEG (sfondo bianco)."""
+    data, _ = compress_data_uri_to_image(data_uri, max_dim=max_dim, target_kb=target_kb, keep_alpha=False)
+    return data
+
+
+async def store_image_from_datauri(path, data_uri, max_dim: int = 1024, target_kb: int = 220, keep_alpha: bool = False):
+    """Comprime un data URI (PNG se keep_alpha e trasparente, altrimenti JPEG) e lo
+    carica su object storage al path indicato.
     Ritorna il path se ok, altrimenti None (il chiamante terrà il base64 come fallback).
     """
-    jpeg = compress_data_uri_to_jpeg(data_uri, max_dim=max_dim, target_kb=target_kb)
-    if not jpeg:
+    data, ctype = compress_data_uri_to_image(data_uri, max_dim=max_dim, target_kb=target_kb, keep_alpha=keep_alpha)
+    if not data:
         return None
     try:
-        await run_in_threadpool(_put_sync, path, jpeg, "image/jpeg")
+        await run_in_threadpool(_put_sync, path, data, ctype or "image/jpeg")
         return path
     except Exception:
         return None

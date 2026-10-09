@@ -570,7 +570,8 @@ async def update_society_settings(request: Request, data: SocietySettingsUpdate,
         from storage_util import store_image_from_datauri, storage_path_for
         _sid_logo = current_user.get("society_id") or "shared"
         _path = storage_path_for("logo", _sid_logo, _sid_logo)
-        _stored = await store_image_from_datauri(_path, _lg_val, max_dim=800, target_kb=180)
+        # 🆕 keep_alpha: un logo scontornato (PNG trasparente) resta PNG — niente riquadro bianco
+        _stored = await store_image_from_datauri(_path, _lg_val, max_dim=800, target_kb=180, keep_alpha=True)
         if _stored:
             update_dict["logo_storage_path"] = _stored
             update_dict["logo"] = ""

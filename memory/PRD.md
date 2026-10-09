@@ -1869,3 +1869,5 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - 🧹 **Pulizia dashboard mobile (giugno 2026)**: rimosso il mini-logo società dalle tab bar di atleta/coach/dirigente/collaboratore (tab più larghe) e rimosso il cerchio con l'iniziale nella dashboard atleta (`athlete/index.tsx`).
 
 - 🐛 **Fix anagrafica collaboratore**: `collaboratore/profile.tsx` ora salva il profilo sul server PRIMA di aprire la Privacy (come coach/dirigente) → la data di nascita e gli altri dati non vanno più persi se la firma viene interrotta. `formatDate` robusto (gg/mm/aaaa, aaaa-mm-gg senza shift fuso, date invalide → '') in collaboratore/coach/dirigente. Backend PATCH `/auth/me` accetta anche `date_of_birth` in gg/mm/aaaa e restituisce 400 (non più ignora) se non valida.
+
+- 🖼️ **Logo trasparente**: `storage_util.compress_data_uri_to_image(keep_alpha)` — se il logo caricato ha trasparenza resta PNG (prima veniva appiattito in JPEG su sfondo bianco → riquadro bianco). Attivo in PATCH `/settings/society` (logo). L'admin deve ricaricare il logo scontornato una volta.
