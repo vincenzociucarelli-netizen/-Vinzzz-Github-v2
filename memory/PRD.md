@@ -1853,3 +1853,5 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - Pagina `/admin/quietanze`, tab "Archivio Firmate" (ex "Report Quietanze" che era solo un link): elenco di TUTTE le quietanze firmate della società (coach/dirigenti/collaboratori/atleti PRO) da `signed_documents`, raggruppate mese per mese, filtri anno + ruolo, totale annuo, PDF singolo (`/documents/download/{id}`), **ZIP del mese / dell'anno** per il commercialista. Link al Report Compensi in fondo.
 - Backend `routes/quietanze_archive.py`: GET `/admin/quietanze/archive?year=`, GET `/admin/quietanze/archive/zip?year=&month=&role=` (riusa la logica di download/rigenerazione PDF di `download_document`).
 - Componente: `src/components/admin/QuietanzeArchive.tsx`.
+
+- 🆕 **Invio al commercialista**: pulsante "Invia" (per mese e per anno) in Archivio Firmate → modal con email (memorizzata in `settings.accountant_email` della società e riproposta) + messaggio facoltativo → POST `/admin/quietanze/archive/send-email` invia via Brevo lo ZIP dei PDF + riepilogo tabellare nel corpo (limite 9 MB). Log in `quietanze_email_log`.

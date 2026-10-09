@@ -9,7 +9,7 @@
  *          GET /api/documents/download/{id}  (PDF singolo)
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Platform, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Platform, ScrollView, Modal, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -72,6 +72,38 @@ export default function QuietanzeArchive() {
   const [openMonths, setOpenMonths] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState<string | null>(null);
 
+  // 🆕 Invio ZIP al commercialista via email
+  const [accountantEmail, setAccountantEmail] = useState('');
+  const [sendTarget, setSendTarget] = useState<{ year: number; month?: number } | null>(null);
+  const [sendEmail, setSendEmail] = useState('');
+  const [sendMessage, setSendMessage] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const openSend = (y: number, m?: number) => {
+    setSendEmail(accountantEmail || '');
+    setSendMessage('');
+    setSendTarget({ year: y, month: m });
+  };
+
+  const doSend = async () => {
+    if (!sendTarget) return;
+    const email = sendEmail.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showAlert('Email non valida', 'Inserisci l\'indirizzo email del commercialista.'); return; }
+    try {
+      setSending(true);
+      const body: any = { year: sendTarget.year, to_email: email, message: sendMessage.trim() || null, save_as_default: true };
+      if (sendTarget.month) body.month = sendTarget.month;
+      if (role) body.role = role;
+      const res = await api.post('/admin/quietanze/archive/send-email', body, { timeout: 180000 });
+      setAccountantEmail(email);
+      setSendTarget(null);
+      showAlert('Email inviata', `ZIP con ${res.data?.count} quietanze inviato a ${email}.`);
+    } catch (e: any) {
+      const d = e?.response?.data?.detail;
+      showAlert('Errore', typeof d === 'string' ? d : 'Invio email non riuscito.');
+    } finally { setSending(false); }
+  };
+
   const load = useCallback(async (y: number | null) => {
     try {
       setLoading(true);
@@ -79,6 +111,7 @@ export default function QuietanzeArchive() {
       setReceipts(res.data?.receipts || []);
       setMonths(res.data?.months || []);
       setYears(res.data?.years || []);
+      if (res.data?.accountant_email) setAccountantEmail(res.data.accountant_email);
       if (!y && res.data?.years?.length) setYear(res.data.years[0]);
       // Apri di default il mese più recente
       const first = (res.data?.months || [])[0];
@@ -167,6 +200,10 @@ export default function QuietanzeArchive() {
                 {busy === `zip-${year}` ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="download" size={16} color="#fff" />}
                 <Text style={styles.zipBtnText}>ZIP anno</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={[styles.zipBtn, styles.mailBtn]} onPress={() => openSend(year)} disabled={!!busy} testID="archive-mail-year">
+                <Ionicons name="mail" size={16} color="#fff" />
+                <Text style={styles.zipBtnText}>Invia</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -192,6 +229,10 @@ export default function QuietanzeArchive() {
                   <TouchableOpacity style={styles.zipBtnSmall} onPress={() => downloadZip(m.year, m.month)} disabled={!!busy} testID={`archive-zip-${key}`}>
                     {busy === `zip-${key}` ? <ActivityIndicator color="#4A148C" size="small" /> : <Ionicons name="archive-outline" size={16} color="#4A148C" />}
                     <Text style={styles.zipBtnSmallText}>ZIP</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.zipBtnSmall, { marginLeft: 6 }]} onPress={() => openSend(m.year, m.month)} disabled={!!busy} testID={`archive-mail-${key}`}>
+                    <Ionicons name="mail-outline" size={16} color="#4A148C" />
+                    <Text style={styles.zipBtnSmallText}>Invia</Text>
                   </TouchableOpacity>
                 </TouchableOpacity>
 
@@ -224,6 +265,53 @@ export default function QuietanzeArchive() {
         <Ionicons name="bar-chart" size={18} color="#8E44AD" />
         <Text style={styles.reportLinkText}>Vai al Report Compensi (riepilogo per persona e soglie)</Text>
       </TouchableOpacity>
+
+      {/* 🆕 Modal invio al commercialista */}
+      <Modal visible={!!sendTarget} transparent animationType="fade" onRequestClose={() => !sending && setSendTarget(null)}>
+        <View style={styles.overlay}>
+          <View style={styles.modal} testID="archive-send-modal">
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>📧 Invia al commercialista</Text>
+              <TouchableOpacity onPress={() => setSendTarget(null)} disabled={sending}><Ionicons name="close" size={24} color="#fff" /></TouchableOpacity>
+            </View>
+            <View style={{ padding: 16 }}>
+              <Text style={styles.modalSub}>
+                Periodo: <Text style={{ fontWeight: '700' }}>{sendTarget?.month ? `${MONTH_NAMES[sendTarget.month]} ${sendTarget.year}` : `Anno ${sendTarget?.year}`}</Text>
+                {role ? ` · solo ${ROLE_LABEL[role]}` : ''}. Verrà allegato lo ZIP con tutti i PDF firmati e un riepilogo nel corpo dell&apos;email.
+              </Text>
+              <Text style={styles.label}>Email del commercialista</Text>
+              <TextInput
+                value={sendEmail}
+                onChangeText={setSendEmail}
+                placeholder="es. studio@commercialista.it"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                style={styles.input}
+                editable={!sending}
+                testID="archive-send-email"
+              />
+              <Text style={styles.hint}>L&apos;indirizzo viene memorizzato e riproposto per i prossimi invii.</Text>
+              <Text style={styles.label}>Messaggio (facoltativo)</Text>
+              <TextInput
+                value={sendMessage}
+                onChangeText={setSendMessage}
+                placeholder="Nota per il commercialista…"
+                placeholderTextColor="#9CA3AF"
+                style={[styles.input, { minHeight: 70, textAlignVertical: 'top' }]}
+                multiline
+                editable={!sending}
+                maxLength={1000}
+                testID="archive-send-message"
+              />
+              <TouchableOpacity style={[styles.zipBtn, styles.mailBtn, { justifyContent: 'center', marginTop: 14 }]} onPress={doSend} disabled={sending} testID="archive-send-confirm">
+                {sending ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="send" size={16} color="#fff" />}
+                <Text style={styles.zipBtnText}>{sending ? 'Invio in corso…' : 'Invia email con ZIP'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -259,4 +347,13 @@ const styles = StyleSheet.create({
   pdfBtnText: { color: '#fff', fontWeight: '700', fontSize: 12 },
   reportLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, margin: 16, padding: 12, borderRadius: 10, borderWidth: 1, borderStyle: 'dashed', borderColor: '#8E44AD', minHeight: 44 },
   reportLinkText: { color: '#8E44AD', fontWeight: '600', fontSize: 13 },
+  mailBtn: { backgroundColor: '#1D6F42', marginLeft: 8 },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 12 },
+  modal: { width: '100%', maxWidth: 520, backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#8E44AD', padding: 14 },
+  modalTitle: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  modalSub: { fontSize: 13, color: '#4B5563', lineHeight: 19, marginBottom: 12 },
+  label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6, marginTop: 6 },
+  input: { borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: '#1F2937', minHeight: 44 },
+  hint: { fontSize: 11, color: '#6B7280', marginTop: 4, fontStyle: 'italic' },
 });
