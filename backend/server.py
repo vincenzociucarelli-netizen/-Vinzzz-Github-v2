@@ -11567,6 +11567,52 @@ async def declare_my_prior_compensation(
     await coll.update_one({"id": current_user["id"]}, {"$set": update_dict})
     # 🆕 28/09/2026 — sincronizza sul record collegato (users↔athletes) così l'admin vede "Firmato"
     await _sync_prior_compensation(current_user["id"], update_dict)
+
+    # 🆕 PDF firmato della dichiarazione pregresso in `signed_documents`
+    # (visibile in "I Miei Documenti", archivio admin e Cronologia)
+    try:
+        from routes.declaration_pdf import build_declaration_pdf, store_signed_declaration, society_name_for
+        _name = doc.get("full_name") or f"{doc.get('first_name', '')} {doc.get('last_name', '')}".strip() or current_user.get("full_name", "")
+        _athlete_id = doc["id"] if coll_name == "athletes" else doc.get("athlete_id")
+        _user_id = current_user["id"] if coll_name == "users" else None
+        if not _user_id and _athlete_id:
+            _lu = await db.users.find_one({"athlete_id": _athlete_id}, {"_id": 0, "id": 1})
+            _user_id = (_lu or {}).get("id")
+        _version = len(user_history) + 1
+        _amount_str = "€ " + f"{float(data.amount):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        paragraphs = [
+            {"text": f"Il/La sottoscritto/a {_name}, consapevole delle responsabilità penali previste dall'art. 76 del D.P.R. 445/2000 in caso di dichiarazioni mendaci,", "style": "normal"},
+            {"text": "DICHIARA", "style": "title"},
+            {"text": f"sotto la propria responsabilità, ai fini del calcolo delle soglie previste dalla Riforma dello Sport (D.Lgs. 36/2021), di aver percepito da altre ASD/SSD (diverse da quella cui presenta questa dichiarazione), per l'anno fiscale {current_year}, compensi per lavoro sportivo pari a:", "style": "normal"},
+            {"text": _amount_str, "style": "title"},
+        ]
+        if is_variation:
+            paragraphs.append({"text": f"La presente dichiarazione (n. {_version}) sostituisce quella precedentemente sottoscritta, che resta conservata nello storico.", "style": "normal"})
+        paragraphs.append({"text": "Si impegna a comunicare tempestivamente alla società ogni variazione dei compensi percepiti da altre società sportive.", "style": "normal"})
+        meta = {
+            "Numero dichiarazione": str(_version),
+            "Anno fiscale": str(current_year),
+            "Data/ora": now.strftime("%d/%m/%Y %H:%M:%S UTC"),
+            "Indirizzo IP": ip_addr,
+            "Dispositivo": (user_agent or "")[:90],
+        }
+        pdf = build_declaration_pdf(
+            title=f"Dichiarazione compensi pregressi {current_year}" + (f" — n. {_version}" if _version > 1 else ""),
+            society_name=await society_name_for(doc.get("society_id") or current_user.get("society_id")),
+            signer_name=_name, paragraphs=paragraphs, meta=meta,
+            signature_base64=data.signature_base64, signed_at=now,
+        )
+        await store_signed_declaration(
+            document_type="prior_compensation_declaration",
+            document_title=f"Dichiarazione Pregresso {current_year}" + (f" (n. {_version})" if _version > 1 else ""),
+            pdf_bytes=pdf, signer_id=_user_id or current_user["id"], signer_name=_name,
+            signer_email=doc.get("email") or current_user.get("email"), athlete_id=_athlete_id,
+            society_id=doc.get("society_id") or current_user.get("society_id"), signed_at=now,
+            signature_base64=data.signature_base64,
+            extra={"amount": round(float(data.amount), 2), "fiscal_year": current_year, "version_number": _version},
+        )
+    except Exception as _e:
+        logging.warning(f"[prior_compensation] PDF non generato: {_e}")
     
     return {
         "success": True,
@@ -36466,8 +36512,8 @@ async def get_athlete_timeline(athlete_id: str, current_user = Depends(get_curre
     # 11. Signed documents
     signed_docs = await db.signed_documents.find(
         {"athlete_id": athlete_id},
-        {"_id": 0, "document_type": 1, "signed_at": 1, "signer_name": 1}
-    ).sort("signed_at", 1).to_list(20)
+        {"_id": 0, "document_type": 1, "signed_at": 1, "signer_name": 1, "document_title": 1}
+    ).sort("signed_at", 1).to_list(50)
     
     doc_type_labels = {
         "privacy_consent": "Consenso Privacy",
@@ -36475,20 +36521,39 @@ async def get_athlete_timeline(athlete_id: str, current_user = Depends(get_curre
         "gdpr_minor": "GDPR Minore",
         "trial_consent": "Consenso Prova",
         "membership_agreement": "Accordo Tesseramento",
+        # 🆕 documenti lavoro sportivo
+        "pension_declaration": "Dichiarazione Posizione Previdenziale",
+        "prior_compensation_declaration": "Dichiarazione Compensi Pregressi",
+        "compensation_receipt": "Quietanza Compenso",
+        "threshold_5000_communication": "Comunicazione Superamento €5.000",
+        "threshold_15000_communication": "Comunicazione Superamento €15.000",
     }
     
     for doc in signed_docs:
         ts = doc.get("signed_at")
         if isinstance(ts, datetime):
             ts = ts.isoformat()
-        doc_label = doc_type_labels.get(doc.get("document_type", ""), doc.get("document_type", "Documento"))
+        _dt = doc.get("document_type", "")
+        doc_label = doc.get("document_title") if _dt in ("pension_declaration", "prior_compensation_declaration", "compensation_receipt") and doc.get("document_title") else doc_type_labels.get(_dt, _dt or "Documento")
+        _is_work_doc = _dt in ("pension_declaration", "prior_compensation_declaration", "compensation_receipt", "threshold_5000_communication", "threshold_15000_communication")
         events.append({
             "type": "document_signed",
-            "icon": "create",
-            "color": "#5856D6",
+            "icon": "shield-checkmark" if _dt == "pension_declaration" else ("cash" if _is_work_doc else "create"),
+            "color": "#6D28D9" if _dt == "pension_declaration" else ("#1D6F42" if _is_work_doc else "#5856D6"),
             "title": f"Firmato: {doc_label}",
             "description": f"Firmato da {doc.get('signer_name', '')}" if doc.get("signer_name") else "Documento firmato digitalmente",
             "date": str(ts) if ts else "",
+        })
+
+    # 🆕 13. Accordo di lavoro sportivo: accettazione compenso
+    if athlete.get("compensation_accepted") and athlete.get("compensation_accepted_date"):
+        events.append({
+            "type": "compensation_accepted",
+            "icon": "checkmark-circle",
+            "color": "#1D6F42",
+            "title": "Accordo Compenso Accettato",
+            "description": "Compenso mensile accettato dall'atleta" + (f" (€ {float(athlete.get('monthly_compensation') or 0):,.2f}/mese)".replace(",", "X").replace(".", ",").replace("X", ".") if athlete.get("monthly_compensation") else ""),
+            "date": str(athlete["compensation_accepted_date"]),
         })
     
     # 12. Certificate history (rinnovi/aggiornamenti). Usa lo storico già caricato sopra.
@@ -36537,7 +36602,7 @@ async def get_athlete_timeline(athlete_id: str, current_user = Depends(get_curre
     seen = set()
     unique_events = []
     for e in events:
-        key = f"{e['type']}_{e.get('date', '')[:16]}"
+        key = f"{e['type']}_{e.get('title', '') if e['type'] == 'document_signed' else ''}_{e.get('date', '')[:16]}"
         if key not in seen:
             seen.add(key)
             unique_events.append(e)

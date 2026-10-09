@@ -154,9 +154,22 @@ export default function AthleteDocumentsScreen() {
             d.document_type === 'threshold_5000_communication' ||
             d.document_type === 'threshold_15000_communication' ||
             d.document_type === 'threshold_5000' ||
-            d.document_type === 'threshold_15000'
+            d.document_type === 'threshold_15000' ||
+            // 🆕 dichiarazioni firmate del lavoro sportivo
+            d.document_type === 'pension_declaration' ||
+            d.document_type === 'prior_compensation_declaration'
           );
           receiptDocs.forEach((rd: any) => {
+            if (rd.document_type === 'pension_declaration' || rd.document_type === 'prior_compensation_declaration') {
+              docs.push({
+                id: rd.id,
+                type: rd.document_type === 'pension_declaration' ? 'pension' : 'prior',
+                name: rd.document_title || (rd.document_type === 'pension_declaration' ? 'Dichiarazione Posizione Previdenziale' : 'Dichiarazione Compensi Pregressi'),
+                date: rd.signed_at || '',
+                url: `/api/documents/signed/${rd.id}/pdf`,
+              } as any);
+              return;
+            }
             const isThreshold5K = rd.document_type?.includes('5000');
             const isThreshold15K = rd.document_type?.includes('15000');
             const monthName = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][((rd.month||1)-1)] || '';
@@ -290,6 +303,9 @@ export default function AthleteDocumentsScreen() {
       case 'privacy': return 'shield-checkmark';
       case 'medical': return 'medkit';
       case 'id': return 'card';
+      case 'pension': return 'shield-checkmark';
+      case 'prior': return 'cash';
+      case 'receipt': return 'receipt';
       default: return 'document';
     }
   };
@@ -299,6 +315,9 @@ export default function AthleteDocumentsScreen() {
       case 'privacy': return '#4CAF50';
       case 'medical': return '#2196F3';
       case 'id': return '#FF9800';
+      case 'pension': return '#6D28D9';
+      case 'prior': return '#1D6F42';
+      case 'receipt': return '#1565C0';
       default: return '#666';
     }
   };

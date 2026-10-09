@@ -260,6 +260,48 @@ async def declare_my_pension_position(
     }
     await db.pension_declarations.insert_one(doc)
 
+    # 🆕 PDF firmato in `signed_documents` → visibile in "I Miei Documenti", archivio admin e Cronologia
+    try:
+        from routes.declaration_pdf import build_declaration_pdf, store_signed_declaration, society_name_for
+        society_name = await society_name_for(subj["society_id"])
+        paragraphs = [
+            {"text": f"Il/La sottoscritto/a {subj['full_name']}", "style": "normal"},
+            {"text": PENSION_TEXTS["intro"], "style": "normal"},
+            {"text": f"Opzione selezionata: {data.position}", "style": "bold"},
+            {"text": opt["label"], "style": "normal"},
+        ]
+        if detail:
+            paragraphs.append({"text": f"{opt.get('detail_label', 'Tipologia')}: {detail}" + (f" — {doc['detail_note']}" if doc.get("detail_note") else ""), "style": "normal"})
+        if data.position == "D":
+            paragraphs.append({"text": "Posizione registrata come «Da verificare».", "style": "bold"})
+        paragraphs.append({"text": PENSION_TEXTS["declaration"], "style": "normal"})
+        meta = {
+            "Versione dichiarazione": f"{doc['version_number']}" + (f" (sostituisce {prev['id']})" if prev else ""),
+            "Versione testo": PENSION_TEXT_VERSION,
+            "Identificativo accordo": subj["agreement_id"],
+            "Identificativo dichiarazione": doc["id"],
+            "Data/ora": now.strftime("%d/%m/%Y %H:%M:%S UTC"),
+            "Indirizzo IP": ip_addr,
+            "Dispositivo": user_agent[:90],
+        }
+        pdf = build_declaration_pdf(
+            title=f"Dichiarazione della posizione previdenziale — v.{doc['version_number']}",
+            society_name=society_name, signer_name=subj["full_name"], paragraphs=paragraphs, meta=meta,
+            signature_base64=data.signature_base64, signed_at=now,
+        )
+        sd_id = await store_signed_declaration(
+            document_type="pension_declaration",
+            document_title=f"Dichiarazione Posizione Previdenziale v.{doc['version_number']}",
+            pdf_bytes=pdf, signer_id=subj["user_id"] or current_user["id"], signer_name=subj["full_name"],
+            signer_email=subj["email"], athlete_id=subj["athlete_id"], society_id=subj["society_id"],
+            signed_at=now, signature_base64=data.signature_base64,
+            extra={"pension_declaration_id": doc["id"], "pension_status": doc["status"], "version_number": doc["version_number"]},
+        )
+        await db.pension_declarations.update_one({"id": doc["id"]}, {"$set": {"signed_document_id": sd_id}})
+        doc["signed_document_id"] = sd_id
+    except Exception as e:
+        logging.warning(f"[pension_declaration] PDF non generato: {e}")
+
     # Notifica in-app agli admin della società (bacheca notifiche admin)
     try:
         if subj["society_id"]:
@@ -327,6 +369,121 @@ async def admin_get_pension_declarations(user_id: str, current_user=Depends(get_
     }
 
 
+async def _backfill_missing_documents(sid: Optional[str]) -> int:
+    """🆕 Genera a posteriori i PDF in `signed_documents` per le dichiarazioni
+    (previdenziali e pregresso) firmate PRIMA dell'introduzione dei PDF.
+    Idempotente: lavora solo sui record senza documento collegato."""
+    from routes.declaration_pdf import build_declaration_pdf, store_signed_declaration, society_name_for
+    created = 0
+    society_name = await society_name_for(sid)
+
+    # 1) Dichiarazioni previdenziali senza signed_document_id
+    q: dict = {"signed_document_id": {"$exists": False}}
+    if sid:
+        q["society_id"] = sid
+    async for d in db.pension_declarations.find(q):
+        try:
+            opt = _option(d.get("position")) or {}
+            paragraphs = [
+                {"text": f"Il/La sottoscritto/a {d.get('user_full_name', '')}", "style": "normal"},
+                {"text": (d.get("text_snapshot") or {}).get("intro") or PENSION_TEXTS["intro"], "style": "normal"},
+                {"text": f"Opzione selezionata: {d.get('position')}", "style": "bold"},
+                {"text": d.get("position_label", ""), "style": "normal"},
+            ]
+            if d.get("detail"):
+                paragraphs.append({"text": f"{opt.get('detail_label', 'Tipologia')}: {d['detail']}" + (f" — {d['detail_note']}" if d.get("detail_note") else ""), "style": "normal"})
+            if d.get("position") == "D":
+                paragraphs.append({"text": "Posizione registrata come «Da verificare».", "style": "bold"})
+            paragraphs.append({"text": (d.get("text_snapshot") or {}).get("declaration") or PENSION_TEXTS["declaration"], "style": "normal"})
+            signed_at = d.get("signed_at") if isinstance(d.get("signed_at"), datetime) else datetime.utcnow()
+            meta = {
+                "Versione dichiarazione": str(d.get("version_number", 1)),
+                "Versione testo": d.get("text_version", PENSION_TEXT_VERSION),
+                "Identificativo accordo": d.get("agreement_id", ""),
+                "Identificativo dichiarazione": d.get("id", ""),
+                "Data/ora": signed_at.strftime("%d/%m/%Y %H:%M:%S UTC"),
+                "Indirizzo IP": d.get("ip", ""),
+                "Dispositivo": (d.get("user_agent") or "")[:90],
+            }
+            pdf = build_declaration_pdf(
+                title=f"Dichiarazione della posizione previdenziale — v.{d.get('version_number', 1)}",
+                society_name=society_name, signer_name=d.get("user_full_name", ""), paragraphs=paragraphs, meta=meta,
+                signature_base64=d.get("signature_base64"), signed_at=signed_at,
+            )
+            sd_id = await store_signed_declaration(
+                document_type="pension_declaration",
+                document_title=f"Dichiarazione Posizione Previdenziale v.{d.get('version_number', 1)}",
+                pdf_bytes=pdf, signer_id=d.get("user_id") or d.get("signed_by_user_id"), signer_name=d.get("user_full_name", ""),
+                signer_email=d.get("user_email"), athlete_id=d.get("athlete_id"), society_id=d.get("society_id"),
+                signed_at=signed_at, signature_base64=d.get("signature_base64"),
+                extra={"pension_declaration_id": d["id"], "pension_status": d.get("status"), "version_number": d.get("version_number", 1)},
+            )
+            await db.pension_declarations.update_one({"id": d["id"]}, {"$set": {"signed_document_id": sd_id}})
+            created += 1
+        except Exception as e:
+            logging.warning(f"[pension backfill] {d.get('id')}: {e}")
+
+    # 2) Pregresso firmato senza documento (users + athletes)
+    for coll, is_athlete in ((db.users, False), (db.athletes, True)):
+        qq: dict = {"other_annual_compensation_signed": True, "other_annual_compensation_signature": {"$exists": True, "$ne": None}}
+        if sid:
+            qq["society_id"] = sid
+        async for src in coll.find(qq, {"_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1, "email": 1, "athlete_id": 1,
+                                        "society_id": 1, "other_annual_compensation": 1, "other_annual_compensation_signed_at": 1,
+                                        "other_annual_compensation_signed_year": 1, "other_annual_compensation_signature": 1,
+                                        "other_annual_compensation_ip": 1, "other_annual_compensation_user_agent": 1}):
+            try:
+                year = src.get("other_annual_compensation_signed_year")
+                signed_at = src.get("other_annual_compensation_signed_at")
+                if not isinstance(signed_at, datetime):
+                    continue
+                athlete_id = src["id"] if is_athlete else src.get("athlete_id")
+                user_id = None if is_athlete else src["id"]
+                if is_athlete:
+                    lu = await db.users.find_one({"athlete_id": src["id"]}, {"_id": 0, "id": 1})
+                    user_id = (lu or {}).get("id")
+                ids = [i for i in (user_id, athlete_id) if i]
+                exists = await db.signed_documents.find_one({
+                    "document_type": "prior_compensation_declaration", "fiscal_year": year,
+                    "$or": [{"signer_id": {"$in": ids}}, {"athlete_id": {"$in": ids}}],
+                }, {"_id": 1})
+                if exists:
+                    continue
+                name = src.get("full_name") or f"{src.get('first_name', '')} {src.get('last_name', '')}".strip()
+                amount = float(src.get("other_annual_compensation") or 0)
+                amount_str = "€ " + f"{amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                paragraphs = [
+                    {"text": f"Il/La sottoscritto/a {name}, consapevole delle responsabilità penali previste dall'art. 76 del D.P.R. 445/2000 in caso di dichiarazioni mendaci,", "style": "normal"},
+                    {"text": "DICHIARA", "style": "title"},
+                    {"text": f"sotto la propria responsabilità, ai fini del calcolo delle soglie previste dalla Riforma dello Sport (D.Lgs. 36/2021), di aver percepito da altre ASD/SSD (diverse da quella cui presenta questa dichiarazione), per l'anno fiscale {year}, compensi per lavoro sportivo pari a:", "style": "normal"},
+                    {"text": amount_str, "style": "title"},
+                    {"text": "Si impegna a comunicare tempestivamente alla società ogni variazione dei compensi percepiti da altre società sportive.", "style": "normal"},
+                ]
+                meta = {"Anno fiscale": str(year), "Data/ora": signed_at.strftime("%d/%m/%Y %H:%M:%S UTC"),
+                        "Indirizzo IP": src.get("other_annual_compensation_ip") or "", "Dispositivo": (src.get("other_annual_compensation_user_agent") or "")[:90]}
+                pdf = build_declaration_pdf(title=f"Dichiarazione compensi pregressi {year}", society_name=society_name, signer_name=name,
+                                            paragraphs=paragraphs, meta=meta, signature_base64=src.get("other_annual_compensation_signature"), signed_at=signed_at)
+                await store_signed_declaration(
+                    document_type="prior_compensation_declaration", document_title=f"Dichiarazione Pregresso {year}",
+                    pdf_bytes=pdf, signer_id=user_id or src["id"], signer_name=name, signer_email=src.get("email"),
+                    athlete_id=athlete_id, society_id=src.get("society_id"), signed_at=signed_at,
+                    signature_base64=src.get("other_annual_compensation_signature"),
+                    extra={"amount": amount, "fiscal_year": year, "version_number": 1},
+                )
+                created += 1
+            except Exception as e:
+                logging.warning(f"[prior backfill] {src.get('id')}: {e}")
+    return created
+
+
+@router.post("/admin/pension-declarations/backfill-documents")
+async def admin_backfill_declaration_documents(current_user=Depends(get_current_user)):
+    """Admin: genera i PDF mancanti per dichiarazioni firmate prima dell'introduzione dei documenti."""
+    _require_admin(current_user)
+    n = await _backfill_missing_documents(current_user.get("society_id"))
+    return {"success": True, "created": n}
+
+
 @router.get("/admin/pension-declarations/summary")
 async def admin_pension_declarations_summary(current_user=Depends(get_current_user)):
     """Admin: riepilogo per il consulente del lavoro — tutti i collaboratori
@@ -334,6 +491,11 @@ async def admin_pension_declarations_summary(current_user=Depends(get_current_us
     previdenziale dichiarata (ultima versione) + storico completo."""
     _require_admin(current_user)
     sid = current_user.get("society_id")
+    # 🆕 backfill silenzioso dei PDF mancanti (idempotente, veloce se non c'è nulla da fare)
+    try:
+        await _backfill_missing_documents(sid)
+    except Exception as e:
+        logging.warning(f"[pension summary] backfill: {e}")
 
     rows: List[dict] = []
     q_users: dict = {"role": {"$in": [UserRole.COACH, UserRole.DIRIGENTE, UserRole.VIEWER, UserRole.COLLABORATORE]}}
