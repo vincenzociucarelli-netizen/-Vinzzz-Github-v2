@@ -24,6 +24,7 @@ import { handleAnagraficaError } from '../../src/utils/anagraficaError';
 import ExternalCompensationStep from '../../src/components/ExternalCompensationStep';
 import PensionDeclarationModal from '../../src/components/PensionDeclarationModal';
 import PensionDeclarationCard from '../../src/components/PensionDeclarationCard';
+import PriorCompensationSelfCard from '../../src/components/PriorCompensationSelfCard';
 const MONTH_NAMES = [
   '', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
@@ -1346,7 +1347,8 @@ export default function CollaboratoreCompensation() {
             )
           )}
 
-          {/* 🆕 Posizione previdenziale dichiarata (stato, storico, nuova dichiarazione) */}
+          {/* 🆕 Pregresso (firma / variazione firmata) + Posizione previdenziale */}
+          <PriorCompensationSelfCard userFullName={profile?.full_name || ''} contractStartDate={profile?.contract_start_date} onChanged={() => loadData()} />
           <View style={{ marginBottom: 12 }}>
             <PensionDeclarationCard key={pensionCardKey} userFullName={profile?.full_name || ''} />
           </View>

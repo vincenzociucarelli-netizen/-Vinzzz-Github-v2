@@ -1855,3 +1855,9 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - Componente: `src/components/admin/QuietanzeArchive.tsx`.
 
 - 🆕 **Invio al commercialista**: pulsante "Invia" (per mese e per anno) in Archivio Firmate → modal con email (memorizzata in `settings.accountant_email` della società e riproposta) + messaggio facoltativo → POST `/admin/quietanze/archive/send-email` invia via Brevo lo ZIP dei PDF + riepilogo tabellare nel corpo (limite 9 MB). Log in `quietanze_email_log`.
+
+
+## 🆕 Ri-accettazione accordo e variazione pregresso (giugno 2026)
+- **Reset accettazione (B)**: se l'admin varia compenso mensile (A) o periodo contratto (C) → `compensation_accepted=False` + `compensation_reaccept_reason`. Implementato in PATCH `/users/{id}` (coach/dirigenti/collaboratori: già per importo, ora anche per date) e PATCH `/athletes/{id}/compensation/settings` (atleti PRO, sync anche sul record users collegato). Nessun reset se i valori non cambiano.
+- **Variazione pregresso (D) dal lavoratore**: POST `/me/prior-compensation/declare` non blocca più la ri-firma nello stesso anno: la dichiarazione precedente viene accodata in `other_annual_compensation_user_history` (append-only, con firma/IP/UA) e sostituita. Admin GET restituisce `user_history` (mostrato in AdminPriorCompensationPanel). Status include `versions`.
+- UI: pulsante "Varia pregresso (nuova dichiarazione firmata)" in CompensationSummaryCard (atleta PRO/coach) e nuova `PriorCompensationSelfCard` in dirigente/collaboratore. Dopo la variazione, se la posizione previdenziale non è firmata, viene richiesta subito. Il pulsante previdenziale resta sempre disponibile (PensionDeclarationCard) anche senza variazioni.

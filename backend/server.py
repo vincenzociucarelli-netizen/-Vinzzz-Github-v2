@@ -7543,6 +7543,18 @@ async def update_user(user_id: str, data: dict, current_user = Depends(get_curre
         # Reset compensation_accepted if the amount changed
         if new_compensation != old_compensation:
             update_data["compensation_accepted"] = False
+            update_data["compensation_reaccept_reason"] = "Variazione compenso mensile"
+
+    # 🆕 Variazione PERIODO contratto → l'accordo va ri-accettato (cambiano durata e totale)
+    def _ymd(v):
+        if not v:
+            return None
+        s = v.isoformat() if hasattr(v, "isoformat") else str(v)
+        return s[:10]
+    for _cf in ("contract_start_date", "contract_end_date"):
+        if _cf in data and _ymd(data[_cf]) != _ymd(user.get(_cf)):
+            update_data["compensation_accepted"] = False
+            update_data["compensation_reaccept_reason"] = "Variazione periodo contratto"
     
     if "other_annual_compensation" in data:
         update_data["other_annual_compensation"] = data["other_annual_compensation"]
@@ -10942,6 +10954,25 @@ async def update_athlete_compensation_settings(athlete_id: str, data: dict, curr
         update_data["bank_name"] = data["bank_name"]
     
     if update_data:
+        # 🆕 Se cambiano compenso mensile o periodo contratto, l'accettazione (B)
+        # decade: l'atleta deve ri-accettare perché variano compensi e durata.
+        def _ymd(v):
+            if not v:
+                return None
+            s = v.isoformat() if hasattr(v, "isoformat") else str(v)
+            return s[:10]
+        reasons = []
+        if "monthly_compensation" in update_data and float(update_data["monthly_compensation"] or 0) != float(athlete.get("monthly_compensation") or 0):
+            reasons.append("compenso mensile")
+        for _cf in ("contract_start_date", "contract_end_date"):
+            if _cf in update_data and _ymd(update_data[_cf]) != _ymd(athlete.get(_cf)):
+                reasons.append("periodo contratto")
+                break
+        if reasons and athlete.get("compensation_accepted"):
+            update_data["compensation_accepted"] = False
+            update_data["compensation_reaccept_reason"] = "Variazione " + " e ".join(reasons)
+            # tieni allineato anche l'eventuale account utente collegato
+            await db.users.update_many({"athlete_id": athlete_id}, {"$set": {"compensation_accepted": False}})
         await db.athletes.update_one({"id": athlete_id}, {"$set": update_data})
     
     return {"message": "Impostazioni compenso aggiornate"}
@@ -11436,6 +11467,7 @@ def _prior_compensation_status_from_doc(doc: dict) -> dict:
         "current_fiscal_year": current_year,
         "has_signature_image": bool(doc.get("other_annual_compensation_signature")),
         "requires_renewal": signed and signed_year != current_year,
+        "versions": len(doc.get("other_annual_compensation_user_history") or []) + (1 if signed else 0),
     }
 
 
@@ -11497,11 +11529,22 @@ async def declare_my_prior_compensation(
     current_year = _current_fiscal_year()
     existing_signed = bool(doc.get("other_annual_compensation_signed"))
     existing_year = doc.get("other_annual_compensation_signed_year")
-    if existing_signed and existing_year == current_year:
-        raise HTTPException(
-            status_code=400,
-            detail="Hai già firmato la dichiarazione per l'anno fiscale corrente. Modifiche solo tramite admin."
-        )
+    # 🆕 Il lavoratore può VARIARE il pregresso già firmato: la nuova dichiarazione
+    # sostituisce la precedente, che resta tracciata nello storico (append-only).
+    user_history = list(doc.get("other_annual_compensation_user_history") or [])
+    is_variation = existing_signed and existing_year == current_year
+    if existing_signed:
+        user_history.append({
+            "amount": float(doc.get("other_annual_compensation") or 0),
+            "signed_at": (doc.get("other_annual_compensation_signed_at").isoformat()
+                          if isinstance(doc.get("other_annual_compensation_signed_at"), datetime)
+                          else doc.get("other_annual_compensation_signed_at")),
+            "signed_year": existing_year,
+            "signature_base64": doc.get("other_annual_compensation_signature"),
+            "ip": doc.get("other_annual_compensation_ip"),
+            "user_agent": doc.get("other_annual_compensation_user_agent"),
+            "replaced_at": datetime.utcnow().isoformat(),
+        })
     
     # Metadati richiesta (per compliance)
     client_host = request.client.host if request.client else None
@@ -11518,6 +11561,7 @@ async def declare_my_prior_compensation(
         "other_annual_compensation_signed_year": current_year,
         "other_annual_compensation_ip": ip_addr,
         "other_annual_compensation_user_agent": user_agent,
+        "other_annual_compensation_user_history": user_history,
     }
     coll = db.users if coll_name == "users" else db.athletes
     await coll.update_one({"id": current_user["id"]}, {"$set": update_dict})
@@ -11526,7 +11570,9 @@ async def declare_my_prior_compensation(
     
     return {
         "success": True,
-        "message": "Dichiarazione firmata correttamente",
+        "message": "Dichiarazione aggiornata correttamente" if is_variation else "Dichiarazione firmata correttamente",
+        "is_variation": is_variation,
+        "versions": len(user_history) + 1,
         "amount": update_dict["other_annual_compensation"],
         "signed_at": now.isoformat(),
         "signed_year": current_year,
@@ -11614,6 +11660,8 @@ async def admin_get_prior_compensation(
         "ip": best.get("other_annual_compensation_ip"),
         "user_agent": best.get("other_annual_compensation_user_agent"),
         "admin_history": best.get("other_annual_compensation_admin_history") or doc.get("other_annual_compensation_admin_history") or [],
+        # 🆕 storico delle dichiarazioni precedenti sostituite dal lavoratore (variazioni firmate)
+        "user_history": best.get("other_annual_compensation_user_history") or doc.get("other_annual_compensation_user_history") or [],
         "user_full_name": doc.get("full_name") or f"{doc.get('first_name','')} {doc.get('last_name','')}".strip(),
         "user_email": doc.get("email"),
         "user_role": doc.get("role"),

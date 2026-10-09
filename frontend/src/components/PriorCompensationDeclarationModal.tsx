@@ -12,7 +12,7 @@
  *
  * Backend endpoint: POST /api/me/prior-compensation/declare
  */
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Modal,
   View,
@@ -37,6 +37,9 @@ interface Props {
    *  della data odierna. Serve a garantire che eventuali arretrati ricevuti il
    *  giorno di inizio contratto siano gestiti separatamente in quietanza. */
   contractStartDate?: string | null;
+  /** 🆕 Variazione di un pregresso già firmato: precompila l'importo attuale e adatta i testi */
+  isVariation?: boolean;
+  currentAmount?: number | null;
   onClose: () => void;
   onDeclared: () => void; // Callback dopo firma andata a buon fine
 }
@@ -51,14 +54,25 @@ export default function PriorCompensationDeclarationModal({
   visible,
   userFullName,
   contractStartDate,
+  isVariation = false,
+  currentAmount,
   onClose,
   onDeclared,
 }: Props) {
   const signatureRef = useRef<SignaturePadInlineRef>(null);
-  const [amountStr, setAmountStr] = useState('');
+  const [amountStr, setAmountStr] = useState(
+    isVariation && currentAmount != null ? String(currentAmount).replace('.', ',') : ''
+  );
   const [confirmChecked, setConfirmChecked] = useState(false);
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Ad ogni apertura: reset campi (precompila l'importo attuale se è una variazione)
+  useEffect(() => {
+    if (!visible) return;
+    setAmountStr(isVariation && currentAmount != null ? String(currentAmount).replace('.', ',') : '');
+    setConfirmChecked(false);
+    setSignatureData(null);
+  }, [visible, isVariation, currentAmount]);
   const today = new Date();
   const currentFiscalYear = today.getFullYear();
   // 🆕 27/07/2026 — Vincenzo: usare data inizio contratto invece di "oggi" per la dichiarazione,
@@ -111,7 +125,8 @@ export default function PriorCompensationDeclarationModal({
         signature_base64: sig,
       });
       if (res.data?.success) {
-        showAlert('Dichiarazione firmata', 'Grazie! Ora puoi accettare il compenso.');
+        showAlert(isVariation ? 'Dichiarazione aggiornata' : 'Dichiarazione firmata',
+          isVariation ? 'La nuova dichiarazione del pregresso è stata registrata.' : 'Grazie! Ora puoi accettare il compenso.');
         onDeclared();
       } else {
         showAlert('Errore', 'Errore durante il salvataggio della dichiarazione.');
@@ -132,7 +147,7 @@ export default function PriorCompensationDeclarationModal({
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <Ionicons name="document-text" size={22} color="#fff" />
-              <Text style={styles.headerTitle}>Dichiarazione Pregresso</Text>
+              <Text style={styles.headerTitle}>{isVariation ? 'Variazione Pregresso' : 'Dichiarazione Pregresso'}</Text>
             </View>
             <TouchableOpacity onPress={onClose} disabled={submitting} data-testid="prior-comp-modal-close">
               <Ionicons name="close" size={26} color="#fff" />
@@ -144,12 +159,22 @@ export default function PriorCompensationDeclarationModal({
             <View style={styles.introBox}>
               <Ionicons name="information-circle" size={18} color="#0369A1" />
               <Text style={styles.introText}>
-                Prima di poter accettare qualunque compenso dalla società, la normativa Riforma
-                Sport richiede che tu dichiari <Text style={{ fontWeight: '700' }}>quanto hai
-                già percepito da altre ASD/SSD</Text> nell&apos;anno fiscale corrente ({currentFiscalYear}).
-                {'\n\n'}
-                Questa dichiarazione va firmata <Text style={{ fontWeight: '700' }}>una sola volta
-                per stagione</Text>. Eventuali modifiche successive sono a carico dell&apos;admin.
+                {isVariation ? (
+                  <>
+                    Stai presentando una <Text style={{ fontWeight: '700' }}>nuova dichiarazione del pregresso</Text> che
+                    sostituisce quella già firmata per l&apos;anno fiscale {currentFiscalYear}. La dichiarazione precedente
+                    resta conservata nello storico. Indica il nuovo importo complessivo e firma di nuovo.
+                  </>
+                ) : (
+                  <>
+                    Prima di poter accettare qualunque compenso dalla società, la normativa Riforma
+                    Sport richiede che tu dichiari <Text style={{ fontWeight: '700' }}>quanto hai
+                    già percepito da altre ASD/SSD</Text> nell&apos;anno fiscale corrente ({currentFiscalYear}).
+                    {'\n\n'}
+                    In caso di variazione potrai presentare una <Text style={{ fontWeight: '700' }}>nuova dichiarazione
+                    firmata</Text>: quella precedente resterà nello storico.
+                  </>
+                )}
               </Text>
             </View>
 

@@ -55,6 +55,13 @@ interface DeclarationStatus {
     new_amount: number;
     note?: string;
   }>;
+  user_history?: Array<{
+    amount: number;
+    signed_at: string | null;
+    signed_year: number | null;
+    signature_base64?: string | null;
+    replaced_at?: string;
+  }>;
   user_full_name?: string;
   user_email?: string;
   user_role?: string;
@@ -327,6 +334,25 @@ export default function AdminPriorCompensationPanel({ userId, compact = false }:
                   </View>
                 )}
               </View>
+
+              {/* 🆕 Storico variazioni firmate dal lavoratore (dichiarazioni precedenti sostituite) */}
+              {(status.user_history && status.user_history.length > 0) && (
+                <View style={styles.historyBox}>
+                  <View style={styles.rowGap6}>
+                    <Ionicons name="git-branch" size={16} color="#374151" />
+                    <Text style={styles.sectionTitle}>Dichiarazioni precedenti del lavoratore ({status.user_history.length})</Text>
+                  </View>
+                  {status.user_history.slice().reverse().map((h, i) => (
+                    <View key={`u-${i}`} style={styles.historyItem}>
+                      <Text style={styles.historyWhen}>Firmata il {formatDateTime(h.signed_at)} · sostituita il {formatDateTime(h.replaced_at)}</Text>
+                      <Text style={styles.historyChange}>Importo dichiarato: <Text style={{ fontWeight: '700' }}>{formatCurrency(h.amount)}</Text> (anno {h.signed_year})</Text>
+                      {h.signature_base64 ? (
+                        <Image source={{ uri: h.signature_base64 }} style={{ width: '100%', height: 70, marginTop: 6, backgroundColor: '#fff', borderRadius: 6 }} resizeMode="contain" />
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              )}
             </ScrollView>
           </View>
         </View>

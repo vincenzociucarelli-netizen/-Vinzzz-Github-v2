@@ -164,6 +164,21 @@ export default function CompensationSummaryCard({
   const handleDeclared = async () => {
     setShowPriorModal(false);
     setPriorSigned(true);
+    if (priorFlow === 'variation') {
+      // 🆕 Variazione pregresso già firmato: NON ri-accetta il compenso; se manca la
+      // dichiarazione previdenziale la richiede, altrimenti ricarica la pagina.
+      setPriorFlow('accept');
+      if (await isPensionDeclared()) {
+        refreshPriorStatus();
+        if (typeof window !== 'undefined' && (window as any)?.location?.reload) {
+          setTimeout(() => { try { (window as any).location.reload(); } catch { /* noop */ } }, 700);
+        }
+      } else {
+        setPensionAfterVariation(true);
+        setShowPensionModal(true);
+      }
+      return;
+    }
     // Dopo la firma del pregresso: se manca la dichiarazione previdenziale, la richiede
     // (firma separata); altrimenti procede con l'accettazione come prima.
     if (await isPensionDeclared()) proceedAfterDeclarations();
@@ -173,8 +188,21 @@ export default function CompensationSummaryCard({
   const handlePensionDeclared = () => {
     setShowPensionModal(false);
     setPensionCardKey((k) => k + 1);
+    if (pensionAfterVariation) {
+      setPensionAfterVariation(false);
+      refreshPriorStatus();
+      if (typeof window !== 'undefined' && (window as any)?.location?.reload) {
+        setTimeout(() => { try { (window as any).location.reload(); } catch { /* noop */ } }, 700);
+      }
+      return;
+    }
     proceedAfterDeclarations();
   };
+
+  // 🆕 Flusso "Varia pregresso" (lavoratore): nuova dichiarazione firmata che sostituisce la precedente
+  const [priorFlow, setPriorFlow] = useState<'accept' | 'variation'>('accept');
+  const [pensionAfterVariation, setPensionAfterVariation] = useState(false);
+  const openPriorVariation = () => { setPriorFlow('variation'); setShowPriorModal(true); };
 
   return (
     <View style={{ marginBottom: 16, backgroundColor: '#fff', borderRadius: 12, padding: 16 }} data-testid="compensation-summary-card">
@@ -317,6 +345,17 @@ export default function CompensationSummaryCard({
                 {formatCurrency(priorCompensation || 0)}
               </Text>
             )}
+            {/* 🆕 Varia pregresso (solo vista personale, se già firmato): nuova dichiarazione firmata */}
+            {isSelfView && priorSigned === true && !pregressoNotice && (
+              <TouchableOpacity
+                onPress={openPriorVariation}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, alignSelf: 'flex-start', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1.5, borderColor: '#007AFF', backgroundColor: '#fff', minHeight: 40 }}
+                testID="vary-prior-comp-btn"
+              >
+                <Ionicons name="create-outline" size={16} color="#007AFF" />
+                <Text style={{ color: '#007AFF', fontWeight: '700', fontSize: 13 }}>Varia pregresso (nuova dichiarazione firmata)</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </View>
@@ -343,7 +382,9 @@ export default function CompensationSummaryCard({
         visible={showPriorModal}
         userFullName={fullName}
         contractStartDate={contractStartDate}
-        onClose={() => setShowPriorModal(false)}
+        isVariation={priorFlow === 'variation'}
+        currentAmount={priorCompensation}
+        onClose={() => { setShowPriorModal(false); setPriorFlow('accept'); }}
         onDeclared={handleDeclared}
       />
 
