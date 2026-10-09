@@ -340,7 +340,12 @@ Società sportiva: ${societyName}
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     try {
+      // 🐛 FIX — gestisce anche "gg/mm/aaaa" già formattato e "aaaa-mm-gg" senza shift di fuso
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) return dateStr;
+      const m = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) return `${m[3]}/${m[2]}/${m[1]}`;
       const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return '';
       const day = String(date.getDate()).padStart(2, '0');
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const year = date.getFullYear();
@@ -508,8 +513,42 @@ Società sportiva: ${societyName}
       return;
     }
     
-    // If privacy not yet accepted, show privacy modal instead of saving directly
+    // If privacy not yet accepted: 🐛 FIX — salva PRIMA il profilo sul server (come coach/dirigente),
+    // poi apri la Privacy. Prima i dati (es. data di nascita) restavano solo in memoria finché
+    // la firma non andava a buon fine e, se interrotta, andavano persi.
     if (!privacyAccepted) {
+      setSaving(true);
+      try {
+        let isoDate = null;
+        if (editData.date_of_birth) {
+          const parts = editData.date_of_birth.split('/');
+          if (parts.length === 3) {
+            isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+          }
+        }
+        await api.patch('/auth/me', {
+          first_name: editData.first_name,
+          last_name: editData.last_name,
+          full_name: `${editData.last_name} ${editData.first_name}`,
+          date_of_birth: isoDate,
+          place_of_birth: editData.place_of_birth,
+          birth_province: editData.province_of_birth,
+          country_of_birth: editData.country_of_birth,
+          gender: editData.gender,
+          fiscal_code: editData.fiscal_code,
+          address: editData.address,
+          city: editData.city,
+          postal_code: editData.postal_code,
+          province: editData.province,
+          phone: editData.phone,
+          collaboratore_license_number: editData.collaboratore_license_number,
+        });
+      } catch (error: any) {
+        showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
+        setSaving(false);
+        return;
+      }
+      setSaving(false);
       setProfileData({...profileData, ...editData});
       setShowPrivacyModal(true);
       return;

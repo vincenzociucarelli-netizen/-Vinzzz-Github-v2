@@ -5106,8 +5106,12 @@ async def update_me(data: UserProfileUpdate, current_user = Depends(get_current_
     if data.date_of_birth is not None:
         try:
             update_dict["date_of_birth"] = datetime.fromisoformat(data.date_of_birth.replace('Z', '+00:00'))
-        except:
-            pass
+        except Exception:
+            # 🐛 FIX — accetta anche "gg/mm/aaaa" invece di ignorare silenziosamente la data
+            try:
+                update_dict["date_of_birth"] = datetime.strptime(data.date_of_birth.strip(), "%d/%m/%Y")
+            except Exception:
+                raise HTTPException(status_code=400, detail="Data di nascita non valida (usa gg/mm/aaaa)")
     if data.place_of_birth is not None:
         update_dict["place_of_birth"] = data.place_of_birth
     if data.birth_province is not None:
