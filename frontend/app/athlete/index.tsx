@@ -1151,13 +1151,8 @@ export default function AthleteScreen() {
       {/* 🚫 26/06/2026 — Banner "Vai a Compensi Sportivi" RIMOSSO: duplicava il bottone
           "Compensi" già presente in alto nella tab navigation. */}
 
-      {/* Profile Card */}
-      <View style={styles.profileCard}>
-        <View style={styles.profileAvatar}>
-          <Text style={styles.profileInitial}>
-            {profile.first_name?.charAt(0) || profile.full_name?.charAt(0) || 'A'}
-          </Text>
-        </View>
+      {/* Profile Card — 🧹 cerchio con iniziale rimosso (pagina più pulita su mobile) */}
+      <View style={[styles.profileCard, { paddingTop: 8 }]}>
         <Text style={styles.profileName}>{profile.full_name}</Text>
         {/* 🚫 16/06/2026 — Compenso mensile + Periodo Contratto SPOSTATI nella pagina
             "Dati Personali" (/athlete/profile) per non avere info sensibili in bella vista. */}
@@ -1666,20 +1661,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-  },
-  profileAvatar: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#B8860B',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  profileInitial: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#fff',
   },
   profileName: {
     fontSize: 20,

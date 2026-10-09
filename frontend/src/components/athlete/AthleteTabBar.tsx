@@ -9,7 +9,6 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
-import MiniSocietyLogo from '../MiniSocietyLogo';
 
 type TabKey = 'dafare' | 'anagrafica' | 'compensi' | 'presenze';
 
@@ -57,9 +56,7 @@ export const AthleteTabBar: React.FC = () => {
 
   return (
     <View style={styles.bar} testID="athlete-tab-bar">
-      <View style={{ paddingHorizontal: 4, justifyContent: 'center' }}>
-        <MiniSocietyLogo size={26} />
-      </View>
+      {/* 🧹 Mini-logo società rimosso: occupava spazio e rendeva le tab troppo strette su mobile */}
       {tabs.map((t) => {
         const active = activeKey === t.key;
         const isCompensTab = t.key === 'compensi' && isCompensated;
