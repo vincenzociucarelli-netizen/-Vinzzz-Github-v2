@@ -104,6 +104,24 @@ async def _history_for(ids: List[str]) -> List[dict]:
     return [d async for d in cur]
 
 
+async def _person_ids(*seed_ids: Optional[str]) -> List[str]:
+    """🆕 Tutti gli id (users + athletes) della STESSA persona: account atleta,
+    record athletes, account coach/dirigente/collaboratore dual-role (alias
+    `email#coach` / stesso CF). La posizione previdenziale è una per persona."""
+    from server import _get_linked_prior_comp_docs  # lazy: evita import circolare
+    ids = set()
+    for sid in seed_ids:
+        if not sid or sid in ids:
+            continue
+        ids.add(sid)
+        for doc, _ in await _get_linked_prior_comp_docs(sid):
+            ids.add(doc["id"])
+            for k in ("athlete_id", "user_id", "linked_user_id"):
+                if doc.get(k):
+                    ids.add(doc[k])
+    return [i for i in ids if i]
+
+
 async def _resolve_subject(current_user: dict) -> dict:
     """Ritorna i dati del soggetto (user + eventuale athlete collegato) con
     il riferimento all'accordo (contratto) corrente."""
@@ -149,6 +167,7 @@ async def require_pension_declared(ids: List[str]) -> None:
     soggetto. Da usare prima del completamento dell'accettazione dell'accordo."""
     if not [i for i in ids if i]:
         return
+    ids = await _person_ids(*ids)
     doc = await db.pension_declarations.find_one(_ids_query(ids), {"_id": 1})
     if not doc:
         raise HTTPException(
@@ -164,7 +183,7 @@ async def require_pension_declared(ids: List[str]) -> None:
 @router.get("/me/pension-declaration/status")
 async def my_pension_status(current_user=Depends(get_current_user)):
     subj = await _resolve_subject(current_user)
-    history = await _history_for([subj["user_id"], subj["athlete_id"]])
+    history = await _history_for(await _person_ids(subj["user_id"], subj["athlete_id"]))
     latest = history[0] if history else None
     return {
         "declared": latest is not None,
@@ -173,6 +192,8 @@ async def my_pension_status(current_user=Depends(get_current_user)):
         "history": [_public(d) for d in history],
         "texts": PENSION_TEXTS,
         "agreement_id": subj["agreement_id"],
+        # 🆕 True se la dichiarazione è stata firmata dall'altro account dual-role
+        "declared_by_linked_account": bool(latest) and latest.get("user_id") != subj["user_id"] and latest.get("athlete_id") != subj["athlete_id"],
     }
 
 
@@ -209,7 +230,7 @@ async def declare_my_pension_position(
         detail = None
 
     subj = await _resolve_subject(current_user)
-    history = await _history_for([subj["user_id"], subj["athlete_id"]])
+    history = await _history_for(await _person_ids(subj["user_id"], subj["athlete_id"]))
     prev = history[0] if history else None
 
     client_host = request.client.host if request.client else None
@@ -340,16 +361,9 @@ def _require_admin(current_user: dict):
 
 
 async def _linked_ids(user_id: str) -> List[str]:
-    """user_id può essere un id `users` o `athletes`: ritorna entrambi se collegati."""
-    ids = [user_id]
-    u = await db.users.find_one({"id": user_id}, {"_id": 0, "athlete_id": 1})
-    if u and u.get("athlete_id"):
-        ids.append(u["athlete_id"])
-    else:
-        lu = await db.users.find_one({"athlete_id": user_id}, {"_id": 0, "id": 1})
-        if lu:
-            ids.append(lu["id"])
-    return ids
+    """user_id può essere un id `users` o `athletes`: ritorna tutti gli id della
+    stessa persona (incluso l'account dual-role)."""
+    return await _person_ids(user_id)
 
 
 @router.get("/admin/users/{user_id}/pension-declarations")
@@ -543,24 +557,54 @@ async def admin_pension_declarations_summary(current_user=Depends(get_current_us
         lu = await db.users.find_one({"athlete_id": a["id"]}, {"_id": 0, "id": 1, "email": 1})
         rows.append({"ids": [a["id"], (lu or {}).get("id")], "src": {**a, "email": a.get("email") or (lu or {}).get("email")}, "role": "atleta_pro"})
 
-    out = []
+    # 🆕 Dual-role: una sola riga per PERSONA (Atleta PRO + Coach/Dirigente/Collaboratore).
+    # Le righe i cui id collegati si intersecano vengono unite; il pregresso mostrato è
+    # quello firmato (se presente su uno qualsiasi dei record collegati).
     for r in rows:
-        src = r["src"]
-        history = await _history_for(r["ids"])
+        r["ids"] = set(await _person_ids(*[i for i in r["ids"] if i]))
+    merged: List[dict] = []
+    for r in rows:
+        target = next((m for m in merged if m["ids"] & r["ids"]), None)
+        if target is None:
+            merged.append({"ids": set(r["ids"]), "parts": [r]})
+        else:
+            target["ids"] |= r["ids"]
+            target["parts"].append(r)
+
+    def _prior_src(parts: List[dict]) -> dict:
+        srcs = [p["src"] for p in parts]
+        for s in srcs:
+            if s.get("other_annual_compensation_signed"):
+                return s
+        return srcs[0]
+
+    out = []
+    for m in merged:
+        parts = m["parts"]
+        src = parts[0]["src"]
+        roles = []
+        for p in parts:
+            if p["role"] not in roles:
+                roles.append(p["role"])
+        prior = _prior_src(parts)
+        history = await _history_for(list(m["ids"]))
         latest = history[0] if history else None
         name = src.get("full_name") or f"{src.get('first_name', '')} {src.get('last_name', '')}".strip()
+        email = next((p["src"].get("email") for p in parts if p["src"].get("email") and "#" not in p["src"].get("email")), src.get("email"))
         out.append({
             "user_id": src["id"],
+            "linked_user_ids": [p["src"]["id"] for p in parts[1:]],
             "full_name": name,
-            "email": src.get("email"),
-            "role": r["role"],
-            "monthly_compensation": src.get("monthly_compensation") or 0,
-            "compensation_accepted": bool(src.get("compensation_accepted")),
+            "email": email,
+            "role": "+".join(roles),
+            "roles": roles,
+            "monthly_compensation": sum(float(p["src"].get("monthly_compensation") or 0) for p in parts),
+            "compensation_accepted": all(bool(p["src"].get("compensation_accepted")) for p in parts),
             "contract_start_date": _iso(src.get("contract_start_date")),
-            "prior_compensation_amount": float(src.get("other_annual_compensation") or 0),
-            "prior_compensation_signed": bool(src.get("other_annual_compensation_signed")),
-            "prior_compensation_signed_at": _iso(src.get("other_annual_compensation_signed_at")),
-            "prior_compensation_signed_year": src.get("other_annual_compensation_signed_year"),
+            "prior_compensation_amount": float(prior.get("other_annual_compensation") or 0),
+            "prior_compensation_signed": bool(prior.get("other_annual_compensation_signed")),
+            "prior_compensation_signed_at": _iso(prior.get("other_annual_compensation_signed_at")),
+            "prior_compensation_signed_year": prior.get("other_annual_compensation_signed_year"),
             "pension_status": latest.get("status") if latest else "not_declared",
             "pension_status_label": STATUS_LABEL.get(latest.get("status"), "") if latest else "Non dichiarata",
             "pension_latest": _public(latest) if latest else None,

@@ -26,6 +26,7 @@ export default function PensionDeclarationCard({ userFullName, onDeclared }: Pro
   const [history, setHistory] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [byLinked, setByLinked] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -33,6 +34,7 @@ export default function PensionDeclarationCard({ userFullName, onDeclared }: Pro
       const res = await api.get('/me/pension-declaration/status');
       setLatest(res.data?.latest || null);
       setHistory(res.data?.history || []);
+      setByLinked(!!res.data?.declared_by_linked_account);
     } catch {
       setLatest(null); setHistory([]);
     } finally {
@@ -64,6 +66,11 @@ export default function PensionDeclarationCard({ userFullName, onDeclared }: Pro
           </Text>
           {latest.detail ? <Text style={styles.detail}>Tipologia: <Text style={{ fontWeight: '600' }}>{latest.detail}</Text>{latest.detail_note ? ` — ${latest.detail_note}` : ''}</Text> : null}
           <Text style={styles.meta}>Sottoscritta il {formatPensionDateTime(latest.signed_at)} · testo v.{latest.text_version}</Text>
+          {byLinked && (
+            <Text style={styles.meta}>
+              Firmata dal tuo profilo {latest.user_role === 'athlete' ? 'Atleta Pro' : 'Coach/Staff'}: vale per tutti i tuoi incarichi (posizione contributiva unica).
+            </Text>
+          )}
 
           {history.length > 1 && (
             <TouchableOpacity onPress={() => setShowHistory(!showHistory)} style={styles.historyToggle} testID="pension-history-toggle">

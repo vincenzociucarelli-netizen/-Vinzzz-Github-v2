@@ -17,7 +17,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import api from '../../src/services/api';
 import AdminPensionDeclarationPanel from '../../src/components/AdminPensionDeclarationPanel';
-import { formatPensionDateTime, pensionStatusStyle, ROLE_LABEL_IT } from '../../src/utils/pensionDeclaration';
+import { formatPensionDateTime, pensionStatusStyle, roleLabelIt } from '../../src/utils/pensionDeclaration';
 
 type Row = {
   user_id: string;
@@ -129,7 +129,7 @@ export default function AdminPensionDeclarationsPage() {
       visible.forEach((r, i) => {
         const l = r.pension_latest;
         addRow(ws1, i + 2, [
-          r.full_name, r.email || '', ROLE_LABEL_IT[r.role] || r.role, Number(r.monthly_compensation || 0), r.compensation_accepted ? 'SI' : 'NO',
+          r.full_name, r.email || '', roleLabelIt(r.role), Number(r.monthly_compensation || 0), r.compensation_accepted ? 'SI' : 'NO',
           r.contract_start_date ? String(r.contract_start_date).slice(0, 10) : '',
           Number(r.prior_compensation_amount || 0), r.prior_compensation_signed ? 'SI' : 'NO', r.prior_compensation_signed_at ? formatPensionDateTime(r.prior_compensation_signed_at) : '',
           statusText(r.pension_status), l?.position || '', l?.position_label || '', l?.detail || '', l?.detail_note || '',
@@ -148,7 +148,7 @@ export default function AdminPensionDeclarationsPage() {
       visible.forEach((r) => {
         r.pension_history.forEach((h) => {
           addRow(ws2, ri++, [
-            r.full_name, r.email || '', ROLE_LABEL_IT[r.role] || r.role, h.version_number, statusText(h.status), h.position, h.position_label,
+            r.full_name, r.email || '', roleLabelIt(r.role), h.version_number, statusText(h.status), h.position, h.position_label,
             h.detail || '', h.detail_note || '', formatPensionDateTime(h.signed_at), h.signed_by_name || '', h.text_version, h.id, h.previous_declaration_id || '', h.agreement_id || '', h.ip || '',
           ], fillFor(h.status));
         });
@@ -264,7 +264,7 @@ export default function AdminPensionDeclarationsPage() {
               <TouchableOpacity style={styles.rowHead} onPress={() => setExpanded(isOpen ? null : r.user_id)}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{r.full_name}</Text>
-                  <Text style={styles.sub}>{ROLE_LABEL_IT[r.role] || r.role}{r.email ? ` · ${r.email}` : ''}</Text>
+                  <Text style={styles.sub}>{roleLabelIt(r.role)}{r.email ? ` · ${r.email}` : ''}</Text>
                 </View>
                 <View style={[styles.badge, { backgroundColor: st.bg, borderColor: st.border }]}>
                   <Ionicons name={st.icon as any} size={14} color={st.color} />

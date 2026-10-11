@@ -31,3 +31,7 @@ export const ROLE_LABEL_IT: Record<string, string> = {
   atleta_pro: 'Atleta Pro',
   athlete: 'Atleta Pro',
 };
+
+/** Etichetta ruolo; per dual-role ("coach+atleta_pro") → "Coach + Atleta Pro". */
+export const roleLabelIt = (role: string): string =>
+  (role || '').split('+').map((r) => ROLE_LABEL_IT[r] || r).join(' + ');

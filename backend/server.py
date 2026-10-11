@@ -11431,23 +11431,41 @@ async def _get_user_or_athlete(user_id: str) -> tuple:
 # il disallineamento ("Non firmato" lato admin), sincronizziamo i due record collegati
 # (user.athlete_id ↔ athlete.id), come già fatto per i Dati Bancari.
 async def _get_linked_prior_comp_docs(user_id: str) -> list:
-    """Ritorna [(doc, collection), ...] dei record collegati: users + athletes."""
+    """Ritorna [(doc, collection), ...] dei record collegati: users + athletes.
+    🆕 Include anche l'altro account del DUAL-ROLE (Atleta PRO ↔ Coach/Dirigente/
+    Collaboratore, alias `email#coach` / stesso CF): la posizione contributiva è
+    UNA per persona, quindi pregresso e dichiarazione previdenziale sono condivisi."""
     out = []
+    seen = set()
+
+    def _add(doc, coll):
+        if doc and doc.get("id") and doc["id"] not in seen:
+            seen.add(doc["id"])
+            out.append((doc, coll))
+
     u = await db.users.find_one({"id": user_id})
     if u:
-        out.append((u, db.users))
+        _add(u, db.users)
         aid = u.get("athlete_id")
         if aid:
-            a = await db.athletes.find_one({"id": aid})
-            if a:
-                out.append((a, db.athletes))
+            _add(await db.athletes.find_one({"id": aid}), db.athletes)
     else:
         a = await db.athletes.find_one({"id": user_id})
         if a:
-            out.append((a, db.athletes))
-            lu = await db.users.find_one({"athlete_id": user_id})
-            if lu:
-                out.append((lu, db.users))
+            _add(a, db.athletes)
+            _add(await db.users.find_one({"athlete_id": user_id}), db.users)
+
+    # Dual-role: dall'atleta PRO al suo account coach/dirigente/collaboratore e viceversa
+    for doc, coll in list(out):
+        if coll.name == "athletes" and doc.get("is_compensated"):
+            linked_user = await _find_linked_compensated_user_for_athlete(doc)
+            if linked_user:
+                _add(linked_user, db.users)
+        elif coll.name == "users" and doc.get("role") in ("coach", "dirigente", "viewer", "collaboratore"):
+            linked_ath = await _find_linked_athlete_pro_for_user(doc["id"])
+            if linked_ath:
+                _add(linked_ath, db.athletes)
+                _add(await db.users.find_one({"athlete_id": linked_ath["id"]}), db.users)
     return out
 
 
