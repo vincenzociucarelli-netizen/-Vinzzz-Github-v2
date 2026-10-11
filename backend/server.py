@@ -7207,6 +7207,65 @@ async def assign_teams_to_coach(user_id: str, data: CoachAssignTeams, current_us
     
     return {"message": "Squadre assegnate con successo"}
 
+async def _ensure_coordinatore_dirigente_alias(coord: dict, admin_user: dict) -> dict:
+    """🆕 Trova o crea l'account DIRIGENTE collegato a un COORDINATORE (dual-role con
+    stesso login). Alias `email#dirigente`, subito attivo: il vero consenso è
+    l'accettazione del compenso che l'interessato firma dal profilo Dirigente."""
+    existing_id = coord.get("linked_dirigente_user_id")
+    if existing_id:
+        existing = await db.users.find_one({"id": existing_id})
+        if existing:
+            return existing
+    existing = await db.users.find_one({"linked_coordinatore_user_id": coord["id"], "role": {"$in": ["dirigente", "viewer"]}})
+    if existing:
+        await db.users.update_one({"id": coord["id"]}, {"$set": {"linked_dirigente_user_id": existing["id"]}})
+        invalidate_auth_cache(coord["id"])
+        return existing
+
+    coord_email = (coord.get("email") or "").lower().strip()
+    if not coord_email:
+        raise HTTPException(status_code=400, detail="Coordinatore senza email — impossibile creare il profilo Dirigente collegato")
+    alias_id = str(uuid.uuid4()).replace("-", "")[:24]
+    doc = {
+        "id": alias_id,
+        "email": f"{coord_email}#dirigente",  # alias interno (login sempre con l'email reale)
+        "role": "dirigente",
+        "full_name": coord.get("full_name", ""),
+        "first_name": coord.get("first_name", ""),
+        "last_name": coord.get("last_name", ""),
+        "fiscal_code": coord.get("fiscal_code", ""),
+        "date_of_birth": coord.get("date_of_birth"),
+        "place_of_birth": coord.get("place_of_birth"),
+        "country_of_birth": coord.get("country_of_birth"),
+        "gender": coord.get("gender"),
+        "address": coord.get("address"),
+        "city": coord.get("city"),
+        "postal_code": coord.get("postal_code"),
+        "province": coord.get("province"),
+        "phone": coord.get("phone"),
+        "iban": coord.get("iban"),
+        "society_id": coord.get("society_id"),
+        "status": "approved",
+        "link_status": "active",
+        "password_hash": hash_password(uuid.uuid4().hex),  # random, mai usata (login via switch)
+        "linked_coordinatore_user_id": coord["id"],
+        "promoted_from_coordinatore_id": coord["id"],
+        "promoted_at": datetime.utcnow(),
+        "promoted_by": admin_user["id"],
+        "promoted_by_name": admin_user.get("full_name", "Amministrazione"),
+        "created_at": datetime.utcnow(),
+        "privacy_accepted": bool(coord.get("privacy_accepted")),
+        "privacy_accepted_at": coord.get("privacy_accepted_at"),
+        "monthly_compensation": 0,
+        "compensation_accepted": False,
+    }
+    await db.users.insert_one(doc)
+    await db.users.update_one({"id": coord["id"]}, {"$set": {"linked_dirigente_user_id": alias_id}})
+    invalidate_auth_cache(coord["id"])
+    logger.info(f"[COORD→DIRIGENTE] Creato profilo Dirigente {alias_id} collegato al coordinatore {coord['id']} da admin {admin_user['id']}")
+    return doc
+
+
 @api_router.patch("/users/{user_id}/compensation")
 async def update_user_compensation(user_id: str, data: dict, current_user = Depends(get_current_user)):
     """Update monthly compensation for coach/dirigente (admin only)"""
@@ -7224,6 +7283,22 @@ async def update_user_compensation(user_id: str, data: dict, current_user = Depe
     # anche come dirigente/coach e percepisce un compenso (es. VERDI FABIO admin di "La Tua Società").
     raw_role = user.get("role", "")
     normalized_role = str(raw_role).strip().lower() if raw_role else ""
+
+    # 🆕 COORDINATORE con compenso: il coordinatore è un ruolo organizzativo senza flusso
+    # compensi/quietanze. Come per Genitore→Dirigente, creiamo (o riusiamo) un account
+    # DIRIGENTE collegato (alias `email#dirigente`, stesso login via "Passa a Modalità
+    # Dirigente") e applichiamo il compenso a quello: così il coordinatore accetta
+    # l'accordo, firma pregresso/previdenza e le quietanze mensili dal profilo Dirigente.
+    if normalized_role == "coordinatore":
+        alias = await _ensure_coordinatore_dirigente_alias(user, current_user)
+        user = alias
+        user_id = alias["id"]
+        raw_role = alias.get("role", "dirigente")
+        normalized_role = "dirigente"
+        redirect_user_id = alias["id"]
+    else:
+        redirect_user_id = None
+
     allowed = ["coach", "dirigente", "viewer", "collaboratore", "athlete", "admin"]
     if normalized_role not in allowed:
         raise HTTPException(
@@ -7296,6 +7371,12 @@ async def update_user_compensation(user_id: str, data: dict, current_user = Depe
             }
         )
     
+    if redirect_user_id:
+        return {
+            "message": "Compenso assegnato al profilo Dirigente collegato al coordinatore. L'interessato lo gestirà con \"Passa a Modalità Dirigente\".",
+            "redirect_user_id": redirect_user_id,
+            "linked_dirigente_user_id": redirect_user_id,
+        }
     return {"message": "Compenso aggiornato con successo"}
 
 @api_router.delete("/users/{user_id}")
@@ -7471,6 +7552,9 @@ async def get_user_detail(user_id: str, current_user = Depends(get_current_user)
         "profile_photo_artistic": user.get("profile_photo_artistic"),
         # Compensation
         "monthly_compensation": user.get("monthly_compensation", 0),
+        # 🆕 Dual-role Coordinatore ↔ Dirigente
+        "linked_dirigente_user_id": user.get("linked_dirigente_user_id"),
+        "linked_coordinatore_user_id": user.get("linked_coordinatore_user_id"),
         "other_annual_compensation": user.get("other_annual_compensation", 0),  # Da altre ASD/SSD
         "compensation_accepted": user.get("compensation_accepted", False),
         "compensation_history": user.get("compensation_history", {}),
@@ -22123,8 +22207,31 @@ async def get_linked_accounts(current_user = Depends(get_current_user)):
                     "email": _dir.get("email", ""),
                     "label": "Modalità Dirigente",
                 })
+    # 🆕 Dual-role Coordinatore ↔ Dirigente (compenso assegnato al coordinatore)
+    if role == "coordinatore":
+        _cu = await db.users.find_one({"id": user_id}, {"_id": 0, "linked_dirigente_user_id": 1})
+        _ldid = (_cu or {}).get("linked_dirigente_user_id")
+        if _ldid:
+            _dir = await db.users.find_one({"id": _ldid}, {"_id": 0, "id": 1, "email": 1, "role": 1})
+            if _dir and _dir.get("id") != user_id:
+                linked.append({
+                    "user_id": _dir["id"],
+                    "role": _dir.get("role", "dirigente"),
+                    "email": _dir.get("email", ""),
+                    "label": "Modalità Dirigente",
+                })
     if role in ("dirigente", "viewer"):
-        _du = await db.users.find_one({"id": user_id}, {"_id": 0, "linked_parent_user_id": 1})
+        _du = await db.users.find_one({"id": user_id}, {"_id": 0, "linked_parent_user_id": 1, "linked_coordinatore_user_id": 1})
+        _lcid = (_du or {}).get("linked_coordinatore_user_id")
+        if _lcid:
+            _coord = await db.users.find_one({"id": _lcid}, {"_id": 0, "id": 1, "email": 1})
+            if _coord and _coord.get("id") != user_id:
+                linked.append({
+                    "user_id": _coord["id"],
+                    "role": "coordinatore",
+                    "email": _coord.get("email", ""),
+                    "label": "Modalità Coordinatore",
+                })
         _lpid = (_du or {}).get("linked_parent_user_id")
         if _lpid:
             _par = await db.users.find_one({"id": _lpid}, {"_id": 0, "id": 1, "email": 1})

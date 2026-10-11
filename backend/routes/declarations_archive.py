@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field, EmailStr
 
 from database import db
 from auth_utils import get_current_user
-from routes.quietanze_archive import _require_admin, _fetch_pdf_bytes, _safe, _eur, _to_int, _name_of
+from routes.quietanze_archive import _require_admin, _fetch_pdf_bytes, _safe, _eur, _to_int, _name_of, RECEIPT_TYPES, MONTH_NAMES_IT
 from routes.pension_declarations import _person_ids, _backfill_missing_documents
 
 router = APIRouter()
@@ -34,7 +34,7 @@ DECL_TYPES: Dict[str, dict] = {
     "threshold_5000_communication": {"label": "Comunicazione superamento € 5.000", "short": "Com. 5k", "icon": "mail", "color": "#EF6C00"},
     "threshold_15000_communication": {"label": "Comunicazione superamento € 15.000", "short": "Com. 15k", "icon": "mail", "color": "#C62828"},
 }
-ROLE_LABEL = {"coach": "Coach", "dirigente": "Dirigente", "viewer": "Dirigente", "collaboratore": "Collaboratore", "athlete": "Atleta Pro"}
+ROLE_LABEL = {"coach": "Coach", "dirigente": "Dirigente", "viewer": "Dirigente", "collaboratore": "Collaboratore", "athlete": "Atleta Pro", "admin": "Admin"}
 
 
 async def _society_query(current_user: dict) -> dict:
@@ -135,6 +135,16 @@ async def _load_grouped(current_user: dict, year: Optional[int] = None, doc_type
         it = _serialize(d, k)
         items.append((it, d))
 
+    # 🆕 Anche chi ha SOLO quietanze (nessuna dichiarazione) compare, per il Fascicolo completo
+    rq = dict(q)
+    rq["document_type"] = {"$in": RECEIPT_TYPES}
+    async for r in db.signed_documents.find(rq, {"_id": 0, "id": 1, "signer_id": 1, "athlete_id": 1, "coach_id": 1, "dirigente_id": 1, "collaboratore_id": 1,
+                                                   "signer_name": 1, "athlete_name": 1, "coach_name": 1, "dirigente_name": 1, "collaboratore_name": 1, "year": 1, "signed_at": 1, "created_at": 1}):
+        if year and _year_of(r) != year:
+            continue
+        k = await key_for(r)
+        persons[k]["receipts_count"] = persons[k].get("receipts_count", 0) + 1
+
     years = sorted({it["year"] for it, _ in items if it["year"]}, reverse=True)
     selected = []
     for it, d in items:
@@ -149,7 +159,12 @@ async def _load_grouped(current_user: dict, year: Optional[int] = None, doc_type
         p["docs"].append(it)
         p["counts"][it["document_type"]] = p["counts"].get(it["document_type"], 0) + 1
 
-    out_persons = sorted([p for p in persons.values() if p["docs"]], key=lambda p: p["name"].lower())
+    out_persons = sorted(
+        [p for p in persons.values() if p["docs"] or (not doc_type and not person and p.get("receipts_count"))],
+        key=lambda p: p["name"].lower(),
+    )
+    for p in out_persons:
+        p.setdefault("receipts_count", 0)
     type_counts = {t: sum(1 for it, _ in selected if it["document_type"] == t) for t in DECL_TYPES}
     return out_persons, selected, years, type_counts
 
@@ -196,6 +211,63 @@ async def _build_zip(selected: List[tuple], persons_by_key: Dict[str, dict], cur
 
 def _zip_name(year: Optional[int], doc_type: Optional[str], person: Optional[str]) -> str:
     return "dichiarazioni" + (f"_{year}" if year else "") + (f"_{_safe(DECL_TYPES.get(doc_type, {}).get('short', doc_type))}" if doc_type else "") + ("_persona" if person else "") + ".zip"
+
+
+@router.get("/admin/declarations/fascicolo/zip")
+async def admin_person_fascicolo_zip(person: str, year: Optional[int] = None, current_user=Depends(get_current_user)):
+    """🆕 Fascicolo completo di UNA persona: quietanze mensili firmate + tutte le
+    dichiarazioni (pregresso, previdenza, soglie), in un unico ZIP.
+    `person` = chiave persona restituita da /admin/declarations/archive (un id della persona)."""
+    _require_admin(current_user)
+    ids = await _person_ids(person)
+    if not ids:
+        raise HTTPException(status_code=404, detail="Persona non trovata")
+
+    # Nome persona (da users/athletes)
+    name = None
+    u = await db.users.find_one({"id": {"$in": ids}}, {"_id": 0, "full_name": 1, "first_name": 1, "last_name": 1})
+    a = await db.athletes.find_one({"id": {"$in": ids}}, {"_id": 0, "full_name": 1, "first_name": 1, "last_name": 1})
+    for src in (a, u):
+        if src:
+            name = src.get("full_name") or f"{src.get('first_name', '')} {src.get('last_name', '')}".strip()
+            if name:
+                break
+    folder = _safe(name or "Persona")
+
+    id_q = {"$or": [{k: {"$in": ids}} for k in ("signer_id", "athlete_id", "coach_id", "dirigente_id", "collaboratore_id")]}
+    proj = {"_id": 0, "pdf_base64": 0, "signature_base64": 0, "signature": 0, "consent_data": 0, "pdf_content": 0}
+    all_types = list(DECL_TYPES.keys()) + RECEIPT_TYPES
+    docs = [d async for d in db.signed_documents.find({**id_q, "document_type": {"$in": all_types}}, proj).sort("signed_at", -1)]
+    if year:
+        docs = [d for d in docs if _year_of(d) == year]
+    if not docs:
+        raise HTTPException(status_code=404, detail="Nessun documento firmato per questa persona")
+
+    buf = io.BytesIO()
+    missing, n_receipts, n_decl = [], 0, 0
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for d in docs:
+            content = await _fetch_pdf_bytes(d.get("id"), current_user)
+            dt = d.get("document_type")
+            if dt in RECEIPT_TYPES:
+                y, m = _to_int(d.get("year")) or _year_of(d) or 0, _to_int(d.get("month")) or 0
+                label = f"{folder}/Quietanze/{y}-{m:02d}_{_safe(MONTH_NAMES_IT[m] if 0 < m < 13 else 'mese')}_{_safe((d.get('id') or '')[:8])}.pdf"
+                n_receipts += 1
+            else:
+                short = _safe(DECL_TYPES.get(dt, {}).get("short") or dt)
+                ver = d.get("version_number")
+                label = f"{folder}/Dichiarazioni/{short}_{_year_of(d) or 'xxxx'}{f'_v{ver}' if ver and int(ver) > 1 else ''}_{_safe((d.get('id') or '')[:8])}.pdf"
+                n_decl += 1
+            if content:
+                zf.writestr(label, content)
+            else:
+                missing.append(label)
+        zf.writestr(f"{folder}/_INDICE.txt",
+                    f"Fascicolo {name or ''}{f' — anno {year}' if year else ''}\nQuietanze firmate: {n_receipts}\nDichiarazioni: {n_decl}\nGenerato: {datetime.utcnow().strftime('%d/%m/%Y %H:%M')} UTC\n"
+                    + ("\nPDF non disponibili:\n" + "\n".join(missing) if missing else ""))
+    buf.seek(0)
+    fname = f"fascicolo_{folder}{f'_{year}' if year else ''}.zip"
+    return StreamingResponse(buf, media_type="application/zip", headers={"Content-Disposition": f'attachment; filename="{fname}"'})
 
 
 @router.get("/admin/declarations/archive/zip")

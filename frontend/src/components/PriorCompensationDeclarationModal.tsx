@@ -61,15 +61,17 @@ export default function PriorCompensationDeclarationModal({
 }: Props) {
   const signatureRef = useRef<SignaturePadInlineRef>(null);
   const [amountStr, setAmountStr] = useState(
-    isVariation && currentAmount != null ? String(currentAmount).replace('.', ',') : ''
+    isVariation ? String(currentAmount ?? 0).replace('.', ',') : '0'
   );
   const [confirmChecked, setConfirmChecked] = useState(false);
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  // Ad ogni apertura: reset campi (precompila l'importo attuale se è una variazione)
+  // Ad ogni apertura: reset campi (precompila l'importo attuale se è una variazione).
+  // 🐛 Fix "0 non accettato": in variazione con importo nullo il campo restava VUOTO e il
+  //    placeholder "0,00" sembrava un valore inserito → bottone grigio. Ora precompiliamo "0".
   useEffect(() => {
     if (!visible) return;
-    setAmountStr(isVariation && currentAmount != null ? String(currentAmount).replace('.', ',') : '');
+    setAmountStr(isVariation ? String(currentAmount ?? 0).replace('.', ',') : '0');
     setConfirmChecked(false);
     setSignatureData(null);
   }, [visible, isVariation, currentAmount]);
@@ -88,8 +90,9 @@ export default function PriorCompensationDeclarationModal({
     return today;
   })();
 
-  const parsedAmount = parseFloat((amountStr || '').replace(',', '.'));
-  const isAmountValid = amountStr !== '' && !isNaN(parsedAmount) && parsedAmount >= 0;
+  // Campo vuoto = 0 (il suggerimento dice "Inserisci 0 se non hai percepito...")
+  const parsedAmount = amountStr.trim() === '' ? 0 : parseFloat(amountStr.replace(',', '.'));
+  const isAmountValid = !isNaN(parsedAmount) && parsedAmount >= 0;
   const canSubmit = isAmountValid && confirmChecked && !!signatureData && !submitting;
 
   const showAlert = (title: string, msg: string) => {

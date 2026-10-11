@@ -58,6 +58,7 @@ export default function SwitchAccountButton() {
         : newRole === 'athlete' ? '/athlete'
         : newRole === 'dirigente' || newRole === 'viewer' ? '/dirigente'
         : newRole === 'parent' ? '/parent'
+        : newRole === 'coordinatore' ? '/coordinatore'
         : '/';
       router.replace(target);
     } catch (e: any) {
@@ -74,6 +75,8 @@ export default function SwitchAccountButton() {
     ? { bg: '#E0F7FA', border: '#00838F', text: '#00838F', icon: 'briefcase' as const }
     : linked.role === 'parent'
     ? { bg: '#F3E5F5', border: '#7B1FA2', text: '#7B1FA2', icon: 'people' as const }
+    : linked.role === 'coordinatore'
+    ? { bg: '#FFF8E1', border: '#F9A825', text: '#F57F17', icon: 'school' as const }
     : { bg: '#FFF3E0', border: '#E65100', text: '#E65100', icon: 'person' as const };
 
   return (

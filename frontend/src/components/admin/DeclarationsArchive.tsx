@@ -55,7 +55,7 @@ type Doc = {
   year: number | null; month?: number | null; amount: number | null; version_number?: number | null; pension_status?: string | null;
   signed_at?: string | null; pdf_filename?: string | null;
 };
-type Person = { key: string; name: string; roles: string[]; role_label: string; agreement_accepted_at?: string | null; monthly_compensation: number; docs: Doc[]; counts: Record<string, number> };
+type Person = { key: string; name: string; roles: string[]; role_label: string; agreement_accepted_at?: string | null; monthly_compensation: number; docs: Doc[]; counts: Record<string, number>; receipts_count?: number };
 type TypeMeta = { key: string; label: string; short: string; icon: string; color: string; count: number };
 
 export default function DeclarationsArchive() {
@@ -94,8 +94,23 @@ export default function DeclarationsArchive() {
   const typeMeta = (k: string) => types.find((t) => t.key === k);
   const visible = persons
     .map((p) => ({ ...p, docs: docType ? p.docs.filter((d) => d.document_type === docType) : p.docs }))
-    .filter((p) => p.docs.length > 0);
+    .filter((p) => p.docs.length > 0 || (!docType && (p.receipts_count || 0) > 0));
   const totalDocs = visible.reduce((s, p) => s + p.docs.length, 0);
+
+  // 🆕 Fascicolo completo: quietanze + dichiarazioni di una persona in un unico ZIP
+  const downloadFascicolo = async (person: Person) => {
+    const key = `fasc-${person.key}`;
+    try {
+      setBusy(key);
+      const params: any = { person: person.key };
+      if (year) params.year = year;
+      const res = await api.get('/admin/declarations/fascicolo/zip', { params, responseType: 'blob', timeout: 180000 });
+      await saveBlob(res.data, `fascicolo_${person.name.replace(/\s+/g, '_')}${year ? `_${year}` : ''}.zip`, 'application/zip');
+    } catch (e: any) {
+      const d = e?.response?.data?.detail;
+      showAlert('Errore', typeof d === 'string' ? d : 'Impossibile generare il fascicolo.');
+    } finally { setBusy(null); }
+  };
 
   const openPdf = async (d: Doc) => {
     try {
@@ -168,6 +183,7 @@ export default function DeclarationsArchive() {
         <Text style={styles.infoText}>
           Tutte le <Text style={{ fontWeight: '700' }}>dichiarazioni firmate</Text> da chi percepisce compensi (Atleti 18+ Pro, coach, dirigenti, collaboratori):
           compensi pregressi / da terzi, posizione previdenziale, superamento soglie. Una cartella per persona nello ZIP da consegnare al commercialista o al consulente del lavoro.
+          Con <Text style={{ fontWeight: '700' }}>Fascicolo</Text> scarichi quietanze + dichiarazioni di una persona in un unico file.
         </Text>
       </View>
 
@@ -198,10 +214,10 @@ export default function DeclarationsArchive() {
         <ActivityIndicator size="large" color="#2E7D32" style={{ marginTop: 30 }} />
       ) : (
         <>
-          {totalDocs > 0 && (
+          {(totalDocs > 0 || visible.length > 0) && (
             <View style={styles.topBar}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.topTitle}>{totalDocs} dichiarazioni · {visible.length} persone</Text>
+                <Text style={styles.topTitle}>{totalDocs} dichiarazioni · {visible.length} person{visible.length === 1 ? 'a' : 'e'}</Text>
                 <Text style={styles.topSub}>{year ? `Anno ${year}` : 'Tutti gli anni'}{docType ? ` · ${typeMeta(docType)?.label}` : ''}</Text>
               </View>
               <TouchableOpacity style={styles.zipBtn} onPress={() => downloadZip()} disabled={!!busy} testID="decl-zip-all">
@@ -231,18 +247,23 @@ export default function DeclarationsArchive() {
                   <View style={{ flex: 1, marginLeft: 6 }}>
                     <Text style={styles.personName}>{p.name}</Text>
                     <Text style={styles.personSub}>
-                      {p.role_label || 'Percettore compenso'} · {p.docs.length} document{p.docs.length === 1 ? 'o' : 'i'}
+                      {p.role_label || 'Percettore compenso'} · {p.docs.length} dichiarazion{p.docs.length === 1 ? 'e' : 'i'}
+                      {(p.receipts_count || 0) > 0 ? ` · ${p.receipts_count} quietanze` : ''}
                       {p.agreement_accepted_at ? ` · accordo accettato il ${fmtSigned(p.agreement_accepted_at).slice(0, 10)}` : ''}
                     </Text>
                   </View>
-                  <TouchableOpacity style={styles.zipBtnSmall} onPress={() => downloadZip(p)} disabled={!!busy} testID={`decl-zip-${p.key}`}>
-                    {busy === `zip-${p.key}` ? <ActivityIndicator color="#1B5E20" size="small" /> : <Ionicons name="archive-outline" size={16} color="#1B5E20" />}
-                    <Text style={styles.zipBtnSmallText}>ZIP</Text>
+                  <TouchableOpacity style={[styles.zipBtnSmall, styles.fascBtn]} onPress={() => downloadFascicolo(p)} disabled={!!busy} testID={`decl-fascicolo-${p.key}`}>
+                    {busy === `fasc-${p.key}` ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="briefcase" size={16} color="#fff" />}
+                    <Text style={[styles.zipBtnSmallText, { color: '#fff' }]}>Fascicolo</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.zipBtnSmall, { marginLeft: 6 }]} onPress={() => openSend(p)} disabled={!!busy} testID={`decl-mail-${p.key}`}>
+                  <TouchableOpacity style={[styles.zipBtnSmall, { marginLeft: 6 }]} onPress={() => openSend(p)} disabled={!!busy || p.docs.length === 0} testID={`decl-mail-${p.key}`}>
                     <Ionicons name="mail-outline" size={16} color="#1B5E20" />
                   </TouchableOpacity>
                 </TouchableOpacity>
+
+                {isOpen && p.docs.length === 0 && (
+                  <Text style={styles.noDeclText}>Nessuna dichiarazione firmata{year ? ` nel ${year}` : ''}: il fascicolo conterrà solo le quietanze.</Text>
+                )}
 
                 {isOpen && p.docs.map((d) => {
                   const tm = typeMeta(d.document_type);
@@ -343,6 +364,8 @@ const styles = StyleSheet.create({
   personSub: { fontSize: 12, color: '#777', marginTop: 2 },
   zipBtnSmall: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderColor: '#2E7D32', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 8, minHeight: 40 },
   zipBtnSmallText: { color: '#1B5E20', fontWeight: '700', fontSize: 12 },
+  fascBtn: { backgroundColor: '#1B5E20', borderColor: '#1B5E20' },
+  noDeclText: { fontSize: 12, color: '#777', fontStyle: 'italic', paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
   docRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
   typeBadge: { width: 34, height: 34, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   docTitle: { fontSize: 13, fontWeight: '600', color: '#333' },

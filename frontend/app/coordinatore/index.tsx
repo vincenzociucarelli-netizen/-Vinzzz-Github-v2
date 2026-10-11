@@ -13,6 +13,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import GuideButton from '../../src/components/GuideButton';
 import FirstLoginGuideHint from '../../src/components/FirstLoginGuideHint';
+import SwitchAccountButton from '../../src/components/SwitchAccountButton';
 
 interface PermItem {
   key: string;
@@ -113,6 +114,8 @@ export default function CoordinatorDashboard() {
         </TouchableOpacity>
       </View>
 
+      {/* 🆕 Dual-role: coordinatore con compenso → "Passa a Modalità Dirigente" */}
+      <SwitchAccountButton />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         {allowed.length === 0 ? (
           <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 32, alignItems: 'center' }}>

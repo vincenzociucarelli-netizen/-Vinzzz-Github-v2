@@ -581,15 +581,21 @@ export default function AdminDirigenteDetail() {
         isoEndDate = `${yyyy}-${mm}-${dd}`;
       }
       
-      await api.patch(`/users/${id}/compensation`, {
+      const res = await api.patch(`/users/${id}/compensation`, {
         monthly_compensation: parseFloat(monthlyCompensation.replace(',', '.')) || 0,
         contract_start_date: isoStartDate,
         contract_end_date: isoEndDate,
         assigned_teams: selectedTeamIds,
         assigned_venues: selectedVenueNames,
       });
-      showAlert('Successo', 'Compenso aggiornato con successo');
       setEditing(false);
+      // 🆕 Coordinatore: il compenso è stato assegnato al profilo Dirigente collegato → apriamo quello
+      if (res.data?.redirect_user_id && res.data.redirect_user_id !== id) {
+        showAlert('Compenso assegnato', res.data?.message || 'Compenso assegnato al profilo Dirigente collegato.');
+        router.replace(`/admin/dirigente/${res.data.redirect_user_id}` as any);
+        return;
+      }
+      showAlert('Successo', 'Compenso aggiornato con successo');
       await loadData();
     } catch (error: any) {
       showAlert('Errore', error.response?.data?.detail || 'Errore durante il salvataggio');
@@ -865,8 +871,42 @@ export default function AdminDirigenteDetail() {
         <View style={styles.photoSection}>
           <Text style={styles.photoName}>{dirigente.full_name}</Text>
           <Text style={styles.photoRole}>
-            {dirigente.role === 'admin' ? '👑 Amministratore' : '👔 Dirigente'}
+            {dirigente.role === 'admin' ? '👑 Amministratore' : dirigente.role === 'coordinatore' ? '🎓 Coordinatore' : '👔 Dirigente'}
           </Text>
+
+          {/* 🆕 Dual-role Coordinatore ↔ Dirigente (compenso gestito dal profilo Dirigente collegato) */}
+          {dirigente.role === 'coordinatore' && (dirigente as any).linked_dirigente_user_id && (
+            <TouchableOpacity
+              style={styles.linkedProfileBanner}
+              onPress={() => router.push(`/admin/dirigente/${(dirigente as any).linked_dirigente_user_id}` as any)}
+              testID="coord-linked-dirigente-btn"
+            >
+              <Ionicons name="briefcase" size={18} color="#00838F" />
+              <Text style={styles.linkedProfileText}>
+                Il compenso di questo coordinatore è gestito dal <Text style={{ fontWeight: '700' }}>profilo Dirigente collegato</Text>. Tocca per aprirlo.
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color="#00838F" />
+            </TouchableOpacity>
+          )}
+          {dirigente.role === 'coordinatore' && !(dirigente as any).linked_dirigente_user_id && (
+            <View style={[styles.linkedProfileBanner, { borderColor: '#F9A825', backgroundColor: '#FFF8E1' }]}>
+              <Ionicons name="information-circle" size={18} color="#F57F17" />
+              <Text style={[styles.linkedProfileText, { color: '#795548' }]}>
+                Salvando un compenso verrà creato un <Text style={{ fontWeight: '700' }}>profilo Dirigente collegato</Text> (stesso login): l'interessato accetterà e firmerà le quietanze con "Passa a Modalità Dirigente".
+              </Text>
+            </View>
+          )}
+          {(dirigente as any).linked_coordinatore_user_id && (
+            <TouchableOpacity
+              style={styles.linkedProfileBanner}
+              onPress={() => router.push(`/admin/dirigente/${(dirigente as any).linked_coordinatore_user_id}` as any)}
+              testID="dirigente-linked-coord-btn"
+            >
+              <Ionicons name="school" size={18} color="#00838F" />
+              <Text style={styles.linkedProfileText}>Profilo Dirigente collegato a un <Text style={{ fontWeight: '700' }}>Coordinatore</Text>. Tocca per aprire il profilo coordinatore.</Text>
+              <Ionicons name="chevron-forward" size={18} color="#00838F" />
+            </TouchableOpacity>
+          )}
           
           {/* Contact Buttons */}
           <View style={styles.contactButtons}>
@@ -2489,6 +2529,20 @@ const styles = StyleSheet.create({
     color: '#333',
     marginTop: 12,
   },
+  linkedProfileBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 10,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#00838F',
+    backgroundColor: '#E0F7FA',
+    minHeight: 48,
+  },
+  linkedProfileText: { flex: 1, fontSize: 12, color: '#006064', lineHeight: 17 },
+
   photoRole: {
     fontSize: 14,
     color: '#8E44AD',

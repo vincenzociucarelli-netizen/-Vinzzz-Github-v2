@@ -250,6 +250,15 @@ export default function StanzaBottoniScreen() {
           how: 'Apri per verificare gli atleti senza consenso foto.',
           route: '/admin/image-consents',
         },
+        {
+          key: 'consent_audit',
+          icon: 'finger-print',
+          color: '#2E7D32',
+          title: 'Consensi Privacy',
+          what: 'Audit trail dei consensi GDPR di utenti e atleti: chi ha accettato cosa, quando e da quale dispositivo.',
+          how: 'Apri per consultare e verificare lo storico dei consensi privacy.',
+          route: '/admin/settings/consent-audit',
+        },
       ],
     },
     {

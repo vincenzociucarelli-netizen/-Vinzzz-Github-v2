@@ -114,23 +114,7 @@ export default function SettingsIndex() {
           <Ionicons name="chevron-forward" size={24} color="#5856D6" />
         </TouchableOpacity>
 
-        {/* Card Consensi Privacy */}
-        <TouchableOpacity 
-          style={[styles.card, { borderColor: '#2E7D32', backgroundColor: '#E8F5E9' }]}
-          onPress={() => router.push('/admin/settings/consent-audit')}
-          data-testid="settings-consent-audit-btn"
-        >
-          <View style={[styles.iconContainer, { backgroundColor: '#2E7D32' }]}>
-            <Ionicons name="finger-print" size={32} color="#fff" />
-          </View>
-          <View style={styles.cardContent}>
-            <Text style={[styles.cardTitle, { color: '#2E7D32' }]}>Consensi Privacy</Text>
-            <Text style={styles.cardDescription}>
-              Audit trail dei consensi GDPR di utenti e atleti
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={24} color="#2E7D32" />
-        </TouchableOpacity>
+        {/* Consensi Privacy → spostato nella Stanza dei Bottoni (Archivi e Consensi) */}
 
         {/* Card Export Dati */}
         <TouchableOpacity 
@@ -142,9 +126,9 @@ export default function SettingsIndex() {
             <Ionicons name="download" size={32} color="#fff" />
           </View>
           <View style={styles.cardContent}>
-            <Text style={[styles.cardTitle, { color: '#00BCD4' }]}>Esporta Dati</Text>
+            <Text style={[styles.cardTitle, { color: '#00BCD4' }]}>Esporta Dati e Backup</Text>
             <Text style={styles.cardDescription}>
-              Scarica CSV di atleti, presenze, compensi e log
+              CSV di atleti, presenze, compensi e log · 🗄️ Backup completo (ZIP) da conservare
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color="#00BCD4" />
@@ -198,7 +182,7 @@ export default function SettingsIndex() {
           <View style={styles.cardContent}>
             <Text style={[styles.cardTitle, { color: '#C62828' }]}>Ripristino Backup</Text>
             <Text style={styles.cardDescription}>
-              Ripristina i dati da un file ZIP (solo Legale Rappresentante)
+              Ripristina i dati da un file ZIP (solo Legale Rappresentante). Il backup si crea da "Esporta Dati e Backup"
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color="#C62828" />
