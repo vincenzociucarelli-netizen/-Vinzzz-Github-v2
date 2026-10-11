@@ -209,6 +209,45 @@ export default function QuietanzePage() {
   const customReceipts = filteredReceipts.filter(r => r.is_custom);
   const pendingCustom = customReceipts.filter(r => !r.receipt_signed);
   const signedCustom = customReceipts.filter(r => r.receipt_signed);
+  // 🆕 Quietanze standard (importo = compenso mensile): prima non venivano mostrate
+  // nel riepilogo (es. collaboratore con Set 2026 firmata), ora elencate in sezioni dedicate.
+  const standardReceipts = filteredReceipts.filter(r => !r.is_custom);
+  const pendingStandard = standardReceipts.filter(r => !r.receipt_signed);
+  const signedStandard = standardReceipts.filter(r => r.receipt_signed);
+  const signedTotal = filteredReceipts.filter(r => r.receipt_signed).length;
+  const pendingTotal = filteredReceipts.length - signedTotal;
+
+  const renderStandardCard = (receipt: any, index: number, signed: boolean) => (
+    <View
+      key={`std-${signed ? 's' : 'p'}-${index}`}
+      style={[styles.receiptCard, styles.standardCard, signed ? styles.receiptSigned : styles.receiptPending]}
+      data-testid={`standard-receipt-${receipt.user_role}-${receipt.year}-${receipt.month}`}
+    >
+      <View style={styles.receiptHeader}>
+        <View style={[styles.roleBadge, { backgroundColor: getRoleColor(receipt.user_role) + '20' }]}>
+          <Text style={[styles.roleBadgeText, { color: getRoleColor(receipt.user_role) }]}>
+            {getRoleLabel(receipt.user_role)}
+          </Text>
+        </View>
+        <Text style={styles.receiptDate}>{MONTH_NAMES[receipt.month]} {receipt.year}</Text>
+      </View>
+      <View style={styles.standardRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.receiptName}>{receipt.user_name}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+            <Ionicons name={signed ? 'checkmark-circle' : 'time-outline'} size={13} color={signed ? '#4CAF50' : '#FF9800'} />
+            <Text style={{ fontSize: 12, color: signed ? '#4CAF50' : '#FF9800', fontWeight: '600' }}>
+              {signed ? 'Firmata' : 'In attesa di firma'}
+            </Text>
+          </View>
+        </View>
+        <Text style={[styles.amountValue, { color: signed ? '#2E7D32' : '#333' }]}>{formatCurrency(receipt.amount_gross)}</Text>
+        <TouchableOpacity style={styles.iconDeleteBtn} onPress={() => handleDelete(receipt)} data-testid="standard-receipt-delete">
+          <Ionicons name="trash-outline" size={18} color="#D32F2F" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -262,15 +301,15 @@ export default function QuietanzePage() {
               {/* Stats Cards */}
               <View style={styles.statsRow}>
                 <View style={[styles.statCard, { backgroundColor: '#FFF3E0' }]}>
-                  <Text style={[styles.statNumber, { color: '#E65100' }]}>{stats.custom_pending}</Text>
-                  <Text style={styles.statLabel}>Custom in attesa</Text>
+                  <Text style={[styles.statNumber, { color: '#E65100' }]}>{pendingTotal}</Text>
+                  <Text style={styles.statLabel}>In attesa{stats.custom_pending ? ` (${stats.custom_pending} custom)` : ''}</Text>
                 </View>
                 <View style={[styles.statCard, { backgroundColor: '#E8F5E9' }]}>
-                  <Text style={[styles.statNumber, { color: '#2E7D32' }]}>{stats.custom_signed}</Text>
-                  <Text style={styles.statLabel}>Custom firmate</Text>
+                  <Text style={[styles.statNumber, { color: '#2E7D32' }]}>{signedTotal}</Text>
+                  <Text style={styles.statLabel}>Firmate{stats.custom_signed ? ` (${stats.custom_signed} custom)` : ''}</Text>
                 </View>
                 <View style={[styles.statCard, { backgroundColor: '#E3F2FD' }]}>
-                  <Text style={[styles.statNumber, { color: '#1565C0' }]}>{stats.total}</Text>
+                  <Text style={[styles.statNumber, { color: '#1565C0' }]}>{filteredReceipts.length}</Text>
                   <Text style={styles.statLabel}>Totale</Text>
                 </View>
               </View>
@@ -423,11 +462,25 @@ export default function QuietanzePage() {
                 </View>
               )}
 
-              {customReceipts.length === 0 && (
+              {/* 🆕 Quietanze standard (coach, dirigenti, collaboratori, atleti pro) */}
+              {signedStandard.length > 0 && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>✅ Quietanze Standard Firmate ({signedStandard.length})</Text>
+                  {signedStandard.map((r, i) => renderStandardCard(r, i, true))}
+                </View>
+              )}
+              {pendingStandard.length > 0 && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>⏳ Quietanze Standard in Attesa ({pendingStandard.length})</Text>
+                  {pendingStandard.map((r, i) => renderStandardCard(r, i, false))}
+                </View>
+              )}
+
+              {filteredReceipts.length === 0 && (
                 <View style={styles.emptyState}>
                   <Ionicons name="document-text-outline" size={60} color="#ccc" />
-                  <Text style={styles.emptyStateText}>Nessuna quietanza personalizzata</Text>
-                  <Text style={styles.emptyStateSubtext}>Le quietanze con importo diverso dallo standard appariranno qui</Text>
+                  <Text style={styles.emptyStateText}>Nessuna quietanza</Text>
+                  <Text style={styles.emptyStateSubtext}>Le quietanze mensili di coach, dirigenti, collaboratori e atleti pro appariranno qui</Text>
                 </View>
               )}
             </>
@@ -700,6 +753,23 @@ const styles = StyleSheet.create({
   },
   receiptSigned: {
     borderLeftColor: '#4CAF50',
+  },
+  standardCard: {
+    padding: 12,
+  },
+  standardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 6,
+  },
+  iconDeleteBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFEBEE',
   },
   receiptHeader: {
     flexDirection: 'row',
