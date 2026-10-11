@@ -39835,6 +39835,7 @@ from routes.recurring_payments import router as recurring_payments_router  # �
 from routes.admin_notes import router as admin_notes_router  # 🆕 19/07/2026 (Bacheca note admin)
 from routes.payments_history import router as payments_history_router  # 🆕 01/08/2026 (Storico pagamenti admin)
 from routes.data_hygiene import router as data_hygiene_router  # 🆕 Igiene Dati admin
+from routes.declarations_archive import router as declarations_archive_router  # 🆕 Archivio dichiarazioni (commercialista)
 from routes.pension_declarations import router as pension_declarations_router  # 🆕 Dichiarazione posizione previdenziale
 from routes.quietanze_archive import router as quietanze_archive_router  # 🆕 Archivio quietanze firmate (admin)
 from routes.worker_timeline import router as worker_timeline_router  # 🆕 Cronologia coach/dirigenti/collaboratori
@@ -39855,6 +39856,7 @@ api_router.include_router(recurring_payments_router)  # 🆕 27/07/2026 (Piani r
 api_router.include_router(admin_notes_router)  # 🆕 19/07/2026 (Bacheca note admin)
 api_router.include_router(payments_history_router)  # 🆕 01/08/2026 (Storico pagamenti admin)
 api_router.include_router(data_hygiene_router)  # 🆕 Igiene Dati admin
+api_router.include_router(declarations_archive_router)  # 🆕 Archivio dichiarazioni
 
 
 @api_router.post("/admin/compensations/reset-coach-year")

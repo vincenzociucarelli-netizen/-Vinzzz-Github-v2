@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/services/api';
 import QuietanzeArchive from '../../src/components/admin/QuietanzeArchive';
+import DeclarationsArchive from '../../src/components/admin/DeclarationsArchive';
 
 const MONTH_NAMES = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
 
@@ -33,7 +34,7 @@ const getRoleColor = (role: string) => {
 
 export default function QuietanzePage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'report' | 'gestione'>('gestione');
+  const [activeTab, setActiveTab] = useState<'report' | 'gestione' | 'dichiarazioni'>('gestione');
   const [loading, setLoading] = useState(true);
   const [receipts, setReceipts] = useState<any[]>([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, custom_pending: 0, custom_signed: 0 });
@@ -287,6 +288,15 @@ export default function QuietanzePage() {
             Archivio Firmate
           </Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'dichiarazioni' && styles.tabActive]}
+          onPress={() => setActiveTab('dichiarazioni')}
+          testID="tab-dichiarazioni"
+        >
+          <Text style={[styles.tabText, activeTab === 'dichiarazioni' && styles.tabTextActive]}>
+            Dichiarazioni
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {activeTab === 'gestione' ? (
@@ -486,6 +496,9 @@ export default function QuietanzePage() {
             </>
           )}
         </ScrollView>
+      ) : activeTab === 'dichiarazioni' ? (
+        // 🆕 Archivio di tutte le dichiarazioni firmate (pregresso, previdenza, soglie) per il commercialista
+        <DeclarationsArchive />
       ) : (
         // 🆕 Archivio di tutte le quietanze firmate, mese per mese (PDF singolo + ZIP)
         <QuietanzeArchive />
