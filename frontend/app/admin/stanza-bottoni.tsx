@@ -174,6 +174,15 @@ export default function StanzaBottoniScreen() {
       title: 'Contabilità e Compensi',
       items: [
         {
+          key: 'income_summary',
+          icon: 'pie-chart',
+          color: '#2E7D32',
+          title: 'Riepilogo Incassi',
+          what: 'Totali effettivamente incassati raggruppati per metodo di pagamento (contanti, bonifico, Stripe, POS…), con dettaglio mese per mese.',
+          how: 'Apri, scegli il periodo (mese, anno o date personalizzate) e leggi i totali per metodo.',
+          route: '/admin/income-summary',
+        },
+        {
           key: 'refunds_report',
           icon: 'arrow-undo',
           color: '#6A1B9A',
@@ -247,8 +256,17 @@ export default function StanzaBottoniScreen() {
       title: 'Manutenzione Dati',
       items: [
         {
-          key: 'payments_hygiene',
+          key: 'data_hygiene',
           icon: 'medkit',
+          color: '#C62828',
+          title: 'Igiene Dati',
+          what: 'Trova le anomalie negli anagrafici: codice fiscale mancante o duplicato, atleti senza squadra, minorenni senza genitore, collegamenti orfani, possibili doppioni.',
+          how: 'Apri il pannello, espandi una categoria e tocca l\'atleta per correggere il dato nella sua scheda.',
+          route: '/admin/data-hygiene',
+        },
+        {
+          key: 'payments_hygiene',
+          icon: 'cash',
           color: '#AD1457',
           title: 'Igiene Pagamenti',
           what: 'Individua anomalie nei pagamenti (importi, rate, duplicati).',

@@ -302,31 +302,31 @@ async def declare_my_pension_position(
     except Exception as e:
         logging.warning(f"[pension_declaration] PDF non generato: {e}")
 
-    # Notifica in-app agli admin della società (bacheca notifiche admin)
+    # Notifica in-app alla bacheca admin della società (UNA sola per società:
+    # la lista notifiche admin è filtrata per society_id, non per singolo admin)
     try:
         if subj["society_id"]:
-            admins = db.users.find({"role": UserRole.ADMIN, "society_id": subj["society_id"]}, {"_id": 0, "id": 1})
-            async for adm in admins:
-                await db.admin_notifications.insert_one({
-                    "id": str(uuid.uuid4()),
-                    "society_id": subj["society_id"],
-                    "admin_id": adm["id"],
-                    "type": "pension_declaration",
-                    "title": "Nuova dichiarazione previdenziale",
-                    "message": f"{subj['full_name']} ha sottoscritto la dichiarazione della posizione previdenziale "
-                               f"(v.{doc['version_number']} — {opt['short']}). Disponibile per il consulente del lavoro.",
-                    "read": False,
-                    "created_at": now.isoformat(),
-                    "entity_type": "pension_declaration",
-                    "entity_id": doc["id"],
-                    "data": {
-                        "declaration_id": doc["id"],
-                        "user_id": subj["user_id"],
-                        "athlete_id": subj["athlete_id"],
-                        "status": doc["status"],
-                        "route": "/admin/pension-declarations",
-                    },
-                })
+            first_admin = await db.users.find_one({"role": UserRole.ADMIN, "society_id": subj["society_id"]}, {"_id": 0, "id": 1})
+            await db.admin_notifications.insert_one({
+                "id": str(uuid.uuid4()),
+                "society_id": subj["society_id"],
+                "admin_id": (first_admin or {}).get("id"),
+                "type": "pension_declaration",
+                "title": "Nuova dichiarazione previdenziale",
+                "message": f"{subj['full_name']} ha sottoscritto la dichiarazione della posizione previdenziale "
+                           f"(v.{doc['version_number']} — {opt['short']}). Disponibile per il consulente del lavoro.",
+                "read": False,
+                "created_at": now.isoformat(),
+                "entity_type": "pension_declaration",
+                "entity_id": doc["id"],
+                "data": {
+                    "declaration_id": doc["id"],
+                    "user_id": subj["user_id"],
+                    "athlete_id": subj["athlete_id"],
+                    "status": doc["status"],
+                    "route": "/admin/pension-declarations",
+                },
+            })
     except Exception as e:  # la notifica non deve mai bloccare la firma
         logging.warning(f"[pension_declaration] notify admins failed: {e}")
 
@@ -367,6 +367,27 @@ async def admin_get_pension_declarations(user_id: str, current_user=Depends(get_
         "history": [_public(d, with_signature=True) for d in history],
         "texts": PENSION_TEXTS,
     }
+
+
+async def _dedupe_pension_notifications(sid: Optional[str]) -> int:
+    """🧹 Rimuove le notifiche duplicate create (una per admin) prima del fix:
+    per ogni dichiarazione resta una sola notifica per società."""
+    q: dict = {"type": "pension_declaration"}
+    if sid:
+        q["society_id"] = sid
+    seen = set()
+    to_delete = []
+    async for n in db.admin_notifications.find(q, {"_id": 0, "id": 1, "entity_id": 1, "society_id": 1, "created_at": 1}).sort("created_at", 1):
+        key = (n.get("society_id"), n.get("entity_id"))
+        if not n.get("entity_id"):
+            continue
+        if key in seen:
+            to_delete.append(n["id"])
+        else:
+            seen.add(key)
+    if to_delete:
+        await db.admin_notifications.delete_many({"id": {"$in": to_delete}})
+    return len(to_delete)
 
 
 async def _backfill_missing_documents(sid: Optional[str]) -> int:
@@ -494,6 +515,7 @@ async def admin_pension_declarations_summary(current_user=Depends(get_current_us
     # 🆕 backfill silenzioso dei PDF mancanti (idempotente, veloce se non c'è nulla da fare)
     try:
         await _backfill_missing_documents(sid)
+        await _dedupe_pension_notifications(sid)
     except Exception as e:
         logging.warning(f"[pension summary] backfill: {e}")
 

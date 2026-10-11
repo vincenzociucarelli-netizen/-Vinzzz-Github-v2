@@ -1701,6 +1701,36 @@ async def find_existing_athlete_by_fiscal_code(fiscal_code: str, society_id: str
     return existing
 
 
+async def get_trial_block_reason(athlete: dict) -> Optional[str]:
+    """🐛 Fix prove oltre il limite: ritorna il motivo di blocco se l'atleta è in
+    PROVA e la prova è TERMINATA (giorni scaduti OPPURE sedute massime raggiunte).
+    Prima veniva controllata solo la scadenza in giorni (e solo se la privacy non
+    era accettata), quindi gli atleti in prova accumulavano presenze oltre il massimo."""
+    status = athlete.get("status")
+    if not (bool(athlete.get("is_trial")) or status in ("trial", "pending_trial")):
+        return None
+    if status in ("active", "approved"):
+        return None  # già iscritto/attivo: il flag is_trial è residuo
+    trial_start = athlete.get("trial_start_date")
+    if not trial_start:
+        return None  # prova non ancora iniziata: la prima presenza la avvia
+    _sid = athlete.get("society_id")
+    ss = await db.settings.find_one({"type": "society", "society_id": _sid}, {"_id": 0, "trial_max_sessions": 1}) if _sid else None
+    max_sessions = int((ss or {}).get("trial_max_sessions", 3) or 3)
+    sessions_count = int(athlete.get("trial_sessions_count", 0) or 0)
+    if sessions_count >= max_sessions:
+        return f"Periodo di prova terminato ({sessions_count}/{max_sessions} allenamenti) - iscrizione richiesta"
+    trial_end = athlete.get("trial_end_date")
+    if trial_end:
+        try:
+            end_dt = datetime.fromisoformat(str(trial_end)) if isinstance(trial_end, str) else trial_end
+            if datetime.utcnow() > end_dt.replace(tzinfo=None):
+                return "Periodo di prova terminato (giorni scaduti) - iscrizione richiesta"
+        except Exception:
+            pass
+    return None
+
+
 async def check_athlete_status(athlete_id: str):
     """Check if athlete can attend (certificate valid, payments up to date, privacy accepted)"""
     athlete = await db.athletes.find_one({"id": athlete_id})
@@ -1711,26 +1741,10 @@ async def check_athlete_status(athlete_id: str):
     if athlete.get("is_withdrawn", False):
         return {"allowed": False, "reason": "⛔ ATLETA RITIRATO - Non più iscritto alla squadra", "warning": None}
     
-    # Check if trial period ended and privacy not accepted
-    is_trial = athlete.get("is_trial", False)
-    trial_start = athlete.get("trial_start_date")
-    trial_end = athlete.get("trial_end_date")
-    trial_active = False
-    
-    if is_trial:
-        if trial_start and trial_end:
-            try:
-                end_dt = datetime.fromisoformat(str(trial_end)) if isinstance(trial_end, str) else trial_end
-                trial_active = datetime.utcnow() <= end_dt
-            except:
-                trial_active = False
-        elif not trial_start:
-            # Not yet started (waiting first attendance)
-            trial_active = True
-    
-    # If trial expired, check normal rules
-    if is_trial and trial_start and not trial_active and not athlete.get("privacy_accepted"):
-        return {"allowed": False, "reason": "Periodo di prova terminato - iscrizione richiesta", "warning": None}
+    # Prova terminata (giorni O sedute massime) → blocco finché non si iscrive
+    trial_block = await get_trial_block_reason(athlete)
+    if trial_block:
+        return {"allowed": False, "reason": trial_block, "warning": None}
     
     # Check society settings for certificate blocking — 🐛 08/07/2026 fix multi-tenancy
     _asid = athlete.get("society_id")
@@ -9431,6 +9445,10 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
             return None
         return today.year - d.year - ((today.month, today.day) < (d.month, d.day))
 
+    # 🆕 limite prove della società (per evidenziare "PROVA SCADUTA" nel roster presenze)
+    _ss_trial = await db.settings.find_one({"type": "society", "society_id": society_id}, {"_id": 0, "trial_max_sessions": 1}) if society_id else None
+    _trial_max_sessions = (_ss_trial or {}).get("trial_max_sessions", 3) or 3
+
     out = []
     for a in aths:
         dob = _to_date(a.get("date_of_birth"))
@@ -9456,6 +9474,7 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
             "status": a.get("status", "pending"),
             "is_trial": bool(a.get("is_trial")) or a.get("status") == "trial",
             "trial_sessions_count": a.get("trial_sessions_count", 0),
+            "trial_max_sessions": _trial_max_sessions,
             "cert_label": cert_label,
             "cert_expiry": cert_expiry,
             "cert_valid": cert_valid,
@@ -18136,14 +18155,15 @@ async def check_attendance(attendance_data: AttendanceCreate, request: Request, 
     # Allow pending_trial athletes: first QR scan starts their trial
     if athlete_status == "pending_trial":
         # Start the trial period
-        trial_days = 14  # default trial period
+        trial_days = 7  # default trial period
         trial_sessions = 3  # default max sessions
         
         # Get society settings for trial config — 🐛 08/07/2026 fix multi-tenancy
         society_settings = await db.settings.find_one({"type": "society", "society_id": athlete.get("society_id")}) if athlete.get("society_id") else await db.settings.find_one({"type": "society"})
         if society_settings:
-            trial_days = society_settings.get("trial_days", 14)
-            trial_sessions = society_settings.get("trial_max_sessions", 3)
+            # 🐛 fix: la chiave corretta è trial_max_days (prima leggeva "trial_days" → sempre 14gg)
+            trial_days = society_settings.get("trial_max_days", 7) or 7
+            trial_sessions = society_settings.get("trial_max_sessions", 3) or 3
         
         trial_start = datetime.now()
         trial_end = trial_start + timedelta(days=trial_days)
@@ -18524,6 +18544,11 @@ async def add_manual_attendance(athlete_id: str, data: ManualAttendanceCreate, r
         assigned = current_user.get("assigned_teams", []) or []
         if team_id not in assigned:
             raise HTTPException(status_code=403, detail="Non sei allenatore di questa squadra")
+
+    # 🐛 Prova terminata (giorni o sedute massime): non si possono aggiungere altre presenze
+    _trial_block = await get_trial_block_reason(athlete)
+    if _trial_block:
+        raise HTTPException(status_code=400, detail=f"{_trial_block}. L'atleta deve iscriversi (o lasciare) prima di registrare nuove presenze.")
 
     # Parse data (obbligatoria) e ora (opzionale)
     try:
@@ -19014,6 +19039,13 @@ async def add_bulk_attendance(team_id: str, data: BulkAttendanceCreate, request:
             continue
 
         athlete_name = athlete.get("full_name") or f"{athlete.get('first_name','')} {athlete.get('last_name','')}".strip()
+
+        # 🐛 Prova terminata (giorni o sedute massime): salta l'atleta invece di
+        # accumulare presenze oltre il limite (es. 7/6).
+        _trial_block = await get_trial_block_reason(athlete)
+        if _trial_block:
+            skipped.append({"athlete_id": aid, "athlete_name": athlete_name, "reason": "prova terminata (iscrizione richiesta)"})
+            continue
 
         # Evita duplicati stessa data/squadra/atleta
         dup = await db.attendances.find_one({"athlete_id": aid, "team_id": team_id, "date": data.date})
@@ -39784,6 +39816,7 @@ from routes.stripe_payments import router as stripe_payments_router  # 🆕 16/0
 from routes.recurring_payments import router as recurring_payments_router  # 🆕 27/07/2026 (Piani ricorrenti Stripe off-session)
 from routes.admin_notes import router as admin_notes_router  # 🆕 19/07/2026 (Bacheca note admin)
 from routes.payments_history import router as payments_history_router  # 🆕 01/08/2026 (Storico pagamenti admin)
+from routes.data_hygiene import router as data_hygiene_router  # 🆕 Igiene Dati admin
 from routes.pension_declarations import router as pension_declarations_router  # 🆕 Dichiarazione posizione previdenziale
 from routes.quietanze_archive import router as quietanze_archive_router  # 🆕 Archivio quietanze firmate (admin)
 from routes.worker_timeline import router as worker_timeline_router  # 🆕 Cronologia coach/dirigenti/collaboratori
@@ -39803,6 +39836,7 @@ api_router.include_router(stripe_payments_router)  # 🆕 16/07/2026 (Stripe che
 api_router.include_router(recurring_payments_router)  # 🆕 27/07/2026 (Piani ricorrenti)
 api_router.include_router(admin_notes_router)  # 🆕 19/07/2026 (Bacheca note admin)
 api_router.include_router(payments_history_router)  # 🆕 01/08/2026 (Storico pagamenti admin)
+api_router.include_router(data_hygiene_router)  # 🆕 Igiene Dati admin
 
 
 @api_router.post("/admin/compensations/reset-coach-year")

@@ -223,6 +223,110 @@ async def get_payments_history(
 
 
 
+@router.get("/admin/payments/income-summary")
+async def get_income_summary(
+    date_from: Optional[str] = Query(None, description="YYYY-MM-DD (inclusivo)"),
+    date_to: Optional[str] = Query(None, description="YYYY-MM-DD (inclusivo)"),
+    current_user=Depends(get_current_user),
+):
+    """🆕 Riepilogo Incassi: totali INCASSATI raggruppati per metodo di pagamento
+    (Contanti, Bonifico, Stripe, POS, …) con dettaglio mensile. Considera solo gli
+    importi effettivamente pagati (pagati/parziali), al netto dei rimborsi."""
+    if current_user.get("role") not in ("admin", "viewer", "coordinatore"):
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    society_id = current_user.get("society_id")
+    if not society_id:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+
+    athlete_ids = [a["id"] for a in await db.athletes.find({"society_id": society_id}, {"id": 1}).to_list(20000)]
+    query = {"$or": [{"society_id": society_id}, {"athlete_id": {"$in": athlete_ids}}]}
+    payments = await db.payments.find(query).to_list(100000)
+
+    d_from = _to_date(date_from)
+    d_to = _to_date(date_to)
+
+    by_method: dict = {}
+    by_month: dict = {}
+    total_paid = 0.0
+    total_refunded = 0.0
+    count = 0
+
+    for p in payments:
+        st = _compute_status(p)
+        if st not in ("paid", "partial", "refunded"):
+            continue
+        eff_raw = p.get("paid_date") or p.get("registration_date") or p.get("created_at")
+        eff_date = _to_date(eff_raw)
+        if d_from and (eff_date is None or eff_date < d_from):
+            continue
+        if d_to and (eff_date is None or eff_date > d_to):
+            continue
+
+        amount = float(p.get("amount", 0) or 0)
+        paid_amount = float(p.get("paid_amount") or (amount if p.get("paid") else 0) or 0)
+        refund_amount = float(p.get("refund_amount") or 0)
+        if st == "refunded" and paid_amount <= 0:
+            paid_amount = amount
+        if paid_amount <= 0 and refund_amount <= 0:
+            continue
+
+        label = _method_display(p.get("payment_method") or "")
+        group = _method_group(p.get("payment_method") or "")
+        m = by_method.setdefault(label, {"method": label, "group": group, "count": 0, "paid": 0.0, "refunded": 0.0})
+        m["count"] += 1
+        m["paid"] += paid_amount
+        m["refunded"] += refund_amount
+
+        month_key = eff_date.strftime("%Y-%m") if eff_date else "—"
+        mo = by_month.setdefault(month_key, {"month": month_key, "count": 0, "paid": 0.0, "refunded": 0.0, "methods": {}})
+        mo["count"] += 1
+        mo["paid"] += paid_amount
+        mo["refunded"] += refund_amount
+        mo["methods"][label] = mo["methods"].get(label, 0.0) + paid_amount - refund_amount
+
+        total_paid += paid_amount
+        total_refunded += refund_amount
+        count += 1
+
+    methods = []
+    net_total = total_paid - total_refunded
+    for m in by_method.values():
+        net = m["paid"] - m["refunded"]
+        methods.append({
+            "method": m["method"],
+            "group": m["group"],
+            "count": m["count"],
+            "paid": round(m["paid"], 2),
+            "refunded": round(m["refunded"], 2),
+            "net": round(net, 2),
+            "share": round((net / net_total * 100) if net_total > 0 else 0, 1),
+        })
+    methods.sort(key=lambda x: x["net"], reverse=True)
+
+    months = []
+    for mo in sorted(by_month.values(), key=lambda x: x["month"], reverse=True):
+        months.append({
+            "month": mo["month"],
+            "count": mo["count"],
+            "paid": round(mo["paid"], 2),
+            "refunded": round(mo["refunded"], 2),
+            "net": round(mo["paid"] - mo["refunded"], 2),
+            "methods": [{"method": k, "net": round(v, 2)} for k, v in sorted(mo["methods"].items(), key=lambda kv: kv[1], reverse=True)],
+        })
+
+    return {
+        "totals": {
+            "count": count,
+            "total_paid": round(total_paid, 2),
+            "total_refunded": round(total_refunded, 2),
+            "net": round(net_total, 2),
+        },
+        "methods": methods,
+        "months": months,
+    }
+
+
 @router.get("/admin/payments/refunds")
 async def get_refunds_report(
     date_from: Optional[str] = Query(None, description="YYYY-MM-DD (inclusivo)"),

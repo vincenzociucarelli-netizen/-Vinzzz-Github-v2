@@ -14,6 +14,7 @@ interface RosterAthlete {
   status: string;
   is_trial: boolean;
   trial_sessions_count: number;
+  trial_max_sessions?: number;
 }
 
 export default function AdminTeamAttendance() {
@@ -207,7 +208,13 @@ export default function AdminTeamAttendance() {
                   <View style={{ flex: 1, marginLeft: 12 }}>
                     <Text style={styles.athleteName}>{a.full_name}</Text>
                     {a.is_trial && (
-                      <Text style={styles.trialBadge}>🔵 In prova · {a.trial_sessions_count || 0} allenamenti</Text>
+                      (a.trial_sessions_count || 0) >= (a.trial_max_sessions || 3) ? (
+                        <Text style={[styles.trialBadge, { color: '#C62828', fontWeight: '700' }]}>
+                          🔴 PROVA SCADUTA · {a.trial_sessions_count || 0}/{a.trial_max_sessions || 3} allenamenti — serve certificato medico e iscrizione
+                        </Text>
+                      ) : (
+                        <Text style={styles.trialBadge}>🔵 In prova · {a.trial_sessions_count || 0}/{a.trial_max_sessions || 3} allenamenti</Text>
+                      )
                     )}
                   </View>
                 </TouchableOpacity>
