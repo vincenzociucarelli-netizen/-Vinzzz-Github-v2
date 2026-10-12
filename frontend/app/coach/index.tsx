@@ -34,6 +34,7 @@ import { OnboardingTutorial, COACH_STEPS } from '../../src/components/Onboarding
 import SocietyBranding from '../../src/components/SocietyBranding';
 import MiniSocietyLogo from '../../src/components/MiniSocietyLogo';
 import SwitchAccountButton from '../../src/components/SwitchAccountButton';
+import PrivacySignButton from '../../src/components/PrivacySignButton';
 import ActivityStartBanners from '../../src/components/ActivityStartBanners';
 import { formatRomeTime } from '../../src/utils/datetime';
 
@@ -1494,6 +1495,8 @@ export default function CoachScreen() {  const router = useRouter();
 
       {/* 🆕 Switch dual-role: Coach ↔ Atleta (visibile solo se collegato) */}
       <SwitchAccountButton />
+      {/* 🆕 Pulsante PRIVACY sempre visibile (firma / gestione consensi) */}
+      <PrivacySignButton profileRoute="/coach/profile" />
 
       {/* 🚫 26/06/2026 — Banner "Vai a Compensi Sportivi" RIMOSSO: duplicava il bottone
           "Compensi" già presente in alto nella tab navigation. */}

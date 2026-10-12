@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect , useRef} from 'react';
 import CoachTabBar from '../../src/components/coach/CoachTabBar';
 import {
   View,
@@ -15,7 +15,7 @@ import {
   KeyboardAvoidingView,
   Modal,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
@@ -109,6 +109,32 @@ export default function CoachProfile() {
   // 🆕 26/06/2026 — Se l'utente è dual-role (anche atleta), TUTTA l'anagrafica
   // diventa un link verso /athlete/profile, per evitare duplicazioni e disallineamenti.
   const [isDualRoleAthlete, setIsDualRoleAthlete] = useState<boolean | null>(null);
+
+  // 🆕 Arrivo dal pulsante "FIRMA LA PRIVACY" della dashboard (?sign_privacy=1):
+  // se la privacy non è firmata apriamo subito la firma GDPR (o la modifica dati se
+  // mancano campi obbligatori). Se è già firmata, apriamo la modifica per i consensi.
+  const { sign_privacy } = useLocalSearchParams<{ sign_privacy?: string }>();
+  const signPrivacyHandledRef = useRef(false);
+  useEffect(() => {
+    if (loading || sign_privacy !== '1' || signPrivacyHandledRef.current) return;
+    signPrivacyHandledRef.current = true;
+    if (privacyAccepted) {
+      setEditing(true);
+      return;
+    }
+    let complete = !!(editData.last_name?.trim() && editData.first_name?.trim() && editData.phone?.trim() && editData.fiscal_code?.trim());
+    const _country = (editData.country_of_birth || DEFAULT_COUNTRY || '').toUpperCase();
+    const _isIt = _country === 'ITALIA' || _country === 'ITALY' || _country === 'IT';
+    if (_isIt && !editData.province_of_birth?.trim()) complete = false;
+    if (complete) {
+      setShowPrivacyModal(true);
+    } else {
+      setEditing(true);
+      showAlert('Completa il profilo', 'Per firmare la privacy completa i campi obbligatori (Cognome, Nome, Telefono, Codice Fiscale) e premi Salva: ti verrà chiesta subito la firma.');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, sign_privacy, privacyAccepted]);
+
   useEffect(() => {
     api.get('/auth/me/dual-role-info')
       .then((res) => {

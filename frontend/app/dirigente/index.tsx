@@ -8,6 +8,7 @@ import GuideButton from '../../src/components/GuideButton';
 import FirstLoginGuideHint from '../../src/components/FirstLoginGuideHint';
 import RoleChangePrompt from '../../src/components/RoleChangePrompt';
 import SwitchAccountButton from '../../src/components/SwitchAccountButton';
+import PrivacySignButton from '../../src/components/PrivacySignButton';
 import {
   View,
   Text,
@@ -292,6 +293,8 @@ export default function DirigenteIndex() {
 
         {/* 🆕 Dual-role genitore↔dirigente: torna alla Modalità Genitore */}
         <SwitchAccountButton />
+        {/* 🆕 Pulsante PRIVACY sempre visibile (firma / gestione consensi) */}
+        <PrivacySignButton profileRoute="/dirigente/profile" />
 
         {/* Admin Switch Card - only for admin users */}
         {user?.role === 'admin' && (

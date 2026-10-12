@@ -14,6 +14,7 @@ import SocietyMatchesLink from '../../src/components/SocietyMatchesLink';
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
+import PrivacySignButton from '../../src/components/PrivacySignButton';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
@@ -180,6 +181,8 @@ export default function CollaboratoreHome() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <SocietyMatchesLink />
+        {/* 🆕 Pulsante PRIVACY sempre visibile (firma / gestione consensi) */}
+        <PrivacySignButton profileRoute="/collaboratore/profile" />
         {/* 🆕 09/08/2026 — Proposta cambio ruolo dall'admin (accetta/rifiuta) */}
         <RoleChangePrompt />
 
