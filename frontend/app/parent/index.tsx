@@ -1,4 +1,5 @@
 import SocietyMatchesLink from '../../src/components/SocietyMatchesLink';
+import GymMapButton from '../../src/components/GymMapButton';
 import React, { useState, useEffect, useMemo } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import { PrivacyRenewalBanner } from '../../src/components/PrivacyRenewalBanner';
@@ -681,24 +682,25 @@ Il sottoscritto genitore/tutore ${user.full_name} dichiara di aver letto e compr
           </Text>
         </View>
 
-        {/* 🆕 Pulsante PRIVACY sempre visibile */}
-        <TouchableOpacity
-          style={{
-            flexDirection: 'row', alignItems: 'center', gap: 10,
-            backgroundColor: '#5E35B1', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16,
-            marginHorizontal: 16, marginBottom: 12,
-            shadowColor: '#5E35B1', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 4,
-          }}
-          onPress={() => setPrivacyStatusVisible(true)}
-          testID="parent-privacy-button"
-        >
-          <Ionicons name="shield-checkmark" size={24} color="#fff" />
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: 0.5 }}>PRIVACY</Text>
-            <Text style={{ fontSize: 12, color: '#EDE7F6', marginTop: 1 }}>Consenso privacy dei tuoi figli</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#fff" />
-        </TouchableOpacity>
+        {/* 🆕 Pulsante PRIVACY (metà) + MAPPA PALESTRE (metà) */}
+        <View style={{ flexDirection: 'row', gap: 10, marginHorizontal: 16, marginBottom: 12 }}>
+          <TouchableOpacity
+            style={{
+              flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
+              backgroundColor: '#5E35B1', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 12, minHeight: 56,
+              shadowColor: '#5E35B1', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 4,
+            }}
+            onPress={() => setPrivacyStatusVisible(true)}
+            testID="parent-privacy-button"
+          >
+            <Ionicons name="shield-checkmark" size={22} color="#fff" />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#fff', letterSpacing: 0.3 }}>PRIVACY</Text>
+              <Text style={{ fontSize: 11, color: '#EDE7F6', marginTop: 1 }} numberOfLines={1}>Consensi dei figli</Text>
+            </View>
+          </TouchableOpacity>
+          <GymMapButton />
+        </View>
 
         {/* Banner: Completa anagrafica se manca il codice fiscale */}
         {user && !user.fiscal_code && (

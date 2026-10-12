@@ -15,6 +15,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../services/api';
+import GymMapButton from './GymMapButton';
 
 interface Props {
   profileRoute: string; // es. '/coach/profile'
@@ -53,36 +54,37 @@ export default function PrivacySignButton({ profileRoute }: Props) {
   if (!state.loaded) return null;
   const signed = state.accepted;
 
+  // Riga: PRIVACY (metà) + MAPPA PALESTRE (metà)
   return (
-    <TouchableOpacity
-      style={[styles.btn, signed ? styles.btnSigned : styles.btnUnsigned]}
-      onPress={() => router.push(`${profileRoute}?sign_privacy=1` as any)}
-      activeOpacity={0.85}
-      testID="privacy-sign-button"
-    >
-      <Ionicons name={signed ? 'shield-checkmark' : 'shield-outline'} size={24} color="#fff" />
-      <View style={{ flex: 1 }}>
-        <Text style={styles.title}>{signed ? 'PRIVACY' : 'FIRMA LA PRIVACY'}</Text>
-        <Text style={styles.sub}>
-          {signed
-            ? `Firmata${state.date ? ` il ${fmt(state.date)}` : ''} · tocca per gestire i consensi`
-            : 'Necessaria per attivare e modificare i consensi'}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color="#fff" />
-    </TouchableOpacity>
+    <View style={styles.row}>
+      <TouchableOpacity
+        style={[styles.btn, signed ? styles.btnSigned : styles.btnUnsigned]}
+        onPress={() => router.push(`${profileRoute}?sign_privacy=1` as any)}
+        activeOpacity={0.85}
+        testID="privacy-sign-button"
+      >
+        <Ionicons name={signed ? 'shield-checkmark' : 'shield-outline'} size={22} color="#fff" />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>{signed ? 'PRIVACY' : 'FIRMA PRIVACY'}</Text>
+          <Text style={styles.sub} numberOfLines={1}>
+            {signed ? `Firmata${state.date ? ` ${fmt(state.date)}` : ''}` : 'Da firmare'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+      <GymMapButton />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  row: { flexDirection: 'row', gap: 10, marginHorizontal: 16, marginBottom: 12 },
   btn: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16,
-    marginHorizontal: 16, marginBottom: 12, minHeight: 56,
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderRadius: 12, paddingVertical: 12, paddingHorizontal: 12, minHeight: 56,
     shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 4,
   },
   btnSigned: { backgroundColor: '#5E35B1', shadowColor: '#5E35B1' },
   btnUnsigned: { backgroundColor: '#E65100', shadowColor: '#E65100' },
-  title: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: 0.5 },
-  sub: { fontSize: 12, color: '#FFFFFFDD', marginTop: 1 },
+  title: { fontSize: 13, fontWeight: '800', color: '#fff', letterSpacing: 0.3 },
+  sub: { fontSize: 11, color: '#FFFFFFDD', marginTop: 1 },
 });
