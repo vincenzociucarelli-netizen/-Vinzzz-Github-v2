@@ -108,7 +108,8 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
   const fmtDate = (iso: string) => {
     try {
       const d = new Date(iso);
-      return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      // 🐛 Fuso orario: data gara salvata come ora italiana "in UTC" → mostrare con timeZone 'UTC' (come l'admin)
+      return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
     } catch { return iso; }
   };
 

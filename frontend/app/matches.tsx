@@ -44,7 +44,7 @@ export default function SocietyMatchesScreen() {
   const groups: Record<string, any[]> = {};
   filtered.forEach((m) => {
     const d = m.date ? new Date(m.date) : null;
-    const key = d && !isNaN(d.getTime()) ? `${MONTHS[d.getMonth()]} ${d.getFullYear()}` : 'Senza data';
+    const key = d && !isNaN(d.getTime()) ? `${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}` : 'Senza data';
     (groups[key] = groups[key] || []).push(m);
   });
 
@@ -52,11 +52,14 @@ export default function SocietyMatchesScreen() {
     if (!iso) return '';
     const d = new Date(iso);
     if (isNaN(d.getTime())) return '';
-    const gg = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const hh = String(d.getHours()).padStart(2, '0');
-    const mi = String(d.getMinutes()).padStart(2, '0');
-    return `${gg}/${mm}/${d.getFullYear()}, ${hh}:${mi}`;
+    // 🐛 Fuso orario: la data gara è salvata come "ora locale italiana" serializzata in UTC
+    // (es. 19:00 → ...T19:00:00Z). L'admin la mostra con timeZone 'UTC'; qui usavamo l'ora
+    // locale del dispositivo → +2h per gli altri utenti. Usiamo i getter UTC.
+    const gg = String(d.getUTCDate()).padStart(2, '0');
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const hh = String(d.getUTCHours()).padStart(2, '0');
+    const mi = String(d.getUTCMinutes()).padStart(2, '0');
+    return `${gg}/${mm}/${d.getUTCFullYear()}, ${hh}:${mi}`;
   };
 
   return (
