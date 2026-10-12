@@ -237,7 +237,7 @@ export default function AdminDirigenteDetail() {
       setDocumentFront(userResponse.data.document_front || '');
       setDocumentBack(userResponse.data.document_back || '');
       setIban(userResponse.data.iban || '');
-      setIbanHolder(userResponse.data.iban_holder || '');
+      setIbanHolder(userResponse.data.iban_holder || userResponse.data.account_holder || '');
       setBankName(userResponse.data.bank_name || '');
       
       // Load teams and venues
@@ -1713,7 +1713,7 @@ export default function AdminDirigenteDetail() {
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.label}>Intestatario</Text>
-                  <Text style={styles.value}>{dirigente.account_holder || '-'}</Text>
+                  <Text style={styles.value}>{dirigente.account_holder || (dirigente as any).iban_holder || '-'}</Text>
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.label}>Banca</Text>

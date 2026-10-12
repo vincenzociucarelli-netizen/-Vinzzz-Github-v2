@@ -6898,6 +6898,53 @@ async def get_pending_users(current_user = Depends(get_current_user)):
     
     return result
 
+async def _sync_bank_details_to_linked(user_doc: dict, bank_sync: dict) -> None:
+    """🆕 Propaga IBAN / intestatario / banca a TUTTI i record della stessa persona:
+    record atleta collegato, alias dual-role (coach, dirigente, coordinatore, genitore)
+    in entrambe le direzioni. Un solo conto per persona, qualunque profilo lo salvi."""
+    if not bank_sync:
+        return
+    bank_sync = dict(bank_sync)
+    # L'admin legge/scrive `iban_holder`, il lavoratore `account_holder` → allineiamo sempre entrambi
+    holder = bank_sync.get("account_holder") or bank_sync.get("iban_holder")
+    if holder is not None:
+        bank_sync["account_holder"] = holder
+        bank_sync["iban_holder"] = holder
+    uid = user_doc.get("id")
+
+    # Record atleta collegato (Atleta PRO)
+    athlete_query = {"id": user_doc["athlete_id"]} if user_doc.get("athlete_id") else {"$or": [
+        {"user_id": uid}, {"linked_user_id": uid},
+        {"email": (user_doc.get("email") or "").lower().split("#", 1)[0]},
+    ]}
+    try:
+        await db.athletes.update_one(athlete_query, {"$set": bank_sync})
+    except Exception as _e:
+        logging.warning(f"[BANK-SYNC] athlete sync failed for user {uid}: {_e}")
+
+    # Alias dual-role collegati (link diretti e inversi)
+    linked_ids = set()
+    for k in ("linked_coach_user_id", "linked_dirigente_user_id", "linked_coordinatore_user_id", "linked_parent_user_id"):
+        if user_doc.get(k):
+            linked_ids.add(user_doc[k])
+    try:
+        async for u in db.users.find({"$or": [
+            {"linked_coach_user_id": uid}, {"linked_dirigente_user_id": uid},
+            {"linked_coordinatore_user_id": uid}, {"linked_parent_user_id": uid},
+        ]}, {"_id": 0, "id": 1}):
+            linked_ids.add(u["id"])
+    except Exception:
+        pass
+    linked_ids.discard(uid)
+    if linked_ids:
+        try:
+            await db.users.update_many({"id": {"$in": list(linked_ids)}}, {"$set": bank_sync})
+            for lid in linked_ids:
+                invalidate_auth_cache(lid)
+        except Exception as _e:
+            logging.warning(f"[BANK-SYNC] linked users sync failed for user {uid}: {_e}")
+
+
 @api_router.patch("/users/me/bank-details")
 async def update_my_bank_details(data: dict, current_user = Depends(get_current_user)):
     """Update current user's bank and document details"""
@@ -6905,42 +6952,19 @@ async def update_my_bank_details(data: dict, current_user = Depends(get_current_
     update_dict = {k: v for k, v in data.items() if k in allowed_fields}
     
     if update_dict:
+        if "account_holder" in update_dict:
+            update_dict["iban_holder"] = update_dict["account_holder"]  # allineato alla vista admin
         await db.users.update_one(
             {"id": current_user["id"]},
             {"$set": update_dict}
         )
 
-        # 🐛 24/09/2026 — Sync dei dati bancari sul record ATLETA collegato.
-        # L'atleta salva i dati sul proprio record `users`, ma l'admin li legge dal
-        # record `athletes`: senza questo sync l'admin non vedeva IBAN/intestatario/banca.
+        # 🐛 Sync dei dati bancari su record atleta e alias dual-role (coach, dirigente,
+        # coordinatore…): l'admin e gli altri profili della stessa persona vedono lo stesso IBAN.
         bank_sync = {k: v for k, v in update_dict.items() if k in ("iban", "account_holder", "bank_name")}
         if bank_sync:
-            # `account_holder` è letto dall'admin come iban_holder||account_holder → allineiamo entrambi
-            if "account_holder" in bank_sync:
-                bank_sync["iban_holder"] = bank_sync["account_holder"]
-            # Individua il record atleta collegato (per link diretto o euristica user_id/email)
-            athlete_id = current_user.get("athlete_id")
-            athlete_query = None
-            if athlete_id:
-                athlete_query = {"id": athlete_id}
-            else:
-                athlete_query = {"$or": [
-                    {"user_id": current_user["id"]},
-                    {"linked_user_id": current_user["id"]},
-                    {"email": (current_user.get("email") or "").lower()},
-                ]}
-            try:
-                await db.athletes.update_one(athlete_query, {"$set": bank_sync})
-            except Exception as _e:
-                logging.warning(f"[BANK-SYNC] athlete sync failed for user {current_user.get('id')}: {_e}")
-
-            # Dual-role: sincronizza anche l'eventuale record coach collegato
-            try:
-                coach_user_id = current_user.get("linked_coach_user_id")
-                if coach_user_id:
-                    await db.users.update_one({"id": coach_user_id}, {"$set": bank_sync})
-            except Exception as _e:
-                logging.warning(f"[BANK-SYNC] coach sync failed for user {current_user.get('id')}: {_e}")
+            full_user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0, "password_hash": 0}) or dict(current_user)
+            await _sync_bank_details_to_linked(full_user, bank_sync)
     
     return {"message": "Dati bancari aggiornati"}
 
@@ -7244,6 +7268,9 @@ async def _ensure_coordinatore_dirigente_alias(coord: dict, admin_user: dict) ->
         "province": coord.get("province"),
         "phone": coord.get("phone"),
         "iban": coord.get("iban"),
+        "iban_holder": coord.get("iban_holder") or coord.get("account_holder"),
+        "account_holder": coord.get("account_holder") or coord.get("iban_holder"),
+        "bank_name": coord.get("bank_name"),
         "society_id": coord.get("society_id"),
         "status": "approved",
         "link_status": "active",
@@ -7602,6 +7629,7 @@ async def update_user_bank_details(user_id: str, data: dict, current_user = Depe
         update_data["iban"] = data["iban"]
     if "iban_holder" in data:
         update_data["iban_holder"] = data["iban_holder"]
+        update_data["account_holder"] = data["iban_holder"]  # allineato alla vista lavoratore
     if "bank_name" in data:
         update_data["bank_name"] = data["bank_name"]
     
@@ -7610,6 +7638,10 @@ async def update_user_bank_details(user_id: str, data: dict, current_user = Depe
             {"id": user_id},
             {"$set": update_data}
         )
+        invalidate_auth_cache(user_id)
+        # 🆕 Propaga ai record collegati della stessa persona (atleta, alias dual-role)
+        bank_sync = {k: v for k, v in update_data.items() if k in ("iban", "iban_holder", "account_holder", "bank_name")}
+        await _sync_bank_details_to_linked(user, bank_sync)
     
     return {"message": "Dati bancari aggiornati con successo"}
 
