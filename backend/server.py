@@ -1745,6 +1745,8 @@ async def check_athlete_status(athlete_id: str):
     trial_block = await get_trial_block_reason(athlete)
     if trial_block:
         return {"allowed": False, "reason": trial_block, "warning": None}
+    # Prova in corso (non terminata): atleta in prova con is_trial o status trial/pending_trial
+    trial_active = bool(athlete.get("is_trial")) or athlete.get("status") in ("trial", "pending_trial")
     
     # Check society settings for certificate blocking — 🐛 08/07/2026 fix multi-tenancy
     _asid = athlete.get("society_id")
@@ -23650,7 +23652,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 "signed_at": now,
                 "signature_base64": request.signature_base64,
                 "linked_coach_receipt_id": receipt_id,
-                "linked_signed_document_id": document_id,
+                "linked_signed_document_id": receipt_id,
                 "unified_with_coach": True,
                 "month_name": month_name,
             }
@@ -34028,7 +34030,7 @@ async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes
 
         signed_at_final = document.get("signed_at") or source_signed_at or document.get("created_at")
 
-        month_name = ITALIAN_MONTHS[int(month_val) - 1] if month_val and 1 <= int(month_val) <= 12 else ""
+        month_name = _MONTH_NAMES_IT[int(month_val)] if month_val and 1 <= int(month_val) <= 12 else ""
 
         pdf_bytes = generate_monthly_receipt_pdf(
             society_name=society_name,
