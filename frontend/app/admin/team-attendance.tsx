@@ -15,6 +15,7 @@ interface RosterAthlete {
   is_trial: boolean;
   trial_sessions_count: number;
   trial_max_sessions?: number;
+  trial_missing?: string[];
 }
 
 export default function AdminTeamAttendance() {
@@ -210,10 +211,17 @@ export default function AdminTeamAttendance() {
                     {a.is_trial && (
                       (a.trial_sessions_count || 0) >= (a.trial_max_sessions || 3) ? (
                         <Text style={[styles.trialBadge, { color: '#C62828', fontWeight: '700' }]}>
-                          🔴 PROVA SCADUTA · {a.trial_sessions_count || 0}/{a.trial_max_sessions || 3} allenamenti — serve certificato medico e iscrizione
+                          🔴 PROVA SCADUTA · {a.trial_sessions_count || 0}/{a.trial_max_sessions || 3} allenamenti
+                          {' — '}
+                          {(a.trial_missing && a.trial_missing.length > 0)
+                            ? `manca: ${a.trial_missing.join(', ')}`
+                            : 'pronto: usa "Ripara prove in blocco" per attivarlo'}
                         </Text>
                       ) : (
-                        <Text style={styles.trialBadge}>🔵 In prova · {a.trial_sessions_count || 0}/{a.trial_max_sessions || 3} allenamenti</Text>
+                        <Text style={styles.trialBadge}>
+                          🔵 In prova · {a.trial_sessions_count || 0}/{a.trial_max_sessions || 3} allenamenti
+                          {(a.trial_missing && a.trial_missing.length > 0) ? ` · manca: ${a.trial_missing.join(', ')}` : ''}
+                        </Text>
                       )
                     )}
                   </View>

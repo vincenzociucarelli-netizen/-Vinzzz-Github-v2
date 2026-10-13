@@ -9529,6 +9529,7 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
         "_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1,
         "date_of_birth": 1, "gender": 1, "fiscal_code": 1, "status": 1,
         "medical_certificate_expiry": 1, "parent_id": 1, "second_parent_id": 1,
+        "privacy_accepted": 1, "medical_certificate_verified": 1,
         "address": 1, "city": 1, "cap": 1, "postal_code": 1, "team_id": 1, "is_registered": 1,
         "is_trial": 1, "trial_sessions_count": 1,
     }
@@ -9566,6 +9567,7 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
     # 🆕 limite prove della società (per evidenziare "PROVA SCADUTA" nel roster presenze)
     _ss_trial = await db.settings.find_one({"type": "society", "society_id": society_id}, {"_id": 0, "trial_max_sessions": 1}) if society_id else None
     _trial_max_sessions = (_ss_trial or {}).get("trial_max_sessions", 3) or 3
+    _teams_full = {t["id"]: t for t in await db.teams.find({"society_id": society_id}, {"_id": 0, "id": 1, "certificate_type_required": 1}).to_list(1000)} if society_id else {}
 
     out = []
     for a in aths:
@@ -9593,6 +9595,8 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
             "is_trial": bool(a.get("is_trial")) or a.get("status") == "trial",
             "trial_sessions_count": a.get("trial_sessions_count", 0),
             "trial_max_sessions": _trial_max_sessions,
+            # 🆕 perché è ancora in prova (es. "privacy da firmare", "certificato mancante")
+            "trial_missing": _trial_missing_reasons(a, _teams_full.get(a.get("team_id"))) if (bool(a.get("is_trial")) or a.get("status") == "trial") else [],
             "cert_label": cert_label,
             "cert_expiry": cert_expiry,
             "cert_valid": cert_valid,
@@ -13509,6 +13513,11 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
         if activated:
             athlete["status"] = "active"
             athlete["is_trial"] = False
+    # 🆕 MINORENNI in prova: attivazione automatica se privacy + certificato ok
+    if update_dict and athlete.get("status") != "active":
+        if await maybe_activate_minor_athlete(athlete_id, current_user):
+            athlete["status"] = "active"
+            athlete["is_trial"] = False
     
     return Athlete(**athlete)
 
@@ -15243,6 +15252,12 @@ async def create_certificate_simple(
     activated_as_pro = False
     if verified_value and athlete.get("end_trial_requested"):
         activated = await check_and_activate_if_ready(data.athlete_id)
+
+    # 🆕 MINORENNI: alla convalida del certificato, se la privacy è firmata, l'atleta
+    # esce dalla prova e diventa ATTIVO anche senza "Termina prova" del genitore.
+    if verified_value and not activated:
+        if await maybe_activate_minor_athlete(data.athlete_id, current_user):
+            activated = True
 
     # 🆕 ADULTI (18+): nessun periodo di prova. Alla convalida del certificato
     # medico, se la privacy è già stata firmata, l'atleta diventa ATTIVO
@@ -18917,10 +18932,17 @@ async def recompute_team_trials(team_id: str, current_user = Depends(get_current
         "$or": [{"is_trial": True}, {"status": {"$in": ["trial", "pending_trial"]}}],
     }).to_list(2000)
     fixed = 0
+    activated = 0
     for a in aths:
         await _recompute_trial_from_attendance(a, team_id)
         fixed += 1
-    return {"message": f"Prova ricalcolata per {fixed} atleti", "count": fixed}
+        # 🆕 chi ha già privacy + certificato convalidato esce dalla prova → ATTIVO
+        if await maybe_activate_minor_athlete(a["id"], current_user):
+            activated += 1
+    msg = f"Prova ricalcolata per {fixed} atleti"
+    if activated:
+        msg += f" · {activated} attivati (privacy + certificato già a posto)"
+    return {"message": msg, "count": fixed, "activated": activated}
 
 
 @api_router.post("/athletes/{athlete_id}/force-end-trial")
@@ -28392,6 +28414,8 @@ async def sign_gdpr_privacy_document(
                 {"id": related_entity_id},
                 {"$set": {"status": "pending_certificate", "is_trial": False, "trial_status": "completed"}}
             )
+        # 🆕 Se il certificato è già convalidato → ATTIVO subito
+        await maybe_activate_minor_athlete(related_entity_id, current_user)
         # Also update the signing parent's own consents (mandatory + image consents)
         parent_consent_sync = {
             "consents.privacy_viewed": {"value": True, **_meta},
@@ -35774,6 +35798,61 @@ async def check_and_activate_if_ready(athlete_id: str):
     return False
 
 
+def _trial_missing_reasons(athlete: dict, team: Optional[dict]) -> list:
+    """🆕 Perché un atleta in prova NON è ancora attivo: lista motivi leggibili
+    ('privacy da firmare', 'certificato mancante', 'certificato da convalidare', 'certificato scaduto')."""
+    reasons = []
+    if not athlete.get("privacy_accepted"):
+        reasons.append("privacy da firmare")
+    _cert_type = cert_type_for_team(team)
+    if cert_required_for_active(_cert_type):
+        if not athlete.get("medical_certificate_expiry"):
+            reasons.append("certificato mancante")
+        elif not has_valid_verified_cert(athlete):
+            exp = athlete.get("medical_certificate_expiry")
+            try:
+                exp_dt = exp if isinstance(exp, datetime) else datetime.fromisoformat(str(exp)[:19])
+                expired = exp_dt.date() < datetime.utcnow().date()
+            except Exception:
+                expired = False
+            reasons.append("certificato scaduto" if expired else "certificato da convalidare")
+    return reasons
+
+
+async def maybe_activate_minor_athlete(athlete_id: str, actor: dict | None = None) -> bool:
+    """🆕 MINORENNI in prova: diventano ATTIVI appena hanno (a) privacy firmata dal
+    genitore E (b) certificato medico convalidato (se richiesto dalla squadra),
+    SENZA dipendere dal flag `end_trial_requested` (il genitore spesso non premeva
+    "Termina prova e iscriviti" e l'atleta restava "in prova" per sempre, anche dopo
+    aver pagato). Richiamabile dopo firma privacy, convalida certificato, riparazione
+    prove e backfill all'avvio. Idempotente."""
+    athlete = await db.athletes.find_one({"id": athlete_id})
+    if not athlete or athlete.get("is_withdrawn"):
+        return False
+    if not _compute_is_minor(athlete):
+        return False
+    in_trial = bool(athlete.get("is_trial")) or athlete.get("status") in ("trial", "pending_trial", "pending_certificate", "pending_decision", "pending")
+    if not in_trial or athlete.get("status") in (AthleteStatus.ACTIVE, AthleteStatus.BLOCKED, "rejected"):
+        return False
+    _team = await db.teams.find_one({"id": athlete.get("team_id")}) if athlete.get("team_id") else None
+    if _trial_missing_reasons(athlete, _team):
+        return False
+    now = datetime.utcnow()
+    await db.athletes.update_one(
+        {"id": athlete_id},
+        {"$set": {
+            "status": "active",
+            "is_trial": False,
+            "trial_status": "completed",
+            "trial_completed_at": now,
+            "activated_at": now,
+            "activated_by": (actor or {}).get("id") if actor else "auto",
+        }},
+    )
+    logger.info(f"[TRIAL→ACTIVE] Minorenne {athlete_id} attivato automaticamente (privacy + certificato ok)")
+    return True
+
+
 async def maybe_activate_adult_athlete(athlete_id: str, actor: dict | None = None) -> bool:
     """🆕 ADULTI (18+): nessun periodo di prova. Un atleta maggiorenne diventa
     ATTIVO ("in forza") SOLO quando ha soddisfatto ENTRAMBI i requisiti:
@@ -42716,6 +42795,25 @@ async def run_data_migrations():
         logger.info(f"Migration 18+ no-prova backfill: {activated_backfill}/{len(candidates)} atleti maggiorenni attivati")
     except Exception as exc:
         logger.warning(f"Migration 18+ no-prova backfill failed: {exc}")
+
+    # 🆕 Backfill MINORENNI bloccati "in prova" pur avendo privacy firmata + certificato
+    # convalidato (il genitore non aveva premuto "Termina prova"). Idempotente.
+    try:
+        minor_ready_q = {
+            "is_withdrawn": {"$ne": True},
+            "$or": [{"is_trial": True}, {"status": {"$in": ["trial", "pending_trial", "pending_certificate", "pending_decision"]}}],
+            "privacy_accepted": True,
+            "medical_certificate_verified": True,
+            "medical_certificate_expiry": {"$exists": True, "$ne": None},
+        }
+        minor_activated = 0
+        minor_candidates = await db.athletes.find(minor_ready_q, {"_id": 0, "id": 1}).to_list(20000)
+        for c in minor_candidates:
+            if await maybe_activate_minor_athlete(c["id"]):
+                minor_activated += 1
+        logger.info(f"Migration minorenni prova→attivo backfill: {minor_activated}/{len(minor_candidates)} atleti attivati")
+    except Exception as exc:
+        logger.warning(f"Migration minorenni prova→attivo backfill failed: {exc}")
 
     # 🆕 01/07/2026 — Migrazione one-shot `active_seasons`: modello "clean slate" per rinnovi.
     # Ogni user/athlete diventa "membro di una stagione". La lista operativa filtra per
