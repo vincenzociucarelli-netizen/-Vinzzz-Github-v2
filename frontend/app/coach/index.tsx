@@ -1068,7 +1068,6 @@ export default function CoachScreen() {  const router = useRouter();
           <Ionicons name="qr-code" size={60} color="#007AFF" />
           <Text style={styles.scannerTitle}>Pronto per scansionare</Text>
           <Text style={styles.scannerSubtitle}>Registra le presenze degli atleti</Text>
-          <SocietyMatchesLink />
           
           {/* Toggle Modalità Sostituzione */}
           <TouchableOpacity 
@@ -1497,6 +1496,10 @@ export default function CoachScreen() {  const router = useRouter();
       <SwitchAccountButton />
       {/* 🆕 Pulsante PRIVACY sempre visibile (firma / gestione consensi) */}
       <PrivacySignButton profileRoute="/coach/profile" />
+      {/* 🆕 Calendario Gare Società: a livello dashboard (prima era nascosto dentro il tab Scanner) */}
+      <View style={{ marginHorizontal: 16 }}>
+        <SocietyMatchesLink />
+      </View>
 
       {/* 🚫 26/06/2026 — Banner "Vai a Compensi Sportivi" RIMOSSO: duplicava il bottone
           "Compensi" già presente in alto nella tab navigation. */}
