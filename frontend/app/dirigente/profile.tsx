@@ -20,6 +20,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
+import { openSignedDocument } from '../../src/utils/openSignedDocument';
 import { Ionicons } from '../../src/components/Icon';
 import * as ImagePicker from 'expo-image-picker';
 import { Picker } from '@react-native-picker/picker';
@@ -1088,48 +1089,10 @@ Società sportiva: ${societyName}
                   borderBottomWidth: index < Math.min(myDocuments.length, 3) - 1 ? 1 : 0,
                   borderBottomColor: '#f0f0f0',
                 }}>
-                  <a
-                    href="#"
-                    onClick={async (e) => {
-                      e.preventDefault();
-                      try {
-                        const response = await api.get(`/documents/signed/${doc.id}/pdf`, {
-                          responseType: 'blob',
-                        });
-                        const blob = new Blob([response.data], { type: 'application/pdf' });
-                        const url = window.URL.createObjectURL(blob);
-                        // 🆕 22/02/2026 — Apre il PDF in nuova scheda invece di forzare il download.
-                        const newWin = window.open(url, '_blank', 'noopener,noreferrer');
-                        if (!newWin) {
-                          const filename = `${doc.document_title || 'documento'}_${(doc.id || '').slice(-8)}.pdf`.replace(/[^\w.\-]+/g, '_');
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = filename;
-                          a.rel = 'noopener noreferrer';
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
-                        }
-                        setTimeout(() => window.URL.revokeObjectURL(url), 30000);
-                      } catch (err: any) {
-                        console.error('Download error:', err);
-                        let msg = 'Impossibile aprire il documento';
-                        if (err.response?.status === 401) {
-                          msg = 'Sessione scaduta. Effettua nuovamente il login.';
-                        } else if (err.response?.data instanceof Blob) {
-                          try { const text = await err.response.data.text(); const json = JSON.parse(text); msg = json.detail || msg; } catch {}
-                        } else if (err.response?.data?.detail) {
-                          msg = err.response.data.detail;
-                        }
-                        if (typeof window !== 'undefined' && window.alert) {
-                          window.alert(msg);
-                        } else {
-                          Alert.alert('Errore', msg);
-                        }
-                      }
-                    }}
-                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1, textDecoration: 'none' }}
-                    data-testid={`open-doc-${doc.id}`}
+                  <TouchableOpacity
+                    onPress={() => openSignedDocument(doc)}
+                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
+                    testID={`open-doc-${doc.id}`}
                   >
                   <Ionicons 
                     name={doc.document_type === 'privacy_consent' ? 'shield-checkmark' : 
@@ -1149,7 +1112,7 @@ Società sportiva: ${societyName}
                     </Text>
                   </View>
                   <Ionicons name="open-outline" size={20} color="#8E44AD" />
-                  </a>
+                  </TouchableOpacity>
                 </View>
               ))}
               {myDocuments.length > 3 && (
@@ -1399,48 +1362,10 @@ Società sportiva: ${societyName}
                   borderBottomWidth: index < myDocuments.length - 1 ? 1 : 0,
                   borderBottomColor: '#f0f0f0',
                 }}>
-                  <a
-                    href="#"
-                    onClick={async (e) => {
-                      e.preventDefault();
-                      try {
-                        const response = await api.get(`/documents/signed/${doc.id}/pdf`, {
-                          responseType: 'blob',
-                        });
-                        const blob = new Blob([response.data], { type: 'application/pdf' });
-                        const url = window.URL.createObjectURL(blob);
-                        // 🆕 22/02/2026 — Apre il PDF in nuova scheda invece di forzare il download.
-                        const newWin = window.open(url, '_blank', 'noopener,noreferrer');
-                        if (!newWin) {
-                          const filename = `${doc.document_title || 'documento'}_${(doc.id || '').slice(-8)}.pdf`.replace(/[^\w.\-]+/g, '_');
-                          const a = document.createElement('a');
-                          a.href = url;
-                          a.download = filename;
-                          a.rel = 'noopener noreferrer';
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
-                        }
-                        setTimeout(() => window.URL.revokeObjectURL(url), 30000);
-                      } catch (err: any) {
-                        console.error('Download error:', err);
-                        let msg = 'Impossibile aprire il documento';
-                        if (err.response?.status === 401) {
-                          msg = 'Sessione scaduta. Effettua nuovamente il login.';
-                        } else if (err.response?.data instanceof Blob) {
-                          try { const text = await err.response.data.text(); const json = JSON.parse(text); msg = json.detail || msg; } catch {}
-                        } else if (err.response?.data?.detail) {
-                          msg = err.response.data.detail;
-                        }
-                        if (typeof window !== 'undefined' && window.alert) {
-                          window.alert(msg);
-                        } else {
-                          Alert.alert('Errore', msg);
-                        }
-                      }
-                    }}
-                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1, textDecoration: 'none' }}
-                    data-testid={`open-modal-doc-${doc.id}`}
+                  <TouchableOpacity
+                    onPress={() => openSignedDocument(doc)}
+                    style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
+                    testID={`open-modal-doc-${doc.id}`}
                   >
                   <Ionicons 
                     name={doc.document_type === 'privacy_consent' ? 'shield-checkmark' : 
@@ -1460,7 +1385,7 @@ Società sportiva: ${societyName}
                     </Text>
                   </View>
                   <Ionicons name="open-outline" size={20} color="#8E44AD" />
-                  </a>
+                  </TouchableOpacity>
                 </View>
               ))}
             </ScrollView>

@@ -14,6 +14,7 @@ interface Match {
   date: string;
   team_id: string;
   team_name?: string;
+  society_name?: string;
   opponent: string;
   venue?: string;
   home_away?: string;
@@ -170,7 +171,7 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
                     <View style={styles.rowMain}>
                       <Text style={styles.rowDate}>{fmtDate(m.date)}</Text>
                       <Text style={styles.rowTeams} numberOfLines={1}>
-                        {isHome ? `${m.team_name || 'Casa'} vs ${m.opponent}` : `${m.opponent} vs ${m.team_name || 'Trasferta'}`}
+                        {isHome ? `${m.society_name || m.team_name || 'Casa'} vs ${m.opponent}` : `${m.opponent} vs ${m.society_name || m.team_name || 'Trasferta'}`}
                       </Text>
                       {m.venue && <Text style={styles.rowVenue}>📍 {m.venue}</Text>}
                     </View>

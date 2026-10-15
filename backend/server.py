@@ -7761,6 +7761,29 @@ async def update_user(user_id: str, data: dict, current_user = Depends(get_curre
 # Linee ~5212-5630 — gestione partite/gare interne ed esterne.
 # Pianificato per estrazione → routers/matches.py
 # ═══════════════════════════════════════════════════════════════════════════════
+_SOCIETY_SUFFIX_RE = re.compile(
+    r"\b(s\.?s\.?d\.?|a\.?s\.?d\.?|a\s*r\.?\s*l\.?|s\.?r\.?l\.?|societ[àa] sportiva dilettantistica|"
+    r"associazione sportiva dilettantistica|a responsabilit[àa] limitata|onlus|aps|ets)\b\.?",
+    re.IGNORECASE,
+)
+
+
+def _society_short_name(settings_doc: Optional[dict]) -> str:
+    """🆕 Nome breve della società per le gare (es. 'Sirio Perugia SSD a RL' → 'Sirio Perugia'):
+    toglie le forme giuridiche (SSD, ASD, a RL, srl, …) dal nome in Impostazioni."""
+    name = ((settings_doc or {}).get("name") or (settings_doc or {}).get("ragione_sociale") or "").strip()
+    if not name:
+        return ""
+    short = _SOCIETY_SUFFIX_RE.sub("", name)
+    short = re.sub(r"\s{2,}", " ", short).strip(" -–,.")
+    return short or name
+
+
+async def _society_short_name_for(society_id: Optional[str]) -> str:
+    q = {"type": "society", "society_id": society_id} if society_id else {"type": "society"}
+    return _society_short_name(await db.settings.find_one(q, {"_id": 0, "name": 1, "ragione_sociale": 1}))
+
+
 @api_router.get("/matches/society-view")
 async def get_matches_society_view(current_user = Depends(get_current_user)):
     """🆕 13/09/2026 — Elenco SOLA LETTURA di tutte le gare della società, accessibile a
@@ -7769,8 +7792,10 @@ async def get_matches_society_view(current_user = Depends(get_current_user)):
     society_id = current_user.get("society_id")
     query = {"society_id": society_id} if society_id else {}
     matches = await db.matches.find(query).sort("date", 1).to_list(1000)
+    _soc = await _society_short_name_for(society_id)
     for m in matches:
         clean_mongo_doc(m)
+        m["society_name"] = _soc  # 🆕 nome società da mostrare al posto del nome squadra ("Serie B/1")
     return matches
 
 
@@ -7956,11 +7981,15 @@ async def get_athlete_matches(
             })
 
     if format.lower() != "ics":
+        _soc = await _society_short_name_for(ath.get("society_id") or society_id)
+        for _m in matches:
+            _m["society_name"] = _soc  # 🆕 nome società al posto del nome squadra
         return {
             "athlete_id": athlete_id,
             "athlete_name": ath.get("full_name") or "",
             "team_ids": team_ids,
             "teams": team_docs,
+            "society_name": _soc,
             "matches": matches,
             "count": len(matches),
         }
@@ -20083,6 +20112,7 @@ async def get_coach_commitments(
                     "title": f"Rifinitura pre-gara {rif_info['team_name']}"
                 })
     
+    _soc_short = await _society_short_name_for(current_user.get("society_id"))
     for match in matches:
         match_date = match.get("date")
         if isinstance(match_date, str):
@@ -20111,7 +20141,11 @@ async def get_coach_commitments(
             "home_away": match.get("home_away", "home"),
             "meeting_time": match.get("meeting_time"),
             "notes": match.get("notes"),
-            "title": f"Gara {match.get('team_name', '')} vs {match.get('opponent', '')}"
+            "society_name": _soc_short,
+            # 🆕 "Gara Sirio Perugia vs X" (o "X vs Sirio Perugia" in trasferta) invece del nome squadra
+            "title": (f"Gara {_soc_short or match.get('team_name', '')} vs {match.get('opponent', '')}"
+                      if (match.get("home_away") or "home") == "home"
+                      else f"Gara {match.get('opponent', '')} vs {_soc_short or match.get('team_name', '')}"),
         }
         
         if day_key == "upcoming":

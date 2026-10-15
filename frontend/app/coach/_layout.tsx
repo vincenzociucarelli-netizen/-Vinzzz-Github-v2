@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { ErrorBoundary } from '../../src/components/ErrorBoundary';
 
 export default function CoachLayout() {
   const router = useRouter();
@@ -43,11 +44,13 @@ export default function CoachLayout() {
 
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="history" />
-      <Stack.Screen name="athlete/[id]" />
-    </Stack>
+    <ErrorBoundary label="area Coach">
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="history" />
+        <Stack.Screen name="athlete/[id]" />
+      </Stack>
+    </ErrorBoundary>
   );
 }
 

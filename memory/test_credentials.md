@@ -87,3 +87,7 @@
 - ⚠️ ATLETA MAURI LENA (id 6a5ec7347c201d9cb7eb70d2) ELIMINATO definitivamente durante un test del flusso self-delete-trial. Non più disponibile.
 - Genitore armida.raschi@gmail.com RICREATO dal testing agent (id 698054822b464959fa669b9f, password Test1234) ma senza figli collegati.
 - Per test futuri del flusso prova/cancellazione: creare un atleta di prova ad-hoc, NON usare atleti reali.
+
+## ⚠️ Aggiornamento 14/10/2026 (DB preview)
+- `testalice1780817007@test.com` e `fabia@test.com` NON esistono più nel DB preview.
+- Sostituti: Atleta PRO → `testflow.pro@test.com` / Test1234 · Atleta quota attivo → `testflow.adult2@test.com` / Test1234 (password resettate dal testing agent).

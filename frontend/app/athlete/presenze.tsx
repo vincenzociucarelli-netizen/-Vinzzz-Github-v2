@@ -129,16 +129,18 @@ export default function AthletePresenze() {
       >
         {/* 🆕 24/02/2026 — Orari Allenamenti (link al calendario settimanale) */}
         <TouchableOpacity
-          style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}
+          style={styles.scheduleCard}
           onPress={() => router.push('/athlete/schedule?tab=orari')}
           data-testid="schedule-menu-item"
         >
-          <Ionicons name="calendar" size={22} color="#007AFF" />
-          <View style={{ marginLeft: 12, flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: '#333' }}>Orari Allenamenti</Text>
-            <Text style={{ fontSize: 12, color: '#888' }}>Calendario settimanale</Text>
+          <View style={styles.scheduleIcon}>
+            <Ionicons name="calendar" size={22} color="#1565C0" />
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
+          <View style={{ marginLeft: 12, flex: 1 }}>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: '#0D47A1' }}>Orari Allenamenti</Text>
+            <Text style={{ fontSize: 12, color: '#5C6BC0' }}>Calendario settimanale della tua squadra</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#1565C0" />
         </TouchableOpacity>
 
         {/* 🆕 29/07/2026 — Calendario Gare con export .ics per uso personale */}
@@ -150,7 +152,7 @@ export default function AthletePresenze() {
         )}
 
         {/* Statistics Section */}
-        <Text style={styles.sectionTitle}>Le Tue Statistiche</Text>
+        <Text style={styles.sectionTitle}>📊 Le Tue Statistiche</Text>
         
         {stats ? (
           <View style={styles.statsContainer}>
@@ -165,15 +167,15 @@ export default function AthletePresenze() {
             
             {/* Secondary stats */}
             <View style={styles.secondaryStatsRow}>
-              <View style={styles.secondaryStatCard}>
-                <Ionicons name="calendar" size={24} color="#4CAF50" />
+              <View style={[styles.secondaryStatCard, { backgroundColor: '#FFF3E0', borderColor: '#FFCC80' }]}>
+                <Ionicons name="flash" size={24} color="#EF6C00" />
                 <Text style={styles.secondaryStatValue}>{stats.weekly_percentage}%</Text>
                 <Text style={styles.secondaryStatLabel}>Questa settimana</Text>
                 <Text style={styles.secondaryStatSubtext}>{stats.weekly_attendances} presenze</Text>
               </View>
               
-              <View style={styles.secondaryStatCard}>
-                <Ionicons name="calendar-outline" size={24} color="#2196F3" />
+              <View style={[styles.secondaryStatCard, { backgroundColor: '#F3E5F5', borderColor: '#CE93D8' }]}>
+                <Ionicons name="calendar" size={24} color="#7B1FA2" />
                 <Text style={styles.secondaryStatValue}>{stats.monthly_percentage}%</Text>
                 <Text style={styles.secondaryStatLabel}>Questo mese</Text>
                 <Text style={styles.secondaryStatSubtext}>{stats.monthly_attendances} presenze</Text>
@@ -189,14 +191,14 @@ export default function AthletePresenze() {
         )}
 
         {/* Attendance History */}
-        <Text style={styles.sectionTitle}>Storico Presenze</Text>
+        <Text style={styles.sectionTitle}>🗓️ Storico Presenze</Text>
         
         {attendances.length > 0 ? (
           <View style={styles.historyContainer}>
             {attendances.slice(0, 20).map((att, index) => (
               <View key={att.id || index} style={styles.historyItem}>
                 <View style={styles.historyIcon}>
-                  <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+                  <Ionicons name="checkmark" size={22} color="#2E7D32" />
                 </View>
                 <View style={styles.historyContent}>
                   <Text style={styles.historyDate}>{formatDate(att.check_in_time)}</Text>
@@ -229,8 +231,13 @@ export default function AthletePresenze() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F3F6FF',
   },
+  scheduleCard: {
+    backgroundColor: '#E3F2FD', borderRadius: 14, padding: 14, marginBottom: 12, marginHorizontal: 16,
+    flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: '#90CAF9',
+  },
+  scheduleIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#BBDEFB', alignItems: 'center', justifyContent: 'center' },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -265,9 +272,9 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#333',
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#1A237E',
     marginHorizontal: 16,
     marginBottom: 12,
     marginTop: 8,
@@ -277,37 +284,39 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   mainStatCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#E8F5E9',
     borderRadius: 16,
     padding: 24,
     alignItems: 'center',
     marginBottom: 12,
-    shadowColor: '#000',
+    borderWidth: 1.5,
+    borderColor: '#A5D6A7',
+    shadowColor: '#2E7D32',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   percentageCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#E8F5E9',
-    borderWidth: 4,
-    borderColor: '#4CAF50',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: '#fff',
+    borderWidth: 6,
+    borderColor: '#43A047',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
   },
   percentageText: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#4CAF50',
+    fontSize: 30,
+    fontWeight: '800',
+    color: '#2E7D32',
   },
   mainStatLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: '#1B5E20',
   },
   mainStatSubtext: {
     fontSize: 14,
@@ -321,9 +330,11 @@ const styles = StyleSheet.create({
   secondaryStatCard: {
     flex: 1,
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#eee',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -348,19 +359,22 @@ const styles = StyleSheet.create({
   },
   historyContainer: {
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 14,
     marginHorizontal: 16,
     overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: '#C5CAE9',
   },
   historyItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: '#EDE7F6',
   },
   historyIcon: {
     marginRight: 12,
+    width: 38, height: 38, borderRadius: 19, backgroundColor: '#E8F5E9', alignItems: 'center', justifyContent: 'center',
   },
   historyContent: {
     flex: 1,
@@ -377,15 +391,15 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   presentBadge: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#C8E6C9',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
   },
   presentBadgeText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#4CAF50',
+    fontWeight: '700',
+    color: '#1B5E20',
   },
   moreText: {
     textAlign: 'center',

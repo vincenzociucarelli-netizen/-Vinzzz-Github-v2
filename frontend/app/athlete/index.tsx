@@ -1240,6 +1240,11 @@ export default function AthleteScreen() {
       {/* Banner "Inizio allenamenti" per ogni squadra dell'atleta */}
       <ActivityStartBanners banners={activityBanners} />
 
+      {/* 🆕 Calendario Gare di tutta la società — anche per gli Atleti PRO (prima mancava) */}
+      <View style={{ marginHorizontal: 16 }}>
+        <SocietyMatchesLink />
+      </View>
+
       {/* Prossimi Impegni — Trainings + Matches con supporto annullamento/modifica */}
       {(commitments.today.length + commitments.tomorrow.length + commitments.day_after.length + commitments.upcoming.length > 0) && (
         <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 16, marginHorizontal: 16, marginBottom: 16 }}>

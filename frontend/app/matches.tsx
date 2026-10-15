@@ -114,10 +114,15 @@ export default function SocietyMatchesScreen() {
                           {isHome ? '🏠 Casa' : '✈️ Trasferta'}
                         </Text>
                       </View>
+                      {/* 🆕 Titolo = nome società (es. "Sirio Perugia vs OMAC"), categoria come etichetta */}
                       <Text style={[styles.title, { color: championshipColor(m.team_name) }]}>
-                        {m.team_name}{m.match_number ? ` - gara ${m.match_number}` : ''}
+                        {isHome
+                          ? `${m.society_name || m.team_name} vs ${m.opponent}`
+                          : `${m.opponent} vs ${m.society_name || m.team_name}`}
                       </Text>
-                      <Text style={styles.vs}>vs {m.opponent}</Text>
+                      <Text style={styles.vs}>
+                        {m.team_name}{m.match_number ? ` · gara ${m.match_number}` : ''}
+                      </Text>
                       {m.date ? <Text style={styles.date}>📅 {fmtDate(m.date)}</Text> : null}
                       {m.venue ? <Text style={styles.detail}>📍 {m.venue}</Text> : null}
                       {m.address ? <Text style={styles.detailSmall}>{m.address}{m.city ? ` - ${m.city}` : ''}</Text> : null}

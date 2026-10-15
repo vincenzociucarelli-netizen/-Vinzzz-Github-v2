@@ -944,24 +944,22 @@ export default function AdminDashboard() {
                   </View>
                 )}
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                  <a
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); handleStaffAction(staffUser.id, displayName, 'approved'); }}
-                    style={{ flex: 1, backgroundColor: '#4CAF50', paddingTop: 7, paddingBottom: 7, borderRadius: 8, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
-                    data-testid={`approve-staff-${staffUser.id}`}
+                  <TouchableOpacity
+                    onPress={() => handleStaffAction(staffUser.id, displayName, 'approved')}
+                    style={{ flex: 1, backgroundColor: '#4CAF50', paddingVertical: 7, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 }}
+                    testID={`approve-staff-${staffUser.id}`}
                   >
                     <Ionicons name="checkmark-circle" size={15} color="#fff" />
                     <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>Approva</Text>
-                  </a>
-                  <a
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); handleStaffAction(staffUser.id, displayName, 'rejected'); }}
-                    style={{ flex: 1, backgroundColor: '#F44336', paddingTop: 7, paddingBottom: 7, borderRadius: 8, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}
-                    data-testid={`reject-staff-${staffUser.id}`}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleStaffAction(staffUser.id, displayName, 'rejected')}
+                    style={{ flex: 1, backgroundColor: '#F44336', paddingVertical: 7, borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 }}
+                    testID={`reject-staff-${staffUser.id}`}
                   >
                     <Ionicons name="close-circle" size={15} color="#fff" />
                     <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>Rifiuta</Text>
-                  </a>
+                  </TouchableOpacity>
                 </View>
               </View>
               );
