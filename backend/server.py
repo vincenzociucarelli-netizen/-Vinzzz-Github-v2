@@ -9600,6 +9600,19 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
 
     out = []
     for a in aths:
+        # 🆕 Auto-attivazione minorenni "pronti" (privacy firmata + eventuale certificato
+        # convalidato se richiesto dalla squadra) DIRETTAMENTE all'apertura del roster
+        # presenze. Risolve: atleti bloccati in "PROVA SCADUTA · pronto: usa Ripara prove
+        # in blocco" che non si attivavano mai da soli (es. squadre U12 senza obbligo di
+        # certificato, dove il backfill allo startup li escludeva). Idempotente.
+        _in_trial = bool(a.get("is_trial")) or a.get("status") == "trial"
+        _missing = _trial_missing_reasons(a, _teams_full.get(a.get("team_id"))) if _in_trial else []
+        if _in_trial and not _missing and _compute_is_minor(a):
+            if await maybe_activate_minor_athlete(a["id"]):
+                a["status"] = "active"
+                a["is_trial"] = False
+                _in_trial = False
+                _missing = []
         dob = _to_date(a.get("date_of_birth"))
         exp = _to_date(a.get("medical_certificate_expiry"))
         if not a.get("medical_certificate_expiry"):
@@ -9621,11 +9634,11 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
             "age": _calc_age(dob),
             "tesserato": bool(a.get("is_registered")),
             "status": a.get("status", "pending"),
-            "is_trial": bool(a.get("is_trial")) or a.get("status") == "trial",
+            "is_trial": _in_trial,
             "trial_sessions_count": a.get("trial_sessions_count", 0),
             "trial_max_sessions": _trial_max_sessions,
             # 🆕 perché è ancora in prova (es. "privacy da firmare", "certificato mancante")
-            "trial_missing": _trial_missing_reasons(a, _teams_full.get(a.get("team_id"))) if (bool(a.get("is_trial")) or a.get("status") == "trial") else [],
+            "trial_missing": _missing,
             "cert_label": cert_label,
             "cert_expiry": cert_expiry,
             "cert_valid": cert_valid,
@@ -42837,8 +42850,6 @@ async def run_data_migrations():
             "is_withdrawn": {"$ne": True},
             "$or": [{"is_trial": True}, {"status": {"$in": ["trial", "pending_trial", "pending_certificate", "pending_decision"]}}],
             "privacy_accepted": True,
-            "medical_certificate_verified": True,
-            "medical_certificate_expiry": {"$exists": True, "$ne": None},
         }
         minor_activated = 0
         minor_candidates = await db.athletes.find(minor_ready_q, {"_id": 0, "id": 1}).to_list(20000)
