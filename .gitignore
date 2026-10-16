@@ -1713,3 +1713,6 @@ credentials.json
 # Evita conflitto package manager su Vercel (usiamo yarn)
 frontend/package-lock.json
 package-lock.json
+
+# Expo/web build output (non deve finire nel repo)
+frontend/dist*/
