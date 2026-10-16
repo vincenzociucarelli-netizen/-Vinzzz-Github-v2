@@ -7351,6 +7351,10 @@ async def update_user_compensation(user_id: str, data: dict, current_user = Depe
     if "other_annual_compensation" in data:
         update_data["other_annual_compensation"] = float(data["other_annual_compensation"]) if data["other_annual_compensation"] else 0
     
+    # 🆕 Flag "iscritto ad altra previdenza obbligatoria" → aliquota INPS 24% senza 2,03%
+    if "inps_insured_elsewhere" in data:
+        update_data["inps_insured_elsewhere"] = bool(data["inps_insured_elsewhere"])
+    
     if "contract_start_date" in data:
         if data["contract_start_date"]:
             try:
@@ -12133,6 +12137,14 @@ async def sign_athlete_compensation_receipt_with_signature(
     first_time_exceeded_5000 = (month_5k == month)
     first_time_exceeded_15000 = (month_15k == month)
     
+    # 🆕 Trattenuta INPS Gestione Separata (quota lavoratore 1/3) sull'eccedenza oltre €5.000.
+    # Base = compenso combinato (Atleta + eventuale quota Coach dual-role) sul cumulo annuo lordo.
+    inps_breakdown = compute_sport_inps_withholding(
+        yearly_total, combined_amount,
+        insured_elsewhere=bool(athlete.get("inps_insured_elsewhere", False)),
+    )
+    amount_net_combined = inps_breakdown["amount_net"]
+    
     now = datetime.utcnow()
     month_names = ["", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
                    "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
@@ -12210,6 +12222,7 @@ async def sign_athlete_compensation_receipt_with_signature(
                 athlete_pro_amount=(float(amount_gross) if coach_contract_active_this_month else None),
                 # 🆕 29/06/2026 — Label "Atleta:" invece di "Collaboratore:"
                 role_label="Atleta",
+                inps_breakdown=inps_breakdown,
             )
             pdf_filename_prefix = "quietanza_atleta"
             doc_type = "compensation_receipt"
@@ -12312,6 +12325,10 @@ async def sign_athlete_compensation_receipt_with_signature(
         "receipt_signed": True,
         "receipt_signed_date": now,
         "amount_gross": amount_gross,
+        # 🆕 Netto corrisposto e trattenuta INPS (quota lavoratore 1/3) oltre €5.000
+        "amount_net": amount_net_combined,
+        "deductions": inps_breakdown.get("inps_worker", 0.0),
+        "inps_breakdown": inps_breakdown,
         "signature_base64": signature_base64,
         "document_id": receipt_id,
         "pdf_filename": pdf_filename,
@@ -21705,6 +21722,94 @@ async def _check_chronological_receipts(
     # Se siamo arrivati qui senza incontrare target, target è fuori contratto: lasciamo passare.
 
 
+# ============================================================
+# 🆕 Contributi INPS Gestione Separata — Riforma Sport (D.Lgs 36/2021)
+# Trattenuta della quota a carico del lavoratore (1/3) sulla sola parte di
+# compenso che, in cumulo annuo (per cassa), eccede la franchigia di €5.000.
+# Valori standard 2026 (circ. INPS n.8/2026), tutti configurabili.
+#   - IVS 25% calcolata sul 50% dell'eccedenza (riduzione transitoria fino 31/12/2027)
+#   - +2,03% sull'intera eccedenza (solo lavoratori NON iscritti ad altra previdenza)
+#   - ripartizione 2/3 committente, 1/3 lavoratore → trattenuta ≈ 4,84% dell'eccedenza
+# ============================================================
+INPS_FRANCHIGIA = 5000.0
+INPS_IVS_RATE_DEFAULT = 0.25      # lavoratori NON iscritti ad altra previdenza
+INPS_IVS_RATE_INSURED = 0.24      # lavoratori già iscritti ad altra previdenza obbligatoria
+INPS_MINOR_RATE = 0.0203          # aliquote minori (solo NON iscritti altrove)
+INPS_IVS_REDUCTION = 0.50         # riduzione 50% base IVS (transitoria fino 31/12/2027)
+INPS_WORKER_SHARE = 1.0 / 3.0     # quota a carico del lavoratore
+
+
+def compute_sport_inps_withholding(
+    yearly_total_before_gross: float,
+    payment_gross: float,
+    insured_elsewhere: bool = False,
+    cfg: Optional[dict] = None,
+) -> dict:
+    """Calcola la trattenuta INPS (quota lavoratore 1/3) per una singola erogazione.
+
+    `yearly_total_before_gross` = totale LORDO già maturato nell'anno PRIMA di questo
+    compenso (quietanze firmate + pregresso + compensi esterni dichiarati).
+    `payment_gross` = compenso lordo pattuito di questa erogazione.
+
+    Ritorna un dict con lordo, eccedenza oltre €5.000, contributi e netto corrisposto.
+    Se l'eccedenza è nulla (ancora sotto la franchigia) → netto = lordo (applies=False).
+    """
+    cfg = cfg or {}
+    franchigia = float(cfg.get("franchigia", INPS_FRANCHIGIA))
+    ivs_reduction = float(cfg.get("ivs_reduction", INPS_IVS_REDUCTION))
+    worker_share = float(cfg.get("worker_share", INPS_WORKER_SHARE))
+    if insured_elsewhere:
+        ivs_rate = float(cfg.get("ivs_rate_insured", INPS_IVS_RATE_INSURED))
+        minor_rate = 0.0
+    else:
+        ivs_rate = float(cfg.get("ivs_rate", INPS_IVS_RATE_DEFAULT))
+        minor_rate = float(cfg.get("minor_rate", INPS_MINOR_RATE))
+
+    before = max(0.0, float(yearly_total_before_gross or 0.0))
+    gross = max(0.0, float(payment_gross or 0.0))
+    after = before + gross
+    # Parte di QUESTO compenso che eccede la franchigia cumulativamente
+    excess = max(0.0, after - franchigia) - max(0.0, before - franchigia)
+    excess = round(min(max(0.0, excess), gross), 2)
+
+    if excess <= 0:
+        return {
+            "applies": False,
+            "amount_gross": round(gross, 2),
+            "excess_over_5000": 0.0,
+            "ivs_base": 0.0,
+            "ivs_rate": ivs_rate,
+            "minor_rate": minor_rate,
+            "inps_total": 0.0,
+            "inps_worker": 0.0,
+            "inps_employer": 0.0,
+            "amount_net": round(gross, 2),
+            "insured_elsewhere": insured_elsewhere,
+        }
+
+    ivs_base = excess * ivs_reduction
+    ivs_contribution = ivs_base * ivs_rate
+    minor_contribution = excess * minor_rate
+    inps_total = ivs_contribution + minor_contribution
+    inps_worker = round(inps_total * worker_share, 2)
+    inps_employer = round(inps_total - inps_worker, 2)
+    amount_net = round(gross - inps_worker, 2)
+    return {
+        "applies": True,
+        "amount_gross": round(gross, 2),
+        "excess_over_5000": round(excess, 2),
+        "ivs_base": round(ivs_base, 2),
+        "ivs_rate": ivs_rate,
+        "minor_rate": minor_rate,
+        "inps_total": round(inps_total, 2),
+        "inps_worker": inps_worker,
+        "inps_employer": inps_employer,
+        "amount_net": amount_net,
+        "insured_elsewhere": insured_elsewhere,
+    }
+
+
+
 def _detect_threshold_crossings_chronological(
     signed_by_month: dict,
     new_month: int,
@@ -23417,18 +23522,14 @@ async def sign_compensation_receipt(
     # Log per debug
     logging.info(f"Threshold check: yearly_total={yearly_total}, new_total={new_total}, first_5k={first_time_exceeded_5000}, first_15k={first_time_exceeded_15000}")
     
-    # Se si supera €5.000 o €15.000 si applicano ritenute
-    if new_total > 5000:
-        # Dopo €5.000: ritenuta IRPEF 23% sull'importo eccedente
-        # Semplificato: per ora mostriamo solo che ci sono deduzioni
-        if new_total > 15000:
-            # Oltre €15.000: contributi INPS + IRPEF
-            # Per semplicità: ritenuta ~33% (IRPEF + contributi)
-            deductions = request.amount_gross * 0.33
-        else:
-            # Tra €5.000 e €15.000: solo IRPEF 23%
-            deductions = request.amount_gross * 0.23
-        amount_net = request.amount_gross - deductions
+    # 🆕 Trattenuta INPS Gestione Separata (quota lavoratore 1/3) sull'eccedenza oltre €5.000.
+    # Sostituisce il vecchio placeholder IRPEF. Base cumulativa per cassa (quietanze + pregresso + esterni).
+    inps_breakdown = compute_sport_inps_withholding(
+        yearly_total, request.amount_gross,
+        insured_elsewhere=bool(coach.get("inps_insured_elsewhere", False)),
+    )
+    amount_net = inps_breakdown["amount_net"]
+    deductions = inps_breakdown["inps_worker"]
     
     # Check if record exists for this month
     existing = await db.coach_compensations.find_one({
@@ -23572,6 +23673,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 signer_id=coach_id,
                 coach_amount=coach_amount_for_pdf,
                 athlete_pro_amount=athlete_pro_amount_for_pdf,
+                inps_breakdown=inps_breakdown,
             )
             pdf_filename_prefix = "quietanza"
             doc_type = "compensation_receipt"
@@ -23654,15 +23756,13 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
             final_amount_gross = existing.get("amount_gross", request.amount_gross)
             logging.info(f"Admin-generated receipt: preserving amount {final_amount_gross}")
         
-        # Recalculate net amount based on final amount
-        final_amount_net = final_amount_gross
-        final_deductions = 0.0
-        if new_total > 5000:
-            if new_total > 15000:
-                final_deductions = final_amount_gross * 0.33
-            else:
-                final_deductions = final_amount_gross * 0.23
-            final_amount_net = final_amount_gross - final_deductions
+        # 🆕 Ricalcolo netto con trattenuta INPS (quota lavoratore 1/3) sull'eccedenza oltre €5.000
+        _inps_final = compute_sport_inps_withholding(
+            yearly_total, final_amount_gross,
+            insured_elsewhere=bool(coach.get("inps_insured_elsewhere", False)),
+        )
+        final_amount_net = _inps_final["amount_net"]
+        final_deductions = _inps_final["inps_worker"]
         
         await db.coach_compensations.update_one(
             {"id": existing["id"]},
@@ -24941,6 +25041,7 @@ def generate_monthly_receipt_pdf(
     coach_amount: Optional[float] = None,
     athlete_pro_amount: Optional[float] = None,
     role_label: str = "Collaboratore",  # 🆕 29/06/2026 — label personalizzabile: "Atleta"/"Coach"/"Dirigente"
+    inps_breakdown: Optional[dict] = None,  # 🆕 trattenuta INPS (quota lavoratore 1/3) oltre €5.000
 ) -> bytes:
     """Generate monthly compensation receipt PDF with proper formatting.
 
@@ -25011,14 +25112,38 @@ def generate_monthly_receipt_pdf(
         c.drawString(2*cm, y, f"Compenso lordo totale: € {amount_gross:.2f}")
     else:
         c.drawString(2*cm, y, f"Compenso lordo: € {amount_gross:.2f}")
-    
+
+    # 🆕 Trattenuta INPS (quota a carico del lavoratore, 1/3) sull'eccedenza oltre €5.000
+    if inps_breakdown and inps_breakdown.get("applies"):
+        _role_low = (role_label or "collaboratore").lower()
+        y -= 0.85*cm
+        c.setFont("Helvetica", 10)
+        c.drawString(2*cm, y, f"Quota compenso eccedente €5.000: € {float(inps_breakdown.get('excess_over_5000', 0) or 0):.2f}")
+        y -= 0.55*cm
+        c.drawString(2*cm, y, f"Contributi INPS trattenuti (quota a carico {_role_low}, 1/3): - € {float(inps_breakdown.get('inps_worker', 0) or 0):.2f}")
+        y -= 0.7*cm
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(2*cm, y, f"Compenso NETTO corrisposto: € {float(inps_breakdown.get('amount_net', amount_gross) or 0):.2f}")
+        y -= 0.45*cm
+        c.setFont("Helvetica-Oblique", 8)
+        c.drawString(2*cm, y, "Superata la soglia annua di €5.000 (Riforma Sport), il netto corrisposto è il lordo pattuito")
+        y -= 0.35*cm
+        c.drawString(2*cm, y, "diminuito della quota contributiva INPS a carico del lavoratore (1/3 del contributo dovuto).")
+
     # Declaration text
     y -= 1.5*cm
     c.setFont("Helvetica", 10)
     # 🆕 30/06/2026 — Dichiarazione e firma usano role_label (Atleta/Coach/
     # Collaboratore/Dirigente) invece di "collaboratore" fisso.
     role_low = (role_label or "collaboratore").lower()
-    declaration = f"{role_label or 'Il collaboratore'} dichiara che, alla data odierna, non sono intervenute variazioni rispetto all'autocertificazione dei compensi sportivi dilettantistici precedentemente resa."
+    # 🆕 Informativa/dichiarazione del punto 4 (ricezione del NETTO, lordo≠netto,
+    # progressivi distinti, compensi pregressi/altri committenti dichiarati).
+    declaration = ("Dichiaro di aver ricevuto l'importo netto indicato nella presente quietanza. "
+                   "Sono consapevole che il compenso lordo e l'importo netto effettivamente ricevuto "
+                   "sono diversi in presenza di trattenute previdenziali. Ai fini del monitoraggio delle "
+                   "soglie fiscali e previdenziali, RegistraTEAM utilizza progressivi distinti, secondo la "
+                   "normativa applicabile. Dichiaro inoltre di aver comunicato correttamente gli eventuali "
+                   "compensi pregressi e quelli percepiti presso altri committenti.")
     
     # Word wrap declaration
     words = declaration.split(' ')
@@ -25043,6 +25168,8 @@ def generate_monthly_receipt_pdf(
     y -= 1.5*cm
     c.setFont("Helvetica", 10)
     c.drawString(2*cm, y, f"Data: {timestamp}")
+    # 🆕 Modalità di pagamento (fissa: Bonifico)
+    c.drawString(width/2 - 1*cm, y, "Modalità di pagamento: Bonifico")
     # 🆕 30/06/2026 — Etichetta firma dinamica
     sign_label_low = role_low if role_low not in ("collaboratore",) else "collaboratore"
     c.drawString(width - 8*cm, y, f"Firma {sign_label_low}:")
@@ -29122,13 +29249,13 @@ async def sign_dirigente_compensation_receipt(
     
     logging.info(f"Dirigente threshold check: yearly_total={yearly_total}, new_total={new_total}, first_5k={first_time_exceeded_5000}, first_15k={first_time_exceeded_15000}")
     
-    # Se si supera €5.000 o €15.000 si applicano ritenute
-    if new_total > 5000:
-        if new_total > 15000:
-            deductions = request.amount_gross * 0.33
-        else:
-            deductions = request.amount_gross * 0.23
-        amount_net = request.amount_gross - deductions
+    # 🆕 Trattenuta INPS Gestione Separata (quota lavoratore 1/3) sull'eccedenza oltre €5.000
+    inps_breakdown = compute_sport_inps_withholding(
+        yearly_total, request.amount_gross,
+        insured_elsewhere=bool(dirigente.get("inps_insured_elsewhere", False)),
+    )
+    amount_net = inps_breakdown["amount_net"]
+    deductions = inps_breakdown["inps_worker"]
     
     # Check if record exists for this month
     existing = await db.dirigente_compensations.find_one({
@@ -29208,6 +29335,8 @@ async def sign_dirigente_compensation_receipt(
                 signed_at=now,
                 document_id=receipt_id,
                 signer_id=dirigente_id,
+                role_label="Dirigente",
+                inps_breakdown=inps_breakdown,
             )
             pdf_filename_prefix = "quietanza_dirigente"
             doc_type = "compensation_receipt"
@@ -29927,13 +30056,13 @@ async def sign_collaboratore_compensation_receipt(
     logging.info(f"=============================================")
     
     # Calculate net amount
-    amount_net = request.amount_gross
-    deductions = 0.0
-    
-    if new_total > 5000:
-        taxable = request.amount_gross if yearly_total >= 5000 else (new_total - 5000)
-        deductions = taxable * 0.2345 if new_total <= 15000 else taxable * 0.40
-        amount_net = request.amount_gross - deductions
+    # 🆕 Trattenuta INPS Gestione Separata (quota lavoratore 1/3) sull'eccedenza oltre €5.000
+    inps_breakdown = compute_sport_inps_withholding(
+        yearly_total, request.amount_gross,
+        insured_elsewhere=bool(collaboratore.get("inps_insured_elsewhere", False)),
+    )
+    amount_net = inps_breakdown["amount_net"]
+    deductions = inps_breakdown["inps_worker"]
     
     now = datetime.utcnow()
     month_name = MONTH_NAMES[request.month]
@@ -30025,6 +30154,8 @@ async def sign_collaboratore_compensation_receipt(
                 signed_at=now,
                 document_id=receipt_id,
                 signer_id=collaboratore_id,
+                role_label="Collaboratore",
+                inps_breakdown=inps_breakdown,
             )
             pdf_filename_prefix = "quietanza_collaboratore"
             doc_type = "collaboratore_compensation_receipt"

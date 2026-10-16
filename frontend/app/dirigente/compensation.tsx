@@ -18,6 +18,8 @@ import { useAuthStore } from '../../src/store/authStore';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import SignaturePadInline from '../../src/components/SignaturePadInline';
+import InpsNetBreakdown from '../../src/components/InpsNetBreakdown';
+import CompensoInformativa from '../../src/components/CompensoInformativa';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 import { handleAnagraficaError } from '../../src/utils/anagraficaError';
@@ -667,6 +669,7 @@ export default function DirigenteCompensation() {
             Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{thresholdMonth15k_y1}</Text> supererai la soglia fiscale di €15.000.
           </Text>
           <Text style={styles.alertFooter15k}>Tassazione IRPEF obbligatoria</Text>
+          <Text style={[styles.alertFooter15k, { fontStyle: 'normal', marginTop: 4 }]}>Progressivo fiscale calcolato sul compenso lordo (fiscalmente rilevante) — criterio da validare dal consulente.</Text>
         </View>
       );
     }
@@ -809,6 +812,7 @@ export default function DirigenteCompensation() {
                 : <>Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{monthLabel2y2}</Text> supererai la soglia fiscale di €15.000.</>}
             </Text>
             <Text style={styles.alertFooter15k}>Tassazione IRPEF obbligatoria</Text>
+          <Text style={[styles.alertFooter15k, { fontStyle: 'normal', marginTop: 4 }]}>Progressivo fiscale calcolato sul compenso lordo (fiscalmente rilevante) — criterio da validare dal consulente.</Text>
           </View>
         );
       }
@@ -1376,6 +1380,27 @@ export default function DirigenteCompensation() {
                   )}
                 </Text>
               </View>
+
+              <CompensoInformativa />
+
+              {/* 🆕 Riepilogo netto se il compenso supera (in cumulo) la soglia €5.000 */}
+              {(() => {
+                const existing = records.find(r => matchesMonth(r.month, selectedMonth || 0) && r.year === selectedYear);
+                const monthGross = existing?.amount_gross || existing?.amount || profile?.monthly_compensation || 0;
+                const prior = (profile as any)?.other_annual_compensation || 0;
+                const yearBefore = records
+                  .filter(r => r.year === selectedYear && r.receipt_signed && (r.month || 0) < (selectedMonth || 0))
+                  .reduce((s, r) => s + (r.amount_gross || r.amount || 0), 0) + prior;
+                return (
+                  <InpsNetBreakdown
+                    yearlyTotalBefore={yearBefore}
+                    monthGross={monthGross}
+                    insuredElsewhere={!!(profile as any)?.inps_insured_elsewhere}
+                    carico="tuo"
+                  />
+                );
+              })()}
+
 
               <Text style={[styles.signatureLabel, { marginBottom: 8 }]}>Firma qui sotto:</Text>
               <SignaturePadInline

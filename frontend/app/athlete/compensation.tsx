@@ -18,6 +18,8 @@ import SocietyBranding from '../../src/components/SocietyBranding';
 import AthleteTabBar from '../../src/components/athlete/AthleteTabBar';
 import CompensationSummaryCard from '../../src/components/compensation/CompensationSummaryCard';
 import SignaturePadInline from '../../src/components/SignaturePadInline';
+import InpsNetBreakdown from '../../src/components/InpsNetBreakdown';
+import CompensoInformativa from '../../src/components/CompensoInformativa';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 import { handleAnagraficaError } from '../../src/utils/anagraficaError';
@@ -914,6 +916,7 @@ export default function AthleteCompensation() {
             Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{thresholdMonth15k_y1}</Text> supererai la soglia fiscale di €15.000.
           </Text>
           <Text style={[styles.thresholdWarningText15k, { textAlign: 'center', fontStyle: 'italic', marginTop: 4 }]}>Tassazione IRPEF obbligatoria</Text>
+          <Text style={[styles.thresholdWarningText15k, { textAlign: 'center', fontSize: 11, marginTop: 4 }]}>Progressivo fiscale calcolato sul compenso lordo (fiscalmente rilevante) — criterio da validare dal consulente.</Text>
         </View>
       );
     }
@@ -1070,6 +1073,7 @@ export default function AthleteCompensation() {
                 : <>Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{thresholdMonth15k_y2}</Text> supererai la soglia fiscale di €15.000.</>}
             </Text>
             <Text style={[styles.thresholdWarningText15k, { textAlign: 'center', fontStyle: 'italic', marginTop: 4 }]}>Tassazione IRPEF obbligatoria</Text>
+          <Text style={[styles.thresholdWarningText15k, { textAlign: 'center', fontSize: 11, marginTop: 4 }]}>Progressivo fiscale calcolato sul compenso lordo (fiscalmente rilevante) — criterio da validare dal consulente.</Text>
           </View>
         );
       }
@@ -1747,6 +1751,27 @@ export default function AthleteCompensation() {
                   Il collaboratore dichiara che non sono intervenute variazioni rispetto all'autocertificazione precedente.
                 </Text>
               </View>
+
+              <CompensoInformativa />
+
+              {/* 🆕 Riepilogo netto se il compenso supera (in cumulo) la soglia €5.000 */}
+              {(() => {
+                const existing = records.find(r => matchesMonth(r.month, selectedMonth || 0) && r.year === selectedYear);
+                const monthGross = existing?.amount_gross || existing?.amount || profile?.monthly_compensation || 0;
+                const prior = (profile as any)?.other_annual_compensation || 0;
+                const yearBefore = records
+                  .filter(r => r.year === selectedYear && r.receipt_signed && (r.month || 0) < (selectedMonth || 0))
+                  .reduce((s, r) => s + (r.amount_gross || r.amount || 0), 0) + prior;
+                return (
+                  <InpsNetBreakdown
+                    yearlyTotalBefore={yearBefore}
+                    monthGross={monthGross}
+                    insuredElsewhere={!!(profile as any)?.inps_insured_elsewhere}
+                    carico="tuo"
+                  />
+                );
+              })()}
+
 
               {/* Signature Pad */}
               <Text style={styles.signatureLabel}>Firma qui sotto:</Text>
