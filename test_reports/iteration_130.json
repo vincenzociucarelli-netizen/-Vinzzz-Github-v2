@@ -1,0 +1,27 @@
+{
+  "summary": "FRONTEND-ONLY smoke test (viewport 390x844, static web preview, no rebuild) of the Coach anagrafica blank-page fix and the sibling profiles. All five profile/dashboard routes render correctly with NO 'Cannot access ... before initialization' TDZ errors and NO uncaught pageerrors: /coach/profile, /coach/profile?sign_privacy=1 (opens in edit mode as expected since privacy already signed), /collaboratore/profile (+ ?sign_privacy=1 edit mode), /dirigente/profile, /parent dashboard, /admin dashboard, /admin/coaches (6 coaches listed), and /admin/coach/[id] (opened 'RICA FEDE' detail = /admin/coach/69adf7618a40c8115bda5c2d, textLen 428, renders). Coach dashboard shows PRIVACY (purple, 'Firmata 11/04/2026') + MAPPA PALESTRE (teal) row and tapping PRIVACY correctly navigates to /coach/profile?sign_privacy=1. Collaboratore, Dirigente and Parent dashboards all show the pastel orange 'Calendario Gare Società' banner. ONE BUG FOUND: on /coach the SocietyMatchesLink banner is placed INSIDE the Scanner-tab ScrollView (coach/index.tsx:1071) so it does NOT appear on the default /coach view — missing where the review request expected it (next to PRIVACY / MAPPA PALESTRE). All other roles mount SocietyMatchesLink at the top level of the dashboard body.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "coach dashboard SocietyMatchesLink placement", "issue": "'Calendario Gare Società' orange banner is rendered inside the Scanner-tab content (app/coach/index.tsx line 1071) instead of in the main dashboard body. On the default landing /coach view only PRIVACY + MAPPA PALESTRE show and the banner is invisible until the user switches to the Scanner tab. Collaboratore, Dirigente, Parent correctly place it at top level (collaboratore/index.tsx:183, dirigente/index.tsx:290, parent/index.tsx:638).", "testID": "society-matches-link", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Move <SocietyMatchesLink /> in /app/frontend/app/coach/index.tsx out of the Scanner-tab ScrollView and render it at the top level of the dashboard body (same position as in collaboratore/dirigente/parent index.tsx), so the orange 'Calendario Gare Società' banner is visible on the default /coach view, next to the PRIVACY/MAPPA PALESTRE row.",
+    "After moving, rebuild the static export (npm run build / expo export) since the preview is served from /app/frontend/dist by 'npx serve -s dist' and has no hot reload."
+  ],
+  "critical_code_review_comments": [
+    "SocietyMatchesLink is placed inside the Scanner tab block (coach/index.tsx:1071) — likely an oversight when the banner was added to all roles on 13/09/2026."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "92%"},
+  "seed_data_creation": "none",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Static web preview served at EXPO_PUBLIC_BACKEND_URL (https://zaino-coach-hub.preview.emergentagent.com) via 'npx serve -s dist' on port 3000. Login payload returns 'token'. Cookie banner 'Accetta tutti' + first-login tutorial overlays appear on first visit per role — dismiss them. Tested credentials used: alice@test.com/Test1234 (coach), paolo@coll.com/PaoloTest123 (collaboratore), lella@dir.com/Test1234 (dirigente), vincenzo.ciucarelli@gmail.com/Test1234 (admin — lands on /select-role before /admin), armida.raschi@gmail.com/Test1234 (parent). Admin coaches list uses TouchableOpacity rows (no <a href>), tap by coach name text to open /admin/coach/[id].",
+  "rca_of_issue": "Coach anagrafica blank-page root cause (TDZ) was already fixed by main agent — verified: /coach/profile and /coach/profile?sign_privacy=1 now render without 'Cannot access ... before initialization' errors (0 console errors, 0 pageerrors). Secondary issue found during the request's broader validation: /coach dashboard is missing the orange calendar banner because SocietyMatchesLink was placed inside the Scanner tab content instead of at the top of the dashboard body."
+}

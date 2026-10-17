@@ -1,0 +1,24 @@
+{
+  "summary": "Frontend-only retest of iteration_87 fixes after data-testid→testID conversion in RN components. ALL 4 FIXES VERIFIED PASS via preview URL. (1) Coach PEDRETTI VITO /admin/coach/69d8a09adc5301e0bacba379 → Compensi tab → [data-testid='admin-coach-compensi-edit-btn'] present + clickable → in edit mode [data-testid='coach-prior-comp-readonly'] present in DOM with text '€ 4950,00' (readonly box, no editable TextInput for pregresso). (2) Collaboratore PAOLI PAOLO opened via /admin/collaboratori → [data-testid='admin-collab-compensi-edit-btn'] present → [data-testid='collab-prior-comp-readonly'] present with '€ 4000,00' AND visible lock text '🔒 Dichiarato e firmato dal collaboratore nel proprio profilo. L'admin può solo visualizzarlo, non inserirlo.' (3) Dirigente MARZO LELLA opened via /admin/dirigenti → [data-testid='admin-dirigente-compensi-edit-btn'] present → [data-testid='dirigente-prior-comp-readonly'] present with '€ 2800,00' AND visible lock text '🔒 Dichiarato e firmato dal dirigente nel proprio profilo. L'admin può solo visualizzarlo, non inserirlo.' (4) TEAMS EDIT REFRESH FLOW: /admin/coaches list initially showed PEDRETTI 'Serie D, Under 18' → opened coach profile → Da fare tab → [data-testid='admin-coach-teams-edit-btn'] present → toggled 'Serie C' → clicked 'Salva Squadre' → returned to /admin/coaches → list correctly showed 'Serie D, Under 18, Serie C' (useFocusEffect refresh working). Reverted change after test to leave data clean. (5) FIPAV panel on athlete BIANCHI MARCO (route /admin/athletes → click athlete → Presenze tab): 'Regola Serie Superiore (Serie C / D / 1ª Div)' + 'Regola Campionati di Categoria (fino a U17)' present with full descriptions ('Max 10 presenze in Serie superiore...', 'Max 2 campionati... max 3 gare...'). No 'Feature A'/'Feature B' text. 'non soggetto' correctly displayed as BIANCHI (born 1998) is out of scope for both rules.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "coach/[id].tsx remains at 3300+ lines — should still be split into sub-components (CompensiCard, TeamsCard, etc.) for maintainability.",
+    "Consider adding ESLint rule to prevent regression from testID → data-testid on RN native components in future PRs.",
+    "In /app/frontend/app/admin route, athletes list URL is /admin/athletes but there is no /admin/atleti alias — minor consistency (Italian vs English) but not a bug."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped by request)", "frontend": "5/5 flows verified (100%)"},
+  "test_credentials": "Admin vincenzo.ciucarelli@gmail.com / Test1234 worked. Coach PEDRETTI id 69d8a09adc5301e0bacba379, Collab PAOLI id 69ac95a48e1e15f961f9c86d, Dirigente MARZO id 69b0272442818f49becb7b25.",
+  "seed_data_creation": "None. Temporary team toggle (added+removed Serie C for PEDRETTI VITO) was fully reverted at end of test.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 4 iteration_87 fix items are now fully green including data-testid contracts. Athletes route is /admin/athletes (not /admin/atleti). Teams-refresh flow verified end-to-end via useFocusEffect. No further action needed on these items.",
+  "rca of the issue": "N/A — all previously reported bugs are resolved. The data-testid→testID conversion done by main agent successfully exposes all required selectors in the RN-Web DOM."
+}

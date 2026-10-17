@@ -1,0 +1,39 @@
+{
+  "summary": "Tested dual-role Admin↔Parent + change-email E2E. Backend: 6 pytest, 5/6 pass; one minor edge case (invalid slot accepted as primary). Frontend: verified visually via Playwright — /admin header now shows a purple people icon (bg #F3E5F5) that navigates to /parent; /parent shows ONLY the linked child (GIULIA), not all 51 society athletes; /parent header has shield icon back-to-staff that correctly returns admin to /admin; /admin/athlete/[id] Anagrafica tab shows the green pill 'Sei collegato come genitore di questo atleta' once linked and hides the link button. Change-email endpoint validated via curl: 400 for wrong password, 400 for duplicate email, 200 for valid change + re-login with new email works. DB state (Vinz email + GIULIA parent_id + second_parent_id) fully restored to original.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/athletes/{id}/link-me-as-parent", "issue": "Invalid slot value (e.g. 'bogus') is accepted and silently treated as primary (returns 200). Backend should validate slot ∈ {'primary','secondary'} and return 400/422."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "TouchableOpacity data-testid propagation", "issue": "As noted in iter 83, JSX data-testid on <TouchableOpacity>/<Modal> does not propagate through react-native-web. All new testids in iter 84 (admin-switch-to-parent-btn, dirigente-parent-switch-card, coord-switch-to-parent-btn, link-me-as-parent-btn, parent-back-to-staff-btn, settings-change-email-btn, change-email-submit-btn) return 0 in the DOM. Functionality works visually and via coordinate/text selectors, but automated e2e testids will fail. Use testID={...} (RN native) instead of data-testid.", "selector": "any data-testid on TouchableOpacity/Pressable", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_dual_role_parent_and_change_email.py",
+    "/app/test_reports/pytest/iter84_results.xml"
+  ],
+  "action_items": [
+    "BACKEND: validate `slot` payload on POST /api/athletes/{id}/link-me-as-parent — reject values not in {'primary','secondary'} with 400.",
+    "FRONTEND (test tooling only): replace data-testid=... with testID=... on TouchableOpacity/Pressable/Modal to expose selectors in the DOM. Not blocking functionality."
+  ],
+  "critical_code_review_comments": [
+    "New endpoints (link-me-as-parent, parent-of, change-email) correctly enforce society-scoped access and password verification. change-email correctly checks case-insensitive uniqueness and rejects duplicates.",
+    "/api/athletes/my dual-role branching correctly returns children-only when the staff user has ≥1 linked athlete — no data leak observed after linking/unlinking flow.",
+    "Slot value not validated in link-me-as-parent (see minor issue) — data-integrity concern if a malformed client sends unexpected strings."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_dual_role_parent_and_change_email.py (new)"
+  ],
+  "success_rate": {"backend": "83% (5/6 pytest; 1 minor validation edge case)", "frontend": "100% functional/visual (data-testid selectors unavailable due to react-native-web, but flows verified via text/coordinates)"},
+  "test_credentials": "Admin: vincenzo.ciucarelli@gmail.com / Test1234 (restored). During test the email was temporarily changed to vincenzo.ciucarelli+test@gmail.com and reverted.",
+  "seed_data_creation": "None. Temporary link between Vinz and GIULIA ROSSI created during tests, then removed. GIULIA parent_id and second_parent_id restored to original (parent@sportsclub.com / unset).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Frontend served statically from /app/frontend/dist by supervisor `expo` (`npx serve -s dist`). Every frontend change requires `cd /app/frontend && npx expo export --platform web && sudo supervisorctl restart expo`. react-native-web does NOT map JSX data-testid — always use testID for e2e selectors. Backend tests: /app/backend/tests/test_dual_role_parent_and_change_email.py (uses REACT_APP_BACKEND_URL). MongoDB athlete documents have both `_id` (ObjectId) and `id` (UUID string) — always query by the `id` string field to match API responses.",
+  "rca of the issue": "N/A — features work as designed. Only edge-case: link-me-as-parent accepts any slot string as primary. Fix: `if slot not in ('primary','secondary'): raise HTTPException(400, 'Slot non valido')` before writing to DB."
+}

@@ -1,0 +1,32 @@
+{
+  "summary": "Verified libricino/GuideButton feature for Dirigente (role=viewer). Backend endpoint /api/guides/dirigente returns 200 + application/pdf for viewer role and 403 for a parent role. Frontend: the book icon (📖) is present in the header of /dirigente, /dirigente/profile and /dirigente/compensation. Clicking it triggers GET /api/guides/dirigente (200, application/pdf) and opens the InAppPdfModal with title 'Guida Dirigente' and an iframe pointing to a blob: URL — PDF loads correctly on all 3 pages.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "GuideButton", "issue": "data-testid prop is NOT rendered in the DOM on React Native Web. The component passes `data-testid={`guide-button-${role}`}` as a prop to <TouchableOpacity>, but RN Web only forwards the standard `testID` prop (which then renders as data-testid). Result: [data-testid='guide-button-dirigente'] selector never matches, breaking automated E2E tests. Suggested fix: change to `testID={`guide-button-${role}`}` in /app/frontend/src/components/GuideButton.tsx line 60.", "selector": "[data-testid='guide-button-dirigente']", "priority": "MEDIUM"},
+      {"component": "GuideButton (Ionicons)", "issue": "The icon renders as a 📖 emoji fallback instead of the intended Ionicons 'book-outline' glyph — suggests the Ionicons web font is not loading. Functionality is unaffected, but visual consistency across icons is broken (the icon is a colored emoji rather than a monochrome outline matching the person/exit icons).", "selector": "header 📖", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "In /app/frontend/src/components/GuideButton.tsx line 60: replace `data-testid={...}` with `testID={...}` so that React Native Web forwards it to the DOM as data-testid (this is required by the review request which explicitly relies on data-testid='guide-button-dirigente').",
+    "Optional: investigate why Ionicons font isn't loading on web (falls back to 📖 emoji). Functionality is fine, but visually inconsistent."
+  ],
+  "critical_code_review_comments": [
+    "GuideButton.tsx uses `data-testid` prop on TouchableOpacity — this is a common RN Web mistake; must be `testID` to be forwarded to the DOM.",
+    "The feature itself is implemented correctly on all 3 Dirigente pages (index, profile, compensation) — button is present, API call fires, PDF modal opens with an iframe."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100% (functional) / partially failing on data-testid selector"},
+  "test_credentials": "lella@dir.com / Test1234 (dirigente role=viewer); fabia@test.com / Test1234 (parent, used for 403 check)",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Feature verified end-to-end. Backend endpoint OK (200 pdf for viewer, 403 for parent). Frontend: book icon renders as 📖 emoji (Ionicons font not loading — cosmetic), and click fires GET /api/guides/dirigente → InAppPdfModal opens with iframe blob URL. Only outstanding issue: the data-testid attribute mentioned in the review request is NOT actually in the DOM because GuideButton.tsx passes `data-testid` instead of `testID` to TouchableOpacity. This blocks selector-based E2E automation but not user functionality.",
+  "rca of the issue": "React Native Web only forwards the `testID` prop from RN components (like TouchableOpacity) to the DOM as `data-testid`. When source code passes the raw HTML attribute `data-testid` as a JSX prop to a RN primitive, RN Web ignores it — the resulting <div role='button'> has no data-testid. Fix: use `testID={`guide-button-${role}`}` in GuideButton.tsx."
+}

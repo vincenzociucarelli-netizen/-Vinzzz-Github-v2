@@ -1,0 +1,75 @@
+{
+  "summary": "Frontend testing completed for athlete payments page cumulative logic and admin team dynamic installments. All 7 features verified successfully - cumulative payment logic, actual payment descriptions from DB, expandable payment plan, correct Residuo Dovuto calculation, no duplicate sections, Scarica Ricevuta button, and admin team dynamic installments.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    ".screenshots/03_payments_page_full.png",
+    ".screenshots/04_payments_expanded.png",
+    ".screenshots/06_admin_team_view.png"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Cumulative payment logic at payments.tsx lines 398-576 is working correctly - €500 total paid applies sequentially across 10 installments",
+    "Pagamenti Ricevuti section at lines 578-630 correctly displays actual payment descriptions from DB, not generic 'Rata 1, Rata 2...'",
+    "Admin team view at [id].tsx lines 1242-1295 correctly shows all 10 dynamic installments with names and due dates instead of hardcoded 3-rate system"
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A - Frontend only testing",
+    "frontend": "100% (7/7 features verified)"
+  },
+  "test_credentials": {
+    "athlete_login": {"email": "luna@18piu.com", "password": "password"},
+    "admin_login": {"email": "pallavoloperugia@gmail.com", "password": "password"},
+    "team_id": "698146f951a98f19b5555a40",
+    "team_name": "Under 18"
+  },
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Athlete payments page and admin team view for Under 18 team are fully working. Luna has 10 installments configured (€50 quota + 9 rates of €100 = €950 total). 5 payments totaling €500 have been made. Cumulative logic correctly shows first 5 installments PAID, Rata 5 PARTIAL (50/100), remaining UNPAID. Admin team view shows all 10 dynamic installments instead of hardcoded 3-rate system.",
+  "tests_executed": [
+    {
+      "feature": "Cumulative payment logic",
+      "status": "PASSED",
+      "description": "Total paid (€500) applied sequentially - first 5 PAID (blue), Rata 5 PARTIAL (orange, 50/100), remaining UNPAID (red)"
+    },
+    {
+      "feature": "Pagamenti Ricevuti section",
+      "status": "PASSED",
+      "description": "Shows actual payment descriptions from DB: Iscrizione, Pagamento del 10/09/2025, Rata 3, Acconto rata 4, Saldo rata 4+Rata 5+ acconto rata 6"
+    },
+    {
+      "feature": "Expandable payment plan",
+      "status": "PASSED",
+      "description": "Clicking next-installment-row expands/collapses full plan showing all 10 installments with correct color coding"
+    },
+    {
+      "feature": "Residuo Dovuto calculation",
+      "status": "PASSED",
+      "description": "Shows €450 correctly (€950 - €500 = €450)"
+    },
+    {
+      "feature": "No duplicate Pagamenti Effettuati section",
+      "status": "PASSED",
+      "description": "Duplicate green section removed - only 'Pagamenti Ricevuti' section present"
+    },
+    {
+      "feature": "Scarica Ricevuta button",
+      "status": "PASSED",
+      "description": "Button visible at data-testid='download-receipt-btn' and clickable"
+    },
+    {
+      "feature": "Admin team dynamic installments",
+      "status": "PASSED",
+      "description": "Shows all 10 dynamic installments (Quota iscrizione + Rata 1-9) with names and due dates instead of hardcoded 3-rate system"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 103 — Backend-only test of the 16/08/2026 performance fix on GET /api/settings/society?include_images=true (routes/settings.py:272-292). Built /app/backend/tests/test_settings_society_image_compression.py with 9 pytest cases: 7 PASS, 2 FAIL. PASSING: (1) heavy logo (>500KB) is compressed to ~267KB base64, max 1280px, valid JPEG w/o 'data:' prefix, persisted in db.settings, stable on 2nd call; (2) same for sport_image; (3) same for stamp_signature; (4-6) small (<500KB) images for logo/sport_image/stamp_signature are LEFT UNCHANGED in both response and DB (regression OK); (7) performance stability — 2nd call returns identical payload length (<500KB) confirming persistence. FAILING (real bug): the LIGHTWEIGHT GET /api/settings/society (without include_images) does NOT return the has_logo / has_sport_image / has_stamp_signature booleans, even though the review request explicitly requires them. RCA at routes/settings.py:295-305 the flags ARE computed on the local `settings` dict but the final return statement at lines 334-376 constructs a NEW dict with hardcoded keys and silently drops the three flags. Verified live: curl to /api/settings/society returns has_logo=None, has_sport_image=None, has_stamp_signature=None. Compression + persistence part of the fix works correctly; only the lightweight response contract is broken. All seeded heavy JPEGs were $unset in teardown (db.settings for society_id=697fdba0d218717959e73eea is clean post-run).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "GET /api/settings/society (no include_images)",
+        "issue": "The response is missing has_logo, has_sport_image, has_stamp_signature booleans even when heavy image fields are present in db.settings. RCA: routes/settings.py lines 303-305 set these flags on the local `settings` dict, but the final return at lines 334-376 rebuilds a new dict from hardcoded keys and never copies the three flags. Fix: add `\"has_logo\": settings.get(\"has_logo\", False), \"has_sport_image\": settings.get(\"has_sport_image\", False), \"has_stamp_signature\": settings.get(\"has_stamp_signature\", False)` to the return dict at routes/settings.py:334-376. Alternatively (cleaner) move the has_* computation into that return dict directly using existence_probe. This is the ONLY failure in the review request checkpoints — compression/persistence works fine, and the anonymous branch (lines 224-254) does return the flags. Priority: HIGH because the frontend uses these flags to decide whether to render <Image> tags pointing at /logo.png etc; without them the light payload is useless for that decision."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_settings_society_image_compression.py",
+    "/app/test_reports/pytest/settings_society_image_compression.xml"
+  ],
+  "action_items": [
+    "Fix routes/settings.py get_society_settings final return (lines 334-376): add `has_logo`, `has_sport_image`, `has_stamp_signature` keys sourced from `settings.get(...)` (they are already populated on the settings dict at lines 303-305 in the include_images=False branch). Without this fix the review-request checkpoint 'REGRESSIONE senza immagini ... deve includere i flag has_logo/has_sport_image/has_stamp_signature corretti' is not satisfied.",
+    "After the fix, rerun /app/backend/tests/test_settings_society_image_compression.py to verify all 9 cases go green (compression tests already pass)."
+  ],
+  "critical_code_review_comments": [
+    "routes/settings.py:272-292 (include_images=true branch): the compression loop correctly iterates over the 3 heavy fields, guards with `isinstance(_val, str) and len(_val) > 500_000`, only persists when the compressed value is smaller (`_comp != _val and len(_comp) < len(_val)`), and wraps everything in a broad try/except that never surfaces the error. Consider logging on compression failure to catch systemic PIL issues in production.",
+    "routes/settings.py:334-376 hardcodes 40+ response keys instead of spreading `**settings` with a projection blacklist. This is what caused the has_* flags to be silently dropped in the lightweight branch. Consider refactoring to `{**settings, 'sport_type': settings.get('sport_type') or settings.get('sport_praticato')}` — keeps forward compatibility.",
+    "utils.compress_base64_image (utils.py:60-92) is called with default max_dim=1280, quality=72 — matches the review-request spec. Returns RAW base64 (no data URI prefix) as required. Handles EXIF orientation and mode conversion; silently returns input on failure — defensive but consider logging.",
+    "The compression backfill only runs on the SETTINGS doc scoped to the authenticated user's society; multi-tenant isolation is preserved (query filter is `{type: society, society_id: <user.society_id>}`)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_settings_society_image_compression.py (new, 9 tests)"
+  ],
+  "success_rate": {
+    "backend": "78% (7/9 pytest PASS — 2 failures are real bug in lightweight response schema, not test issues)",
+    "frontend": "N/A (backend-only requested)"
+  },
+  "seed_data_creation": "During test runs, heavy JPEG base64 (~4MB, 1600x1600 q98 gradient+noise) was $set into db.settings.{logo, sport_image, stamp_signature} for society_id=697fdba0d218717959e73eea. All fields were $unset in fixture finally blocks; verified absent post-run. No production data touched.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Auth login returns { token, user }. Backend base URL: EXPO_BACKEND_URL (currently https://zaino-coach-hub.preview.emergentagent.com). Admin society_id: 697fdba0d218717959e73eea. Settings doc query is {type: 'society', society_id: <admin.society_id>}. The compression backfill (include_images=true) is now WORKING for logo/sport_image/stamp_signature (verified 3x3 = 9 assertion classes across the 3 fields, all green). The one remaining issue is the LIGHTWEIGHT endpoint at routes/settings.py:334-376 not including has_logo/has_sport_image/has_stamp_signature in the response — after the main agent adds these 3 keys to the return dict, rerun test_settings_society_image_compression.py to confirm 9/9 pass. To generate a heavy-but-well-compressing JPEG use size_px=1600 gradient+small-noise q98 (~4MB base64, compresses to ~267KB).",
+  "rca_of_issue": "REGRESSION BUG in lightweight branch of GET /api/settings/society. Reproduction: curl -H 'Authorization: Bearer <admin_token>' /api/settings/society → response is missing has_logo, has_sport_image, has_stamp_signature keys. Root cause: routes/settings.py lines 303-305 compute the flags onto the local `settings` dict, but the final `return { 'name': settings.get('name'), ... }` at lines 334-376 hardcodes ~40 keys and never copies the three flags. Mitigation: add three lines to the return dict — `'has_logo': settings.get('has_logo', False)`, `'has_sport_image': settings.get('has_sport_image', False)`, `'has_stamp_signature': settings.get('has_stamp_signature', False)`. Impact: the frontend cannot decide whether to render <Image src=/api/settings/society/logo.png /> tags without those flags, which reintroduces the slowness reported by the admin (client falls back to include_images=true just to know whether an image exists)."
+}

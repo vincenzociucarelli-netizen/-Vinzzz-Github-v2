@@ -1,0 +1,20 @@
+{
+  "summary": "Verified FIPAV level classification bug fix. All 6 backend tests passed: 'Prima Divisione Femminile' is now correctly classified as 'upper' and increments upper_league_presences. Other variants (Serie C, Serie D Maschile, 1^ Divisione) also classify as upper. 'Under 14/16' remain 'category' (do NOT increment upper counter, but count in camp3_presences_count and weekly_summary). Upper entries are counted BOTH in upper_league_presences AND weekly_summary.max_in_any_week. GET self-heal returns consistent levels. Duplicate-date block (400) still active.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": ["/app/backend/tests/test_fipav_classify_level.py", "/app/test_reports/pytest/fipav_classify.xml"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "classify_fipav_level: robust normalization (unicode NFKD, replaces ^/°/ª, lowercase). Recognizes 'serie c', 'serie d' and 'divisione' + ('prima' or 1/1a). Good coverage.",
+    "Consider also matching 'terza divisione'? Not required per spec (only 1^ upper); Seconda/Terza correctly fall to 'category'.",
+    "_recompute_levels applied on both GET and POST — good self-heal for legacy entries."
+  ],
+  "updated_files": ["/app/backend/tests/test_fipav_classify_level.py"],
+  "success_rate": {"backend": "100%", "frontend": "n/a"},
+  "test_credentials": "vincenzo.ciucarelli@gmail.com / Test1234; athlete_id=c0555a97927f4054ae84b1c9",
+  "seed_data_creation": "Tests auto-cleanup all game_presences at setup and teardown (MARCO registry emptied).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login response uses 'token' key (not 'access_token'). MARCO athlete registry left clean.",
+  "rca of the issue": "Prior code used exact set match UPPER_LEAGUE_SET={'Serie C','Serie D','1^ Divisione'}, missing variants like 'Prima Divisione Femminile'. Fix normalizes and pattern-matches. Verified upper_league_presences now increments correctly."
+}

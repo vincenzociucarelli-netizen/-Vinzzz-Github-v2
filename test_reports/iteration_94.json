@@ -1,0 +1,25 @@
+{
+  "summary": "Bug fix 03/08/2026 (privacy MAI accettata alla registrazione per MINORENNI dall'area genitore) VERIFICATO OK sia backend sia frontend. Backend: POST /api/athletes con DOB 2012-05-10 restituisce privacy_accepted=False, consent_images_internal=None, consents.privacy_viewed.value=False, status='pending_trial', is_minor=True. Con DOB 2000-05-10 mantiene privacy_accepted=True, consent_images_internal=True, status='pending', is_minor=False (comportamento invariato). Frontend (build statico attuale, NON ricompilato): in /parent/register-athlete inserendo 10/05/2012 nella sezione 'Tipo Iscrizione' compare SOLO il box informativo 'Iscrizione con periodo di prova (7 giorni)' e NESSUNA checkbox privacy; cambiando a 10/05/2000 il box informativo sparisce e compaiono le checkbox consensi incluse 'Presa visione dell'informativa sulla privacy *'. Anche in dashboard genitore il minore appena creato appare 'In attesa di inizio prova' (NON attivo/privacy).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_minor_privacy_at_registration.py",
+    "/app/test_reports/pytest/iter94_minor_privacy.xml"
+  ],
+  "action_items": [
+    "Cancellare i 2 atleti di seed creati durante il test (fiscal_code inizianti con ZZTEST): ZZTESTMIN12X001Y (MinorTest ZZTEST, DOB 2012-05-10) e ZZTESTADT00X002Y (AdultTest ZZTEST, DOB 2000-05-10), entrambi appartenenti alla parent armida.raschi@gmail.com / Pallavolo Perugia."
+  ],
+  "critical_code_review_comments": [
+    "server.py:8293 usa `(datetime.utcnow() - dob).days // 365` per calcolare l'età: approssimazione grossolana che può sbagliare di ~1 giorno vicino al compleanno bisestile. Non critico per il fix corrente ma andrebbe sostituito con calcolo anno civile (anni compiuti alla data odierna) coerente con `_compute_is_minor` (usato altrove).",
+    "register-athlete.tsx duplica la logica di calcolo minorenne (client) rispetto al backend: il backend è comunque autoritativo (verificato), quindi il rischio è basso. Ok.",
+    "Payload dal client per minorenne include già privacy_accepted:false / consent_privacy_viewed:false / consent_images_*:null (righe 280-283) -> doppia protezione. Buono."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (2/2 pytest)", "frontend": "100% (minor/adult toggle UI OK)"},
+  "test_credentials": "Parent: armida.raschi@gmail.com / Test1234 (Pallavolo Perugia)",
+  "seed_data_creation": "2 atleti creati con CF ZZTESTMIN12X001Y e ZZTESTADT00X002Y sotto parent_id di armida.raschi@gmail.com. Da rimuovere dal main agent.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Preview servito da build statico (npx serve -s dist). Il bundle attuale contiene già il fix privacy minori. Login parent: cookie banner 'Solo necessari' + onboarding modal ('Protezione Dati') vanno chiusi con 'Salta'. Il campo DOB usa placeholder 'es: 15/05/2010' e maxlength=10, formato GG/MM/AAAA. Selettori text-based affidabili: get_by_text('Iscrizione con periodo di prova') e get_by_text(\"Presa visione dell'informativa sulla privacy\").",
+  "rca of the issue": "Prima del fix, in server.py POST /api/athletes usava indiscriminatamente i valori privacy_accepted/consent_* forniti dal client: il frontend genitore, anche per minorenne, inviava privacy_accepted=true portando l'atleta in stato 'active' con privacy accettata senza firma reale. Fix opzione A applicato: nel branch is_minor si forza privacy_accepted=False, consent_privacy_viewed=False, consent_images_internal/promo=None e status='pending_trial'; per i maggiorenni il comportamento originale è preservato. Frontend aggiornato in parallelo per rimuovere le checkbox privacy dal form quando la DOB indica minorenne. Verifica end-to-end superata."
+}

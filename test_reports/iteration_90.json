@@ -1,0 +1,37 @@
+{
+  "summary": "Frontend-only test della card 'Calendario Gare' collassabile con filtro 3-vie (Da giocare/Giocate/Totale) su vista atleta MARCO e vista admin per athlete c0555a97927f4054ae84b1c9. Tutti i 5 requisiti superati.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "detailed_results": {
+    "athlete_view_marco": {
+      "card_collapsed_by_default": "PASS - toggle presente (data-testid=athlete-matches-toggle), filtro upcoming NON visibile a card collassata",
+      "federation_links_visible_when_collapsed": "PASS - data-testid=athlete-federation-links visibile fuori dal collapse",
+      "expand_shows_filters": "PASS - 3 filter tab visibili con label esatte: 'Da giocare (0)', 'Giocate (54)', 'Totale (54)'",
+      "export_ics_button_present": "PASS - data-testid=athlete-matches-export-ics",
+      "default_filter_upcoming_shows_empty_message": "PASS - 'Nessuna gara da giocare.' visibile",
+      "click_giocate_shows_list_with_vedi_tutte": "PASS - 'Vedi tutte (54)' presente, mostra 5 gare",
+      "click_totale_shows_list_with_vedi_tutte": "PASS - 'Vedi tutte (54)' presente",
+      "toggle_collapse_again": "PASS - filter tab count torna 0 al re-click header, federation links restano visibili"
+    },
+    "admin_view": {
+      "fipav_panel_on_top": "PASS - 'Regole FIPAV' index=70 PRIMA di 'Calendario Gare' index=969",
+      "serie_superiore_and_settimana_info_present": "PASS - testo 'Serie Superiore' e regola 'gare a settimana' presenti nel pannello Regole FIPAV",
+      "calendario_gare_collapsible_same_behavior": "PASS - toggle presente, filtro nascosto collassato, espanso mostra i 3 filter tab",
+      "squadra_and_statistiche_below": "PASS - 'Squadra' index=1131, 'Statistiche' index=1173 (dopo Calendario Gare)"
+    }
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100%"},
+  "test_credentials": "marcob@test.com/Test1234 (atleta), vincenzo.ciucarelli@gmail.com/Test1234 (admin)",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Feature 'Calendario Gare collassabile + filtro 3-vie' completamente funzionante su entrambe le viste (atleta e admin). Data-testid corretti: athlete-matches-toggle, athlete-matches-filter-upcoming/played/all, athlete-matches-export-ics, athlete-federation-links. Ordine tab Presenze admin: Regole FIPAV -> Calendario Gare -> Squadra -> Statistiche."
+}

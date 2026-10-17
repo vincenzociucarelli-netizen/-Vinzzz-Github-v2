@@ -1,0 +1,95 @@
+{
+  "summary": "Backend testing for GDPR-compliant endpoints completed. All 11 tests passed: DELETE /api/auth/delete-my-data (GDPR deletion), GET /api/auth/me returns trial_end_date/date_of_birth for athletes.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_gdpr_endpoints.py",
+    "/app/test_reports/pytest/gdpr_endpoints_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "GDPR DELETE endpoint VERIFIED at server.py lines 11488-11569: Deletes user, athlete record, signed_documents, receipts, notifications, certificates",
+    "/api/auth/me VERIFIED at server.py lines 1348-1381: Returns trial_end_date, date_of_birth, privacy_accepted for athlete role",
+    "Adult athlete registration correctly creates athlete record with trial_end_date (7 days from registration)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_gdpr_endpoints.py"
+  ],
+  "success_rate": {
+    "backend": "100% (11/11 tests passed)",
+    "frontend": "N/A - Backend only testing requested"
+  },
+  "test_credentials": {
+    "adult_athlete": {"email": "adult.athlete@test.com", "password": "Test1234"},
+    "admin": {"email": "test.admin@test.com", "password": "Test1234"}
+  },
+  "seed_data_creation": "Created and deleted test users: gdpr.test.* and gdpr.athlete.* (cleaned up by GDPR deletion tests)",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "GDPR endpoints fully verified. DELETE /api/auth/delete-my-data deletes all user data (user, athlete, documents, certificates, receipts, notifications). /api/auth/me correctly returns trial_end_date and date_of_birth from athlete collection for athlete role users. Adult athlete registration tested - creates athlete with trial_end_date 7 days from registration.",
+  "verified_features": {
+    "gdpr_delete_endpoint": {
+      "status": "PASS",
+      "endpoint": "DELETE /api/auth/delete-my-data",
+      "fix_location": "server.py lines 11488-11569",
+      "description": "GDPR-compliant data deletion endpoint. Deletes: user, athlete record, signed_documents, receipts, notifications, certificates",
+      "test_results": {
+        "auth_required": true,
+        "user_deleted": true,
+        "athlete_deleted": true,
+        "response_includes_deleted_counts": true
+      }
+    },
+    "auth_me_trial_end_date": {
+      "status": "PASS",
+      "endpoint": "GET /api/auth/me",
+      "fix_location": "server.py lines 1369-1372",
+      "description": "Returns trial_end_date from athlete collection for users with athlete role",
+      "test_results": {
+        "field_present": true,
+        "sample_value": "2026-03-03T06:07:10.389000"
+      }
+    },
+    "auth_me_date_of_birth": {
+      "status": "PASS",
+      "endpoint": "GET /api/auth/me",
+      "fix_location": "server.py lines 1374-1376",
+      "description": "Returns date_of_birth from athlete collection if not in user record",
+      "test_results": {
+        "field_present": true,
+        "sample_value": "1990-05-15T00:00:00"
+      }
+    },
+    "auth_me_privacy_accepted": {
+      "status": "PASS",
+      "endpoint": "GET /api/auth/me",
+      "fix_location": "server.py lines 1377-1379",
+      "description": "Returns privacy_accepted from athlete record if not in user record",
+      "test_results": {
+        "field_present": true
+      }
+    }
+  },
+  "tests_executed": {
+    "backend": {
+      "TestHealthCheck::test_api_health": "PASS",
+      "TestAdminLogin::test_admin_login": "PASS",
+      "TestAthleteAuth::test_adult_athlete_login": "PASS",
+      "TestAthleteAuth::test_auth_me_returns_trial_end_date": "PASS",
+      "TestAthleteAuth::test_auth_me_returns_date_of_birth": "PASS",
+      "TestAthleteAuth::test_auth_me_returns_privacy_accepted": "PASS",
+      "TestGDPRDeleteEndpoint::test_delete_endpoint_requires_auth": "PASS",
+      "TestGDPRDeleteEndpoint::test_delete_endpoint_exists": "PASS",
+      "TestGDPRDeleteEndpoint::test_delete_creates_test_user_and_deletes": "PASS",
+      "TestGDPRDeleteAdultAthlete::test_delete_adult_athlete_flow": "PASS",
+      "TestAuthMeForAthletes::test_auth_me_full_response": "PASS"
+    }
+  }
+}

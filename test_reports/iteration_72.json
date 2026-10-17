@@ -1,0 +1,35 @@
+{
+  "summary": "Testato REFACTOR Fase 2 del Riepilogo Compensi Unificato (feedback PO italiano). Backend: pytest test_quartile_calculation.py 21/21 PASS dopo il cambio di _calculate_ras_total da float a dict {total, breakdown}. Nuovo file pytest test_compensation_summary_breakdown.py 6/6 PASS: endpoint /api/admin/persons/{user_id}/compensation-summary espone correttamente `ras_breakdown` in coach_section (per Fede Rica = 10 elementi mensili da set 2025 a giu 2026, tutti quartile=4 e amount=1700.0, somma=17.000) e mantiene `earliest_first_year=2025`. Frontend (Expo web static build, login vincenzo.ciucarelli@gmail.com): apertura /admin/coach/69adf7618a40c8115bda5c2d mostra la card 'Riepilogo Compensi' senza più il selettore anno (summary-year-prev/next NON esistono) e senza il bottone 'Aggiorna'. I box anno fiscale hanno titolo '📅 Anno Fiscale 2025' / '📅 Anno Fiscale 2026' con sottotitolo 'sino al 31/12/YYYY' (eliminato il vecchio '(1° anno)'). Sotto la riga Compensi Coach/Dirigente compare 'Contratto: Dal 01/09/2025 al 30/06/2026'. Il box 2025 mostra 'Percepito sino al 31/08/2025' €13.200,00 (NON 'Pregresso (1° anno)'). Cliccando la riga RAS coach si apre l'accordion ras-coach-breakdown con tutte e 10 le righe mensili (Settembre 2025 → Giugno 2026), ognuna con formato '€1700.00 × 100% (mese pieno)  € 1700,00' e riga finale 'Totale  € 17.000,00'. Network: catturate esattamente 2 chiamate compensation-summary (year=2026 e year=2025) come richiesto dal refetch automatico per earliest_first_year < currentYear.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_compensation_summary_breakdown.py",
+    "/app/backend/tests/test_quartile_calculation.py",
+    "/app/test_reports/pytest/quartile_iter72.xml",
+    "/app/test_reports/pytest/comp_breakdown_iter72.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py L13976-14003 _calculate_ras_total: refactor da float a dict {total, breakdown} pulito. Edge cases (contract_end<start, monthly_amount<=0, end mancante) gestiti correttamente con return {total:0, breakdown:[]}. Iterazione mese-per-mese corretta con gestione passaggio anno (dicembre→gennaio).",
+    "server.py L14085-14116 endpoint: espone ras_breakdown sia in coach_section che in athlete_section in modo simmetrico. Bene.",
+    "server.py L14152 earliest_first_year derivato da min(first_year_candidates) — corretto per dual-role.",
+    "PersonCompensationSummary.tsx L257-264 sottotitolo box anno fiscale = 'sino al 31/12/{block.year}' (statico) — corrisponde esattamente al feedback PO. Buono.",
+    "PersonCompensationSummary.tsx L184 label dinamica pregresso = 'Percepito sino al {day-before-earliestStart}' — formattazione gg/mm/aaaa coerente con il resto della UI.",
+    "PersonCompensationSummary.tsx L197-249 accordion breakdown: filtra `breakdown.filter(b => b.amount > 0)` e renderizza riga per riga con quartileLabel. Riga 'Totale' usa importToShow (consistente con la riga collassata). Solido.",
+    "Minor: il formato monetario nelle righe interne del breakdown è '€ 1700,00' (con spazio, senza puntini per le migliaia) mentre nel resto della UI è '€17.000,00'. Non è un bug funzionale ma una piccola inconsistenza visiva di formatCurrency — il PO può confermare se serve uniformare.",
+    "Nessun residuo di '(1° anno)' o 'Pregresso (1° anno)' né 'Aggiorna' o 'summary-year-prev/next' nel DOM corrente del build statico — refactor completo lato frontend."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_compensation_summary_breakdown.py (nuovo)"
+  ],
+  "success_rate": {
+    "backend": "100% — 21/21 quartile + 6/6 new breakdown endpoint tests PASS (27/27 totale)",
+    "frontend": "100% — tutti i check di refactor verificati: no year switcher, no Aggiorna, titoli/sottotitoli corretti, periodo contrattuale visibile, label pregresso dinamica, accordion 10 mesi con Totale €17.000,00, doppia chiamata API per refetch"
+  },
+  "test_credentials": {"admin": "vincenzo.ciucarelli@gmail.com / Test1234"},
+  "seed_data_creation": "Nessuno — usato il coach esistente Fede Rica (69adf7618a40c8115bda5c2d) di Pallavolo Perugia SSD con contratto 01/09/2025-30/06/2026 a 1700€/mese.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Refactor Fase 2 chiuso. L'endpoint /api/admin/persons/{user_id}/compensation-summary ora ritorna ras_breakdown (lista {year, month, amount, quartile}) sia in coach_section che in athlete_section, e mantiene earliest_first_year. Frontend PersonCompensationSummary.tsx: data-testid disponibili → person-compensation-summary, summary-box-ras, summary-box-fy_current, summary-box-fy_next, ras-coach-toggle, ras-coach-breakdown, ras-athlete-toggle, ras-athlete-breakdown, fy_current-coach-toggle, fy_current-athlete-toggle, fy_next-coach-toggle, fy_next-athlete-toggle, ras-grand-total, fy_current-grand-total, fy_next-grand-total, dual-role-badge. Il refetch automatico year-1 scatta SOLO se earliest_first_year < year corrente (vedere useEffect dipendenza). Build Expo statico è in npx serve -s dist e contiene già il refactor.",
+  "rca_of_the_issue": "N/A — refactor completo verificato, nessun bug. Solo nota minore di formato monetario nelle righe interne dell'accordion ('€ 1700,00' vs '€17.000,00' altrove) — cosmetica, non funzionale."
+}

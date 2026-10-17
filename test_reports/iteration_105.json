@@ -1,0 +1,37 @@
+{
+  "summary": "Backend-only regression on POST /api/certificates/simple after the 18/08/2026 authorization fix (relationship-based, not role-based). All 6 executed test cases pass; the multi-tenant regression is skipped because the DB currently has a single real society and no cross-society user credentials are available.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_certificate_relation_auth.py",
+    "/app/test_reports/pytest/certificate_relation_auth.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py:13096-13121 — Guard now correctly relies on relation predicates (is_admin | is_coordinatore | is_linked_parent | is_self_athlete | is_authorized_staff). Reads cleanly and short-circuits before verified-flag handling. Consider extracting a shared helper `user_can_edit_athlete_certificate(user, athlete)` because the same 5-branch check is likely to be re-used in the upcoming PDF-upload and delete endpoints."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (6/6 executed, 1 skipped by design)", "frontend": "N/A (skipped as requested)"},
+  "seed_data_creation": "None. The test module snapshots and restores: armida.raschi.role (parent<->coach for case b), MAURI LENA team_id/team_ids (temporarily attached to one of Lella's assigned_teams for case e), medical_certificate_expiry/issue_date on the athlete, and wipes any certificates.athlete_id=MAURI LENA rows created during the run. Verified DB clean after run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Test file /app/backend/tests/test_certificate_relation_auth.py is idempotent and self-restoring; safe to re-run. Case (m) multi-tenant regression is currently skipped: to enable, seed a user with known credentials belonging to a society_id different from 697fdba0d218717959e73eea and adapt the last test (login + POST -> 403).",
+  "rca_of_issue": "Original bug (403 'Non hai i permessi per aggiornare certificati' for a genuinely linked parent whose role != 'parent'): POST /certificates/simple used a role whitelist before checking parent_id/second_parent_id, so a user linked as parent but stored with role=coach/coordinator/viewer was rejected. Fix at server.py:13096-13121 now derives authorization from the RELATION (is_linked_parent OR is_self_athlete OR is_authorized_staff OR is_admin OR is_coordinatore). Verified: (a) parent+linked -> 200, (b) coach-role linked as parent_id -> 200 (was 403 before fix), (c) parent-role but unrelated -> 403, (d) admin same society -> 200, (e) viewer assigned to team -> 200, round-trip GET + athlete document sync work. Multi-tenant isolation cannot be end-to-end tested with current DB (single society); code path relies on relation predicates which all fail for a foreign-society, unrelated user, so 403 is expected by inspection.",
+  "test_cases_executed": [
+    {"id": "a", "case": "role=parent linked", "expected": 200, "got": "200/201", "status": "PASS"},
+    {"id": "b", "case": "role=coach linked as parent_id (bug regression)", "expected": 200, "got": "200/201", "status": "PASS"},
+    {"id": "c", "case": "role=parent NOT linked to target athlete", "expected": 403, "got": "403 with 'permessi'", "status": "PASS"},
+    {"id": "d", "case": "admin same society", "expected": 200, "got": "200/201", "status": "PASS"},
+    {"id": "e", "case": "viewer with athlete's team in assigned_teams", "expected": 200, "got": "200/201", "status": "PASS"},
+    {"id": "r", "case": "GET /certificates round-trip + athlete medical_* sync", "expected": "200 with dates 2026-04-10 / 2027-04-09", "got": "match", "status": "PASS"},
+    {"id": "m", "case": "other-society user not linked", "expected": 403, "got": "SKIPPED", "status": "SKIP (single society in DB, no cross-society credentials)"}
+  ]
+}

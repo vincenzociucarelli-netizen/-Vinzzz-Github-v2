@@ -1,0 +1,62 @@
+{
+  "summary": "Testing (frontend only) iterazione 118 — flussi 'Promozione Genitore → Dirigente' + 'Registro Presenze coach open-athlete'. ✅ TUTTI I FLUSSI PASSANO END-TO-END dopo aver applicato un fix minore (data-testid → testID) sui componenti TouchableOpacity. Bug scoperto e sistemato durante il test: react-native-web NON forwarda l'attributo `data-testid` letterale quando è passato come prop a TouchableOpacity; solo `testID` viene convertito in `data-testid` sul DOM. Due componenti chiave usavano la forma errata: (1) admin/parents.tsx line 724 promote-to-dirigente-btn, (2) src/components/SwitchAccountButton.tsx line 81 switch-account-btn — entrambi corretti a `testID`. Dopo il fix + expo export + supervisorctl restart expo, tutti gli step del flusso vengono verificati: promote → dialog 'Proposta inviata' → riapertura modale mostra 'In attesa di accettazione' → login genitore mostra DirigenteProposalBanner con accept/reject → tap Accetta → alert conferma → SwitchAccountButton compare AUTOMATICAMENTE senza refresh manuale (grazie a switchKey) → tap switch → redirect a /dirigente → nella dashboard dirigente lo stesso switch-account-btn è visibile per tornare a Modalità Genitore. Flusso coach: alice@test.com → /coach/team/{id}/attendances → tap open-athlete-{id} → naviga correttamente a /coach/athlete/{id}. Backend fix iterazione 117 (get_current_user projection + /users/parents payload + cache invalidation) VERIFICATI OK: GET /api/users/parents ora ritorna esplicitamente linked_dirigente_user_id/pending_dirigente_user_id, e dopo POST promote lo stato viene subito visto (nessun ritardo cache di 8s). NOTA STATO DB: dopo questo test armida.raschi@gmail.com risulta ora Dirigente (accettato). Ripristinare prima di rieseguire il flusso.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "admin/parents.tsx — promote-to-dirigente-btn",
+        "issue": "FIX APPLICATO: il prop era `data-testid=\"promote-to-dirigente-btn\"` su un <TouchableOpacity>. react-native-web 0.21 NON forwarda quell'attributo letterale al DOM: solo `testID` viene convertito in `data-testid`. Effetto pre-fix: il pulsante era visivamente presente ma il selector di test non lo trovava (is_visible = False) e la promozione risultava non tappabile via automazione. Cambiato in `testID=\"promote-to-dirigente-btn\"`.",
+        "testID": "promote-to-dirigente-btn",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "src/components/SwitchAccountButton.tsx — switch-account-btn",
+        "issue": "FIX APPLICATO: stesso pattern, prop `data-testid=\"switch-account-btn\"` non forwardato al DOM. Cambiato in `testID=\"switch-account-btn\"`. Ora la SwitchAccountButton è raggiungibile via automazione sia sulla dashboard genitore sia sulla dashboard dirigente.",
+        "testID": "switch-account-btn",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "Codebase — molti altri TouchableOpacity/View usano `data-testid=\"...\"` letterale",
+        "issue": "NON APPLICATO (fuori dallo scope di questa iterazione ma DA CORREGGERE): almeno 25+ occorrenze di `data-testid=` come prop diretta su componenti RN in admin/parents.tsx (righe 413, 612, 641, 738, 773), app/parent/index.tsx (16 occorrenze incl. parent-back-to-staff-btn, complete-profile-banner, pending-link-requests-banner, link-athlete-btn, parent-palestre-btn, accept-privacy-*, delete-data-*, ecc.), app/dirigente/index.tsx (10 occorrenze incl. switch-to-coordinator-btn, dirigente-coord-switch-card, dirigente-parent-switch-card, dirigente-link-child-cta, dirigente-palestre-btn, dirigente-team-pill-*, dirigente-stat-*, dirigente-stats-modal-close). Tutte queste NON risultano nel DOM: se un test futuro dovrà interagirci verrà bloccato con lo stesso sintomo. La correzione è meccanica (rename prop → `testID`), ma va fatta in batch.",
+        "testID": "multiple",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "react-native-web 0.21 prop forwarding",
+        "issue": "In react-native-web ^0.21.0 (vedi frontend/package.json), TouchableOpacity/View filtrano l'attributo `data-testid` passato come prop letterale: viene silenziosamente rimosso. Al contrario, `testID` (documentato React Native) viene tradotto in `data-testid` sul DOM. Convenzione consigliata: usare SEMPRE `testID={...}` nel codice sorgente RN. Consideralo un lint rule / codemod da applicare al codebase."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_118.json",
+    "/app/test_reports/pytest/parent_promote_to_dirigente.xml (creato in iter 117 — non rieseguito qui, testing solo frontend)"
+  ],
+  "action_items": [
+    "OPZIONALE (housekeeping): rinominare in batch tutti i prop `data-testid=` letterali su componenti RN (TouchableOpacity/View/Text/Modal) in `testID=` — vedi elenco file/righe sopra. È l'unica ragione per cui l'automazione non trova gli elementi. Non blocca il flusso funzionale ma blocca i test automation.",
+    "PRIMA DI RIESEGUIRE questo test: ripristinare armida.raschi@gmail.com allo stato pulito (rimuovere linked_dirigente_user_id sul parent + cancellare il dirigente user auto-creato). Attualmente armida è collegata come dirigente (test end-to-end appena completato)."
+  ],
+  "critical_code_review_comments": [
+    "Pattern rischioso: mescolare `testID` (React Native) e `data-testid` (DOM) su TouchableOpacity nello stesso componente. In react-native-web 0.21 solo `testID` funziona. Ho contato 30+ occorrenze del pattern sbagliato nei file di riferimento — meritano un codemod globale.",
+    "admin/parents.tsx: TouchableOpacity annidati (styles.userCard onPress=openDetailModal contiene TouchableOpacity onPress=openActionModal). Su react-native-web questo può causare fire di ENTRAMBI gli onPress al tap sull'ellipsis. Nel test attuale non ha causato problemi perché il modal action apre sopra al detail, ma è fragile.",
+    "SwitchAccountButton: la key remount pattern (switchKey) funziona per forzare il refetch di /auth/linked-accounts dopo l'accept: buona idea. Verificato end-to-end senza refresh manuale."
+  ],
+  "updated_files": [
+    "/app/frontend/app/admin/parents.tsx (line 724: data-testid → testID per promote-to-dirigente-btn)",
+    "/app/frontend/src/components/SwitchAccountButton.tsx (line 81: data-testid → testID per switch-account-btn)",
+    "/app/frontend/dist/* (rigenerato con `npx expo export --platform web`)",
+    "expo supervisord restart"
+  ],
+  "success_rate": {"backend": "N/A (frontend only)", "frontend": "100% — tutti e 6 gli step del flusso promozione+accettazione+switch PASS; coach attendances→open-athlete PASS"},
+  "seed_data_creation": "Nessun nuovo dato. Stato modificato: armida.raschi@gmail.com ora ha una proposta accettata (pending → linked). Ripristinare per re-run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Il flusso è verificato E2E. Per replay: (1) ripristinare armida a stato pulito (unset linked_dirigente_user_id sull'utente, delete del dirigente user auto-creato); (2) i due file .tsx sopra sono ora corretti; (3) usa selettori data-testid come `[data-testid=\"promote-to-dirigente-btn\"]` — funzionano dopo il fix; (4) attenzione alle overlay Cookies e 'Guida Rapida' che possono bloccare i primi click — dismiss con testo 'Ho capito' / 'Solo necessari'; (5) attenzione al TouchableOpacity annidato in parent card — usa direttamente `document.querySelector('[data-testid=\"parent-actions-<id>\"]').click()` da JS per bypassare event bubbling.",
+  "rca_of_issue": "Sintomo iniziale: tap su 'Promuovi a Dirigente' non produceva alcun effetto (dialog non appariva, backend restava con pending_dirigente_user_id=None). Riproduzione: (a) navigare in /admin/parents, aprire action modal parent armida, cliccare Promuovi via JS → nessun evento. (b) Ispezione DOM: cercato il testo 'Promuovi a Dirigente' e risalita 8 livelli — nessun elemento della catena aveva `data-testid`, `role` o classe riconoscibile. Root cause: in react-native-web 0.21, i componenti Touchable filtrano i props: `testID` viene convertito in `data-testid`, ma `data-testid` letterale passato come prop viene DROPPATO dal filter. Il codice usava `data-testid=\"promote-to-dirigente-btn\"` invece di `testID=\"...\"`. Stessa causa per switch-account-btn. Mitigazione applicata: cambiare prop → `testID`, `npx expo export --platform web --output-dir dist`, `sudo supervisorctl restart expo`. Verifica post-fix: promote_btn_visible=True, dialog confirm+alert 'Proposta inviata' apparsi, backend aggiornato, riapertura modale mostra 'In attesa di accettazione', banner genitore visibile, accept funziona, switch button appare senza refresh, redirect a /dirigente OK, switch back button visibile in dirigente dashboard."
+}

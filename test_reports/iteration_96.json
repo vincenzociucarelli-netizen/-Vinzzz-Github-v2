@@ -1,0 +1,32 @@
+{
+  "summary": "Frontend-only regression test (RegistraTEAM Expo Web static build). Verified: (1) atleta a quota vede la barra delle tab (Da fare / Anagrafica / Pagamenti / Presenze) su /athlete; (2) tab Anagrafica porta a /athlete/profile e in fondo mostra la sezione collassabile 'Consensi Privacy' con ConsentManager (voci 'Presa visione Informativa Privacy', 'Utilizzo immagini ad uso interno', ecc.); (3) navigazione a /athlete/payments e /athlete/presenze funzionante senza errori; (4) admin Registro Presenze per Under 14 (697fec5d90eef140898ebfd7) ora elenca l'atleta pending 'Test REACT' con badge 'In attesa' (data-testid att-status-c0555a97927f4054ae84b1c9). Il conteggio ora è '1 atleti' invece di 0.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AthleteTabBar.tsx", "issue": "I data-testid richiesti (athlete-tab-bar, athlete-tab-dafare, athlete-tab-anagrafica, athlete-tab-compensi, athlete-tab-presenze) NON compaiono nel DOM. Il componente usa la prop `data-testid` direttamente su <View> e <TouchableOpacity> di React Native, che RN Web non forwarda al DOM. Va usato `testID={...}` (RN Web lo converte automaticamente in data-testid). Visivamente la tab bar funziona, ma i test E2E che usano quei selettori falliranno.", "selector": "[data-testid=\"athlete-tab-bar\"]", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/athlete home", "issues": ["Il nome mostrato nell'header ('Ciao Test!' o 'Test REACT') sembra provenire da cache/stale user in AsyncStorage: dopo login come marcob@test.com la pagina profilo mostra correttamente MARCO BIANCHI (CF BNCMRC98E15G478X, marcob@test.com) ma l'header di /athlete continua a mostrare il nome di un utente precedente. Non è il bug richiesto ma da verificare."]},
+      {"screen": "Admin attendance-stats API", "issues": ["Il campo 'name' degli atleti torna None nel payload (verificato via curl). Il frontend riesce comunque a mostrare il nome ('Test REACT') probabilmente da altra fonte, ma è preferibile popolare 'name' nel backend."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Sostituire in /app/frontend/src/components/athlete/AthleteTabBar.tsx i prop `data-testid=\"athlete-tab-bar\"` e `data-testid={`athlete-tab-${t.key}`}` con `testID=\"athlete-tab-bar\"` e `testID={`athlete-tab-${t.key}`}` così che React Native Web li esponga come data-testid nel DOM. Ricostruire il bundle Expo Web statico.",
+    "(Opzionale) Verificare che l'header di /athlete si aggiorni immediatamente dopo login (potrebbe leggere da AsyncStorage 'user' stale).",
+    "(Opzionale) Popolare il campo athlete 'name' nella risposta di /api/teams/{id}/attendance-stats."
+  ],
+  "critical_code_review_comments": [
+    "AthleteTabBar: uso di `data-testid` come prop di React Native invece di `testID`. RN Web supporta testID → data-testid nativamente. Bug sistemico: se testID non è forwarded, gli E2E specificati falliranno.",
+    "attendance-stats: aggiungere il nome/cognome atleta nel payload evita chiamate aggiuntive lato frontend."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped as requested)", "frontend": "100% funzionale (visivo + navigazione + admin badge). testID mancanti nel DOM: bug separato."},
+  "test_credentials": "Atleta: marcob@test.com / Test1234; Admin: vincenzo.ciucarelli@gmail.com / Test1234",
+  "seed_data_creation": "None",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login su Expo Web richiede click su ancestor del text 'Accedi' (non è un <button> HTML, è TouchableOpacity RN Web). Il preview è build statico: dopo qualsiasi modifica frontend serve rebuild Expo Web. Sessione tra chiamate del browser tool non è persistita (nuovo contesto). Verifica registro presenze admin su team Under 14 id 697fec5d90eef140898ebfd7: attualmente 1 atleta pending visibile.",
+  "rca of the issue": "La regressione delle tab bar dell'atleta a quota è risolta VISIVAMENTE (la tab bar appare correttamente su /athlete, /athlete/profile, /athlete/payments, /athlete/presenze con evidenziazione della tab attiva). La sezione 'Consensi Privacy' compare in fondo a /athlete/profile ed è collassabile, con ConsentManager renderizzato all'apertura. Il filtro admin del Registro Presenze ora include correttamente gli atleti pending (verificato via UI e curl). Rimane un bug secondario: i data-testid richiesti sulla tab bar atleta non vengono emessi nel DOM perché la prop non è `testID` come richiede React Native Web ma `data-testid` che non viene forwarded su View/TouchableOpacity."
+}

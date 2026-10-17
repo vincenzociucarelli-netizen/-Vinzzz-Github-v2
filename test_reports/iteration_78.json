@@ -1,0 +1,35 @@
+{
+  "summary": "Iteration 78 (VERDI FABIO admin allow-list fix): added 'admin' to the role allow-list of PATCH /api/users/{user_id}/compensation. Updated and ran /app/backend/tests/test_compensation_role_fix.py — all 22 tests pass (100%, +3 new vs iter77). New TestAdminRoleAccepted class covers: (a) role='admin' canonical → 200 + 1500€ persisted; (b) role='Admin' Capital A → 200 + DB auto-normalized to 'admin' (backend log 'role normalizzato da Admin a admin' confirmed); (c) role='ADMIN' uppercase → 200 + DB auto-normalized (log confirmed); (d) realistic VERDI FABIO payload (monthly=1500, dates 2025-09-01→2026-06-30, venues PalaSole/PalaLuna, empty teams, other_annual=0) → 200 + full DB persistence verified via direct pymongo read; (e) 'pippo' invalid role still rejected with 400 + 'role attuale: pippo'. Regression: parent still rejected (400). Existing role normalization tests for dirigente/coach (Capital/UPPER/whitespace) still pass. CRITICAL VERDI FABIO BUG IS FIXED.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_compensation_role_fix.py",
+    "/app/test_reports/pytest/iter78_admin_role.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py L4973 allow-list extension to include 'admin' is correct and minimal. The change preserves the existing normalization logic from iter77 (raw_role.strip().lower()) and the auto-correction Mongo write triggers for any case variant.",
+    "Error message at L4977 correctly enumerates all accepted roles ('coach, dirigenti, collaboratori, atleti PRO e admin') and still includes 'role attuale: <raw>' for diagnostics — VERDI FABIO scenario would never reproduce now.",
+    "Recommendation (carry-over from iter77): add a one-time Mongo migration script to bulk-update db.users.{ role: {$in: ['Admin','ADMIN','Dirigente',...]} } -> lowercase, to avoid the per-request auto-correction long-term."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_compensation_role_fix.py"
+  ],
+  "success_rate": {
+    "backend": "100% (22/22)",
+    "frontend": "not tested (skipped per request)"
+  },
+  "test_credentials": "Admin: vincenzo.ciucarelli@gmail.com / Test1234 (used only for login & DB seeding; not modified). Test users created/cleaned via pymongo with TEST_role_admin_* prefix.",
+  "seed_data_creation": "TEST_role_admin_canon_*, TEST_role_admin_capital_*, TEST_role_admin_upper_*, TEST_role_admin_verdi_*, TEST_role_invalid_pippo_iter78_* inserted directly via pymongo and cleaned up in finally blocks of each test. No residual seed data. vincenzo.ciucarelli@gmail.com (real admin) NOT modified per request.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "test_compensation_role_fix.py now has 22 tests (was 19 in iter77). New class TestAdminRoleAccepted at L565 covers the iter78 admin allow-list fix. The whole role-related compensation behaviour is now: ACCEPTED = coach/dirigente/collaboratore/athlete/admin (any case, whitespace tolerated, DB auto-corrected); REJECTED = parent + any non-listed string (e.g. 'pippo') with 'role attuale: <raw>' diagnostic. The vincenzo.ciucarelli admin (real account) is intentionally NOT touched — all admin tests use temp users.",
+  "rca of the issue": "VERDI FABIO è admin della società 'La Tua Società' ma svolge anche compiti da dirigente percependo un compenso. L'endpoint PATCH /api/users/{id}/compensation rifiutava il PATCH con HTTP 400 perché la allow-list (iter77) era ['coach','dirigente','viewer','collaboratore','athlete'] senza 'admin'. Lo screenshot dell'utente mostrava 'role attuale: admin' nel messaggio errore, confermando che la normalizzazione case-insensitive aveva funzionato (iter77 ok) ma il role admin non era contemplato. Fix iter78: server.py L4973 → allow-list estesa con 'admin'; messaggio errore aggiornato ('coach, dirigenti, collaboratori, atleti PRO e admin'). Verifica end-to-end: 22 test pytest passano, log INFO 'role normalizzato da Admin/ADMIN a admin' confermati per i casi non canonici, persistenza DB verificata (monthly_compensation=1500, dates, venues) via pymongo direct read."
+}

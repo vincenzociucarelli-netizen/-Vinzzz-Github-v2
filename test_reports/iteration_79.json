@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 79 (Atleta 18+ PRO end-to-end). Backend: 5/6 tests pass on new deletion-requests endpoints. Frontend UI testing BLOCKED by stale prebuild: /app/frontend is served by `npx serve -s dist` and /app/frontend/dist/index.html is dated 2026-06-25 — all UI changes made after that (EVENTI PI, description-add-link-btn / event-info-add-link-btn testIDs, badge 5K/15K, banner deletion atleta, FAB Mappa Palestre PRO, rendering markdown link in preseason public/list) are NOT visible in the running bundle. Source code in /app/frontend/app is correct (verified via grep), but the served bundle is stale. Main agent must run `cd /app/frontend && npx expo export --platform web -o dist` and restart `supervisorctl restart expo` before any UI verification.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/admin/deletion-requests/pending-summary", "issue": "total=2 ma by_athlete/by_coach/by_collaboratore/by_dirigente sono tutti vuoti. Causa: l'insert batch del flusso reset_year (server.py L31159) NON persiste athlete_id/coach_id/collaboratore_id/dirigente_id, quindi tali righe vengono contate in `total` ma escluse da tutti i bucket. La UI admin che mostra il badge per atleta (testID=athlete-pending-deletion-badge-{id}) non vedrà mai questi 2 record. Fix: aggiungere alla insert L31159 i 4 ID derivati dal signed_document oppure, nell'aggregazione L25541, fare lookup di signed_documents per recuperare athlete_id/coach_id quando assenti."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "TUTTO il frontend Atleta PRO + Admin EVENTI PI", "issue": "BLOCKER ambientale: il preview serve /app/frontend/dist (npx serve -s dist) che è dated 25/06/2026; i sorgenti modificati il 30/06 (admin/preseason.tsx, admin/index.tsx, athlete/*, ecc.) NON sono nel bundle. Tutti i testID nuovi (description-add-link-btn, event-info-add-link-btn, athlete-pro-palestre-btn-dafare, receipt-threshold-badge-5K/15K, athlete-pending-deletion-badge-{id}, request-delete-receipt-{m}-{y}) ritornano count=0 in Playwright. Headers ancora 'Pre-iscrizioni' invece di 'EVENTI PI'. NON è un bug di codice, è un bug di deploy: manca `npx expo export --platform web -o dist`.", "affected_selectors": ["[data-testid=description-add-link-btn]","[data-testid=event-info-add-link-btn]","[data-testid=athlete-pro-palestre-btn-dafare]","[data-testid=receipt-threshold-badge-5K]","[data-testid=receipt-threshold-badge-15K]","[data-testid=athlete-pending-deletion-badge-*]","[data-testid=request-delete-receipt-*]"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_deletion_requests_endpoints.py",
+    "/app/test_reports/pytest/iter79_deletion_endpoints.xml"
+  ],
+  "action_items": [
+    "PRIORITARIO: Eseguire `cd /app/frontend && npx expo export --platform web -o dist` (può richiedere 2-5 min) e poi `sudo supervisorctl restart expo`. Senza questo, NESSUNA modifica UI fatta dopo il 25/06/2026 è verificabile.",
+    "Fix backend: in server.py L31159 (batch reset_year) aggiungere alla insert deletion_requests i campi athlete_id/coach_id/collaboratore_id/dirigente_id estratti dal signed_document corrispondente, oppure modificare la pending-summary (L25541) per fare lookup di signed_documents quando questi ID sono mancanti — altrimenti il badge per atleta non comparirà mai per richieste create dal flusso reset_year.",
+    "Dopo il rebuild dist, ri-eseguire Playwright per verificare: (a) tab 'Da Fare' atleta PRO mostra card 'Mappa Palestre' con testID; (b) banner GDPR/cancellazione documenti; (c) tab Documenti badge 5K/15K + nuovo titolo 'Comunicazione Superamento'; (d) admin /admin/preseason header 'EVENTI PI' + modal con 2 pulsanti 'Aggiungi link'; (e) admin /admin/athletes badge arancione '⏱ N canc.'; (f) admin athlete detail modale Quietanze Mensili pulsante cestino → richiesta invece di cancellazione diretta."
+  ],
+  "critical_code_review_comments": [
+    "server.py L25541: la projection limita ai 4 ID owner ma il flusso reset_year (L31159) non li popola — discrepanza tra produttore e consumatore. Suggerito unificare lo schema deletion_requests con una funzione helper `_build_deletion_request_doc(signed_document, requested_by, signer)` da usare in entrambi i punti di insert (L24902 e L31159).",
+    "Architettura deploy: il frontend è servito come prebuild statico (npx serve -s dist). Non c'è uno script `build`/`export` in package.json e non c'è automazione del rebuild. Questo rende qualunque modifica UI invisibile finché non si lancia manualmente `expo export`. Suggerito aggiungere `\"export:web\": \"expo export --platform web -o dist\"` a package.json e includere il build in supervisor o in un hook post-edit.",
+    "Source admin/preseason.tsx L460 e admin/index.tsx L1167 sono CORRETTI (text='EVENTI PI'); analoghi testID `description-add-link-btn` (L931) e `event-info-add-link-btn` (L965) presenti nel sorgente. Quindi la logica frontend è completa, manca solo il deploy del bundle."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_deletion_requests_endpoints.py (nuovo)"
+  ],
+  "success_rate": {
+    "backend": "83% (5/6) — l'unico failure è il bug aggregazione pending-summary",
+    "frontend": "0% — bundle stale, nessun testID nuovo presente nel DOM servito"
+  },
+  "test_credentials": "Admin vincenzo.ciucarelli@gmail.com / Test1234 OK (login + ruolo admin). Atleta PRO testalice1780817007@test.com / Test1234 OK (login funziona, role='athlete').",
+  "seed_data_creation": "Nessun dato seedato. Solo letture su deletion_requests e endpoint pubblici.",
+  "retest_needed": true,
+  "main_agent_can_self_test": false,
+  "context_for_next_testing_agent": "1) Verificare PRIMA di tutto che /app/frontend/dist/index.html sia stato rigenerato dopo l'iterazione corrente (`stat -c '%y' /app/frontend/dist/index.html`). 2) test_deletion_requests_endpoints.py è il file di riferimento per i due nuovi endpoint; il test test_aggregation_total_matches_sum DEVE diventare verde una volta che main agent ripara la insert di reset_year o l'aggregazione. 3) I 3 deletion_requests pendenti reali nel DB preview hanno: 2 batch 'reset_year_2026' (athlete_id mancante, document_type=threshold_*) e 1 collaboratore senza society_id (orfano, escluso dal society scope dell'admin). Considerare se ripulire o accettare come dato reale.",
+  "rca of the issue": "PROBLEMA #1 (frontend): supervisor expo program esegue `npx serve -s dist`, cioè serve un export statico già compilato. dist/index.html è del 25/06/2026 mentre admin/preseason.tsx è stato modificato il 30/06. Tutti i nuovi testID e il rebrand 'EVENTI PI' sono nel sorgente ma non nel bundle servito → Playwright vede 0 occorrenze per ogni testID e i body text mostrano ancora 'Pre-iscrizioni'. SOLUZIONE: rebuild con `npx expo export --platform web -o dist` + `supervisorctl restart expo`. PROBLEMA #2 (backend): pending-summary endpoint conta deletion_requests con status=pending e li aggrega per athlete_id/coach_id/collaboratore_id/dirigente_id, ma il batch insert in admin_reset_year_signed_documents (~L31159) inserisce le richieste SENZA quei campi (sono assenti dal dict insert), quindi 2 righe nel DB preview hanno total=2 ma sum(buckets)=0. Riproducibile con curl `GET /api/admin/deletion-requests/pending-summary` come vincenzo.ciucarelli → `{\"total\":2,\"by_athlete\":{},\"by_coach\":{},\"by_collaboratore\":{},\"by_dirigente\":{}}`. Fix consigliato: nello stesso punto di insert L31159 derivare gli ID dal `signed_document d` (es. `athlete_id: d.get('athlete_id') or d.get('atleta_id')`, idem per coach/collab/dirig) — analogamente a quanto già fatto in admin_request_delete_signed_document L24910-24913."
+}

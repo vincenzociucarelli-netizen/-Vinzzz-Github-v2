@@ -1,0 +1,49 @@
+{
+  "summary": "Iteration 102 — Backend-only regression for the 16/08/2026 performance fix (compress_base64_image on-read backfill). Built /app/backend/tests/test_image_compression_backfill.py with 6 pytest cases exercising the four flows requested: (1) GET /api/societies/my compresses the society `logo` when >500KB, persists the compressed version in DB (societies.logo), and returns a stable, valid-JPEG base64 (max 1280px, ~267KB from a ~8.7MB seed) with NO 'data:' prefix; (2) small logo is left untouched; (3) GET /api/athletes/{c0555a97927f4054ae84b1c9} compresses both `athlete_photo` and `athlete_photo_artistic` when >500KB and persists them to MongoDB (also verified valid JPEG + max 1280px + stability on 2nd call). NOTE: the Athlete Pydantic model does not declare these fields, so `Athlete(**doc)` strips them from the HTTP response — the backfill still runs and writes the compressed bytes to DB, which is where the actual performance win lives (subsequent reads pull ~4MB less from MongoDB). This is flagged for the main agent to consider whether to also expose them in the response model; (4) GET /api/auth/me?include_images=true compresses HEAVY_IMAGE_FIELDS on the admin user (verified via `stamp_signature`) — payload shrinks from ~8.7MB → ~267KB base64, persisted to users.stamp_signature, stable on 2nd call; (5) GET /api/settings/society?include_images=true still returns 200 with the expected schema (this endpoint does NOT itself run the backfill, contrary to the review request wording — the code that hosts HEAVY_IMAGE_FIELDS + compression lives in /auth/me at server.py:4294, not in routes/settings.py:192, but /settings/society regression is green); (6) GET /api/society/card-fiscale still returns 200 image/jpeg with a valid JPEG body. All 6 tests PASS. All seeded heavy fields are cleaned up ($unset) after the run (verified: societies.logo, athletes.athlete_photo/athlete_photo_artistic, users.stamp_signature all absent post-run).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "GET /api/athletes/{id}",
+        "issue": "Athlete Pydantic model (server.py:887-1019) does NOT declare athlete_photo/athlete_photo_artistic fields, so they are stripped from the JSON response by `Athlete(**athlete)` at line 11262. The compression backfill still runs and persists to DB (verified), but callers who need the photo in the response must fetch it via a different endpoint (or extend the model). Since the main perf win is DB size + payload size on subsequent aggregate reads, this may be intentional; flagging for awareness only."
+      },
+      {
+        "endpoint": "GET /api/settings/society?include_images=true",
+        "issue": "Review request lists this endpoint as PERFORMANCE FIX 3, but the code referenced at server.py:4294 (HEAVY_IMAGE_FIELDS + compress_base64_image) actually lives in /api/auth/me, not in routes/settings.py:192 (/settings/society). /settings/society?include_images=true simply returns heavy fields as-is with no compression. If the intent was to also compress heavy images returned by /settings/society, that logic is currently MISSING there. Verified experimentally: seeding is not needed since the endpoint doesn't touch user heavy fields; regression test confirms it still returns 200 with the expected schema."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_image_compression_backfill.py",
+    "/app/test_reports/pytest/image_compression_backfill.xml"
+  ],
+  "action_items": [
+    "(Awareness) The Athlete response model at server.py:887 does not expose athlete_photo/athlete_photo_artistic — the compression backfill correctly writes them to DB but they are NOT in the response payload. If the frontend needs the photo from GET /athletes/{id}, add these fields to the Athlete Pydantic model.",
+    "(Clarification) If /api/settings/society?include_images=true also needs compression backfill (as suggested by the review request text), that logic must be added to routes/settings.py:192 — currently it lives only in /api/auth/me at server.py:4294 for user-scoped HEAVY_IMAGE_FIELDS (profile_photo, stamp_signature, doc images).",
+    "(Optional) Consider bumping the internal min_bytes threshold in utils.compress_base64_image (currently 350_000 bytes) closer to the endpoint's 500_000 char string trigger to guarantee that the compressed result is always < 500KB base64, avoiding any risk of re-compression thrashing on borderline-noisy inputs. Not blocking — current behavior tested stable with realistic seeds."
+  ],
+  "critical_code_review_comments": [
+    "utils.compress_base64_image (utils.py:60-92) correctly strips 'data:' prefix, applies EXIF transpose, converts to RGB, thumbnails to (max_dim, max_dim) preserving aspect ratio, and re-encodes as JPEG q72 — matches spec. Returns RAW base64 (no data URI) as required by the frontend contract.",
+    "get_my_society (server.py:1676-1700), get_athlete (server.py:11168-11189), and /auth/me include_images branch (server.py:4353-4370) each guard with `isinstance(_val, str) and len(_val) > 500_000` before calling compress_base64_image, and only $set to DB when `_comp != _val and len(_comp) < len(_val)` — safe pattern that never corrupts DB on compression failures.",
+    "compress_base64_image swallows all exceptions and returns the input unchanged (utils.py:91-92) — defensive but silent; consider logging a warning so we don't miss a systemic PIL/format failure in production.",
+    "GET /settings/society at routes/settings.py:192 does NOT run the compression backfill even with include_images=true — inconsistent with review request wording. Either add the same HEAVY_IMAGE_FIELDS loop here (mirroring server.py:4353-4370) or update the review request to reflect that the fix lives in /auth/me."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_image_compression_backfill.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (6/6 pytest PASS)",
+    "frontend": "N/A (backend-only test requested)"
+  },
+  "seed_data_creation": "During the test run, heavy base64 JPEGs (~8.7MB and ~4MB) were $set into societies.logo (697fdba0d218717959e73eea), athletes.athlete_photo & athlete_photo_artistic (c0555a97927f4054ae84b1c9), and users.stamp_signature (vincenzo.ciucarelli@gmail.com). All fields were $unset in the fixture `finally` blocks and re-verified absent from MongoDB post-run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Auth login returns { token, user } (not access_token). Backend base URL: https://zaino-coach-hub.preview.emergentagent.com. Admin society_id: 697fdba0d218717959e73eea. Test athlete: c0555a97927f4054ae84b1c9 (Test REACT). To seed a payload that triggers the >500KB backfill AND compresses to <500KB (so 2nd call is stable, no re-compression), use a gradient+noise JPEG at 2400x2400 q98 (~8.7MB base64) — pure noise stays >500KB even after 1280/q72 downscale and will re-compress on every read (design consideration, not a bug). For the athlete test use 1600x1600 (~4MB) so both photo fields fit under the MongoDB 16MB BSON doc limit.",
+  "rca_of_issue": "Not a bug — this is a performance-fix regression pass. The compress_base64_image on-read backfill works as designed for the three endpoints that call it (societies/my, athletes/{id}, auth/me?include_images=true). Two secondary observations: (a) Athlete response model doesn't expose the compressed athlete_photo (stripped by Pydantic), so consumers relying on it via the response must be updated or the model extended; (b) The endpoint labeled in the review request as '/settings/society?include_images=true' is actually /auth/me?include_images=true in code — /settings/society has no compression backfill; main agent should decide whether to add it or update the spec."
+}

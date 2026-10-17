@@ -1,0 +1,36 @@
+{
+  "summary": "Tested 3 bug fixes after season rollover for RegistraTEAM. BUG 1 (backend): GET /api/users/dirigenti now returns 4 users (CIUCHETTI admin, TEST DIRIGENTE dirigente, MARZO LELLA viewer, PINELLI LIVIA viewer) instead of empty array. Self-heal confirmed in DB: all 4 users have '2026-2027' in active_seasons. Multi-tenancy holds (society_id filter respected). BUG 2 & 3 verified via code review of the Expo/React Native app (playwright UI automation not applicable to native app served via Expo).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/users/dirigenti", "issue": "Returns TEST DIRIGENTE with status='suspended' too. Endpoint does not filter by status. If intent is 'approved/pending only', add status filter; otherwise OK. Not a regression from this fix."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_dirigenti_rollover_visibility.py"
+  ],
+  "action_items": [
+    "(Optional) Consider whether TEST DIRIGENTE (status=suspended) should appear in /api/users/dirigenti — endpoint has no status filter.",
+    "UI verification of BUG 2 (preseason expand/collapse) and BUG 3 (coordinatore badge) was done via code review only — the app is Expo/React Native; recommend manual smoke test in the Expo web preview if needed."
+  ],
+  "critical_code_review_comments": [
+    "server.py line 4738: query uses `$or: [{rollover_decision:{$ne:'removed'}},{rollover_decision_season:{$ne:current}}]` — this correctly excludes only users with BOTH rollover_decision='removed' AND rollover_decision_season==current_season (via De Morgan). Verified in DB and via live API.",
+    "preseason.tsx lines 164/627/684: expandedCards Set + isExpanded gate + data-testid='campaign-toggle-{id}' + chevron up/down toggle — all in place and correct.",
+    "coordinatore/index.tsx lines 65-77: badge with data-testid='coordinatore-role-badge', Ionicons 'school' (graduation-cap), text 'COORDINATORE' — implemented correctly."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_dirigenti_rollover_visibility.py (new)"
+  ],
+  "success_rate": {"backend": "100% (5/5 tests passed)", "frontend": "code-review only"},
+  "test_credentials": "vincenzo.ciucarelli@gmail.com / Test1234 (admin, Pallavolo Perugia SSD)",
+  "seed_data_creation": "None. Did not create coordinator test account (BUG 3 verified via code review since UI is React Native).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend fix for dirigenti visibility after rollover is confirmed working. Users self-heal into current season (2026-2027) on GET. Multi-tenancy respected. The pytest file /app/backend/tests/test_dirigenti_rollover_visibility.py can be reused. UI (Expo RN) needs manual QA for expand/collapse and coordinator badge — code inspection shows correct implementation.",
+  "rca of the issue": "Pre-fix query filtered by `active_seasons: current_season`, which excluded staff whose active_seasons were not updated during rollover (bug in rollover routine, or accounts created before). Post-fix uses inverse rollover_decision filter + idempotent self-heal via $addToSet. Live API returns the 4 expected users; DB shows '2026-2027' added to active_seasons for all."
+}

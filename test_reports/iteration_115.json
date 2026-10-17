@@ -1,0 +1,53 @@
+{
+  "summary": "Retest OF iteration_114 blockers dopo fix backend a POST /api/documents/sign-gdpr-privacy (fallback society_id + fallback residenza dal record atleta collegato). FLUSSO E2E COMPLETO SUPERATO SENZA PATCH MANUALI AL DB. Stato test come atteso: user marcob@test.com SENZA society_id/CAP/residenza sul record utente; athlete c0555a97927f4054ae84b1c9 CON society_id 697fdba0d218717959e73eea e residenza (Perugia PG, CAP 06100). Login atleta 18+ marcob@test.com/Test1234 → apre profilo /athlete/profile → l'overlay 'Periodo di Prova Terminato' copre il banner 'sign-privacy-banner' (già annotato in iter_114) ma il flusso 'Voglio Restare' apre lo stesso GDPRPrivacyModal → Step1 'Presa visione informativa' → 'Procedi alla firma' → Step2 firma disegnata su [data-testid='gdpr-signature-canvas'] → 'Conferma e Salva' → POST /api/documents/sign-gdpr-privacy => 200 (NON PIU' 404 'Nessuna società configurata' NE' 400 'CAP'), PATCH /api/auth/me {privacy_accepted:true} => 200, banner scompare (count=0). Persistenza verificata via admin (vincenzo.ciucarelli@gmail.com/Test1234) GET /api/athletes/c0555a97927f4054ae84b1c9 => privacy_accepted=true, privacy_accepted_date=2026-08-23T23:30:22, privacy_pdf_url=/api/documents/signed/31f1db9c-.../pdf. Record signed_documents creato (id 31f1db9c-978a-4c45-9bc8-17ae15c7f87c, document_type=gdpr_adult).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/documents/sign-gdpr-privacy (persistence)",
+        "issue": "Il record salvato in db.signed_documents NON contiene i campi 'user_id' né 'signed:true' (visto per id 31f1db9c-978a-4c45-9bc8-17ae15c7f87c). Il dup_query a server.py L24805-L24812 filtra per {user_id, document_type, signed:True}, quindi l'anti-duplicato NON scatterebbe → un utente potrebbe firmare più volte creando doc duplicati. Impatto basso perché il frontend rimuove il banner dopo la prima firma, ma è un bug di robustezza. Verificare la sezione di insert del signed_documents nell'endpoint sign-gdpr-privacy."
+      },
+      {
+        "endpoint": "GET /api/settings/society/logo.png",
+        "issue": "404 a ogni load profilo (society senza logo). Cosmetico, come in iter_114."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "GDPRPrivacyModal",
+        "issue": "document_title salvato = 'Informativa Privacy GDPR - Staff' anche per signerRole='athlete'/documentType='gdpr_adult'. La UI dello Step 1 mostra 'INFORMATIVA PRIVACY PER STAFF ... Gentile Collaboratore / Membro dello Staff'. Bug UX già segnalato in iter_114 (MEDIUM) - non blocker ma testo/PDF non tailored per atleti.",
+        "testID": "N/A",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "athlete/profile.tsx Trial-Expired overlay",
+        "issue": "L'overlay 'Periodo di Prova Terminato' (TrialEndModal) copre il banner giallo 'sign-privacy-banner' e non ha un dismiss diretto. Non blocca il flusso (via 'Voglio Restare' si arriva allo stesso GDPRPrivacyModal), ma il banner risulta inaccessibile direttamente. Già segnalato in iter_114.",
+        "testID": "sign-privacy-banner",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_115.json"],
+  "action_items": [
+    "(OPZIONALE, minore) Verificare in server.py POST /api/documents/sign-gdpr-privacy che l'insert su db.signed_documents includa user_id e signed:True: attualmente il record salvato non contiene questi campi, quindi l'anti-duplicato (L24805-L24812) non blocca doppie firme.",
+    "(GIÀ NOTO) Contenuto informativa in GDPRPrivacyModal per signerRole='athlete' è ancora 'PER STAFF' - tailorare titolo e testo per atleti.",
+    "(GIÀ NOTO) Overlay 'Periodo di Prova Terminato' copre il banner sign-privacy-banner - aggiungere dismiss o esporre la CTA banner anche dentro il TrialEndModal."
+  ],
+  "critical_code_review_comments": [
+    "server.py L24756-24769: fallback society_id dal record atleta implementato correttamente (recupera user.athlete_id → athletes.society_id). Funziona come atteso.",
+    "server.py L24831-24860: fallback dati residenza (address/city/province/postal_code) dal record atleta collegato implementato correttamente. Il check 'Residenza obbligatoria' ora legge anche da _ath_res e la firma va a buon fine per atleti 18+ con residenza solo sul record atleta.",
+    "Persistenza cross-collezioni OK: PATCH /api/auth/me sincronizza privacy_accepted su USER e propaga a ATHLETE (privacy_accepted, privacy_accepted_date, privacy_pdf_url tutti settati su entrambi i record)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "NESSUNA. Test eseguito con lo stato pre-esistente (user senza society_id/CAP/residenza, athlete con society_id e residenza). I fallback backend hanno permesso alla firma di andare a buon fine SENZA patch manuali al DB - fix confermato.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Bug originale 'Privacy non ancora accettata' per atleti 18+ è RISOLTO. I fix backend (fallback society_id da athlete, fallback residenza da athlete) funzionano end-to-end senza necessità di dati redundanti sul record utente. Se serve rieseguire: reset db.users.update({email:marcob@test.com},{$set:{privacy_accepted:false}}) + db.athletes.update({id:c0555a97927f4054ae84b1c9},{$set:{privacy_accepted:false, privacy_pdf_url:null, privacy_accepted_date:null}}) + db.signed_documents.delete_many({related_entity_id:'c0555a97927f4054ae84b1c9', document_type:'gdpr_adult'}).",
+  "rca_of_issue": "Bug originale (iter_114): POST /api/documents/sign-gdpr-privacy falliva con 404 (society_id mancante sul record user) e 400 (CAP mancante sul record user) per atleti 18+ i cui dati sono canonicamente sul record ATLETA collegato (non duplicati sul record utente). Fix applicato in server.py: (1) L24762-L24765 fallback society_id via user.athlete_id → athletes.society_id; (2) L24837-L24846 fallback residenza (address/city/province/postal_code) via lo stesso link. Verifica: firma ora 200 OK, PDF archiviato, privacy_accepted sincronizzato su user+athlete, banner scompare, admin GET conferma persistenza. Nessuna regressione osservata."
+}

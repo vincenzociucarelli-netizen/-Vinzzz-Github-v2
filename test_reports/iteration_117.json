@@ -1,0 +1,64 @@
+{
+  "summary": "Testing feature 'Promozione Genitore → Dirigente con accettazione dell'interessato'. BACKEND: 3/10 test PASS, 7/10 FAIL. Individuati DUE bug critici che bloccano l'intero flusso: (1) get_current_user() in server.py NON include nella sua projection Mongo i campi 'pending_dirigente_user_id' e 'linked_dirigente_user_id', quindi il dict current_user restituito ha sempre None su questi campi → gli endpoint /api/parent/dirigente-proposal, /accept e /reject vedono sempre pending=null e restituiscono {pending:false} / 404. Il genitore quindi NON vede mai la proposta e NON può accettare. (2) GET /api/users/parents legge nella projection i campi 'linked_dirigente_user_id'/'pending_dirigente_user_id' dal DB ma NON li inserisce nel dict risposta (loop 6615-6628), quindi il frontend admin/parents.tsx (che dipende da questi campi per mostrare i badge 'In attesa di accettazione' / 'Già Dirigente') NON riesce a distinguere lo stato del genitore. FRONTEND: attendances → open-athlete VERIFICATO OK (navigazione a /admin/athlete/{id} funziona). Non è stato possibile validare visivamente il banner DirigenteProposalBanner né il badge 'In attesa' perché i due bug backend bloccano l'intera catena.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "get_current_user (helper) / /api/parent/dirigente-proposal / /api/parent/dirigente-proposal/accept / /api/parent/dirigente-proposal/reject",
+        "issue": "BLOCCANTE: la projection di get_current_user() (server.py 1446-1458) e il dict di ritorno (1484-1495) NON includono 'pending_dirigente_user_id' e 'linked_dirigente_user_id'. Di conseguenza, dentro gli endpoint di proposta, `current_user.get('pending_dirigente_user_id')` è sempre None. Effetto misurato: dopo POST /admin/parents/{id}/promote-to-dirigente (che scrive correttamente il campo su DB) → GET /api/parent/dirigente-proposal restituisce {'pending': False} e POST /accept restituisce 404 'Nessuna proposta di incarico in attesa'. Il flusso di accettazione dual-role è quindi TOTALMENTE bloccato. Attenzione anche alla cache _AUTH_USER_CACHE (TTL 8s): dopo il fix della projection andrebbe invalidata subito in promote_parent_to_dirigente() e in accept/reject per evitare finestra di 8s.",
+        "priority": "CRITICAL"
+      },
+      {
+        "endpoint": "GET /api/users/parents",
+        "issue": "BLOCCANTE FE: la projection Mongo (server.py 6587-6592) legge 'linked_dirigente_user_id' e 'pending_dirigente_user_id', ma il dict di risposta (loop 6615-6628) NON li ri-inserisce. Il frontend /app/frontend/app/admin/parents.tsx dichiara questi campi nella interface Parent (righe 39-40) e li usa nel modal azioni (710-728) per selezionare tra 'Già Dirigente' / 'In attesa di accettazione' / 'Promuovi a Dirigente'. Effetto: dopo la promozione, riaprendo il menu il pulsante mostra sempre 'Promuovi a Dirigente' (mai 'In attesa') e per genitori già dirigenti non mostra 'Già Dirigente'.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "admin/parents.tsx ellipsis-vertical button",
+        "issue": "Il bottone che apre il modale azioni del genitore (line 353-355) NON ha testID/data-testid, quindi è difficile raggiungerlo in automazione (i test devono affidarsi alla geometria del card). Suggerito: testID={`parent-actions-${item.id}`}.",
+        "testID": "parent-actions-btn (MANCANTE)",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Genitore accetta la proposta Dirigente",
+        "issue": "Non testabile end-to-end: il backend (bug critico #1) fa sì che /parent/dirigente-proposal ritorni sempre pending=false ⇒ DirigenteProposalBanner (accept-dirigente-btn / reject-dirigente-btn) non compare mai su /parent. Codice del banner corretto (testID presenti, POST /accept/reject presenti).",
+        "affected_testIDs": ["dirigente-proposal-banner", "accept-dirigente-btn", "reject-dirigente-btn", "switch-account-btn"]
+      },
+      {
+        "flow": "Badge stato dirigente in admin/parents",
+        "issue": "Non testabile: bug critico #2 fa mancare pending_dirigente_user_id/linked_dirigente_user_id nel payload → tutti e tre i rami del ternario mostrano sempre 'Promuovi a Dirigente'.",
+        "affected_testIDs": ["promote-to-dirigente-btn"]
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_parent_promote_to_dirigente_flow.py",
+    "/app/test_reports/pytest/parent_promote_to_dirigente.xml"
+  ],
+  "action_items": [
+    "FIX #1 (CRITICAL) in server.py get_current_user(): aggiungere 'pending_dirigente_user_id': 1 e 'linked_dirigente_user_id': 1 alla projection (righe 1446-1458) e includerli nel dict di ritorno (righe 1484-1495) — così anche 'linked_parent_user_id' per la view dirigente. Idealmente invalidare la cache (_AUTH_USER_CACHE.pop(parent_id, None)) dentro promote_parent_to_dirigente() e accept/reject per evitare il TTL di 8s.",
+    "FIX #2 (HIGH) in server.py get_parents() (loop 6615-6628): aggiungere al dict di risposta result.append({...}) le chiavi 'linked_dirigente_user_id': p.get('linked_dirigente_user_id') e 'pending_dirigente_user_id': p.get('pending_dirigente_user_id').",
+    "FIX #3 (LOW) admin/parents.tsx: aggiungere testID={`parent-actions-${item.id}`} al TouchableOpacity dell'ellipsis-vertical (line 353) per facilitare i test futuri.",
+    "Dopo i fix, ri-eseguire /app/backend/tests/test_parent_promote_to_dirigente_flow.py — deve dare 10/10 PASS."
+  ],
+  "critical_code_review_comments": [
+    "server.py get_current_user() usa una projection molto ristretta + cache di 8s: qualunque nuovo campo utente necessario a nuovi endpoint deve essere aggiunto ESPLICITAMENTE alla projection e al dict return, altrimenti current_user.get('nuovo_campo') sarà sempre None (silent bug).",
+    "server.py get_parents() ha una projection completa ma il costruttore del dict result[] è manuale e omette silenziosamente due campi già in projection: pattern rischioso — usare invece {**p, **overrides} o esplicitare gli override.",
+    "server.py promote_parent_to_dirigente() e accept/reject NON invalidano _AUTH_USER_CACHE del parent: c'è quindi una finestra di fino a 8s in cui il parent, anche dopo il fix di get_current_user, continuerebbe a vedere lo stato vecchio."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "30% (3/10)", "frontend": "100% verificato per attendances→open-athlete; NON testabile per banner/badge a causa dei bug backend"},
+  "seed_data_creation": "Nessuna. Ripulito lo stato DB del genitore armida.raschi@gmail.com (linked_parent_user_id aliases rimossi, pending_dirigente_user_id/linked_dirigente_user_id unset).",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Per ripetere il test dopo i fix: (1) verificare che lo stato DB sia pulito: nessun user con linked_parent_user_id=<id armida>. (2) Eseguire pytest /app/backend/tests/test_parent_promote_to_dirigente_flow.py -v. (3) Frontend: login admin, /admin/parents, cercare 'armida', il card RASCI ARMANDA compare, ma l'ellipsis-vertical non ha testID (usare selettore posizionale o aggiungere testID). Il testID promote-to-dirigente-btn è dentro il modale azioni. (4) /parent (dopo login armida): DirigenteProposalBanner con testID dirigente-proposal-banner. (5) attendances→open-athlete VERIFICATO OK, non serve ri-testarlo.",
+  "rca_of_issue": "Root cause bug #1: get_current_user() (server.py 1445-1458) è stato ottimizzato per prestazioni con projection ristretta e cache in-memory (8s), ma quando il nuovo flusso Parent↔Dirigente ha introdotto pending_dirigente_user_id/linked_dirigente_user_id sull'utente, questi campi NON sono stati aggiunti né alla projection Mongo né al dict return. Perciò i tre endpoint /parent/dirigente-proposal[/accept|/reject] leggono current_user.get('pending_dirigente_user_id') e ottengono sempre None, rispondendo pending=false / 404. Riproduzione: (a) admin promote → DB parent.pending_dirigente_user_id valorizzato (verificato con motor query), (b) parent GET /parent/dirigente-proposal → {'pending': False} (verificato con curl / requests). Mitigazione (2 righe): aggiungere i due campi alla projection e al return di get_current_user(). Idealmente invalidare la cache dopo mutation. Root cause bug #2: get_parents() (server.py 6615-6628) costruisce manualmente il dict result e omette due campi già presenti nella projection: fix banale, aggiungere 2 chiavi al dict."
+}

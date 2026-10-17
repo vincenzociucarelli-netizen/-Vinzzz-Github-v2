@@ -1,0 +1,25 @@
+{
+  "summary": "FRONTEND-ONLY retest of match card title fix on /matches (public society calendar) after iteration_133. Logged in as testflow.pro@test.com, dismissed onboarding overlay, navigated to /matches, switched to Giocate and Tutte tabs. Verified every match card now renders '<Society> vs <opponent>' when home and '<opponent> vs <Society>' when away as the main title, with 'Under 16 · gara <match_number>' as the smaller second line. No category-only titles observed. Fix PASSED.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/tmp/matches_giocate.png",
+    "/tmp/matches_tutte_full.png"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "matches.tsx:117-125 — title now uses (society_name || team_name) with correct home/away ordering; fallback to team_name is safe when society_name is missing. Category + match_number correctly moved to the second (smaller) line."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only)", "frontend": "100%"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Verified samples on /matches (filter 'Giocate' and 'Tutte'): Home => 'Pallavolo Perugia vs ASD PGS BOSICO VOLLEY GENESI SOLUTIONS RED' / 'Pallavolo Perugia vs THAI di JAIKID NATAPOL'; Away => 'THAI di JAIKID NATAPOL vs Pallavolo Perugia' / 'NUOVA PALLAVOLO GUALDO vs Pallavolo Perugia'. Secondary line correctly reads 'Under 16 · gara 2707' etc. Fix in app/matches.tsx L117-125 confirmed working in built static export at https://zaino-coach-hub.preview.emergentagent.com.",
+  "rca_of_issue": "N/A — verification task only."
+}

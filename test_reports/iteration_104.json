@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 104 — Full retest of the parent medical-certificate save bug (18/08/2026 fix). BOTH backend and UI verified end-to-end on mobile viewport 390x844. Backend pytest /app/backend/tests/test_parent_certificate_flow.py: 4/4 PASS (login as armida.raschi@gmail.com/Test1234, GET /athletes/6a5ec7347c201d9cb7eb70d2, POST /certificates/simple with issue=2026-01-07 expiry=2027-01-06 → GET returns persisted cert with correct dates and validity_months=12 derived; athlete doc has medical_certificate_expiry/issue_date synced; second POST updating only issue_date to 2026-02-10 also persists). UI E2E via Playwright: (1) 'Inserisci dati certificato' opens the form; entering 07/01/2026 + 12 months auto-shows 'Scadenza 06/01/2027'; clicking 'Salva' triggers the 'Certificato salvato!' alert; the card immediately switches to 'Scadenza: 06/01/2027 / Emissione: 07/01/2026' (NO more 'Nessun certificato inserito'). (2) After a full page reload the certificate STILL shows correctly (persistence OK). (3) 'Modifica date certificato' now opens with BOTH fields pre-populated: Data Emissione='07/01/2026', Mesi di Validità='12' (the previous bug where validity was empty and Salva was disabled is FIXED). (4) Changing ONLY issue date to 15/03/2026 recomputes expiry to 14/03/2027 and Salva persists it. The keyboardShouldPersistTaps='handled' fix on the ScrollView was verified indirectly (Salva was reachable without keyboard dismissal issue). SIDE-NOTE (not blocking): none of the data-testid attributes (`insert-certificate-dates-btn`, `modify-certificate-dates-btn`, `cert-issue-date-input`, `cert-validity-months-input`, `cert-save-btn`) are rendered to the DOM — `document.querySelectorAll('[data-testid]')` returns []. Reason: the source uses `data-testid` as a raw prop on RN TouchableOpacity/TextInput but React Native Web ONLY forwards the `testID` prop (which it then maps to data-testid). All flows work via text/placeholder selectors, so this is a TEST INSTRUMENTATION issue, not a user-facing bug — but the review request explicitly asks to test using those data-testids, so it will bite future automated tests. Recommend main agent rename `data-testid` → `testID` on the 5 elements in /app/frontend/app/parent/athlete/[id].tsx CertificateDateForm (lines 131, 147, 171, 184, 207). Bug fix as a whole = CONFIRMED WORKING.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "CertificateDateForm (parent/athlete/[id].tsx)",
+        "issue": "Uses `data-testid` as a raw prop on TouchableOpacity and TextInput at lines 131, 147, 171, 184, 207. React Native Web only forwards the `testID` prop (mapped to data-testid on the DOM). Result: `document.querySelectorAll('[data-testid]')` returns [] on the parent athlete page and the testIDs given in the review request cannot be resolved by Playwright. Fix: rename all 5 occurrences from `data-testid=\"...\"` to `testID=\"...\"`."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_parent_certificate_flow.py",
+    "/app/test_reports/pytest/parent_cert.xml"
+  ],
+  "action_items": [
+    "OPTIONAL / TESTING-ONLY: rename `data-testid` → `testID` on the 5 CertificateDateForm elements at /app/frontend/app/parent/athlete/[id].tsx lines 131 (modify-certificate-dates-btn), 147 (insert-certificate-dates-btn), 171 (cert-issue-date-input), 184 (cert-validity-months-input), 207 (cert-save-btn). No functional impact; needed only so the testIDs referenced in the review actually appear in the DOM.",
+    "The certificate save bug can be marked as CLOSED — end-to-end works, dates persist, modify pre-fills validity, and reload shows the saved cert."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/app/parent/athlete/[id].tsx: CertificateDateForm useEffect at lines 56-70 correctly re-syncs issueDate/validityMonths when the async-loaded `certificate` prop arrives, and guards with `if (showForm) return;` so it does not clobber user input. Good.",
+    "handleSave at lines 97-122 posts to /certificates/simple and shows platform-appropriate alert (window.alert on web, Alert.alert on native). Good, but consider using api.post response for optimistic UI update instead of only calling onSaved().",
+    "Consistency issue across the file: some elements use React Native's `testID` prop while CertificateDateForm mixes in `data-testid`. Standardize on `testID` — RN Web will emit the correct DOM attribute automatically."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_parent_certificate_flow.py (new — 4 pytest cases, all green)"
+  ],
+  "success_rate": {
+    "backend": "100% (4/4 pytest PASS)",
+    "frontend": "100% (all 4 UI checkpoints from the review PASS: save, persistence after reload, modify pre-fill, edit-only-issue-date save)"
+  },
+  "seed_data_creation": "Parent armida.raschi@gmail.com already linked to athlete MAURI LENA (id 6a5ec7347c201d9cb7eb70d2). During tests a certificate was created and then $unset/cleaned via db.certificates.delete_many + db.athletes.$unset medical_certificate_* — DB is clean post-run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Bug 'data certificato non memorizzata' verified as FIXED end-to-end (backend + parent UI on mobile viewport 390x844). If you need to reproduce: login as armida.raschi@gmail.com/Test1234, navigate to /parent/athlete/6a5ec7347c201d9cb7eb70d2, scroll to 'Certificato Medico' card, click 'Inserisci dati certificato' (currently only findable by text — see react_native_issues), enter 07/01/2026 + 12, click Salva, expect green 'Scadenza 06/01/2027' card. The auto-generated `Certificato salvato!` browser alert must be handled by a dialog listener in Playwright (accept()); note the Python lambda `lambda d: (print(d.message()), d.accept())` fails because `dialog.message` is a property, use `dialog.message` (no parens). Cleanup: db.certificates.delete_many({athlete_id:'6a5ec7347c201d9cb7eb70d2'}); db.athletes.$unset medical_certificate_*.",
+  "rca_of_issue": "Original RCA (per main agent) was that ScrollView missed keyboardShouldPersistTaps='handled' AND CertificateDateForm did not re-sync issueDate/validityMonths when the async certificate prop arrived (so Mesi di Validità stayed empty and Salva was disabled). Both fixes are in place in /app/frontend/app/parent/athlete/[id].tsx (ScrollView riga ~1734 and useEffect at lines 56-70). Backend already saves and syncs correctly (POST /certificates/simple + medical_certificate_* sync verified via curl and via pytest). Retest shows the UI now saves, displays, persists across reload, and correctly pre-fills the modify form. NO regression detected."
+}

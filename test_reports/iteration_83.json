@@ -1,0 +1,40 @@
+{
+  "summary": "Tested role conversion feature (Admin/Viewer/Dirigente/Coordinatore) end-to-end. Backend: 8/8 pytest OK. Frontend: full flow works VISUALLY after rebuilding stale expo dist bundle (dirigenti page long-press → 3 role buttons; perms modal 9 checkboxes with 4-preset selection; badge COORDINATORE + '4/9 sezioni' counter; revert coord→dirigente OK; dual-role autonomous switch: Lella lands on /coordinatore, /dirigente shows 'Passa a Modalità Coordinatore' card). CRITICAL INFRA ISSUE: /app/frontend/dist was stale (built 08:29 UTC, before E1's 09:29 changes). Supervisor 'expo' serves the dist folder statically via `npx serve -s dist`, so hot reload does NOT apply — every code change requires `npx expo export --platform web` + supervisor restart. Testing agent rebuilt the bundle. Also noticed data-testid on <TouchableOpacity>/<Modal> children DOES NOT propagate to the DOM in react-native-web; visible text and functionality work, but automated tests using [data-testid=...] selectors will fail. Lella restored to viewer at end.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "TouchableOpacity data-testid propagation", "issue": "In react-native-web, plain JSX prop `data-testid=\"...\"` on <TouchableOpacity> is NOT forwarded to the underlying DOM element. All 12+ testids added by E1 (btn-make-admin, btn-make-dirigente, btn-make-coordinator, btn-edit-coordinator-perms, btn-save-coordinator, coord-perm-*, coord-perms-count-*, switch-to-dirigente-btn, switch-to-coordinator-btn, dirigente-coord-switch-card, coordinatore-role-badge) return count=0 in the DOM. Visually the UI works, but automated E2E tests using these selectors will fail. Use `testID=\"...\"` (RN prop) or `dataSet={{testid:'...'}}` on the wrapping <View>, or wrap the pressable in a plain <div data-testid=..>.", "selector": "any data-testid on TouchableOpacity", "priority": "MEDIUM"},
+      {"component": "/dirigente page for coordinatore user", "issue": "When Lella (role=coordinatore) navigates to /dirigente, the page shows 'Impossibile caricare gli impegni' + 403 errors on admin-only endpoints (/api/dirigente/impegni or similar). Layout accepts coordinator role but API calls need to be relaxed OR redirected.", "selector": "text=Impossibile caricare gli impegni", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_coordinator_role.py",
+    "/app/test_reports/pytest/test_coordinator_role.xml"
+  ],
+  "action_items": [
+    "IMPORTANT: Every frontend code change MUST be followed by `cd /app/frontend && npx expo export --platform web && sudo supervisorctl restart expo` — the current supervisor config serves the pre-built /app/frontend/dist folder via `npx serve`, so hot-reload does NOT apply. Consider adding a rebuild step to the CI/dev workflow or switching expo supervisor to `npx expo start --web` for live reload.",
+    "OPTIONAL (test-only fix): replace `data-testid=\"...\"` with `testID=\"...\"` on TouchableOpacity/Modal children so selectors work in automated e2e tests (visible functionality is unaffected).",
+    "MINOR: relax the 403 blocking on /dirigente for coordinatore users (impegni endpoint) or hide/skip those API calls when role=coordinatore."
+  ],
+  "critical_code_review_comments": [
+    "Frontend build pipeline serves stale bundle — E1 changes were invisible until manual rebuild. High risk of silent regressions in preview env.",
+    "TouchableOpacity does NOT forward `data-testid` prop through react-native-web; use `testID` (auto-mapped) or wrap in View to guarantee DOM propagation.",
+    "Backend PATCH /users/{id}/role correctly filters invalid permission keys, enforces admin-only + multi-tenancy (checked in tests). No changes needed."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_coordinator_role.py (new)",
+    "/app/frontend/dist/* (rebuilt via `npx expo export --platform web`)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100% (visual/functional) / 0% (data-testid selectors)"},
+  "test_credentials": "Admin vincenzo.ciucarelli@gmail.com / Test1234; Lella lella@dir.com / Test1234 (restored to role=viewer)",
+  "seed_data_creation": "None. Lella temporarily converted to coordinator during test then restored to viewer.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend tests in /app/backend/tests/test_coordinator_role.py, all pass. Login response uses 'token' key (not 'access_token'). Frontend is served STATICALLY from /app/frontend/dist by `npx serve -s dist -l 3000` under supervisor 'expo'. Hot reload is NOT active — rebuild required for every frontend change: `cd /app/frontend && npx expo export --platform web && sudo supervisorctl restart expo` (takes ~90s). react-native-web does NOT map `data-testid` JSX prop; use RN's `testID`.",
+  "rca of the issue": "Feature was fully implemented by E1 but appeared broken in browser because /app/frontend/dist bundle (served by `npx serve`) hadn't been rebuilt since 08:29 UTC, before E1's edits at 09:29 UTC. After running `npx expo export --platform web`, new bundle entry-921923189de632ca954009d1b3c005f8.js contained 'Trasforma in Coordinatore' + 9 permission checkboxes and everything worked. Fix: rebuild dist after each frontend change, or switch supervisor to Metro dev server."
+}

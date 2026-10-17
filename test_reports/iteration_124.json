@@ -1,0 +1,32 @@
+{
+  "summary": "Iteration 124 — Testato Feature A (Kit Abbigliamento) e Feature B (Presenza manuale straordinaria). BACKEND: 7/7 pytest verdi (PATCH+GET kit_price/kit_sponsor persistono; POST /coach/athletes/{id}/manual-attendance: admin OK con manual_entry=true/forced=true/status='allowed' + audit_logs 'manual_attendance_added' con details.extraordinary=true; 400 su data invalida; 404 su atleta inesistente; 401/403 senza auth; coach alice@test.com risulta ASSEGNATA al team 697fec5d90eef140898ebfd7 → 200 OK). FRONTEND: (A) /admin/settings/society mostra kit-price-input=80 e kit-sponsor-input='Errea Sport - Negozio Rossi (Perugia)' pre-popolati; kit-info-banner correttamente renderizzato su /admin/team/697fec5d90eef140898ebfd7 (Under 14) sotto la sezione Quote e su /parent/athlete/6a5ec7347c201d9cb7eb70d2 → tab Pagamenti sotto 'Quota Stagionale'; il banner NON compare su /athlete/payments perché il loader carica /settings/society solo dentro il ramo `if (athleteId)` e per l'atleta test (viola@test.com) /auth/me non restituisce athlete_id → societySettings resta null. (B) Il pulsante manual-attendance-btn è presente in /coach/athlete/{id} sotto 'Statistiche Presenze'; al tap apre il modale con avviso 'straordinaria...registrato nei log e visibile agli admin', data pre-popolata GG/MM/AAAA=09/09/2026 (Europe/Rome oggi), campi manual-time-input, manual-note-input e manual-confirm-btn tutti presenti.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "app/athlete/payments.tsx", "issue": "KitInfoBanner non renderizza per l'atleta perché societySettings viene caricato solo se meRes.data.athlete_id è truthy (linea ~79). Per utenti atleta senza athlete_id in /auth/me il fetch di /settings/society viene saltato e il banner ritorna null. Verificato su viola@test.com: GET /api/settings/society ritorna kit_price=80 e kit_sponsor='Errea Sport...' (200), ma il frontend non lo utilizza. Suggerimento: spostare il fetch di /settings/society fuori dal blocco `if (athleteId)`, oppure comunque caricarlo sempre.", "testID": "kit-info-banner", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_kit_and_manual_attendance.py",
+    "/app/test_reports/pytest/kit_and_manual_attendance.xml"
+  ],
+  "action_items": [
+    "In app/athlete/payments.tsx, spostare il fetch di api.get('/settings/society') fuori dal blocco `if (athleteId)` cosi il KitInfoBanner si renderizza per tutti gli atleti (anche quelli con /auth/me senza athlete_id). Test manuale con viola@test.com e marcob@test.com in seguito.",
+    "Verificare che l'utente marcob@test.com abbia society_id popolato (ora è null nel DB): impedisce alle pagine /athlete/* di ricevere i dati della società (branding, IBAN, kit). Non blocca il rilascio Feature A ma è pulizia dati."
+  ],
+  "critical_code_review_comments": [
+    "settings.py GET /settings/society: se il token è valido ma l'utente non ha society_id, la richiesta viene degradata a 'anonima' e restituisce i default RegistraTEAM. Comportamento corretto per multi-tenancy ma insidioso per utenti con record utente incompleti (es. marcob@test.com senza society_id). Suggerire di popolare society_id in fase di registrazione o loggare warning.",
+    "server.py add_manual_attendance: usa datetime.strptime naive per la data — corretto. La coach RBAC controlla team_id in assigned_teams; admin/coordinatore bypassano. Audit log via log_audit con details.extraordinary=True presente. Isolamento società ok."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_kit_and_manual_attendance.py (nuovo)"
+  ],
+  "success_rate": {"backend": "100% (7/7)", "frontend": "80% — 4 su 5 punti Feature A verificati; Feature B verificata al 100%"},
+  "seed_data_creation": "Nessun dato residuo: 1 attendance manuale creata durante il test admin viene rimossa dallo stesso test via delete diretto in Mongo; 1 attendance creata durante il test del coach (alice→team 697fec5d90eef140898ebfd7 → 200 OK, non 403) è stata cancellata manualmente. I valori kit_price/kit_sponsor di produzione sono stati ripristinati al termine del test.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "alice@test.com risulta assegnata al team 697fec5d90eef140898ebfd7 (assigned_teams contiene quel team_id): l'endpoint manual-attendance per lei ritorna 200 e crea il record. Se occorre testare il ramo 403 del coach non assegnato, usare un coach diverso o rimuovere temporaneamente il team dai suoi assigned_teams. Per verificare il fix del banner su /athlete/payments dopo l'action_item, testare con viola@test.com (society_id=697fdba0d218717959e73eea)."
+}

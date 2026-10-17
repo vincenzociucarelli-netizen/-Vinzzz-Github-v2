@@ -1,0 +1,43 @@
+{
+  "summary": "Validato Step 1 refactor PERSONA — Hub Anagrafica Unica per dual-role. Backend: 6/6 PASS sul nuovo file pytest /app/backend/tests/test_persona_hub.py (GET /api/admin/persons/{id}/profile). 41/41 PASS sui test compensation correlati (persona_hub + compensation_summary_endpoint + breakdown + quartile) verificando regressione zero. Frontend (login vincenzo.ciucarelli@gmail.com/Test1234): TEST1 navigando direttamente a /admin/persona/{fede_rica_id=69adf7618a40c8115bda5c2d} → auto-redirect a /admin/coach/{fede_rica_id} confermato (single-role coach). TEST2 sulla pagina /admin/coach/{fede_rica_id} la stringa 'Riepilogo Compensi' NON è più presente nel DOM — PersonCompensationSummary correttamente RIMOSSO come da spec Step 1. TEST3 su /admin/athlete/{TestAlice_id=6a251c6fd7734aedf9c18d94} nessuna card 'Riepilogo Compensi (Doppio Ruolo)' — anche qui PersonCompensationSummary rimosso. Endpoint Step 1 ritorna profile.first_name='FEDE', last_name='RICA', email='fede@coach.com', has_coach_role=true, has_athlete_role=false, is_dual_role=false. 403 per non-admin, 404 per ID inesistente, risolve sia user_id sia athlete_id (TestAlice via athlete_id → has_athlete_role=true).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "global tests/", "issue": "Pre-existing: eseguendo tutti i test in serie scatta rate-limit /api/auth/login (15+ tentativi → blocco 1h). Mitigato cancellando collection db.login_rate_limits prima del run. Non è una regressione Step 1."},
+      {"endpoint": "tests/test_compensation_summary_endpoint.py + altri", "issue": "Pre-existing: i test asseriscono EXPO_PUBLIC_BACKEND_URL ma /app/backend/.env non lo definisce; il test va eseguito esportando esplicitamente la variabile (`EXPO_PUBLIC_BACKEND_URL=... pytest`). Non Step 1."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_persona_hub.py",
+    "/app/test_reports/pytest/persona_hub_iter73.xml",
+    "/app/test_reports/pytest/compensation_iter73.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py L14026-14093 GET /admin/persons/{user_id}/profile: implementazione pulita. Bidirezionale (user_id ↔ athlete_id) via _find_linked_athlete_pro_for_user / _find_linked_compensated_user_for_athlete. Multi-tenant check su society_id corretto. Esclusione _id su entrambe le find_one. Helper _safe per merge user→athlete è leggibile.",
+    "server.py L14057-14058: has_coach_role richiede `role in (coach/dirigente/collaboratore/admin) AND (monthly_compensation>0 OR contract_start_date presente)`. Buono — evita falsi positivi per admin senza contratto. Però considerare: un coach con compenso 0 e senza contract_start_date risulterebbe has_coach_role=false anche se è effettivamente un tecnico tesserato. Edge case da valutare con PO.",
+    "persona/[id].tsx L51-68: useEffect dependency [id] OK. router.replace() invece di push() per non sporcare lo stack — corretto. Manca però una guardia contro doppio-redirect: se l'API ritorna data, poi l'utente clicca back, l'effetto si rilancia con stesso id ma data già settato in stato. Minor — non blocca lo Step 1.",
+    "persona/[id].tsx: nessun pulsante 'Compensi' attualmente reindirizza a /admin/coach/{user_id} (commento a riga 108-109 dice 'Step 2: pagina compensi unificata. Per ora rimanda al riepilogo nel coach'). Tuttavia, dato che PersonCompensationSummary è stato RIMOSSO dalla scheda coach, cliccando 'Compensi (Doppio Ruolo)' dall'hub si finisce su /admin/coach/{id} dove NON c'è più il riepilogo compensi — UX rotta nel caso dual-role finché Step 2 non sarà completato. Aprire un commento/promemoria per Step 2 o disabilitare temporaneamente il bottone Compensi con etichetta 'Disponibile a breve'.",
+    "DualRoleHubBanner.tsx (NUOVO) e modifiche athlete/[id].tsx + coach/[id].tsx non verificate in dual-role reale: nei dati di test attuali non c'è una persona is_dual_role=true (Fede=solo coach, Alice=solo atleta PRO). Per validare la visibilità del banner serve un dato di test con sia user con compenso sia athlete record collegati."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_persona_hub.py (nuovo file pytest, 6 test)"
+  ],
+  "success_rate": {
+    "backend": "100% — 6/6 nuovi test test_persona_hub.py + 41/41 sul cluster compensation correlato (persona_hub + breakdown + quartile + summary_endpoint con env var settata)",
+    "frontend": "100% — 3/3 test E2E: redirect single-role, nessun PersonCompensationSummary su coach, nessun PersonCompensationSummary su athlete"
+  },
+  "test_credentials": {
+    "admin": "vincenzo.ciucarelli@gmail.com / Test1234"
+  },
+  "seed_data_creation": "Nessuno. Usato Fede Rica (user_id=69adf7618a40c8115bda5c2d, single-role coach) e TestAlice Debug (athlete_id=6a251c6fd7734aedf9c18d94, single-role atleta PRO). Pulita collection db.login_rate_limits per evitare 429 sull'admin durante l'esecuzione pytest.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Step 1 chiuso. Endpoint nuovo /api/admin/persons/{id}/profile risponde 200 con shape {user_id, athlete_id, society_id, is_dual_role, has_athlete_role, has_coach_role, coach_role_name, profile{first_name,last_name,fiscal_code,email,phone,birth_date,birth_place,address,city,province,postal_code,photo_url,qr_identifier}}. Route /admin/persona/[id].tsx: auto-redirect a /admin/coach/{user_id} o /admin/athlete/{athlete_id} se !is_dual_role; testID disponibili: persona-hub-header, back-button, person-name, hub-btn-atleta, hub-btn-coach, hub-btn-compensi. PersonCompensationSummary è stato RIMOSSO dalle pagine /admin/athlete/[id] e /admin/coach/[id] (correttamente, da spec Step 1) — andrà ripristinato in Step 2 sotto /admin/persona/[id]/compensi. NON c'è ancora un caso di test dual-role reale per validare la visibilità del DualRoleHubBanner: prima di Step 2 sarebbe utile creare un seed con sia un user compensato sia un athlete PRO collegati (stesso CF/email/society). Per evitare lockout login durante run completi: `python -c \"...db.login_rate_limits.delete_many({})\"` prima di pytest. Set `EXPO_PUBLIC_BACKEND_URL` env var per i test che la richiedono.",
+  "rca_of_the_issue": "N/A — refactor Step 1 verificato senza issue funzionali. Unico promemoria: il bottone 'Compensi (Doppio Ruolo)' dell'hub attualmente reindirizza al coach detail dove il riepilogo è stato rimosso → UX temporaneamente rotta finché Step 2 non implementa /admin/persona/[id]/compensi. Considerare di disabilitare il bottone o aggiungere etichetta 'Disponibile a breve' nel frattempo."
+}

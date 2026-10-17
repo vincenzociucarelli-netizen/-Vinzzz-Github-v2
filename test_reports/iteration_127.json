@@ -1,0 +1,37 @@
+{
+  "summary": "Pension Position Declaration (Dichiarazione posizione previdenziale) end-to-end test. Backend: 14/14 pytest cases passed covering /me/pension-declaration/status (shape + no signature leak), /me/pension-declaration/declare (400 for A w/o detail, 400 for confirm=false, 422 for invalid position E, 409 for wrong text_version, 422 for short signature, append-only versioning with previous_declaration_id, D=to_verify, A/B/C=signed), admin endpoints (admin sees signature, non-admin 403), admin summary (rows contain prior_compensation + pension_status enum + pension_versions, Lella present with >=3 versions), admin notifications contain 'pension_declaration' entry after declare, and REGRESSION on /api/coach/{id}/accept-compensation and /api/dirigente/{id}/accept-compensation returning 403 with detail.code='PENSION_DECLARATION_REQUIRED' when pension declaration is missing (fabricated disposable test users with prior_signed=True, cleaned up after). Frontend (desktop 1280x800): dirigente lella@dir.com full flow executed: card 'Posizione previdenziale dichiarata' renders with FIRMATA · v.6 badge, 'Storico dichiarazioni (6)', 'Aggiorna posizione (nuova dichiarazione)' button opens the modal with all 4 options A/B/C/D, option A reveals typology chips (Lavoro dipendente / Lavoro autonomo / Altra gestione), confirm checkbox + signature canvas work, submit was disabled until signature was drawn, after signing + submitting via 'FIRMA E CONFERMA' the card updated to FIRMATA · v.7 and Storico dichiarazioni (7). Admin vincenzo.ciucarelli@gmail.com: /admin/stanza-bottoni contains 'Dichiarazioni Previdenziali' entry which navigates to /admin/pension-declarations; the page shows 13 workers with Tutti (13) / Firmate (1) / Da verificare (0) / Non dichiarate (12) filter chips, search input, Excel button in header, MARZO LELLA FIRMATA badge (v.7) with expandable AdminPensionDeclarationPanel ('Posizione previdenziale (dichiarata dal lavoratore)' + 'Dettagli, firma e storico (7)' button). ⚠️ MAJOR TESTABILITY ISSUE: data-testid attributes are stripped from the production/preview bundle — only 1 testID (`guide-button-dirigente`) is present in the whole DOM across all tested screens, so NONE of the requested testIDs (pension-declaration-card, pension-new-declaration-btn, pension-declaration-modal, pension-option-A..D, pension-detail-*, pension-confirm-checkbox, pension-submit-btn, pension-filter-*, pension-search, pension-export-excel-btn, admin-pension-panel, pension-row-*) are reachable from Playwright. Reason: the source components (PensionDeclarationModal/Card/AdminPensionDeclarationPanel + admin/pension-declarations.tsx) use `data-testid` on React Native primitives (View/TouchableOpacity), which don't forward unknown HTML attributes to the DOM on React Native Web. The proper RN Web prop is `testID` (auto-converted to `data-testid`). Functionally the UI works, but automated E2E hooks are missing.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "PensionDeclarationCard / PensionDeclarationModal / AdminPensionDeclarationPanel / app/admin/pension-declarations.tsx", "issue": "data-testid attributes are not rendered in the DOM on web (React Native Web doesn't forward unknown HTML attrs on View/TouchableOpacity). Use the `testID` prop instead of `data-testid`. Only 1 testID in the whole page (guide-button-dirigente) is present. References: /app/frontend/src/components/PensionDeclarationCard.tsx (lines 48, 69, 91), /app/frontend/src/components/PensionDeclarationModal.tsx (lines 106, 112, 148, 171, 185, 207, 226, 242), /app/frontend/src/components/AdminPensionDeclarationPanel.tsx (lines 39, 57, 73), /app/frontend/app/admin/pension-declarations.tsx (lines 218, 222, 244, 248, 263)"}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_pension_declarations.py",
+    "/app/test_reports/pytest/pension_declarations_results.xml"
+  ],
+  "action_items": [
+    "FRONTEND: replace `data-testid=\"...\"` with `testID=\"...\"` in all pension-related RN components (PensionDeclarationCard, PensionDeclarationModal, AdminPensionDeclarationPanel, admin/pension-declarations.tsx) so React Native Web renders them as `data-testid` on the DOM. Then rebuild the static web bundle (static build currently has them stripped — only `guide-button-dirigente` is present). This also likely explains why other screens in the app have very few testIDs reachable.",
+    "FRONTEND (nice-to-have): add testID to the Excel export button and verify the actual file download starts on web (not tested here because testID is missing and multiple 'Excel' matches collide — the button is visually present and wired to exportExcel in /admin/pension-declarations.tsx).",
+    "DOC: /app/memory/test_credentials.md collaboratore passwords for PAOLI PAOLO (shown as 'PaoloTest123' at line 60 but also notes '/paolo@coll.com' which may be wrong) and franz@coll.com are not aligned — the collaboratore pension card could not be verified via UI due to credential ambiguity. The backend summary endpoint already confirms both DARK FRANZ and PAOLI PAOLO are listed with 'Non dichiarata' badge."
+  ],
+  "critical_code_review_comments": [
+    "routes/pension_declarations.py: solid implementation — append-only, text_version check, D→to_verify, A/B detail enforcement, previous_declaration_id chain, admin notification on declare, signatures excluded from /me endpoints and included only on /admin endpoints. No ObjectId leakage (uses `_id: 0` or filters out). _resolve_subject correctly supports both user and compensated-athlete.",
+    "server.py: _require_pension_declared properly chained after _require_prior_compensation_declared in both /coach/{id}/accept-compensation and /dirigente/{id}/accept-compensation; also present on /athletes/{id}/accept-compensation (regression-safe)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_pension_declarations.py (new)"
+  ],
+  "success_rate": {"backend": "100% (14/14)", "frontend": "90% (card+modal+submit+admin list+stanza-bottoni verified via text selectors; Excel actual download + admin dirigente/coach sub-page not verified due to missing testIDs and the main-agent note not to rebuild)"},
+  "seed_data_creation": "During the UI test, lella@dir.com's pension declarations grew from v.6 to v.7 (one additional 'C' signed declaration). Backend TestAppendOnly test adds 2 more versions (A signed, D to_verify) per run. Regression test created 2 disposable test users (test_pens_coach_*@test.com and test_pens_dir_*@test.com) and deleted them + their pension records at test teardown.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Pension declaration feature fully working end-to-end. If main agent fixes the testID issue and rebuilds the web bundle, re-run /app/backend/tests/test_pension_declarations.py (regression) + a Playwright UI run using the testIDs listed in the review request to confirm selectors are reachable.",
+  "rca_of_issue": "React Native Web only forwards a known allowlist of HTML attributes from Views/Pressables. `data-testid` directly on <View> is not in that allowlist and is dropped. React Native Web converts `testID` to `data-testid` automatically. Fix: swap all occurrences in the 4 files listed above and rebuild."
+}

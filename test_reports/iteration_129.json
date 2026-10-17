@@ -1,0 +1,31 @@
+{
+  "summary": "Backend-only regression testing of the /api/attendance/check NameError fix (trial_active) and the related latent NameErrors (ITALIAN_MONTHS, document_id). 19/19 pytest tests passed. Verified: (1) admin login returns 'token'; (2) force=true on no-team athlete returns 200 'allowed', follow-up without force returns 200 'already_registered' with can_force=true; (3) cert/trial athlete returns 200 'blocked' (not 500 NameError); (4) unknown QR → 404; (5) get_trial_block_reason unit tests covering sessions exceeded, days expired, trial in progress, pending_trial without start, and active status; (6) end-to-end trial athlete scenario — blocked with 'Periodo di prova terminato (3/3' when sessions_count=3, not blocked when sessions_count=1; (7) bulk-attendance for a trial-expired athlete returns athlete in 'skipped' with reason containing 'prova terminata'; (8) regression smoke on /api/admin/declarations/archive, /api/admin/data-hygiene, /api/admin/payments/income-summary — all 200. All test-created attendance docs deleted and athlete fields restored (trial_sessions_count=0, trial_start/end_date $unset).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_attendance_check_bug_fix.py",
+    "/app/test_reports/pytest/attendance_check_bug_fix.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py is 42,862 lines — exceeds the 700-line maintainability threshold by a huge margin. Pre-existing issue; should be modularised when roadmap allows (routers per domain).",
+    "server.py uses deprecated FastAPI @app.on_event('startup'/'shutdown') (lines 41862, 42433, 42463, 42661). Migrate to lifespan event handlers (pre-existing, not part of this fix)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_attendance_check_bug_fix.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "N/A"},
+  "seed_data_creation": "No seed data created. Test temporarily mutated athletes 6a8b91ab1b0135de8faf2953 and c0555a97927f4054ae84b1c9 and inserted attendance docs; all mutations reverted and attendance docs deleted at teardown. Verified post-run: adult athlete status=active, trial_sessions_count=0, 0 attendances; trial athlete status=trial, is_trial=false, trial_sessions_count=0, trial_start_date/trial_end_date unset, 0 attendances.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Reusable regression test file: /app/backend/tests/test_attendance_check_bug_fix.py. Fixtures connect to local MongoDB via MONGO_URL/DB_NAME and perform full cleanup. BASE_URL comes from frontend/.env EXPO_PUBLIC_BACKEND_URL. Login response uses key 'token'.",
+  "rca_of_issue": "Root cause (fixed by main agent before this run): in check_athlete_status at /app/backend/server.py ~line 1749, 'trial_active' was referenced before definition in some branches after a prior edit; this surfaced to the user as HTTP 500 with message 'Errore durante la registrazione'. Fix: ensure 'trial_active' is computed once at the top of the branch and the two other latent NameErrors (ITALIAN_MONTHS, document_id) are also defined/imported. Verified via (a) status 200 on cert-blocked athlete flow and (b) unit calls into get_trial_block_reason() importing server.py without ImportError."
+}

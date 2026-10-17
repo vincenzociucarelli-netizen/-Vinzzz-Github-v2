@@ -1,0 +1,32 @@
+{
+  "summary": "Iter.128 — Backend-only testing (frontend static build intentionally skipped per request). Covered: (1) GET /api/admin/data-hygiene with admin → 200, summary.total_athletes>0, all required check keys present (missing_fiscal_code, duplicate_fiscal_code, no_team, minor_without_parent, parents_without_children) and `count == len(items)` invariant holds for every check; collaboratore paolo@coll.com (role=collaboratore, NOT admin/coordinatore) → 403 'Solo admin'. (2) GET /api/admin/payments/income-summary with admin → 200, totals.net==430.00 (Contanti 150 + Bonifico 200 + Stripe 100 − refund 20) exactly matches the 3 seeded test_seed=True payments; methods sorted by net desc; shares sum to 100.0% ±1 (99.9); seeded unpaid 300 correctly excluded (total_paid=450, well under the 650 ceiling). date_from=first-day-of-current-month filter → net==230.00 (Contanti 150 + Stripe 80, with Bonifico from 2026-09-01 correctly excluded). (3) Trial-block flow: created disposable athlete (society 697fdba0d218717959e73eea, team 'Under 14') with status='trial', is_trial=True, trial_start=now, trial_end=+5d, trial_sessions_count=3 → POST /api/admin/teams/{team_id}/bulk-attendance returns 200 with athlete in skipped[] with reason 'prova terminata (iscrizione richiesta)' and NO row in db.attendances; POST /api/coach/athletes/{id}/manual-attendance → 400 with detail starting 'Periodo di prova terminato (3/3 allenamenti) - iscrizione richiesta'. After setting trial_sessions_count=1 the same bulk-attendance call registers the athlete and _recompute_trial_from_attendance sets trial_sessions_count back to 1 (distinct dates). Athlete with status='active' and leftover is_trial=True is NOT blocked (registered). Disposable athlete + attendances cleaned up in teardown. (4) Regression: GET /api/admin/payments/history → 200 with rows+totals; GET /api/admin/team-roster?team_id=… → 200 containing trial_max_sessions field. All 11/11 pytest cases PASSED.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter128_hygiene_income_trial.py",
+    "/app/test_reports/pytest/iter128_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "routes/data_hygiene.py: solid implementation — all required check keys present, each check carries count/title/severity/description/items, items sorted alphabetically, invariant `count == len(items)` is enforced server-side. ACL correctly allows admin+coordinatore (403 for collaboratore). No ObjectId leakage (uses `_id: 0` on every projection).",
+  "routes/payments_history.py (income-summary): correct totals math — paid_amount − refund_amount, methods normalized via _method_group (stripe/cash/bank_transfer/other) and labelled via _method_display, shares computed over positive net_total (safe when net==0), unpaid rows correctly skipped via _compute_status (only paid/partial/refunded are counted). Date filter inclusive on both ends.",
+  "server.py get_trial_block_reason (L1704): correctly skips when status∈{active,approved} even if is_trial=True (fixes leftover-flag false positive) and blocks when trial_sessions_count>=trial_max_sessions OR trial_end_date passed. Used consistently from check_athlete_status (QR), add_manual_attendance (400) and add_bulk_attendance (skipped[]).",
+    "pending_trial trial start now reads trial_max_days (default 7) from society settings instead of hardcoded 14 — aligned with the review request."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter128_hygiene_income_trial.py (new)"
+  ],
+  "success_rate": {"backend": "100% (11/11)", "frontend": "not tested (skipped per request)"},
+  "seed_data_creation": "Only the admin's existing test_seed=True payments were used (Contanti 150 paid, Bonifico 200 paid, Stripe 100 paid+20 refund, unpaid 300). A disposable athlete `test128_<uuid>` was created in society 697fdba0d218717959e73eea on team 'Under 14' and then fully deleted (plus its attendances) in teardown. No persistent artefact remains in the preview DB.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 3 new/updated backend features (data-hygiene, income-summary, trial-block in bulk+manual attendance) are green. Regression on payments/history and team-roster still green. Frontend /admin/data-hygiene and /admin/income-summary pages were explicitly skipped (static web build may still be building) — ask main agent to confirm the web build is ready before running UI tests."
+}

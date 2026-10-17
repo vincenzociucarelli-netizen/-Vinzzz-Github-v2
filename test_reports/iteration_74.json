@@ -1,0 +1,51 @@
+{
+  "summary": "Verified bug fix per propagazione compensation_accepted da db.users a db.athletes per atleti PRO. Creato nuovo file pytest /app/backend/tests/test_compensation_accepted_sync.py con 6 test mirati: PATCH /api/auth/me {compensation_accepted:true} da athlete propaga correttamente a db.athletes (assert su DB diretto + assert via GET /api/athletes/{id} con admin), reverse flow accept=false propaga a entrambe le collection, coach role NON tocca db.athletes, startup migration log 'Migration compensation_accepted sync: X/Y atleti aggiornati' presente, GDPR preview endpoint /api/documents/preview-gdpr-privacy ritorna 200 con preview_url; il PDF (fetched con ?raw=1) inizia con %PDF e supera 1KB. Tutti i 6 test PASSED. Non sono state riscontrate regressioni.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "PATCH /api/auth/me",
+        "issue": "Quando l'atleta imposta compensation_accepted=false, il campo compensation_accepted_date NON viene azzerato a None (resta il valore precedente in entrambe le collection users + athletes). Coerente fra le due collection — solo UX/coerenza dato, non rompe l'admin view. Considerare un set esplicito a null in entrambe le update quando accepted=False per allineare con l'altro endpoint /athletes/{id}/compensation/accept che invece resetta la data (server.py L4966)."
+      },
+      {
+        "endpoint": "/api/auth/login",
+        "issue": "La user payload restituita da /auth/login NON include il campo athlete_id, anche se è presente in db.users per gli atleti PRO. Il frontend potrebbe doverlo recuperare via /auth/me. Non bloccante: aggirato nei test leggendo direttamente da MongoDB."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_compensation_accepted_sync.py",
+    "/app/test_reports/pytest/compensation_accepted_sync_iter74.xml"
+  ],
+  "action_items": [
+    "Opzionale: azzerare compensation_accepted_date a None in db.users e db.athletes quando atleta fa PATCH /auth/me {compensation_accepted:false} (server.py L3928-3944) per coerenza con la logica di /athletes/{id}/compensation/accept.",
+    "Opzionale: includere athlete_id nella user payload di /api/auth/login per evitare round-trip aggiuntivi al frontend."
+  ],
+  "critical_code_review_comments": [
+    "server.py L3936-3944: la propagazione usa current_user.get('athlete_id') or current_user.get('id') come fallback. Il fallback su current_user['id'] sarebbe SBAGLIATO in produzione perché db.athletes.id non corrisponde a users.id (sono ID separati). Verificare che per TUTTI gli atleti PRO in produzione il campo users.athlete_id sia popolato — altrimenti l'update non match niente in athletes. La migration di startup (L31964) usa la stessa logica e quindi avrebbe lo stesso problema su atleti con athlete_id mancante. Aggiungere una validazione/log warning se athlete_id è None per role=athlete.",
+    "server.py L3928-3944: quando accepted=False non viene scritto compensation_accepted_date=None su db.athletes. L'update parziale potrebbe creare stato incoerente con admin UI che mostra la 'data accettazione' anche dopo la revoca. Allineare con /athletes/{id}/compensation/accept (L4966) che resetta esplicitamente.",
+    "server.py L31987: il log riporta 'X/Y atleti aggiornati' dove Y è il numero di users con accepted=True (non il totale di atleti). Stringa di log corretta per il significato; il main agent può self-verify che il pattern è loggato a ogni startup.",
+    "server.py L20559 preview-gdpr-privacy: ora filtra correttamente society/settings per current_user.society_id (multi-tenant fix). Il PDF viene cached in _preview_pdf_cache (dict in-memory, NON multi-process safe). Su worker multipli il preview_id generato da un worker potrebbe non essere trovato dall'altro che serve la GET /preview-pdf/{id}. Non bloccante con singolo worker uvicorn, ma da tenere a mente per scaling."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_compensation_accepted_sync.py (nuovo file, 6 test pytest)"
+  ],
+  "success_rate": {
+    "backend": "100% — 6/6 pytest PASSED"
+  },
+  "test_credentials": {
+    "admin": "vincenzo.ciucarelli@gmail.com / Test1234",
+    "athlete_pro_compensated": "testalice1780817007@test.com / Test1234 (athlete_id=6a251c6fd7734aedf9c18d94, user_id=6a251c70d7734aedf9c18d96, society=697fdba0d218717959e73eea)",
+    "coach": "alice@test.com / Test1234"
+  },
+  "seed_data_creation": "Nessun nuovo seed. Riusato TestAlice Debug come atleta PRO compensato (athlete_type='compensated'). Pulita collection db.login_rate_limits per evitare 429 durante la run. Stato finale: TestAlice user+athlete entrambi compensation_accepted=False (reset dal test). Coach Alice rimane compensation_accepted=True (era già True prima della run).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Il bug fix compensation_accepted sync è VERIFICATO: PATCH /api/auth/me da athlete propaga su db.athletes via athlete_id presente in db.users (current_user.get('athlete_id') or current_user.get('id')). Tutti i 6 test del nuovo file /app/backend/tests/test_compensation_accepted_sync.py passano. Nota: nel DB di test esiste UNA SOLA società (697fdba0d218717959e73eea PALLAVOLO PERUGIA SSD a RL), quindi il test multi-tenancy GDPR (test #6 nella richiesta originale) verifica solo che l'endpoint risponda 200 con PDF non vuoto contenente i metadati della società del caller. Per un test cross-tenant completo serve un seed con almeno 2 società + 2 admin distinti — non disponibile attualmente. Endpoint /api/documents/preview-pdf/{id} ritorna HTML viewer per default; per ottenere i bytes del PDF aggiungere ?raw=1. La user payload di /auth/login NON include athlete_id, quindi nei test l'athlete_id va recuperato da db.users direttamente.",
+  "rca_of_the_issue": "Bug originale: l'admin che apriva /admin/athlete/[id] leggeva compensation_accepted da db.athletes, ma il PATCH /auth/me dell'atleta aggiornava solo db.users → due collection desincronizzate. Fix (server.py L3936-3944): se current_user.role == ATHLETE, dopo l'update di db.users si propaga lo stesso flag (e la data se True) su db.athletes via current_user.get('athlete_id') or current_user.get('id'). Migration startup (L31964-31989) sincronizza retroattivamente atleti con users.compensation_accepted=True ma athletes.compensation_accepted!=True. Verificato via test pytest con assert diretti su MongoDB e via GET /api/athletes/{id} con admin token. Reverse flow accept=False propaga correttamente (entrambe le collection a False)."
+}

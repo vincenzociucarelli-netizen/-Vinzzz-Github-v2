@@ -1,0 +1,31 @@
+{
+  "summary": "Backend-only test — POST /api/matches/import upsert scope per team_id (fix 30/08/2026). Testato con 2 team ESISTENTI della società Pallavolo Perugia via admin vincenzo.ciucarelli@gmail.com. Scenari coperti: (1) Import gara #1 TEAM_A vs ROMA + import gara #1 TEAM_B vs TERAMO → entrambe coesistono, TEAM_A NON cancellata. (2) Re-import TEAM_A gara #1 con opponent=MILANO → TEAM_A aggiornata (una sola occorrenza) e TEAM_B intatta (vs TERAMO). (3) Cleanup finale delle gare TEST. Tutti i 4 test passano. Il codice di /matches/import (server.py ~7871-7898) correttamente scopa sia la delete che la pre-existing lookup per {society_id, team_id, match_number}.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_matches_import_team_scope.py",
+    "/app/test_reports/pytest/matches_import_team_scope.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Il blocco delete/upsert (server.py ~7873-7898) è coerente: filtra per society_id + team_id + match_number. Fallback branch (nessun match_number) già scopato anche per team_id. Ok.",
+    "Suggerimento non bloccante: quando match_numbers_to_import contiene numeri usati anche da team di ALTRE società, la query è già protetta perché society_id è nel filtro. Nessuna azione richiesta."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_matches_import_team_scope.py (nuovo file)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "N/A (skipped by request)"},
+  "seed_data_creation": "Nessun team creato (society ha già >= 2 team). Sono state create 3 gare TEST_S1_* e tutte eliminate al termine (test_4_cleanup_created_matches verifica assenza residui).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Regression test riutilizzabile: /app/backend/tests/test_matches_import_team_scope.py copre l'upsert scope per team_id di POST /api/matches/import. Richiede admin vincenzo.ciucarelli@gmail.com/Test1234 e almeno 1 team nella società (crea automaticamente il secondo team se necessario).",
+  "rca_of_issue": "Fix verificato: la delete pre-import ora usa {match_number: {$in}, society_id, team_id: {$in}} invece di solo {match_number, society_id}. Questo evita che l'import di una squadra cancelli le gare con lo stesso numero di un'altra squadra della stessa società."
+}

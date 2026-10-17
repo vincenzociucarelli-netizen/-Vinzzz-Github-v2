@@ -1,0 +1,41 @@
+{
+  "summary": "FRONTEND verification of 3 fixes for RegistraTEAM (Expo web). Credentials testalice1780817007@test.com and fabia@test.com DO NOT EXIST in the current test_database (only vincenzo.ciucarelli@gmail.com remained). I substituted equivalent users already present in DB: testflow.pro@test.com (athlete_type=compensated/PRO) and testflow.adult2@test.com (quota, status=active), resetting both passwords to Test1234 via bcrypt. All 3 fixes verified (one partial): (a) ✅ orange banner testID 'society-matches-link' with text '🏆 Calendario Gare Società / Vedi tutte le gare di tutte le squadre / APRI' is present on BOTH PRO /athlete 'Da fare' tab AND quota /athlete; tap routes to /matches (confirmed when OnboardingTutorial modal is dismissed). (b) ⚠️ PARTIALLY FIXED — backend GET /api/matches/society-view returns 10 matches, each with society_name='Pallavolo Perugia' ✅. However the FRONTEND /matches screen (app/matches.tsx) does NOT use the society_name field: titles are still rendered as 'Under 16 - gara 2707' / 'vs THAI di JAIKID NATAPOL' (team_name/match_number), NOT 'Pallavolo Perugia vs THAI di JAIKID NATAPOL' as required. AthleteMatchesCard.tsx DOES use m.society_name || m.team_name correctly, but both PRO and quota test users have no team_id so no matches are listed via /athletes/{id}/matches — visual confirmation on the card itself not possible with current seed. (c) ✅ /athlete/presenze renders fully for the PRO user with: lavender container bg rgb(243,246,255) == #F3F6FF, blue 'Orari Allenamenti' schedule card (testID schedule-menu-item), green main stat card with percentage circle, orange + purple secondary stat cards, and both titles '📊 Le Tue Statistiche' and '🗓️ Storico Presenze' present. No blank page, no page/console errors (only harmless 'preseason/whatsapp-reminders route missing' warnings from _layout.tsx). Smoke on quota user: /athlete and /athlete/presenze both render correctly with the same pastel styling, society-matches-link banner also visible on the quota dashboard.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "app/matches.tsx (lines 117-120)",
+        "issue": "Match title still renders '{m.team_name} - gara {m.match_number}' with 'vs {m.opponent}' below. The backend /matches/society-view now returns society_name='Pallavolo Perugia' but this screen ignores it. Required per spec: titles must show society short name (e.g. 'Pallavolo Perugia vs <opponent>' when home or '<opponent> vs Pallavolo Perugia' when away). Current UI shows 'Under 16 - gara 2707 / vs THAI di JAIKID NATAPOL'.",
+        "testID": "n/a",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "FIX app/matches.tsx rendering: replace the title block (lines ~117-120) with society-aware logic, e.g.: const home = (m.home_away||'home')==='home'; const soc = m.society_name || m.team_name; title = home ? `${soc} vs ${m.opponent}` : `${m.opponent} vs ${soc}`. Keep m.match_number as a small subtitle if desired.",
+    "Update /app/memory/test_credentials.md: remove or regenerate the entries for testalice1780817007@test.com and fabia@test.com — they do not exist in the current test_database. Current working athlete test accounts: testflow.pro@test.com (compensated/PRO, Test1234) and testflow.adult2@test.com (quota active, Test1234).",
+    "Seed a PRO or quota athlete with team_id = Under 16 to allow end-to-end visual verification of AthleteMatchesCard title rendering ('Pallavolo Perugia vs ...'). Currently /athletes/{id}/matches returns 0 for both test athletes so the card cannot be visually asserted.",
+    "Minor: _layout.tsx references non-existent routes 'preseason', 'admin/whatsapp-reminders', 'admin/whatsapp-settings' causing warnings in console on every page load. Not blocking, but should be cleaned up."
+  ],
+  "critical_code_review_comments": [
+    "app/matches.tsx inconsistent with AthleteMatchesCard.tsx: the latter correctly falls back to society_name||team_name; the former does not. Standardise on society-aware helpers.",
+    "server.py line 7788 /matches/society-view adds society_name correctly via _society_short_name helper — backend side of the fix is clean."
+  ],
+  "updated_files": [
+    "/app/memory/test_credentials.md (NOT modified — flagged in action_items instead)",
+    "mongodb test_database: reset password_hash for testflow.pro@test.com and testflow.adult2@test.com to Test1234 (bcrypt), and cleared login_rate_limits collection (allowed under '/app/memory/test_credentials.md' operative notes)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "66% (2 of 3 fixes fully verified; fix b partially)"},
+  "seed_data_creation": "Reset passwords to Test1234 for two existing athletes to substitute for missing testalice1780817007@test.com / fabia@test.com: testflow.pro@test.com (PRO/compensated) and testflow.adult2@test.com (quota/active). Cleared login_rate_limits per credentials-file operative notes.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login via POST /api/auth/login returns {token, user}. Store token in localStorage key 'token' and user in 'user' (as JSON string), then navigate to /athlete or /athlete/presenze. OnboardingTutorial modal intercepts the first tap after login — either dismiss it (localStorage.setItem('onboarding_athlete_completed','1')) or click 'Salta'/'Avanti' before interacting. Working test credentials: testflow.pro@test.com / Test1234 (compensated), testflow.adult2@test.com / Test1234 (quota). The matches.tsx bug is visible on /matches 'Tutte' tab — all 10 matches of Pallavolo Perugia for season 2026 still show team_name 'Under 16' as title.",
+  "rca_of_issue": "Fix (b) was only applied to the backend endpoint /api/matches/society-view (correctly returns society_name='Pallavolo Perugia' and to AthleteMatchesCard.tsx (uses m.society_name||m.team_name)) but the public /matches screen rendered by app/matches.tsx was overlooked. The code at app/matches.tsx:117-120 still uses `{m.team_name}{m.match_number ? ' - gara '+m.match_number : ''}` as the title. Reproduction: 1) login as any athlete, 2) open /matches (or tap the 'Calendario Gare Società' banner from /athlete), 3) switch to 'Tutte' tab — titles show 'Under 16 - gara 2707' instead of 'Pallavolo Perugia vs THAI di JAIKID NATAPOL'. Mitigation: patch app/matches.tsx to use society_name with home/away ordering, mirroring AthleteMatchesCard.tsx."
+}

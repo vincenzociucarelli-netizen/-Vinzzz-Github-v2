@@ -1,0 +1,35 @@
+{
+  "summary": "REGRESSIONE COVER PRESERVATION su campagne Pre-iscrizione VERIFICATA COME RISOLTA. Backend 10/10 test PASS + validazione UI end-to-end con Playwright confermano che il fix (`coverChanged` flag lato FE + PATCH exclude_unset lato BE) impedisce l'azzeramento della cover_image quando si modifica solo la descrizione. Prova cardinale: modifica descrizione via UI admin sulla campagna reale 6f3b4944-47b1-4fdf-b0a0-e6b11070ffc3 → cover_len IDENTICA prima/dopo (6134 bytes) e /api/preseason/public/{id}/cover.jpg continua a restituire 200 image/jpeg 16786 bytes. og:image nel share HTML punta correttamente a /api/preseason/public/{id}/cover.jpg. Coperti anche i casi di rimozione esplicita (cover_image=\"\" → cleared, cover.jpg 404) e ri-aggiunta.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_preseason_cover_preservation.py",
+    "/app/test_reports/pytest/preseason_cover_preservation.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Backend PATCH /preseason/campaigns/{id} (server.py:34267-34289) usa correttamente data.dict(exclude_unset=True) e mantiene la logica di clearing esplicito solo per description/event_info/open_date/close_date — cover_image NON è nella whitelist di clearing via None, quindi solo cover_image='' (stringa vuota esplicita) svuota la copertina, come atteso dal fix.",
+    "Frontend admin/preseason.tsx (righe 189-193, 326-328, 358, 390, 413, 1378) implementa correttamente il flag coverChanged: reset a false all'apertura del modal, true solo su pick nuovo file / drop / rimozione esplicita. La condizione if (!editingId || coverChanged) garantisce che il payload cover_image sia inviato solo su create o cambio effettivo — comportamento coerente con exclude_unset lato BE.",
+    "L'endpoint /preseason/campaigns (lista) esclude volutamente cover_image per performance e restituisce has_cover:boolean; il modal di modifica ricarica il base64 completo da /preseason/campaigns/{id} solo se has_cover è true (righe 363-368). Anche se questo fetch fallisce, coverChanged resta false → il PATCH successivo NON invia cover_image → cover intatta. Difesa in profondità corretta."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_preseason_cover_preservation.py (nuovo, 10 test)"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 test PASS)",
+    "frontend": "100% (flusso UI admin verificato end-to-end via Playwright)"
+  },
+  "seed_data_creation": "Il test UI ha temporaneamente aggiunto ' [ui-regression-marker]' alla description della campagna 6f3b4944-47b1-4fdf-b0a0-e6b11070ffc3 e poi l'ha ripulita via PATCH nel teardown. La cover_image originale (PNG 6134 char base64 → 16786 bytes normalizzati in JPEG per l'endpoint pubblico) è rimasta invariata. Nessun dato residuo.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Il fix è validato sia via API sia via UI reale. Se serve retestare: (1) pytest /app/backend/tests/test_preseason_cover_preservation.py -v riproduce tutti i casi (patch senza cover, patch con cover='', re-add, 404 senza cover, og:image nel share HTML); (2) UI: login vincenzo.ciucarelli@gmail.com / Test1234, /admin/preseason, espandere card 'Pre-iscrizione Stagione 2026/2027', click Modifica, cambiare solo descrizione, Salva Modifiche → verificare via API GET /api/preseason/campaigns/6f3b4944-47b1-4fdf-b0a0-e6b11070ffc3 che cover_image sia ancora presente. Il modal usa il testo visibile 'Modifica'/'Salva Modifiche'/'Rimuovi'/'Cambia' (non tutti i testID sono presenti). Su web la card deve essere PRIMA espansa (click sul chevron/riga) per rivelare i bottoni azione.",
+  "rca_of_issue": "Root cause originale (già risolto dal main agent nel commit oggetto della review): il frontend, in modifica campagna, inviava SEMPRE cover_image nel PATCH — anche quando l'utente non ricaricava l'immagine. Poiché la lista /preseason/campaigns non contiene più il base64 (ottimizzazione performance), lo stato newCoverImage restava '' → PATCH con cover_image='' → backend azzerava la copertina → /preseason/public/{id}/cover.jpg restituiva 404 → WhatsApp mostrava anteprima senza immagine. Fix applicato: stato coverChanged (bool) settato a true SOLO se l'utente sceglie/rimuove effettivamente l'immagine; il payload include cover_image solo in create o quando coverChanged è true. Backend PATCH usa già exclude_unset e non tocca campi non presenti. Verifica end-to-end: cover_len byte-identical (6134) prima e dopo edit descrizione dalla UI reale, e la cover.jpg pubblica continua a rispondere 200 image/jpeg."
+}

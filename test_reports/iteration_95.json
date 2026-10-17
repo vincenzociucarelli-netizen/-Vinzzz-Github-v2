@@ -1,0 +1,44 @@
+{
+  "summary": "Iteration 95 — Certificate-gate onboarding (RegistraTEAM). Backend: 8/10 pytest PASS. Confermato: (a) POST /api/athletes minorenne + already_registered=true → pending_certificate, false → pending_trial; (b) POST /api/certificates/simple verified=true su pending_certificate → pending_trial; (c) POST /api/trial/accept-privacy senza cert convalidato → 400 con messaggio 'certificato', con cert convalidato → status=active; (d) PATCH /api/athletes/{id}/approval status=trial su ADULTO senza cert → pending_certificate; (e) PATCH dismiss-review/restore-review OK e GET /api/athletes espone review_dismissed_season; (f) regressione GET /api/athletes 200 con lista arricchita. FAIL CRITICO: POST /api/teams con certificate_type_required=buona_salute restituisce HTTP 500 (AttributeError: 'TeamCreate' object has no attribute 'certificate_type_required'). Il modello Pydantic TeamCreate/TeamUpdate/Team in /app/backend/models/team_models.py NON dichiara il campo certificate_type_required, quindi la feature 'Certificato medico richiesto per squadra' NON funziona lato API (POST 500, PATCH silenziosamente ignorato, GET stripped dal response_model). Frontend (build statico dist aggiornato): funzionalmente OK — inserendo DOB minorenne (05/05/2014) su /parent/register-athlete compare la domanda 'già giocato/tesserato' con opzioni 'Sì' e 'No, prima volta'; con DOB adulto (05/05/1990) la domanda scompare. Sezione admin '🗂️ Da controllare' su /admin/athletes mostra pillola verde 'Controllato': cliccandola il contatore passa da 3 → 2 (feature funziona). Su /admin/teams (Nuova Squadra) e /admin/team/[id] è presente la sezione 'Certificato medico richiesto' con 3 opzioni Agonistico/Buona Salute/Nessuno (testo visibile). Testabilità: come già segnalato in iter93, tutti i data-testid applicati a TouchableOpacity/View/Text (already-registered-yes/no, create-cert-type-*, cert-type-*, dismiss-review-*, task-expiring-certs) NON vengono propagati nel DOM da React Native Web perché il prop grezzo 'data-testid' non è supportato: va usato 'testID'.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/teams", "issue": "HTTP 500 quando body contiene certificate_type_required. Traceback: routes/teams.py:86 accede a team_data.certificate_type_required ma models/team_models.py::TeamCreate non dichiara quel campo → AttributeError su Pydantic v2. Feature 'Certificato medico richiesto per squadra' non funziona.", "priority": "CRITICAL"},
+      {"endpoint": "PATCH /api/teams/{id}", "issue": "certificate_type_required viene silenziosamente ignorato: models/team_models.py::TeamUpdate non dichiara il campo, quindi exclude_unset lo scarta. Nessun errore, ma il valore non persiste.", "priority": "HIGH"},
+      {"endpoint": "GET /api/teams (response_model=Team)", "issue": "Anche se il documento in DB avesse certificate_type_required, il modello Team non lo dichiara → viene rimosso dalla risposta (response_model filtra). Il frontend non riesce a leggere il valore salvato. Fix: aggiungere Optional[str] = 'agonistico' a Team/TeamCreate/TeamUpdate."}
+    ],
+    "minor": [
+      {"endpoint": "server.py:8356", "issue": "age = (utcnow - dob).days // 365 è approssimazione grossolana (già segnalato in iter94)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Testabilità E2E teams/register/dashboard", "issue": "React Native Web NON propaga il prop 'data-testid' su <TouchableOpacity/View/Text>. Vanno convertiti in 'testID' i seguenti selettori: (1) app/parent/register-athlete.tsx L724,L732 → already-registered-yes/no; (2) app/admin/teams.tsx L908 → create-cert-type-*; (3) app/admin/team/[id].tsx (verificare) → cert-type-*; (4) app/admin/athletes.tsx L656 → dismiss-review-{id}; (5) app/admin/index.tsx L763 (task chip) → task-expiring-certs/task-* (tutti i task chip). Funzionalità OK, solo attributo assente nel DOM.", "affected_selectors": ["[data-testid=already-registered-yes]", "[data-testid=already-registered-no]", "[data-testid^=create-cert-type-]", "[data-testid^=cert-type-]", "[data-testid^=dismiss-review-]", "[data-testid=task-expiring-certs]"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_certificate_gate_onboarding.py",
+    "/app/test_reports/pytest/iter95_cert_gate.xml"
+  ],
+  "action_items": [
+    "FIX BACKEND CRITICO: aggiungere `certificate_type_required: Optional[str] = 'agonistico'` in /app/backend/models/team_models.py sia in TeamCreate, sia in TeamUpdate, sia in Team. Senza questo la feature squadra→certificato non è funzionante (POST 500, PATCH ignora, GET strippa).",
+    "FIX FRONTEND (testabilità): sostituire `data-testid=` con `testID=` sui componenti RN Native (TouchableOpacity/View/Text) elencati: already-registered-*, create-cert-type-*, cert-type-*, dismiss-review-*, task-* in admin/index.tsx. Dopo la modifica: `cd /app/frontend && npx expo export -p web --clear && sudo supervisorctl restart expo`.",
+    "Regression test una volta fixato il TeamModel: rieseguire pytest test_certificate_gate_onboarding.py::TestTeamCertificateTypePersistence (attualmente 2 test in fail)."
+  ],
+  "critical_code_review_comments": [
+    "models/team_models.py: Team/TeamCreate/TeamUpdate omettono certificate_type_required nonostante route+frontend lo usino. Server.py:780 ha una TeamCreate duplicata che invece dichiara il campo — inconsistenza modelli, il route importa quella sbagliata (dai models/).",
+    "React Native Web: pattern ricorrente in tutta la codebase di uso di `data-testid` grezzo su TouchableOpacity/View. RN Web accetta solo 'testID' che poi converte in data-testid nel DOM. Convertire uniformemente.",
+    "server.py:8356 usa aritmetica giorni/365 per il calcolo età (approx). Già segnalato in iter94: preferire _compute_is_minor per consistenza."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_certificate_gate_onboarding.py (nuovo)"
+  ],
+  "success_rate": {"backend": "80% (8/10 pytest — 2 fail per bug TeamModel)", "frontend": "100% funzionale (già-tesserato toggle, dismiss-review click, cert section forms) — testID non nel DOM ma feature OK via testo"},
+  "test_credentials": "Admin vincenzo.ciucarelli@gmail.com/Test1234; Parent armida.raschi@gmail.com/Test1234 (Pallavolo Perugia)",
+  "seed_data_creation": "Test crea atleti temporanei con fiscal_code ZZTEST* e team ZZTEST TeamBS/TeamPatch: teardown_module li elimina via DELETE /api/athletes/:id e /api/teams/:id. Verificato: nessun residuo in DB al termine (deleteMany ha eliminato 0).",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Preview servito da build statico (npx serve -s dist). Il bundle attuale contiene già tutte le feature (verificato con grep sul JS dist). Login: cookie banner 'Solo necessari' + modal 'Salta' vanno chiusi. Per rebuild frontend: cd /app/frontend && npx expo export -p web --clear && sudo supervisorctl restart expo. Ricordati: React Native Web propaga solo testID (non data-testid grezzo). Il bug models/team_models.py è chirurgico: aggiungere 3 righe. Test pytest già presente in /app/backend/tests/test_certificate_gate_onboarding.py — dopo fix eseguire `python -m pytest backend/tests/test_certificate_gate_onboarding.py -v`.",
+  "rca of the issue": "Root cause del fail POST /api/teams: /app/backend/routes/teams.py:86 accede a team_data.certificate_type_required, ma il modello Pydantic TeamCreate importato da /app/backend/models/team_models.py:50-70 non dichiara quel campo. In Pydantic v2, l'accesso ad attributo inesistente su BaseModel solleva AttributeError → FastAPI restituisce 500. Il modello Team (response_model) omette anch'esso il campo, quindi qualunque valore salvato in DB verrebbe rimosso dalla risposta. Fix chirurgico: aggiungere `certificate_type_required: Optional[str] = 'agonistico'` a Team, TeamCreate e TeamUpdate in models/team_models.py. Nota: server.py:780 dichiara una seconda TeamCreate con il campo, ma non è quella usata dal router — è residuo di refactor. Riproduzione: `curl -X POST /api/teams -H auth -d '{\"name\":\"X\",\"certificate_type_required\":\"buona_salute\"}'` → 500."
+}
