@@ -101,3 +101,6 @@ credentials.json
 # sono richiesti dal deploy Emergent per le variabili d'ambiente e il rewrite
 # di EXPO_PUBLIC_BACKEND_URL. Ignoriamo solo gli override locali.
 .env*.local
+
+# Credenziali di test interne: non devono finire nel deploy/repo
+memory/test_credentials.md

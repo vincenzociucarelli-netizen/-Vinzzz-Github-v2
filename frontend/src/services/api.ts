@@ -1,7 +1,10 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8001';
+// 🆕 Nessun fallback http://localhost in sorgente (requisito HTTPS build nativi + deploy).
+// EXPO_PUBLIC_BACKEND_URL è sempre fornito da frontend/.env (riscritto in deploy);
+// in assenza si usa baseURL relativo '/api' (valido su web same-origin).
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 const api = axios.create({
   baseURL: `${BACKEND_URL}/api`,
