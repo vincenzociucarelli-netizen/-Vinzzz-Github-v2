@@ -20,6 +20,7 @@ import CompensationSummaryCard from '../../src/components/compensation/Compensat
 import SignaturePadInline from '../../src/components/SignaturePadInline';
 import InpsNetBreakdown from '../../src/components/InpsNetBreakdown';
 import CompensoInformativa from '../../src/components/CompensoInformativa';
+import InpsNetLines from '../../src/components/InpsNetLines';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 import { handleAnagraficaError } from '../../src/utils/anagraficaError';
@@ -1750,6 +1751,12 @@ export default function AthleteCompensation() {
                   Compenso lordo: {formatCurrency((profile?.monthly_compensation || 0))}{'\n'}
                   Il collaboratore dichiara che non sono intervenute variazioni rispetto all'autocertificazione precedente.
                 </Text>
+                <InpsNetLines
+                  yearlyTotalBefore={(() => { const prior = (profile as any)?.other_annual_compensation || 0; return records.filter(r => r.year === selectedYear && r.receipt_signed && (r.month || 0) < (selectedMonth || 0)).reduce((s, r) => s + (r.amount_gross || r.amount || 0), 0) + prior; })()}
+                  monthGross={(records.find(r => matchesMonth(r.month, selectedMonth || 0) && r.year === selectedYear)?.amount_gross) || (records.find(r => matchesMonth(r.month, selectedMonth || 0) && r.year === selectedYear)?.amount) || profile?.monthly_compensation || 0}
+                  insuredElsewhere={!!(profile as any)?.inps_insured_elsewhere}
+                  carico="tuo"
+                />
               </View>
 
               <CompensoInformativa />
