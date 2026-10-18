@@ -31,31 +31,34 @@ from models.enums import UserRole
 router = APIRouter()
 
 # ─────────────────────── Testi canonici (versionati) ───────────────────────
-PENSION_TEXT_VERSION = "1.0"
+# 🆕 v2.0 (18/10/2026) — Testo riformulato in linguaggio comprensibile e
+# distinzione corretta tra previdenza pensionistica e assicurazione INAIL.
+# A e B sono SELEZIONABILI INSIEME (indipendenti); C e D sono esclusive.
+# NB: le dichiarazioni v1 firmate in precedenza restano valide nello storico e
+# NON vengono richieste nuovamente.
+PENSION_TEXT_VERSION = "2.0"
 
 PENSION_OPTIONS: List[Dict[str, Any]] = [
     {
         "code": "A",
-        "label": "Sono attualmente iscritto o assicurato presso un'altra forma di previdenza obbligatoria, oltre alla posizione eventualmente derivante dal lavoro sportivo.",
-        "short": "Assicurato presso altra previdenza obbligatoria",
-        "detail_label": "Tipologia di copertura",
-        "detail_choices": ["Lavoro dipendente", "Lavoro autonomo", "Altra gestione previdenziale"],
+        "label": "Sono iscritto/a a un'altra gestione previdenziale obbligatoria ai fini pensionistici.",
+        "short": "Altra gestione previdenziale obbligatoria (pensionistica)",
+        "example": "Ad esempio, perché lavoro come dipendente, artigiano o commerciante, oppure verso contributi a una cassa previdenziale professionale.",
     },
     {
         "code": "B",
         "label": "Sono titolare di pensione diretta.",
         "short": "Titolare di pensione diretta",
-        "detail_label": "Tipologia di pensione",
-        "detail_choices": ["Pensione di vecchiaia", "Pensione anticipata", "Pensione di invalidità", "Altra pensione diretta"],
+        "example": "Ad esempio, pensione di vecchiaia o anticipata.",
     },
     {
         "code": "C",
-        "label": "Non sono attualmente assicurato presso altre forme di previdenza obbligatoria e non sono titolare di pensione diretta.",
-        "short": "Nessuna altra previdenza / nessuna pensione",
+        "label": "Non sono iscritto/a ad altre gestioni previdenziali obbligatorie ai fini pensionistici e non sono titolare di pensione diretta.",
+        "short": "Nessuna altra previdenza pensionistica / nessuna pensione",
     },
     {
         "code": "D",
-        "label": "Non sono in grado di dichiarare con certezza la mia posizione previdenziale e richiedo una verifica.",
+        "label": "Non so con certezza quale sia la mia posizione previdenziale e richiedo una verifica.",
         "short": "Da verificare",
     },
 ]
@@ -63,9 +66,12 @@ PENSION_OPTIONS: List[Dict[str, Any]] = [
 PENSION_TEXTS: Dict[str, Any] = {
     "version": PENSION_TEXT_VERSION,
     "title": "Dichiarazione della posizione previdenziale",
-    "intro": "Ai fini della corretta gestione amministrativa e previdenziale del mio rapporto di lavoro sportivo, dichiaro la seguente posizione previdenziale.",
+    "intro": "Il/La sottoscritto/a dichiara la propria posizione previdenziale ai fini della corretta gestione amministrativa e contributiva del rapporto di lavoro sportivo.",
+    "question": "Qual è la tua attuale posizione previdenziale?",
+    "multi_hint": "Puoi selezionare sia A che B se entrambe ti riguardano. Le opzioni C e D vanno scelte da sole.",
     "options": PENSION_OPTIONS,
-    "declaration": "Dichiaro che le informazioni fornite sono veritiere e aggiornate. Mi impegno a comunicare tempestivamente alla società eventuali variazioni della mia posizione previdenziale che possano incidere sulla gestione del rapporto di lavoro sportivo.",
+    "note": "Nota: l'assicurazione INAIL contro gli infortuni sul lavoro e le polizze assicurative private, da sole, non costituiscono un'altra gestione previdenziale ai fini pensionistici.",
+    "declaration": "Dichiaro che le informazioni fornite sono veritiere e aggiornate alla data della sottoscrizione. Mi impegno a comunicare tempestivamente alla società eventuali variazioni della mia posizione previdenziale.",
 }
 
 STATUS_LABEL = {"signed": "Firmata", "to_verify": "Da verificare"}
@@ -73,6 +79,25 @@ STATUS_LABEL = {"signed": "Firmata", "to_verify": "Da verificare"}
 
 def _option(code: str) -> Optional[Dict[str, Any]]:
     return next((o for o in PENSION_OPTIONS if o["code"] == code), None)
+
+
+def _decl_positions(decl: dict) -> List[str]:
+    """Lista normalizzata delle opzioni scelte, compatibile con i record legacy
+    (campo `position` singolo 'A'/'B'/'C'/'D' oppure composito 'A+B')."""
+    p = decl.get("positions")
+    if isinstance(p, list) and p:
+        return [c for c in ("A", "B", "C", "D") if c in p]
+    pos = str(decl.get("position") or "")
+    return [c for c in ("A", "B", "C", "D") if c in pos]
+
+
+def _is_insured_elsewhere(decl: Optional[dict]) -> bool:
+    """True se la dichiarazione implica un'altra gestione previdenziale obbligatoria
+    (A) o la titolarità di pensione diretta (B) → IVS 24% senza supplemento 2,03%."""
+    if not decl:
+        return False
+    pos = _decl_positions(decl)
+    return ("A" in pos) or ("B" in pos)
 
 
 def _iso(v):
@@ -193,19 +218,24 @@ async def my_pension_status(current_user=Depends(get_current_user)):
         "texts": PENSION_TEXTS,
         "agreement_id": subj["agreement_id"],
         # 🆕 Regime INPS derivato: A/B → assicurato altrove/pensionato (24% senza 2,03%)
-        "inps_insured_elsewhere": bool(latest and latest.get("position") in ("A", "B")),
+        "inps_insured_elsewhere": _is_insured_elsewhere(latest),
         # 🆕 True se la dichiarazione è stata firmata dall'altro account dual-role
         "declared_by_linked_account": bool(latest) and latest.get("user_id") != subj["user_id"] and latest.get("athlete_id") != subj["athlete_id"],
     }
 
 
 class PensionDeclareRequest(BaseModel):
-    position: str = Field(..., pattern="^[ABCD]$", description="Opzione scelta A/B/C/D")
-    detail: Optional[str] = Field(None, max_length=120, description="Tipologia copertura (A) o pensione (B)")
+    # 🆕 v2: selezione multipla. A e B possono coesistere; C e D sono esclusive.
+    positions: Optional[List[str]] = Field(None, description="Opzioni scelte (A/B multiple, C/D esclusive)")
+    position: Optional[str] = Field(None, description="Compat v1: opzione singola A/B/C/D")
     detail_note: Optional[str] = Field(None, max_length=300, description="Precisazione libera facoltativa")
     confirm: bool = Field(..., description="Spunta di conferma del testo dichiarativo")
     signature_base64: str = Field(..., min_length=50, description="Firma digitale (base64 PNG)")
     text_version: Optional[str] = Field(None, description="Versione testo mostrata al firmatario")
+
+    def resolved_positions(self) -> List[str]:
+        raw = self.positions if self.positions else ([self.position] if self.position else [])
+        return [c for c in ("A", "B", "C", "D") if c in raw]
 
 
 @router.post("/me/pension-declaration/declare")
@@ -220,16 +250,16 @@ async def declare_my_pension_position(
         raise HTTPException(status_code=403, detail="Operazione non consentita per questo profilo")
     if not data.confirm:
         raise HTTPException(status_code=400, detail="Devi confermare il testo della dichiarazione")
-    opt = _option(data.position)
-    if not opt:
-        raise HTTPException(status_code=400, detail="Opzione non valida")
+    positions = data.resolved_positions()
+    if not positions:
+        raise HTTPException(status_code=400, detail="Seleziona almeno una risposta")
+    # C e D sono esclusive: non possono combinarsi con nessun'altra opzione
+    if ("C" in positions or "D" in positions) and len(positions) > 1:
+        raise HTTPException(status_code=400, detail="Le opzioni C e D vanno selezionate da sole")
     if data.text_version and data.text_version != PENSION_TEXT_VERSION:
         raise HTTPException(status_code=409, detail="Il testo della dichiarazione è stato aggiornato: ricarica la pagina e ripeti la firma")
-    detail = (data.detail or "").strip() or None
-    if data.position in ("A", "B") and not detail:
-        raise HTTPException(status_code=400, detail=f"Indica la {opt['detail_label'].lower()}")
-    if data.position in ("C", "D"):
-        detail = None
+    opts = [_option(c) for c in positions]
+    detail = None
 
     subj = await _resolve_subject(current_user)
     history = await _history_for(await _person_ids(subj["user_id"], subj["athlete_id"]))
@@ -256,20 +286,22 @@ async def declare_my_pension_position(
         # Snapshot del pregresso al momento della firma (solo informativo)
         "prior_compensation_amount": subj["prior_compensation_amount"],
         "prior_compensation_signed": subj["prior_compensation_signed"],
-        # Contenuto dichiarato
-        "position": data.position,
-        "position_label": opt["label"],
-        "position_short": opt["short"],
+        # Contenuto dichiarato (v2: selezione multipla)
+        "positions": positions,
+        "position": "+".join(positions),
+        "position_label": "  •  ".join(o["label"] for o in opts if o),
+        "position_short": " + ".join(o["short"] for o in opts if o),
         "detail": detail,
         "detail_note": (data.detail_note or "").strip() or None,
-        "status": "to_verify" if data.position == "D" else "signed",
+        "status": "to_verify" if "D" in positions else "signed",
         # Versionamento
         "version_number": (prev.get("version_number", 0) + 1) if prev else 1,
         "previous_declaration_id": prev.get("id") if prev else None,
         "text_version": PENSION_TEXT_VERSION,
         "text_snapshot": {
             "intro": PENSION_TEXTS["intro"],
-            "option": opt["label"],
+            "option": "  •  ".join(o["label"] for o in opts if o),
+            "note": PENSION_TEXTS["note"],
             "declaration": PENSION_TEXTS["declaration"],
         },
         # Evidenze di sottoscrizione
@@ -287,14 +319,21 @@ async def declare_my_pension_position(
     # calcolo INPS backend sia dall'anteprima quietanza nel frontend.
     #   • Posizione A (assicurato presso altra previdenza obbligatoria) o
     #     B (titolare di pensione diretta) → IVS 24% SENZA supplemento 2,03%.
-    #   • Posizione C (nessuna altra copertura/pensione) o D (da verificare) →
-    #     regime pieno IVS 25% + 2,03% (default prudenziale).
+    #   • Posizione C (nessuna altra copertura/pensione) → regime pieno IVS 25% + 2,03%.
+    #   • Posizione D (da verificare) → NON si assegna alcun regime/aliquota in
+    #     automatico: il flag contributivo NON viene toccato e la posizione resta
+    #     "pendente" finché l'amministrazione/il consulente non la verifica.
     try:
-        insured = data.position in ("A", "B")
         person_ids = await _person_ids(subj["user_id"], subj["athlete_id"])
         if person_ids:
-            await db.users.update_many({"id": {"$in": person_ids}}, {"$set": {"inps_insured_elsewhere": insured}})
-            await db.athletes.update_many({"id": {"$in": person_ids}}, {"$set": {"inps_insured_elsewhere": insured}})
+            if "D" in positions:
+                # Nessuna assegnazione automatica di aliquota: marca solo come da verificare.
+                upd = {"$set": {"inps_position_to_verify": True}}
+            else:
+                insured = ("A" in positions) or ("B" in positions)
+                upd = {"$set": {"inps_insured_elsewhere": insured, "inps_position_to_verify": False}}
+            await db.users.update_many({"id": {"$in": person_ids}}, upd)
+            await db.athletes.update_many({"id": {"$in": person_ids}}, upd)
             try:
                 from server import invalidate_auth_cache
                 for pid in person_ids:
@@ -311,13 +350,16 @@ async def declare_my_pension_position(
         paragraphs = [
             {"text": f"Il/La sottoscritto/a {subj['full_name']}", "style": "normal"},
             {"text": PENSION_TEXTS["intro"], "style": "normal"},
-            {"text": f"Opzione selezionata: {data.position}", "style": "bold"},
-            {"text": opt["label"], "style": "normal"},
+            {"text": f"Opzione/i selezionata/e: {doc['position']}", "style": "bold"},
         ]
-        if detail:
-            paragraphs.append({"text": f"{opt.get('detail_label', 'Tipologia')}: {detail}" + (f" — {doc['detail_note']}" if doc.get("detail_note") else ""), "style": "normal"})
-        if data.position == "D":
+        for o in opts:
+            if o:
+                paragraphs.append({"text": f"{o['code']}) {o['label']}", "style": "normal"})
+        if doc.get("detail_note"):
+            paragraphs.append({"text": f"Precisazione: {doc['detail_note']}", "style": "normal"})
+        if "D" in positions:
             paragraphs.append({"text": "Posizione registrata come «Da verificare».", "style": "bold"})
+        paragraphs.append({"text": PENSION_TEXTS["note"], "style": "normal"})
         paragraphs.append({"text": PENSION_TEXTS["declaration"], "style": "normal"})
         meta = {
             "Versione dichiarazione": f"{doc['version_number']}" + (f" (sostituisce {prev['id']})" if prev else ""),
@@ -358,7 +400,7 @@ async def declare_my_pension_position(
                 "type": "pension_declaration",
                 "title": "Nuova dichiarazione previdenziale",
                 "message": f"{subj['full_name']} ha sottoscritto la dichiarazione della posizione previdenziale "
-                           f"(v.{doc['version_number']} — {opt['short']}). Disponibile per il consulente del lavoro.",
+                           f"(v.{doc['version_number']} — {doc['position_short']}). Disponibile per il consulente del lavoro.",
                 "read": False,
                 "created_at": now.isoformat(),
                 "entity_type": "pension_declaration",
@@ -614,10 +656,12 @@ async def admin_pension_declarations_summary(current_user=Depends(get_current_us
         latest = history[0] if history else None
         # 🆕 Backfill del flag `inps_insured_elsewhere` per dichiarazioni firmate
         # prima dell'introduzione della sincronizzazione (idempotente).
+        # La posizione D («da verificare») NON viene mai sincronizzata in automatico:
+        # nessuna aliquota viene assegnata finché la posizione non è chiarita.
         try:
-            insured = bool(latest and latest.get("position") in ("A", "B"))
             pids = list(m["ids"])
-            if pids:
+            if pids and latest and "D" not in _decl_positions(latest):
+                insured = _is_insured_elsewhere(latest)
                 await db.users.update_many({"id": {"$in": pids}, "inps_insured_elsewhere": {"$ne": insured}}, {"$set": {"inps_insured_elsewhere": insured}})
                 await db.athletes.update_many({"id": {"$in": pids}, "inps_insured_elsewhere": {"$ne": insured}}, {"$set": {"inps_insured_elsewhere": insured}})
         except Exception:

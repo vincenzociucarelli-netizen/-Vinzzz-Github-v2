@@ -22,15 +22,17 @@ export interface PensionOption {
   code: 'A' | 'B' | 'C' | 'D';
   label: string;
   short: string;
-  detail_label?: string;
-  detail_choices?: string[];
+  example?: string;
 }
 
 export interface PensionTexts {
   version: string;
   title: string;
   intro: string;
+  question?: string;
+  multi_hint?: string;
   options: PensionOption[];
+  note?: string;
   declaration: string;
 }
 
@@ -51,8 +53,7 @@ const showAlert = (title: string, msg: string) => {
 export default function PensionDeclarationModal({ visible, userFullName, previousVersionNumber, onClose, onDeclared }: Props) {
   const signatureRef = useRef<SignaturePadInlineRef>(null);
   const [texts, setTexts] = useState<PensionTexts | null>(null);
-  const [position, setPosition] = useState<'A' | 'B' | 'C' | 'D' | null>(null);
-  const [detail, setDetail] = useState<string>('');
+  const [positions, setPositions] = useState<('A' | 'B' | 'C' | 'D')[]>([]);
   const [detailNote, setDetailNote] = useState('');
   const [confirmChecked, setConfirmChecked] = useState(false);
   const [signatureData, setSignatureData] = useState<string | null>(null);
@@ -60,15 +61,25 @@ export default function PensionDeclarationModal({ visible, userFullName, previou
 
   useEffect(() => {
     if (!visible) return;
-    setPosition(null); setDetail(''); setDetailNote(''); setConfirmChecked(false); setSignatureData(null);
+    setPositions([]); setDetailNote(''); setConfirmChecked(false); setSignatureData(null);
     api.get('/me/pension-declaration/status')
       .then((res) => setTexts(res.data?.texts || null))
       .catch(() => setTexts(null));
   }, [visible]);
 
-  const selected = texts?.options.find((o) => o.code === position) || null;
-  const needsDetail = position === 'A' || position === 'B';
-  const canSubmit = !!position && (!needsDetail || !!detail) && confirmChecked && !!signatureData && !submitting && !!texts;
+  // A/B sono cumulabili; C e D sono esclusive (deselezionano tutto il resto).
+  const toggleOption = (code: 'A' | 'B' | 'C' | 'D') => {
+    setPositions((prev) => {
+      const has = prev.includes(code);
+      if (code === 'C' || code === 'D') return has ? [] : [code];
+      // A / B: additivo, ma rimuove eventuali C/D
+      const base = prev.filter((c) => c !== 'C' && c !== 'D');
+      return has ? base.filter((c) => c !== code) : [...base, code];
+    });
+  };
+
+  const isD = positions.includes('D');
+  const canSubmit = positions.length > 0 && confirmChecked && !!signatureData && !submitting && !!texts;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -77,15 +88,14 @@ export default function PensionDeclarationModal({ visible, userFullName, previou
     try {
       setSubmitting(true);
       const res = await api.post('/me/pension-declaration/declare', {
-        position,
-        detail: needsDetail ? detail : null,
+        positions,
         detail_note: detailNote.trim() || null,
         confirm: true,
         signature_base64: sig,
         text_version: texts?.version,
       });
       if (res.data?.success) {
-        showAlert('Dichiarazione sottoscritta', position === 'D'
+        showAlert('Dichiarazione sottoscritta', isD
           ? 'La tua posizione è stata registrata come "Da verificare". La società sarà avvisata.'
           : 'Grazie! La dichiarazione è stata registrata e conservata.');
         onDeclared();
@@ -136,62 +146,58 @@ export default function PensionDeclarationModal({ visible, userFullName, previou
                 <Text style={[styles.legalText, { marginTop: 8 }]}>{texts.intro}</Text>
               </View>
 
-              <Text style={styles.sectionLabel}>Seleziona una risposta (obbligatorio)</Text>
+              <Text style={styles.sectionLabel}>{texts.question || 'Seleziona una risposta (obbligatorio)'}</Text>
+              {texts.multi_hint ? (
+                <Text style={styles.hintText}>{texts.multi_hint}</Text>
+              ) : null}
               {texts.options.map((o) => {
-                const active = position === o.code;
+                const active = positions.includes(o.code);
+                const square = o.code === 'A' || o.code === 'B';
                 return (
                   <TouchableOpacity
                     key={o.code}
                     style={[styles.option, active && styles.optionActive]}
-                    onPress={() => { setPosition(o.code); setDetail(''); }}
+                    onPress={() => toggleOption(o.code)}
                     disabled={submitting}
                     testID={`pension-option-${o.code}`}
                   >
-                    <View style={[styles.radio, active && styles.radioActive]}>
-                      {active && <View style={styles.radioDot} />}
+                    <View style={[square ? styles.checkMark : styles.radio, active && (square ? styles.checkMarkActive : styles.radioActive)]}>
+                      {active && (square
+                        ? <Ionicons name="checkmark" size={14} color="#fff" />
+                        : <View style={styles.radioDot} />)}
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.optionCode}>{o.code}</Text>
                       <Text style={styles.optionText}>{o.label}</Text>
+                      {o.example ? <Text style={styles.optionExample}>{o.example}</Text> : null}
                     </View>
                   </TouchableOpacity>
                 );
               })}
 
-              {selected && needsDetail && (
-                <View style={styles.detailBox}>
-                  <Text style={styles.sectionLabel}>{selected.detail_label} (obbligatorio)</Text>
-                  <View style={styles.chips}>
-                    {(selected.detail_choices || []).map((c) => (
-                      <TouchableOpacity
-                        key={c}
-                        style={[styles.chip, detail === c && styles.chipActive]}
-                        onPress={() => setDetail(c)}
-                        disabled={submitting}
-                        testID={`pension-detail-${c.replace(/\s+/g, '-').toLowerCase()}`}
-                      >
-                        <Text style={[styles.chipText, detail === c && styles.chipTextActive]}>{c}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  <TextInput
-                    value={detailNote}
-                    onChangeText={setDetailNote}
-                    placeholder="Precisazione facoltativa (es. ente/gestione, datore di lavoro...)"
-                    placeholderTextColor="#9CA3AF"
-                    style={styles.noteInput}
-                    editable={!submitting}
-                    maxLength={300}
-                    testID="pension-detail-note"
-                  />
+              {texts.note ? (
+                <View style={styles.noteBox}>
+                  <Ionicons name="information-circle" size={16} color="#1D4ED8" />
+                  <Text style={styles.noteBoxText}>{texts.note}</Text>
                 </View>
-              )}
+              ) : null}
 
-              {position === 'D' && (
+              <TextInput
+                value={detailNote}
+                onChangeText={setDetailNote}
+                placeholder="Precisazione facoltativa (es. ente/gestione, datore di lavoro...)"
+                placeholderTextColor="#9CA3AF"
+                style={styles.noteInput}
+                editable={!submitting}
+                maxLength={300}
+                testID="pension-detail-note"
+              />
+
+              {isD && (
                 <View style={styles.verifyBox}>
                   <Ionicons name="alert-circle" size={18} color="#B45309" />
                   <Text style={styles.verifyText}>
-                    La tua posizione sarà registrata come <Text style={{ fontWeight: '700' }}>«Da verificare»</Text>: la società e il consulente del lavoro la approfondiranno con te.
+                    La tua posizione sarà registrata come <Text style={{ fontWeight: '700' }}>«Da verificare»</Text>: la società e il consulente del lavoro la approfondiranno con te. Nessuna aliquota contributiva verrà applicata automaticamente.
                   </Text>
                 </View>
               )}
@@ -272,20 +278,20 @@ const styles = StyleSheet.create({
   legalTitle: { textAlign: 'center', fontSize: 12, letterSpacing: 1.5, color: '#374151', fontWeight: '700', marginBottom: 10 },
   legalText: { fontSize: 13, color: '#1F2937', lineHeight: 20 },
   sectionLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 8 },
+  hintText: { fontSize: 12, color: '#6B7280', marginBottom: 10, lineHeight: 17, fontStyle: 'italic' },
   option: { flexDirection: 'row', gap: 10, padding: 12, borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 10, marginBottom: 8, alignItems: 'flex-start', backgroundColor: '#fff' },
   optionActive: { borderColor: '#1E3A8A', backgroundColor: '#EFF6FF' },
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#9CA3AF', alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   radioActive: { borderColor: '#1E3A8A' },
   radioDot: { width: 11, height: 11, borderRadius: 6, backgroundColor: '#1E3A8A' },
+  checkMark: { width: 22, height: 22, borderRadius: 5, borderWidth: 2, borderColor: '#9CA3AF', alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  checkMarkActive: { borderColor: '#1E3A8A', backgroundColor: '#1E3A8A' },
   optionCode: { fontSize: 12, fontWeight: '700', color: '#1E3A8A', marginBottom: 2 },
   optionText: { fontSize: 13, color: '#1F2937', lineHeight: 19 },
-  detailBox: { backgroundColor: '#F0F9FF', borderRadius: 10, padding: 12, marginTop: 4, marginBottom: 12, borderWidth: 1, borderColor: '#BAE6FD' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
-  chip: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, borderWidth: 1.5, borderColor: '#93C5FD', backgroundColor: '#fff', minHeight: 40, justifyContent: 'center' },
-  chipActive: { backgroundColor: '#1E3A8A', borderColor: '#1E3A8A' },
-  chipText: { fontSize: 13, color: '#1E3A8A', fontWeight: '600' },
-  chipTextActive: { color: '#fff' },
-  noteInput: { borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 10, fontSize: 13, color: '#1F2937', backgroundColor: '#fff' },
+  optionExample: { fontSize: 12, color: '#6B7280', lineHeight: 17, marginTop: 4, fontStyle: 'italic' },
+  noteBox: { flexDirection: 'row', gap: 8, backgroundColor: '#EFF6FF', padding: 12, borderRadius: 10, marginTop: 4, marginBottom: 12, alignItems: 'flex-start', borderWidth: 1, borderColor: '#BFDBFE' },
+  noteBoxText: { fontSize: 12, color: '#1E40AF', flex: 1, lineHeight: 18 },
+  noteInput: { borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 10, fontSize: 13, color: '#1F2937', backgroundColor: '#fff', marginBottom: 12 },
   verifyBox: { flexDirection: 'row', gap: 8, backgroundColor: '#FEF3C7', padding: 12, borderRadius: 10, marginBottom: 12, alignItems: 'flex-start' },
   verifyText: { fontSize: 13, color: '#92400E', flex: 1, lineHeight: 19 },
   declBox: { backgroundColor: '#F9FAFB', borderLeftWidth: 4, borderLeftColor: '#1E3A8A', padding: 12, borderRadius: 8, marginBottom: 12, marginTop: 4 },
