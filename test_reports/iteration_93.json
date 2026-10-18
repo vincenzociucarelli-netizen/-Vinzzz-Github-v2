@@ -1,0 +1,30 @@
+{
+  "summary": "Frontend-only testing of new Admin 'Storico Pagamenti' feature. Rebuilt expo web bundle (was stale, missing /admin/payments-history route). After rebuild all functional acceptance criteria PASS: page renders, 5 test movements shown (MAURI LENA In attesa 120, BIANCHI MARCO Parziale 200 acconto 80, BIANCHI Pagato 300, MAURI Non pagato 150 Contanti, BIANCHI Rimborsato 100), summary Movimenti=5 / Incassato=€380,00 / Rimborsato=€100,00. Filter chip Rimborsati -> count=1, chip Contanti -> count=1, search 'mauri' -> count=2 (client-side). Export CSV button clickable with no JS errors. Only issues are testability (data-testid propagation on <Text>/<View> and on TouchableOpacity without testID prop).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "admin -> Storico Pagamenti card", "issue": "Il selettore data-testid='payments-history-menu-card' non compare nel DOM (React Native Web non forwarda 'data-testid' su TouchableOpacity senza testID). Il click sulla card funziona per l'utente, ma il testID non e' esposto. Fix: sostituire 'data-testid' con 'testID' (o aggiungere anche testID) sulla TouchableOpacity in app/admin/index.tsx L1556-1560.", "affected_selectors": ["[data-testid=payments-history-menu-card]"]},
+      {"flow": "Storico Pagamenti - riepilogo/testid", "issue": "I data-testid 'payments-history-page', 'summary-count', 'summary-paid', 'summary-refunded' non compaiono nel DOM perche' RN Web non propaga il prop grezzo 'data-testid' su <View>/<Text>. Vanno usati testID (RN Web li converte in data-testid). Fix in app/admin/payments-history.tsx L189, L293, L297, L301.", "affected_selectors": ["[data-testid=payments-history-page]","[data-testid=summary-count]","[data-testid=summary-paid]","[data-testid=summary-refunded]"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "In app/admin/payments-history.tsx: sostituire i props 'data-testid' con 'testID' sui componenti View/Text (righe ~189, 293, 297, 301) per rendere accessibili payments-history-page, summary-count, summary-paid, summary-refunded via [data-testid=...] nel DOM.",
+    "In app/admin/index.tsx L1559: aggiungere/sostituire con testID='payments-history-menu-card' sulla TouchableOpacity della card Storico Pagamenti.",
+    "IMPORTANTE: dopo modifiche frontend eseguire 'npx expo export -p web --clear' e 'sudo supervisorctl restart expo' — l'app in preview e' servita come build statico da /app/frontend/dist tramite 'npx serve -s dist'. Il testing di questa iterazione ha richiesto un rebuild perche' il bundle iniziale non conteneva la nuova pagina (route /admin/payments-history rispondeva Unmatched Route)."
+  ],
+  "critical_code_review_comments": [
+    "Preview e' un build statico (npx serve -s dist). Il flusso richiede rebuild manuale dopo ogni modifica frontend: main agent deve eseguire 'npx expo export -p web' e restart 'expo' supervisor.",
+    "Uso misto di data-testid e testID nel file payments-history.tsx: alcuni elementi hanno entrambi (export-csv-btn, back-btn, retry-btn) altri solo data-testid (Text/View top-level). Uniformare a testID (standard RN Web) per garantire propagazione."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (not tested)", "frontend": "95% (funzionalita' 100% OK, 2 gruppi di testID mancanti nel DOM)"},
+  "test_credentials": "Admin: vincenzo.ciucarelli@gmail.com / Test1234 (societa' Pallavolo Perugia SSD a RL)",
+  "seed_data_creation": "Nessuno (5 test payments TESTPH_* gia' presenti). Verificati visivamente in pagina.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Il preview e' servito come build statico (npx serve -s dist). Per testare modifiche frontend serve un rebuild: cd /app/frontend && npx expo export -p web --clear && sudo supervisorctl restart expo. Su RN Web usare testID (non data-testid grezzo) per garantire l'attributo nel DOM. Login: cliente Accedi non ha testID accessibile; usare click via coordinate o input+premere invio. Cookie banner (Solo necessari) va chiuso per interagire con form login.",
+  "rca of the issue": "Bundle statico obsoleto: expo serviva un dist compilato prima dell'aggiunta di app/admin/payments-history.tsx, quindi la route restituiva 'Unmatched Route'. Risolto rieseguendo 'npx expo export -p web --clear' e restart supervisor expo. Testabilita' testID: React Native Web propaga solo 'testID' -> 'data-testid'; l'attributo grezzo 'data-testid' viene stripped su View/Text e su Touchable senza testID. Sostituire in tutti i punti."
+}

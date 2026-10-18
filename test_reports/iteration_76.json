@@ -1,0 +1,45 @@
+{
+  "summary": "Backend-only testing of the bug fix for PATCH /api/users/{user_id}/compensation role authorization. The fix extends accepted roles to include ATHLETE (in addition to COACH/DIRIGENTE/VIEWER/COLLABORATORE) and enriches error message with the current role. All 8 tests passed (8/8 = 100%).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_compensation_role_fix.py",
+    "/app/test_reports/pytest/compensation_role_fix.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py L4956-L5036: endpoint logic is sound. Note that for role=athlete the canonical monthly_compensation lives on db.athletes (athlete_type=compensated) while this endpoint writes only to db.users — the sync the other way is handled elsewhere (iteration_74). Confirm UI reads from the right collection for PRO athletes to avoid display drift.",
+    "server.py L4992 / L5002: bare `except:` swallows date parsing errors silently — invalid contract dates produce a 200 with no DB update and no feedback. Recommend narrowing to ValueError/TypeError and returning HTTP 400 with field name.",
+    "Error message currently says 'coach, dirigenti, collaboratori e atleti PRO' but allowed list still includes VIEWER — copy is slightly misleading for viewer rejections (none observed in tests, but worth aligning)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_compensation_role_fix.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "not tested (per request)"
+  },
+  "test_credentials": "Admin: vincenzo.ciucarelli@gmail.com / Test1234 — Coach: alice@test.com / Test1234 — Collaboratore: paolo@coll.com / PaoloTest123 — Atleta PRO: testalice1780817007@test.com / Test1234",
+  "seed_data_creation": "No new seed data created. Tests use existing users discovered via /api/users/dirigenti, /api/users/parents and direct logins. Tests strictly filter role== target_role to avoid picking admin/viewer entries returned by /users/dirigenti.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Note: /api/users/dirigenti returns ALL of admin+dirigente+viewer (4 records here). Always filter by user['role']=='dirigente' when picking a target. The PATCH /users/{id}/compensation endpoint silently ignores invalid ISO date strings (bare except). Athlete PRO compensation lives on both db.users (this endpoint) and db.athletes (synced elsewhere — see iteration_74).",
+  "test_results_detail": {
+    "TestCompensationRoleAccepted::test_dirigente_compensation_update_200": "PASS",
+    "TestCompensationRoleAccepted::test_coach_compensation_update_200": "PASS",
+    "TestCompensationRoleAccepted::test_collaboratore_compensation_update_200": "PASS",
+    "TestCompensationRoleAccepted::test_athlete_pro_compensation_update_200_main_bug_case": "PASS — verified 200 OK and persistence of monthly_compensation=800.0 + dates",
+    "TestCompensationRoleRejected::test_admin_role_rejected_with_role_in_error": "PASS — 400 with 'role attuale: admin' in detail",
+    "TestCompensationRoleRejected::test_parent_role_rejected_with_role_in_error": "PASS — 400 with 'role attuale: parent' in detail",
+    "TestCompensationAcceptedPreservation::test_contract_dates_only_does_not_reset_accepted": "PASS — flag preserved when monthly_compensation is absent from payload",
+    "TestCompensationAcceptedPreservation::test_same_amount_does_not_reset_accepted": "PASS — flag preserved when monthly_compensation is unchanged"
+  },
+  "rca of the issue": "Original bug: VERDI FABIO (target user) had role='athlete' in db.users even though the admin UI rendered him under 'dirigenti'. The endpoint guard at server.py L4966 allowed only [COACH, DIRIGENTE, VIEWER, COLLABORATORE] so it returned 400 'Compenso applicabile solo a coach, dirigenti e collaboratori'. Fix: added ATHLETE to the allow-list and included role in the error message so future role-mismatches are diagnosable. Reproduction and remediation are both verified by the new pytest suite."
+}

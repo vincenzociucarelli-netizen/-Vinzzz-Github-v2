@@ -1,0 +1,42 @@
+{
+  "summary": "Tested Bacheca Note Admin feature (backend + frontend). Backend: 10/11 pytest tests passed. Frontend: board renders correctly in the right position and all interactive flows (create/take/complete/reopen/completed section) work end-to-end. However, all data-testid attributes required by the spec are DROPPED by React Native Web because they were declared as data-testid on RN components (View/TouchableOpacity/TextInput) rather than as the `testID` prop → RN Web strips them so no automated hook is possible via those selectors.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/admin/notes/{id}/complete", "issue": "Spec says 'Non può essere richiamato su nota già completata (400)', but the endpoint currently accepts a double-complete and returns 200 (overwrites completed_by/completed_at). Need to add: if note.get('completed'): raise HTTPException(400, 'Nota già completata')."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AdminNotesBoard.tsx", "issue": "All required data-testid attributes are NOT propagated to the DOM. React Native Web only converts the RN `testID` prop to `data-testid`; passing `data-testid` directly as a JSX prop to <View>/<TouchableOpacity>/<TextInput> is silently dropped. Verified via document.querySelectorAll('[data-testid*=\"admin-notes\"]') returning 0 elements. Impacts: admin-notes-board, admin-notes-toggle, admin-notes-new-title, admin-notes-new-submit, admin-notes-advanced-toggle, admin-notes-priority-{p}, admin-notes-new-due, admin-note-{id}, admin-note-take-{id}, admin-note-complete-{id}, admin-note-edit-{id}, admin-note-save-{id}, admin-note-delete-{id}, admin-notes-completed-toggle, admin-note-completed-{id}, admin-note-reopen-{id}. Fix: replace every `data-testid=\"…\"` with `testID=\"…\"` on RN components (Metro/RN Web will output the correct data-testid attribute).", "selector": "[data-testid=admin-notes-*]", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_admin_notes.py",
+    "/app/test_reports/pytest/admin_notes.xml"
+  ],
+  "action_items": [
+    "Fix backend: return 400 in POST /admin/notes/{id}/complete when note.completed==True (see routes/admin_notes.py:212).",
+    "Fix frontend: rename every `data-testid=\"…\"` prop in /app/frontend/src/components/AdminNotesBoard.tsx to `testID=\"…\"` so RN Web emits the DOM attribute. This is a mechanical global replace within that file.",
+    "After the testID fix, rebuild the web bundle: `cd /app/frontend && npx expo export --platform web --output-dir dist && sudo supervisorctl restart expo` — Metro/Expo is served from /app/frontend/dist by supervisor (`npx serve -s dist`), so source changes are NOT hot-reloaded in production preview until dist is re-exported (this bit us during this iteration — the previous bundle did not include AdminNotesBoard at all)."
+  ],
+  "critical_code_review_comments": [
+    "Serving pre-built dist via `npx serve -s dist` means any code change requires an explicit `expo export` + supervisor restart, otherwise the preview URL keeps serving a stale bundle. Consider changing the supervisor command to `expo start --web --host 0.0.0.0 -p 3000` for dev preview OR document the export step clearly.",
+    "AdminNotesBoard.tsx: line 269 `if (loading) return null` — if the initial GET fails silently (catch block empty), user sees literally nothing; consider showing an error state or at least the empty board.",
+    "AdminNotesBoard.tsx line 269: catch block is silent — good for non-admin (403) but hides real errors; log to console at least.",
+    "Backend complete/take/untake do not enforce that a completed note cannot be re-taken/re-untaken (take DOES check completed → 400, untake does NOT). Consider making untake also 400 on completed notes for symmetry."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_admin_notes.py (new)",
+    "/app/frontend/dist/** (rebuilt via `npx expo export` — needed to make AdminNotesBoard reach the browser at all)"
+  ],
+  "success_rate": {"backend": "91% (10/11)", "frontend": "functional 100% via text selectors, but 0% of required data-testid hooks work"},
+  "test_credentials": "Admin: vincenzo.ciucarelli@gmail.com / Test1234 (works). Coach: alice@test.com / Test1234 (used to validate 403).",
+  "seed_data_creation": "Created 2 admin_notes rows prefixed TEST_ during UI run and cleaned them up via `db.admin_notes.delete_many({'title': {'$regex': '^TEST_'}})`.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "1) After main agent replaces `data-testid` with `testID` in AdminNotesBoard.tsx, MUST run `cd /app/frontend && npx expo export --platform web --output-dir dist && sudo supervisorctl restart expo` before retesting. 2) When running Playwright, note that RN Web login button is a TouchableOpacity — use `page.locator('text=\"Accedi\"').first.click(force=True)`, NOT `get_by_role('button', name=...)`. 3) Login redirects to /select-role then to /admin — allow ~8s. 4) For UI E2E without testIDs, use text selectors as shown in this iteration.",
+  "rca of the issue": "React Native primitives (View, TouchableOpacity, TextInput) do not forward arbitrary HTML attributes to the DOM on Web; only the RN-standard `testID` prop is converted to `data-testid` by the RN Web polyfill. The component author used `data-testid=\"…\"` directly, so nothing lands in the DOM. Reproduction: log in as admin, open devtools, run `document.querySelectorAll('[data-testid]').length` on the board section — no notes-related testids present, even though the JSX contains them. Mitigation: sed-style replace `data-testid=` → `testID=` across AdminNotesBoard.tsx, then rebuild the dist bundle."
+}

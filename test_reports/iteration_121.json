@@ -1,0 +1,30 @@
+{
+  "summary": "Re-verifica fix clamp trial_max_sessions in /app/backend/routes/settings.py:552 (min(1, min(10, ...))). Eseguita SOLO la classe TestTrialMaxSessions in /app/backend/tests/test_matches_import_and_commitments.py, estesa con 2 test aggiuntivi per copertura completa: (1) trial_max_sessions=10 → salvato ESATTAMENTE 10 (non piu clampato a 5); (2) trial_max_sessions=15 → clampato a 10; (3) trial_max_sessions=0 → clampato a 1. Tutti e 3 i test PASSED (2.43s). Fix verificato correttamente. Parti (A) import e (B) commitments NON ritestate come da richiesta.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_matches_import_and_commitments.py",
+    "/app/test_reports/pytest/trial_max_sessions.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Fix in /app/backend/routes/settings.py:552 corretto: max(1, min(10, data.trial_max_sessions)) — clamp min=1, max=10 come da specifica."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_matches_import_and_commitments.py (aggiunti 2 test: clamp upper a 10 per valore 15, clamp lower a 1 per valore 0)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "N/A (skip frontend)"},
+  "seed_data_creation": "Nessuna. Ogni test ripristina il valore originale di trial_max_sessions nel finally.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "TestTrialMaxSessions ora contiene 3 test (accepts_10, clamp upper 15→10, clamp lower 0→1). Tutti PASS. Fix trial_max_sessions clamp 1..10 verificato end-to-end su backend esterno EXPO_PUBLIC_BACKEND_URL.",
+  "rca_of_issue": "Il bug originario clampava a max 5 (min(5, ...)); il fix (min(10, ...)) e stato verificato: PATCH /api/settings/society con trial_max_sessions=10 persiste 10, con 15 persiste 10 (clamp), con 0 persiste 1 (clamp)."
+}

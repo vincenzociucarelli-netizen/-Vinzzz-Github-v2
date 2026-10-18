@@ -1,0 +1,27 @@
+{
+  "summary": "Tested NEW feature 'Riepilogo Compensi Annuale - Export XLSX range custom'. Backend: 7/7 pytest pass on /api/admin/compensation-summary/default-range and /api/admin/compensation-summary/export-xlsx (admin success, season 2025/2026 default, XLSX content-type + content, Fede Rica €17.000 verified, 11 data rows, =SUM formulas, separate 'Esterni nel Range' column, threshold flags €5K/€15K, 400 invalid range, 400 invalid format, 403 non-admin, 401 no-auth). Frontend (Expo web static build): admin/index card 'Riepilogo Compensi Annuale — Esporta XLSX per il commercialista (range custom)' visible, clickable (data-testid=compensation-export-menu-card works). Modal opens with title '📊 Esporta Riepilogo Compensi', badge '🏆 Stagione 2025/2026', Dal=01/07/2025, Al=30/06/2026 pre-populated, green 'Scarica XLSX' + 'Annulla' buttons, and footer informativo with the quartili rule. Date validation: when Al < Dal the error 'La data di fine deve essere successiva alla data di inizio' is shown and download is blocked.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_compensation_summary_xlsx.py",
+    "/app/test_reports/pytest/comp_xlsx_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py L27867-27903 _calculate_person_range_total: clamp contract on range then iterates month-by-month with weekly-quartile rule. Edge case correctly handled (effective_end < effective_start returns 0). Solid.",
+    "L27906-27956 default-range endpoint: correctly determines current season based on today() vs season_start_month/day and supports non-solar (e.g. luglio→giugno) by branching e_month<s_month. Returns {start_date, end_date, label}. OK.",
+    "L27959-28085 export-xlsx endpoint: multi-tenant society_id filter ✓, separate column for 'Esterni nel Range' (NOT summed to total) ✓, sums external_total per anno solare toccato (years_in_range loop), includes coach/dirigente/collaboratore/admin from users + athletes PRO, ordered by cognome/nome. Good.",
+    "L28116 (TOTALI row): uses =SUM(G5:G15) formula range that is hard-coded to the current row count; works because computed dynamically against actual data row span. Confirmed via XLSX inspection.",
+    "Athlete PRO with missing contract dates correctly emits 'Date contratto incomplete' note and 0 total instead of error. Good UX.",
+    "Server.py is 31000+ lines — pre-existing technical debt flagged in iteration_70, still pending. Out of scope for this feature.",
+    "Frontend CompensationExportModal: validation error 'La data di fine deve essere successiva alla data di inizio' is local-only (blocks submit). Backend also returns 400 if it slips through. Defense in depth — OK."
+  ],
+  "updated_files": ["/app/backend/tests/test_compensation_summary_xlsx.py (new)"],
+  "success_rate": {"backend": "100% - 7/7 pytest pass", "frontend": "100% - all modal elements, pre-populated dates, badge, buttons, footer, and validation work"},
+  "test_credentials": {"admin": "vincenzo.ciucarelli@gmail.com / Test1234", "non_admin": "viola@test.com / Test1234"},
+  "seed_data_creation": "None — used existing data of Pallavolo Perugia SSD. XLSX includes 11 compensated persons (Fede Rica coach 01/09/2025–30/06/2026 @1700/mese = €17.000 verified ✓).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Endpoint /api/admin/compensation-summary/default-range returns {start_date,end_date,label} based on settings.season_start_month/day/end. Default for Pallavolo Perugia (1/7→30/6) = Stagione 2025/2026. Endpoint /api/admin/compensation-summary/export-xlsx?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD returns XLSX with header row 'Cognome, Nome, Codice Fiscale, Ruolo, Inizio Contratto, Fine Contratto, Compenso/Mese (€), Totale nel Range (€), Esterni nel Range (€), Supera €5K, Supera €15K, Note' + TOTALI row with =SUM formulas. Login JSON returns 'token' (NOT 'access_token'). On Expo web: accept cookie banner first, use keyboard.type for RN TextInput, then click 'Accedi'. The compensation-export-menu-card uses data-testid which is preserved in DOM.",
+  "rca_of_the_issue": "N/A — feature works correctly end-to-end. NOTE PO-confirmed: external compensation column is 0 for the test dataset because no external compensations are recorded for years 2025/2026 in the test society. The LOGIC is verified (iterates over years_in_range and calls _get_year_external_compensations_total) — empty result is expected for current seed data."
+}

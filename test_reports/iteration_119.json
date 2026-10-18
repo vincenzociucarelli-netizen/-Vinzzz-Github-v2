@@ -1,0 +1,29 @@
+{
+  "summary": "Feature 'Convert Pre-iscrizione → Iscrizione via invito genitore' fully verified end-to-end on frontend (admin + public form). All 3 UI scenarios passed. Backend endpoints POST /api/preseason/responses/{id}/invite and POST /api/preseason/public/{id}/respond return 200 with correct payloads. Deprecated packages / SafeAreaView / RN issues: none new detected. NOTE: testID attributes declared as `data-testid` prop on RN components (TextInput/TouchableOpacity) are stripped by React Native Web at render time — visible testIDs on DOM only appear on native HTML elements (e.g. `<input type='date'>`). This does not block the feature but hampers automated tests that rely on data-testid selectors. Tests were executed using text/placeholder selectors as workaround.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "TextInput/TouchableOpacity data-testid prop", "issue": "The whole /app/frontend/app/admin/preseason.tsx and /app/frontend/app/preseason/[id].tsx pass 'data-testid=...' as a prop to React Native TextInput/TouchableOpacity. React Native Web only forwards the standard 'testID' prop (which is mapped to data-testid on DOM). Result: the specific testIDs required by the review (preseason-quick-invite-<id>, preseason-invite-email, preseason-invite-send, preseason-invite-btn, preseason-email-parent, preseason-first-name, preseason-last-name, preseason-birth-date-native, view-responses-<id>) are NOT present in the rendered DOM. Only 'preseason-birth-date' (native <input type=date>) is present. Reference: /app/frontend/app/admin/preseason.tsx:864, 1135, 1170, 1188, 1400, and /app/frontend/app/preseason/[id].tsx:277, 281, 297, 316. Fix: rename the prop from 'data-testid' to 'testID' on RN components (keep 'data-testid' only for real HTML elements like <input>)."}
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_119.json"
+  ],
+  "action_items": [
+    "OPTIONAL: rename `data-testid` → `testID` on RN components in /app/frontend/app/admin/preseason.tsx and /app/frontend/app/preseason/[id].tsx to allow selector-based UI automation. Rebuild expo export afterwards."
+  ],
+  "critical_code_review_comments": [
+    "Spurious Expo Router warning 'No route named preseason exists in nested children' visible in console — actual route works correctly; warning caused by _layout.tsx explicit <Stack.Screen name='preseason' /> combined with expo-router's group folder resolution. Cosmetic only.",
+    "Feature UX correct: quick-invite (row) closes only invite modal; detail-invite closes detail modal first then opens invite modal. After invite, detail modal (when reopened) shows 'Reinvia invito all\\'iscrizione' + destination email caption. Row shows 'Invitata' badge + 'Reinvia invito iscrizione' button."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (endpoints reached via UI: /api/preseason/campaigns 200, /responses 200, /responses/{id}/invite 200 x2, /public/{id}/respond 200)", "frontend": "100% (3/3 review scenarios verified)"},
+  "seed_data_creation": "No seed created. Used existing campaign afe8e90d-c0ef-4d7e-8a07-5fabcf312261 with responses ROSSI GIULIA (id 38a3addb-0ddd-484a-a4eb-fafafa5ffd81) and BIANCHI MARTA (id b4b5525e-8b4a-4d77-8f67-f8f557d97c79). Both are now status='invited' after this test run. A new public response 'QA AUTO' (id c5b59ce1-cffc-4ccd-836f-76cf2cf22a93) with email_parent qa.genitore+public@example.com was also submitted through the public form.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Both responses in campaign afe8e90d... are now 'invited' — to re-test the quick-invite/detail-invite from scratch, either create a new campaign or ask backend to reset response.status to 'new' for those two IDs. Use text/placeholder selectors (not data-testid) until the testID rename is applied. Login credentials: vincenzo.ciucarelli@gmail.com / Test1234 (Amministratore role in role picker). Cookie banner has 'Solo necessari' button that must be clicked first.",
+  "rca_of_issue": "N/A — no bug found. Only notable observation: data-testid prop is not forwarded to DOM by RN Web on non-DOM components; use testID for RN components and keep data-testid only for raw HTML tags."
+}

@@ -1,0 +1,30 @@
+{
+  "summary": "Tested new 'Copie Originali Certificati' feature end-to-end. Backend: 4/4 pytest tests passing (GET shape+counts, 403 RBAC for non-admin, PATCH reflection in list, cleanup). Frontend UI: card 'certificate-originals-menu-card' renders in Admin dashboard right after 'Consensi Immagini' (y=2865 vs y=2787), navigates to /admin/certificate-originals, tabs display correct accented labels 'Già consegnato' (NO 'Giu00e0' escape bug), sort chips (sort-name/sort-team) present, and toggle (cert-orig-toggle-{id}) correctly moves an athlete from 'Da consegnare (3)' to 'Già consegnato (1)' with counters updated and reset restores state. Preview env restored to all original_received=false.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/admin/certificate-originals", "issues": ["Cosmetic: with the 3 preview athletes, sort-by-team produces the same visual order as sort-by-name because two athletes share 'Nessuna squadra' (alphabetically before 'Under 14') and are still tie-broken by name. Not a bug (secondary sort by name is correct), but with larger datasets this needs no change."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_certificate_originals_list.py",
+    "/app/test_reports/pytest/cert_originals_list.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py:13450 GET /admin/athletes/certificate-originals correctly enforces society isolation and admin/coordinator RBAC via _has_admin_or_coord_perm; response matches contract.",
+    "certificate-originals.tsx uses testID props correctly (tab-pending, tab-received, sort-name, sort-team, cert-orig-toggle-{id}); text is properly wrapped in <Text>; StyleSheet used; no deprecated packages."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_certificate_originals_list.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "None. Toggled MAURI LENA temporarily during test then restored to original_received=false. Final GET confirms received_count=0.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login flow requires: (1) dismiss cookie banner 'Solo necessari' (rendered as touchable div, not <button>); (2) after login user lands on /select-role, click 'Amministratore' to reach /admin; (3) 'Ho capito' guide modal appears on first login and blocks taps until dismissed. Auth API returns field 'token' (NOT 'access_token'). BASE_URL env: EXPO_PUBLIC_BACKEND_URL. All new endpoints under /api/admin/athletes/certificate-originals* work.",
+  "rca_of_issue": "N/A — feature under test is a new addition; no defects found. All acceptance criteria from the review request pass."
+}

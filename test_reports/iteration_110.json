@@ -1,0 +1,54 @@
+{
+  "summary": "Backend features per iteration 06/2026 verificate: PATCH /api/settings/society migra correttamente il logo (data URI) su Emergent Object Storage e imposta logo_storage_path (campo 'logo' svuotato); GET /api/settings/society/logo.png ritorna 200 image/jpeg; GET /api/settings/society?include_images=true reidrata logo come data URI con has_logo=true. PATCH /api/admin/athletes/{id}/certificate-original attiva/disattiva il flag con metadati by_name/at e restituisce anche via GET /api/athletes/{id}. UI: pulsante testID='cert-original-toggle' visibile SOLO quando esiste il certificato (verificato su MAURI LENA, id 6a5ec7347c201d9cb7eb70d2), alterna correttamente stato e mostra 'Registrata da ... il ...'. TROVATI 2 BUG sulla pagina admin/settings/society: (1) logo non renderizzato per double-prefix data URI, (2) upload di un nuovo logo dalla UI bypassa la migrazione a object storage (regressione).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "PATCH /api/settings/society",
+        "issue": "REGRESSIONE MIGRAZIONE STORAGE: la migrazione a object storage (routes/settings.py:558) scatta SOLO se update_dict['logo'].startswith('data:'). Il frontend admin/settings/society.tsx (line 248) usa expo-image-picker che restituisce RAW base64 senza prefisso 'data:', quindi ogni nuovo upload salta la migrazione e finisce come base64 pesante in Mongo (ripristina il problema che la migrazione doveva risolvere). Verificato: PATCH con raw base64 → GET include_images restituisce raw base64 (len=988, is_data_uri=False) → logo_storage_path NON viene impostato."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "admin/settings/society.tsx",
+        "issue": "BUG DOUBLE-PREFIX: il backend GET /api/settings/society?include_images=true ora restituisce 'logo' già come data URI ('data:image/jpeg;base64,...'), ma il render a line 702 lo avvolge nuovamente: source={{ uri: `data:image/jpeg;base64,${logo}` }} → URI risultante 'data:image/jpeg;base64,data:image/jpeg;base64,...' → INVALIDO. In console: 'net::ERR_INVALID_URL'. Il logo non appare (visibile solo la X di rimozione). Reference: /app/frontend/app/admin/settings/society.tsx:702 (e stesso pattern su timbro se applicabile).",
+        "testID": "logo-preview (mancante)",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Salva nuovo logo dalle Impostazioni Società",
+        "issue": "handleSelectLogo (society.tsx:248) imposta setLogo(result.assets[0].base64) — raw base64 senza 'data:' — poi handleSave invia {logo: <raw base64>}. Il backend NON riconosce il prefisso e non carica su storage: fallisce lo scopo della migrazione. Fix suggerito: nel frontend, dopo image picker fare setLogo(`data:image/jpeg;base64,${result.assets[0].base64}`) OPPURE nel backend accettare anche raw base64 e wrappare con 'data:image/jpeg;base64,' prima di chiamare store_image_from_datauri.",
+        "affected_testIDs": ["logo-select-btn (mancante)"]
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_logo_storage_and_cert_original.py",
+    "/app/test_reports/pytest/logo_cert_original.xml"
+  ],
+  "action_items": [
+    "FIX society.tsx render logo: rimuovere il doppio prefisso 'data:image/jpeg;base64,${logo}' → usare direttamente {uri: logo} quando logo inizia con 'data:', altrimenti (retrocompat) usare `data:image/jpeg;base64,${logo}`.",
+    "FIX flusso upload nuovo logo: nel frontend wrappare il base64 restituito da expo-image-picker in un data URI PRIMA di salvarlo in state, così il backend rileva 'data:' e migra su storage. In alternativa, aggiornare backend settings.py per accettare anche raw base64.",
+    "Verificare stesso pattern per 'stamp_signature' (timbro) in society.tsx (line 601-624) — sport_image e stamp_signature potrebbero avere lo stesso schema di rendering, controllare per evitare bug analoghi ora che il backend può reidratare stringhe."
+  ],
+  "critical_code_review_comments": [
+    "routes/settings.py:558 — la condizione `update_dict['logo'].startswith('data:')` è troppo stretta: se il chiamante manda base64 puro (come fa la UI dopo image picker), la migrazione non parte. Suggerita normalizzazione: se è string > 100 char e non inizia con 'data:', wrappare con 'data:image/jpeg;base64,' prima di chiamare store_image_from_datauri.",
+    "routes/settings.py: le stesse considerazioni si applicano a 'sport_image' e 'stamp_signature' se in futuro verranno migrate a storage (attualmente restano base64 in Mongo).",
+    "Backend cert-original endpoint (server.py:13408) — corretto e ben scritto: verifica multi-tenancy (society_id), rispetta _has_admin_or_coord_perm, azzera i metadati con original_received=false."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_logo_storage_and_cert_original.py (nuovo)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "50% (cert-original OK, logo preview KO)"},
+  "seed_data_creation": "Nessun seed. Il logo della società di Vincenzo (Pallavolo Perugia SSD a RL) è stato aggiornato più volte come parte del test e restituito allo stato migrato su storage (data URI 200x120 blu). L'atleta MAURI LENA (6a5ec7347c201d9cb7eb70d2) è tornato allo stato medical_certificate_original_received=false dopo il test.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Se E1 corregge il double-prefix in society.tsx (line 702) e il flusso di upload immagine, ri-verificare: (1) preview logo visibile (Image con nw>0) sulla pagina /admin/settings/society; (2) salvataggio di un nuovo logo → GET include_images=true ritorna data URI con logo_storage_path popolato (verificabile lato DB o via observabilità della lunghezza campo 'logo' in Mongo che deve restare vuoto). Il pytest esistente /app/backend/tests/test_logo_storage_and_cert_original.py copre già i casi backend.",
+  "rca_of_issue": "Root cause double-prefix: la migrazione a object storage ha cambiato il CONTRATTO del payload GET /settings/society?include_images=true — prima 'logo' era raw base64, ora è data URI (via get_image_datauri). Il consumer frontend society.tsx non è stato aggiornato di conseguenza (line 702 concatena ancora il prefisso). Regressione parallela: handleSelectLogo continua a settare raw base64, quindi il backend PATCH non lo riconosce come candidato per lo storage → il salvataggio di un nuovo logo bypassa la migrazione. Reproduzione: (a) aprire /admin/settings/society come admin Vincenzo → il logo non appare (solo icona X) e console mostra ERR_INVALID_URL; (b) via curl PATCH con {'logo': '<raw_base64>'} → GET include_images ritorna la stringa raw base64 invariata, senza logo_storage_path."
+}

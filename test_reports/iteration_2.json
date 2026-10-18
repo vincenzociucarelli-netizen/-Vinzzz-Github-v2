@@ -1,0 +1,53 @@
+{
+  "summary": "Verified both bug fixes for RegistraTEAM volleyball club management app: 1) 'Sport Praticato' field now correctly saves and loads via API and UI, 2) Floating save button is visible at bottom of Settings page without scrolling.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/health", "issue": "Returns 404 from public URL (health endpoint not under /api/ prefix) - cosmetic issue, not a bug"}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Console warnings", "issues": ["'shadow*' style props are deprecated (use 'boxShadow')", "props.pointerEvents is deprecated (use style.pointerEvents)", "Image: style.resizeMode is deprecated"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_settings.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Both bug fixes verified working correctly",
+    "SocietySettingsUpdate model includes sport_praticato field (line ~1461)",
+    "GET /api/settings/society returns sport_praticato in response (line ~1485)",
+    "PATCH /api/settings/society saves sport_praticato field (line ~1538-1539)",
+    "Floating save button implemented with proper positioning (lines 566-583 in settings.tsx)"
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "80%", "frontend": "100%"},
+  "seed_data_creation": "N/A",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login requires mouse click at exact coordinates due to React Native Web TouchableOpacity. Use page.evaluate to get button coordinates then page.mouse.click(). Admin login goes to role selection page first.",
+  "test_results": {
+    "backend_tests": {
+      "test_get_society_settings_public": "PASS - sport_praticato field present in response",
+      "test_login_admin": "PASS - Admin credentials work correctly",
+      "test_patch_society_settings_sport_praticato": "PASS - Field saves and persists correctly",
+      "test_patch_society_settings_multiple_fields": "PASS - Multiple fields including sport_praticato save correctly"
+    },
+    "frontend_tests": {
+      "login_page_loads": "PASS",
+      "admin_login_successful": "PASS",
+      "settings_page_accessible": "PASS",
+      "sport_praticato_field_visible": "PASS - Field visible with saved value 'Pallavolo Test'",
+      "floating_save_button_visible": "PASS - Green 'Salva Modifiche' button at bottom of page"
+    }
+  },
+  "verified_fixes": {
+    "bug_1_sport_praticato_not_saving": "FIXED - Field added to SocietySettingsUpdate model, GET response, and PATCH handler",
+    "bug_2_save_button_not_visible": "FIXED - Changed to floating button with absolute positioning at bottom of screen"
+  }
+}

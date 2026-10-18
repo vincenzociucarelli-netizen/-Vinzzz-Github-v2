@@ -1,0 +1,22 @@
+{
+  "summary": "Frontend smoke test verifica fix bug 'CollaboratoreTabBar is not defined'. Testati 4 ruoli (collaboratore/coach/atleta/admin) e le 3 pagine collaboratore (index/profile/compensation). TUTTI passati: 0 PAGE ERRORS su ogni pagina, nessun ReferenceError 'is not defined'. La pagina /collaboratore mostra correttamente header 'Il Mio Lavoro', 'Ciao, PAOLO', le 3 tab (Da fare attiva/Anagrafica/Compensi) e i contenuti (Impegni con MiniVolley/Starter Group/Serie D/Under 18/etc, Squadre Assegnate, Palestre). Bug RISOLTO.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_75.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Console log non bloccante osservato su tutti i ruoli: 'Error refreshing user: TypeError: Failed to fetch' da AuthContext.refreshUser. Probabilmente dovuto al fatto che il token viene iniettato in localStorage senza che il context React abbia ancora completato l'init, oppure CORS/network transitorio durante la chiamata di refresh iniziale. Non blocca il rendering, ma vale la pena verificare retry/backoff in AuthContext.refreshUser per migliorare la resilienza UX in caso di network glitch al primo load."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped)", "frontend": "100% (6/6 scenarios)"},
+  "test_credentials": "paolo@coll.com/PaoloTest123 (collaboratore), alice@test.com/Test1234 (coach), testalice1780817007@test.com/Test1234 (atleta compensated), vincenzo.ciucarelli@gmail.com/Test1234 (admin)",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Fix verificato: aggiunta import CollaboratoreTabBar a riga 20 di /app/frontend/app/collaboratore/index.tsx. Tutte le dashboard per ruoli (collaboratore/coach/atleta/admin) caricano senza PAGE ERRORS e con body length > 700 chars. Le tab navigation collaboratore funzionano (index→profile→compensation, body > 1000 chars ciascuna). C'è un warning benigno 'Error refreshing user: Failed to fetch' generato da AuthContext durante il primo refresh post-login (non blocca rendering, da indagare separatamente se serve).",
+  "rca of the issue": "ROOT CAUSE: import statement mancante per CollaboratoreTabBar in /app/frontend/app/collaboratore/index.tsx; il componente era usato a riga 148 (<CollaboratoreTabBar active='dafare' />) ma mai importato, causando ReferenceError 'CollaboratoreTabBar is not defined' a runtime che faceva crashare il render React → body vuoto/pagina bianca per il collaboratore. RIPRODUZIONE PRE-FIX: login come paolo@coll.com e visita /collaboratore → schermata bianca + console error. FIX: aggiunta riga 20 `import CollaboratoreTabBar from '../../src/components/collaboratore/CollaboratoreTabBar';`. VERIFICA POST-FIX: /collaboratore renderizza correttamente (body 1025 chars, 0 PAGE ERRORS, tutte le 3 tab visibili). Le altre pagine collaboratore (profile.tsx, compensation.tsx) avevano già l'import corretto. Coach/dirigente/athlete index hanno già gli import corretti (verificato anche via test reale)."
+}

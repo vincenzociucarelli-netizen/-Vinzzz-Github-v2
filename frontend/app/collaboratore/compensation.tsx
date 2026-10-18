@@ -20,6 +20,7 @@ import { Ionicons } from '../../src/components/Icon';
 import SignaturePadInline from '../../src/components/SignaturePadInline';
 import InpsNetBreakdown from '../../src/components/InpsNetBreakdown';
 import CompensoInformativa from '../../src/components/CompensoInformativa';
+import InpsNetLines from '../../src/components/InpsNetLines';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
 import { handleAnagraficaError } from '../../src/utils/anagraficaError';
@@ -1721,6 +1722,13 @@ export default function CollaboratoreCompensation() {
                       </Text>
                     </View>
                   </View>
+                  
+                  <InpsNetLines
+                    yearlyTotalBefore={(() => { const prior = (profile as any)?.other_annual_compensation || 0; return records.filter(r => r.year === selectedYear && r.receipt_signed && (r.month || 0) < (selectedMonth || 0)).reduce((s, r) => s + (r.amount_gross || r.amount || 0), 0) + prior; })()}
+                    monthGross={(records.find(r => matchesMonth(r.month, selectedMonth || 0) && r.year === selectedYear)?.amount_gross) || (records.find(r => matchesMonth(r.month, selectedMonth || 0) && r.year === selectedYear)?.amount) || profile?.monthly_compensation || 0}
+                    insuredElsewhere={!!(profile as any)?.inps_insured_elsewhere}
+                    carico="tuo"
+                  />
                   
                   <View style={{ backgroundColor: '#F5F5F5', padding: 8, borderRadius: 4 }}>
                     <Text style={{ fontSize: 10, color: '#666', textAlign: 'center', lineHeight: 14 }}>

@@ -1,0 +1,28 @@
+{
+  "summary": "Frontend-only verification of Consensi Privacy section visibility across staff role profiles (coach, dirigente, collaboratore) and regression check on adult athlete. All 4 role profiles show the 'Consensi Privacy' section as expected.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results": {
+    "coach_alice@test.com /coach/profile": "PASS - 'Consensi Privacy' section visible",
+    "dirigente_lella@dir.com /dirigente/profile": "PASS - 'Consensi Privacy' section visible",
+    "collaboratore_paolo@coll.com /collaboratore/profile": "PASS - 'Consensi Privacy' section visible",
+    "atleta_marcob@test.com /athlete Anagrafica tab": "PASS (no regression) - 'Consensi Privacy' section still visible after dismissing onboarding modal"
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Console warnings: Layout children reference non-existent routes 'preseason', 'admin/whatsapp-reminders', 'admin/whatsapp-settings' in app/_layout - not blocking but should be cleaned up.",
+    "Several 403/404 resource loads observed during profile navigation - main agent should verify these are expected (permission-gated endpoints per role)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100% (4/4 profiles)"},
+  "test_credentials": "alice@test.com/Test1234, lella@dir.com/Test1234, paolo@coll.com/PaoloTest123, marcob@test.com/Test1234",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The 'Consensi Privacy' fix (removing {privacyAccepted && ...} wrapper) works correctly on Coach, Dirigente, Collaboratore profiles. Adult athlete profile requires dismissing onboarding modal ('Salta' button) before Anagrafica tab is accessible - keep this in mind for future athlete testing."
+}

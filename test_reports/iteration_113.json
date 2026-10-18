@@ -1,0 +1,38 @@
+{
+  "summary": "Testato ottimizzazione /api/prime-squadre/stats e apertura singolo atleta (iter 113). BACKEND: GET /api/prime-squadre/stats risponde in 0.212s prima chiamata e 0.239s seconda (cache) - target <1s superato. Payload contiene tutte le chiavi attese (pro_enabled, total_members, max_members, available_slots, current_year, yearly_stats). Scoping multi-tenant CORRETTO: total_members=0, total_compensations=0, total_receipts=0 (preview ha 3 atleti / 0 compensati come previsto). GET /api/prime-squadre/athletes: 200 OK in 0.295s con payload 2 bytes (nessun leak base64). GET /api/athletes?light=true: 200 OK in 0.155s. GET /api/athletes/{id}: 200 OK in 0.189s. FRONTEND: login funzionante, /admin/prime-squadre apre correttamente e mostra 'Statistiche 2026' (0 Membri, 50 Posti liberi, €0 Tot.Compensi, 0 Quietanze) - stats call browser=205ms, athletes=127ms. Singolo atleta /admin/athlete/c0555a97927f4054ae84b1c9 apre correttamente (nav ~7s ma senza errori JS - la maggior parte del tempo è dovuta al bundle statico Expo web, non alle API - top API call è payments 127ms). Tab 'Anagrafica' visibile e cliccabile; card 'Certificato Medico' presente con scadenza 11/11/2026; pulsante testID 'cert-original-toggle' presente e visibile (count=1). NESSUN page error. REGRESSIONI: /admin/athletes (3 atleti), /admin/coaches (6), /admin/dirigenti (5), /admin/parents (24 approvati) tutti caricati correttamente. Tutti i 7 test pytest passano.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_prime_squadre_stats_perf.py",
+    "/app/test_reports/pytest/prime_squadre_stats_iter113.xml"
+  ],
+  "action_items": [
+    "Nessuna azione richiesta: ottimizzazione stats verificata (0.21s vs 5.8s precedenti), apertura singolo atleta senza blocchi, scoping multi-tenant corretto.",
+    "Consigliato monitorare in produzione con società reali (con atleti compensati) per confermare che il conteggio scoped e la cache TTL 600s si comportino come atteso anche con volumi maggiori."
+  ],
+  "critical_code_review_comments": [
+    "server.py > 700 righe (attualmente ~38k): non bloccante ma continua a essere non ideale, si consiglia progressiva modularizzazione a lungo termine.",
+    "Ci sono 2 warning console non critici in preview: 'ERR_INVALID_URL' (probabile logo società mancante) - non blocca l'apertura, ma verificare in produzione che le società con logo settato non generino errori simili.",
+    "Layout warnings ripetuti su route 'preseason', 'admin/whatsapp-reminders', 'admin/whatsapp-settings' - route referenziate nel Layout ma non definite in Expo Router: ripulire il _layout.tsx per rimuovere le entry Screen non usate."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_prime_squadre_stats_perf.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "100%"
+  },
+  "seed_data_creation": "Nessuna seed data creata.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Preview state: società 'Pallavolo Perugia SSD a RL', 3 atleti totali, 0 compensati (attesi in stats). Login testID 'login-email-input'/'login-password-input'/'login-submit-button' NON rendono a data-testid nel web build corrente - usare input[type=email/password] e get_by_text('Accedi', exact=True) per submit. Dopo login si atterra su /select-role prima di /admin/... ma la navigazione diretta a /admin/prime-squadre funziona.",
+  "rca_of_issue": "Bug originale (stats 5.8s) causato da: (1) find_one settings senza projection che caricava logo base64; (2) count_documents non filtrato per society_id (scan collezione + leak multi-tenant); (3) find compensi non scoped. Fix applicato nella sessione (server.py L28040-28096): projection minima {_id:0,pro_enabled:1}, conteggi/aggregate scoped per society_id usando indice composito, cache TTL 600s. Verificato con pytest + browser: risposta ora 0.21s (fresh) / 0.24s (cache) = miglioramento ~27x. Apertura singolo atleta OK, la card certificato e il testID 'cert-original-toggle' sono visibili quando si clicca la tab Anagrafica."
+}

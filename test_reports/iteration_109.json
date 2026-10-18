@@ -1,0 +1,24 @@
+{
+  "summary": "Frontend-only UI verification of admin athlete card 'Riepilogo Quote' due-date fix. Confirmed 'Scad. 03/11/2025' shows below 'Rata 2' (€150) and 'Scad. 23/12/2025' shows below 'Rata 3' (€200), while 'Iscrizione - Rata 1' (€250) correctly has NO date line. Team Under 14 page still shows both due dates (no regression). All amounts still visible on the right. Login via Standard access → role picker → Amministratore works; navigation to /admin/athlete/[id] → Pagamenti tab renders the expected layout.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_109.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Fix implementation at /app/frontend/app/admin/athlete/[id].tsx:3497-3512 correctly renders installments_list dynamically and adds a 'Scad. GG/MM/AAAA' subline only when inst.due_date is present, keeping the amount aligned to the right via <View style={{flex:1}}>. Matches the style used in /app/frontend/app/admin/team/[id].tsx (Scad. block)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped)", "frontend": "100%"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Admin login vincenzo.ciucarelli@gmail.com/Test1234 requires: cookie banner ('Solo necessari') → email/password → click 'Accedi' text (React Native Touchable, role=button selector doesn't match, use get_by_text('Accedi', exact=True)) → 'select-role' page → click 'Amministratore'. On admin athlete page, 'Riepilogo Quote' lives inside the 'Pagamenti' tab (default tab is 'Da fare'). Athlete c0555a97927f4054ae84b1c9 in team 697fec5d90eef140898ebfd7 has 3 rate: 250 (Iscrizione, no due_date), 150 (Scad. 03/11/2025), 200 (Scad. 23/12/2025).",
+  "rca_of_issue": "Bug: In admin athlete card, installments_list was rendered but the due_date field (already provided by backend at server.py:14734) was never displayed. Fix: added a <Text style={{fontSize:11,color:'#888'}}>Scad. {toLocaleDateString('it-IT')}</Text> subline below the installment name, gated by inst.due_date. Amount stays right-aligned by wrapping the label+date in a <View style={{flex:1}}>. Verified visually: 1st rata (Iscrizione, no due_date) shows only name+amount, 2nd/3rd rate show 'Scad. 03/11/2025' / 'Scad. 23/12/2025' subline. Team page still shows same due dates → no regression."
+}

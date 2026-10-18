@@ -1,0 +1,39 @@
+{
+  "summary": "MIGRAZIONE Emergent Object Storage per copertine campagne preseason VALIDATA end-to-end. Backend: 10/10 PASS (test_preseason_cover_object_storage.py). Copre: (1) CREATE con cover_image data URI → response ha cover_storage_path='registrateam/uploads/697fdba0d218717959e73eea/covers/{id}.jpg' e cover_image='' come atteso; (2) GET /api/preseason/public/{id}/cover.jpg 200 image/jpeg servita DALLO STORAGE (magic byte FFD8 verificato); (3) PATCH senza campo cover_image → cover_storage_path IDENTICO prima/dopo, cover.jpg ancora 200; (4) PATCH con nuovo cover_image → nuovo cover_storage_path popolato, cover.jpg 200; (5) PATCH con cover_image='' → cover_storage_path svuotato, cover.jpg 404; (6) Lista /api/preseason/campaigns → cover_image assente (performance), has_cover:true sia per campagne con storage sia per legacy base64; (7) Fallback base64 retrocompat: campagna legacy 6f3b4944-47b1-4fdf-b0a0-e6b11070ffc3 (solo cover_image base64, storage_path vuoto) → cover.jpg 200 via dual-read + share HTML og:image punta a /api/preseason/public/{id}/cover.jpg. UI: seed via API di una nuova campagna con cover, login admin vincenzo.ciucarelli@gmail.com/Test1234 su /admin/preseason, verificato via DOM query che l'img thumbnail della card punta esattamente a /api/preseason/public/{cid}/cover.jpg (storage) e che coesiste con la thumbnail della campagna legacy (base64 fallback). Nessuna regressione. Emergent Object Storage integrazione reale funzionante.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_preseason_cover_object_storage.py",
+    "/app/test_reports/pytest/preseason_cover_object_storage.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py:34176-34219 (create_preseason_campaign): il salvataggio è a due stadi — insert con cover_image='' + cover_storage_path='', poi in caso di data URI upload storage e assegnazione storage_path. Se lo storage fallisce, fallback al base64 in cover_image. Nota di robustezza: il fallback assegna cover_image ma il documento in Mongo è già stato inserito prima del try storage (sicuro), il return finale ritorna l'oggetto locale mutato → coerente col DB. ✅",
+    "server.py:34281-34321 (update_preseason_campaign): usa data.dict(exclude_unset=True) e tratta cover_image='' come rimozione esplicita (svuota sia cover_image sia cover_storage_path). Il caso di nuovo data URI carica su storage e forza cover_image=''. Comportamento coerente con la migrazione. ✅",
+    "server.py:34628-34659 (get_preseason_cover_image): dual-read con priorità storage → fallback base64. Il retry con reset della _storage_key su 503 (34591-34594, 34603-34606) gestisce correttamente scadenza chiave. Cache-Control: public, max-age=300 sensato per un OG preview. ✅",
+    "server.py:34222-34262 (list): projection {'cover_image':0} + aggregazione con has_cover=OR(cover_image, cover_storage_path). Nessun payload multi-MB in lista, performance protetta. ✅",
+    "server.py:34740-34757 (share OG): has_cover = OR(cover_image, cover_storage_path). og:image punta sempre a /api/preseason/public/{id}/cover.jpg (endpoint dual-read). Dimensioni og:image: reali per base64, 1200x630 hardcoded per storage — questo perché il processamento server-side normalizza SEMPRE a max 1200px; il valore 1200x630 dichiarato è indicativo per OG e potrebbe non corrispondere esattamente al ratio reale se l'originale non era 1200x630 (minor cosmetico, non impatta l'apertura dell'anteprima).",
+    "frontend/app/admin/preseason.tsx:375-450 (handlePickCoverImage web): compressione canvas max 1200px lato lungo + JPEG quality 0.82 con sfondo bianco (evita trasparenze nere sui PNG). Setta correttamente coverChanged=true solo su pick effettivo. ✅",
+    "Nota: nessun testID sui bottoni chiave (Crea Campagna, Salva Modifiche, Modifica, Nuova Campagna, Carica copertina). L'UI test è dovuta ricadere su get_by_text — non blocca la verifica ma è già stato annotato nell'iterazione precedente."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_preseason_cover_object_storage.py (nuovo, 10 test)"
+  ],
+  "success_rate": {
+    "backend": "100% (10/10 test PASS)",
+    "frontend": "100% (thumbnail servita da cover.jpg dallo storage verificata via DOM + coesistenza con fallback base64 legacy)"
+  },
+  "seed_data_creation": "Il test UI ha creato una campagna 'TEST_ui_cover_thumb' (stagione 2099/2100) con cover_image data URI, verificato la thumbnail nella UI admin, e poi eliminato la campagna via DELETE /api/preseason/campaigns/{id}. Il test pytest ha creato 'TEST_object_storage_cover' (stagione 2099/2100) e l'ha eliminata via fixture teardown. La campagna legacy 6f3b4944-... (fallback base64) è stata PRESERVATA come richiesto. Nessun dato residuo.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Per retestare la migrazione object storage: pytest /app/backend/tests/test_preseason_cover_object_storage.py -v (5.8s, 10 test). I test creano/eliminano una loro campagna e NON toccano la legacy 6f3b4944-47b1-4fdf-b0a0-e6b11070ffc3, che serve per validare il fallback base64. Per test UI: login vincenzo.ciucarelli@gmail.com/Test1234, /admin/preseason → verificare che le card mostrino thumbnail img[src*='/api/preseason/public/'] e che il src contenga il campaign.id (rendering via cover.jpg endpoint). Il file /app/frontend/app/admin/preseason.tsx NON ha testID su bottoni chiave (Crea/Salva/Modifica/Nuova Campagna): E1 potrebbe aggiungerli per test futuri più stabili. INTEGRATION_PROXY_URL non è in backend/.env, ma _STORAGE_BASE ha fallback hardcoded a https://integrations.emergentagent.com (server.py:34571) — funziona. EMERGENT_LLM_KEY è presente in backend/.env.",
+  "rca_of_issue": "Non applicabile: nessun bug trovato. Il fix di Fase B (migrazione base64 → Emergent Object Storage) è correttamente implementato. Il flusso CREATE/EDIT/REMOVE/LIST/FALLBACK è tutto coerente con le specifiche del review request. Il fatto che INTEGRATION_PROXY_URL non sia in .env non causa problemi grazie al default hardcoded verso https://integrations.emergentagent.com; se in produzione (Render) l'URL fosse diverso, andrebbe aggiunto — ma il main agent già lo sa. Osservazione minore: og:image nel share HTML dichiara sempre 1200x630 per le cover servite da storage (il processamento normalizza a max 1200px ma non è detto che sia 1200x630 esatto). Non impatta l'apertura dell'anteprima WhatsApp/Facebook, solo eventualmente la scelta del crop preview del social — cosmetico."
+}

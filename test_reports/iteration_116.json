@@ -1,0 +1,35 @@
+{
+  "summary": "Retest fix mobile GDPR privacy per atleta 18+ (marcob@test.com) su viewport 390x844. Entrambi i blocker sono risolti. PROBLEMA 2: su /athlete/profile il TrialEndModal appare correttamente (trial scaduto + privacy non accettata) e il tap su 'Voglio Restare' apre immediatamente il GDPR Privacy Modal (non piu Alert.alert intermedio) - il nuovo handler setShowTrialEndModal(false)+setShowPrivacyModal(true) funziona su web mobile. PROBLEMA 1: lo Step 1 del GDPR Modal e' interamente scrollabile in una ScrollView (scrollHeight 2130px vs container 614px); scrollando il pulsante 'Ho letto e compreso - Procedi alla firma' passa da y=2271 (fuori schermo) a y=737 (dentro viewport 844) ed e' tappabile. Ticking 'Presa visione informativa' + tap sul pulsante -> Step 2. Canvas [data-testid=gdpr-signature-canvas] disegnabile via mouse drag, 'Conferma e Salva' -> POST /api/documents/sign-gdpr-privacy 200. Persistenza confermata: /auth/me privacy_accepted=true e GET admin /api/athletes/c0555a97927f4054ae84b1c9 -> privacy_accepted=true, privacy_accepted_at popolato. I fallback backend society/CAP hanno funzionato senza patch manuali sul record user (user.society_id/CAP restano null, athlete ha valori).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Landing dopo login atleta 18+",
+        "issue": "Il TrialEndModal e' montato SOLO in /app/frontend/app/athlete/profile.tsx (URL /athlete/profile), NON in /app/frontend/app/athlete/index.tsx (URL /athlete che e' la landing dopo il login). Quindi l'atleta che accede vede solo il banner Privacy in index.tsx; per vedere il TrialEndModal deve navigare al tab Anagrafica/profilo. Non e' un difetto della fix ma va notato: se l'intento era che il modal comparisse subito al login, il logic 'if isExpired && !privacyAccepted -> setShowTrialEndModal(true)' andrebbe replicato anche in index.tsx (oppure aggiungere un redirect a /athlete/profile in questa condizione).",
+        "affected_testIDs": []
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Nessuna azione richiesta per la fix testata: entrambi i blocker mobile risolti.",
+    "OPZIONALE: valutare se replicare la logica 'trial scaduto + privacy non accettata -> apri TrialEndModal' anche su /app/frontend/app/athlete/index.tsx (landing), oppure fare redirect a /athlete/profile in questa condizione, cosi' che l'atleta veda subito il modal dopo il login senza dover navigare manualmente."
+  ],
+  "critical_code_review_comments": [
+    "GDPRPrivacyModal Step 1 ora avvolge checkbox + preview + nextButton in ScrollView (lines 433-614): fix corretto e verificato su viewport 390x844.",
+    "TrialEndModal.onAcceptPrivacy in profile.tsx (line 1509-1514) chiama direttamente setShowPrivacyModal(true) senza Alert.alert intermedio: fix corretto per web/mobile."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Ho ripristinato i flag di test dopo il primo run che aveva gia' firmato la privacy: db.athletes.update_one({id: c0555a97927f4054ae84b1c9}, $set: {privacy_accepted: False, trial_end_date: 2026-01-01T00:00:00}). Analogo unset di privacy_accepted_at. Nessuna patch a society_id/CAP dell'utente. Post-test rimane privacy_accepted=true (firma effettuata dal test).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Il TrialEndModal si vede SOLO su /athlete/profile (profile.tsx), non su /athlete (index.tsx). Per ripetere il test da capo: reset con db.athletes.update_one({id:'c0555a97927f4054ae84b1c9'}, {'$set':{'privacy_accepted':False,'trial_end_date':datetime(2026,1,1)},'$unset':{'privacy_accepted_at':''}}) e stesso per db.users con id user 'c6e8d18292a54fc6a8f4b792'. Login: marcob@test.com/Test1234, dismiss onboarding tour (Salta/Ho capito), navigare a /athlete/profile.",
+  "rca_of_issue": "Root cause della segnalazione originale: (1) su viewport mobile 390x844 il contenuto dello Step 1 GDPR Modal (informativa + user data box + checkbox consensi + preview button + nextButton) era di ~2130px totali ma il container aveva solo ~614px di altezza visibile senza scroll, e il nextButton era in fondo -> non raggiungibile. Fix: avvolgere il tutto in <ScrollView contentContainerStyle={{paddingBottom:24}}> verificato lines 433-614. (2) TrialEndModal usava Alert.alert('Firma Privacy', ..., callback) su tap 'Voglio Restare' e su web mobile la callback dell'Alert nativo era inaffidabile, per cui non partiva l'apertura del privacy modal. Fix: rimosso Alert intermedio, onAcceptPrivacy chiama direttamente setShowTrialEndModal(false)+setShowPrivacyModal(true). Entrambe le fix verificate end-to-end con POST 200 e persistenza DB."
+}

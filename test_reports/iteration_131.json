@@ -1,0 +1,20 @@
+{
+  "summary": "FRONTEND-ONLY re-test (viewport 390x844, static web preview, no rebuild) of the iteration_130 follow-up fix. All 3 requested items PASS. (1) Coach alice@test.com /coach dashboard: pastel orange 'Calendario Gare Società' banner (testID society-matches-link) is visible at top-level of the dashboard body (box x=16 y=295 w=358 h=74), rendered between the PRIVACY+MAPPA PALESTRE row (y≈216-283) and the Squadre/Scanner/Società tab bar, WITHOUT switching tabs — matches the expected placement. Tapping the banner navigates to /matches which renders the 'Calendario Gare / Da disputare / Giocate / Tutte' screen correctly. (2) /coach/profile still renders (textLen=775, 0 pageerrors, Anagrafica tab visible with ALICE LUPI 18/07/1998 data) — TDZ fix holds. (3) Collaboratore paolo@coll.com /collaboratore shows exactly 1 banner (count=1, visible, no duplicate).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Static web preview at EXPO_PUBLIC_BACKEND_URL (https://zaino-coach-hub.preview.emergentagent.com) via 'npx serve -s dist' on port 3000. Login button is best selected by text 'Accedi' (page.get_by_text or get_by_role button) — no stable [data-testid=\"login-submit\"]. Cookie banner 'Accetta tutti' + first-login tutorial may appear per role. SocietyMatchesLink banner on /coach now rendered at coach/index.tsx line 1500-1502, OUTSIDE the Scanner tab, directly after <PrivacySignButton /> and before the tab/scrollview content.",
+  "rca_of_issue": "Previous iteration flagged SocietyMatchesLink placement inside the Scanner-tab ScrollView; main agent moved it to coach/index.tsx line 1500 (inside a <View style={{marginHorizontal:16}}>) at top-level of dashboard body, right after <PrivacySignButton />. Verified visually and via bounding box: banner now sits between PRIVACY/MAPPA PALESTRE row and the Squadre tab bar. /coach/profile TDZ fix remains intact (0 console pageerrors)."
+}

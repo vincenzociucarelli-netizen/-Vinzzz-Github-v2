@@ -1,0 +1,41 @@
+{
+  "summary": "Backend only. 3 test PASS / 1 FAIL. (A) POST /api/matches/import assegna correttamente la partita al team_id passato dall'admin (verificato via GET /api/matches: team_id identico, home_away, opponent, venue e match_number persistiti). Riga senza team_id → finisce in `errors` e non viene importata. (B) GET /api/coach/commitments nasconde l'allenamento nel giorno di una gara (home) della stessa squadra, e continua a mostrarlo regolarmente in un altro giorno di allenamento senza gara nella stessa settimana (testato usando ?user_id={coach_id} di un coach con la squadra in assigned_teams). (C) 🐛 BUG BACKEND CONFERMATO: PATCH /api/settings/society con trial_max_sessions=10 viene salvato come 5 → clamp `max(1, min(5, ...))` in /app/backend/routes/settings.py:552 non aggiornato in linea con il cap frontend 5→10. Il modello Pydantic ha anche un commento obsoleto '(1-5, default 3)' in server.py:6029.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "PATCH /api/settings/society",
+        "issue": "trial_max_sessions viene ancora clampato a max 5 lato backend (routes/settings.py:552: `update_dict['trial_max_sessions'] = max(1, min(5, data.trial_max_sessions))`). Il frontend cap è stato alzato a 10 ma il backend continua a troncare. Payload {trial_max_sessions:10} → risposta GET mostra 5. Fix: sostituire `min(5, ...)` con `min(10, ...)`. Aggiornare anche il commento in server.py:6029 (SocietySettingsUpdate) da '(1-5, default 3)' a '(1-10, default 3)'.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_matches_import_and_commitments.py",
+    "/app/test_reports/pytest/iter120_results.xml"
+  ],
+  "action_items": [
+    "In /app/backend/routes/settings.py:552 cambiare `max(1, min(5, data.trial_max_sessions))` in `max(1, min(10, data.trial_max_sessions))`.",
+    "In /app/backend/server.py:6029 aggiornare il commento del campo `trial_max_sessions` da '(1-5, default 3)' a '(1-10, default 3)' per coerenza."
+  ],
+  "critical_code_review_comments": [
+    "SocietySettingsUpdate ha DUE dichiarazioni di `trial_max_days` (server.py:6015 e 6028) → la seconda sovrascrive la prima ma è confusionario. Consiglio: rimuovere la riga 6015 (duplicata; c'è anche trial_max_trainings alla 6014 apparentemente non usato). Nessun impatto funzionale ma sporca il modello.",
+    "In /api/matches/import il campo `home_away` di default è 'away' (per import da federazione). Il frontend nuovo passa esplicitamente 'home' o 'away' scelto dall'admin — comportamento corretto verificato via GET. Nessuna modifica richiesta.",
+    "In /api/coach/commitments la logica 'gara annulla allenamento' funziona sia per gare home sia away (linea 17195-17234 usa un set unico `home_match_days` popolato per TUTTE le gare, indipendentemente dal home_away — il nome della variabile è quindi fuorviante ma la logica è corretta). Considerare rename in `match_days` per chiarezza."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_matches_import_and_commitments.py (nuovo)"
+  ],
+  "success_rate": {"backend": "75% (3/4)", "frontend": "N/A (skipped)"},
+  "seed_data_creation": "Nessun seed permanente creato. Match TEST_AMICH_*/TEST_HIDE_* creati e poi cancellati durante il test. La squadra usata è preesistente della società Pallavolo Perugia (nessun team creato ex-novo). trial_max_sessions ripristinato al valore originale nel finally.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Dopo che il main agent corregge il clamp in routes/settings.py:552 (min(5,..) → min(10,..)), basta rilanciare `pytest /app/backend/tests/test_matches_import_and_commitments.py::TestTrialMaxSessions -v` per confermare il fix. Gli altri 3 test sono già verdi. Endpoint per admin di /api/coach/commitments accetta ?user_id o ?athlete_id come da doc; il test qui usa il coach con assigned_teams contenente la squadra scelta (fallback ad athlete se nessun coach trovato).",
+  "rca_of_issue": "BUG (C) — trial_max_sessions clamp: durante l'ultima iterazione il frontend ha alzato il cap da 5 a 10 (admin/settings/trial.tsx) ma il backend è rimasto con il clamp storico `min(5, ...)` in routes/settings.py:552. Reproduction: login admin → PATCH /api/settings/society {trial_max_sessions:10} → GET /api/settings/society → trial_max_sessions == 5 (invece di 10). Fix una riga: min(5,..) → min(10,..) + aggiornare commento nel modello Pydantic in server.py:6029."
+}

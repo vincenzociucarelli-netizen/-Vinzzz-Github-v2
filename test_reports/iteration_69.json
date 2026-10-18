@@ -1,0 +1,46 @@
+{
+  "summary": "Tested BUG-1 (coach training hidden on away match days), UI-2 (date in OGGI/DOMANI/DOPODOMANI), UI-3 (compact admin matches page). Backend: 3/3 tests passed - training is hidden on BOTH home and away match days for coach commitments endpoint. Frontend code review confirms date format in section headers across coach/parent/athlete/minor dashboards. Admin matches page UI verified visually post-rebuild: title 'Calendario Gare' bigger on one line, compact 'Info importazione' icon replaced the big blue card, Template button preserved. IMPORTANT: had to rebuild the Expo web bundle (npx expo export -p web) because /app/frontend/dist contained a stale May 4 build - so any UI changes were not visible to end users until rebuild.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_coach_commitments_away_match.py",
+    "/app/test_reports/pytest/coach_commitments_results.xml"
+  ],
+  "action_items": [
+    "IMPORTANT: The Expo web is served from a static dist/ directory (supervisor command: `npx serve -s dist -l 3000`). Frontend source edits do NOT take effect on the live URL until `cd /app/frontend && npx expo export -p web --output-dir dist` is run. The testing agent had to rebuild manually. Main agent should run the export command after any frontend change so users see the updated UI, or change the supervisor command to a hot-reloading dev server.",
+    "Optional: in /app/backend/server.py around lines 11911-11960 the variable `home_match_days` is now misleading because it actually contains BOTH home and away matches that hide training. Suggest renaming to `match_days` (and `home_match_rifinitura` -> `match_rifinitura` is still home-only so keep that name). Not a bug, just a naming refactor."
+  ],
+  "critical_code_review_comments": [
+    "/app/backend/server.py L11921-11949: confirmed ALL matches (home OR away) add (team_id, day_key) to home_match_days set; rifinitura is only added for home matches. Logic correct.",
+    "/app/frontend/app/coach/index.tsx L1378, L1431, L1484: date appended to OGGI/DOMANI/DOPODOMANI via date-fns format(new Date(), 'dd/MM') + format(..., 'EEEE', {locale: it}).toUpperCase(). Correct.",
+    "/app/frontend/app/parent/index.tsx L53-60: formatDayLabel helper returns 'DD/MM - GIORNO'. Used at L664, L744, L824. Correct.",
+    "/app/frontend/app/athlete/index.tsx L1289-1303 and /app/frontend/app/minor/index.tsx L449-465: IIFE returns label list with fmt(0/1/2) appended. Correct.",
+    "/app/frontend/app/admin/matches.tsx L650: title now has numberOfLines=1 + adjustsFontSizeToFit; L1151-1155 style fontSize 24. L671-688: compact instructionCard with Info importazione TouchableOpacity opening window.alert/Alert.alert with full original text. Template button preserved. Visually verified after web export rebuild.",
+    "Variable naming in coach commitments (home_match_days) is misleading since it now holds both home and away match days - cosmetic only."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_coach_commitments_away_match.py",
+    "/app/frontend/dist/ (rebuilt via npx expo export -p web)"
+  ],
+  "success_rate": {
+    "backend": "100% - 3/3 tests passed",
+    "frontend": "UI-3 visually verified; UI-2 verified via code review (login UI test blocked by Expo web static auth flow rate limit on fabia@test.com)"
+  },
+  "test_credentials": {
+    "admin": "vincenzo.ciucarelli@gmail.com / Test123",
+    "coach_alice": "alice@test.com / Test123 (TEMPORARILY set during test, then restored to original hash on teardown)",
+    "athlete_18plus": "fabia@test.com / Test123"
+  },
+  "seed_data_creation": "Temp TEST_AWAY_MATCH_* and TEST_HOME_MATCH_* match documents and a TEST_VENUE training session added/removed during each pytest run with proper teardown.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Expo web is served from /app/frontend/dist (static build via `npx serve -s dist -l 3000`). After ANY frontend source change you MUST run `cd /app/frontend && timeout 240 npx expo export -p web --output-dir dist` (takes ~3-4 min) for the changes to be visible on the public URL. Old entry hash was entry-923edd6...js, new is entry-26cc1efd...js. Login via Playwright works for admin (vincenzo); fabia@test.com may hit rate-limit after multiple attempts (HTTP 429) - clean cooldown ~15 min. The coach commitments test uses motor directly to set bcrypt password for alice and restores it after.",
+  "rca_of_issue": "Original problem reported that UI changes were not visible: root cause was Expo web is served from a static dist/ directory (last built May 4, 2026) and Expo source edits don't hot-reload to the served bundle. Fix: run `npx expo export -p web --output-dir dist` after frontend changes. Main agent should automate this in their workflow."
+}

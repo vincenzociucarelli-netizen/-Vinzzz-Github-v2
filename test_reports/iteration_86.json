@@ -1,0 +1,23 @@
+{
+  "summary": "Retest of Bacheca Note Admin after iteration_85 fixes. BOTH FIXES VERIFIED: (1) Backend: POST /admin/notes/{id}/complete now correctly returns 400 on double-complete (test_complete_already_completed_returns_400 PASSES). (2) Frontend: all 16 testID props are now emitted as data-testid in the DOM (verified via document.querySelectorAll on the live preview). Full E2E regression via testID selectors executed successfully: create → take → complete → completed section → reopen → delete. Backend 11/11 pytest tests pass. No regressions.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_admin_notes.py",
+    "/app/test_reports/pytest/admin_notes.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Note: `admin-notes-new-due` testID exists in source only inside the advanced-options panel; visible during advanced-open (line 362). `admin-note-save-{id}` appears only when a note is in edit mode (line 430). Both are correctly wired; not tested at runtime this iteration but structurally in place.",
+    "The Bacheca board is expanded by default on load — clicking `admin-notes-toggle` collapses it. This is the intended behavior (from `useState(true)` in AdminNotesBoard) and is fine.",
+    "Previous review comments still stand (loading=null with silent catch, non-symmetric untake behavior on completed notes) — non-blocking, tracked as tech debt."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (11/11)", "frontend": "100% (all testIDs resolve, all flows work)"},
+  "test_credentials": "Admin: vincenzo.ciucarelli@gmail.com / Test1234 (worked). Coach: alice@test.com / Test1234 (used for 403 check).",
+  "seed_data_creation": "Test note TEST_retest86 created via UI then deleted at end of run. No residual test data.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iteration_85 issues are RESOLVED. Backend endpoint POST /admin/notes/{id}/complete returns 400 on double-complete as spec. Frontend AdminNotesBoard now uses `testID=` prop (RN Web standard) → DOM emits `data-testid=`. All 16 required testIDs verified live: admin-notes-board, admin-notes-toggle, admin-notes-new-title, admin-notes-new-submit, admin-notes-advanced-toggle, admin-notes-priority-{high|medium|low}, admin-notes-completed-toggle, admin-note-{id}, admin-note-take-{id}, admin-note-complete-{id}, admin-note-edit-{id}, admin-note-delete-{id}, admin-note-completed-{id}, admin-note-reopen-{id}. `admin-notes-new-due` and `admin-note-save-{id}` present in source (verified via grep) and rendered only in advanced-open / edit-mode respectively.",
+  "rca of the issue": "N/A — both prior issues are fixed and verified. The frontend fix (data-testid → testID) required an Expo web bundle rebuild, which was already performed by the main agent (dist bundle timestamp 17:47, and testIDs found in bundle JS). Backend fix is a 2-line check added at line 219-220 of routes/admin_notes.py."
+}

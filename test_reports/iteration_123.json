@@ -1,0 +1,31 @@
+{
+  "summary": "Backend-only regression for the Europe/Rome timezone fix in GET /api/coach/commitments (server.py ~L17152, now_it().replace(tzinfo=None)). Test executed at 22:11 UTC = 00:11 CEST, i.e. UTC weekday=Domenica but IT weekday=Lunedì — the EXACT edge case the bug describes. Created a scoped test team (Pallavolo Perugia) with activity_start_date=today (IT) and two training_sessions on the Italian today and tomorrow, plus a test athlete assigned to it; queried the endpoint as admin with ?athlete_id=. All 3 tests PASS: (1) endpoint reachable, (2) IT-today's session correctly bucketed into 'today' and IT-tomorrow's session into 'tomorrow' (no leakage into adjacent buckets), (3) regression: team without activity_start_date keeps trainings hidden across today/tomorrow/day_after/upcoming. Full cleanup of test team + athlete performed.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_coach_commitments_timezone.py",
+    "/app/test_reports/pytest/coach_commitments_timezone_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py L17152 fix looks correct: now_it().replace(tzinfo=None) produces a naive Europe/Rome datetime, keeping the downstream naive-datetime comparisons (matches['date'], overrides date strings) consistent.",
+    "Note (already-existing behavior, not part of this fix): match date comparisons at ~L17181/17216/17394 compare a naive stored datetime (assumed UTC) against 'today' which is now naive Europe/Rome midnight; for matches near midnight IT this can still misplace matches by ±1 day. Out of scope for this iteration but worth flagging if a similar bug is reported for match bucketing."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_coach_commitments_timezone.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "N/A (skipped per request)"},
+  "seed_data_creation": "Ephemeral only — test team (TEST_TZ_TEAM_*) and test athlete (TEST_TZ_ATH_*) inserted directly into MongoDB and deleted in the same test's finally block. Nothing left in DB.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Timezone bucketing in /coach/commitments is verified for the 'UTC-day != IT-day' edge case. If retesting, note that the test relies on the current IT-vs-UTC weekday alignment being able to differ; even when they coincide the test still passes (it only validates that the response follows the Italian weekday, which is always correct). Uses admin credentials from /app/memory/test_credentials.md (vincenzo.ciucarelli@gmail.com / Test1234) and admin society Pallavolo Perugia.",
+  "rca_of_issue": "Original bug: GET /api/coach/commitments computed today/tomorrow/day_after with datetime.utcnow(). In late-evening/night IT hours, UTC is still on the previous calendar day, so today.weekday() was one day behind Italy. The frontend labels the buckets ('Oggi/Domani/Dopodomani') using the device's local time, so a training scheduled for the Italian today's weekday name was matched against the UTC yesterday's day and slipped into the 'tomorrow' bucket. Fix at server.py:17152 replaces utcnow() with now_it().replace(tzinfo=None) (Europe/Rome, CET/CEST-aware via zoneinfo). Verified end-to-end via test_training_bucketed_on_italian_today_and_tomorrow while the runtime clock was UTC=Sun / IT=Mon."
+}

@@ -1,0 +1,33 @@
+{
+  "summary": "Frontend verification of 4 fixes on preview URL — ALL PASS. 1) Coordinatore Registro Presenze (/admin/team/697fec5d90eef140898ebfd7/attendances after opening Under 14): renders 'Registro Presenze', team name 'Under 14', '1 atleti', tabs Settimana/Mese/Totale and 1 athlete row 'Test REACT · In attesa · 0 su 1 allenamenti · 0%' with att-status-* testID — NO 'Errore' header, NO 'Impossibile caricare i dati'. 2) Scadenze Certificati (/admin/medical-certificates-archive) works for BOTH coordinator and admin: header 'Scadenze Certificati' present, 4 counter cards (Scaduti 0 / In scadenza 0 / Validi 1 / Mancanti 2), '3 atleti' list with expiry date, team badge (Under 14) and status badges (Valido / Da verificare / Mancante). 3) Athlete detail (/admin/athlete/c0555a97927f4054ae84b1c9): the text 'Sono io il genitore' appears ONCE and only inside the discreet bottom button link-me-as-parent-btn (y=2138), immediately above delete-athlete-btn (y=2184). The old purple banner in the Anagrafica section is REMOVED. 4) Delete-athlete modal: initial state aria-disabled=true, opacity=0.5, pointerEvents=none (DISABLED); after typing partial 'elimin' still disabled; after typing 'ELIMINA' becomes aria-disabled=null, opacity=1, pointerEvents=auto (ENABLED). Cancelled via 'Annulla' — no actual deletion executed. Confirm button correctly guarded by delete-confirm-input.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "/admin/athlete/[id] (delete modal)",
+        "issues": [
+          "The confirm-delete-athlete-btn also enables when the user types 'elimina' in lowercase (code uses .trim().toUpperCase() === 'ELIMINA'). Prompt shows the token as uppercase 'ELIMINA', so accepting lowercase is a slight deviation from the visual expectation but is not a functional bug. Consider a strict case-sensitive comparison if the spec requires exact match; otherwise safe to keep as-is."
+        ]
+      }
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "(Optional) Decide whether the ELIMINA confirmation should be strictly case-sensitive; currently 'elimina' also enables the confirm button.",
+    "(Pre-existing, non-blocking) app/_layout still declares Screens 'preseason', 'admin/whatsapp-reminders', 'admin/whatsapp-settings' that do not exist — Expo Router prints warnings on every navigation."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/app/admin/athlete/[id].tsx is >5000 lines — consider splitting into sub-components (Anagrafica, Payments, Attendance tabs) for maintainability.",
+    "Numerous 403 errors in the browser console when coordinator opens /admin/teams (loading coaches/dirigenti/collaboratori) — expected because those endpoints stay admin-only, but the client should skip the calls when role=coordinatore to reduce noise."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A (frontend only)", "frontend": "100% (4/4 fixes verified)" },
+  "seed_data_creation": "None — used existing Pallavolo Perugia SSD data (team Under 14 id 697fec5d90eef140898ebfd7, athlete Test REACT id c0555a97927f4054ae84b1c9). No delete was executed (modal cancelled via 'Annulla').",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Preview login sequence: (1) dismiss cookie banner via get_by_text('Accetta tutti'|'Solo necessari'); (2) fill inputs by type; (3) click 'Accedi' via get_by_text('Accedi', exact=True) — TouchableOpacity does NOT expose role=button; (4) admin lands on /select-role, pick get_by_text('Amministratore'). testIDs on athlete detail page: link-me-as-parent-btn (or unlink-me-as-parent-btn), delete-athlete-btn, delete-confirm-input, confirm-delete-athlete-btn. Coordinator credentials still: coord.test@registrateam.it / Test1234. Admin: vincenzo.ciucarelli@gmail.com / Test1234.",
+  "rca_of_issue": "N/A — no bug reproduced. All 4 targeted fixes verified working on preview build."
+}

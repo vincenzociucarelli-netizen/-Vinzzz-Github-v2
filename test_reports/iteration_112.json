@@ -1,0 +1,28 @@
+{
+  "summary": "Testato feature 'Ricerca Atleti' (Ricerca Avanzata) — filtro Squadra + Export XLS/CSV a campi selezionabili. Backend: 4/4 test PASS su GET /api/admin/athletes/export-data (shape con 27 campi, gruppi Anagrafica/Contatti/Residenza/Sportivo/Stato/Certificato, formattazione dd/mm/yyyy + Sì/No, 403 per coach, 401/403 senza auth). Frontend (viewport mobile 390x844, testID nativi Expo web): login admin OK, /admin/athlete-search carica 3 atleti, Picker 'team-filter-picker' popolato con 'Tutte le squadre' + 'Under 14'; selezione squadra + 'Cerca' → contatore passa da '3 atleti trovati' a '1 atleti trovati'; 'Pulisci' resetta squadra ('') e ripristina 3 atleti. Modal export (open-export-modal-btn) mostra toggle 'format-xlsx'/'format-csv' (default xlsx, pulsante 'Scarica Excel'), 27 checkbox 'field-<key>' per gruppo (verificati field-last_name, field-first_name, field-fiscal_code, field-team_name, field-medical_certificate_expiry). Contatore 'Campi da esportare (N)' passa correttamente 6→5 al toggle di un campo, 'toggle-all-fields' 0↔27. Con 0 campi il click su 'download-export-btn' mostra alert 'Seleziona almeno un campo da esportare' senza errori JS. Passando a CSV il pulsante diventa 'Scarica CSV'; il download parte davvero (file 'atleti_2026-08-18.csv' catturato) e toast '✅ Esportato File CSV scaricato (3 atleti)'. Tornando su xlsx scarica 'atleti_2026-08-18.xlsx'. Nessun errore rosso React Native. Cookie banner 'Solo necessari' gestito.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_athletes_export_data.py",
+    "/app/test_reports/pytest/athletes_export_data.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "athlete-search.tsx usa import di 'expo-file-system/legacy'. Funziona su mobile ma è marcato legacy da Expo SDK 52+; considerare migrazione a nuova API stabile 'expo-file-system' quando disponibile. Non blocca il web (usa Blob).",
+    "L'ordine dei controlli in doExport verifica prima 'filteredAthletes.length===0' e poi 'selectedFields.length===0'. Se i risultati sono vuoti l'utente vede 'Nessun atleta da esportare' anche se avesse 0 campi selezionati: non è un bug (il pulsante Esporta è nascosto quando non ci sono atleti), ma vale la pena tenerlo a mente."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_athletes_export_data.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Nessuna seed data creata. Preview contiene già 3 atleti e 1 squadra 'Under 14'.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Rieseguire: pytest /app/backend/tests/test_athletes_export_data.py. Frontend: admin vincenzo.ciucarelli@gmail.com/Test1234 → /admin/athlete-search. Ricordare di chiudere il cookie banner 'Solo necessari' dopo il login prima di interagire. In preview esistono 3 atleti e 1 squadra 'Under 14'.",
+  "rca_of_issue": ""
+}

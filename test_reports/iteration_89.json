@@ -1,0 +1,23 @@
+{
+  "summary": "Frontend-only regression on atleta MARCO (marcob@test.com). Verificato: (1) rimozione duplicazione card 'Calendario Gare' dalla tab 'Da fare' — la card non è più presente in /athlete; (2) card 'Calendario Gare' presente UNA sola volta in /athlete/presenze; (3) nuova sezione 'Calendario ufficiale FIPAV' con testo descrittivo e bottone 'Calendario Federazione — Under 14' (testID athlete-federation-link-<teamId>) presente, visibile e cliccabile; (4) regressione calendario stagione: 54 gare (Vedi tutte (54)) e bottone 'Esporta .ics' presenti. Tutti i 6 check automatici PASS.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Layout router (console warnings)", "issues": ["Warning ricorrenti: 'No route named preseason/admin/whatsapp-reminders/whatsapp-settings exists in nested children' — noise nel layout _layout.tsx, non blocca funzionalità"]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Warning Expo Router persistenti in app/_layout su route inesistenti (preseason, admin/whatsapp-reminders, admin/whatsapp-settings): rimuovere gli Screen non usati o creare le route mancanti per evitare noise console"
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "test_credentials": "marcob@test.com / Test1234 (atleta MARCO, team Under 14 con calendar_link di test)",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Tutti e 3 i check richiesti sono PASS: (a) Da fare NON contiene più athlete-matches-card (count=0), (b) Presenze contiene athlete-matches-card (count=1) e la sezione FIPAV con 1 bottone federation-link (Under 14) cliccabile, (c) sono visibili le 54 gare della stagione con Vedi tutte (54) ed Esporta .ics. Il modale onboarding 'Dati Personali' su primo accesso si chiude regolarmente con 'Salta'."
+}

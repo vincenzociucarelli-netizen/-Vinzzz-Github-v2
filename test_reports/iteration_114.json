@@ -1,0 +1,64 @@
+{
+  "summary": "Tested athlete 18+ Privacy Signature banner + GDPRPrivacyModal flow for marcob@test.com. The banner with testID 'sign-privacy-banner' renders correctly on athlete profile when isAdult && !privacy_accepted. The GDPRPrivacyModal opens with Step 1 (Presa visione informativa checkbox + optional image consents) and Step 2 (react-signature-canvas). After drawing signature and confirming, POST /api/documents/sign-gdpr-privacy succeeded, PDF was archived, and privacy_accepted flag was persisted to BOTH the user AND the athlete record. Verified via admin API GET /api/athletes/c0555a97927f4054ae84b1c9 → privacy_accepted=true, privacy_accepted_date populated, privacy_pdf_url set. Banner disappears after signing and stays hidden after reload. HOWEVER two seed-data blockers were discovered that initially caused the flow to fail (404 then 400) and had to be patched manually to complete the test — see backend_issues below.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/documents/sign-gdpr-privacy",
+        "issue": "Returned 404 'Nessuna società configurata' for marcob@test.com because the user record had NO society_id field, while the ATHLETE record does have society_id='697fdba0d218717959e73eea'. The endpoint (server.py L24758-L24762) reads society_id ONLY from current_user and does not fallback to the linked athlete record. RCA: (a) test seed for marcob was incomplete (missing society_id), and (b) backend has no fallback via user.athlete_id -> athletes.society_id. Applied temporary DB fix: db.users.update_one({email: marcob@test.com}, {$set: {society_id: '697fdba0d218717959e73eea'}}).",
+        "priority": "HIGH"
+      },
+      {
+        "endpoint": "POST /api/documents/sign-gdpr-privacy",
+        "issue": "After fixing society_id, returned 400 'Completa i dati di residenza nel tuo profilo prima di firmare: CAP' because marcob user had no postal_code. The residenza-check at server.py L24824-L24844 requires address, city, province AND postal_code (CAP) on the athlete-role user before allowing GDPR signature. Applied temporary DB fix: db.users.update_one({email: marcob@test.com}, {$set: {postal_code: '06100'}}). Seed data for the test user must include CAP; otherwise the banner flow cannot complete for a real user missing residence data.",
+        "priority": "HIGH"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "GET /api/settings/society/logo.png",
+        "issue": "Returns 404 on every profile load (society has no logo uploaded). Cosmetic, not blocking."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "GDPRPrivacyModal",
+        "issue": "The informativa body text shown to an adult ATHLETE begins with 'INFORMATIVA PRIVACY PER STAFF ... Gentile Collaboratore / Membro dello Staff'. For document_type='gdpr_adult' + signerRole='athlete', the displayed informativa is not tailored to athletes. This is content/UX, not blocking — the PDF may already be different, but the modal preview text is misleading for athletes.",
+        "testID": "N/A",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "athlete/profile.tsx Trial-Expired modal",
+        "issue": "For a trial-expired athlete 18+ with privacy_accepted=false (marcob's state), the 'Periodo di Prova Terminato' orange overlay modal always renders on top and has no close/dismiss action. This overlay hides the yellow 'sign-privacy-banner' visually and prevents the direct banner tap. The GDPR modal can still be opened via the trial modal's 'Voglio Restare' card (same GDPRPrivacyModal instance), and the underlying banner works correctly (testID present, disappears after sign). Consider adding a way to reach the banner directly, or presenting the banner INSIDE the trial modal explicitly."
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Athlete 18+ signs privacy from profile",
+        "issue": "End-to-end works after data fixes: modal → sign-gdpr-privacy → user.privacy_accepted + athlete.privacy_accepted synced. The frontend also fires PATCH /api/auth/me {privacy_accepted:true} after sign; both user and athlete flags are set to true. Verified with admin GET /api/athletes/{id}.",
+        "affected_testIDs": ["sign-privacy-banner", "gdpr-signature-canvas"]
+      }
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_114.json"],
+  "action_items": [
+    "Backend: In POST /api/documents/sign-gdpr-privacy, when current_user.role=='athlete' and current_user has no society_id, FALLBACK by looking up user.athlete_id → athletes.society_id (or by athletes.user_id). Return 404 only if truly not linked to any society. This prevents future breakage when a user record lacks the redundant society_id copy.",
+    "Backend/Seed: The test account marcob@test.com must include society_id AND postal_code (CAP) on the user record, otherwise the privacy signing endpoint fails (I patched the DB manually to unblock testing).",
+    "Frontend/UX: The 'Periodo di Prova Terminato' overlay on athlete profile obscures the sign-privacy-banner and offers no direct dismiss. Either add a close button on that overlay or ensure the banner is fully reachable without opening the trial modal (e.g. surface the same call-to-action inside the trial modal explicitly).",
+    "Frontend/Content: In GDPRPrivacyModal, the informativa text shown to an ATHLETE (documentType='gdpr_adult', signerRole='athlete') currently reads 'INFORMATIVA PRIVACY PER STAFF' / 'Gentile Collaboratore / Membro dello Staff'. Provide an athlete-tailored informativa string when signerRole==='athlete'."
+  ],
+  "critical_code_review_comments": [
+    "server.py L24758-24762: sign-gdpr-privacy blindly requires current_user.society_id — should fallback to athlete/persona linkage. This is the RCA of the reported bug 'Privacy non ancora accettata' whenever the user record's society_id is missing (common for legacy or migrated data).",
+    "server.py L24824-24844: 'Residenza obbligatoria' check reads postal_code ONLY from full_user (not from request.signer_postal_code). Frontend does not send postal_code in the payload, so users without CAP on their user record cannot sign — they must first fill CAP in profile. Consider surfacing this hint in the banner or in the GDPR modal pre-flight."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% after data fix", "frontend": "100%"},
+  "seed_data_creation": "Applied to unblock testing: (1) db.users.update({email:marcob@test.com}, {$set:{society_id:'697fdba0d218717959e73eea', postal_code:'06100'}}). (2) Reset db.athletes.privacy_accepted=false and db.users.privacy_accepted=false pre-test to force banner visibility.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Full flow works end-to-end for marcob@test.com AFTER applying data fixes. Verified via admin GET /api/athletes/c0555a97927f4054ae84b1c9 → privacy_accepted=true. Once the main agent fixes (a) the endpoint society_id fallback and (b) makes the seed correct, this iteration's data patches will no longer be needed. To retest from scratch, first reset: db.users.update({email:marcob@test.com}, {$set:{privacy_accepted:false, postal_code:null, society_id:null}}) and db.athletes.update({id:c0555a97927f4054ae84b1c9}, {$set:{privacy_accepted:false}}) and delete related signed_documents where user_id=marcob's user id.",
+  "rca_of_issue": "User's original complaint ('Privacy non ancora accettata' with no way to sign it) is only partially fixed by the new banner. The banner UI is correct, but the underlying sign-gdpr-privacy endpoint fails with 404 for users whose user-record society_id is missing (looked-up via current_user.society_id, no fallback). This is precisely the class of legacy/migrated data that led to the original bug report. Recommend backend fix to fallback via athlete_id → athletes.society_id so the fix is robust even without perfect user-record data. Additionally, users lacking CAP hit a 400 without a friendly frontend hint."
+}

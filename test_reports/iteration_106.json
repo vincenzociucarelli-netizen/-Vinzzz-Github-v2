@@ -1,0 +1,35 @@
+{
+  "summary": "Regressione auth cache (TTL 8s) + throttle last_active_at (60s) su RegistraTEAM: 16/16 test PASS. Login OK per admin/parent/viewer, /auth/me restituisce dati coerenti per ogni ruolo, endpoint protetti (seasons/current-name, athletes, users/coaches, users/parents, users/dirigenti) rispondono 200 con isolamento multi-tenant intatto, header X-Response-Time-ms presente su tutte le /api/* (3-21ms in preview), test di concorrenza (20 richieste interleaved admin+parent, 12 admin+viewer) non evidenziano data-leak inter-utente durante la finestra di cache, e il flusso di salvataggio certificato per genitore collegato (armida su MAURI LENA) continua a funzionare correttamente (POST 200 + persistenza verificata via GET /athletes/{id}).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_auth_cache_regression.py",
+    "/app/test_reports/pytest/auth_cache_regression.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "get_current_user cache (server.py:1296-1316) è correttamente chiavata per user_id proveniente dal JWT: token distinti → chiavi distinte, quindi non c'è possibilità di leakage a parità di token. Il role viene comunque preso dal JWT (non dal doc cachato), quindi anche un rename di ruolo lato admin non viene servito da cache stale per un token vecchio (il role resta quello firmato nel JWT).",
+    "invalidate_auth_cache(user_id) è definito ma non ho verificato che venga chiamato in tutti i punti dove il documento utente muta (role/status/assigned_teams/coordinator_permissions). Suggerito controllo statico per assicurare che dopo PATCH /users/{id}, promozioni, cambi società o cambi assigned_teams venga sempre invocato: eventuale stale window fino a 8s è accettabile ma va documentata.",
+    "La cache è per-worker (in-process). Con più worker uvicorn/gunicorn si può avere staleness fino a 8s per worker distinti; nessun rischio di correttezza, solo eventuale ritardo nella propagazione di cambi ruolo — coerente con quanto dichiarato nel commit."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_auth_cache_regression.py (nuovo)"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "not tested (backend-only request)"
+  },
+  "seed_data_creation": "Il test certificato ha aggiornato issue_date=2026-01-15 / expiry_date=2027-01-14 sull'atleta MAURI LENA (id 6a5ec7347c201d9cb7eb70d2). Idempotente; non incide su altri flussi (l'atleta era senza certificato per design del test setup).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Preview latencies misurate ora: seasons/current-name 3ms, auth/me 3ms, athletes 4ms, coaches 3ms, parents 3ms, dirigenti 21ms — coerenti con quanto dichiarato dal main agent (20-28ms). Il problema dei 7-9s è di produzione (Atlas M0 shared) e non riproducibile in preview. Le mitigazioni backend (cache utente TTL 8s + throttle last_active_at 60s) sono correttamente attive: header X-Response-Time-ms visibile su ogni risposta /api/*.",
+  "rca_of_issue": "Non applicabile — nessun bug trovato. La cache in-process con chiave user_id (dal JWT) è progettata correttamente per evitare leakage cross-utente perché ogni utente ha un token con user_id proprio; il role usato nella response è quello del JWT, non del documento cachato, quindi coerente per definizione. Test di concorrenza (20 richieste alternate admin/parent, 12 admin/viewer) confermano che email/role/society_id restituiti da /auth/me sono sempre corretti per il token chiamante."
+}

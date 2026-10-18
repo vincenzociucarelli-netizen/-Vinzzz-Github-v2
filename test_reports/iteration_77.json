@@ -1,0 +1,35 @@
+{
+  "summary": "Tested PATCH /api/users/{user_id}/compensation role normalization fix (lowercase + strip + auto-correct DB). All 19 backend tests passed (100%): 4 non-canonical role variants (Dirigente, DIRIGENTE, '  dirigente  ', Coach) accepted with 200 and DB auto-normalized to canonical lowercase; invalid role 'pippo' rejected with 400 and diagnostic message containing actual role; canonical roles (coach/dirigente/collaboratore/athlete) still 200 with no spurious DB writes; admin/parent still rejected with 400. Backend logs confirm 'role normalizzato da X a Y' INFO messages fired correctly. The original VERDI FABIO bug scenario is fully covered.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_compensation_role_fix.py",
+    "/app/test_reports/pytest/iter77_role_fix.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py L4970: `str(raw_role).strip().lower() if raw_role else ''` is fine but the `if raw_role` short-circuit on falsy is redundant since `str(None).strip().lower()` would yield 'none' (different but harmless). Consider simplifying to `str(raw_role or '').strip().lower()`.",
+    "server.py L4978: comparison `normalized_role != raw_role` triggers DB write also when raw_role is None (since '' != None). Minor; auto-correction will set role='' for users with null role and then fail allow-list check — but order of operations means allow-list check happens BEFORE the correction, so this is safe.",
+    "Auto-correction log is INFO level — good for traceability of historical case-mismatch fixes; consider adding a Mongo migration script to bulk-normalize roles offline as a permanent fix."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_compensation_role_fix.py"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "not tested (skipped per request)"
+  },
+  "test_credentials": "Admin: vincenzo.ciucarelli@gmail.com / Test1234; Coach: alice@test.com / Test1234; PRO athlete: testalice1780817007@test.com / Test1234; Collaboratore: paolo@coll.com / PaoloTest123",
+  "seed_data_creation": "Test users inserted via pymongo directly into db.users with id prefix 'TEST_role_*' (capital, upper, ws, coach_mixed, invalid, canon_*, rej_*). All cleaned up in test finally blocks. No residual seed data.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "test_compensation_role_fix.py now has 19 tests covering: 4 canonical-role positive cases, 2 negative (admin/parent), 2 compensation_accepted preservation, 5 role normalization (Capital/UPPER/whitespace/Coach mixed/invalid 'pippo'), and 6 parametrized regression (4 canonical roles still OK + admin/parent still rejected). All pass. The fix at server.py L4966-4980 is verified end-to-end including DB auto-correction (verified via direct pymongo find_one after PATCH).",
+  "rca of the issue": "Originale (VERDI FABIO): admin riceveva 400 'Compenso applicabile solo a coach, dirigenti e collaboratori' anche se l'utente era dirigente. Root cause: il valore di `user.role` in db.users non era nella forma canonica lowercase (es. 'Dirigente' o 'DIRIGENTE' o con whitespace), mentre l'allow-list confrontava case-sensitive contro 'coach'/'dirigente'/etc. Mitigation applicata in server.py L4966-4980: `normalized_role = str(raw_role).strip().lower()` + confronto allow-list su versione normalizzata + auto-aggiornamento di db.users con il valore corretto quando differente dal raw (log INFO). I test coprono tutti gli scenari richiesti (Capital, UPPER, whitespace, invalid, canonical regression)."
+}

@@ -1,0 +1,61 @@
+{
+  "summary": "Tested consent management feature (GDPR compliance) for RegistraTEAM app. All 13 backend API tests passed. Frontend testing verified consent cards on parent profile page with switches for images_internal and images_promo, athlete consent cards for minor children, and admin consent audit page with entity list and detail modal showing full history.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Console warnings", "issues": ["'shadow*' style props are deprecated. Use 'boxShadow'", "[Layout children]: No route named 'preseason' exists in nested children"]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_consent_management.py",
+    "/app/test_reports/pytest/consent_management_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "ConsentManager component properly handles both user and athlete consent types",
+    "Admin consent audit page correctly displays entities with consent badges and history count",
+    "Detail modal shows full consent state and change history with IP addresses",
+    "data-testid attributes are present in code but not rendered in React Native Web DOM (known limitation)"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_consent_management.py"
+  ],
+  "success_rate": {
+    "backend": "100% (13/13 tests passed)",
+    "frontend": "100% (all consent features verified)"
+  },
+  "test_credentials": {
+    "admin": "pallavoloperugia@gmail.com / Test1234 - WORKING",
+    "parent": "perla@test.com / Test1234 - WORKING",
+    "adult_athlete": "luna@18piu.com / Test1234 - WORKING"
+  },
+  "seed_data_creation": "None - used existing test users",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Consent management feature is fully implemented and working. Backend endpoints: GET/PATCH /api/users/me/consents, GET/PATCH /api/athletes/{id}/consents, GET /api/admin/all-consents, GET /api/admin/consent-history/{type}/{id}. Frontend: ConsentManager component renders on parent, coach, and athlete profile pages. Admin settings has 'Consensi Privacy' card linking to /admin/settings/consent-audit page.",
+  "features_tested": {
+    "backend_api": {
+      "GET /api/users/me/consents": "PASS - Returns user consent data with history",
+      "PATCH /api/users/me/consents": "PASS - Updates images_internal/images_promo and adds history entry",
+      "GET /api/athletes/{id}/consents": "PASS - Returns athlete consent data (parent auth required)",
+      "PATCH /api/athletes/{id}/consents": "PASS - Updates athlete consent (parent auth required)",
+      "GET /api/admin/all-consents": "PASS - Returns list of entities with consents (admin only)",
+      "GET /api/admin/consent-history/{type}/{id}": "PASS - Returns full consent detail (admin only)",
+      "Non-admin 403 on admin endpoints": "PASS - Correctly returns 403 Forbidden"
+    },
+    "frontend_ui": {
+      "parent_profile_consent_card": "PASS - Shows 'Consensi Privacy' card with 4 consent rows",
+      "parent_profile_athlete_consent_cards": "PASS - Shows consent card for each minor athlete child (LAURA GRIGI, MARTINA GRIGI)",
+      "consent_switches_interactive": "PASS - Switches for images_internal and images_promo are interactive",
+      "consent_history_toggle": "PASS - 'Cronologia modifiche' link shows/hides history",
+      "admin_settings_consent_card": "PASS - 'Consensi Privacy' card links to /admin/settings/consent-audit",
+      "admin_consent_audit_list": "PASS - Shows entities with consent badges (interno, promozionali)",
+      "admin_consent_audit_detail_modal": "PASS - Opens modal with 'Stato Attuale' and 'Cronologia Modifiche'"
+    }
+  }
+}

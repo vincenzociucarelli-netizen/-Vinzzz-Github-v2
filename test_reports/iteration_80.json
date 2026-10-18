@@ -1,0 +1,25 @@
+{
+  "summary": "v7.14 bug fix verified: password protezione dati non più richiesto nel profile-check quando ALMENO UNA delle due password (data_password_hash OR second_parent_data_password_hash) è impostata. 5/5 backend tests passed + smoke multi-tenancy 3/3 passed. Frontend: pulsante QR scan verificato visibile in tab Accesso Atleta.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_data_password_checklist_v714.py",
+    "/app/backend/tests/test_multitenancy_smoke.py"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Nota: l'endpoint reale è /api/athletes/{id}/profile-check (non /checklist come riportato nel task). Ho testato l'endpoint corretto.",
+    "Il fix (server.py:27564-27567) è corretto: has_pw = bool(data_password_hash OR second_parent_data_password_hash). Match esatto con la user story del bug (utente re-associato ad altro slot).",
+    "Attenzione: GET /athletes/{id}/has-password ha logica differente (slot-aware con fallback) rispetto al profile-check. Comportamento intenzionale ma vale la pena documentarlo."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_data_password_checklist_v714.py (nuovo file di test regressione)"
+  ],
+  "success_rate": {"backend": "100% (5/5 + 3/3 smoke)", "frontend": "100% (visual check QR button OK)"},
+  "test_credentials": "TEST parent creato dinamicamente via DB con cleanup automatico (fixture module scope)",
+  "seed_data_creation": "Il test crea 1 parent user + 1 minor athlete con id prefissati 'TEST_' e li elimina alla fine del module. Nessun dato residuo.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Test file di regressione /app/backend/tests/test_data_password_checklist_v714.py copre 5 casi (baseline, change-password + has-password, password in primary slot, password in second slot solo, missing entrambe). Riesegui insieme al test_multitenancy_smoke prima di rilasciare v7.15+.",
+  "rca of the issue": "RCA: Prima del fix, validate check in profile-check era slot-specific: se athlete.parent_id == current_user.id → controllava data_password_hash; se second_parent → controllava second_parent_data_password_hash. Quando un utente veniva re-associato da slot secondario a primario (o viceversa), la password rimaneva nello slot originale e il check falliva sullo slot nuovo → 'Password protezione dati' compariva sempre nel parent_missing. Fix: check permissivo con OR logico su entrambi i field. Riprodotto e verificato in test_v714_fix_password_in_second_slot_only."
+}

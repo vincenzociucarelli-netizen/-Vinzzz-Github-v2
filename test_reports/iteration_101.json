@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 101 — RegistraTEAM. Verified: (A) BANNER 'Inizio allenamenti' — coach @ /coach shows banner 'Inizio allenamenti Under 14: 05/09/2026' with testID='activity-start-banners' (visually + DOM); backend /api/coach/commitments returns activity_banners[] populated with team_id=697fec5d90eef140898ebfd7, team_name='Under 14', start_label containing 2026 (PASS). By backend symmetry (_build_commitments_payload in routes/parents.py appends result['activity_banners']), /api/parent/commitments and /api/athlete/commitments and /api/minor/dashboard also expose activity_banners for teams with activity_start_date. Minor dashboard reads it correctly at /app/frontend/app/minor/index.tsx:448 → banners={(data.commitments as any)?.activity_banners} (matches backend shape). (B) DATA AUTO-FORMAT verified via CODE REVIEW: formatDateInput at admin/team/[id].tsx:47-60 strips non-digits, caps 8 chars, inserts '/' after position 2 and 5. The activity_start_date TextInput at line 1008-1017 uses testID='team-activity-start-input', placeholder='gg/mm/aaaa', keyboardType='number-pad', maxLength=10, onChangeText={setActivityStartDate(formatDateInput(text))}. The exact same helper is already used elsewhere (installments due_date at line 947) which the user has confirmed working. UI live-typing test could not fully complete because Playwright cannot reliably tap the React Native TouchableOpacity pencil icon in the header to toggle EDIT mode (no click event exposed on RN Web TouchableOpacity — known limitation, NOT a product bug). (C) 3 DIRIGENTI: backend regression pytest — POST /api/teams/697fec5d90eef140898ebfd7/assign-dirigenti with 3 ids returns 200 and after subsequent GET /api/teams/{id}, dirigenti_info contains all 3 (CIUCHETTI VINZZZZ + COORD TEST + TEST DIRIGENTE). Visual confirm: /admin/team/697fec5d90eef140898ebfd7 view mode shows the 3 names in the Dirigenti section (2 visible on first fold — CIUCHETTI VINZZZZ, TEST DIRIGENTE — and COORD TEST scrolled below, all 3 present in body textContent). All 4 pytest tests PASS.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_activity_banners_and_dirigenti.py",
+    "/app/test_reports/pytest/iter101_banners_dirigenti.xml"
+  ],
+  "action_items": [
+    "(Optional) Ensure Coach banner also appears for other roles by having the main agent do a quick visual smoke on athlete/parent/minor dashboards — backend endpoints already return activity_banners; frontend wiring is in place in athlete/index.tsx:1260, parent/index.tsx:722, minor/index.tsx:448. Since we could not create a test parent/athlete account linked to Under 14 without disturbing production data, the visual pass on those pages is left to the main agent.",
+    "(No fix needed) Auth token key mismatch — server returns { token, user } but old tests expected access_token; test file updated to accept both."
+  ],
+  "critical_code_review_comments": [
+    "ActivityStartBanners.tsx correctly de-duplicates banners by team_id — good defensive coding for dual-role/multi-child parents.",
+    "In minor/index.tsx line 448, banners are read from data.commitments.activity_banners — matches backend response shape from /api/minor/dashboard (commitments = _build_commitments_payload(...) which includes activity_banners). Confirmed OK.",
+    "Coach commitments loader (coach/index.tsx:243-246) merges activity_banners from coach + athlete responses when dual-role; ActivityStartBanners then de-duplicates by team_id → correct pattern.",
+    "assign-dirigenti frontend call at admin/team/[id].tsx:552 uses { ids: selectedDirigenteIds } (JSON), matching backend expectation — no serialization bug."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_activity_banners_and_dirigenti.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (4/4 pytest PASS on iter101 suite)",
+    "frontend": "Coach banner PASS (visual + DOM). Admin date auto-format & 3 dirigenti verified via backend+code review; UI keystroke test blocked by Playwright/RN TouchableOpacity limitation (not a product bug)."
+  },
+  "seed_data_creation": "Reused existing Under 14 team (697fec5d90eef140898ebfd7) with activity_start_date=2026-09-05 and 3 pre-existing dirigenti. Backend assign-dirigenti test re-writes the same 3 ids to the team (idempotent).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Auth response key is 'token' NOT 'access_token' — grab as body.get('token') or body.get('access_token'). To toggle EDIT mode on /admin/team/[id] in Playwright, RN TouchableOpacity does not fire click; recommend adding testID='team-edit-toggle-btn' to the pencil TouchableOpacity at admin/team/[id].tsx:622 (currently no testID). Also consider adding testID='team-save-btn' to the Salva Modifiche button so future agents can automate the whole save flow. Once those testIDs exist, the auto-format live-typing test can run: fill('[data-testid=\"team-activity-start-input\"]','05092026') then verify input_value()=='05/09/2026'.",
+  "rca_of_issue": "No functional bug reproduced. The user-reported requirements (A) coach banner visible, (B) auto-format /placeholder gg/mm/aaaa, (C) 3 dirigenti persist — all validated (A via UI screenshot+testID+API, B via code review+existing sibling usage in installments, C via backend regression + view-mode UI presence of all 3 names). The only limitation was inability to drive React Native pencil TouchableOpacity via Playwright to toggle edit mode; this is a testability gap in the frontend (missing testID on the edit toggle), not a bug in the feature."
+}
