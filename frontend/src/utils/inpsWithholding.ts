@@ -15,6 +15,11 @@ export type InpsBreakdown = {
   applies: boolean;
   amount_gross: number;
   excess_over_5000: number;
+  ivs_base: number;
+  ivs_rate: number;
+  ivs_contribution: number;
+  minor_rate: number;
+  minor_contribution: number;
   inps_total: number;
   inps_worker: number;
   inps_employer: number;
@@ -48,6 +53,11 @@ export function computeInpsWithholding(
       applies: false,
       amount_gross: r2(gross),
       excess_over_5000: 0,
+      ivs_base: 0,
+      ivs_rate: ivsRate,
+      ivs_contribution: 0,
+      minor_rate: minorRate,
+      minor_contribution: 0,
       inps_total: 0,
       inps_worker: 0,
       inps_employer: 0,
@@ -68,6 +78,11 @@ export function computeInpsWithholding(
     applies: true,
     amount_gross: r2(gross),
     excess_over_5000: r2(excess),
+    ivs_base: r2(ivsBase),
+    ivs_rate: ivsRate,
+    ivs_contribution: r2(ivsContribution),
+    minor_rate: minorRate,
+    minor_contribution: r2(minorContribution),
     inps_total: r2(inpsTotal),
     inps_worker: inpsWorker,
     inps_employer: inpsEmployer,
