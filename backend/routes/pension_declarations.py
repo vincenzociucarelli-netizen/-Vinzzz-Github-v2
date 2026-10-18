@@ -192,6 +192,8 @@ async def my_pension_status(current_user=Depends(get_current_user)):
         "history": [_public(d) for d in history],
         "texts": PENSION_TEXTS,
         "agreement_id": subj["agreement_id"],
+        # 🆕 Regime INPS derivato: A/B → assicurato altrove/pensionato (24% senza 2,03%)
+        "inps_insured_elsewhere": bool(latest and latest.get("position") in ("A", "B")),
         # 🆕 True se la dichiarazione è stata firmata dall'altro account dual-role
         "declared_by_linked_account": bool(latest) and latest.get("user_id") != subj["user_id"] and latest.get("athlete_id") != subj["athlete_id"],
     }
@@ -280,6 +282,27 @@ async def declare_my_pension_position(
         "signature_base64": data.signature_base64,
     }
     await db.pension_declarations.insert_one(doc)
+
+    # 🆕 Sincronizza il flag denormalizzato `inps_insured_elsewhere` usato sia dal
+    # calcolo INPS backend sia dall'anteprima quietanza nel frontend.
+    #   • Posizione A (assicurato presso altra previdenza obbligatoria) o
+    #     B (titolare di pensione diretta) → IVS 24% SENZA supplemento 2,03%.
+    #   • Posizione C (nessuna altra copertura/pensione) o D (da verificare) →
+    #     regime pieno IVS 25% + 2,03% (default prudenziale).
+    try:
+        insured = data.position in ("A", "B")
+        person_ids = await _person_ids(subj["user_id"], subj["athlete_id"])
+        if person_ids:
+            await db.users.update_many({"id": {"$in": person_ids}}, {"$set": {"inps_insured_elsewhere": insured}})
+            await db.athletes.update_many({"id": {"$in": person_ids}}, {"$set": {"inps_insured_elsewhere": insured}})
+            try:
+                from server import invalidate_auth_cache
+                for pid in person_ids:
+                    invalidate_auth_cache(pid)
+            except Exception:
+                pass
+    except Exception as e:
+        logging.warning(f"[pension_declaration] sync inps flag failed: {e}")
 
     # 🆕 PDF firmato in `signed_documents` → visibile in "I Miei Documenti", archivio admin e Cronologia
     try:
@@ -589,6 +612,16 @@ async def admin_pension_declarations_summary(current_user=Depends(get_current_us
         prior = _prior_src(parts)
         history = await _history_for(list(m["ids"]))
         latest = history[0] if history else None
+        # 🆕 Backfill del flag `inps_insured_elsewhere` per dichiarazioni firmate
+        # prima dell'introduzione della sincronizzazione (idempotente).
+        try:
+            insured = bool(latest and latest.get("position") in ("A", "B"))
+            pids = list(m["ids"])
+            if pids:
+                await db.users.update_many({"id": {"$in": pids}, "inps_insured_elsewhere": {"$ne": insured}}, {"$set": {"inps_insured_elsewhere": insured}})
+                await db.athletes.update_many({"id": {"$in": pids}, "inps_insured_elsewhere": {"$ne": insured}}, {"$set": {"inps_insured_elsewhere": insured}})
+        except Exception:
+            pass
         name = src.get("full_name") or f"{src.get('first_name', '')} {src.get('last_name', '')}".strip()
         email = next((p["src"].get("email") for p in parts if p["src"].get("email") and "#" not in p["src"].get("email")), src.get("email"))
         out.append({
