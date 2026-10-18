@@ -30,7 +30,7 @@ export default function InpsNetBreakdown({
 
   return (
     <View style={styles.box}>
-      <Text style={styles.title}>Superata la soglia €5.000 — compenso netto</Text>
+      <Text style={styles.title}>Superata la soglia €5.000 — dettaglio contributi INPS</Text>
       <View style={styles.row}>
         <Text style={styles.label}>Compenso pattuito (lordo)</Text>
         <Text style={styles.val}>{formatEuro(bd.amount_gross)}</Text>
@@ -40,7 +40,25 @@ export default function InpsNetBreakdown({
         <Text style={styles.val}>{formatEuro(bd.excess_over_5000)}</Text>
       </View>
       <View style={styles.row}>
-        <Text style={styles.label}>Contributi INPS (quota a carico {carico}, 1/3)</Text>
+        <Text style={styles.label}>Imponibile previdenziale (50% dell'eccedenza)</Text>
+        <Text style={styles.val}>{formatEuro(bd.ivs_base)}</Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={styles.label}>Contributo IVS ({Math.round(bd.ivs_rate * 100)}% dell'imponibile)</Text>
+        <Text style={styles.val}>{formatEuro(bd.ivs_contribution)}</Text>
+      </View>
+      {bd.minor_rate > 0 && (
+        <View style={styles.row}>
+          <Text style={styles.label}>Aliquote aggiuntive ({(bd.minor_rate * 100).toFixed(2)}% sull'eccedenza)</Text>
+          <Text style={styles.val}>{formatEuro(bd.minor_contribution)}</Text>
+        </View>
+      )}
+      <View style={styles.row}>
+        <Text style={styles.label}>Contributo INPS totale dovuto</Text>
+        <Text style={styles.val}>{formatEuro(bd.inps_total)}</Text>
+      </View>
+      <View style={styles.row}>
+        <Text style={styles.label}>Trattenuta a carico {carico} (1/3 del contributo)</Text>
         <Text style={[styles.val, styles.deduct]}>- {formatEuro(bd.inps_worker)}</Text>
       </View>
       <View style={[styles.row, styles.rowTotal]}>
@@ -49,7 +67,7 @@ export default function InpsNetBreakdown({
       </View>
       <Text style={styles.note}>
         Importo effettivamente erogato. Il cumulo verso le soglie €5.000/€15.000 resta
-        calcolato sul compenso lordo pattuito.
+        calcolato sul compenso lordo pattuito. I 2/3 restanti del contributo sono a carico della società.
       </Text>
     </View>
   );

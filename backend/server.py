@@ -21800,7 +21800,9 @@ def compute_sport_inps_withholding(
         "excess_over_5000": round(excess, 2),
         "ivs_base": round(ivs_base, 2),
         "ivs_rate": ivs_rate,
+        "ivs_contribution": round(ivs_contribution, 2),
         "minor_rate": minor_rate,
+        "minor_contribution": round(minor_contribution, 2),
         "inps_total": round(inps_total, 2),
         "inps_worker": inps_worker,
         "inps_employer": inps_employer,
@@ -25113,22 +25115,44 @@ def generate_monthly_receipt_pdf(
     else:
         c.drawString(2*cm, y, f"Compenso lordo: € {amount_gross:.2f}")
 
-    # 🆕 Trattenuta INPS (quota a carico del lavoratore, 1/3) sull'eccedenza oltre €5.000
+    # 🆕 Dettaglio trasparente del calcolo dei contributi INPS (Gestione Separata, Riforma Sport)
     if inps_breakdown and inps_breakdown.get("applies"):
         _role_low = (role_label or "collaboratore").lower()
-        y -= 0.85*cm
-        c.setFont("Helvetica", 10)
-        c.drawString(2*cm, y, f"Quota compenso eccedente €5.000: € {float(inps_breakdown.get('excess_over_5000', 0) or 0):.2f}")
-        y -= 0.55*cm
-        c.drawString(2*cm, y, f"Contributi INPS trattenuti (quota a carico {_role_low}, 1/3): - € {float(inps_breakdown.get('inps_worker', 0) or 0):.2f}")
-        y -= 0.7*cm
+        _exc = float(inps_breakdown.get('excess_over_5000', 0) or 0)
+        _ivs_base = float(inps_breakdown.get('ivs_base', 0) or 0)
+        _ivs_rate = float(inps_breakdown.get('ivs_rate', 0) or 0)
+        _ivs_contr = float(inps_breakdown.get('ivs_contribution', 0) or 0)
+        _minor_rate = float(inps_breakdown.get('minor_rate', 0) or 0)
+        _minor_contr = float(inps_breakdown.get('minor_contribution', 0) or 0)
+        _tot = float(inps_breakdown.get('inps_total', 0) or 0)
+        _worker = float(inps_breakdown.get('inps_worker', 0) or 0)
+        _net = float(inps_breakdown.get('amount_net', amount_gross) or 0)
+        y -= 0.8*cm
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(2*cm, y, "Dettaglio contributi INPS (Gestione Separata - Riforma Sport):")
+        y -= 0.5*cm
+        c.setFont("Helvetica", 9)
+        c.drawString(2.3*cm, y, f"- Quota compenso eccedente la franchigia di €5.000: € {_exc:.2f}")
+        y -= 0.42*cm
+        c.drawString(2.3*cm, y, f"- Imponibile previdenziale (50% dell'eccedenza, agevolazione fino al 31/12/2027): € {_ivs_base:.2f}")
+        y -= 0.42*cm
+        c.drawString(2.3*cm, y, f"- Contributo IVS ({_ivs_rate*100:.0f}% dell'imponibile): € {_ivs_contr:.2f}")
+        if _minor_rate > 0:
+            y -= 0.42*cm
+            c.drawString(2.3*cm, y, f"- Aliquote aggiuntive ({_minor_rate*100:.2f}% sul 100% dell'eccedenza): € {_minor_contr:.2f}")
+        y -= 0.42*cm
+        c.drawString(2.3*cm, y, f"- Contributo INPS totale dovuto: € {_tot:.2f}")
+        y -= 0.42*cm
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(2.3*cm, y, f"- Trattenuta a carico {_role_low} (1/3 del contributo totale): - € {_worker:.2f}")
+        y -= 0.65*cm
         c.setFont("Helvetica-Bold", 11)
-        c.drawString(2*cm, y, f"Compenso NETTO corrisposto: € {float(inps_breakdown.get('amount_net', amount_gross) or 0):.2f}")
+        c.drawString(2*cm, y, f"Compenso NETTO corrisposto: € {_net:.2f}")
         y -= 0.45*cm
         c.setFont("Helvetica-Oblique", 8)
-        c.drawString(2*cm, y, "Superata la soglia annua di €5.000 (Riforma Sport), il netto corrisposto è il lordo pattuito")
+        c.drawString(2*cm, y, "Il netto corrisposto e' il lordo pattuito diminuito della quota contributiva INPS a carico")
         y -= 0.35*cm
-        c.drawString(2*cm, y, "diminuito della quota contributiva INPS a carico del lavoratore (1/3 del contributo dovuto).")
+        c.drawString(2*cm, y, "del lavoratore (1/3 del contributo dovuto). I 2/3 restanti sono a carico della societa'.")
 
     # Declaration text
     y -= 1.5*cm
