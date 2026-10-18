@@ -104,3 +104,6 @@ credentials.json
 
 # Credenziali di test interne: non devono finire nel deploy/repo
 memory/test_credentials.md
+.env
+.env.*
+*.env
