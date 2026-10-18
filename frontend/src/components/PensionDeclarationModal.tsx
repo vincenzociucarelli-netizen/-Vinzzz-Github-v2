@@ -50,7 +50,7 @@ const showAlert = (title: string, msg: string) => {
   else Alert.alert(title, msg);
 };
 
-export default function PensionDeclarationModal({ visible, userFullName, previousVersionNumber, onClose, onDeclared }: Props) {
+export default function PensionDeclarationModal({ visible, userFullName, onClose, onDeclared }: Props) {
   const signatureRef = useRef<SignaturePadInlineRef>(null);
   const [texts, setTexts] = useState<PensionTexts | null>(null);
   const [positions, setPositions] = useState<('A' | 'B' | 'C' | 'D')[]>([]);
@@ -128,16 +128,6 @@ export default function PensionDeclarationModal({ visible, userFullName, previou
             <View style={{ padding: 30, alignItems: 'center' }}><ActivityIndicator color="#1E3A8A" /></View>
           ) : (
             <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: 24 }} keyboardShouldPersistTaps="handled">
-              {previousVersionNumber ? (
-                <View style={styles.versionBox}>
-                  <Ionicons name="git-branch" size={16} color="#92400E" />
-                  <Text style={styles.versionText}>
-                    Stai presentando una <Text style={{ fontWeight: '700' }}>nuova dichiarazione (v.{previousVersionNumber + 1})</Text> che
-                    aggiorna la precedente. Le versioni precedenti restano conservate nello storico.
-                  </Text>
-                </View>
-              ) : null}
-
               <View style={styles.legalBox}>
                 <Text style={styles.legalTitle}>{texts.title.toUpperCase()}</Text>
                 <Text style={styles.legalText}>
@@ -272,8 +262,6 @@ const styles = StyleSheet.create({
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerTitle: { color: '#fff', fontSize: 16, fontWeight: '700' },
   body: { paddingHorizontal: 18, paddingTop: 14 },
-  versionBox: { flexDirection: 'row', gap: 8, backgroundColor: '#FEF3C7', padding: 10, borderRadius: 10, marginBottom: 12, alignItems: 'flex-start' },
-  versionText: { fontSize: 12, color: '#92400E', flex: 1, lineHeight: 18 },
   legalBox: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 10, padding: 14, marginBottom: 14 },
   legalTitle: { textAlign: 'center', fontSize: 12, letterSpacing: 1.5, color: '#374151', fontWeight: '700', marginBottom: 10 },
   legalText: { fontSize: 13, color: '#1F2937', lineHeight: 20 },
