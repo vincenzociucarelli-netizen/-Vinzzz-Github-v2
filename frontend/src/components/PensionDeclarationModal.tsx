@@ -131,9 +131,9 @@ export default function PensionDeclarationModal({ visible, userFullName, onClose
               <View style={styles.legalBox}>
                 <Text style={styles.legalTitle}>{texts.title.toUpperCase()}</Text>
                 <Text style={styles.legalText}>
-                  Il/La sottoscritto/a <Text style={{ fontWeight: '700' }}>{userFullName}</Text>
+                  Il/La sottoscritto/a <Text style={{ fontWeight: '700' }}>{userFullName}</Text>{' '}
+                  {texts.intro.replace(/^Il\/La sottoscritto\/a\s*/i, '')}
                 </Text>
-                <Text style={[styles.legalText, { marginTop: 8 }]}>{texts.intro}</Text>
               </View>
 
               <Text style={styles.sectionLabel}>{texts.question || 'Seleziona una risposta (obbligatorio)'}</Text>
