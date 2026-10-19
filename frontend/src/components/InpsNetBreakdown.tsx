@@ -28,39 +28,27 @@ export default function InpsNetBreakdown({
   const bd = computeInpsWithholding(yearlyTotalBefore, monthGross, insuredElsewhere);
   if (!bd.applies) return null;
 
+  const rows: { label: string; value: string; deduct?: boolean }[] = [
+    { label: 'Compenso pattuito (lordo)', value: formatEuro(bd.amount_gross) },
+    { label: 'Quota eccedente €5.000', value: formatEuro(bd.excess_over_5000) },
+    { label: "Imponibile previdenziale (50% dell'eccedenza)", value: formatEuro(bd.ivs_base) },
+    { label: `Contributo IVS (${Math.round(bd.ivs_rate * 100)}% dell'imponibile)`, value: formatEuro(bd.ivs_contribution) },
+  ];
+  if (bd.minor_rate > 0) {
+    rows.push({ label: `Aliquote aggiuntive (${(bd.minor_rate * 100).toFixed(2)}% sull'eccedenza)`, value: formatEuro(bd.minor_contribution) });
+  }
+  rows.push({ label: 'Contributo INPS totale dovuto', value: formatEuro(bd.inps_total) });
+  rows.push({ label: `Trattenuta a carico ${carico} (1/3 del contributo)`, value: `- ${formatEuro(bd.inps_worker)}`, deduct: true });
+
   return (
     <View style={styles.box}>
       <Text style={styles.title}>Superata la soglia €5.000 — dettaglio contributi INPS</Text>
-      <View style={styles.row}>
-        <Text style={styles.label}>Compenso pattuito (lordo)</Text>
-        <Text style={styles.val}>{formatEuro(bd.amount_gross)}</Text>
-      </View>
-      <View style={styles.row}>
-        <Text style={styles.label}>Quota eccedente €5.000</Text>
-        <Text style={styles.val}>{formatEuro(bd.excess_over_5000)}</Text>
-      </View>
-      <View style={styles.row}>
-        <Text style={styles.label}>Imponibile previdenziale (50% dell'eccedenza)</Text>
-        <Text style={styles.val}>{formatEuro(bd.ivs_base)}</Text>
-      </View>
-      <View style={styles.row}>
-        <Text style={styles.label}>Contributo IVS ({Math.round(bd.ivs_rate * 100)}% dell'imponibile)</Text>
-        <Text style={styles.val}>{formatEuro(bd.ivs_contribution)}</Text>
-      </View>
-      {bd.minor_rate > 0 && (
-        <View style={styles.row}>
-          <Text style={styles.label}>Aliquote aggiuntive ({(bd.minor_rate * 100).toFixed(2)}% sull'eccedenza)</Text>
-          <Text style={styles.val}>{formatEuro(bd.minor_contribution)}</Text>
+      {rows.map((r, idx) => (
+        <View key={r.label} style={[styles.row, { backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FDEFC2' }]}>
+          <Text style={styles.label}>{r.label}</Text>
+          <Text style={[styles.val, r.deduct && styles.deduct]}>{r.value}</Text>
         </View>
-      )}
-      <View style={styles.row}>
-        <Text style={styles.label}>Contributo INPS totale dovuto</Text>
-        <Text style={styles.val}>{formatEuro(bd.inps_total)}</Text>
-      </View>
-      <View style={styles.row}>
-        <Text style={styles.label}>Trattenuta a carico {carico} (1/3 del contributo)</Text>
-        <Text style={[styles.val, styles.deduct]}>- {formatEuro(bd.inps_worker)}</Text>
-      </View>
+      ))}
       <View style={[styles.row, styles.rowTotal]}>
         <Text style={styles.labelBold}>Netto corrisposto</Text>
         <Text style={styles.valBold}>{formatEuro(bd.amount_net)}</Text>
@@ -79,7 +67,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FFCC80',
     borderRadius: 10,
-    padding: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     marginTop: 12,
   },
   title: {
@@ -87,18 +76,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#E65100',
     marginBottom: 8,
+    paddingHorizontal: 4,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 3,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 4,
   },
   rowTotal: {
     borderTopWidth: 1,
     borderTopColor: '#FFCC80',
     marginTop: 4,
-    paddingTop: 6,
+    paddingTop: 8,
+    backgroundColor: 'transparent',
   },
   label: { fontSize: 12, color: '#555', flex: 1, paddingRight: 8 },
   labelBold: { fontSize: 13, fontWeight: '700', color: '#333', flex: 1, paddingRight: 8 },
