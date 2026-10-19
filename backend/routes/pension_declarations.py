@@ -347,9 +347,10 @@ async def declare_my_pension_position(
     try:
         from routes.declaration_pdf import build_declaration_pdf, store_signed_declaration, society_name_for
         society_name = await society_name_for(subj["society_id"])
+        import re as _re
+        _intro_tail = _re.sub(r"^il/la sottoscritto/a\s*", "", PENSION_TEXTS["intro"], flags=_re.IGNORECASE)
         paragraphs = [
-            {"text": f"Il/La sottoscritto/a {subj['full_name']}", "style": "normal"},
-            {"text": PENSION_TEXTS["intro"], "style": "normal"},
+            {"text": f"Il/La sottoscritto/a {subj['full_name']} {_intro_tail}", "style": "normal"},
             {"text": f"Opzione/i selezionata/e: {doc['position']}", "style": "bold"},
         ]
         for o in opts:

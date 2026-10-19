@@ -256,11 +256,11 @@ export default function AdminPensionDeclarationsPage() {
           <ActivityIndicator color="#4C1D95" style={{ marginTop: 30 }} />
         ) : visible.length === 0 ? (
           <Text style={styles.empty}>Nessun collaboratore per i filtri selezionati.</Text>
-        ) : visible.map((r) => {
+        ) : visible.map((r, idx) => {
           const st = pensionStatusStyle(r.pension_status);
           const isOpen = expanded === r.user_id;
           return (
-            <View key={r.user_id} style={styles.rowCard} testID={`pension-row-${r.user_id}`}>
+            <View key={r.user_id} style={[styles.rowCard, { backgroundColor: idx % 2 === 0 ? '#FFFFFF' : '#FEF9E7' }]} testID={`pension-row-${r.user_id}`}>
               <TouchableOpacity style={styles.rowHead} onPress={() => setExpanded(isOpen ? null : r.user_id)}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{r.full_name}</Text>
