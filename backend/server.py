@@ -21621,13 +21621,18 @@ async def _find_linked_compensated_user_for_athlete(athlete: dict) -> Optional[d
         return None
 
 
-async def _get_signed_yearly_total_as_coach(coach_user_id: str, year: int) -> float:
-    """Somma compensi firmati come Coach/Dirigente/Collaboratore (coach_compensations) per l'anno."""
+async def _get_signed_yearly_total_as_coach(coach_user_id: str, year: int, payment_shift: int = 0) -> float:
+    """Somma compensi firmati come Coach/Dirigente/Collaboratore (coach_compensations) per l'anno.
+    Con payment_shift=1 la competenza di dicembre è incassata a gennaio dell'anno dopo."""
     try:
+        if payment_shift == 1:
+            q = {"coach_id": coach_user_id, "receipt_signed": True,
+                 "$or": [{"year": year, "month": {"$ne": 12}}, {"year": year - 1, "month": 12}]}
+        else:
+            q = {"coach_id": coach_user_id, "year": year, "receipt_signed": True}
         total = 0.0
         async for r in db.coach_compensations.find(
-            {"coach_id": coach_user_id, "year": year, "receipt_signed": True},
-            {"_id": 0, "amount_gross": 1, "amount": 1},
+            q, {"_id": 0, "amount_gross": 1, "amount": 1},
         ):
             total += float(r.get("amount_gross") or r.get("amount") or 0)
         return round(total, 2)
@@ -21636,13 +21641,19 @@ async def _get_signed_yearly_total_as_coach(coach_user_id: str, year: int) -> fl
         return 0.0
 
 
-async def _get_signed_yearly_total_as_atleta_pro(athlete_id: str, year: int) -> float:
-    """Somma compensi firmati come Atleta PRO (atleta_pro_compensations) per l'anno."""
+async def _get_signed_yearly_total_as_atleta_pro(athlete_id: str, year: int, payment_shift: int = 0) -> float:
+    """Somma compensi firmati come Atleta PRO (atleta_pro_compensations) per l'anno.
+    Con payment_shift=1 (cassa = mese successivo) la competenza di dicembre viene
+    incassata a gennaio e conta nell'anno solare successivo."""
     try:
+        if payment_shift == 1:
+            q = {"atleta_id": athlete_id, "receipt_signed": True,
+                 "$or": [{"year": year, "month": {"$ne": 12}}, {"year": year - 1, "month": 12}]}
+        else:
+            q = {"atleta_id": athlete_id, "year": year, "receipt_signed": True}
         total = 0.0
         async for r in db.atleta_pro_compensations.find(
-            {"atleta_id": athlete_id, "year": year, "receipt_signed": True},
-            {"_id": 0, "amount_gross": 1, "amount": 1},
+            q, {"_id": 0, "amount_gross": 1, "amount": 1},
         ):
             total += float(r.get("amount_gross") or r.get("amount") or 0)
         return round(total, 2)
@@ -21978,18 +21989,58 @@ def _calculate_fiscal_year_total(
     contract_end: Optional[date],
     monthly_amount: float,
     year: int,
+    payment_shift: int = 0,
 ) -> dict:
     """Totale anno solare = somma compensi proporzionali nei 12 mesi dell'anno
-    (regola quartili). Ritorna anche breakdown per mese."""
+    (regola quartili). Ritorna anche breakdown per mese.
+
+    🆕 payment_shift: criterio di cassa.
+        0 = i compensi sono incassati nel mese di competenza (default).
+        1 = i compensi sono incassati il mese SUCCESSIVO: l'importo che cade nel
+            mese di pagamento `p` dell'anno solare corrisponde alla competenza del
+            mese `p-1` (e gennaio raccoglie la competenza di dicembre dell'anno prima).
+            Effetto netto: la competenza di dicembre slitta all'anno solare successivo.
+    """
     breakdown = []
     total = 0.0
-    for m in range(1, 13):
+    for p in range(1, 13):  # p = mese di PAGAMENTO nell'anno solare `year`
+        if payment_shift == 1:
+            comp_year = year if p > 1 else year - 1
+            comp_month = p - 1 if p > 1 else 12
+        else:
+            comp_year, comp_month = year, p
         amount, quartile = _calculate_proportional_amount_quartile(
-            contract_start, contract_end, monthly_amount, year, m,
+            contract_start, contract_end, monthly_amount, comp_year, comp_month,
         )
-        breakdown.append({"month": m, "amount": amount, "quartile": quartile})
+        breakdown.append({"month": p, "amount": amount, "quartile": quartile})
         total += amount
     return {"total": round(total, 2), "breakdown": breakdown}
+
+
+async def _get_payment_timing(society_id: Optional[str]) -> str:
+    """🆕 Legge il criterio di cassa della società per le soglie compensi.
+    Ritorna "same_month" (default) o "next_month"."""
+    try:
+        q = {"type": "society", "society_id": society_id} if society_id else {"type": "society"}
+        ss = await db.settings.find_one(q, {"_id": 0, "compensation_payment_timing": 1})
+        return (ss or {}).get("compensation_payment_timing") or "same_month"
+    except Exception:
+        return "same_month"
+
+
+def _payment_shift_from_timing(timing: Optional[str]) -> int:
+    return 1 if timing == "next_month" else 0
+
+
+def _rebucket_month_year_for_payment(month: int, year: int, payment_shift: int) -> tuple:
+    """🆕 Dato un record di COMPETENZA (month, year), ritorna (payment_month, payment_year)
+    secondo il criterio di cassa. Con payment_shift=1 la competenza di dicembre
+    diventa gennaio dell'anno successivo."""
+    if payment_shift != 1:
+        return month, year
+    if month >= 12:
+        return 1, year + 1
+    return month + 1, year
 
 
 
@@ -22113,6 +22164,8 @@ async def admin_person_compensation_summary(
     if year is None:
         year = datetime.now(timezone.utc).year
     year_next = year + 1
+    # 🆕 Criterio di cassa società (slittamento dicembre)
+    _shift = _payment_shift_from_timing(await _get_payment_timing(society_id))
 
     # === Estrai dati Coach (da users) ===
     coach_section = None
@@ -22133,8 +22186,8 @@ async def admin_person_compensation_summary(
                 "ras_total": ras_data["total"],
                 "ras_breakdown": ras_data["breakdown"],
                 "ras_calculable": bool(c_start and c_end),
-                "fiscal_year": _calculate_fiscal_year_total(c_start, c_end, c_monthly, year),
-                "fiscal_year_next": _calculate_fiscal_year_total(c_start, c_end, c_monthly, year_next),
+                "fiscal_year": _calculate_fiscal_year_total(c_start, c_end, c_monthly, year, _shift),
+                "fiscal_year_next": _calculate_fiscal_year_total(c_start, c_end, c_monthly, year_next, _shift),
             }
             if c_start:
                 coach_first_year = c_start.year
@@ -22157,8 +22210,8 @@ async def admin_person_compensation_summary(
             "ras_total": ras_data_a["total"],
             "ras_breakdown": ras_data_a["breakdown"],
             "ras_calculable": bool(a_start and a_end),
-            "fiscal_year": _calculate_fiscal_year_total(a_start, a_end, a_monthly, year),
-            "fiscal_year_next": _calculate_fiscal_year_total(a_start, a_end, a_monthly, year_next),
+            "fiscal_year": _calculate_fiscal_year_total(a_start, a_end, a_monthly, year, _shift),
+            "fiscal_year_next": _calculate_fiscal_year_total(a_start, a_end, a_monthly, year_next, _shift),
         }
         if a_start:
             athlete_first_year = a_start.year
@@ -24015,14 +24068,28 @@ async def get_coach_threshold_status(
         raise HTTPException(status_code=404, detail="Coach non trovato")
     
     monthly_compensation = coach.get("monthly_compensation", 0) or 0
-    
-    # Calculate yearly total from signed receipts
-    yearly_records = await db.coach_compensations.find({
-        "coach_id": coach_id,
-        "year": year,
-        "receipt_signed": True,
-        "is_previous_season": {"$ne": True}
-    }).to_list(12)
+
+    # 🆕 Criterio di cassa società: con "next_month" la competenza di dicembre
+    # viene incassata a gennaio e conta nell'anno solare successivo.
+    _timing = await _get_payment_timing(coach.get("society_id"))
+    _shift = _payment_shift_from_timing(_timing)
+
+    # Calculate yearly total from signed receipts (re-bucketing December se cassa = mese successivo)
+    if _shift == 1:
+        _yearly_q = {
+            "coach_id": coach_id,
+            "receipt_signed": True,
+            "is_previous_season": {"$ne": True},
+            "$or": [{"year": year, "month": {"$ne": 12}}, {"year": year - 1, "month": 12}],
+        }
+    else:
+        _yearly_q = {
+            "coach_id": coach_id,
+            "year": year,
+            "receipt_signed": True,
+            "is_previous_season": {"$ne": True},
+        }
+    yearly_records = await db.coach_compensations.find(_yearly_q).to_list(24)
     
     yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
     
@@ -24034,7 +24101,7 @@ async def get_coach_threshold_status(
     athlete_pro_monthly_compensation = 0.0
     if linked_athlete_pro:
         athlete_pro_yearly_total = await _get_signed_yearly_total_as_atleta_pro(
-            linked_athlete_pro["id"], year
+            linked_athlete_pro["id"], year, _shift
         )
         athlete_pro_monthly_compensation = float(
             linked_athlete_pro.get("monthly_compensation") or 0
@@ -24158,8 +24225,8 @@ async def get_coach_threshold_status(
         months_in_year = list(range(1, 13))
     all_year_records = await db.coach_compensations.find({
         "coach_id": coach_id,
-        "year": year
-    }).to_list(12)
+        "year": {"$in": ([year] if _shift == 0 else [year, year - 1])}
+    }).to_list(24)
     # 📌 Include anche i compensi esterni dichiarati nell'anno per il calcolo
     # proiettato del mese di superamento delle soglie 5K/15K
     coach_external_year_total = await _get_year_external_compensations_total(coach_id, year)
@@ -24169,24 +24236,46 @@ async def get_coach_threshold_status(
     if linked_athlete_pro:
         athlete_pro_year_records = await db.atleta_pro_compensations.find({
             "atleta_id": linked_athlete_pro["id"],
-            "year": year
-        }).to_list(12)
+            "year": {"$in": ([year] if _shift == 0 else [year, year - 1])}
+        }).to_list(24)
+
+    def _within_contract(cy: int, cm: int) -> bool:
+        if contract_year is None:
+            return True
+        if cy < contract_year or (cy == contract_year and cm < contract_start_month):
+            return False
+        if contract_end_year is not None and (cy > contract_end_year or (cy == contract_end_year and cm > contract_end_month)):
+            return False
+        return True
+
+    def _competence_amount(cy: int, cm: int) -> float:
+        if not _within_contract(cy, cm):
+            return 0.0
+        rec = next((r for r in all_year_records if r.get("year") == cy and r.get("month") == cm), None)
+        amt = rec.get("amount_gross", rec.get("amount", monthly_compensation)) if rec else monthly_compensation
+        if linked_athlete_pro:
+            ap = next((r for r in athlete_pro_year_records if r.get("year") == cy and r.get("month") == cm), None)
+            amt += ap.get("amount_gross", ap.get("amount", athlete_pro_monthly_compensation)) if ap else athlete_pro_monthly_compensation
+        return amt
+
     projected_total = (prior_compensation if (contract_year == year) else 0) + coach_external_year_total
     threshold_5k_month = 0
     threshold_15k_month = 0
-    for m in months_in_year:
-        existing = next((r for r in all_year_records if r.get("month") == m), None)
-        amt = existing.get("amount_gross", existing.get("amount", monthly_compensation)) if existing else monthly_compensation
-        # 🆕 FASE 2 — Aggiungi il compenso Atleta PRO dello stesso mese (se presente / previsto)
-        if linked_athlete_pro:
-            ap_existing = next((r for r in athlete_pro_year_records if r.get("month") == m), None)
-            ap_amt = ap_existing.get("amount_gross", ap_existing.get("amount", athlete_pro_monthly_compensation)) if ap_existing else athlete_pro_monthly_compensation
-            amt += ap_amt
+    # p = mese di PAGAMENTO nell'anno solare `year`. Con cassa "mese successivo"
+    # la competenza di dicembre slitta a gennaio dell'anno dopo (quindi esce da quest'anno).
+    for p in range(1, 13):
+        if _shift == 1:
+            cy, cm = (year, p - 1) if p > 1 else (year - 1, 12)
+        else:
+            cy, cm = year, p
+        amt = _competence_amount(cy, cm)
+        if amt <= 0:
+            continue
         projected_total += amt
         if projected_total > 5000 and threshold_5k_month == 0:
-            threshold_5k_month = m
+            threshold_5k_month = p
         if projected_total > 15000 and threshold_15k_month == 0:
-            threshold_15k_month = m
+            threshold_15k_month = p
     
     # Extend warning to also cover projected exceedance (not just next-receipt exceedance).
     # This way the banner appears as soon as we know the contract will cross the threshold,
@@ -29618,6 +29707,9 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
     
     monthly_compensation = dirigente.get("monthly_compensation", 0) or 0
     prior_compensation = dirigente.get("other_annual_compensation", 0) or dirigente.get("prior_year_compensation", 0) or 0
+    # 🆕 Criterio di cassa società
+    _timing = await _get_payment_timing(dirigente.get("society_id"))
+    _shift = _payment_shift_from_timing(_timing)
     
     # Get contract start year to determine if prior compensation applies
     contract_start = dirigente.get("contract_start_date")
@@ -29635,12 +29727,12 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
     applies_prior = (contract_start_year == year) if contract_start_year else False
     effective_prior = prior_compensation if applies_prior else 0
     
-    yearly_records = await db.dirigente_compensations.find({
-        "dirigente_id": dirigente_id,
-        "year": year,
-        "receipt_signed": True,
-        "is_previous_season": {"$ne": True}
-    }).to_list(12)
+    if _shift == 1:
+        _yq = {"dirigente_id": dirigente_id, "receipt_signed": True, "is_previous_season": {"$ne": True},
+               "$or": [{"year": year, "month": {"$ne": 12}}, {"year": year - 1, "month": 12}]}
+    else:
+        _yq = {"dirigente_id": dirigente_id, "year": year, "receipt_signed": True, "is_previous_season": {"$ne": True}}
+    yearly_records = await db.dirigente_compensations.find(_yq).to_list(24)
     
     yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
     
@@ -29694,28 +29786,44 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
     else:
         months_in_year = list(range(1, 13))
     
-    # Get ALL records for this year (signed and unsigned)
+    # Get ALL records for this year (signed and unsigned); + anno precedente se cassa mese successivo
     all_year_records = await db.dirigente_compensations.find({
         "dirigente_id": dirigente_id,
-        "year": year,
+        "year": {"$in": ([year] if _shift == 0 else [year, year - 1])},
         "is_previous_season": {"$ne": True}
-    }).to_list(12)
+    }).to_list(24)
     
     # Calculate projected total with actual amounts where available
     # Include anche i compensi esterni dichiarati nell'anno per il calcolo
     # proiettato del mese di superamento delle soglie 5K/15K
     dirig_external_year_total = await _get_year_external_compensations_total(dirigente_id, year)
+
+    def _within_contract_d(cy: int, cm: int) -> bool:
+        if contract_start_year is None:
+            return True
+        if cy < contract_start_year or (cy == contract_start_year and cm < contract_start_month):
+            return False
+        if contract_end_year is not None and (cy > contract_end_year or (cy == contract_end_year and cm > contract_end_month)):
+            return False
+        return True
+
     projected_total = effective_prior + dirig_external_year_total
     threshold_5k_month = 0
     threshold_15k_month = 0
-    for m in months_in_year:
-        existing = next((r for r in all_year_records if r.get("month") == m), None)
+    for p in range(1, 13):
+        if _shift == 1:
+            cy, cm = (year, p - 1) if p > 1 else (year - 1, 12)
+        else:
+            cy, cm = year, p
+        if not _within_contract_d(cy, cm):
+            continue
+        existing = next((r for r in all_year_records if r.get("year") == cy and r.get("month") == cm), None)
         amt = existing.get("amount_gross", existing.get("amount", monthly_compensation)) if existing else monthly_compensation
         projected_total += amt
         if projected_total > 5000 and threshold_5k_month == 0:
-            threshold_5k_month = m
+            threshold_5k_month = p
         if projected_total > 15000 and threshold_15k_month == 0:
-            threshold_15k_month = m
+            threshold_15k_month = p
     
     # Calculate if we're approaching thresholds based on PROJECTED total
     next_total = total_with_prior + next_amount
@@ -30381,14 +30489,17 @@ async def get_collaboratore_threshold_status(
         raise HTTPException(status_code=404, detail="Collaboratore non trovato")
     
     monthly_compensation = collaboratore.get("monthly_compensation", 0) or 0
+    # 🆕 Criterio di cassa società
+    _timing = await _get_payment_timing(collaboratore.get("society_id"))
+    _shift = _payment_shift_from_timing(_timing)
     
     # Calculate yearly total from signed receipts
-    yearly_records = await db.collaboratore_compensations.find({
-        "collaboratore_id": collaboratore_id,
-        "year": year,
-        "receipt_signed": True,
-        "is_previous_season": {"$ne": True}
-    }).to_list(12)
+    if _shift == 1:
+        _yq = {"collaboratore_id": collaboratore_id, "receipt_signed": True, "is_previous_season": {"$ne": True},
+               "$or": [{"year": year, "month": {"$ne": 12}}, {"year": year - 1, "month": 12}]}
+    else:
+        _yq = {"collaboratore_id": collaboratore_id, "year": year, "receipt_signed": True, "is_previous_season": {"$ne": True}}
+    yearly_records = await db.collaboratore_compensations.find(_yq).to_list(24)
     
     yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
     
@@ -30496,25 +30607,42 @@ async def get_collaboratore_threshold_status(
         collab_months_in_year = list(range(1, 13))
     
     all_collab_year_records = await db.collaboratore_compensations.find({
-        "collaboratore_id": collaboratore_id, "year": year,
+        "collaboratore_id": collaboratore_id,
+        "year": {"$in": ([year] if _shift == 0 else [year, year - 1])},
         "is_previous_season": {"$ne": True}
-    }).to_list(12)
+    }).to_list(24)
     
     eff_prior = prior_compensation if (collab_start_year_val and year == collab_start_year_val) else 0
     # 📌 Include anche i compensi esterni dichiarati nell'anno per il calcolo
     # proiettato del mese di superamento delle soglie 5K/15K
     eff_external_year = await _get_year_external_compensations_total(collaboratore_id, year)
+
+    def _within_contract_c(cy: int, cm: int) -> bool:
+        if not collab_start_year_val:
+            return True
+        if cy < collab_start_year_val or (cy == collab_start_year_val and cm < collab_start_month):
+            return False
+        if collab_end_year_val and (cy > collab_end_year_val or (cy == collab_end_year_val and cm > collab_end_month)):
+            return False
+        return True
+
     proj_total = eff_prior + eff_external_year
     collab_threshold_5k_month = 0
     collab_threshold_15k_month = 0
-    for m in collab_months_in_year:
-        existing = next((r for r in all_collab_year_records if r.get("month") == m), None)
+    for p in range(1, 13):
+        if _shift == 1:
+            cy, cm = (year, p - 1) if p > 1 else (year - 1, 12)
+        else:
+            cy, cm = year, p
+        if not _within_contract_c(cy, cm):
+            continue
+        existing = next((r for r in all_collab_year_records if r.get("year") == cy and r.get("month") == cm), None)
         amt = existing.get("amount_gross", existing.get("amount", monthly_compensation)) if existing else monthly_compensation
         proj_total += amt
         if proj_total > 5000 and collab_threshold_5k_month == 0:
-            collab_threshold_5k_month = m
+            collab_threshold_5k_month = p
         if proj_total > 15000 and collab_threshold_15k_month == 0:
-            collab_threshold_15k_month = m
+            collab_threshold_15k_month = p
     
     needs_warning_5000 = (not prior_already_exceeded_5k) and not (declaration_5000 and declaration_5000.get("signed")) and (collab_threshold_5k_month > 0 and yearly_total < 5000)
     needs_warning_15000 = (not prior_already_exceeded_15k) and not (declaration_15000 and declaration_15000.get("signed")) and (collab_threshold_15k_month > 0 and yearly_total <= 15000)
@@ -31474,22 +31602,25 @@ async def get_athlete_threshold_status(athlete_id: str, year: int, current_user 
     
     monthly_compensation = member.get("monthly_compensation", 0) or 0
     prior_compensation = member.get("other_annual_compensation", 0) or 0
+    # 🆕 Criterio di cassa società
+    _timing = await _get_payment_timing(member.get("society_id"))
+    _shift = _payment_shift_from_timing(_timing)
     
     # Get records based on member type
     if member_type == "athlete":
-        # 🆕 28/06/2026 — Fix nome collezione (era "atleta_pro_compensations" inesistente)
-        yearly_records = await db.athlete_compensation_receipts.find({
-            "athlete_id": athlete_id,
-            "year": year,
-            "receipt_signed": True
-        }).to_list(12)
+        if _shift == 1:
+            _yq = {"athlete_id": athlete_id, "receipt_signed": True,
+                   "$or": [{"year": year, "month": {"$ne": 12}}, {"year": year - 1, "month": 12}]}
+        else:
+            _yq = {"athlete_id": athlete_id, "year": year, "receipt_signed": True}
+        yearly_records = await db.athlete_compensation_receipts.find(_yq).to_list(24)
     else:
-        # For coaches/dirigenti, use coach_compensations or similar
-        yearly_records = await db.coach_compensations.find({
-            "coach_id": athlete_id,
-            "year": year,
-            "signed": True
-        }).to_list(12)
+        if _shift == 1:
+            _yq = {"coach_id": athlete_id, "signed": True,
+                   "$or": [{"year": year, "month": {"$ne": 12}}, {"year": year - 1, "month": 12}]}
+        else:
+            _yq = {"coach_id": athlete_id, "year": year, "signed": True}
+        yearly_records = await db.coach_compensations.find(_yq).to_list(24)
     
     yearly_total = sum(r.get("amount_gross", r.get("amount", 0)) for r in yearly_records)
     
@@ -31518,7 +31649,7 @@ async def get_athlete_threshold_status(athlete_id: str, year: int, current_user 
         linked_coach_user = await _find_linked_compensated_user_for_athlete(member)
         if linked_coach_user:
             coach_yearly_total = await _get_signed_yearly_total_as_coach(
-                linked_coach_user["id"], year
+                linked_coach_user["id"], year, _shift
             )
             coach_monthly_compensation = float(linked_coach_user.get("monthly_compensation") or 0)
             yearly_total += coach_yearly_total
@@ -31565,44 +31696,60 @@ async def get_athlete_threshold_status(athlete_id: str, year: int, current_user 
         months_in_year = list(range(1, 13))
     
     # Tutti i record di entrambe le posizioni per la proiezione mensile
+    _proj_years = [year] if _shift == 0 else [year, year - 1]
     if member_type == "athlete":
-        # 🆕 28/06/2026 — Fix nome collezione (era "atleta_pro_compensations" inesistente)
         all_athlete_pro_records = await db.athlete_compensation_receipts.find({
-            "athlete_id": athlete_id, "year": year
-        }).to_list(12)
+            "athlete_id": athlete_id, "year": {"$in": _proj_years}
+        }).to_list(24)
     else:
         all_athlete_pro_records = []
     all_coach_records: list = []
     if linked_coach_user:
         all_coach_records = await db.coach_compensations.find({
-            "coach_id": linked_coach_user["id"], "year": year
-        }).to_list(12)
+            "coach_id": linked_coach_user["id"], "year": {"$in": _proj_years}
+        }).to_list(24)
     
     base_proj = external_year_total + (
         prior_compensation if (contract_start_year == year) else 0
     )
+
+    def _within_contract_ap(cy: int, cm: int) -> bool:
+        if not contract_start_year:
+            return True
+        if cy < contract_start_year or (cy == contract_start_year and cm < contract_start_month):
+            return False
+        if contract_end_year and (cy > contract_end_year or (cy == contract_end_year and cm > contract_end_month)):
+            return False
+        return True
+
     projected_total = base_proj
     threshold_5k_month = 0
     threshold_15k_month = 0
-    for m in months_in_year:
+    for p in range(1, 13):
+        if _shift == 1:
+            cy, cm = (year, p - 1) if p > 1 else (year - 1, 12)
+        else:
+            cy, cm = year, p
+        if not _within_contract_ap(cy, cm):
+            continue
         # Componente Atleta PRO (o Coach diretto)
         if member_type == "athlete":
-            ap_rec = next((r for r in all_athlete_pro_records if r.get("month") == m), None)
+            ap_rec = next((r for r in all_athlete_pro_records if r.get("year") == cy and r.get("month") == cm), None)
             ap_amt = ap_rec.get("amount_gross", ap_rec.get("amount", monthly_compensation)) if ap_rec else monthly_compensation
         else:
-            ap_rec = next((r for r in yearly_records if r.get("month") == m), None)
+            ap_rec = next((r for r in yearly_records if r.get("year") == cy and r.get("month") == cm), None)
             ap_amt = ap_rec.get("amount_gross", ap_rec.get("amount", monthly_compensation)) if ap_rec else monthly_compensation
         amt = ap_amt
         # Componente Coach collegato (solo se atleta dual-role)
         if linked_coach_user:
-            c_rec = next((r for r in all_coach_records if r.get("month") == m), None)
+            c_rec = next((r for r in all_coach_records if r.get("year") == cy and r.get("month") == cm), None)
             c_amt = c_rec.get("amount_gross", c_rec.get("amount", coach_monthly_compensation)) if c_rec else coach_monthly_compensation
             amt += c_amt
         projected_total += amt
         if projected_total > 5000 and threshold_5k_month == 0:
-            threshold_5k_month = m
+            threshold_5k_month = p
         if projected_total > 15000 and threshold_15k_month == 0:
-            threshold_15k_month = m
+            threshold_15k_month = p
     
     # Approaching basato su totale cumulativo + monthly cumulativo
     cumulative_monthly = monthly_compensation + coach_monthly_compensation

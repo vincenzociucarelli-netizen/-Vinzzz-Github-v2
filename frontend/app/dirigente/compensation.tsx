@@ -133,6 +133,7 @@ export default function DirigenteCompensation() {
   const [contractStartMonth, setContractStartMonth] = useState<number | null>(null);
   const [contractEndMonth, setContractEndMonth] = useState<number | null>(null);
   const [priorCompensation, setPriorCompensation] = useState(0);
+  const [paymentShift, setPaymentShift] = useState(0);
   
   // Threshold status
   const [thresholdStatus, setThresholdStatus] = useState<ThresholdStatus | null>(null);
@@ -188,6 +189,7 @@ export default function DirigenteCompensation() {
       // Load profile
       const profileRes = await api.get('/auth/me');
       setProfile(profileRes.data);
+      try { const sRes = await api.get('/settings/society'); setPaymentShift(sRes.data?.compensation_payment_timing === 'next_month' ? 1 : 0); } catch { /* default */ }
       
       // Parse contract dates
       let startYear = null;
@@ -605,6 +607,48 @@ export default function DirigenteCompensation() {
       signedTotal: signedTotal + prior,
       months: monthsInYear,
     };
+  };
+
+  // 🆕 Criterio di cassa: riepilogo soglie per anno solare di PAGAMENTO
+  const isWithinContract = (cy: number, cm: number): boolean => {
+    if (!contractStartYear || !contractStartMonth) return true;
+    if (cy < contractStartYear || (cy === contractStartYear && cm < contractStartMonth)) return false;
+    if (contractEndYear && contractEndMonth && (cy > contractEndYear || (cy === contractEndYear && cm > contractEndMonth))) return false;
+    return true;
+  };
+  const getCashCompetenceForYear = (year: number): { cy: number; cm: number }[] => {
+    const res: { cy: number; cm: number }[] = [];
+    for (let p = 1; p <= 12; p++) {
+      let cy: number, cm: number;
+      if (paymentShift === 1) { if (p > 1) { cy = year; cm = p - 1; } else { cy = year - 1; cm = 12; } }
+      else { cy = year; cm = p; }
+      if (isWithinContract(cy, cm)) res.push({ cy, cm });
+    }
+    return res;
+  };
+  const getYearSummaryCash = (year: number) => {
+    if (!contractStartYear || !contractEndYear || paymentShift === 0) {
+      const s = getYearSummary(year);
+      const cms = (s.months as number[]) || [];
+      return { ...s, rangeLabel: cms.length ? `${MONTH_NAMES[cms[0]]?.substring(0, 3)}-${MONTH_NAMES[cms[cms.length - 1]]?.substring(0, 3)}` : '' };
+    }
+    const monthlyComp = profile?.monthly_compensation || 0;
+    const comp = getCashCompetenceForYear(year);
+    const monthCount = comp.length;
+    const yearlyFromContractBase = monthlyComp * monthCount;
+    let actualYearlyTotal = 0;
+    let supplementaryTotal = 0;
+    comp.forEach(({ cy, cm }) => {
+      const receipt = records.find(r => r.year === cy && r.month === cm);
+      const receiptAmount = receipt?.amount_gross || receipt?.amount || monthlyComp;
+      actualYearlyTotal += receiptAmount;
+      if (receiptAmount > monthlyComp) supplementaryTotal += receiptAmount - monthlyComp;
+    });
+    const prior = year === contractStartYear ? priorCompensation : 0;
+    const total = actualYearlyTotal + prior;
+    const cms = comp.map(c => c.cm);
+    const rangeLabel = cms.length ? `${MONTH_NAMES[cms[0]]?.substring(0, 3)}-${MONTH_NAMES[cms[cms.length - 1]]?.substring(0, 3)}` : '';
+    return { year, monthCount, monthlyComp, yearlyFromContract: actualYearlyTotal, yearlyFromContractBase, supplementaryTotal, priorCompensation: prior, totalProjected: total, signedTotal: total, months: cms, rangeLabel };
   };
 
   const renderThresholdWarnings = () => {
@@ -1214,7 +1258,7 @@ export default function DirigenteCompensation() {
             
             {/* First Year Summary (with prior compensation) - GREEN theme */}
             {(() => {
-              const summary = getYearSummary(contractStartYear);
+              const summary = getYearSummaryCash(contractStartYear);
               const exceeds5k = summary.totalProjected > 5000;
               const exceeds15k = summary.totalProjected > 15000;
               // First year: GREEN base color
@@ -1226,7 +1270,7 @@ export default function DirigenteCompensation() {
               return (
                 <View key={`summary-${contractStartYear}`} style={[styles.yearBox, { backgroundColor: bgColor, borderLeftWidth: 4, borderLeftColor: borderColor }]}>
                   <Text style={[styles.yearBoxTitle, { color: headerColor }]}>
-                    {icon} Anno {contractStartYear} ({MONTH_NAMES[contractStartMonth || 9].substring(0,3)}-Dic: {summary.monthCount} mesi)
+                    {icon} Anno {contractStartYear} ({summary.rangeLabel || `${MONTH_NAMES[contractStartMonth || 9].substring(0,3)}-Dic`}: {summary.monthCount} mesi)
                   </Text>
                   
                   {/* Linear layout like Coach view */}
@@ -1244,7 +1288,7 @@ export default function DirigenteCompensation() {
             
             {/* Second Year Summary (if contract spans 2 years) - BLUE theme */}
             {contractEndYear > contractStartYear && (() => {
-              const summary = getYearSummary(contractEndYear);
+              const summary = getYearSummaryCash(contractEndYear);
               const exceeds5k = summary.totalProjected > 5000;
               const exceeds15k = summary.totalProjected > 15000;
               // Second year: BLUE base color
@@ -1256,7 +1300,7 @@ export default function DirigenteCompensation() {
               return (
                 <View key={`summary-${contractEndYear}`} style={[styles.yearBox, { backgroundColor: bgColor, borderLeftWidth: 4, borderLeftColor: borderColor }]}>
                   <Text style={[styles.yearBoxTitle, { color: headerColor }]}>
-                    {icon} Anno {contractEndYear} (Gen-{MONTH_NAMES[contractEndMonth || 5].substring(0,3)}: {summary.monthCount} mesi)
+                    {icon} Anno {contractEndYear} ({summary.rangeLabel || `Gen-${MONTH_NAMES[contractEndMonth || 5].substring(0,3)}`}: {summary.monthCount} mesi)
                   </Text>
                   
                   {/* Linear layout like Coach view */}

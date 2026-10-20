@@ -1,0 +1,29 @@
+{
+  "summary": "Backend-only testing della nuova feature 'compensation_payment_timing' (same_month vs next_month) sulla società. 14/14 pytest passano. Verificato: (1) PATCH /api/settings/society con body {compensation_payment_timing:'next_month'|'same_month'} persiste correttamente e GET /api/settings/society lo ritorna; default = 'same_month'. (2) GET /api/coach/69adf7618a40c8115bda5c2d/threshold-status/2026 ritorna yearly_total=7700 in same_month e yearly_total=9400 in next_month (match esatto con i valori attesi del PRD). (3) Non-regressione verificata: tornando a same_month dopo aver impostato next_month, il yearly_total torna identico al baseline 7700. (4) /api/dirigente/{id}/threshold-status/2026, /api/collaboratore/{id}/threshold-status/2026, /api/prime-squadre/athletes/{id}/threshold-status/2026 ritornano 200 in entrambe le modalità (nessun 500); usati rispettivamente dirigenti CIUCHETTI VINZZZZ, collaboratore DARK FRANZ, atleta compensato 'Testflow pro'. (5) /api/admin/persons/{user_id}/compensation-summary?year=2026 ritorna 200 in entrambe le modalità; la struttura espone fiscal_year_current/fiscal_year_next al top-level e coach_section.fiscal_year/coach_section.fiscal_year_next nel sotto-oggetto (nessun 500). Per il coach di riferimento il coach_section.fiscal_year.total è 10200 in same_month e 11900 in next_month (coerente con contratto Set 2025 - Giu 2026, monthly 1700: la competenza di Dic 2025 scivola in Gen 2026 pagando 7 mesi * 1700). Teardown eseguito: compensation_payment_timing ripristinato a 'same_month' nel DB preview.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_compensation_payment_timing.py",
+    "/app/test_reports/pytest/compensation_payment_timing.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Helper _calculate_fiscal_year_total (/app/backend/server.py:21987) implementa il payment_shift in modo pulito: con shift=1 il mese di pagamento p raccoglie la competenza di (p-1), e Gennaio raccoglie Dicembre dell'anno precedente — matematicamente corretto ed equivalente ai valori attesi dal problem statement.",
+    "_get_payment_timing legge db.settings con fallback a 'same_month' sia su documento mancante sia su eccezione: safe default che evita 500 su società senza settings.",
+    "Il campo è distribuito correttamente nei 4 endpoint threshold-status (coach ~24075, dirigente ~29712, collaboratore ~30494, atleta PRO ~31607) e nel compensation-summary (~22168) via la coppia _get_payment_timing/_payment_shift_from_timing — nessun endpoint dimenticato tra quelli richiesti dal PRD."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_compensation_payment_timing.py (nuovo)"
+  ],
+  "success_rate": {"backend": "100% (14/14)", "frontend": "N/A (backend-only)"},
+  "seed_data_creation": "Nessun dato seed creato. Il setting compensation_payment_timing è stato temporaneamente spostato tra 'same_month' e 'next_month' durante i test ma ripristinato a 'same_month' al teardown (verificato via GET /api/settings/society post-run).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Feature stabile. Numeri di riferimento utili per retest: coach 69adf7618a40c8115bda5c2d (RICA FEDE monthly 1700, contratto Set 2025 - Giu 2026, prior=0): yearly_total 2026 = 7700 (same_month) / 9400 (next_month); coach_section.fiscal_year.total nel compensation-summary = 10200 (same_month) / 11900 (next_month). Teardown-safety: il modulo di test include una fixture autouse scope=module che ripristina sempre compensation_payment_timing='same_month' alla fine.",
+  "rca_of_issue": "N/A — testing di feature nuova, nessun bug trovato."
+}
