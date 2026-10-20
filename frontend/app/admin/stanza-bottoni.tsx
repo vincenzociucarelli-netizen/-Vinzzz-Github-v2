@@ -91,86 +91,6 @@ export default function StanzaBottoniScreen() {
 
   const sections: { title: string; items: OpItem[] }[] = [
     {
-      title: 'Periodo di Prova',
-      items: [
-        {
-          key: 'close_trials',
-          icon: 'flag',
-          color: '#C62828',
-          danger: true,
-          title: 'Fine periodo prove',
-          what: 'Chiude in blocco TUTTE le prove ancora attive della società. Da quel momento ogni atleta deve firmare la privacy, pagare la quota concordata e inserire i dati del certificato medico (consegnando copia e poi originale alla società).',
-          how: 'Premi il pulsante e conferma. L\'operazione vale per tutta la società e non riguarda chi è già attivo o ritirato.',
-          action: 'close_trials',
-          badge: trialsCount !== null ? `${trialsCount} in prova` : undefined,
-        },
-      ],
-    },
-    {
-      title: 'Inizio / Fine Stagione',
-      items: [
-        {
-          key: 'nuova_stagione',
-          icon: 'sparkles',
-          color: '#6A1B9A',
-          title: 'Nuova Stagione',
-          what: 'Avvia una nuova stagione sportiva archiviando i dati di quella precedente.',
-          how: 'Apri e segui la procedura guidata di creazione nuova stagione.',
-          route: '/admin/nuova-stagione',
-        },
-        {
-          key: 'riconferma',
-          icon: 'refresh-circle',
-          color: '#1565C0',
-          title: 'Riconferma Stagione',
-          what: 'Chiede agli iscritti di confermare la partecipazione alla nuova stagione.',
-          how: 'Avvia la riconferma: gli atleti riceveranno la richiesta di conferma.',
-          route: '/admin/season-reconfirm',
-        },
-        {
-          key: 'preseason',
-          icon: 'megaphone',
-          color: '#2E7D32',
-          title: 'Pre-Stagione ed Eventi',
-          what: 'Gestisce pre-iscrizioni, open day, tryout ed eventi prima della stagione.',
-          how: 'Crea un evento e condividi il link di pre-iscrizione con le famiglie.',
-          route: '/admin/preseason',
-        },
-        {
-          key: 'seasons',
-          icon: 'archive',
-          color: '#5D4037',
-          title: 'Storico Stagioni',
-          what: 'Consulta lo storico delle stagioni passate (atleti, staff e campionati archiviati).',
-          how: 'Apri per rivedere i dati delle stagioni precedenti.',
-          route: '/admin/seasons',
-        },
-      ],
-    },
-    {
-      title: 'Calendario Gare (FIPAV)',
-      items: [
-        {
-          key: 'import_calendar',
-          icon: 'globe',
-          color: '#00838F',
-          title: 'Importa Calendario',
-          what: 'Importa il calendario gare dalla federazione (FIPAV e altre).',
-          how: 'Segui la procedura: scegli stagione, società e campionati da importare.',
-          route: '/admin/import-calendar',
-        },
-        {
-          key: 'sync_fipav',
-          icon: 'sync',
-          color: '#EF6C00',
-          title: 'Sincronizza FIPAV',
-          what: 'Aggiorna date, risultati e campi di gioco delle gare già in archivio leggendo il portale FIPAV.',
-          how: 'Premi: controlla il portale e aggiorna in automatico le gare con variazioni.',
-          action: 'sync_fipav',
-        },
-      ],
-    },
-    {
       title: 'Contabilità e Compensi',
       items: [
         {
@@ -262,6 +182,45 @@ export default function StanzaBottoniScreen() {
       ],
     },
     {
+      title: 'Calendario Gare (FIPAV)',
+      items: [
+        {
+          key: 'import_calendar',
+          icon: 'globe',
+          color: '#00838F',
+          title: 'Importa Calendario',
+          what: 'Importa il calendario gare dalla federazione (FIPAV e altre).',
+          how: 'Segui la procedura: scegli stagione, società e campionati da importare.',
+          route: '/admin/import-calendar',
+        },
+        {
+          key: 'sync_fipav',
+          icon: 'sync',
+          color: '#EF6C00',
+          title: 'Sincronizza FIPAV',
+          what: 'Aggiorna date, risultati e campi di gioco delle gare già in archivio leggendo il portale FIPAV.',
+          how: 'Premi: controlla il portale e aggiorna in automatico le gare con variazioni.',
+          action: 'sync_fipav',
+        },
+      ],
+    },
+    {
+      title: 'Periodo di Prova',
+      items: [
+        {
+          key: 'close_trials',
+          icon: 'flag',
+          color: '#C62828',
+          danger: true,
+          title: 'Fine periodo prove',
+          what: 'Chiude in blocco TUTTE le prove ancora attive della società. Da quel momento ogni atleta deve firmare la privacy, pagare la quota concordata e inserire i dati del certificato medico (consegnando copia e poi originale alla società).',
+          how: 'Premi il pulsante e conferma. L\'operazione vale per tutta la società e non riguarda chi è già attivo o ritirato.',
+          action: 'close_trials',
+          badge: trialsCount !== null ? `${trialsCount} in prova` : undefined,
+        },
+      ],
+    },
+    {
       title: 'Manutenzione Dati',
       items: [
         {
@@ -290,6 +249,47 @@ export default function StanzaBottoniScreen() {
           what: 'Verifica la distribuzione delle stagioni attive (utile se liste o archivi appaiono vuoti).',
           how: 'Apri e leggi i conteggi per atleti, squadre e utenti.',
           route: '/admin/diagnose',
+        },
+      ],
+    },
+    {
+      title: 'Inizio / Fine Stagione (una volta l\'anno)',
+      items: [
+        {
+          key: 'nuova_stagione',
+          icon: 'sparkles',
+          color: '#6A1B9A',
+          title: 'Nuova Stagione',
+          what: 'Avvia una nuova stagione sportiva archiviando i dati di quella precedente.',
+          how: 'Apri e segui la procedura guidata di creazione nuova stagione.',
+          route: '/admin/nuova-stagione',
+        },
+        {
+          key: 'riconferma',
+          icon: 'refresh-circle',
+          color: '#1565C0',
+          title: 'Riconferma Stagione',
+          what: 'Chiede agli iscritti di confermare la partecipazione alla nuova stagione.',
+          how: 'Avvia la riconferma: gli atleti riceveranno la richiesta di conferma.',
+          route: '/admin/season-reconfirm',
+        },
+        {
+          key: 'preseason',
+          icon: 'megaphone',
+          color: '#2E7D32',
+          title: 'Pre-Stagione ed Eventi',
+          what: 'Gestisce pre-iscrizioni, open day, tryout ed eventi prima della stagione.',
+          how: 'Crea un evento e condividi il link di pre-iscrizione con le famiglie.',
+          route: '/admin/preseason',
+        },
+        {
+          key: 'seasons',
+          icon: 'archive',
+          color: '#5D4037',
+          title: 'Storico Stagioni',
+          what: 'Consulta lo storico delle stagioni passate (atleti, staff e campionati archiviati).',
+          how: 'Apri per rivedere i dati delle stagioni precedenti.',
+          route: '/admin/seasons',
         },
       ],
     },

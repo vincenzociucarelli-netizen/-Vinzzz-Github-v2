@@ -465,6 +465,16 @@ export default function AdminDashboard() {
         {/* 🆕 20/07/2026 — Icone azioni spostate al confine blu/bianco (fondo dell'header) */}
         <View style={styles.headerBottomIconsRow}>
           <View style={styles.headerButtons}>
+            {/* 🔍 Ricerca funzioni (command palette) */}
+            <TouchableOpacity
+              onPress={() => router.push('/admin/function-search')}
+              style={styles.headerIconBtn}
+              hitSlop={HEADER_ICON_HIT_SLOP}
+              activeOpacity={0.6}
+              data-testid="admin-function-search-btn"
+            >
+              <Text style={{ fontSize: 17 }}>🔍</Text>
+            </TouchableOpacity>
             {/* Notifications Bell */}
             <TouchableOpacity
               onPress={() => router.push('/admin/notifications')}
