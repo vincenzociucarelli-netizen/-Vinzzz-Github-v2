@@ -136,6 +136,8 @@ export default function CoachCompensation() {
   const [contractStartMonth, setContractStartMonth] = useState<number | null>(null);
   const [contractEndMonth, setContractEndMonth] = useState<number | null>(null);
   const [priorCompensation, setPriorCompensation] = useState(0);
+  // 🆕 Criterio di cassa società: 0 = pagato nel mese di competenza, 1 = pagato il mese successivo
+  const [paymentShift, setPaymentShift] = useState(0);
   // 🆕 19/06/2026 — Edit pregressi + accept compenso (migrato da /coach/profile)
   const [editingPrior, setEditingPrior] = useState(false);
   const [priorDraft, setPriorDraft] = useState('0');
@@ -254,6 +256,12 @@ export default function CoachCompensation() {
       // Load profile
       const profileRes = await api.get('/auth/me');
       setProfile(profileRes.data);
+
+      // 🆕 Criterio di cassa società (soglie compensi)
+      try {
+        const sRes = await api.get('/settings/society');
+        setPaymentShift(sRes.data?.compensation_payment_timing === 'next_month' ? 1 : 0);
+      } catch { /* default same_month */ }
       
       // Parse contract dates
       let startYear = null;
@@ -854,6 +862,70 @@ export default function CoachCompensation() {
     };
   };
 
+  // 🆕 Criterio di cassa: una competenza è "incassata" nel mese successivo?
+  const isWithinContract = (cy: number, cm: number): boolean => {
+    if (!contractStartYear || !contractStartMonth) return true;
+    if (cy < contractStartYear || (cy === contractStartYear && cm < contractStartMonth)) return false;
+    if (contractEndYear && contractEndMonth && (cy > contractEndYear || (cy === contractEndYear && cm > contractEndMonth))) return false;
+    return true;
+  };
+
+  // Mesi di COMPETENZA i cui PAGAMENTI cadono nell'anno solare `year`.
+  const getCashCompetenceForYear = (year: number): { cy: number; cm: number }[] => {
+    const res: { cy: number; cm: number }[] = [];
+    for (let p = 1; p <= 12; p++) {
+      let cy: number, cm: number;
+      if (paymentShift === 1) {
+        if (p > 1) { cy = year; cm = p - 1; } else { cy = year - 1; cm = 12; }
+      } else { cy = year; cm = p; }
+      if (isWithinContract(cy, cm)) res.push({ cy, cm });
+    }
+    return res;
+  };
+
+  // Riepilogo per soglie €5k/€15k con CRITERIO DI CASSA (anno solare di PAGAMENTO).
+  // Con "same_month" coincide con getYearSummary; con "next_month" la competenza di
+  // dicembre slitta all'anno successivo.
+  const getYearSummaryCash = (year: number) => {
+    if (!contractStartYear || !contractEndYear || paymentShift === 0) {
+      const s = getYearSummary(year);
+      const cms = (s.months as number[]) || [];
+      return { ...s, rangeLabel: cms.length ? `${MONTH_NAMES[cms[0]]?.substring(0, 3)}-${MONTH_NAMES[cms[cms.length - 1]]?.substring(0, 3)}` : '' };
+    }
+    const monthlyComp = profile?.monthly_compensation || 0;
+    const comp = getCashCompetenceForYear(year);
+    const monthCount = comp.length;
+    const yearlyFromContractBase = monthlyComp * monthCount;
+    let actualYearlyTotal = 0;
+    let supplementaryTotal = 0;
+    const specialMonths: { month: number; amount: number }[] = [];
+    comp.forEach(({ cy, cm }) => {
+      const receipt = records.find(r => r.year === cy && r.month === cm);
+      const receiptAmount = receipt?.amount_gross ?? receipt?.amount ?? monthlyComp;
+      actualYearlyTotal += receiptAmount;
+      if (receipt && receiptAmount !== monthlyComp) {
+        supplementaryTotal += (receiptAmount - monthlyComp);
+        specialMonths.push({ month: cm, amount: receiptAmount });
+      }
+    });
+    const prior = year === contractStartYear ? priorCompensation : 0;
+    const externalTotal = externalByYear[year] || 0;
+    const total = actualYearlyTotal + prior + externalTotal;
+    const cms = comp.map(c => c.cm);
+    const rangeLabel = cms.length ? `${MONTH_NAMES[cms[0]]?.substring(0, 3)}-${MONTH_NAMES[cms[cms.length - 1]]?.substring(0, 3)}` : '';
+    return {
+      year, monthCount, monthlyComp,
+      yearlyFromContract: actualYearlyTotal,
+      yearlyFromContractBase,
+      supplementaryTotal, specialMonths,
+      priorCompensation: prior, externalTotal,
+      totalProjected: total,
+      signedTotal: total,
+      months: cms,
+      rangeLabel,
+    };
+  };
+
   const renderThresholdWarnings = () => {
     if (!thresholdStatus) return null;
     
@@ -890,7 +962,7 @@ export default function CoachCompensation() {
     
     // Year 1 projection: show banner whenever the projected annual total exceeds threshold,
     // declaration not yet signed, and not already in "needs_declaration" state (which has its own banner).
-    const summaryY1 = getYearSummary(contractStartYear);
+    const summaryY1 = getYearSummaryCash(contractStartYear);
     const willExceed5k_y1 = (summaryY1?.totalProjected || 0) > 5000;
     const willExceed15k_y1 = (summaryY1?.totalProjected || 0) > 15000;
     const showWarning5k_y1 = willExceed5k_y1
@@ -1010,7 +1082,7 @@ export default function CoachCompensation() {
     // Add warnings for the second year (2026) if contract spans two years
     if (thresholdStatus2026 && contractEndYear && contractEndYear > contractStartYear) {
       const year2026 = contractEndYear;
-      const summaryY2 = getYearSummary(contractEndYear);
+      const summaryY2 = getYearSummaryCash(contractEndYear);
       const willExceed5k_y2 = (summaryY2?.totalProjected || 0) > 5000;
       const willExceed15k_y2 = (summaryY2?.totalProjected || 0) > 15000;
       const showWarning5k_y2 = willExceed5k_y2
@@ -1485,7 +1557,7 @@ export default function CoachCompensation() {
             
             {/* First Year Summary (with prior compensation) - GREEN theme */}
             {(() => {
-              const summary = getYearSummary(contractStartYear);
+              const summary = getYearSummaryCash(contractStartYear);
               const exceeds5k = summary.totalProjected > 5000;
               const exceeds15k = summary.totalProjected > 15000;
               // First year: GREEN base color
@@ -1497,7 +1569,7 @@ export default function CoachCompensation() {
               return (
                 <View key={`summary-${contractStartYear}`} style={[styles.yearBox, { backgroundColor: bgColor, borderLeftWidth: 4, borderLeftColor: borderColor }]}>
                   <Text style={[styles.yearBoxTitle, { color: headerColor }]}>
-                    {icon} Anno {contractStartYear} ({MONTH_NAMES[contractStartMonth || 9].substring(0,3)}-Dic: {summary.monthCount} mesi)
+                    {icon} Anno {contractStartYear} ({summary.rangeLabel || `${MONTH_NAMES[contractStartMonth || 9].substring(0,3)}-Dic`}: {summary.monthCount} mesi)
                   </Text>
                   
                   {/* Linear layout like Admin view */}
@@ -1520,7 +1592,7 @@ export default function CoachCompensation() {
             
             {/* Second Year Summary (if contract spans 2 years) - BLUE theme */}
             {contractEndYear > contractStartYear && (() => {
-              const summary = getYearSummary(contractEndYear);
+              const summary = getYearSummaryCash(contractEndYear);
               const exceeds5k = summary.totalProjected > 5000;
               const exceeds15k = summary.totalProjected > 15000;
               // Second year: BLUE base color
@@ -1532,7 +1604,7 @@ export default function CoachCompensation() {
               return (
                 <View key={`summary-${contractEndYear}`} style={[styles.yearBox, { backgroundColor: bgColor, borderLeftWidth: 4, borderLeftColor: borderColor }]}>
                   <Text style={[styles.yearBoxTitle, { color: headerColor }]}>
-                    {icon} Anno {contractEndYear} (Gen-{MONTH_NAMES[contractEndMonth || 5].substring(0,3)}: {summary.monthCount} mesi)
+                    {icon} Anno {contractEndYear} ({summary.rangeLabel || `Gen-${MONTH_NAMES[contractEndMonth || 5].substring(0,3)}`}: {summary.monthCount} mesi)
                   </Text>
                   
                   {/* Linear layout like Admin view */}

@@ -374,6 +374,7 @@ async def get_society_settings(request: Request, include_images: bool = False):
             "kit_price_under": None,
             "kit_price_minivolley": None,
             "kit_sponsor": None,
+            "compensation_payment_timing": "same_month",
         }
     return {
         "name": settings.get("name", "Società Sportiva"),
@@ -417,6 +418,7 @@ async def get_society_settings(request: Request, include_images: bool = False):
         "season_end_day": settings.get("season_end_day", 30),
         "trial_max_days": settings.get("trial_max_days", 7),
         "trial_max_sessions": settings.get("trial_max_sessions", 3),
+        "compensation_payment_timing": settings.get("compensation_payment_timing", "same_month"),
         "kit_price": settings.get("kit_price"),
         "kit_price_under": settings.get("kit_price_under", settings.get("kit_price")),
         "kit_price_minivolley": settings.get("kit_price_minivolley"),
@@ -451,7 +453,8 @@ async def update_society_settings(request: Request, data: SocietySettingsUpdate,
         "season_start_month", "season_start_day",
         "season_end_month", "season_end_day",
         "iban", "bank_name", "affiliations",
-        "kit_price", "kit_price_under", "kit_price_minivolley", "kit_sponsor"
+        "kit_price", "kit_price_under", "kit_price_minivolley", "kit_sponsor",
+        "compensation_payment_timing",
     ]
     for f in fields:
         v = getattr(data, f, None)
@@ -559,6 +562,12 @@ async def update_society_settings(request: Request, data: SocietySettingsUpdate,
         update_dict["trial_max_days"] = max(3, min(15, data.trial_max_days))
     if data.trial_max_sessions is not None:
         update_dict["trial_max_sessions"] = max(1, min(10, data.trial_max_sessions))
+
+    # compensation payment timing: whitelist
+    if data.compensation_payment_timing is not None:
+        update_dict["compensation_payment_timing"] = (
+            "next_month" if data.compensation_payment_timing == "next_month" else "same_month"
+        )
 
     # ⚡ 06/2026 — Migrazione logo → Emergent Object Storage. Il logo può arrivare
     # come data URI (data:image/...;base64,...) oppure come base64 grezzo (alcuni

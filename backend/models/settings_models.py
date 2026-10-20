@@ -46,6 +46,11 @@ class SocietySettingsUpdate(BaseModel):
     # Trial period settings
     trial_max_days: Optional[int] = None  # 3-15
     trial_max_sessions: Optional[int] = None  # 1-5
+    # 🆕 Timing pagamento compensi (criterio di cassa per soglie €5.000/€15.000).
+    # "same_month"  = i compensi sono pagati nello stesso mese di competenza (default, comportamento storico)
+    # "next_month"  = i compensi sono pagati il mese SUCCESSIVO → la competenza di dicembre
+    #                  viene incassata a gennaio e conta nell'anno solare successivo.
+    compensation_payment_timing: Optional[str] = None
     # 🆕 Kit abbigliamento / sponsor tecnico (society-wide, informativo)
     # Due prezzi: Under e MiniVolley. La squadra sceglie quale applicare (kit_type).
     kit_price: Optional[float] = None  # legacy = prezzo Under
