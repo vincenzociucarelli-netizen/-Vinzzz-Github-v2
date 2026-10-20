@@ -31,12 +31,12 @@ const COMMANDS: Command[] = [
   // ——— Azioni "dentro" una schermata (le più difficili da ritrovare) ———
   {
     title: 'Ripara prove in blocco',
-    keywords: 'prova scaduta allenamenti presenze ricalcola riallinea sistema aggiusta conteggio 6/3 prove certificato',
-    where: 'Squadre › apri una squadra › Presenze squadra',
+    keywords: 'prova scaduta allenamenti presenze ricalcola riallinea sistema aggiusta conteggio 6/3 prove certificato attiva atleta',
+    where: 'Squadre › apri una squadra › Registra Presenze (manuale)',
     route: '/admin/teams',
     icon: 'construct',
     color: '#C62828',
-    hint: 'Apri una squadra, vai su "Presenze", scorri in fondo e tocca «Ripara prove in blocco (dalle presenze)».',
+    hint: 'Squadre → apri la squadra → tocca «Registra Presenze (manuale)»: lì in alto trovi il pulsante «Ripara prove in blocco (dalle presenze)».',
   },
   {
     title: 'Fine periodo prove',
