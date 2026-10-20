@@ -10,6 +10,16 @@ RegistraTEAM è un'applicazione full-stack per la gestione delle società sporti
 - Athlete Code persistente legato al Codice Fiscale
 - Pagamenti Stripe multi-tenant + Rate + Parziali
 - Bacheca Note Admin con notifiche urgenti
+
+## 🆕 FEATURE (Giu 2026) — Criterio di cassa compensi (soglie €5.000/€15.000) + Ricerca Funzioni Admin
+- **Setting società** `compensation_payment_timing` ("same_month" default | "next_month") in Impostazioni → Altre Impostazioni → sezione "💶 Pagamento Compensi" (anche presente in Dati Società). Persistito su `db.settings` (type=society) via PATCH/GET `/api/settings/society`.
+- **Regola "mese successivo" (criterio di cassa):** la competenza di DICEMBRE viene incassata a gennaio e conta nell'anno solare SUCCESSIVO per le soglie €5.000 (previdenziale) e €15.000 (fiscale). Con "same_month" comportamento INVARIATO. Pregressi e compensi esterni NON slittano (restano nell'anno registrato).
+- **Backend:** helper `_calculate_fiscal_year_total(..., payment_shift)`, `_get_payment_timing()`, `_payment_shift_from_timing()`, `_rebucket_month_year_for_payment()` in server.py. Shift applicato in: `/api/coach|dirigente|collaboratore/{id}/threshold-status/{year}`, `/api/prime-squadre/athletes/{id}/threshold-status/{year}`, `/api/admin/persons/{id}/compensation-summary`, e negli helper `_get_signed_yearly_total_as_coach/_atleta_pro` (re-bucketing dicembre nel yearly_total firmato). Il totale RAS (valore contratto) NON slitta.
+- **Frontend:** `getYearSummaryCash()` nelle schermate self-service (coach/collaboratore/dirigente/athlete compensation.tsx) e `getYearlyBreakdown` shift-aware nelle schede admin (admin/athlete|coach|collaboratore|dirigente/[id].tsx). Le quietanze mensili restano per competenza. Verificato: Set→Mag monthly 333 + pregresso 4000 → 2026 passa da 5332€ a 4999€ con "next_month".
+- **Ricerca Funzioni:** icona 🔍 nell'header della dashboard Admin → `/admin/function-search` (command palette, ~55 funzioni indicizzate con parole chiave + breadcrumb + hint). "Ripara prove in blocco": percorso Squadre › apri squadra › Registra Presenze (manuale).
+- **Stanza dei Bottoni** riordinata: comandi frequenti in alto, "Inizio/Fine Stagione" (una volta l'anno) in fondo.
+- NB: la preview web serve l'export statico `dist/` (`npx serve -s dist`), quindi ogni modifica frontend richiede `npx expo export --platform web --output-dir dist` + restart expo.
+
 - Auto-generazione Richieste Visita ASL Umbria 1 (PDF A4)
 - Email transazionali via Brevo con dominio verificato centralizzato
 

@@ -142,6 +142,7 @@ export default function AdminCollaboratoreDetail() {
   // Edit state
   const [monthlyCompensation, setMonthlyCompensation] = useState('');
   const [otherAnnualCompensation, setOtherAnnualCompensation] = useState('0');
+  const [paymentShift, setPaymentShift] = useState(0);
   const [contractStartDate, setContractStartDate] = useState('');
   const [contractEndDate, setContractEndDate] = useState('');
   
@@ -230,6 +231,7 @@ export default function AdminCollaboratoreDetail() {
         setLastReset(lr.data || null);
       } catch {}
       setAvailableVenues(settingsRes.data.venues || []);
+      setPaymentShift(settingsRes.data?.compensation_payment_timing === 'next_month' ? 1 : 0);
       setMonthlyCompensation(collabRes.data.monthly_compensation?.toString() || '0');
       setOtherAnnualCompensation(collabRes.data.other_annual_compensation?.toString() || '0');
       setSelectedTeamIds(collabRes.data.assigned_teams || []);
@@ -453,38 +455,44 @@ export default function AdminCollaboratoreDetail() {
     if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
       const startYear = start.getFullYear();
       const endYear = end.getFullYear();
+      const sMonth1 = start.getMonth() + 1;
+      const eMonth1 = end.getMonth() + 1;
+      const withinC = (cy: number, cm: number) => {
+        if (cy < startYear || (cy === startYear && cm < sMonth1)) return false;
+        if (cy > endYear || (cy === endYear && cm > eMonth1)) return false;
+        return true;
+      };
       
       for (let year = startYear; year <= endYear; year++) {
-        const yearStartMonth = (year === startYear) ? start.getMonth() : 0;
-        const yearEndMonth = (year === endYear) ? end.getMonth() : 11;
+        // Mesi di COMPETENZA i cui pagamenti cadono nell'anno solare (criterio di cassa)
+        const comp: { cy: number; cm: number }[] = [];
+        for (let p = 1; p <= 12; p++) {
+          let cy: number, cm: number;
+          if (paymentShift === 1) { if (p > 1) { cy = year; cm = p - 1; } else { cy = year - 1; cm = 12; } }
+          else { cy = year; cm = p; }
+          if (withinC(cy, cm)) comp.push({ cy, cm });
+        }
+        if (comp.length === 0) continue;
+        const monthsThisYear = comp.length;
         
-        const monthsThisYear = yearEndMonth - yearStartMonth + 1;
-        
-        // Calculate from actual receipts if available
-        const yearReceipts = (signedReceipts || []).filter((r: any) => {
-          if (r.year !== year) return false;
-          const monthIndex = r.month - 1;
-          return monthIndex >= yearStartMonth && monthIndex <= yearEndMonth;
+        let supplementaryThisYear = 0;
+        comp.forEach(({ cy, cm }) => {
+          const receipt = (signedReceipts || []).find((r: any) => r.year === cy && r.month === cm);
+          const receiptAmount = receipt ? (receipt.amount_gross || receipt.amount || 0) : 0;
+          if (receiptAmount > monthly) supplementaryThisYear += receiptAmount - monthly;
         });
         
         const baseAmountThisYear = monthly * monthsThisYear;
         
-        let supplementaryThisYear = 0;
-        yearReceipts.forEach((receipt: any) => {
-          const receiptAmount = receipt.amount_gross || receipt.amount || 0;
-          if (receiptAmount > monthly) {
-            supplementaryThisYear += receiptAmount - monthly;
-          }
-        });
-        
         const totalThisYear = baseAmountThisYear + supplementaryThisYear;
         const priorThisYear = (year === startYear) ? prior : 0;
         const grandTotalThisYear = priorThisYear + totalThisYear;
+        const cms = comp.map(c => c.cm);
         
         years[year] = {
           months: monthsThisYear,
-          startMonth: monthNames[yearStartMonth],
-          endMonth: monthNames[yearEndMonth],
+          startMonth: monthNames[cms[0] - 1],
+          endMonth: monthNames[cms[cms.length - 1] - 1],
           total: totalThisYear,
           baseAmount: baseAmountThisYear,
           supplementary: supplementaryThisYear,
@@ -1215,7 +1223,7 @@ export default function AdminCollaboratoreDetail() {
                               color: yearlyBreakdown[years[0]].exceedsThreshold5k ? '#F57F17' : '#2E7D32',
                               fontWeight: 'bold' 
                             }]}>
-                              {yearlyBreakdown[years[0]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[0]} ({yearlyBreakdown[years[0]].startMonth}-Dic: {yearlyBreakdown[years[0]].months} mesi)
+                              {yearlyBreakdown[years[0]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[0]} ({yearlyBreakdown[years[0]].startMonth}-{yearlyBreakdown[years[0]].endMonth}: {yearlyBreakdown[years[0]].months} mesi)
                             </Text>
                             <View style={{ marginTop: 8 }}>
                               <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[0]].baseAmount || yearlyBreakdown[years[0]].total)}</Text></Text>
@@ -1239,7 +1247,7 @@ export default function AdminCollaboratoreDetail() {
                               color: yearlyBreakdown[years[1]].exceedsThreshold5k ? '#F57F17' : '#2E7D32',
                               fontWeight: 'bold' 
                             }]}>
-                              {yearlyBreakdown[years[1]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[1]} (Gen-{yearlyBreakdown[years[1]].endMonth}: {yearlyBreakdown[years[1]].months} mesi)
+                              {yearlyBreakdown[years[1]].exceedsThreshold5k ? '⚠️' : '✅'} Anno {years[1]} ({yearlyBreakdown[years[1]].startMonth}-{yearlyBreakdown[years[1]].endMonth}: {yearlyBreakdown[years[1]].months} mesi)
                             </Text>
                             <View style={{ marginTop: 8 }}>
                               <Text style={{ fontSize: 13, color: '#333', marginBottom: 4 }}>• Compenso base: <Text style={{ fontWeight: 'bold' }}>{formatCurrency(yearlyBreakdown[years[1]].baseAmount || yearlyBreakdown[years[1]].total)}</Text></Text>

@@ -242,7 +242,7 @@ export default function AdminAthleteDetail() {
   const [certificate, setCertificate] = useState<Certificate | null>(null);
   const [stats, setStats] = useState<AthleteAttendanceStats | null>(null);
   // 🆕 05/07/2026 — Impostazioni società (per data inizio stagione sportiva)
-  const [societySettings, setSocietySettings] = useState<{ season_start_month?: number; season_start_day?: number }>({});
+  const [societySettings, setSocietySettings] = useState<{ season_start_month?: number; season_start_day?: number; compensation_payment_timing?: string }>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'dafare' | 'dati' | 'pagamenti' | 'presenze'>('dafare');
@@ -691,6 +691,7 @@ export default function AdminAthleteDetail() {
         setSocietySettings({
           season_start_month: settingsRes.data?.season_start_month,
           season_start_day: settingsRes.data?.season_start_day,
+          compensation_payment_timing: settingsRes.data?.compensation_payment_timing,
         });
         // Logo/timbro per i PDF: caricati in background, NON bloccano l'apertura scheda.
         api.get('/settings/society?include_images=true')
@@ -2272,34 +2273,46 @@ export default function AdminAthleteDetail() {
     const monthly = Number((athlete as any)?.monthly_compensation || 0);
     const prior = Number((athlete as any)?.other_annual_compensation || 0);
     const monthNames = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+    const shift = societySettings?.compensation_payment_timing === 'next_month' ? 1 : 0;
     const years: { [year: number]: any } = {};
     const start = parseAthleteDate((athlete as any)?.contract_start_date);
     const end = parseAthleteDate((athlete as any)?.contract_end_date);
     if (start && end && !isNaN(start.getTime()) && !isNaN(end.getTime())) {
       const sy = start.getFullYear();
       const ey = end.getFullYear();
+      const sMonth = start.getMonth() + 1; // 1-12
+      const eMonth = end.getMonth() + 1;
+      const withinContract = (cy: number, cm: number) => {
+        if (cy < sy || (cy === sy && cm < sMonth)) return false;
+        if (cy > ey || (cy === ey && cm > eMonth)) return false;
+        return true;
+      };
       for (let y = sy; y <= ey; y++) {
-        const ysm = (y === sy) ? start.getMonth() : 0;
-        const yem = (y === ey) ? end.getMonth() : 11;
-        const monthsThisYear = yem - ysm + 1;
-        const yearReceipts = (signedReceipts || []).filter((r: any) => {
-          if (r.year !== y) return false;
-          const mi = (r.month || 1) - 1;
-          return mi >= ysm && mi <= yem;
-        });
-        const baseAmount = monthly * monthsThisYear;
+        // Mesi di COMPETENZA i cui pagamenti cadono nell'anno solare y
+        const comp: { cy: number; cm: number }[] = [];
+        for (let p = 1; p <= 12; p++) {
+          let cy: number, cm: number;
+          if (shift === 1) { if (p > 1) { cy = y; cm = p - 1; } else { cy = y - 1; cm = 12; } }
+          else { cy = y; cm = p; }
+          if (withinContract(cy, cm)) comp.push({ cy, cm });
+        }
+        if (comp.length === 0) continue;
+        const monthsThisYear = comp.length;
         let supplementary = 0;
-        yearReceipts.forEach((r: any) => {
-          const amt = r.amount_gross || r.amount || 0;
+        comp.forEach(({ cy, cm }) => {
+          const r = (signedReceipts || []).find((rr: any) => rr.year === cy && rr.month === cm);
+          const amt = r ? (r.amount_gross || r.amount || 0) : 0;
           if (amt > monthly) supplementary += amt - monthly;
         });
+        const baseAmount = monthly * monthsThisYear;
         const total = baseAmount + supplementary;
         const priorThis = (y === sy) ? prior : 0;
         const grandTotal = priorThis + total;
+        const cms = comp.map(c => c.cm);
         years[y] = {
           months: monthsThisYear,
-          startMonth: monthNames[ysm],
-          endMonth: monthNames[yem],
+          startMonth: monthNames[cms[0] - 1],
+          endMonth: monthNames[cms[cms.length - 1] - 1],
           baseAmount, supplementary, total,
           priorCompensation: priorThis,
           grandTotal,
@@ -4304,8 +4317,9 @@ export default function AdminAthleteDetail() {
                           const yb = yearlyBreakdown[y];
                           if (!yb) return null;
                           const isStartYear = idx === 0;
-                          const dateRange = isStartYear ? `${yb.startMonth}-Dic` : `Gen-${yb.endMonth}`;
+                          const dateRange = `${yb.startMonth}-${yb.endMonth}`;
                           // 🆕 26/06/2026 — Mesi di contratto Coach in questo anno solare
+                          // (allineato al criterio di cassa: con "mese successivo" dicembre slitta)
                           let coachMonthsThisYear = 0;
                           if (coachMonthly > 0 && coachStart && coachEnd) {
                             try {
@@ -4313,8 +4327,12 @@ export default function AdminAthleteDetail() {
                               const ce = new Date(coachEnd);
                               const csIdx = cs.getFullYear() * 12 + cs.getMonth();
                               const ceIdx = ce.getFullYear() * 12 + ce.getMonth();
-                              for (let m = 0; m < 12; m++) {
-                                const mIdx = y * 12 + m;
+                              const shift = societySettings?.compensation_payment_timing === 'next_month' ? 1 : 0;
+                              for (let p = 1; p <= 12; p++) {
+                                let cyy: number, cmm: number;
+                                if (shift === 1) { if (p > 1) { cyy = y; cmm = p - 1; } else { cyy = y - 1; cmm = 12; } }
+                                else { cyy = y; cmm = p; }
+                                const mIdx = cyy * 12 + (cmm - 1);
                                 if (mIdx >= csIdx && mIdx <= ceIdx) coachMonthsThisYear += 1;
                               }
                             } catch {}
