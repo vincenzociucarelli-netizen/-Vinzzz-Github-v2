@@ -67,6 +67,8 @@ export default function OtherSettings() {
   const [seasonStartDay, setSeasonStartDay] = useState(1);
   const [seasonEndMonth, setSeasonEndMonth] = useState(6);
   const [seasonEndDay, setSeasonEndDay] = useState(30);
+  // 🆕 Criterio di cassa compensi (soglie €5k/€15k)
+  const [paymentTiming, setPaymentTiming] = useState<'same_month' | 'next_month'>('same_month');
 
   useEffect(() => {
     checkAccessAndLoad();
@@ -101,6 +103,7 @@ export default function OtherSettings() {
       setSeasonStartDay(response.data.season_start_day || 1);
       setSeasonEndMonth(response.data.season_end_month || 6);
       setSeasonEndDay(response.data.season_end_day || 30);
+      setPaymentTiming(response.data.compensation_payment_timing === 'next_month' ? 'next_month' : 'same_month');
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -162,6 +165,7 @@ export default function OtherSettings() {
         season_start_day: seasonStartDay,
         season_end_month: seasonEndMonth,
         season_end_day: seasonEndDay,
+        compensation_payment_timing: paymentTiming,
       });
       showAlert('Successo', 'Impostazioni salvate con successo');
     } catch (error: any) {
@@ -377,6 +381,51 @@ export default function OtherSettings() {
           <View style={{ backgroundColor: '#E8F5E9', padding: 10, borderRadius: 8, marginTop: 10 }}>
             <Text style={{ fontSize: 12, color: '#2E7D32' }}>
               Stagione corrente: dal {String(seasonStartDay).padStart(2, '0')}/{String(seasonStartMonth).padStart(2, '0')} al {String(seasonEndDay).padStart(2, '0')}/{String(seasonEndMonth).padStart(2, '0')} dell'anno successivo
+            </Text>
+          </View>
+        </View>
+
+        {/* 🆕 Pagamento Compensi (criterio di cassa per soglie €5.000 / €15.000) */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>💶 Pagamento Compensi</Text>
+          <Text style={{ fontSize: 13, color: '#607D8B', marginBottom: 6, lineHeight: 18 }}>
+            Le soglie previdenziali (€5.000) e fiscali (€15.000) si calcolano sui compensi
+            effettivamente incassati nell'anno solare. Indica quando la società paga i compensi.
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.timingOption, paymentTiming === 'same_month' && styles.timingOptionActive]}
+            onPress={() => setPaymentTiming('same_month')}
+            testID="payment-timing-same"
+          >
+            <View style={[styles.timingRadio, paymentTiming === 'same_month' && styles.timingRadioActive]}>
+              {paymentTiming === 'same_month' && <View style={styles.timingDot} />}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.timingTitle}>Nello stesso mese</Text>
+              <Text style={styles.timingSub}>Il compenso di settembre è pagato a settembre. (Impostazione attuale)</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.timingOption, paymentTiming === 'next_month' && styles.timingOptionActive]}
+            onPress={() => setPaymentTiming('next_month')}
+            testID="payment-timing-next"
+          >
+            <View style={[styles.timingRadio, paymentTiming === 'next_month' && styles.timingRadioActive]}>
+              {paymentTiming === 'next_month' && <View style={styles.timingDot} />}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.timingTitle}>Il mese successivo</Text>
+              <Text style={styles.timingSub}>Il compenso di settembre è pagato a ottobre; quello di dicembre a gennaio (quindi conta nell'anno nuovo).</Text>
+            </View>
+          </TouchableOpacity>
+
+          <View style={{ backgroundColor: '#FFF8E1', padding: 10, borderRadius: 8, marginTop: 10 }}>
+            <Text style={{ fontSize: 12, color: '#8A6100' }}>
+              {paymentTiming === 'next_month'
+                ? 'Criterio di cassa: la competenza di dicembre viene incassata a gennaio e conteggiata nell\'anno solare successivo per le soglie €5.000/€15.000.'
+                : 'Ogni compenso conta nell\'anno solare del mese di competenza.'}
             </Text>
           </View>
         </View>
@@ -724,6 +773,26 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: '#333',
   },
+  timingOption: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    padding: 12,
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    borderRadius: 10,
+    marginTop: 8,
+    backgroundColor: '#fff',
+  },
+  timingOptionActive: { borderColor: '#2E7D32', backgroundColor: '#F1F8E9' },
+  timingRadio: {
+    width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#9E9E9E',
+    alignItems: 'center', justifyContent: 'center', marginTop: 1,
+  },
+  timingRadioActive: { borderColor: '#2E7D32' },
+  timingDot: { width: 11, height: 11, borderRadius: 6, backgroundColor: '#2E7D32' },
+  timingTitle: { fontSize: 14, fontWeight: '700', color: '#263238' },
+  timingSub: { fontSize: 12, color: '#607D8B', marginTop: 2, lineHeight: 17 },
   sectionDesc: {
     fontSize: 14,
     color: '#666',
