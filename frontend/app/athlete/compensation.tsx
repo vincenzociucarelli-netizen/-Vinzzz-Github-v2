@@ -978,7 +978,9 @@ export default function AthleteCompensation() {
         <View key="warning-5000" style={styles.thresholdWarningBox5k}>
           <Text style={styles.thresholdWarningTitle5k}>⚠️ Anno {contractStartYear}: Soglia dei €5.000</Text>
           <Text style={[styles.thresholdWarningText5k, { textAlign: 'center', lineHeight: 18, marginTop: 4 }]}>
-            Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{thresholdMonth5k_y1}</Text> supererai la soglia previdenziale di €5.000.
+            {priorCompensation >= 5000
+              ? 'Soglia già superata all\'ingresso (compensi pregressi oltre i €5.000): contributi dovuti fin dalla prima quietanza.'
+              : <>Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{thresholdMonth5k_y1}</Text> supererai la soglia previdenziale di €5.000.</>}
           </Text>
           <Text style={[styles.thresholdWarningText5k, { textAlign: 'center', fontStyle: 'italic', marginTop: 4 }]}>Contributi previdenziali INPS</Text>
         </View>
@@ -991,7 +993,9 @@ export default function AthleteCompensation() {
         <View key="warning-15000" style={styles.thresholdWarningBox15k}>
           <Text style={styles.thresholdWarningTitle15k}>🚨 Anno {contractStartYear}: Soglia dei €15.000</Text>
           <Text style={[styles.thresholdWarningText15k, { textAlign: 'center', lineHeight: 18, marginTop: 4 }]}>
-            Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{thresholdMonth15k_y1}</Text> supererai la soglia fiscale di €15.000.
+            {priorCompensation >= 15000
+              ? 'Soglia già superata all\'ingresso (compensi pregressi oltre i €15.000): comunicazione dovuta fin dalla prima quietanza.'
+              : <>Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{thresholdMonth15k_y1}</Text> supererai la soglia fiscale di €15.000.</>}
           </Text>
           <Text style={[styles.thresholdWarningText15k, { textAlign: 'center', fontStyle: 'italic', marginTop: 4 }]}>Tassazione IRPEF obbligatoria</Text>
           <Text style={[styles.thresholdWarningText15k, { textAlign: 'center', fontSize: 11, marginTop: 4 }]}>Progressivo fiscale calcolato sul compenso lordo (fiscalmente rilevante) — criterio da validare dal consulente.</Text>

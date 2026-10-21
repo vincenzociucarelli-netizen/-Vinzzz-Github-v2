@@ -1819,6 +1819,24 @@ export default function TeamDetail() {
               <Ionicons name="chevron-forward" size={24} color="#999" />
             </TouchableOpacity>
 
+            {/* Link: Convocazioni gara */}
+            <TouchableOpacity 
+              style={styles.attendanceLink}
+              onPress={() => router.push(`/convocations?team_id=${id}&team_name=${encodeURIComponent(team?.name || '')}`)}
+              testID="link-convocations"
+            >
+              <View style={styles.attendanceLinkContent}>
+                <View style={styles.attendanceLinkIcon}>
+                  <Ionicons name="clipboard-outline" size={28} color="#1E88E5" />
+                </View>
+                <View style={styles.attendanceLinkText}>
+                  <Text style={styles.attendanceLinkTitle}>Convocazioni Gara</Text>
+                  <Text style={styles.attendanceLinkSubtitle}>Convoca gli atleti, PDF e invio WhatsApp</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="#999" />
+            </TouchableOpacity>
+
             
             {/* Link to Training Overrides */}
             <TouchableOpacity 

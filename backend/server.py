@@ -9672,6 +9672,249 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
     out.sort(key=lambda x: (x.get("full_name") or "").lower())
     return {"team": team, "count": len(out), "athletes": out}
 
+# ============================================================================
+# 🆕 CONVOCAZIONI (call-ups) — Admin/Coach selezionano gli atleti della rosa di
+# una squadra per una gara (dal calendario o inserita a mano), aggiungono
+# ritrovo/orari/note, salvano come bozza o "inviata". Il PDF e l'apertura di
+# WhatsApp precompilato avvengono lato app. Isolato per società.
+# ============================================================================
+
+async def _conv_team_or_403(current_user, team_id: str) -> dict:
+    """Ritorna la squadra se l'utente può gestirne le convocazioni, altrimenti 403/404.
+    Admin/Coordinatore: qualsiasi squadra della società. Coach: solo le assegnate."""
+    society_id = current_user.get("society_id")
+    team = await db.teams.find_one({"id": team_id, "society_id": society_id}, {"_id": 0, "id": 1, "name": 1})
+    if not team:
+        raise HTTPException(status_code=404, detail="Squadra non trovata")
+    role = current_user["role"]
+    if role in (UserRole.ADMIN, UserRole.COORDINATORE, UserRole.DIRIGENTE):
+        return team
+    if role == UserRole.COACH and team_id in (current_user.get("assigned_teams", []) or []):
+        return team
+    raise HTTPException(status_code=403, detail="Non sei autorizzato a gestire le convocazioni di questa squadra")
+
+
+def _conv_phones_from_athlete(a: dict, pmap: dict) -> dict:
+    """Telefoni (atleta/madre/padre con fallback dai genitori collegati)."""
+    def _clean(v):
+        return (str(v).strip() if v else "")
+    athlete_phone = _clean(a.get("phone_athlete")) or _clean(a.get("phone"))
+    mother_phone = _clean(a.get("phone_mother"))
+    father_phone = _clean(a.get("phone_father"))
+    parent_fallback = _clean(pmap.get(a.get("parent_id"))) or _clean(pmap.get(a.get("second_parent_id")))
+    if not mother_phone and not father_phone and parent_fallback:
+        mother_phone = parent_fallback
+    return {"athlete_phone": athlete_phone, "mother_phone": mother_phone, "father_phone": father_phone}
+
+
+@api_router.get("/convocations/team/{team_id}/roster")
+async def convocation_roster(team_id: str, current_user = Depends(get_current_user)):
+    """Elenco atleti (anche aggregati via team_ids) della squadra per la selezione
+    nella convocazione. Accessibile ad admin/coordinatore/coach assegnato."""
+    team = await _conv_team_or_403(current_user, team_id)
+    society_id = current_user.get("society_id")
+    from utils import get_current_season_for_society as _get_cs
+    _season = await _get_cs(db, society_id)
+    q = {
+        "society_id": society_id,
+        "is_withdrawn": {"$ne": True},
+        "$and": [
+            {"$or": [{"team_id": team_id}, {"team_ids": team_id}]},
+            {"$or": [
+                {"rollover_decision": {"$ne": "removed"}},
+                {"rollover_decision_season": {"$ne": _season}},
+            ]},
+        ],
+    }
+    proj = {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1,
+            "date_of_birth": 1, "athlete_role": 1, "status": 1}
+    aths = await db.athletes.find(q, proj).to_list(5000)
+    out = []
+    for a in aths:
+        full_name = (f"{a.get('last_name','')} {a.get('first_name','')}".strip() or a.get("full_name", ""))
+        out.append({
+            "id": a["id"],
+            "full_name": full_name,
+            "role": a.get("athlete_role", "") or "",
+            "is_minor": _compute_is_minor(a),
+        })
+    out.sort(key=lambda x: (x.get("full_name") or "").lower())
+    return {"team": team, "count": len(out), "athletes": out}
+
+
+def _conv_public(c: dict) -> dict:
+    """Pulisce una convocazione per l'output (rimuove _id)."""
+    c = dict(c)
+    c.pop("_id", None)
+    return c
+
+
+@api_router.get("/convocations")
+async def list_convocations(team_id: Optional[str] = None, current_user = Depends(get_current_user)):
+    """Elenco convocazioni. Se team_id è passato → solo quella squadra (con controllo
+    autorizzazione). Per i coach senza team_id → solo le squadre assegnate."""
+    society_id = current_user.get("society_id")
+    role = current_user["role"]
+    q = {"society_id": society_id}
+    if team_id:
+        await _conv_team_or_403(current_user, team_id)
+        q["team_id"] = team_id
+    elif role == UserRole.COACH:
+        q["team_id"] = {"$in": current_user.get("assigned_teams", []) or []}
+    elif role not in (UserRole.ADMIN, UserRole.COORDINATORE, UserRole.DIRIGENTE):
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+    items = await db.convocations.find(q).sort("created_at", -1).to_list(1000)
+    return [_conv_public(c) for c in items]
+
+
+@api_router.post("/convocations")
+async def create_convocation(data: dict = Body(...), current_user = Depends(get_current_user)):
+    """Crea una convocazione (bozza o inviata). Campi gara/ritrovo/note gestiti
+    lato app (stringhe già formattate). athlete_ids = atleti selezionati."""
+    team_id = (data.get("team_id") or "").strip()
+    if not team_id:
+        raise HTTPException(status_code=400, detail="team_id obbligatorio")
+    team = await _conv_team_or_403(current_user, team_id)
+    now = datetime.utcnow()
+    conv = {
+        "id": str(uuid.uuid4()),
+        "society_id": current_user.get("society_id"),
+        "team_id": team_id,
+        "team_name": team.get("name", ""),
+        "match_id": data.get("match_id") or None,
+        "opponent": (data.get("opponent") or "").strip(),
+        "match_date": (data.get("match_date") or "").strip(),
+        "match_time": (data.get("match_time") or "").strip(),
+        "home_away": data.get("home_away") or "home",
+        "venue": (data.get("venue") or "").strip(),
+        "city": (data.get("city") or "").strip(),
+        "meeting_place": (data.get("meeting_place") or "").strip(),
+        "meeting_time": (data.get("meeting_time") or "").strip(),
+        "start_time": (data.get("start_time") or "").strip(),
+        "notes": (data.get("notes") or "").strip(),
+        "athlete_ids": list(data.get("athlete_ids") or []),
+        "status": "sent" if data.get("status") == "sent" else "draft",
+        "created_by": current_user["id"],
+        "created_by_name": current_user.get("full_name", current_user.get("email", "")),
+        "created_at": now,
+        "updated_at": now,
+        "sent_at": now if data.get("status") == "sent" else None,
+    }
+    await db.convocations.insert_one(conv)
+    return _conv_public(conv)
+
+
+async def _get_conv_or_404(conv_id: str, current_user) -> dict:
+    conv = await db.convocations.find_one({"id": conv_id, "society_id": current_user.get("society_id")})
+    if not conv:
+        raise HTTPException(status_code=404, detail="Convocazione non trovata")
+    await _conv_team_or_403(current_user, conv["team_id"])
+    return conv
+
+
+@api_router.get("/convocations/{conv_id}")
+async def get_convocation(conv_id: str, current_user = Depends(get_current_user)):
+    """Dettaglio convocazione con i nomi degli atleti selezionati (per il PDF/anteprima)."""
+    conv = await _get_conv_or_404(conv_id, current_user)
+    ids = conv.get("athlete_ids") or []
+    names = []
+    if ids:
+        aths = await db.athletes.find({"id": {"$in": ids}}, {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1, "athlete_role": 1}).to_list(5000)
+        amap = {a["id"]: a for a in aths}
+        for aid in ids:
+            a = amap.get(aid)
+            if not a:
+                continue
+            names.append({
+                "id": aid,
+                "full_name": (f"{a.get('last_name','')} {a.get('first_name','')}".strip() or a.get("full_name", "")),
+                "role": a.get("athlete_role", "") or "",
+            })
+        names.sort(key=lambda x: (x.get("full_name") or "").lower())
+    out = _conv_public(conv)
+    out["athletes"] = names
+    return out
+
+
+@api_router.patch("/convocations/{conv_id}")
+async def update_convocation(conv_id: str, data: dict = Body(...), current_user = Depends(get_current_user)):
+    """Aggiorna una convocazione esistente (campi gara/ritrovo/note/atleti/stato)."""
+    conv = await _get_conv_or_404(conv_id, current_user)
+    allowed = ["match_id", "opponent", "match_date", "match_time", "home_away",
+               "venue", "city", "meeting_place", "meeting_time", "start_time",
+               "notes", "athlete_ids", "status"]
+    upd = {}
+    for k in allowed:
+        if k not in data:
+            continue
+        if k == "athlete_ids":
+            upd[k] = list(data.get(k) or [])
+        elif k == "status":
+            upd[k] = "sent" if data.get(k) == "sent" else "draft"
+        elif k == "match_id":
+            upd[k] = data.get(k) or None
+        elif k in ("home_away",):
+            upd[k] = data.get(k) or "home"
+        else:
+            upd[k] = (str(data.get(k) or "")).strip()
+    upd["updated_at"] = datetime.utcnow()
+    if upd.get("status") == "sent" and not conv.get("sent_at"):
+        upd["sent_at"] = datetime.utcnow()
+    await db.convocations.update_one({"id": conv_id}, {"$set": upd})
+    fresh = await db.convocations.find_one({"id": conv_id})
+    return _conv_public(fresh)
+
+
+@api_router.post("/convocations/{conv_id}/send")
+async def send_convocation(conv_id: str, current_user = Depends(get_current_user)):
+    """Segna la convocazione come INVIATA (dopo l'apertura di WhatsApp lato app)."""
+    conv = await _get_conv_or_404(conv_id, current_user)
+    now = datetime.utcnow()
+    await db.convocations.update_one(
+        {"id": conv_id},
+        {"$set": {"status": "sent", "sent_at": conv.get("sent_at") or now, "updated_at": now}},
+    )
+    fresh = await db.convocations.find_one({"id": conv_id})
+    return _conv_public(fresh)
+
+
+@api_router.delete("/convocations/{conv_id}")
+async def delete_convocation(conv_id: str, current_user = Depends(get_current_user)):
+    await _get_conv_or_404(conv_id, current_user)
+    await db.convocations.delete_one({"id": conv_id})
+    return {"deleted": True}
+
+
+@api_router.get("/convocations/{conv_id}/contacts")
+async def convocation_contacts(conv_id: str, current_user = Depends(get_current_user)):
+    """Telefoni (atleta/madre/padre) SOLO degli atleti convocati, per l'invio WhatsApp."""
+    conv = await _get_conv_or_404(conv_id, current_user)
+    ids = conv.get("athlete_ids") or []
+    if not ids:
+        return {"count": 0, "athletes": []}
+    proj = {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1,
+            "date_of_birth": 1, "phone_athlete": 1, "phone": 1,
+            "phone_mother": 1, "phone_father": 1, "parent_id": 1, "second_parent_id": 1}
+    aths = await db.athletes.find({"id": {"$in": ids}}, proj).to_list(5000)
+    pids = list({p for a in aths for p in (a.get("parent_id"), a.get("second_parent_id")) if p})
+    pmap = {}
+    if pids:
+        parents = await db.users.find({"id": {"$in": pids}}, {"_id": 0, "id": 1, "phone": 1}).to_list(5000)
+        pmap = {p["id"]: (p.get("phone") or "").strip() for p in parents}
+    out = []
+    for a in aths:
+        full_name = (f"{a.get('last_name','')} {a.get('first_name','')}".strip() or a.get("full_name", ""))
+        phones = _conv_phones_from_athlete(a, pmap)
+        out.append({
+            "athlete_id": a["id"],
+            "athlete_name": full_name,
+            "is_minor": _compute_is_minor(a),
+            **phones,
+        })
+    out.sort(key=lambda x: (x.get("athlete_name") or "").lower())
+    return {"count": len(out), "athletes": out}
+
+
 @api_router.get("/admin/teams/{team_id}/whatsapp-contacts")
 async def get_team_whatsapp_contacts(team_id: str, current_user = Depends(get_current_user)):
     """🆕 05/09/2026 — Contatti (telefoni) di tutti gli atleti di UNA squadra per

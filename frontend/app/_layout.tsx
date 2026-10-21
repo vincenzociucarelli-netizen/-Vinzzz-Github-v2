@@ -116,6 +116,8 @@ export default function RootLayout() {
         <Stack.Screen name="minor" />
         <Stack.Screen name="preseason" />
         <Stack.Screen name="palestre" />
+        <Stack.Screen name="convocations/index" />
+        <Stack.Screen name="convocations/editor" />
         <Stack.Screen name="admin/whatsapp-reminders" />
         <Stack.Screen name="admin/whatsapp-settings" />
       </Stack>
