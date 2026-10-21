@@ -51,7 +51,7 @@ export default function AdminTeamAttendance() {
     setRepairing(true);
     try {
       const res = await api.post(`/admin/teams/${teamId}/recompute-trials`);
-      showAlert('Prove ricalcolate', `${res.data?.count ?? 0} atleti aggiornati dalle presenze registrate.`);
+      showAlert('Prove ricalcolate', res.data?.message || `${res.data?.count ?? 0} atleti aggiornati dalle presenze registrate.`);
       const r = await api.get('/admin/team-roster', { params: { team_id: teamId } });
       setAthletes((r.data?.athletes || []).filter((a: any) => a.status !== 'withdrawn'));
     } catch (e: any) {
