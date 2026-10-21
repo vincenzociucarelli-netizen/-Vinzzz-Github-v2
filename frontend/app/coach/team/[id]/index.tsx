@@ -254,6 +254,17 @@ export default function CoachTeamAthletes() {
           </TouchableOpacity>
         )}
 
+        {/* 🆕 Convocazioni gara */}
+        <TouchableOpacity
+          style={[styles.attendanceBtn, { backgroundColor: '#E3F2FD', borderColor: '#90CAF9' }]}
+          onPress={() => router.push(`/convocations?team_id=${id}&team_name=${encodeURIComponent(team?.name || '')}`)}
+          testID="coach-convocations-btn"
+        >
+          <Ionicons name="clipboard-outline" size={20} color="#1565C0" />
+          <Text style={[styles.attendanceBtnText, { color: '#1565C0' }]}>Convocazioni Gara</Text>
+          <Ionicons name="chevron-forward" size={20} color="#1565C0" />
+        </TouchableOpacity>
+
         {/* Athletes Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>👥 Atleti</Text>

@@ -1,0 +1,44 @@
+{
+  "summary": "Tested new CONVOCAZIONI module (backend + frontend). Backend: 16/16 pytest pass (roster, create draft/sent, list, detail with athletes, patch, contacts, send, delete; coach permission isolation: 403 on non-assigned teams for roster/create/list/get, 200 on own teams). Frontend: Admin end-to-end flow verified — admin/teams → team detail → link-convocations opens /convocations list → 'Nuova convocazione' opens /convocations/editor → fill opponent/date/time → 'Seleziona tutti' selects roster athletes (0/2 → 2/2 on Under 14) → 'Salva' persists DRAFT to backend with 2 athletes correctly stored. Pre-existing draft reopens with pre-filled fields. WhatsApp modal and PDF button added with testIDs. Coach UI link (coach-convocations-btn) is wired to the same /convocations route — tested at code level and via backend permissions (coach can create on assigned team, 403 on others). Note: added 5 testIDs to convocations/index.tsx and convocations/editor.tsx and rebuilt the web bundle (dist) since supervisor serves a pre-built static bundle (not metro dev server).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "convocations/editor.tsx handleSaveDraft", "issue": "On web, after showAlert('Salvata'), router.back() is called synchronously. If the user arrived at the editor via direct deep-link (no history entry), the user stays on the editor instead of returning to the list. In the real admin/coach flow (team → list → editor) it works, but it is fragile. Suggest router.replace(`/convocations?team_id=...`) as a fallback when canGoBack() is false.", "testID": "conv-save-draft-btn", "priority": "LOW"},
+      {"component": "convocations/index.tsx + editor.tsx", "issue": "No testID on key interactive elements before this run (added by tester): new-convocation-btn, convocation-editor-screen, conv-toggle-all, conv-save-draft-btn, conv-send-wa-btn, conv-pdf-btn, convocations-list-screen. Please keep these.", "testID": "multiple", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/convocations list", "issues": ["Delete button is just an inline 'Elimina' Text next to 'Apri'. On a mobile touch target (<44px tall) can be too close to Apri → risk of accidental taps. Consider spacing or a trailing icon-only destructive button."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_convocations.py",
+    "/app/test_reports/pytest/convocations_results.xml"
+  ],
+  "action_items": [
+    "(nice-to-have) In convocations/editor.tsx handleSaveDraft: after showAlert, if !router.canGoBack() do router.replace(`/convocations?team_id=${teamId}&team_name=${encodeURIComponent(teamName)}`).",
+    "Keep the testIDs added by this tester (new-convocation-btn, conv-save-draft-btn, conv-send-wa-btn, conv-pdf-btn, conv-toggle-all, convocation-editor-screen, convocations-list-screen).",
+    "Optional: add testIDs on each athlete checkbox row (e.g. athlete-row-<id>) and on the match calendar rows to make future automation easier.",
+    "No functional fix required: backend is 100% and the UI happy-path works."
+  ],
+  "critical_code_review_comments": [
+    "server.py _conv_team_or_403 cleanly handles role-based access (ADMIN/COORDINATORE/DIRIGENTE: all society teams; COACH: only assigned_teams; others 403). Verified end-to-end.",
+    "convocations endpoints correctly exclude Mongo _id via _conv_public helper.",
+    "list_convocations for coach without team_id filters by assigned_teams — verified.",
+    "frontend editor shows preselected gara data when match_id present and loads roster via /api/convocations/team/{id}/roster — OK.",
+    "whatsapp modal uses wa.me deep-link (no external integration) — compliant with spec."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_convocations.py (new)",
+    "/app/frontend/app/convocations/index.tsx (added testIDs: new-convocation-btn, convocations-list-screen)",
+    "/app/frontend/app/convocations/editor.tsx (added testIDs: convocation-editor-screen, conv-toggle-all, conv-pdf-btn, conv-save-draft-btn, conv-send-wa-btn)",
+    "/app/frontend/dist (rebuilt via `npx expo export -p web --output-dir dist` because supervisor serves pre-built static bundle)"
+  ],
+  "success_rate": { "backend": "100%", "frontend": "~90% (admin happy-path verified; coach UI only partially covered because the coach dashboard has an onboarding tutorial overlay that blocked programmatic clicks — but code paths are identical to admin and backend permissions are fully covered by pytest)" },
+  "seed_data_creation": "Temporary TEST_* convocations created during testing have been deleted (verified via DELETE /api/convocations/{id}).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Supervisor runs `npx serve -s dist -l 3000` (not metro dev). After any frontend code change, you MUST run `cd /app/frontend && npx expo export -p web --output-dir dist` then `sudo supervisorctl restart expo`. Backend tests live at /app/backend/tests/test_convocations.py. Coach test credentials: alice@test.com / Test1234. On coach dashboard a 'Guida rapida' tutorial overlay blocks clicks — click 'Ho capito' or 'Salta' to dismiss before interacting with team cards.",
+  "rca_of_issue": "N/A — module works. Only testing-side friction: Playwright click(force=True) on React-Native-Web TouchableOpacity sometimes bypasses the onPress; using plain .click() (without force) correctly fires onPress. Also learned: Playwright page.on('dialog') must be registered BEFORE triggering window.alert so showAlert doesn't block."
+}

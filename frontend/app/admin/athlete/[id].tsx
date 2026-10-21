@@ -4422,7 +4422,9 @@ export default function AdminAthleteDetail() {
                                   <View key={`w5-${yr}`} style={{ backgroundColor: '#FFF3E0', borderWidth: 1, borderColor: '#FF9800', borderRadius: 8, padding: 12, alignItems: 'center' }}>
                                     <Text style={{ fontSize: 14, fontWeight: '700', color: '#E65100', textAlign: 'center', marginBottom: 4 }}>⚠️ Anno {yr}: Soglia dei €5.000</Text>
                                     <Text style={{ fontSize: 13, color: '#E65100', textAlign: 'center', lineHeight: 18 }}>
-                                      Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{mn[t5ThresholdMonth || 0]}</Text> supererà la soglia previdenziale di €5.000.
+                                      {(ei === 0 && Number((athlete as any)?.other_annual_compensation || 0) >= 5000)
+                                        ? 'Soglia già superata all\'ingresso (pregressi oltre i €5.000): contributi dovuti dalla prima quietanza.'
+                                        : <>Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{mn[t5ThresholdMonth || 0]}</Text> supererà la soglia previdenziale di €5.000.</>}
                                     </Text>
                                     <Text style={{ fontSize: 11, color: '#E65100', textAlign: 'center', fontStyle: 'italic', marginTop: 4 }}>Contributi previdenziali INPS</Text>
                                   </View>
@@ -4434,7 +4436,9 @@ export default function AdminAthleteDetail() {
                                   <View key={`w15-${yr}`} style={{ backgroundColor: '#F3E5F5', borderWidth: 1, borderColor: '#9C27B0', borderRadius: 8, padding: 12, alignItems: 'center' }}>
                                     <Text style={{ fontSize: 14, fontWeight: '700', color: '#6A1B9A', textAlign: 'center', marginBottom: 4 }}>🚨 Anno {yr}: Soglia dei €15.000</Text>
                                     <Text style={{ fontSize: 13, color: '#6A1B9A', textAlign: 'center', lineHeight: 18 }}>
-                                      Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{mn[t15ThresholdMonth || 0]}</Text> supererà la soglia fiscale di €15.000.
+                                      {(ei === 0 && Number((athlete as any)?.other_annual_compensation || 0) >= 15000)
+                                        ? 'Soglia già superata all\'ingresso (pregressi oltre i €15.000): comunicazione dovuta dalla prima quietanza.'
+                                        : <>Con la quietanza del mese di <Text style={{ fontWeight: 'bold' }}>{mn[t15ThresholdMonth || 0]}</Text> supererà la soglia fiscale di €15.000.</>}
                                     </Text>
                                     <Text style={{ fontSize: 11, color: '#6A1B9A', textAlign: 'center', fontStyle: 'italic', marginTop: 4 }}>Tassazione IRPEF obbligatoria</Text>
                                   </View>
