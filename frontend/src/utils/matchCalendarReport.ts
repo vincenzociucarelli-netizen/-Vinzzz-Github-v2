@@ -53,31 +53,25 @@ const matchesTable = (rows: MatchRow[]): string => {
         <td style="text-align:center;">${esc(r.ora)}</td>
         <td style="text-align:center;">${esc(r.casaTrasferta)}</td>
         <td>${esc(r.squadra)}</td>
-        <td class="hl" style="text-align:center; font-weight:bold;">${esc(r.garaN)}</td>
-        <td class="hl">${esc(r.campionato)}</td>
-        <td class="hl" style="text-align:center;">${esc(r.girone)}</td>
+        <td style="text-align:center; font-weight:bold;">${esc(r.garaN)}</td>
+        <td>${esc(r.campionato)}</td>
         <td>${esc(r.avversario)}</td>
         <td>${esc(r.impianto)}</td>
         <td>${esc(r.citta)}</td>
-        <td style="text-align:center;">${esc(r.ritrovo)}</td>
-        <td style="text-align:center;">${esc(r.risultato)}</td>
       </tr>`).join('')
-    : `<tr><td colspan="13" style="text-align:center; color:#666; font-style:italic;">Nessuna gara</td></tr>`;
+    : `<tr><td colspan="10" style="text-align:center; color:#666; font-style:italic;">Nessuna gara</td></tr>`;
   return `<table>
     <thead><tr>
-      <th style="width:24px; text-align:center;">#</th>
-      <th style="width:74px;">Data</th>
-      <th style="width:40px; text-align:center;">Ora</th>
-      <th style="width:62px; text-align:center;">Casa/Tras.</th>
-      <th style="width:96px;">Squadra</th>
-      <th style="width:56px; text-align:center;">Gara N.</th>
-      <th style="width:96px;">Campionato</th>
-      <th style="width:44px; text-align:center;">Girone</th>
-      <th>Avversario</th>
-      <th>Impianto</th>
-      <th style="width:80px;">Città</th>
-      <th style="width:50px; text-align:center;">Ritrovo</th>
-      <th style="width:56px; text-align:center;">Risult.</th>
+      <th style="width:26px; text-align:center;">#</th>
+      <th style="width:80px;">Data</th>
+      <th style="width:42px; text-align:center;">Ora</th>
+      <th style="width:64px; text-align:center;">Casa/Tras.</th>
+      <th style="width:110px;">Squadra</th>
+      <th style="width:60px; text-align:center;">Gara N.</th>
+      <th style="width:120px;">Campionato</th>
+      <th style="width:150px;">Avversario</th>
+      <th style="width:160px;">Impianto</th>
+      <th style="width:130px;">Città</th>
     </tr></thead>
     <tbody>${body}</tbody>
   </table>`;
@@ -110,7 +104,6 @@ export const generateMatchCalendarHTML = (d: MatchCalendarPDFData): string => {
   th, td { border:1px solid #D1D5DB; padding:3px 5px; font-size:10px; vertical-align:top; }
   th { background:#1E3A8A; color:#fff; text-align:left; font-size:10px; }
   tbody tr:nth-child(even) { background:#F3F4F6; }
-  td.hl { background:#FEF3C7; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   thead { display: table-header-group; }
   tr { page-break-inside: avoid; }
   .foot { margin-top:20px; font-size:9.5px; color:#888; text-align:center; }

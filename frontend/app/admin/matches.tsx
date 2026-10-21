@@ -299,12 +299,12 @@ export default function AdminMatches() {
 
       // 🆕 26/09/2026 — Layout definitivo colonne (Riepilogo + ogni squadra):
       //  # · Data (estesa) · Ora · Casa/Trasferta · [Squadra solo nel Riepilogo] ·
-      //  Gara N. · Campionato · Girone (queste 3 evidenziate in GIALLO) · Avversario ·
-      //  Impianto · Indirizzo · Città · Note. Rimosse "Risultato" e "Ritrovo".
+      //  Gara N. · Campionato · Avversario · Impianto · Indirizzo · Città · Note.
+      //  Rimosse "Girone", "Risultato" e "Ritrovo" (richiesta utente).
       const SUMMARY_COLS: [string, number][] = [
         ['#', 5], ['Data', 26], ['Ora', 8], ['Casa/Trasferta', 13], ['Squadra', 16],
-        ['Gara N.', 10], ['Campionato', 16], ['Girone', 8], ['Avversario', 26],
-        ['Impianto', 28], ['Indirizzo', 28], ['Città', 16], ['Note', 20],
+        ['Gara N.', 10], ['Campionato', 16], ['Avversario', 20],
+        ['Impianto', 22], ['Indirizzo', 28], ['Città', 22], ['Note', 20],
       ];
       const TEAM_COLS: [string, number][] = SUMMARY_COLS.filter(([h]) => h !== 'Squadra');
 
@@ -327,7 +327,6 @@ export default function AdminMatches() {
           'Squadra': m.team_name || '',
           'Gara N.': m.match_number || '',
           'Campionato': m.championship || '',
-          'Girone': m.girone || '',
           'Avversario': m.opponent || '',
           'Impianto': m.venue || '',
           'Indirizzo': m.address || '',
@@ -703,14 +702,14 @@ export default function AdminMatches() {
 
 
   // Download template Excel — 🆕 26/09/2026: identico al file esportato (stesse colonne/stile)
-  // così gli stampati sono uniformi. Header verde + blocco giallo (Gara N./Campionato/Girone).
+  // così gli stampati sono uniformi. Header blu uniforme (nessuna evidenziatura gialla).
   const downloadTemplate = async () => {
     try {
       const ExcelJS = (await import('exceljs')).default;
       const COLS: [string, number][] = [
         ['#', 5], ['Data', 26], ['Ora', 8], ['Casa/Trasferta', 13],
-        ['Gara N.', 10], ['Campionato', 16], ['Girone', 8], ['Avversario', 26],
-        ['Impianto', 28], ['Indirizzo', 28], ['Città', 16], ['Note', 20],
+        ['Gara N.', 10], ['Campionato', 16], ['Avversario', 20],
+        ['Impianto', 22], ['Indirizzo', 28], ['Città', 22], ['Note', 20],
       ];
       const HEADER_BLUE = 'FF1F3864';
       const ALT = 'FFF2F2F2';
@@ -719,7 +718,7 @@ export default function AdminMatches() {
       // Riga d'esempio (come da richiesta utente)
       const example: { [k: string]: string } = {
         '#': '1', 'Data': 'Domenica 25 ottobre 2026', 'Ora': '17:00', 'Casa/Trasferta': 'Casa',
-        'Gara N.': '313', 'Campionato': 'Serie D', 'Girone': 'A',
+        'Gara N.': '313', 'Campionato': 'Serie D',
         'Avversario': 'POLISPORTIVA DELFINO - IDRO', 'Impianto': 'PALESTRA SCUOLA ELEMENTARE',
         'Indirizzo': 'SAN FELICIANO', 'Città': 'MAGIONE', 'Note': '',
       };

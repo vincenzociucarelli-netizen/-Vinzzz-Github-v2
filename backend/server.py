@@ -9612,14 +9612,26 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
         # presenze. Risolve: atleti bloccati in "PROVA SCADUTA · pronto: usa Ripara prove
         # in blocco" che non si attivavano mai da soli (es. squadre U12 senza obbligo di
         # certificato, dove il backfill allo startup li escludeva). Idempotente.
-        _in_trial = bool(a.get("is_trial")) or a.get("status") == "trial"
-        _missing = _trial_missing_reasons(a, _teams_full.get(a.get("team_id"))) if _in_trial else []
-        if _in_trial and not _missing:
-            if await maybe_activate_athlete(a["id"]):
-                a["status"] = "active"
+        _status_cur = a.get("status")
+        # 🆕 Atleti GIÀ in forza (active/blocked/rejected) non devono MAI comparire come
+        # "PROVA SCADUTA": se è rimasta appiccicata l'etichetta prova (is_trial=True) la
+        # ripuliamo subito (auto-heal). Era questo il caso "pronto ma non succede nulla":
+        # l'atleta era già attivo ma restava rosso e la riparazione lo saltava.
+        if _status_cur in ("active", "blocked", "rejected"):
+            if a.get("is_trial"):
+                await db.athletes.update_one({"id": a["id"]}, {"$set": {"is_trial": False, "trial_status": "completed"}})
                 a["is_trial"] = False
-                _in_trial = False
-                _missing = []
+            _in_trial = False
+            _missing = []
+        else:
+            _in_trial = bool(a.get("is_trial")) or _status_cur == "trial"
+            _missing = _trial_missing_reasons(a, _teams_full.get(a.get("team_id"))) if _in_trial else []
+            if _in_trial and not _missing:
+                if await maybe_activate_athlete(a["id"]):
+                    a["status"] = "active"
+                    a["is_trial"] = False
+                    _in_trial = False
+                    _missing = []
         dob = _to_date(a.get("date_of_birth"))
         exp = _to_date(a.get("medical_certificate_expiry"))
         if not a.get("medical_certificate_expiry"):
@@ -19013,17 +19025,24 @@ async def recompute_team_trials(team_id: str, current_user = Depends(get_current
         else:
             fresh = await db.athletes.find_one({"id": a["id"]}) or a
             _name = fresh.get("full_name") or f"{fresh.get('first_name','')} {fresh.get('last_name','')}".strip() or "Atleta"
+            # 🆕 Già in forza ma con l'etichetta prova rimasta appiccicata → la ripuliamo
+            # (è il caso "pronto ma non succede nulla": l'atleta era già attivo e restava
+            # rosso come PROVA SCADUTA). Dopo la pulizia torna normale, lo contiamo come
+            # sistemato.
             if fresh.get("status") in ("active", "blocked", "rejected"):
-                continue  # già a posto
+                if fresh.get("is_trial"):
+                    await db.athletes.update_one({"id": a["id"]}, {"$set": {"is_trial": False, "trial_status": "completed"}})
+                    activated += 1
+                continue
             reasons = _trial_missing_reasons(fresh, team)
             _cnt = fresh.get("trial_sessions_count", 0) or 0
             _max = fresh.get("trial_max_sessions", 3) or 3
             if reasons:
                 not_activated.append(f"{_name}: {', '.join(reasons)}")
             elif _cnt < _max:
-                not_activated.append(f"{_name}: prova non ancora completata ({_cnt}/{_max})")
+                not_activated.append(f"{_name}: prova non completata ({_cnt}/{_max} presenze)")
             else:
-                not_activated.append(f"{_name}: pronto ma non attivato (dato anomalo: controllare data di nascita/stato)")
+                not_activated.append(f"{_name}: stato={fresh.get('status')}, minore={_compute_is_minor(fresh)}, privacy={'ok' if fresh.get('privacy_accepted') else 'NO'} — non attivato")
     msg = f"Ricalcolo completato su {fixed} atleti in prova. Attivati: {activated}."
     if not_activated:
         msg += "\n\nNon attivati (motivo):\n• " + "\n• ".join(not_activated)
