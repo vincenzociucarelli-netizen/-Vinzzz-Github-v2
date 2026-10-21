@@ -18983,18 +18983,26 @@ async def recompute_team_trials(team_id: str, current_user = Depends(get_current
     if current_user["role"] not in (UserRole.ADMIN, UserRole.COORDINATORE, UserRole.COACH):
         raise HTTPException(status_code=403, detail="Operazione riservata ad admin/coach")
     society_id = current_user.get("society_id")
-    team = await db.teams.find_one({"id": team_id, "society_id": society_id}, {"_id": 0, "id": 1})
+    team = await db.teams.find_one({"id": team_id, "society_id": society_id}, {"_id": 0, "id": 1, "certificate_type_required": 1})
     if not team:
         raise HTTPException(status_code=404, detail="Squadra non trovata")
     if current_user["role"] == UserRole.COACH and team_id not in (current_user.get("assigned_teams", []) or []):
         raise HTTPException(status_code=403, detail="Non sei allenatore di questa squadra")
 
+    # 🐛 Allineato all'elenco presenze: include anche gli atleti aggregati da altre
+    # squadre (team_ids), non solo la squadra principale (team_id). Prima la
+    # riparazione saltava questi atleti e "non succedeva nulla".
     aths = await db.athletes.find({
-        "society_id": society_id, "team_id": team_id,
-        "$or": [{"is_trial": True}, {"status": {"$in": ["trial", "pending_trial"]}}],
+        "society_id": society_id,
+        "is_withdrawn": {"$ne": True},
+        "$and": [
+            {"$or": [{"team_id": team_id}, {"team_ids": team_id}]},
+            {"$or": [{"is_trial": True}, {"status": {"$in": ["trial", "pending_trial"]}}]},
+        ],
     }).to_list(2000)
     fixed = 0
     activated = 0
+    not_activated = []  # 🆕 motivo per atleta non attivato (diagnostica)
     for a in aths:
         await _recompute_trial_from_attendance(a, team_id)
         fixed += 1
@@ -19002,10 +19010,24 @@ async def recompute_team_trials(team_id: str, current_user = Depends(get_current
         # (minorenne o maggiorenne)
         if await maybe_activate_athlete(a["id"], current_user):
             activated += 1
-    msg = f"Prova ricalcolata per {fixed} atleti"
-    if activated:
-        msg += f" · {activated} attivati (privacy + certificato già a posto)"
-    return {"message": msg, "count": fixed, "activated": activated}
+        else:
+            fresh = await db.athletes.find_one({"id": a["id"]}) or a
+            _name = fresh.get("full_name") or f"{fresh.get('first_name','')} {fresh.get('last_name','')}".strip() or "Atleta"
+            if fresh.get("status") in ("active", "blocked", "rejected"):
+                continue  # già a posto
+            reasons = _trial_missing_reasons(fresh, team)
+            _cnt = fresh.get("trial_sessions_count", 0) or 0
+            _max = fresh.get("trial_max_sessions", 3) or 3
+            if reasons:
+                not_activated.append(f"{_name}: {', '.join(reasons)}")
+            elif _cnt < _max:
+                not_activated.append(f"{_name}: prova non ancora completata ({_cnt}/{_max})")
+            else:
+                not_activated.append(f"{_name}: pronto ma non attivato (dato anomalo: controllare data di nascita/stato)")
+    msg = f"Ricalcolo completato su {fixed} atleti in prova. Attivati: {activated}."
+    if not_activated:
+        msg += "\n\nNon attivati (motivo):\n• " + "\n• ".join(not_activated)
+    return {"message": msg, "count": fixed, "activated": activated, "not_activated": not_activated}
 
 
 @api_router.post("/admin/athletes/repair-minor-flags")
