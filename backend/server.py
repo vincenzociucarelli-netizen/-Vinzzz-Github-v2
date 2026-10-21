@@ -9713,22 +9713,34 @@ async def convocation_roster(team_id: str, current_user = Depends(get_current_us
     nella convocazione. Accessibile ad admin/coordinatore/coach assegnato."""
     team = await _conv_team_or_403(current_user, team_id)
     society_id = current_user.get("society_id")
-    from utils import get_current_season_for_society as _get_cs
-    _season = await _get_cs(db, society_id)
+    # ⚠️ Stessa identica query del "Registro Presenze" (/teams/{id}/attendance-stats):
+    # atleti collegati via team_id OPPURE team_id_2 (seconda squadra) OPPURE team_ids
+    # (aggregati). Prima mancava team_id_2 → in squadre come la Serie D (13 atlete
+    # assegnate come seconda squadra) la convocazione mostrava 0 atlete.
     q = {
-        "society_id": society_id,
-        "is_withdrawn": {"$ne": True},
-        "$and": [
-            {"$or": [{"team_id": team_id}, {"team_ids": team_id}]},
-            {"$or": [
-                {"rollover_decision": {"$ne": "removed"}},
-                {"rollover_decision_season": {"$ne": _season}},
-            ]},
+        "$or": [
+            {"team_id": team_id},
+            {"team_id_2": team_id},
+            {"team_ids": team_id},
         ],
+        "status": {"$nin": ["rejected", "withdrawn", "removed", "deleted"]},
+        "is_withdrawn": {"$ne": True},
     }
+    if society_id:
+        q["society_id"] = society_id
     proj = {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1,
             "date_of_birth": 1, "athlete_role": 1, "status": 1}
     aths = await db.athletes.find(q, proj).to_list(5000)
+    # Parità col Registro Presenze: includi anche gli atleti in prova che hanno
+    # presenze registrate per questa squadra ma senza team_id impostato.
+    existing_ids = {a["id"] for a in aths}
+    trial_attendance_ids = await db.attendances.distinct("athlete_id", {"team_id": team_id})
+    missing_ids = [aid for aid in trial_attendance_ids if aid not in existing_ids]
+    if missing_ids:
+        q_extra = {"id": {"$in": missing_ids}, "status": "trial", "is_withdrawn": {"$ne": True}}
+        if society_id:
+            q_extra["society_id"] = society_id
+        aths.extend(await db.athletes.find(q_extra, proj).to_list(500))
     out = []
     for a in aths:
         full_name = (f"{a.get('last_name','')} {a.get('first_name','')}".strip() or a.get("full_name", ""))
