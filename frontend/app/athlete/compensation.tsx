@@ -1049,13 +1049,16 @@ export default function AthleteCompensation() {
     if (thresholdStatus.thresholds['5000'].declaration_signed) {
       const m1 = thresholdStatus.thresholds['5000'].threshold_month;
       const monthLabel1 = (m1 && m1 >= 1 && m1 <= 12) ? MONTH_NAMES[m1] : '';
+      const priorAlreadyOver1 = priorCompensation >= 5000;
       warnings.push(
         <View key="signed-5000" style={styles.thresholdSignedBox}>
           <Text style={styles.thresholdSignedTitle}>
             ✅ Anno {contractStartYear}: Dichiarazione €5.000 firmata
           </Text>
           <Text style={styles.thresholdSignedBody}>
-            Soglia previdenziale comunicata{monthLabel1 ? <>{' (superata nel mese di '}<Text style={{ fontWeight: 'bold' }}>{monthLabel1}</Text>{')'}</> : null}
+            {priorAlreadyOver1
+              ? 'Soglia già superata all\'ingresso (compensi pregressi oltre i €5.000): contributi dovuti fin dalla prima quietanza.'
+              : <>Soglia previdenziale comunicata{monthLabel1 ? <>{' (superata nel mese di '}<Text style={{ fontWeight: 'bold' }}>{monthLabel1}</Text>{')'}</> : null}</>}
           </Text>
         </View>
       );
@@ -1064,13 +1067,16 @@ export default function AthleteCompensation() {
     if (thresholdStatus.thresholds['15000'].declaration_signed) {
       const m2 = thresholdStatus.thresholds['15000'].threshold_month;
       const monthLabel2 = (m2 && m2 >= 1 && m2 <= 12) ? MONTH_NAMES[m2] : '';
+      const priorAlreadyOver2 = priorCompensation >= 15000;
       warnings.push(
         <View key="signed-15000" style={styles.thresholdSignedBox}>
           <Text style={styles.thresholdSignedTitle}>
             ✅ Anno {contractStartYear}: Dichiarazione €15.000 firmata
           </Text>
           <Text style={styles.thresholdSignedBody}>
-            Soglia fiscale comunicata{monthLabel2 ? <>{' (superata nel mese di '}<Text style={{ fontWeight: 'bold' }}>{monthLabel2}</Text>{')'}</> : null}
+            {priorAlreadyOver2
+              ? 'Soglia già superata all\'ingresso (compensi pregressi oltre i €15.000): comunicazione dovuta fin dalla prima quietanza.'
+              : <>Soglia fiscale comunicata{monthLabel2 ? <>{' (superata nel mese di '}<Text style={{ fontWeight: 'bold' }}>{monthLabel2}</Text>{')'}</> : null}</>}
           </Text>
         </View>
       );

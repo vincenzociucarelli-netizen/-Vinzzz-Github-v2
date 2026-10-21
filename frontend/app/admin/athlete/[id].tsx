@@ -4448,7 +4448,7 @@ export default function AdminAthleteDetail() {
                                 blocks.push(
                                   <View key={`s5-${yr}`} style={{ backgroundColor: bg, borderWidth: 1, borderColor: bd, borderRadius: 8, padding: 12, alignItems: 'center' }}>
                                     <Text style={{ fontSize: 14, fontWeight: '700', color: tc, textAlign: 'center', marginBottom: 4 }}>✅ Anno {yr}: Dichiarazione €5.000 firmata</Text>
-                                    <Text style={{ fontSize: 13, color: tc, textAlign: 'center', fontStyle: 'italic' }}>Soglia previdenziale comunicata{(t5?.threshold_month >= 1 && t5?.threshold_month <= 12) ? <>{' (superata nel mese di '}<Text style={{ fontWeight: 'bold' }}>{mn[t5.threshold_month]}</Text>{')'}</> : null}</Text>
+                                    <Text style={{ fontSize: 13, color: tc, textAlign: 'center', fontStyle: 'italic' }}>{(ei === 0 && Number((athlete as any)?.other_annual_compensation || 0) >= 5000) ? 'Soglia già superata all\'ingresso (pregressi oltre i €5.000): contributi dovuti dalla prima quietanza.' : <>Soglia previdenziale comunicata{(t5?.threshold_month >= 1 && t5?.threshold_month <= 12) ? <>{' (superata nel mese di '}<Text style={{ fontWeight: 'bold' }}>{mn[t5.threshold_month]}</Text>{')'}</> : null}</>}</Text>
                                   </View>
                                 );
                               }
@@ -4460,7 +4460,7 @@ export default function AdminAthleteDetail() {
                                 blocks.push(
                                   <View key={`s15-${yr}`} style={{ backgroundColor: bg, borderWidth: 1, borderColor: bd, borderRadius: 8, padding: 12, alignItems: 'center' }}>
                                     <Text style={{ fontSize: 14, fontWeight: '700', color: tc, textAlign: 'center', marginBottom: 4 }}>✅ Anno {yr}: Dichiarazione €15.000 firmata</Text>
-                                    <Text style={{ fontSize: 13, color: tc, textAlign: 'center', fontStyle: 'italic' }}>Soglia fiscale comunicata{(t15?.threshold_month >= 1 && t15?.threshold_month <= 12) ? <>{' (superata nel mese di '}<Text style={{ fontWeight: 'bold' }}>{mn[t15.threshold_month]}</Text>{')'}</> : null}</Text>
+                                    <Text style={{ fontSize: 13, color: tc, textAlign: 'center', fontStyle: 'italic' }}>{(ei === 0 && Number((athlete as any)?.other_annual_compensation || 0) >= 15000) ? 'Soglia già superata all\'ingresso (pregressi oltre i €15.000): comunicazione dovuta dalla prima quietanza.' : <>Soglia fiscale comunicata{(t15?.threshold_month >= 1 && t15?.threshold_month <= 12) ? <>{' (superata nel mese di '}<Text style={{ fontWeight: 'bold' }}>{mn[t15.threshold_month]}</Text>{')'}</> : null}</>}</Text>
                                   </View>
                                 );
                               }
