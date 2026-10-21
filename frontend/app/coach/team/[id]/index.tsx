@@ -43,6 +43,7 @@ export default function CoachTeamAthletes() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showTeamPhoto, setShowTeamPhoto] = useState(false);
+  const [canManualAttendance, setCanManualAttendance] = useState(false);
 
   const loadTeam = async () => {
     try {
@@ -52,6 +53,10 @@ export default function CoachTeamAthletes() {
     } catch (error) {
       console.error('Error loading team:', error);
     }
+    try {
+      const me = await api.get('/auth/me');
+      setCanManualAttendance(!!me.data?.can_manual_attendance);
+    } catch { /* default off */ }
   };
 
   const loadAthletes = async () => {
@@ -235,6 +240,19 @@ export default function CoachTeamAthletes() {
           <Text style={styles.attendanceBtnText}>Registro Presenze</Text>
           <Ionicons name="chevron-forward" size={20} color="#007AFF" />
         </TouchableOpacity>
+
+        {/* 🆕 Registra Presenze (manuale) — solo se abilitato dall'admin */}
+        {canManualAttendance && (
+          <TouchableOpacity
+            style={[styles.attendanceBtn, { backgroundColor: '#E8F5E9', borderColor: '#A5D6A7' }]}
+            onPress={() => router.push(`/coach/team/${id}/manual-attendance`)}
+            testID="coach-manual-attendance-btn"
+          >
+            <Ionicons name="create-outline" size={20} color="#2E7D32" />
+            <Text style={[styles.attendanceBtnText, { color: '#2E7D32' }]}>Registra Presenze (manuale)</Text>
+            <Ionicons name="chevron-forward" size={20} color="#2E7D32" />
+          </TouchableOpacity>
+        )}
 
         {/* Athletes Section */}
         <View style={styles.section}>

@@ -11,6 +11,17 @@ RegistraTEAM è un'applicazione full-stack per la gestione delle società sporti
 - Pagamenti Stripe multi-tenant + Rate + Parziali
 - Bacheca Note Admin con notifiche urgenti
 
+
+## 🐞 FIX (Giu 2026) — "Ripara prove in blocco" non azzerava atleti pronti
+- Sintomo: atleti con "🔴 PROVA SCADUTA · N/3 — pronto: usa Ripara prove in blocco per attivarlo" restavano rossi anche dopo aver premuto Ripara.
+- Causa: l'attivazione (sia in `/api/admin/team-roster` all'apertura, sia in `/api/admin/teams/{id}/recompute-trials`) chiamava SOLO `maybe_activate_minor_athlete`. Gli atleti pronti ma trattati come maggiorenni (o con `is_minor=False` / data di nascita adulta per dati di test) non venivano MAI attivati.
+- Fix: nuovo helper unificato `maybe_activate_athlete()` (prova minore, poi adulto) in server.py (~riga 36252). Usato in team-roster (~9617, rimosso il gate `_compute_is_minor`) e in recompute-trials (~19002). Verificato: atleta adulto in prova pronto → status active, is_trial False. Solo backend, nessun rebuild frontend.
+
+## 🆕 FEATURE (Giu 2026) — Presenza manuale per coach + miglioria banner soglia- **#1 Banner soglia:** quando il solo pregresso (other_annual_compensation) è già ≥ €5.000/€15.000, il banner mostra "Soglia già superata all'ingresso … contributi/comunicazione dovuti dalla prima quietanza" invece di un mese ambiguo. Modificato in app/athlete/compensation.tsx e app/admin/athlete/[id].tsx.
+- **#3 Presenza manuale coach:** nuovo flag per-coach `can_manual_attendance` (default off). Admin lo attiva con checkbox nella scheda coach (app/admin/coach/[id].tsx → PATCH /api/users/{id} {can_manual_attendance}). Endpoint `/api/admin/teams/{team_id}/bulk-attendance` ora richiede il flag per i coach (admin sempre). Il coach abilitato vede "Registra Presenze (manuale)" nella schermata squadra (app/coach/team/[id]/index.tsx) → nuova schermata app/coach/team/[id]/manual-attendance.tsx (seleziona atleti + data/ora, POST bulk). `/auth/me` espone il flag. Verificato: PATCH persiste su Mongo.
+- **#4 CONVOCAZIONI — DA FARE (prossima build):** selezione atleti (checkbox) dalla rosa della squadra per convocazione partita, collegamento a gara del calendario, dati ritrovo/ora inseriti dal coach; comunicazione via PDF "Distinta convocazione" + WhatsApp ad atleta (+genitore se minore). Usabile da Admin e Coach.
+
+
 ## 🆕 FEATURE (Giu 2026) — Criterio di cassa compensi (soglie €5.000/€15.000) + Ricerca Funzioni Admin
 - **Setting società** `compensation_payment_timing` ("same_month" default | "next_month") in Impostazioni → Altre Impostazioni → sezione "💶 Pagamento Compensi" (anche presente in Dati Società). Persistito su `db.settings` (type=society) via PATCH/GET `/api/settings/society`.
 - **Regola "mese successivo" (criterio di cassa):** la competenza di DICEMBRE viene incassata a gennaio e conta nell'anno solare SUCCESSIVO per le soglie €5.000 (previdenziale) e €15.000 (fiscale). Con "same_month" comportamento INVARIATO. Pregressi e compensi esterni NON slittano (restano nell'anno registrato).
