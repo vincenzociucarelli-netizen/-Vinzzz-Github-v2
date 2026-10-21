@@ -19008,6 +19008,45 @@ async def recompute_team_trials(team_id: str, current_user = Depends(get_current
     return {"message": msg, "count": fixed, "activated": activated}
 
 
+@api_router.post("/admin/athletes/repair-minor-flags")
+async def repair_minor_flags(current_user = Depends(get_current_user)):
+    """🆕 Riparazione una-tantum: ricalcola il flag `is_minor` di TUTTI gli atleti
+    della società dalla data di nascita (età < 18 → minorenne). Corregge i record
+    importati con il flag errato, che impediva l'attivazione automatica e altre
+    logiche minore/maggiorenne. Idempotente. Salta chi non ha una data valida."""
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.COORDINATORE):
+        raise HTTPException(status_code=403, detail="Operazione riservata ad admin")
+    society_id = current_user.get("society_id")
+    query = {"society_id": society_id} if society_id else {}
+    aths = await db.athletes.find(query, {"_id": 0, "id": 1, "is_minor": 1, "date_of_birth": 1}).to_list(10000)
+    today = datetime.utcnow()
+    fixed = 0
+    no_dob = 0
+    for a in aths:
+        dob = a.get("date_of_birth")
+        if not dob:
+            no_dob += 1
+            continue
+        try:
+            if isinstance(dob, str):
+                dob_dt = datetime.fromisoformat(dob.replace("Z", "").split("T")[0])
+            else:
+                dob_dt = dob
+            age = today.year - dob_dt.year - ((today.month, today.day) < (dob_dt.month, dob_dt.day))
+        except Exception:
+            no_dob += 1
+            continue
+        correct_minor = age < 18
+        if a.get("is_minor") is not correct_minor:
+            await db.athletes.update_one({"id": a["id"]}, {"$set": {"is_minor": correct_minor}})
+            fixed += 1
+    msg = f"Etichetta minorenne/maggiorenne ricalcolata. Corretti {fixed} atleti."
+    if no_dob:
+        msg += f" ({no_dob} saltati: data di nascita mancante o non valida.)"
+    return {"message": msg, "fixed": fixed, "skipped_no_dob": no_dob, "total": len(aths)}
+
+
+
 @api_router.post("/athletes/{athlete_id}/force-end-trial")
 async def force_end_trial(athlete_id: str, request: Request, current_user = Depends(get_current_user)):
     """🆕 06/09/2026 — Termina SUBITO il periodo di prova di un atleta (admin):

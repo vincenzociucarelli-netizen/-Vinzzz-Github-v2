@@ -70,6 +70,25 @@ export default function StanzaBottoniScreen() {
     }
   };
 
+  const doRepairMinors = async () => {
+    setBusyKey('repair_minors');
+    try {
+      const r = await api.post('/admin/athletes/repair-minor-flags');
+      setResult({
+        title: 'Riparazione minorenni',
+        message: r.data?.message || 'Operazione completata.',
+      });
+    } catch (err: any) {
+      setResult({
+        title: 'Errore',
+        message: err?.response?.data?.detail || err?.message || 'Operazione non riuscita.',
+      });
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+
   const doSyncFipav = async () => {
     setBusyKey('sync_fipav');
     try {
@@ -242,6 +261,15 @@ export default function StanzaBottoniScreen() {
           route: '/admin/payments-hygiene',
         },
         {
+          key: 'repair_minors',
+          icon: 'people',
+          color: '#1565C0',
+          title: 'Ripara Minorenni',
+          what: 'Ricalcola l\'etichetta minorenne/maggiorenne di tutti gli atleti dalla data di nascita. Corregge i record importati con l\'etichetta sbagliata (che impediva l\'attivazione automatica e la gestione corretta di privacy genitore e convocazioni).',
+          how: 'Premi il pulsante: la correzione è automatica e sicura. Salta chi non ha una data di nascita valida.',
+          action: 'repair_minors',
+        },
+        {
           key: 'diagnose',
           icon: 'pulse',
           color: '#455A64',
@@ -300,6 +328,7 @@ export default function StanzaBottoniScreen() {
     if (op.route) { router.push(op.route as any); return; }
     if (op.action === 'close_trials') { setConfirmTrials(true); return; }
     if (op.action === 'sync_fipav') { doSyncFipav(); return; }
+    if (op.action === 'repair_minors') { doRepairMinors(); return; }
   };
 
   return (
@@ -366,7 +395,7 @@ export default function StanzaBottoniScreen() {
               {trialsCount !== null
                 ? `Stai per terminare il periodo di prova di ${trialsCount} ${trialsCount === 1 ? 'atleta' : 'atleti'}.`
                 : 'Stai per terminare il periodo di prova di tutti gli atleti in prova.'}
-              {'\n\n'}Ognuno dovrà firmare la privacy, pagare la quota concordata e inserire i dati del certificato medico. L'operazione riguarda tutta la società.
+              {'\n\n'}Ognuno dovrà firmare la privacy, pagare la quota concordata e inserire i dati del certificato medico. L&apos;operazione riguarda tutta la società.
             </Text>
             <View style={styles.modalBtns}>
               <TouchableOpacity style={[styles.mBtn, styles.mBtnCancel]} onPress={() => setConfirmTrials(false)} data-testid="confirm-trials-cancel">
