@@ -108,6 +108,8 @@ export default function AdminCoachDetail() {
   const [saving, setSaving] = useState(false);
   const [editingTeams, setEditingTeams] = useState(false);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const [canManualAttendance, setCanManualAttendance] = useState(false);
+  const [savingManual, setSavingManual] = useState(false);
   const [savingTeams, setSavingTeams] = useState(false);
 
   // 🆕 22/06/2026 — Multi-select Livello/Grado coach (replica della logica user-side)
@@ -220,6 +222,7 @@ export default function AdminCoachDetail() {
       setMonthlyCompensation(coachRes.data.monthly_compensation?.toString() || '0');
       setOtherAnnualCompensation(coachRes.data.other_annual_compensation?.toString() || '0');
       setSelectedTeams(coachRes.data.assigned_teams || []);
+      setCanManualAttendance(!!coachRes.data.can_manual_attendance);
       
       // Load contract start date
       if (coachRes.data.contract_start_date) {
@@ -456,6 +459,22 @@ export default function AdminCoachDetail() {
       setSavingTeams(false);
     }
   };
+
+  // 🆕 Permesso registrazione presenze manuale (per allenatori senza QR/telefono)
+  const toggleManualAttendance = async () => {
+    const next = !canManualAttendance;
+    setSavingManual(true);
+    try {
+      await api.patch(`/users/${id}`, { can_manual_attendance: next });
+      setCanManualAttendance(next);
+      setCoach({ ...coach!, can_manual_attendance: next } as any);
+    } catch (error: any) {
+      showAlert('Errore', error.response?.data?.detail || 'Errore nel salvataggio');
+    } finally {
+      setSavingManual(false);
+    }
+  };
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -1117,6 +1136,24 @@ export default function AdminCoachDetail() {
               </>
             )}
           </View>
+
+          {/* 🆕 Permesso presenze manuali */}
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 14, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: canManualAttendance ? '#2E7D32' : '#E0E0E0', backgroundColor: canManualAttendance ? '#F1F8E9' : '#FAFAFA' }}
+            onPress={toggleManualAttendance}
+            disabled={savingManual}
+            testID="coach-can-manual-attendance"
+          >
+            <Ionicons name={canManualAttendance ? 'checkbox' : 'square-outline'} size={24} color={canManualAttendance ? '#2E7D32' : '#9E9E9E'} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#263238' }}>Consenti registrazione presenze manuale</Text>
+              <Text style={{ fontSize: 12, color: '#607D8B', marginTop: 2, lineHeight: 17 }}>
+                L'allenatore potrà registrare le presenze selezionando gli atleti e la data (utile per chi non usa il QR, es. minivolley). Senza spunta deve usare la scansione QR.
+              </Text>
+            </View>
+            {savingManual && <ActivityIndicator size="small" color="#2E7D32" />}
+          </TouchableOpacity>
+
         </TabSection>
 
         {/* 📋 TAB ANAGRAFICA — parte 1 (Dati Personali / Indirizzo / Dati Fiscali) */}

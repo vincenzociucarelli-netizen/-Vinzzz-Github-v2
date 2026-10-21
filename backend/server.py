@@ -7674,6 +7674,9 @@ async def update_user(user_id: str, data: dict, current_user = Depends(get_curre
     for _fipav in ("is_scorekeeper", "is_referee", "is_accompanying_manager"):
         if _fipav in data:
             update_data[_fipav] = bool(data[_fipav])
+    # 🆕 Permesso registrazione presenze manuale (per allenatori senza QR/telefono)
+    if "can_manual_attendance" in data:
+        update_data["can_manual_attendance"] = bool(data["can_manual_attendance"])
     
     # Compensation fields
     if "monthly_compensation" in data:
@@ -9611,8 +9614,8 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
         # certificato, dove il backfill allo startup li escludeva). Idempotente.
         _in_trial = bool(a.get("is_trial")) or a.get("status") == "trial"
         _missing = _trial_missing_reasons(a, _teams_full.get(a.get("team_id"))) if _in_trial else []
-        if _in_trial and not _missing and _compute_is_minor(a):
-            if await maybe_activate_minor_athlete(a["id"]):
+        if _in_trial and not _missing:
+            if await maybe_activate_athlete(a["id"]):
                 a["status"] = "active"
                 a["is_trial"] = False
                 _in_trial = False
@@ -18996,12 +18999,52 @@ async def recompute_team_trials(team_id: str, current_user = Depends(get_current
         await _recompute_trial_from_attendance(a, team_id)
         fixed += 1
         # 🆕 chi ha già privacy + certificato convalidato esce dalla prova → ATTIVO
-        if await maybe_activate_minor_athlete(a["id"], current_user):
+        # (minorenne o maggiorenne)
+        if await maybe_activate_athlete(a["id"], current_user):
             activated += 1
     msg = f"Prova ricalcolata per {fixed} atleti"
     if activated:
         msg += f" · {activated} attivati (privacy + certificato già a posto)"
     return {"message": msg, "count": fixed, "activated": activated}
+
+
+@api_router.post("/admin/athletes/repair-minor-flags")
+async def repair_minor_flags(current_user = Depends(get_current_user)):
+    """🆕 Riparazione una-tantum: ricalcola il flag `is_minor` di TUTTI gli atleti
+    della società dalla data di nascita (età < 18 → minorenne). Corregge i record
+    importati con il flag errato, che impediva l'attivazione automatica e altre
+    logiche minore/maggiorenne. Idempotente. Salta chi non ha una data valida."""
+    if current_user["role"] not in (UserRole.ADMIN, UserRole.COORDINATORE):
+        raise HTTPException(status_code=403, detail="Operazione riservata ad admin")
+    society_id = current_user.get("society_id")
+    query = {"society_id": society_id} if society_id else {}
+    aths = await db.athletes.find(query, {"_id": 0, "id": 1, "is_minor": 1, "date_of_birth": 1}).to_list(10000)
+    today = datetime.utcnow()
+    fixed = 0
+    no_dob = 0
+    for a in aths:
+        dob = a.get("date_of_birth")
+        if not dob:
+            no_dob += 1
+            continue
+        try:
+            if isinstance(dob, str):
+                dob_dt = datetime.fromisoformat(dob.replace("Z", "").split("T")[0])
+            else:
+                dob_dt = dob
+            age = today.year - dob_dt.year - ((today.month, today.day) < (dob_dt.month, dob_dt.day))
+        except Exception:
+            no_dob += 1
+            continue
+        correct_minor = age < 18
+        if a.get("is_minor") is not correct_minor:
+            await db.athletes.update_one({"id": a["id"]}, {"$set": {"is_minor": correct_minor}})
+            fixed += 1
+    msg = f"Etichetta minorenne/maggiorenne ricalcolata. Corretti {fixed} atleti."
+    if no_dob:
+        msg += f" ({no_dob} saltati: data di nascita mancante o non valida.)"
+    return {"message": msg, "fixed": fixed, "skipped_no_dob": no_dob, "total": len(aths)}
+
 
 
 @api_router.post("/athletes/{athlete_id}/force-end-trial")
@@ -19208,10 +19251,12 @@ async def add_bulk_attendance(team_id: str, data: BulkAttendanceCreate, request:
     if not team:
         raise HTTPException(status_code=404, detail="Squadra non trovata")
 
-    # Coach: solo squadre assegnate
+    # Coach: solo squadre assegnate + permesso esplicito concesso dall'admin
     if current_user["role"] == UserRole.COACH:
         if team_id not in (current_user.get("assigned_teams", []) or []):
             raise HTTPException(status_code=403, detail="Non sei allenatore di questa squadra")
+        if not current_user.get("can_manual_attendance"):
+            raise HTTPException(status_code=403, detail="Registrazione manuale non abilitata per il tuo profilo. Chiedi all'amministratore di attivarla.")
 
     if not data.athlete_ids:
         raise HTTPException(status_code=400, detail="Nessun atleta selezionato")
@@ -36243,6 +36288,19 @@ async def maybe_activate_adult_athlete(athlete_id: str, actor: dict | None = Non
         f"certificato convalidato, athlete_type={athlete.get('athlete_type')})"
     )
     return True
+
+
+async def maybe_activate_athlete(athlete_id: str, actor: dict | None = None) -> bool:
+    """🆕 Attivazione unificata: prova a chiudere la prova e mettere ATTIVO l'atleta
+    se è pronto (privacy firmata + certificato ok/non richiesto), indipendentemente
+    dal fatto che sia minorenne o maggiorenne. Risolve gli atleti bloccati in
+    "PROVA SCADUTA · pronto" che, trattati come maggiorenni (o con is_minor=False /
+    data di nascita adulta per dati di test), non venivano mai attivati perché la
+    riparazione prove gestiva solo i minorenni. Idempotente."""
+    if await maybe_activate_minor_athlete(athlete_id, actor):
+        return True
+    return await maybe_activate_adult_athlete(athlete_id, actor)
+
 
 
 @api_router.post("/athletes/{athlete_id}/waive-trial")
