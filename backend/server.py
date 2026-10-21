@@ -20659,6 +20659,7 @@ async def get_coach_commitments_debug(
     return report
 
 
+@api_router.get("/coach/team/{team_id}/athletes")
 async def get_coach_team_athletes(team_id: str, current_user = Depends(get_current_user)):
     """Get athletes for a team (coach view - limited info)"""
     if current_user["role"] != UserRole.COACH:
