@@ -19,6 +19,7 @@ import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
 import AthleteMatchesCard from '../../src/components/AthleteMatchesCard';
 import ActivityStartBanners from '../../src/components/ActivityStartBanners';
+import ConvocationNotice from '../../src/components/ConvocationNotice';
 import { formatRomeTime } from '../../src/utils/datetime';
 
 const DAYS_IT: { [key: string]: string } = {
@@ -438,6 +439,11 @@ export default function MinorDashboard() {
           <Text style={styles.statLabel}>Questo Mese</Text>
           <Text style={styles.statValue}>{data.stats.monthly_attendances}</Text>
         </View>
+      </View>
+
+      {/* 🆕 Convocazioni (sola lettura) */}
+      <View style={{ paddingHorizontal: 16 }}>
+        <ConvocationNotice athleteId={data?.athlete?.id} accentColor={accentColor} />
       </View>
 
       {/* Banner "Inizio allenamenti" per squadra (visibile anche in accesso lite) */}

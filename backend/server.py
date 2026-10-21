@@ -9799,6 +9799,8 @@ async def create_convocation(data: dict = Body(...), current_user = Depends(get_
         "match_time": (data.get("match_time") or "").strip(),
         "home_away": data.get("home_away") or "home",
         "venue": (data.get("venue") or "").strip(),
+        "venue_address": (data.get("venue_address") or "").strip(),
+        "maps_url": (data.get("maps_url") or "").strip(),
         "city": (data.get("city") or "").strip(),
         "meeting_place": (data.get("meeting_place") or "").strip(),
         "meeting_time": (data.get("meeting_time") or "").strip(),
@@ -9853,8 +9855,8 @@ async def update_convocation(conv_id: str, data: dict = Body(...), current_user 
     """Aggiorna una convocazione esistente (campi gara/ritrovo/note/atleti/stato)."""
     conv = await _get_conv_or_404(conv_id, current_user)
     allowed = ["match_id", "opponent", "match_date", "match_time", "home_away",
-               "venue", "city", "meeting_place", "meeting_time", "start_time",
-               "notes", "athlete_ids", "status"]
+               "venue", "venue_address", "maps_url", "city", "meeting_place",
+               "meeting_time", "start_time", "notes", "athlete_ids", "status"]
     upd = {}
     for k in allowed:
         if k not in data:
@@ -9925,6 +9927,68 @@ async def convocation_contacts(conv_id: str, current_user = Depends(get_current_
         })
     out.sort(key=lambda x: (x.get("athlete_name") or "").lower())
     return {"count": len(out), "athletes": out}
+
+
+@api_router.get("/convocations/for-athlete/{athlete_id}")
+async def convocations_for_athlete(athlete_id: str, current_user = Depends(get_current_user)):
+    """🆕 Convocazioni INVIATE in cui l'atleta è convocato, in SOLA LETTURA, per
+    la home dell'atleta/genitore e l'accesso Lite. Include i dati gara/ritrovo,
+    indirizzo+mappa e il contatto del coach (per avvisare in caso di assenza)."""
+    athlete = await db.athletes.find_one({"id": athlete_id}, {"_id": 0, "id": 1, "society_id": 1, "parent_id": 1, "second_parent_id": 1})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    sid = athlete.get("society_id")
+    role = current_user.get("role")
+    allowed = False
+    if role in (UserRole.ADMIN, UserRole.COORDINATORE, UserRole.DIRIGENTE, UserRole.COACH) and current_user.get("society_id") == sid:
+        allowed = True
+    if current_user.get("athlete_id") == athlete_id:
+        allowed = True
+    if role in (UserRole.PARENT, "parent") and current_user.get("id") in (athlete.get("parent_id"), athlete.get("second_parent_id")):
+        allowed = True
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+
+    convs = await db.convocations.find(
+        {"society_id": sid, "status": "sent", "athlete_ids": athlete_id}
+    ).sort("created_at", -1).to_list(200)
+
+    coach_cache: dict = {}
+    async def _coach_for(team_id: str):
+        if team_id in coach_cache:
+            return coach_cache[team_id]
+        coach = await db.users.find_one(
+            {"society_id": sid, "role": UserRole.COACH, "assigned_teams": team_id},
+            {"_id": 0, "full_name": 1, "phone": 1},
+        )
+        res = {"coach_name": (coach or {}).get("full_name", ""), "coach_phone": (coach or {}).get("phone", "")}
+        coach_cache[team_id] = res
+        return res
+
+    out = []
+    for c in convs:
+        contact = await _coach_for(c.get("team_id"))
+        out.append({
+            "id": c["id"],
+            "team_name": c.get("team_name", ""),
+            "opponent": c.get("opponent", ""),
+            "home_away": c.get("home_away", "home"),
+            "match_date": c.get("match_date", ""),
+            "match_time": c.get("match_time", ""),
+            "venue": c.get("venue", ""),
+            "venue_address": c.get("venue_address", ""),
+            "maps_url": c.get("maps_url", ""),
+            "city": c.get("city", ""),
+            "meeting_place": c.get("meeting_place", ""),
+            "meeting_time": c.get("meeting_time", ""),
+            "start_time": c.get("start_time", ""),
+            "notes": c.get("notes", ""),
+            "coach_name": contact["coach_name"],
+            "coach_phone": contact["coach_phone"],
+            "sent_at": c.get("sent_at"),
+        })
+    return out
+
 
 
 @api_router.get("/admin/teams/{team_id}/whatsapp-contacts")
