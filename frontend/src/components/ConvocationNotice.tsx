@@ -8,6 +8,7 @@ export interface ConvocationNoticeItem {
   id: string;
   team_name: string;
   opponent: string;
+  match_number?: string;
   home_away: string;
   match_date: string;
   match_time: string;
@@ -70,6 +71,7 @@ export default function ConvocationNotice({ athleteId, accentColor = '#5856D6' }
               <Text style={[styles.badge, { color: accentColor }]}>SEI CONVOCATA</Text>
             </View>
             <Text style={styles.title}>{title}</Text>
+            {!!c.match_number && <Text style={styles.line}>🏷️ Gara n. {c.match_number}</Text>}
             {!!when && <Text style={styles.line}>📅 {when}</Text>}
             {(!!c.venue || !!c.city) && <Text style={styles.line}>📍 {[c.venue, c.city].filter(Boolean).join(' · ')}</Text>}
             {!!c.venue_address && <Text style={styles.sub}>{c.venue_address}</Text>}

@@ -9754,6 +9754,43 @@ async def convocation_roster(team_id: str, current_user = Depends(get_current_us
     return {"team": team, "count": len(out), "athletes": out}
 
 
+@api_router.get("/convocations/team/{team_id}/society-athletes")
+async def convocation_society_athletes(team_id: str, current_user = Depends(get_current_user)):
+    """🆕 Altri atleti della SOCIETÀ non già presenti nella rosa di questa squadra,
+    per poterli aggiungere alla convocazione."""
+    await _conv_team_or_403(current_user, team_id)
+    society_id = current_user.get("society_id")
+    # id già nella rosa (stessa query del roster)
+    roster_q = {
+        "$or": [{"team_id": team_id}, {"team_id_2": team_id}, {"team_ids": team_id}],
+    }
+    roster_ids = set(await db.athletes.distinct("id", roster_q))
+    q = {
+        "status": {"$nin": ["rejected", "withdrawn", "removed", "deleted"]},
+        "is_withdrawn": {"$ne": True},
+    }
+    if society_id:
+        q["society_id"] = society_id
+    proj = {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1,
+            "date_of_birth": 1, "athlete_role": 1, "team_name": 1}
+    aths = await db.athletes.find(q, proj).to_list(10000)
+    out = []
+    for a in aths:
+        if a["id"] in roster_ids:
+            continue
+        full_name = (f"{a.get('last_name','')} {a.get('first_name','')}".strip() or a.get("full_name", ""))
+        out.append({
+            "id": a["id"],
+            "full_name": full_name,
+            "role": a.get("athlete_role", "") or "",
+            "team": a.get("team_name", "") or "",
+            "is_minor": _compute_is_minor(a),
+        })
+    out.sort(key=lambda x: (x.get("full_name") or "").lower())
+    return {"count": len(out), "athletes": out}
+
+
+
 def _conv_public(c: dict) -> dict:
     """Pulisce una convocazione per l'output (rimuove _id)."""
     c = dict(c)
@@ -9794,6 +9831,7 @@ async def create_convocation(data: dict = Body(...), current_user = Depends(get_
         "team_id": team_id,
         "team_name": team.get("name", ""),
         "match_id": data.get("match_id") or None,
+        "match_number": (data.get("match_number") or "").strip(),
         "opponent": (data.get("opponent") or "").strip(),
         "match_date": (data.get("match_date") or "").strip(),
         "match_time": (data.get("match_time") or "").strip(),
@@ -9856,7 +9894,7 @@ async def update_convocation(conv_id: str, data: dict = Body(...), current_user 
     conv = await _get_conv_or_404(conv_id, current_user)
     allowed = ["match_id", "opponent", "match_date", "match_time", "home_away",
                "venue", "venue_address", "maps_url", "city", "meeting_place",
-               "meeting_time", "start_time", "notes", "athlete_ids", "status"]
+               "meeting_time", "start_time", "notes", "athlete_ids", "status", "match_number"]
     upd = {}
     for k in allowed:
         if k not in data:
@@ -9972,6 +10010,7 @@ async def convocations_for_athlete(athlete_id: str, current_user = Depends(get_c
             "id": c["id"],
             "team_name": c.get("team_name", ""),
             "opponent": c.get("opponent", ""),
+            "match_number": c.get("match_number", ""),
             "home_away": c.get("home_away", "home"),
             "match_date": c.get("match_date", ""),
             "match_time": c.get("match_time", ""),
@@ -21951,6 +21990,170 @@ async def my_pending_signature_receipts(current_user = Depends(get_current_user)
             })
     out.sort(key=lambda x: (x.get("year") or 0, x.get("month") or 0), reverse=True)
     return out
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# 🆕 FASE 2 — Commercialista: riepilogo mensile (F24), fascicolo persona, email
+# ─────────────────────────────────────────────────────────────────────────
+_MESI_IT = ["", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+            "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
+
+
+async def _commercialista_anagrafica(role: str, uid: str) -> dict:
+    if role == "athlete":
+        doc = await db.athletes.find_one({"id": uid}) or {}
+    else:
+        doc = await db.users.find_one({"id": uid}) or {}
+    full_name = doc.get("full_name") or f"{doc.get('last_name','')} {doc.get('first_name','')}".strip()
+    return {
+        "full_name": full_name,
+        "fiscal_code": doc.get("fiscal_code") or doc.get("codice_fiscale") or doc.get("tax_code") or "",
+        "birth_date": doc.get("birth_date") or doc.get("date_of_birth") or "",
+        "birth_place": doc.get("birth_place") or doc.get("luogo_nascita") or "",
+        "address": doc.get("address") or doc.get("residenza") or doc.get("indirizzo") or "",
+        "iban": doc.get("iban") or "",
+        "email": doc.get("email") or "",
+        "phone": doc.get("phone") or doc.get("phone_athlete") or "",
+        "other_annual_compensation": doc.get("other_annual_compensation", 0) or 0,
+        "previdenza_altra": bool(doc.get("has_other_mandatory_pension") or doc.get("altra_previdenza") or doc.get("iscritto_altra_previdenza")),
+        "contract_total": doc.get("contract_total") or doc.get("compensation_total") or doc.get("total_compensation") or 0,
+        "contract_start": doc.get("contract_start_date") or doc.get("contract_start") or "",
+        "contract_end": doc.get("contract_end_date") or doc.get("contract_end") or "",
+    }
+
+
+def _receipt_amounts(r: dict) -> dict:
+    gross = float(r.get("amount_gross", r.get("amount", 0)) or 0)
+    net = float(r.get("amount_net", gross) or gross)
+    versare = float(r.get("deductions", 0) or 0)
+    if versare <= 0:
+        versare = max(0.0, round(gross - net, 2))
+    return {"gross": gross, "net": net, "versare": round(versare, 2)}
+
+
+@api_router.get("/admin/commercialista/summary")
+async def commercialista_summary(year: int, month: int, current_user = Depends(get_current_user)):
+    """Riepilogo del mese per il commercialista: chi ha percepito un compenso,
+    con importi, flag superamento soglia (F24 mensile) e totali nominativi."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    _sid = current_user.get("society_id")
+    society_user_ids = set()
+    async for u in db.users.find({"society_id": _sid} if _sid else {}, {"_id": 0, "id": 1}):
+        if u.get("id"):
+            society_user_ids.add(u["id"])
+    rows = []
+    for role, (coll, idf) in ROLE_RECEIPT_MAP.items():
+        async for r in db[coll].find({"year": year, "month": month}):
+            owner = r.get(idf)
+            if role == "athlete":
+                ath = await db.athletes.find_one({"id": owner}, {"_id": 0, "society_id": 1})
+                if _sid and (not ath or ath.get("society_id") != _sid):
+                    continue
+            else:
+                if _sid and owner not in society_user_ids:
+                    continue
+            amt = _receipt_amounts(r)
+            if amt["gross"] <= 0:
+                continue
+            ana = await _commercialista_anagrafica(role, owner)
+            rows.append({
+                "user_role": role, "user_id": owner, "full_name": ana["full_name"],
+                "fiscal_code": ana["fiscal_code"],
+                "amount_gross": amt["gross"], "amount_net": amt["net"], "importo_versare": amt["versare"],
+                "exceeded_5000": bool(r.get("exceeded_5000")), "exceeded_15000": bool(r.get("exceeded_15000")),
+                "receipt_signed": bool(r.get("receipt_signed")),
+                "payment_made": bool(r.get("payment_made")),
+            })
+    rows.sort(key=lambda x: (x.get("full_name") or "").lower())
+    f24 = [x for x in rows if x["exceeded_5000"]]
+    tot_versare = round(sum(x["importo_versare"] for x in f24), 2)
+    tot_gross = round(sum(x["amount_gross"] for x in rows), 2)
+    return {
+        "year": year, "month": month, "month_name": _MESI_IT[month] if 0 < month < 13 else str(month),
+        "recipients": rows,
+        "f24": f24,
+        "totals": {
+            "count": len(rows), "f24_count": len(f24),
+            "total_gross": tot_gross, "total_versare": tot_versare,
+        },
+    }
+
+
+@api_router.get("/admin/commercialista/fascicolo/{user_role}/{user_id}")
+async def commercialista_fascicolo(user_role: str, user_id: str, year: int,
+                                   scope: str = "year", current_user = Depends(get_current_user)):
+    """Dati per il fascicolo personale (PDF lato app): anagrafica, accordo,
+    dichiarazioni (pregresso/previdenza) e quietanze del periodo.
+    scope: 'year' (anno solare) | 'season' (set–ago)."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    if user_role not in ROLE_RECEIPT_MAP:
+        raise HTTPException(status_code=400, detail="Ruolo non valido")
+    coll, idf = ROLE_RECEIPT_MAP[user_role]
+    ana = await _commercialista_anagrafica(user_role, user_id)
+    if scope == "season":
+        # stagione sportiva: set(anno) → ago(anno+1)
+        cur = db[coll].find({idf: user_id, "$or": [
+            {"year": year, "month": {"$gte": 9}},
+            {"year": year + 1, "month": {"$lte": 8}},
+        ]})
+    else:
+        cur = db[coll].find({idf: user_id, "year": year})
+    receipts = []
+    tot_gross = 0.0
+    tot_versare = 0.0
+    async for r in cur:
+        amt = _receipt_amounts(r)
+        tot_gross += amt["gross"]
+        if r.get("exceeded_5000"):
+            tot_versare += amt["versare"]
+        m = r.get("month") or 0
+        receipts.append({
+            "year": r.get("year"), "month": m, "month_name": _MESI_IT[m] if 0 < m < 13 else str(m),
+            "amount_gross": amt["gross"], "amount_net": amt["net"], "importo_versare": amt["versare"],
+            "receipt_signed": bool(r.get("receipt_signed")),
+            "exceeded_5000": bool(r.get("exceeded_5000")), "exceeded_15000": bool(r.get("exceeded_15000")),
+        })
+    receipts.sort(key=lambda x: (x.get("year") or 0, x.get("month") or 0))
+    return {
+        "user_role": user_role, "user_id": user_id, "scope": scope, "year": year,
+        "anagrafica": ana,
+        "receipts": receipts,
+        "totals": {"total_gross": round(tot_gross, 2), "total_versare": round(tot_versare, 2),
+                   "over_5000": tot_gross + (ana.get("other_annual_compensation") or 0) > 5000,
+                   "over_15000": tot_gross + (ana.get("other_annual_compensation") or 0) > 15000},
+    }
+
+
+@api_router.post("/admin/commercialista/send-email")
+async def commercialista_send_email(data: dict = Body(...), current_user = Depends(get_current_user)):
+    """Invia al commercialista un'email con il fascicolo PDF in allegato (generato
+    lato app e passato in base64)."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    to_email = (data.get("to_email") or "").strip()
+    pdf_b64 = data.get("pdf_base64") or ""
+    if not to_email or "@" not in to_email:
+        raise HTTPException(status_code=400, detail="Email commercialista non valida")
+    subject = (data.get("subject") or "Documenti compensi — RegistraTEAM").strip()
+    html = data.get("html") or "<p>In allegato il documento richiesto.</p>"
+    fname = (data.get("pdf_filename") or "fascicolo.pdf").strip()
+    society = await db.societies.find_one({"id": current_user.get("society_id")}) if current_user.get("society_id") else None
+    try:
+        from email_service import send_email_with_pdf, send_transactional_email, apply_society_branding
+        kwargs = apply_society_branding(society, {})
+        if pdf_b64:
+            res = await send_email_with_pdf(to_email=to_email, subject=subject, html_content=html,
+                                            pdf_base64=pdf_b64, pdf_filename=fname, **kwargs)
+        else:
+            res = await send_transactional_email(to_email=to_email, subject=subject, html_content=html, **kwargs)
+        return {"ok": True, "result": res}
+    except Exception as e:
+        logger.error(f"commercialista_send_email error: {e}")
+        raise HTTPException(status_code=500, detail=f"Invio email non riuscito: {e}")
+
+
 
 
 

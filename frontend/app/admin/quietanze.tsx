@@ -340,6 +340,13 @@ export default function QuietanzePage() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>📋 Quietanze</Text>
         <TouchableOpacity
+          onPress={() => router.push('/admin/commercialista')}
+          data-testid="header-commercialista-btn"
+          style={{ padding: 8 }}
+        >
+          <Ionicons name="briefcase-outline" size={22} color="#5856D6" />
+        </TouchableOpacity>
+        <TouchableOpacity
           onPress={() => setWipeModalVisible(true)}
           data-testid="header-wipe-user-btn"
           style={{ padding: 8 }}

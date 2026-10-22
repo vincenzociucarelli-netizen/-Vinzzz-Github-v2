@@ -10,10 +10,10 @@ import { Ionicons } from '../../src/components/Icon';
 import api from '../../src/services/api';
 import { downloadConvocationPDF } from '../../src/utils/convocationReport';
 
-interface RosterAthlete { id: string; full_name: string; role?: string; is_minor?: boolean; }
+interface RosterAthlete { id: string; full_name: string; role?: string; is_minor?: boolean; team?: string; }
 interface TeamMatch {
   id: string; opponent: string; date: string; home_away: string;
-  venue?: string; city?: string; meeting_time?: string;
+  venue?: string; city?: string; meeting_time?: string; match_number?: string; address?: string;
 }
 interface Contact {
   athlete_id: string; athlete_name: string; is_minor: boolean;
@@ -59,6 +59,7 @@ export default function ConvocationEditor() {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [opponent, setOpponent] = useState('');
+  const [matchNumber, setMatchNumber] = useState('');
   const [matchDate, setMatchDate] = useState('');
   const [matchTime, setMatchTime] = useState('');
   const [homeAway, setHomeAway] = useState<'home' | 'away'>('home');
@@ -68,6 +69,9 @@ export default function ConvocationEditor() {
   const [city, setCity] = useState('');
   const [palestre, setPalestre] = useState<Palestra[]>([]);
   const [showPalestre, setShowPalestre] = useState(false);
+  const [societyAthletes, setSocietyAthletes] = useState<RosterAthlete[]>([]);
+  const [showSociety, setShowSociety] = useState(false);
+  const [societyQuery, setSocietyQuery] = useState('');
   const [meetingPlace, setMeetingPlace] = useState('');
   const [meetingTime, setMeetingTime] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -125,6 +129,7 @@ export default function ConvocationEditor() {
           const c = await api.get(`/convocations/${convId0}`);
           const d = c.data || {};
           setOpponent(d.opponent || '');
+          setMatchNumber(d.match_number || '');
           setMatchDate(d.match_date || '');
           setMatchTime(d.match_time || '');
           setHomeAway(d.home_away === 'away' ? 'away' : 'home');
@@ -155,11 +160,13 @@ export default function ConvocationEditor() {
     const { date, time } = fmtMatch(m.date);
     setSelectedMatchId(m.id);
     setOpponent(m.opponent || '');
+    setMatchNumber(m.match_number || '');
     setMatchDate(date);
     setMatchTime(time);
     setHomeAway(m.home_away === 'away' ? 'away' : 'home');
     setVenue(m.venue || '');
     setCity(m.city || '');
+    if (m.address) setVenueAddress(m.address);
     if (m.meeting_time && !meetingTime) setMeetingTime(m.meeting_time);
     setStartTime(time);
     setShowCalendar(false);
@@ -195,9 +202,35 @@ export default function ConvocationEditor() {
     setShowPalestre(false);
   };
 
+  const loadSociety = async () => {
+    setShowSociety((v) => !v);
+    if (societyAthletes.length === 0) {
+      try {
+        const res = await api.get(`/convocations/team/${teamId}/society-athletes`);
+        setSocietyAthletes(res.data?.athletes || []);
+      } catch { /* opzionale */ }
+    }
+  };
+
+  // Rosa squadra + atleti società aggiunti (per PDF e conteggio convocati)
+  const allAthletes = useMemo(() => {
+    const map = new Map<string, RosterAthlete>();
+    [...roster, ...societyAthletes].forEach((a) => { if (!map.has(a.id)) map.set(a.id, a); });
+    return Array.from(map.values());
+  }, [roster, societyAthletes]);
+
+  const filteredSociety = useMemo(() => {
+    const q = societyQuery.trim().toLowerCase();
+    const base = societyAthletes;
+    if (!q) return base.slice(0, 50);
+    return base.filter((a) => `${a.full_name} ${a.team || ''}`.toLowerCase().includes(q)).slice(0, 50);
+  }, [societyAthletes, societyQuery]);
+
+
   const buildPayload = (status?: 'draft' | 'sent') => ({
     team_id: teamId,
     match_id: selectedMatchId || null,
+    match_number: matchNumber.trim(),
     opponent: opponent.trim(),
     match_date: matchDate.trim(),
     match_time: matchTime.trim(),
@@ -250,12 +283,13 @@ export default function ConvocationEditor() {
 
   const handlePDF = async () => {
     if (!validate()) return;
-    const athletes = roster.filter(a => selected.has(a.id)).map(a => ({ id: a.id, full_name: a.full_name, role: a.role }));
+    const athletes = allAthletes.filter(a => selected.has(a.id)).map(a => ({ id: a.id, full_name: a.full_name, role: a.role }));
     await downloadConvocationPDF({
       societyName: society.name || 'RegistraTEAM',
       societyLogo: society.logo,
       teamName: teamName || '',
       opponent: opponent.trim(),
+      matchNumber: matchNumber.trim(),
       homeAway,
       matchDate: matchDate.trim(),
       matchTime: matchTime.trim(),
@@ -389,6 +423,8 @@ export default function ConvocationEditor() {
         {/* Dati gara */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Dati gara</Text>
+          <Text style={styles.label}>Numero gara</Text>
+          <TextInput style={styles.input} value={matchNumber} onChangeText={setMatchNumber} placeholder="Es. 2713 (univoco)" keyboardType="default" />
           <Text style={styles.label}>Avversario *</Text>
           <TextInput style={styles.input} value={opponent} onChangeText={setOpponent} placeholder="Es. SAN MARIANO VOLLEY" />
           <View style={styles.rowGap}>
@@ -485,6 +521,38 @@ export default function ConvocationEditor() {
               </TouchableOpacity>
             );
           })}
+        </View>
+
+        {/* 🆕 Altri atleti della società */}
+        <View style={styles.card}>
+          <TouchableOpacity style={styles.rowBetween} onPress={loadSociety}>
+            <Text style={styles.cardTitle}>➕ Aggiungi altri atleti della società</Text>
+            <Ionicons name={showSociety ? 'chevron-up' : 'chevron-down'} size={20} color="#5856D6" />
+          </TouchableOpacity>
+          {showSociety && (
+            <View style={{ marginTop: 8 }}>
+              <TextInput
+                style={styles.input}
+                value={societyQuery}
+                onChangeText={setSocietyQuery}
+                placeholder="Cerca per nome o squadra"
+              />
+              {filteredSociety.length === 0 ? (
+                <Text style={styles.emptyText}>Nessun altro atleta disponibile.</Text>
+              ) : filteredSociety.map(a => {
+                const isSel = selected.has(a.id);
+                return (
+                  <TouchableOpacity key={a.id} style={[styles.athleteRow, isSel && styles.athleteRowSel]} onPress={() => toggle(a.id)}>
+                    <Ionicons name={isSel ? 'checkbox' : 'square-outline'} size={24} color={isSel ? '#5856D6' : '#B0B0B0'} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.athleteName}>{a.full_name}{a.role ? ` · ${a.role}` : ''}</Text>
+                      {!!a.team && <Text style={{ fontSize: 12, color: '#999' }}>{a.team}</Text>}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
         </View>
       </ScrollView>
 
