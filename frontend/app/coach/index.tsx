@@ -1,4 +1,5 @@
 import SocietyMatchesLink from '../../src/components/SocietyMatchesLink';
+import PendingReceiptNotice from '../../src/components/PendingReceiptNotice';
 import React, { useState, useEffect, useRef } from 'react';
 import CoachTabBar from '../../src/components/coach/CoachTabBar';
 import {
@@ -1498,6 +1499,10 @@ export default function CoachScreen() {  const router = useRouter();
       <PrivacySignButton profileRoute="/coach/profile" />
       {/* 🆕 Calendario Gare Società: a livello dashboard (prima era nascosto dentro il tab Scanner) */}
       <View style={{ marginHorizontal: 16 }}>
+        {/* 🆕 Avviso quietanze da firmare (bonifico effettuato) */}
+        <View style={{ marginHorizontal: 16 }}>
+          <PendingReceiptNotice signRoute="/coach/compensation" />
+        </View>
         <SocietyMatchesLink />
       </View>
 

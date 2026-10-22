@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import AthleteTabBar from '../../src/components/athlete/AthleteTabBar';
 import ConvocationNotice from '../../src/components/ConvocationNotice';
+import PendingReceiptNotice from '../../src/components/PendingReceiptNotice';
 import {
   View,
   Text,
@@ -585,6 +586,7 @@ export default function AthleteScreen() {
         {/* 🆕 Convocazioni (sola lettura) */}
         <View style={{ marginHorizontal: 16 }}>
           <ConvocationNotice athleteId={profile?.id} accentColor="#E53935" />
+          <PendingReceiptNotice signRoute="/athlete/compensation" />
         </View>
 
         {/* Compact Profile Header */}

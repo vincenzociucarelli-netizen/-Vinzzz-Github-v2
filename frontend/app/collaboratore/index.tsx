@@ -1,4 +1,5 @@
 import SocietyMatchesLink from '../../src/components/SocietyMatchesLink';
+import PendingReceiptNotice from '../../src/components/PendingReceiptNotice';
 /**
  * 🆕 22/06/2026 — Dashboard Collaboratore (lato user)
  *
@@ -180,6 +181,10 @@ export default function CollaboratoreHome() {
         contentContainerStyle={{ paddingBottom: 40 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {/* 🆕 Avviso quietanze da firmare (bonifico effettuato) */}
+        <View style={{ marginHorizontal: 16 }}>
+          <PendingReceiptNotice signRoute="/collaboratore/compensation" />
+        </View>
         <SocietyMatchesLink />
         {/* 🆕 Pulsante PRIVACY sempre visibile (firma / gestione consensi) */}
         <PrivacySignButton profileRoute="/collaboratore/profile" />
