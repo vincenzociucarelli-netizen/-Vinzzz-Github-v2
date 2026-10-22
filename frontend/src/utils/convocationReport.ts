@@ -142,83 +142,180 @@ export const generateConvocationHTML = (d: ConvocationPDFData): string => {
 </body></html>`;
 };
 
+// Costruisce il PDF della convocazione nativamente con jsPDF (solo web):
+// testo selezionabile, ruoli garantiti dai dati, file piccolo e condivisibile.
+const buildConvocationPdf = (JsPDF: any, d: ConvocationPDFData) => {
+  const pdf = new JsPDF('p', 'mm', 'a4');
+  const PW = 210, PH = 297, M = 12, CW = PW - M * 2;
+  let y = M;
+  const today = new Date();
+  const todayStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+
+  // Intestazione
+  let textX = M;
+  if (d.societyLogo) {
+    try {
+      const src = d.societyLogo.startsWith('data:') ? d.societyLogo : `data:image/jpeg;base64,${d.societyLogo}`;
+      const fmt = src.includes('image/png') ? 'PNG' : 'JPEG';
+      pdf.addImage(src, fmt, M, y, 18, 18);
+      textX = M + 22;
+    } catch { /* logo opzionale */ }
+  }
+  pdf.setTextColor(30, 58, 138); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(20);
+  pdf.text('Convocazione', textX, y + 7);
+  pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10); pdf.setTextColor(85, 85, 85);
+  pdf.text(d.teamName || '', textX, y + 13);
+
+  pdf.setFont('helvetica', 'bold'); pdf.setFontSize(11); pdf.setTextColor(51, 51, 51);
+  pdf.text(d.societyName || '', PW - M, y + 3, { align: 'right' });
+  let ry = y + 3;
+  if (d.matchNumber) {
+    ry += 5; pdf.setTextColor(198, 40, 40); pdf.setFontSize(11);
+    pdf.text(`Gara n. ${d.matchNumber}`, PW - M, ry, { align: 'right' });
+  }
+  ry += 4.5;
+  pdf.setFont('helvetica', 'normal'); pdf.setFontSize(8); pdf.setTextColor(136, 136, 136);
+  pdf.text(`Generato il ${todayStr}`, PW - M, ry, { align: 'right' });
+
+  y += 20;
+  pdf.setDrawColor(30, 58, 138); pdf.setLineWidth(0.8); pdf.line(M, y, PW - M, y);
+  y += 6;
+
+  // Riquadro gara
+  const matchTitle = d.homeAway === 'home'
+    ? `${d.societyName} - ${d.opponent}`
+    : `${d.opponent} - ${d.societyName}`;
+  const dateLine = [d.matchDate, d.matchTime].filter(Boolean).join('  -  ');
+  const boxH = dateLine ? 16 : 11;
+  pdf.setFillColor(238, 242, 255); pdf.setDrawColor(199, 210, 254); pdf.setLineWidth(0.3);
+  pdf.roundedRect(M, y, CW, boxH, 2, 2, 'FD');
+  pdf.setTextColor(30, 58, 138); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(13);
+  pdf.text(matchTitle, M + 4, y + 6, { maxWidth: CW - 8 });
+  if (dateLine) {
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10); pdf.setTextColor(51, 51, 51);
+    pdf.text(dateLine, M + 4, y + 12);
+  }
+  y += boxH + 5;
+
+  // Tabella info
+  const info: { label: string; value: string; link?: string }[] = [];
+  info.push({ label: 'Casa/Trasferta', value: d.homeAway === 'home' ? 'Casa' : 'Trasferta' });
+  if (d.venue) info.push({ label: 'Impianto', value: d.venue });
+  if (d.venueAddress) info.push({ label: 'Indirizzo', value: d.venueAddress });
+  if (d.city) info.push({ label: 'Citta', value: d.city });
+  if (d.mapsUrl) info.push({ label: 'Mappa', value: 'Apri su Google Maps', link: d.mapsUrl });
+  if (d.meetingPlace) info.push({ label: 'Luogo di ritrovo', value: d.meetingPlace });
+  if (d.meetingTime) info.push({ label: 'Ora di ritrovo', value: d.meetingTime });
+  if (d.startTime) info.push({ label: 'Inizio gara', value: d.startTime });
+  if (d.notes) info.push({ label: 'Note', value: d.notes });
+
+  const labelW = 42, valW = CW - labelW;
+  for (const r of info) {
+    pdf.setFontSize(9);
+    const lines = r.link ? [r.value] : pdf.splitTextToSize(r.value, valW - 6);
+    const rowH = Math.max(7, lines.length * 4.4 + 2.6);
+    pdf.setFillColor(243, 244, 246); pdf.setDrawColor(229, 231, 235); pdf.setLineWidth(0.2);
+    pdf.rect(M, y, labelW, rowH, 'FD');
+    pdf.setFillColor(255, 255, 255);
+    pdf.rect(M + labelW, y, valW, rowH, 'FD');
+    pdf.setFont('helvetica', 'bold'); pdf.setTextColor(85, 85, 85);
+    pdf.text(r.label, M + 2, y + 4.8, { maxWidth: labelW - 3 });
+    pdf.setFont('helvetica', 'normal');
+    if (r.link) {
+      pdf.setTextColor(30, 58, 138);
+      pdf.textWithLink(r.value, M + labelW + 3, y + 4.8, { url: r.link });
+    } else {
+      pdf.setTextColor(17, 17, 17);
+      pdf.text(lines, M + labelW + 3, y + 4.8);
+    }
+    y += rowH;
+  }
+  y += 5;
+
+  // Avviso
+  const alertText = `Attenzione: in caso di impossibilita a partecipare, avvisare immediatamente il coach${d.coachName ? ` (${d.coachName})` : ''}${d.coachPhone ? ` al numero ${d.coachPhone}` : ''} telefonicamente o con un messaggio WhatsApp.`;
+  pdf.setFontSize(9);
+  const alLines = pdf.splitTextToSize(alertText, CW - 8);
+  const alH = alLines.length * 4.4 + 5;
+  pdf.setFillColor(255, 243, 224); pdf.setDrawColor(255, 204, 128); pdf.setLineWidth(0.3);
+  pdf.roundedRect(M, y, CW, alH, 2, 2, 'FD');
+  pdf.setTextColor(146, 64, 14); pdf.setFont('helvetica', 'normal');
+  pdf.text(alLines, M + 4, y + 5);
+  y += alH + 6;
+
+  // Titolo elenco
+  pdf.setFont('helvetica', 'bold'); pdf.setFontSize(12); pdf.setTextColor(30, 58, 138);
+  pdf.text(`Atleti convocati (${d.athletes.length})`, M, y);
+  y += 2;
+  pdf.setDrawColor(229, 231, 235); pdf.setLineWidth(0.2); pdf.line(M, y, PW - M, y);
+  y += 4;
+
+  // Tabella atleti
+  const c0 = 24, c2 = 42, c1 = CW - c0 - c2, rowH = 7;
+  const drawHeader = () => {
+    pdf.setFillColor(30, 58, 138); pdf.rect(M, y, CW, rowH, 'F');
+    pdf.setTextColor(255, 255, 255); pdf.setFont('helvetica', 'bold'); pdf.setFontSize(9);
+    pdf.text('N. maglia', M + c0 / 2, y + 4.8, { align: 'center' });
+    pdf.text('Atleta', M + c0 + 2, y + 4.8);
+    pdf.text('Ruolo', M + c0 + c1 + 2, y + 4.8);
+    y += rowH;
+  };
+  drawHeader();
+  pdf.setFont('helvetica', 'normal');
+  d.athletes.forEach((a, idx) => {
+    if (y + rowH > PH - M) { pdf.addPage(); y = M; drawHeader(); pdf.setFont('helvetica', 'normal'); }
+    if (idx % 2 === 1) { pdf.setFillColor(243, 244, 246); pdf.rect(M, y, CW, rowH, 'F'); }
+    pdf.setDrawColor(209, 213, 219); pdf.setLineWidth(0.2);
+    pdf.rect(M, y, c0, rowH); pdf.rect(M + c0, y, c1, rowH); pdf.rect(M + c0 + c1, y, c2, rowH);
+    pdf.setTextColor(17, 17, 17); pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(String(a.jersey_number || ''), M + c0 / 2, y + 4.8, { align: 'center' });
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(pdf.splitTextToSize(a.full_name || '', c1 - 4)[0] || '', M + c0 + 2, y + 4.8);
+    pdf.text(pdf.splitTextToSize(a.role || '', c2 - 4)[0] || '', M + c0 + c1 + 2, y + 4.8);
+    y += rowH;
+  });
+  if (d.athletes.length === 0) {
+    pdf.setDrawColor(209, 213, 219); pdf.rect(M, y, CW, rowH);
+    pdf.setTextColor(102, 102, 102);
+    pdf.text('Nessun atleta convocato', M + CW / 2, y + 4.8, { align: 'center' });
+    y += rowH;
+  }
+
+  // Footer
+  pdf.setFontSize(8); pdf.setTextColor(136, 136, 136);
+  pdf.text('Documento generato automaticamente da RegistraTEAM.', PW / 2, Math.min(y + 8, PH - 6), { align: 'center' });
+
+  return pdf;
+};
+
 export const downloadConvocationPDF = async (d: ConvocationPDFData) => {
-  const html = generateConvocationHTML(d);
   const fileName = (d.fileName || 'convocazione').replace(/[^a-zA-Z0-9_-]+/g, '_');
   if (Platform.OS === 'web') {
-    // Apri subito una scheda (gesto utente) per evitare il blocco popup;
-    // vi caricheremo il PDF generato come vero file (visualizzabile/condivisibile).
-    const win = window.open('', '_blank');
-    try {
-      const { jsPDF } = await import('jspdf');
-      const html2canvas = (await import('html2canvas')).default;
-
-      // Render dell'HTML in un iframe nascosto ma con dimensioni reali (A4 @96dpi)
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.left = '-10000px';
-      iframe.style.top = '0';
-      iframe.style.width = '794px';
-      iframe.style.height = '1123px';
-      iframe.style.border = '0';
-      document.body.appendChild(iframe);
-      const doc = iframe.contentWindow!.document;
-      doc.open(); doc.write(html); doc.close();
-
-      await new Promise<void>((resolve) => {
-        if (doc.readyState === 'complete') setTimeout(resolve, 300);
-        else iframe.contentWindow!.addEventListener('load', () => setTimeout(resolve, 300));
-      });
-
-      const canvas = await html2canvas(doc.body, {
-        scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 794,
-      });
-      document.body.removeChild(iframe);
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageW = 210, pageH = 297;
-      const imgH = (canvas.height * pageW) / canvas.width;
-      let heightLeft = imgH;
-      let position = 0;
-      pdf.addImage(imgData, 'PNG', 0, position, pageW, imgH);
-      heightLeft -= pageH;
-      while (heightLeft > 0) {
-        position -= pageH;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, pageW, imgH);
-        heightLeft -= pageH;
-      }
-
-      const blob = pdf.output('blob');
-      const url = URL.createObjectURL(blob);
-      if (win && !win.closed) {
-        win.location.href = url;
-      } else {
-        // popup bloccato: scarica il file (apribile/condivisibile dal telefono)
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${fileName}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      }
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-    } catch {
-      if (win && !win.closed) win.close();
-      // fallback estremo: stampa diretta
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed'; iframe.style.right = '0'; iframe.style.bottom = '0';
-      iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = '0';
-      document.body.appendChild(iframe);
-      const doc = iframe.contentWindow?.document;
-      if (doc) {
-        doc.open(); doc.write(html); doc.close();
-        const w = iframe.contentWindow as Window;
-        setTimeout(() => { try { w.focus(); w.print(); } catch { /* noop */ } }, 400);
+    const { jsPDF } = await import('jspdf');
+    const pdf = buildConvocationPdf(jsPDF, d);
+    const blob = pdf.output('blob');
+    const file = new File([blob], `${fileName}.pdf`, { type: 'application/pdf' });
+    const nav = navigator as any;
+    // Condivisione del FILE (non di un link blob): su mobile apre il foglio di
+    // condivisione e lo allega direttamente a WhatsApp/email, ecc.
+    if (nav.canShare && nav.canShare({ files: [file] })) {
+      try {
+        await nav.share({ files: [file], title: 'Convocazione' });
+        return;
+      } catch (err: any) {
+        if (err && err.name === 'AbortError') return; // annullato dall'utente
+        // altri errori -> fallback al download
       }
     }
+    // Fallback (desktop o condivisione file non supportata): scarica il PDF.
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${fileName}.pdf`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   } else {
+    const html = generateConvocationHTML(d);
     const Print = await import('expo-print');
     const Sharing = await import('expo-sharing');
     try {
