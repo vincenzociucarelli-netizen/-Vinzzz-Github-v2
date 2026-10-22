@@ -144,27 +144,79 @@ export const generateConvocationHTML = (d: ConvocationPDFData): string => {
 
 export const downloadConvocationPDF = async (d: ConvocationPDFData) => {
   const html = generateConvocationHTML(d);
+  const fileName = (d.fileName || 'convocazione').replace(/[^a-zA-Z0-9_-]+/g, '_');
   if (Platform.OS === 'web') {
-    // Stampa affidabile tramite iframe nascosto (niente blocco popup): dalla
-    // finestra di stampa si può scegliere "Salva come PDF" = download del PDF.
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
-    const doc = iframe.contentWindow?.document;
-    if (doc) {
+    // Apri subito una scheda (gesto utente) per evitare il blocco popup;
+    // vi caricheremo il PDF generato come vero file (visualizzabile/condivisibile).
+    const win = window.open('', '_blank');
+    try {
+      const { jsPDF } = await import('jspdf');
+      const html2canvas = (await import('html2canvas')).default;
+
+      // Render dell'HTML in un iframe nascosto ma con dimensioni reali (A4 @96dpi)
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.left = '-10000px';
+      iframe.style.top = '0';
+      iframe.style.width = '794px';
+      iframe.style.height = '1123px';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+      const doc = iframe.contentWindow!.document;
       doc.open(); doc.write(html); doc.close();
-      const win = iframe.contentWindow as Window;
-      const run = () => {
-        try { win.focus(); win.print(); } catch { /* noop */ }
-        setTimeout(() => { try { document.body.removeChild(iframe); } catch { /* noop */ } }, 1500);
-      };
-      if (doc.readyState === 'complete') setTimeout(run, 350);
-      else { win.onload = () => setTimeout(run, 350); }
+
+      await new Promise<void>((resolve) => {
+        if (doc.readyState === 'complete') setTimeout(resolve, 300);
+        else iframe.contentWindow!.addEventListener('load', () => setTimeout(resolve, 300));
+      });
+
+      const canvas = await html2canvas(doc.body, {
+        scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 794,
+      });
+      document.body.removeChild(iframe);
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageW = 210, pageH = 297;
+      const imgH = (canvas.height * pageW) / canvas.width;
+      let heightLeft = imgH;
+      let position = 0;
+      pdf.addImage(imgData, 'PNG', 0, position, pageW, imgH);
+      heightLeft -= pageH;
+      while (heightLeft > 0) {
+        position -= pageH;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pageW, imgH);
+        heightLeft -= pageH;
+      }
+
+      const blob = pdf.output('blob');
+      const url = URL.createObjectURL(blob);
+      if (win && !win.closed) {
+        win.location.href = url;
+      } else {
+        // popup bloccato: scarica il file (apribile/condivisibile dal telefono)
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${fileName}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch {
+      if (win && !win.closed) win.close();
+      // fallback estremo: stampa diretta
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed'; iframe.style.right = '0'; iframe.style.bottom = '0';
+      iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = '0';
+      document.body.appendChild(iframe);
+      const doc = iframe.contentWindow?.document;
+      if (doc) {
+        doc.open(); doc.write(html); doc.close();
+        const w = iframe.contentWindow as Window;
+        setTimeout(() => { try { w.focus(); w.print(); } catch { /* noop */ } }, 400);
+      }
     }
   } else {
     const Print = await import('expo-print');
