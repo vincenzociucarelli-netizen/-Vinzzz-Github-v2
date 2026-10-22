@@ -11,6 +11,7 @@ export interface ConvocationAthlete {
   id: string;
   full_name: string;
   role?: string;
+  jersey_number?: string;
 }
 
 export interface ConvocationPDFData {
@@ -60,9 +61,9 @@ export const generateConvocationHTML = (d: ConvocationPDFData): string => {
   const dateLine = [d.matchDate, d.matchTime].filter(Boolean).join(' · ');
 
   const athletesRows = d.athletes.length
-    ? d.athletes.map((a, i) => `
+    ? d.athletes.map((a) => `
       <tr>
-        <td style="text-align:center;">${i + 1}</td>
+        <td style="text-align:center; font-weight:bold;">${esc(a.jersey_number || '')}</td>
         <td>${esc(a.full_name)}</td>
         <td>${esc(a.role || '')}</td>
       </tr>`).join('')
@@ -133,7 +134,7 @@ export const generateConvocationHTML = (d: ConvocationPDFData): string => {
 
   <h2 class="sec">Atleti convocati <span style="font-size:11px; color:#888; font-weight:normal;">(${d.athletes.length})</span></h2>
   <table class="ath">
-    <thead><tr><th style="width:34px; text-align:center;">#</th><th>Atleta</th><th style="width:140px;">Ruolo</th></tr></thead>
+    <thead><tr><th style="width:44px; text-align:center;">N° maglia</th><th>Atleta</th><th style="width:140px;">Ruolo</th></tr></thead>
     <tbody>${athletesRows}</tbody>
   </table>
 
@@ -175,7 +176,7 @@ export const downloadConvocationPDF = async (d: ConvocationPDFData) => {
       } else {
         await Print.printAsync({ html });
       }
-    } catch (e) {
+    } catch {
       await Print.printAsync({ html });
     }
   }

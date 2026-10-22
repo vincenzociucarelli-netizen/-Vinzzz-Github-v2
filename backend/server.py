@@ -1064,6 +1064,7 @@ class Athlete(BaseModel):
     withdrawn_reason: Optional[str] = None  # Motivo ritiro
     # Dati tecnici (gestiti da Coach) - FOTO RIMOSSE per privacy
     athlete_role: Optional[str] = None  # Ruolo dell'atleta
+    jersey_number: Optional[str] = None  # Numero di maglia
     athlete_height: Optional[int] = None  # Altezza in cm
     athlete_weight: Optional[int] = None  # Peso in kg
     athlete_elevation: Optional[int] = None  # Elevazione in cm
@@ -1213,6 +1214,7 @@ class AthleteUpdate(BaseModel):
     withdrawn_reason: Optional[str] = None  # Motivo ritiro
     # Dati tecnici - FOTO RIMOSSE per privacy
     athlete_role: Optional[str] = None
+    jersey_number: Optional[str] = None
     athlete_height: Optional[int] = None
     athlete_weight: Optional[int] = None
     athlete_elevation: Optional[int] = None
@@ -9729,7 +9731,7 @@ async def convocation_roster(team_id: str, current_user = Depends(get_current_us
     if society_id:
         q["society_id"] = society_id
     proj = {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1,
-            "date_of_birth": 1, "athlete_role": 1, "status": 1}
+            "date_of_birth": 1, "athlete_role": 1, "jersey_number": 1, "status": 1}
     aths = await db.athletes.find(q, proj).to_list(5000)
     # Parità col Registro Presenze: includi anche gli atleti in prova che hanno
     # presenze registrate per questa squadra ma senza team_id impostato.
@@ -9748,6 +9750,7 @@ async def convocation_roster(team_id: str, current_user = Depends(get_current_us
             "id": a["id"],
             "full_name": full_name,
             "role": a.get("athlete_role", "") or "",
+            "jersey_number": a.get("jersey_number", "") or "",
             "is_minor": _compute_is_minor(a),
         })
     out.sort(key=lambda x: (x.get("full_name") or "").lower())
@@ -9772,7 +9775,7 @@ async def convocation_society_athletes(team_id: str, current_user = Depends(get_
     if society_id:
         q["society_id"] = society_id
     proj = {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1,
-            "date_of_birth": 1, "athlete_role": 1, "team_name": 1}
+            "date_of_birth": 1, "athlete_role": 1, "jersey_number": 1, "team_name": 1}
     aths = await db.athletes.find(q, proj).to_list(10000)
     out = []
     for a in aths:
@@ -9783,6 +9786,7 @@ async def convocation_society_athletes(team_id: str, current_user = Depends(get_
             "id": a["id"],
             "full_name": full_name,
             "role": a.get("athlete_role", "") or "",
+            "jersey_number": a.get("jersey_number", "") or "",
             "team": a.get("team_name", "") or "",
             "is_minor": _compute_is_minor(a),
         })
@@ -9871,7 +9875,7 @@ async def get_convocation(conv_id: str, current_user = Depends(get_current_user)
     ids = conv.get("athlete_ids") or []
     names = []
     if ids:
-        aths = await db.athletes.find({"id": {"$in": ids}}, {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1, "athlete_role": 1}).to_list(5000)
+        aths = await db.athletes.find({"id": {"$in": ids}}, {"_id": 0, "id": 1, "first_name": 1, "last_name": 1, "full_name": 1, "athlete_role": 1, "jersey_number": 1}).to_list(5000)
         amap = {a["id"]: a for a in aths}
         for aid in ids:
             a = amap.get(aid)
@@ -9881,6 +9885,7 @@ async def get_convocation(conv_id: str, current_user = Depends(get_current_user)
                 "id": aid,
                 "full_name": (f"{a.get('last_name','')} {a.get('first_name','')}".strip() or a.get("full_name", "")),
                 "role": a.get("athlete_role", "") or "",
+                "jersey_number": a.get("jersey_number", "") or "",
             })
         names.sort(key=lambda x: (x.get("full_name") or "").lower())
     out = _conv_public(conv)
@@ -13833,6 +13838,8 @@ async def update_athlete(athlete_id: str, update_data: AthleteUpdate, current_us
     if current_user["role"] in [UserRole.ADMIN, UserRole.COACH]:
         if update_data.athlete_role is not None:
             update_dict["athlete_role"] = update_data.athlete_role
+        if update_data.jersey_number is not None:
+            update_dict["jersey_number"] = (update_data.jersey_number or "").strip()
         if update_data.athlete_height is not None:
             update_dict["athlete_height"] = update_data.athlete_height
         if update_data.athlete_weight is not None:

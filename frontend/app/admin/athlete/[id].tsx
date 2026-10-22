@@ -732,6 +732,7 @@ export default function AdminAthleteDetail() {
         discount_note: athleteData.discount_note || '',
         // Technical data
         athlete_role: athleteData.athlete_role || '',
+        jersey_number: athleteData.jersey_number || '',
         athlete_height: athleteData.athlete_height?.toString() || '',
         athlete_weight: athleteData.athlete_weight?.toString() || '',
         athlete_elevation: athleteData.athlete_elevation?.toString() || '',
@@ -1003,6 +1004,7 @@ export default function AdminAthleteDetail() {
         discount_note: editData.discount_note || null,
         // Technical data
         athlete_role: editData.athlete_role || null,
+        jersey_number: (editData.jersey_number || '').trim(),
         athlete_height: editData.athlete_height ? parseInt(editData.athlete_height) : null,
         athlete_weight: editData.athlete_weight ? parseInt(editData.athlete_weight) : null,
         athlete_elevation: editData.athlete_elevation ? parseInt(editData.athlete_elevation) : null,
@@ -3396,6 +3398,16 @@ export default function AdminAthleteDetail() {
                       placeholderTextColor="#999"
                     />
                   )}
+                  <Text style={[styles.inputLabel, { marginTop: 12 }]}>Numero di maglia</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editData.jersey_number}
+                    onChangeText={(t) => setEditData({...editData, jersey_number: t.replace(/\D/g, '')})}
+                    placeholder="Es. 10"
+                    placeholderTextColor="#999"
+                    keyboardType="numeric"
+                    maxLength={3}
+                  />
                   <View style={styles.rowInputsThree}>
                     <View style={styles.thirdInput}>
                       <Text style={styles.inputLabel}>Altezza cm.</Text>
@@ -3452,6 +3464,14 @@ export default function AdminAthleteDetail() {
                     <View style={styles.roleDisplay}>
                       <Text style={styles.techDataLabel}>Ruolo</Text>
                       <Text style={styles.roleValue}>{athleteRole}</Text>
+                    </View>
+                  ) : null}
+
+                  {/* Numero di maglia */}
+                  {athlete?.jersey_number ? (
+                    <View style={styles.roleDisplay}>
+                      <Text style={styles.techDataLabel}>Numero di maglia</Text>
+                      <Text style={styles.roleValue}>{athlete.jersey_number}</Text>
                     </View>
                   ) : null}
 
