@@ -13,7 +13,7 @@ import { downloadConvocationPDF } from '../../src/utils/convocationReport';
 interface RosterAthlete { id: string; full_name: string; role?: string; is_minor?: boolean; team?: string; }
 interface TeamMatch {
   id: string; opponent: string; date: string; home_away: string;
-  venue?: string; city?: string; meeting_time?: string;
+  venue?: string; city?: string; meeting_time?: string; match_number?: string; address?: string;
 }
 interface Contact {
   athlete_id: string; athlete_name: string; is_minor: boolean;
@@ -59,6 +59,7 @@ export default function ConvocationEditor() {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [opponent, setOpponent] = useState('');
+  const [matchNumber, setMatchNumber] = useState('');
   const [matchDate, setMatchDate] = useState('');
   const [matchTime, setMatchTime] = useState('');
   const [homeAway, setHomeAway] = useState<'home' | 'away'>('home');
@@ -128,6 +129,7 @@ export default function ConvocationEditor() {
           const c = await api.get(`/convocations/${convId0}`);
           const d = c.data || {};
           setOpponent(d.opponent || '');
+          setMatchNumber(d.match_number || '');
           setMatchDate(d.match_date || '');
           setMatchTime(d.match_time || '');
           setHomeAway(d.home_away === 'away' ? 'away' : 'home');
@@ -158,11 +160,13 @@ export default function ConvocationEditor() {
     const { date, time } = fmtMatch(m.date);
     setSelectedMatchId(m.id);
     setOpponent(m.opponent || '');
+    setMatchNumber(m.match_number || '');
     setMatchDate(date);
     setMatchTime(time);
     setHomeAway(m.home_away === 'away' ? 'away' : 'home');
     setVenue(m.venue || '');
     setCity(m.city || '');
+    if (m.address) setVenueAddress(m.address);
     if (m.meeting_time && !meetingTime) setMeetingTime(m.meeting_time);
     setStartTime(time);
     setShowCalendar(false);
@@ -226,6 +230,7 @@ export default function ConvocationEditor() {
   const buildPayload = (status?: 'draft' | 'sent') => ({
     team_id: teamId,
     match_id: selectedMatchId || null,
+    match_number: matchNumber.trim(),
     opponent: opponent.trim(),
     match_date: matchDate.trim(),
     match_time: matchTime.trim(),
@@ -284,6 +289,7 @@ export default function ConvocationEditor() {
       societyLogo: society.logo,
       teamName: teamName || '',
       opponent: opponent.trim(),
+      matchNumber: matchNumber.trim(),
       homeAway,
       matchDate: matchDate.trim(),
       matchTime: matchTime.trim(),
@@ -417,6 +423,8 @@ export default function ConvocationEditor() {
         {/* Dati gara */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Dati gara</Text>
+          <Text style={styles.label}>Numero gara</Text>
+          <TextInput style={styles.input} value={matchNumber} onChangeText={setMatchNumber} placeholder="Es. 2713 (univoco)" keyboardType="default" />
           <Text style={styles.label}>Avversario *</Text>
           <TextInput style={styles.input} value={opponent} onChangeText={setOpponent} placeholder="Es. SAN MARIANO VOLLEY" />
           <View style={styles.rowGap}>

@@ -18,6 +18,7 @@ export interface ConvocationPDFData {
   societyLogo?: string | null; // base64 (con o senza prefisso data:)
   teamName: string;
   opponent: string;
+  matchNumber?: string;
   homeAway: string; // 'home' | 'away'
   matchDate: string;
   matchTime: string;
@@ -54,8 +55,8 @@ export const generateConvocationHTML = (d: ConvocationPDFData): string => {
   const today = new Date();
   const todayStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
   const matchTitle = d.homeAway === 'home'
-    ? `${d.teamName} &ndash; ${d.opponent}`
-    : `${d.opponent} &ndash; ${d.teamName}`;
+    ? `${esc(d.societyName)} &ndash; ${esc(d.opponent)}`
+    : `${esc(d.opponent)} &ndash; ${esc(d.societyName)}`;
   const dateLine = [d.matchDate, d.matchTime].filter(Boolean).join(' · ');
 
   const athletesRows = d.athletes.length
@@ -81,6 +82,7 @@ export const generateConvocationHTML = (d: ConvocationPDFData): string => {
   .head .sub { font-size:12px; color:#555; margin-top:3px; }
   .head .society { text-align:right; font-size:13px; font-weight:bold; color:#333; }
   .head .society .gen { display:block; font-size:10px; font-weight:normal; color:#888; margin-top:2px; }
+  .head .society .gara { display:block; font-size:13px; font-weight:bold; color:#C62828; margin-top:3px; }
   .matchbox { background:#EEF2FF; border:1px solid #C7D2FE; border-radius:8px; padding:12px 14px; margin-bottom:14px; }
   .matchbox .vs { font-size:17px; font-weight:bold; color:#1E3A8A; }
   .matchbox .when { font-size:13px; color:#333; margin-top:4px; }
@@ -105,7 +107,7 @@ export const generateConvocationHTML = (d: ConvocationPDFData): string => {
         <div class="sub">${esc(d.teamName)}</div>
       </div>
     </div>
-    <div class="society">${esc(d.societyName)}<span class="gen">Generato il ${esc(todayStr)}</span></div>
+    <div class="society">${esc(d.societyName)}${d.matchNumber ? `<span class="gara">Gara n. ${esc(d.matchNumber)}</span>` : ''}<span class="gen">Generato il ${esc(todayStr)}</span></div>
   </div>
 
   <div class="matchbox">
@@ -142,18 +144,26 @@ export const generateConvocationHTML = (d: ConvocationPDFData): string => {
 export const downloadConvocationPDF = async (d: ConvocationPDFData) => {
   const html = generateConvocationHTML(d);
   if (Platform.OS === 'web') {
-    const w = window.open('', '_blank');
-    if (w) {
-      w.document.write(html);
-      w.document.close();
-      w.onload = () => { w.print(); };
-    } else {
-      const blob = new Blob([html], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `${d.fileName}.html`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+    // Stampa affidabile tramite iframe nascosto (niente blocco popup): dalla
+    // finestra di stampa si può scegliere "Salva come PDF" = download del PDF.
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open(); doc.write(html); doc.close();
+      const win = iframe.contentWindow as Window;
+      const run = () => {
+        try { win.focus(); win.print(); } catch { /* noop */ }
+        setTimeout(() => { try { document.body.removeChild(iframe); } catch { /* noop */ } }, 1500);
+      };
+      if (doc.readyState === 'complete') setTimeout(run, 350);
+      else { win.onload = () => setTimeout(run, 350); }
     }
   } else {
     const Print = await import('expo-print');

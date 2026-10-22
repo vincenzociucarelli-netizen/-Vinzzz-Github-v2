@@ -9831,6 +9831,7 @@ async def create_convocation(data: dict = Body(...), current_user = Depends(get_
         "team_id": team_id,
         "team_name": team.get("name", ""),
         "match_id": data.get("match_id") or None,
+        "match_number": (data.get("match_number") or "").strip(),
         "opponent": (data.get("opponent") or "").strip(),
         "match_date": (data.get("match_date") or "").strip(),
         "match_time": (data.get("match_time") or "").strip(),
@@ -9893,7 +9894,7 @@ async def update_convocation(conv_id: str, data: dict = Body(...), current_user 
     conv = await _get_conv_or_404(conv_id, current_user)
     allowed = ["match_id", "opponent", "match_date", "match_time", "home_away",
                "venue", "venue_address", "maps_url", "city", "meeting_place",
-               "meeting_time", "start_time", "notes", "athlete_ids", "status"]
+               "meeting_time", "start_time", "notes", "athlete_ids", "status", "match_number"]
     upd = {}
     for k in allowed:
         if k not in data:
@@ -10009,6 +10010,7 @@ async def convocations_for_athlete(athlete_id: str, current_user = Depends(get_c
             "id": c["id"],
             "team_name": c.get("team_name", ""),
             "opponent": c.get("opponent", ""),
+            "match_number": c.get("match_number", ""),
             "home_away": c.get("home_away", "home"),
             "match_date": c.get("match_date", ""),
             "match_time": c.get("match_time", ""),
