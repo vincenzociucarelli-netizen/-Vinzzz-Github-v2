@@ -10,7 +10,7 @@ import { Ionicons } from '../../src/components/Icon';
 import api from '../../src/services/api';
 import { downloadConvocationPDF } from '../../src/utils/convocationReport';
 
-interface RosterAthlete { id: string; full_name: string; role?: string; is_minor?: boolean; }
+interface RosterAthlete { id: string; full_name: string; role?: string; is_minor?: boolean; team?: string; }
 interface TeamMatch {
   id: string; opponent: string; date: string; home_away: string;
   venue?: string; city?: string; meeting_time?: string;
@@ -68,6 +68,9 @@ export default function ConvocationEditor() {
   const [city, setCity] = useState('');
   const [palestre, setPalestre] = useState<Palestra[]>([]);
   const [showPalestre, setShowPalestre] = useState(false);
+  const [societyAthletes, setSocietyAthletes] = useState<RosterAthlete[]>([]);
+  const [showSociety, setShowSociety] = useState(false);
+  const [societyQuery, setSocietyQuery] = useState('');
   const [meetingPlace, setMeetingPlace] = useState('');
   const [meetingTime, setMeetingTime] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -195,6 +198,31 @@ export default function ConvocationEditor() {
     setShowPalestre(false);
   };
 
+  const loadSociety = async () => {
+    setShowSociety((v) => !v);
+    if (societyAthletes.length === 0) {
+      try {
+        const res = await api.get(`/convocations/team/${teamId}/society-athletes`);
+        setSocietyAthletes(res.data?.athletes || []);
+      } catch { /* opzionale */ }
+    }
+  };
+
+  // Rosa squadra + atleti società aggiunti (per PDF e conteggio convocati)
+  const allAthletes = useMemo(() => {
+    const map = new Map<string, RosterAthlete>();
+    [...roster, ...societyAthletes].forEach((a) => { if (!map.has(a.id)) map.set(a.id, a); });
+    return Array.from(map.values());
+  }, [roster, societyAthletes]);
+
+  const filteredSociety = useMemo(() => {
+    const q = societyQuery.trim().toLowerCase();
+    const base = societyAthletes;
+    if (!q) return base.slice(0, 50);
+    return base.filter((a) => `${a.full_name} ${a.team || ''}`.toLowerCase().includes(q)).slice(0, 50);
+  }, [societyAthletes, societyQuery]);
+
+
   const buildPayload = (status?: 'draft' | 'sent') => ({
     team_id: teamId,
     match_id: selectedMatchId || null,
@@ -250,7 +278,7 @@ export default function ConvocationEditor() {
 
   const handlePDF = async () => {
     if (!validate()) return;
-    const athletes = roster.filter(a => selected.has(a.id)).map(a => ({ id: a.id, full_name: a.full_name, role: a.role }));
+    const athletes = allAthletes.filter(a => selected.has(a.id)).map(a => ({ id: a.id, full_name: a.full_name, role: a.role }));
     await downloadConvocationPDF({
       societyName: society.name || 'RegistraTEAM',
       societyLogo: society.logo,
@@ -485,6 +513,38 @@ export default function ConvocationEditor() {
               </TouchableOpacity>
             );
           })}
+        </View>
+
+        {/* 🆕 Altri atleti della società */}
+        <View style={styles.card}>
+          <TouchableOpacity style={styles.rowBetween} onPress={loadSociety}>
+            <Text style={styles.cardTitle}>➕ Aggiungi altri atleti della società</Text>
+            <Ionicons name={showSociety ? 'chevron-up' : 'chevron-down'} size={20} color="#5856D6" />
+          </TouchableOpacity>
+          {showSociety && (
+            <View style={{ marginTop: 8 }}>
+              <TextInput
+                style={styles.input}
+                value={societyQuery}
+                onChangeText={setSocietyQuery}
+                placeholder="Cerca per nome o squadra"
+              />
+              {filteredSociety.length === 0 ? (
+                <Text style={styles.emptyText}>Nessun altro atleta disponibile.</Text>
+              ) : filteredSociety.map(a => {
+                const isSel = selected.has(a.id);
+                return (
+                  <TouchableOpacity key={a.id} style={[styles.athleteRow, isSel && styles.athleteRowSel]} onPress={() => toggle(a.id)}>
+                    <Ionicons name={isSel ? 'checkbox' : 'square-outline'} size={24} color={isSel ? '#5856D6' : '#B0B0B0'} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.athleteName}>{a.full_name}{a.role ? ` · ${a.role}` : ''}</Text>
+                      {!!a.team && <Text style={{ fontSize: 12, color: '#999' }}>{a.team}</Text>}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
         </View>
       </ScrollView>
 
