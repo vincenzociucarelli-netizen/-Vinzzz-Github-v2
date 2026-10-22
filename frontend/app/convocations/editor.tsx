@@ -124,6 +124,12 @@ export default function ConvocationEditor() {
           const pal = await api.get('/palestre/list');
           setPalestre(pal.data?.palestre || []);
         } catch { /* lista palestre opzionale */ }
+        // carica subito gli atleti della società così i convocati "aggiunti"
+        // restano visibili in elenco e finiscono nel PDF anche in modifica
+        try {
+          const sa = await api.get(`/convocations/team/${teamId}/society-athletes`);
+          setSocietyAthletes(sa.data?.athletes || []);
+        } catch { /* opzionale */ }
 
         if (convId0) {
           const c = await api.get(`/convocations/${convId0}`);
@@ -503,7 +509,7 @@ export default function ConvocationEditor() {
         {/* Atleti */}
         <View style={styles.card}>
           <View style={styles.rowBetween}>
-            <Text style={styles.cardTitle}>Atleti convocati ({selected.size}/{roster.length})</Text>
+            <Text style={styles.cardTitle}>Atleti convocati ({selected.size} convocati)</Text>
             {roster.length > 0 && (
               <TouchableOpacity onPress={toggleAll} testID="conv-toggle-all">
                 <Text style={styles.selectAll}>{allSelected ? 'Deseleziona tutti' : 'Seleziona tutti'}</Text>
@@ -521,6 +527,16 @@ export default function ConvocationEditor() {
               </TouchableOpacity>
             );
           })}
+          {/* convocati aggiunti da altre squadre della società (restano in elenco) */}
+          {allAthletes.filter(a => selected.has(a.id) && !roster.some(r => r.id === a.id)).map(a => (
+            <TouchableOpacity key={a.id} style={[styles.athleteRow, styles.athleteRowSel]} onPress={() => toggle(a.id)}>
+              <Ionicons name="checkbox" size={24} color="#5856D6" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.athleteName}>{a.full_name}{a.role ? ` · ${a.role}` : ''}</Text>
+                <Text style={{ fontSize: 12, color: '#999' }}>Aggiunto dalla società{a.team ? ` · ${a.team}` : ''}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
         </View>
 
         {/* 🆕 Altri atleti della società */}
