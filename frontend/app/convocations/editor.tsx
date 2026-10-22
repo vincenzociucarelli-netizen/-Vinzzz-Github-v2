@@ -10,7 +10,7 @@ import { Ionicons } from '../../src/components/Icon';
 import api from '../../src/services/api';
 import { downloadConvocationPDF } from '../../src/utils/convocationReport';
 
-interface RosterAthlete { id: string; full_name: string; role?: string; is_minor?: boolean; team?: string; }
+interface RosterAthlete { id: string; full_name: string; role?: string; jersey_number?: string; is_minor?: boolean; team?: string; }
 interface TeamMatch {
   id: string; opponent: string; date: string; home_away: string;
   venue?: string; city?: string; meeting_time?: string; match_number?: string; address?: string;
@@ -289,7 +289,7 @@ export default function ConvocationEditor() {
 
   const handlePDF = async () => {
     if (!validate()) return;
-    const athletes = allAthletes.filter(a => selected.has(a.id)).map(a => ({ id: a.id, full_name: a.full_name, role: a.role }));
+    const athletes = allAthletes.filter(a => selected.has(a.id)).map(a => ({ id: a.id, full_name: a.full_name, role: a.role, jersey_number: a.jersey_number }));
     await downloadConvocationPDF({
       societyName: society.name || 'RegistraTEAM',
       societyLogo: society.logo,

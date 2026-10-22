@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '../../src/components/Icon';
 import api from '../../src/services/api';
+import { downloadConvocationPDF } from '../../src/utils/convocationReport';
 
 interface Convocation {
   id: string;
@@ -69,6 +70,43 @@ export default function ConvocationsList() {
     router.push(convId ? `${base}&conv_id=${convId}` : base);
   };
 
+  const [pdfBusy, setPdfBusy] = useState<string | null>(null);
+  const openPdf = async (c: Convocation) => {
+    if (pdfBusy) return;
+    setPdfBusy(c.id);
+    try {
+      const [detRes, socRes] = await Promise.all([
+        api.get(`/convocations/${c.id}`),
+        api.get('/settings/society?include_images=true'),
+      ]);
+      const d = detRes.data || {};
+      await downloadConvocationPDF({
+        societyName: socRes.data?.name || 'RegistraTEAM',
+        societyLogo: socRes.data?.logo || null,
+        teamName: d.team_name || c.team_name || teamName || '',
+        opponent: d.opponent || '',
+        matchNumber: d.match_number || '',
+        homeAway: d.home_away === 'away' ? 'away' : 'home',
+        matchDate: d.match_date || '',
+        matchTime: d.match_time || '',
+        venue: d.venue || '',
+        city: d.city || '',
+        venueAddress: d.venue_address || '',
+        mapsUrl: d.maps_url || '',
+        meetingPlace: d.meeting_place || '',
+        meetingTime: d.meeting_time || '',
+        startTime: d.start_time || '',
+        notes: d.notes || '',
+        athletes: (d.athletes || []).map((a: any) => ({ id: a.id, full_name: a.full_name, role: a.role, jersey_number: a.jersey_number })),
+        fileName: `convocazione_${(d.team_name || teamName || 'squadra').replace(/[^a-zA-Z0-9]+/g, '_')}`,
+      });
+    } catch {
+      showAlert('Errore', 'Impossibile generare il PDF.');
+    } finally {
+      setPdfBusy(null);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -113,6 +151,12 @@ export default function ConvocationsList() {
                   <Ionicons name="create-outline" size={18} color="#5856D6" />
                   <Text style={styles.actionText}>Apri</Text>
                 </TouchableOpacity>
+                <TouchableOpacity style={styles.actionBtn} onPress={() => openPdf(c)} disabled={pdfBusy === c.id}>
+                  {pdfBusy === c.id
+                    ? <ActivityIndicator size="small" color="#1E7E34" />
+                    : <Ionicons name="document-text-outline" size={18} color="#1E7E34" />}
+                  <Text style={[styles.actionText, { color: '#1E7E34' }]}>Apri PDF</Text>
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.actionBtn} onPress={() => confirmDelete(c.id)}>
                   <Ionicons name="trash-outline" size={18} color="#C62828" />
                   <Text style={[styles.actionText, { color: '#C62828' }]}>Elimina</Text>
@@ -142,7 +186,7 @@ const styles = StyleSheet.create({
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardTitle: { fontSize: 15, fontWeight: '700', color: '#222', flex: 1, marginRight: 8 },
   cardMeta: { fontSize: 13, color: '#666', marginTop: 6 },
-  cardActions: { flexDirection: 'row', gap: 20, marginTop: 12, borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingTop: 10 },
+  cardActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, marginTop: 12, borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingTop: 10 },
   actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   actionText: { color: '#5856D6', fontWeight: '600', fontSize: 14 },
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
