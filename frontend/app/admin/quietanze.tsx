@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Modal, TextInput, Platform } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Modal, TextInput, Platform, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../src/services/api';
@@ -199,6 +199,83 @@ export default function QuietanzePage() {
     }
   };
 
+  // 🆕 FASE 1 — Bonifico + sollecito firma WhatsApp
+  const normalizePhone = (raw: string): string => {
+    let p = (raw || '').replace(/\D/g, '');
+    if (!p) return '';
+    if (p.startsWith('00')) p = p.substring(2);
+    if (p.startsWith('39')) return p;
+    p = p.replace(/^0+/, '');
+    return `39${p}`;
+  };
+
+  const markPayment = async (receipt: any, paid: boolean) => {
+    try {
+      await api.post('/admin/quietanze/mark-payment', {
+        user_role: receipt.user_role, user_id: receipt.user_id,
+        year: receipt.year, month: receipt.month, paid,
+      });
+      loadReceipts();
+    } catch (e: any) {
+      const m = e.response?.data?.detail || 'Operazione non riuscita';
+      if (Platform.OS === 'web') window.alert(m); else Alert.alert('Errore', m);
+    }
+  };
+
+  const remindWhatsApp = (receipt: any) => {
+    const norm = normalizePhone(receipt.phone);
+    if (!norm) {
+      const m = 'Numero di telefono non presente nella scheda di questo utente.';
+      if (Platform.OS === 'web') window.alert(m); else Alert.alert('Nessun numero', m);
+      return;
+    }
+    const msg = `Ciao ${receipt.user_name}, è stato effettuato il bonifico del compenso di ${MONTH_NAMES[receipt.month]} ${receipt.year}. Ti chiediamo di firmare al più presto la quietanza nell'app RegistraTEAM. Grazie!`;
+    const url = `https://wa.me/${norm}?text=${encodeURIComponent(msg)}`;
+    if (Platform.OS === 'web') window.open(url, '_blank'); else Linking.openURL(url);
+  };
+
+  const [bulkModal, setBulkModal] = useState(false);
+  const [bulkYear, setBulkYear] = useState(String(new Date().getFullYear()));
+  const [bulkMonth, setBulkMonth] = useState(String(new Date().getMonth() + 1));
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const runBulkPayment = async () => {
+    const y = parseInt(bulkYear, 10); const m = parseInt(bulkMonth, 10);
+    if (!y || !m || m < 1 || m > 12) { Alert.alert('Errore', 'Mese/anno non validi'); return; }
+    try {
+      setBulkBusy(true);
+      const res = await api.post('/admin/quietanze/mark-payment-bulk', { year: y, month: m, user_role: filterRole || undefined });
+      const n = res.data?.updated ?? 0;
+      const msg = `Bonifici segnati: ${n} quietanze di ${MONTH_NAMES[m]} ${y}${filterRole ? ` (${getRoleLabel(filterRole)})` : ''}.`;
+      if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Fatto', msg);
+      setBulkModal(false);
+      loadReceipts();
+    } catch (e: any) {
+      Alert.alert('Errore', e.response?.data?.detail || 'Operazione non riuscita');
+    } finally { setBulkBusy(false); }
+  };
+
+  const renderReceiptActions = (receipt: any) => {
+    if (receipt.receipt_signed) return null;
+    return (
+      <View style={styles.actionsRow}>
+        <TouchableOpacity
+          style={[styles.actBtn, receipt.payment_made ? styles.actBtnDone : styles.actBtnPay]}
+          onPress={() => markPayment(receipt, !receipt.payment_made)}
+        >
+          <Ionicons name={receipt.payment_made ? 'checkmark-circle' : 'cash-outline'} size={15} color={receipt.payment_made ? '#2E7D32' : '#fff'} />
+          <Text style={[styles.actBtnText, { color: receipt.payment_made ? '#2E7D32' : '#fff' }]}>
+            {receipt.payment_made ? 'Bonifico fatto' : 'Segna bonifico'}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.actBtn, styles.actBtnWa]} onPress={() => remindWhatsApp(receipt)}>
+          <Ionicons name="logo-whatsapp" size={15} color="#fff" />
+          <Text style={[styles.actBtnText, { color: '#fff' }]}>Sollecita firma</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   const filteredReceipts = receipts.filter(r => {
     if (filterRole && r.user_role !== filterRole) return false;
     if (filterStatus === 'pending' && r.receipt_signed) return false;
@@ -247,6 +324,7 @@ export default function QuietanzePage() {
           <Ionicons name="trash-outline" size={18} color="#D32F2F" />
         </TouchableOpacity>
       </View>
+      {renderReceiptActions(receipt)}
     </View>
   );
 
@@ -362,6 +440,12 @@ export default function QuietanzePage() {
                 </ScrollView>
               </View>
 
+              {/* 🆕 Bonifici in blocco per mese */}
+              <TouchableOpacity style={styles.bulkBtn} onPress={() => setBulkModal(true)} data-testid="bulk-payment-btn">
+                <Ionicons name="cash-outline" size={18} color="#fff" />
+                <Text style={styles.bulkBtnText}>Segna bonifici del mese</Text>
+              </TouchableOpacity>
+
               {/* Pending Custom Receipts */}
               {pendingCustom.length > 0 && (
                 <View style={styles.section}>
@@ -408,8 +492,9 @@ export default function QuietanzePage() {
                       </View>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, justifyContent: 'center' }}>
                         <Ionicons name="time-outline" size={14} color="#FF9800" />
-                        <Text style={{ fontSize: 12, color: '#FF9800', fontWeight: '600' }}>In attesa di firma</Text>
+                        <Text style={{ fontSize: 12, color: '#FF9800', fontWeight: '600' }}>{receipt.payment_made ? 'Bonifico fatto — in attesa di firma' : 'In attesa di firma'}</Text>
                       </View>
+                      {renderReceiptActions(receipt)}
                     </View>
                   ))}
                 </View>
@@ -504,6 +589,41 @@ export default function QuietanzePage() {
         <QuietanzeArchive />
       )}
       
+      {/* 🆕 Bonifici in blocco Modal */}
+      <Modal visible={bulkModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.editModalContent}>
+            <View style={styles.editModalHeader}>
+              <Text style={styles.editModalTitle}>💸 Bonifici in blocco</Text>
+              <TouchableOpacity onPress={() => setBulkModal(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>
+              Segna il bonifico per TUTTE le quietanze non ancora firmate del mese scelto{filterRole ? ` (solo ${getRoleLabel(filterRole)})` : ''}. I destinatari vedranno l{'\u2019'}avviso di firma.
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.editModalLabel}>Mese (1-12)</Text>
+                <TextInput style={styles.editInput} value={bulkMonth} onChangeText={setBulkMonth} keyboardType="numeric" placeholder="Es: 10" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.editModalLabel}>Anno</Text>
+                <TextInput style={styles.editInput} value={bulkYear} onChangeText={setBulkYear} keyboardType="numeric" placeholder="Es: 2026" />
+              </View>
+            </View>
+            <View style={styles.editModalActions}>
+              <TouchableOpacity style={[styles.editModalBtn, styles.editModalCancelBtn]} onPress={() => setBulkModal(false)}>
+                <Text style={styles.editModalCancelText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.editModalBtn, styles.editModalSaveBtn, bulkBusy && { opacity: 0.5 }]} onPress={runBulkPayment} disabled={bulkBusy}>
+                {bulkBusy ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.editModalSaveText}>Segna bonifici</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Edit Modal */}
       <Modal visible={editModalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -845,6 +965,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#EEE',
+  },
+  actBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 8,
+  },
+  actBtnPay: { backgroundColor: '#FB8C00' },
+  actBtnDone: { backgroundColor: '#E8F5E9', borderWidth: 1, borderColor: '#A5D6A7' },
+  actBtnWa: { backgroundColor: '#25D366' },
+  actBtnText: { fontSize: 13, fontWeight: '700' },
+  bulkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FB8C00',
+    paddingVertical: 11,
+    borderRadius: 10,
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  bulkBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   editBtn: {
     flex: 1,
     flexDirection: 'row',

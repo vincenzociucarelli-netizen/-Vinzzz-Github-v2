@@ -1,4 +1,5 @@
 import SocietyMatchesLink from '../../src/components/SocietyMatchesLink';
+import PendingReceiptNotice from '../../src/components/PendingReceiptNotice';
 import React, { useState, useEffect } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import SocietyContactsSection from '../../src/components/SocietyContactsSection';
@@ -287,6 +288,10 @@ export default function DirigenteIndex() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {/* 🆕 Avviso quietanze da firmare (bonifico effettuato) */}
+        <View style={{ marginHorizontal: 16 }}>
+          <PendingReceiptNotice signRoute="/dirigente/compensation" />
+        </View>
         <SocietyMatchesLink />
         {/* 🆕 09/08/2026 — Proposta cambio ruolo dall'admin (accetta/rifiuta) */}
         <RoleChangePrompt />

@@ -19,6 +19,10 @@ interface Contact {
   athlete_id: string; athlete_name: string; is_minor: boolean;
   athlete_phone: string; mother_phone: string; father_phone: string;
 }
+interface Palestra {
+  name: string; address: string; description?: string;
+  folder?: string; google_maps_url?: string;
+}
 
 const normalizePhone = (raw: string): string => {
   let p = (raw || '').replace(/\D/g, '');
@@ -59,7 +63,11 @@ export default function ConvocationEditor() {
   const [matchTime, setMatchTime] = useState('');
   const [homeAway, setHomeAway] = useState<'home' | 'away'>('home');
   const [venue, setVenue] = useState('');
+  const [venueAddress, setVenueAddress] = useState('');
+  const [mapsUrl, setMapsUrl] = useState('');
   const [city, setCity] = useState('');
+  const [palestre, setPalestre] = useState<Palestra[]>([]);
+  const [showPalestre, setShowPalestre] = useState(false);
   const [meetingPlace, setMeetingPlace] = useState('');
   const [meetingTime, setMeetingTime] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -108,6 +116,10 @@ export default function ConvocationEditor() {
         setRoster(rosterRes.data?.athletes || []);
         setMatches(matchesRes.data || []);
         setSociety({ name: socRes.data?.name || '', logo: socRes.data?.logo || null });
+        try {
+          const pal = await api.get('/palestre/list');
+          setPalestre(pal.data?.palestre || []);
+        } catch { /* lista palestre opzionale */ }
 
         if (convId0) {
           const c = await api.get(`/convocations/${convId0}`);
@@ -117,6 +129,8 @@ export default function ConvocationEditor() {
           setMatchTime(d.match_time || '');
           setHomeAway(d.home_away === 'away' ? 'away' : 'home');
           setVenue(d.venue || '');
+          setVenueAddress(d.venue_address || '');
+          setMapsUrl(d.maps_url || '');
           setCity(d.city || '');
           setMeetingPlace(d.meeting_place || '');
           setMeetingTime(d.meeting_time || '');
@@ -157,6 +171,30 @@ export default function ConvocationEditor() {
   const allSelected = roster.length > 0 && selected.size === roster.length;
   const toggleAll = () => setSelected(allSelected ? new Set() : new Set(roster.map(a => a.id)));
 
+  const filteredPalestre = useMemo(() => {
+    const q = city.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return palestre.filter(p =>
+      `${p.folder || ''} ${p.name} ${p.address} ${p.description || ''}`.toLowerCase().includes(q)
+    ).slice(0, 20);
+  }, [palestre, city]);
+
+  const selectPalestra = (p: Palestra) => {
+    // Nel KML il nome è spesso "Comune - Nome impianto" (es. "Magione - Palazzetto
+    // dello Sport"). Estraiamo il comune come città e il resto come impianto, senza
+    // sovrascrivere con il 'folder' (che è una categoria, non il comune).
+    const parts = (p.name || '').split(' - ');
+    if (parts.length >= 2) {
+      setCity(parts[0].trim());
+      setVenue(parts.slice(1).join(' - ').trim());
+    } else {
+      setVenue(p.name || '');
+    }
+    setVenueAddress(p.address || '');
+    setMapsUrl(p.google_maps_url || '');
+    setShowPalestre(false);
+  };
+
   const buildPayload = (status?: 'draft' | 'sent') => ({
     team_id: teamId,
     match_id: selectedMatchId || null,
@@ -165,6 +203,8 @@ export default function ConvocationEditor() {
     match_time: matchTime.trim(),
     home_away: homeAway,
     venue: venue.trim(),
+    venue_address: venueAddress.trim(),
+    maps_url: mapsUrl.trim(),
     city: city.trim(),
     meeting_place: meetingPlace.trim(),
     meeting_time: meetingTime.trim(),
@@ -221,6 +261,8 @@ export default function ConvocationEditor() {
       matchTime: matchTime.trim(),
       venue: venue.trim(),
       city: city.trim(),
+      venueAddress: venueAddress.trim(),
+      mapsUrl: mapsUrl.trim(),
       meetingPlace: meetingPlace.trim(),
       meetingTime: meetingTime.trim(),
       startTime: startTime.trim(),
@@ -370,7 +412,37 @@ export default function ConvocationEditor() {
           <Text style={styles.label}>Impianto</Text>
           <TextInput style={styles.input} value={venue} onChangeText={setVenue} placeholder="Palazzetto / Palestra" />
           <Text style={styles.label}>Città</Text>
-          <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="Città" />
+          <TextInput
+            style={styles.input}
+            value={city}
+            onChangeText={(t) => { setCity(t); setShowPalestre(true); }}
+            placeholder="Scrivi la città per cercare la palestra"
+            onFocus={() => setShowPalestre(true)}
+          />
+          {showPalestre && filteredPalestre.length > 0 && (
+            <View style={styles.palBox}>
+              <Text style={styles.palHint}>Palestre memorizzate per «{city.trim()}» — tocca per selezionare:</Text>
+              {filteredPalestre.map((p, i) => (
+                <TouchableOpacity key={`${p.name}-${i}`} style={styles.palRow} onPress={() => selectPalestra(p)}>
+                  <Ionicons name="location-outline" size={18} color="#5856D6" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.palName}>{p.name}</Text>
+                    {!!p.address && <Text style={styles.palAddr}>{p.address}</Text>}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+          {!!venueAddress && (
+            <View style={styles.selectedPal}>
+              <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
+              <Text style={styles.selectedPalText}>{venueAddress}</Text>
+            </View>
+          )}
+          <Text style={styles.label}>Indirizzo impianto</Text>
+          <TextInput style={styles.input} value={venueAddress} onChangeText={setVenueAddress} placeholder="Indirizzo (compilato se scegli una palestra)" />
+          <Text style={styles.label}>Link mappa (Google Maps)</Text>
+          <TextInput style={styles.input} value={mapsUrl} onChangeText={setMapsUrl} placeholder="https://maps.google.com/..." autoCapitalize="none" />
         </View>
 
         {/* Ritrovo */}
@@ -510,6 +582,13 @@ const styles = StyleSheet.create({
   athleteRowSel: { backgroundColor: '#F5F3FF', borderRadius: 8 },
   athleteName: { fontSize: 15, color: '#111', flex: 1 },
   selectAll: { color: '#5856D6', fontWeight: '600', fontSize: 13 },
+  palBox: { backgroundColor: '#F5F3FF', borderRadius: 8, padding: 8, marginTop: 8 },
+  palHint: { fontSize: 12, color: '#6A5ACD', marginBottom: 6, fontWeight: '600' },
+  palRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#E6E0FF' },
+  palName: { fontSize: 14, color: '#222', fontWeight: '600' },
+  palAddr: { fontSize: 12, color: '#777' },
+  selectedPal: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, backgroundColor: '#E8F5E9', borderRadius: 8, padding: 8 },
+  selectedPalText: { fontSize: 13, color: '#2E7D32', flex: 1 },
   emptyText: { color: '#999', fontStyle: 'italic', marginTop: 10 },
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', gap: 10, padding: 14, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#E5E5EA' },
   fBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 13, borderRadius: 10 },

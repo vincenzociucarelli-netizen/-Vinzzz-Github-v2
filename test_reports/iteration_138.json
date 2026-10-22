@@ -1,0 +1,50 @@
+{
+  "summary": "Tested the 2 new CONVOCAZIONI features (iter138). Backend: 11/11 pytest pass covering (a) GET /api/palestre/list payload shape (80 items, keys name/address/folder/google_maps_url) and auth for admin+coach; (b) POST/PATCH/GET /api/convocations now round-trip the new fields venue_address and maps_url; (c) GET /api/convocations/for-athlete/{athlete_id} returns only status=sent conv for the athlete with coach_name/coach_phone exposed, admin+coach same-society → 200, unrelated parent → 403, missing athlete → 404, draft convocations are filtered out. Frontend editor flow verified end-to-end on mobile viewport 390x844: typing 'Magione' in Città surfaces 1 palestra suggestion → tap autofills Impianto='Magione - Palazzetto dello Sport' and Link mappa to the correct Google Maps search URL. ConvocationNotice component correctly embedded in /athlete, /minor and /parent/athlete/[id] (Da fare tab) — verified at code level; backend API that feeds it is 100% green. ❗ Found 1 visible frontend bug: on palestra selection the Città field is OVERWRITTEN with the KML folder name 'Palestre e Palazzetti in Umbria' (a category, NOT the comune); the problem statement assumed folder=comune but the KML returned by /palestre/list uses folder as a top-level grouping. ❗ Minor data gap: for 'Magione - Palazzetto dello Sport' the KML address is empty so Indirizzo stays blank after selection — not a code bug but worth communicating to the coach.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "convocations/editor.tsx selectPalestra",
+        "issue": "`if (p.folder) setCity(p.folder)` overwrites the Città field (which the user typed as 'Magione') with the KML folder value, which in the real /palestre/list response is a category like 'Palestre e Palazzetti in Umbria', not a comune. UX is clearly wrong (field becomes meaningless). Reference: /app/frontend/app/convocations/editor.tsx:186",
+        "testID": "convocation-editor-screen",
+        "priority": "MEDIUM"
+      },
+      {
+        "component": "convocations/editor.tsx selectPalestra",
+        "issue": "If KML palestra has empty address, Indirizzo stays empty with no visual hint. Consider showing a small note or auto-filling with 'city, Italia' as fallback, or extracting the address from the google_maps_url query. Reference: /app/frontend/app/convocations/editor.tsx:182-188",
+        "testID": "convocation-editor-screen",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_convocations_iter138.py",
+    "/app/test_reports/pytest/convocations_iter138_results.xml",
+    "/app/backend/tests/test_convocations.py (pre-existing, still green per iter137)"
+  ],
+  "action_items": [
+    "FIX: in /app/frontend/app/convocations/editor.tsx line 186, remove `if (p.folder) setCity(p.folder);` OR only set it when folder matches a known comune (not a KML category). Current behaviour clobbers 'Magione' with 'Palestre e Palazzetti in Umbria'.",
+    "Note to main agent / product: KML `folder` is the top-level map folder, not comune. If the goal is 'palestre memorizzate per quel comune', consider parsing the comune from the palestra name (e.g. 'Magione - PalaBigio' → 'Magione') or from `province`/address and expose a dedicated `city`/`comune` field in /api/palestre/list.",
+    "(Optional) When a palestra with empty address is selected, auto-fill Indirizzo with `${name}, ${comune}` as a fallback so the convocation PDF/notice is never missing a location string.",
+    "No functional change required for the 'SEI CONVOCATA' read-only notice: backend endpoint, component embedding in /athlete, /minor and /parent/athlete/[id] (Da fare) all verified."
+  ],
+  "critical_code_review_comments": [
+    "/api/convocations/for-athlete/{id} authorization correctly checks: same-society admin/coach/coordinatore/dirigente OR the athlete themself (current_user.athlete_id==id) OR parent linked via parent_id/second_parent_id. 403 for everyone else, 404 for unknown athlete.",
+    "coach_phone/coach_name resolved via a per-team cache — avoids N+1 queries. Note: if more than one coach is assigned to the same team the first match wins (acceptable per spec).",
+    "server.py POST/PATCH /api/convocations correctly whitelist venue_address and maps_url in the `allowed` list; sent_at is set on first status->sent transition only.",
+    "ConvocationNotice.tsx: simple, well-contained; useFocusEffect re-fetches on tab focus; normalizePhone handles 00/39 and leading zeros; wa.me deep-link + tel: used (no external integration).",
+    "Minor: ConvocationNotice.tsx line 65 always builds `wa` from coach_phone, but the WhatsApp button is only rendered when c.coach_phone truthy — OK."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_convocations_iter138.py (new, 11 tests)"
+  ],
+  "success_rate": { "backend": "100% (11/11 new + previous 16/16 still green)", "frontend": "~85% — editor palestra flow fully reproduced; City-field overwrite bug observed and documented. SEI CONVOCATA notice verified at code+API level only (no athlete-login run)." },
+  "seed_data_creation": "All TEST_* convocations created during pytest are deleted on fixture teardown (verified).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend is 100%. The only outstanding issue is the Città overwrite bug on palestra selection (editor.tsx:186). After the main agent patches it, re-run the UI flow: goto /convocations/editor?team_id=<id>&team_name=X, type 'Magione' in Città, tap the suggested 'Magione - Palazzetto dello Sport', then assert Città is still 'Magione' (not 'Palestre e Palazzetti in Umbria'). Reminder: supervisor serves dist/ (static). After any FE change: `cd /app/frontend && npx expo export -p web --output-dir dist && sudo supervisorctl restart expo`. Pre-built dist from iter137 is still in place so this iteration's bug repros as-is.",
+  "rca_of_issue": "selectPalestra assumes the KML `folder` field is the comune (as per the problem statement), but palestre_kml.py returns the top-level KML folder which Google My Maps uses as a logical grouping — in production this is 'Palestre e Palazzetti in Umbria', 'Trasporti Pubblici', 'Studi Medici'. Easiest fix: drop the `setCity(p.folder)` call. Better fix: derive comune from the palestra name (split on ' - ' / ' – ' / comma) or from the `province` + reverse-geocode of lat/lng, and expose it as a first-class `city` field in /api/palestre/list."
+}

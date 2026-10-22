@@ -38,6 +38,7 @@ import { COUNTRIES, DEFAULT_COUNTRY } from '../../../src/constants/countries';
 import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
 // 🆕 29/07/2026 — Card Calendario Gare (con export .ics) per il genitore
 import AthleteMatchesCard from '../../../src/components/AthleteMatchesCard';
+import ConvocationNotice from '../../../src/components/ConvocationNotice';
 import { AdminCoachCommitments } from '../../../src/components/admin/AdminCoachCommitments';
 
 // --- Certificate Date Form Component ---
@@ -2086,6 +2087,10 @@ export default function AthleteDetail() {
 
         {/* === DA FARE TAB === */}
         {activeTab === 'dafare' && (<>
+        {/* 🆕 Convocazioni (sola lettura) */}
+        {id && typeof id === 'string' && (
+          <ConvocationNotice athleteId={id} accentColor="#5856D6" />
+        )}
         {/* 🆕 31/08/2026 — Agenda impegni ricca (Oggi/Domani/Dopodomani + Successivi)
             con badge PROVVISORIO e banner "Inizio allenamenti", identica alla vista
             che l'atleta vede sul proprio telefono. Fonte: /coach/commitments?athlete_id. */}

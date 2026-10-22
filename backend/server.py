@@ -9799,6 +9799,8 @@ async def create_convocation(data: dict = Body(...), current_user = Depends(get_
         "match_time": (data.get("match_time") or "").strip(),
         "home_away": data.get("home_away") or "home",
         "venue": (data.get("venue") or "").strip(),
+        "venue_address": (data.get("venue_address") or "").strip(),
+        "maps_url": (data.get("maps_url") or "").strip(),
         "city": (data.get("city") or "").strip(),
         "meeting_place": (data.get("meeting_place") or "").strip(),
         "meeting_time": (data.get("meeting_time") or "").strip(),
@@ -9853,8 +9855,8 @@ async def update_convocation(conv_id: str, data: dict = Body(...), current_user 
     """Aggiorna una convocazione esistente (campi gara/ritrovo/note/atleti/stato)."""
     conv = await _get_conv_or_404(conv_id, current_user)
     allowed = ["match_id", "opponent", "match_date", "match_time", "home_away",
-               "venue", "city", "meeting_place", "meeting_time", "start_time",
-               "notes", "athlete_ids", "status"]
+               "venue", "venue_address", "maps_url", "city", "meeting_place",
+               "meeting_time", "start_time", "notes", "athlete_ids", "status"]
     upd = {}
     for k in allowed:
         if k not in data:
@@ -9925,6 +9927,68 @@ async def convocation_contacts(conv_id: str, current_user = Depends(get_current_
         })
     out.sort(key=lambda x: (x.get("athlete_name") or "").lower())
     return {"count": len(out), "athletes": out}
+
+
+@api_router.get("/convocations/for-athlete/{athlete_id}")
+async def convocations_for_athlete(athlete_id: str, current_user = Depends(get_current_user)):
+    """🆕 Convocazioni INVIATE in cui l'atleta è convocato, in SOLA LETTURA, per
+    la home dell'atleta/genitore e l'accesso Lite. Include i dati gara/ritrovo,
+    indirizzo+mappa e il contatto del coach (per avvisare in caso di assenza)."""
+    athlete = await db.athletes.find_one({"id": athlete_id}, {"_id": 0, "id": 1, "society_id": 1, "parent_id": 1, "second_parent_id": 1})
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    sid = athlete.get("society_id")
+    role = current_user.get("role")
+    allowed = False
+    if role in (UserRole.ADMIN, UserRole.COORDINATORE, UserRole.DIRIGENTE, UserRole.COACH) and current_user.get("society_id") == sid:
+        allowed = True
+    if current_user.get("athlete_id") == athlete_id:
+        allowed = True
+    if role in (UserRole.PARENT, "parent") and current_user.get("id") in (athlete.get("parent_id"), athlete.get("second_parent_id")):
+        allowed = True
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Non autorizzato")
+
+    convs = await db.convocations.find(
+        {"society_id": sid, "status": "sent", "athlete_ids": athlete_id}
+    ).sort("created_at", -1).to_list(200)
+
+    coach_cache: dict = {}
+    async def _coach_for(team_id: str):
+        if team_id in coach_cache:
+            return coach_cache[team_id]
+        coach = await db.users.find_one(
+            {"society_id": sid, "role": UserRole.COACH, "assigned_teams": team_id},
+            {"_id": 0, "full_name": 1, "phone": 1},
+        )
+        res = {"coach_name": (coach or {}).get("full_name", ""), "coach_phone": (coach or {}).get("phone", "")}
+        coach_cache[team_id] = res
+        return res
+
+    out = []
+    for c in convs:
+        contact = await _coach_for(c.get("team_id"))
+        out.append({
+            "id": c["id"],
+            "team_name": c.get("team_name", ""),
+            "opponent": c.get("opponent", ""),
+            "home_away": c.get("home_away", "home"),
+            "match_date": c.get("match_date", ""),
+            "match_time": c.get("match_time", ""),
+            "venue": c.get("venue", ""),
+            "venue_address": c.get("venue_address", ""),
+            "maps_url": c.get("maps_url", ""),
+            "city": c.get("city", ""),
+            "meeting_place": c.get("meeting_place", ""),
+            "meeting_time": c.get("meeting_time", ""),
+            "start_time": c.get("start_time", ""),
+            "notes": c.get("notes", ""),
+            "coach_name": contact["coach_name"],
+            "coach_phone": contact["coach_phone"],
+            "sent_at": c.get("sent_at"),
+        })
+    return out
+
 
 
 @api_router.get("/admin/teams/{team_id}/whatsapp-contacts")
@@ -20659,6 +20723,7 @@ async def get_coach_commitments_debug(
     return report
 
 
+@api_router.get("/coach/team/{team_id}/athletes")
 async def get_coach_team_athletes(team_id: str, current_user = Depends(get_current_user)):
     """Get athletes for a team (coach view - limited info)"""
     if current_user["role"] != UserRole.COACH:
@@ -21647,6 +21712,9 @@ async def admin_get_all_custom_receipts(
                 "user_id": r.get("coach_id"),
                 "user_name": user.get("full_name", "N/A"),
                 "user_role": "coach",
+                "phone": user.get("phone", "") or user.get("phone_number", ""),
+                "payment_made": r.get("payment_made", False),
+                "payment_made_date": r.get("payment_made_date"),
                 "month": r.get("month"),
                 "year": r.get("year"),
                 "amount_gross": r.get("amount_gross", r.get("amount", 0)),
@@ -21678,6 +21746,9 @@ async def admin_get_all_custom_receipts(
                 "user_id": r.get("dirigente_id"),
                 "user_name": user.get("full_name", "N/A"),
                 "user_role": "dirigente",
+                "phone": user.get("phone", "") or user.get("phone_number", ""),
+                "payment_made": r.get("payment_made", False),
+                "payment_made_date": r.get("payment_made_date"),
                 "month": r.get("month"),
                 "year": r.get("year"),
                 "amount_gross": r.get("amount_gross", r.get("amount", 0)),
@@ -21709,6 +21780,9 @@ async def admin_get_all_custom_receipts(
                 "user_id": r.get("collaboratore_id"),
                 "user_name": user.get("full_name", "N/A"),
                 "user_role": "collaboratore",
+                "phone": user.get("phone", "") or user.get("phone_number", ""),
+                "payment_made": r.get("payment_made", False),
+                "payment_made_date": r.get("payment_made_date"),
                 "month": r.get("month"),
                 "year": r.get("year"),
                 "amount_gross": r.get("amount_gross", r.get("amount", 0)),
@@ -21744,6 +21818,9 @@ async def admin_get_all_custom_receipts(
             "user_id": r.get("athlete_id"),
             "user_name": athlete.get("full_name", "N/A"),
             "user_role": "athlete",
+            "phone": athlete.get("phone_athlete") or athlete.get("phone") or "",
+            "payment_made": r.get("payment_made", False),
+            "payment_made_date": r.get("payment_made_date"),
             "month": r.get("month"),
             "year": r.get("year"),
             "amount_gross": amt,
@@ -21771,6 +21848,109 @@ async def admin_get_all_custom_receipts(
         "custom_pending": len([r for r in all_receipts if r["is_custom"] and not r["receipt_signed"]]),
         "custom_signed": len([r for r in all_receipts if r["is_custom"] and r["receipt_signed"]])
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# 🆕 FASE 1 Quietanze — "Bonifico effettuato" + avviso firma destinatario
+# ─────────────────────────────────────────────────────────────────────────
+ROLE_RECEIPT_MAP = {
+    "coach": ("coach_compensations", "coach_id"),
+    "dirigente": ("dirigente_compensations", "dirigente_id"),
+    "collaboratore": ("collaboratore_compensations", "collaboratore_id"),
+    "athlete": ("athlete_compensation_receipts", "athlete_id"),
+}
+
+
+@api_router.post("/admin/quietanze/mark-payment")
+async def admin_mark_quietanza_payment(data: dict = Body(...), current_user = Depends(get_current_user)):
+    """Segna (o annulla) il BONIFICO su una singola quietanza. Imposta payment_made
+    così il destinatario riceve l'avviso di firmare."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    role = data.get("user_role")
+    uid = data.get("user_id")
+    if role not in ROLE_RECEIPT_MAP or not uid:
+        raise HTTPException(status_code=400, detail="Dati non validi")
+    year = int(data.get("year")); month = int(data.get("month"))
+    paid = bool(data.get("paid", True))
+    coll, idf = ROLE_RECEIPT_MAP[role]
+    now = datetime.now(timezone.utc).isoformat()
+    upd = {"payment_made": paid, "payment_made_date": now if paid else None, "payment_made_by": current_user["id"]}
+    res = await db[coll].update_one({idf: uid, "year": year, "month": month}, {"$set": upd})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Quietanza non trovata")
+    return {"ok": True, "payment_made": paid}
+
+
+@api_router.post("/admin/quietanze/mark-payment-bulk")
+async def admin_mark_quietanza_payment_bulk(data: dict = Body(...), current_user = Depends(get_current_user)):
+    """Segna il BONIFICO in blocco per tutte le quietanze di un mese/anno (opzionale
+    filtro per ruolo). Di default solo quelle non ancora firmate. Isolato per società."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    year = int(data.get("year")); month = int(data.get("month"))
+    only_role = data.get("user_role")
+    only_unsigned = bool(data.get("only_unsigned", True))
+    _sid = current_user.get("society_id")
+    society_user_ids = set()
+    _uq = {"society_id": _sid} if _sid else {}
+    async for u in db.users.find(_uq, {"_id": 0, "id": 1}):
+        if u.get("id"):
+            society_user_ids.add(u["id"])
+    now = datetime.now(timezone.utc).isoformat()
+    count = 0
+    roles = [only_role] if only_role in ROLE_RECEIPT_MAP else list(ROLE_RECEIPT_MAP.keys())
+    for role in roles:
+        coll, idf = ROLE_RECEIPT_MAP[role]
+        q = {"year": year, "month": month}
+        if only_unsigned:
+            q["receipt_signed"] = {"$ne": True}
+        async for r in db[coll].find(q):
+            owner = r.get(idf)
+            if role == "athlete":
+                ath = await db.athletes.find_one({"id": owner}, {"_id": 0, "society_id": 1})
+                if _sid and (not ath or ath.get("society_id") != _sid):
+                    continue
+            else:
+                if _sid and owner not in society_user_ids:
+                    continue
+            await db[coll].update_one(
+                {"_id": r["_id"]},
+                {"$set": {"payment_made": True, "payment_made_date": now, "payment_made_by": current_user["id"]}},
+            )
+            count += 1
+    return {"ok": True, "updated": count, "year": year, "month": month}
+
+
+@api_router.get("/me/receipts/pending-signature")
+async def my_pending_signature_receipts(current_user = Depends(get_current_user)):
+    """Quietanze con bonifico effettuato ma NON ancora firmate dall'utente corrente.
+    Alimenta l'avviso 'Firma la quietanza di [mese]' nella home del destinatario."""
+    role = current_user.get("role")
+    MONTHS = ["", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+              "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
+    targets = []
+    if role in ("coach", "dirigente", "collaboratore"):
+        coll, idf = ROLE_RECEIPT_MAP[role]
+        targets.append((coll, idf, current_user.get("id")))
+    aid = current_user.get("athlete_id")
+    if aid:
+        targets.append(("athlete_compensation_receipts", "athlete_id", aid))
+    out = []
+    for coll, idf, owner in targets:
+        if not owner:
+            continue
+        async for r in db[coll].find({idf: owner, "payment_made": True, "receipt_signed": {"$ne": True}}):
+            m = r.get("month") or 0
+            out.append({
+                "role": idf.replace("_id", ""),
+                "year": r.get("year"),
+                "month": m,
+                "month_name": MONTHS[m] if 0 < m < 13 else str(m),
+                "amount": r.get("amount_gross", r.get("amount", 0)),
+            })
+    out.sort(key=lambda x: (x.get("year") or 0, x.get("month") or 0), reverse=True)
+    return out
 
 
 

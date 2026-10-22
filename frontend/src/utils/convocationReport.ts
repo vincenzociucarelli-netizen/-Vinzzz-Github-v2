@@ -27,6 +27,10 @@ export interface ConvocationPDFData {
   meetingTime: string;
   startTime: string;
   notes: string;
+  venueAddress?: string;
+  mapsUrl?: string;
+  coachName?: string;
+  coachPhone?: string;
   athletes: ConvocationAthlete[];
   fileName: string;
 }
@@ -85,6 +89,7 @@ export const generateConvocationHTML = (d: ConvocationPDFData): string => {
   table.info td.lbl { width:160px; color:#555; font-weight:bold; background:#F3F4F6; border:1px solid #E5E7EB; }
   table.info td.val { border:1px solid #E5E7EB; }
   h2.sec { font-size:14px; color:#1E3A8A; margin:6px 0 6px; padding-bottom:4px; border-bottom:1px solid #E5E7EB; }
+  .alert { background:#FFF3E0; border:1px solid #FFCC80; border-radius:8px; padding:10px 12px; margin-bottom:16px; font-size:12px; color:#92400E; }
   table.ath { width:100%; border-collapse:collapse; }
   table.ath th, table.ath td { border:1px solid #D1D5DB; padding:5px 8px; font-size:12px; text-align:left; }
   table.ath th { background:#1E3A8A; color:#fff; }
@@ -111,12 +116,18 @@ export const generateConvocationHTML = (d: ConvocationPDFData): string => {
   <table class="info">
     ${row('Casa/Trasferta', d.homeAway === 'home' ? 'Casa' : 'Trasferta')}
     ${row('Impianto', d.venue)}
+    ${row('Indirizzo', d.venueAddress || '')}
     ${row('Città', d.city)}
+    ${d.mapsUrl ? `<tr><td class="lbl">Mappa</td><td class="val"><a href="${esc(d.mapsUrl)}" style="color:#1E3A8A;">📍 Apri su Google Maps</a></td></tr>` : ''}
     ${row('Luogo di ritrovo', d.meetingPlace)}
     ${row('Ora di ritrovo', d.meetingTime)}
     ${row('Inizio gara', d.startTime)}
     ${row('Note', d.notes)}
   </table>
+
+  <div class="alert">
+    ⚠️ In caso di impossibilità a partecipare, avvisare <strong>immediatamente il coach</strong>${d.coachName ? ` (${esc(d.coachName)})` : ''}${d.coachPhone ? ` al numero <strong>${esc(d.coachPhone)}</strong>` : ''} telefonicamente o con un messaggio WhatsApp.
+  </div>
 
   <h2 class="sec">Atleti convocati <span style="font-size:11px; color:#888; font-weight:normal;">(${d.athletes.length})</span></h2>
   <table class="ath">

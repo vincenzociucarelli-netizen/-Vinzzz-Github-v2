@@ -2,6 +2,8 @@ import SocietyMatchesLink from '../../src/components/SocietyMatchesLink';
 import React, { useState, useEffect, useRef } from 'react';
 import SocietyBranding from '../../src/components/SocietyBranding';
 import AthleteTabBar from '../../src/components/athlete/AthleteTabBar';
+import ConvocationNotice from '../../src/components/ConvocationNotice';
+import PendingReceiptNotice from '../../src/components/PendingReceiptNotice';
 import {
   View,
   Text,
@@ -581,6 +583,12 @@ export default function AthleteScreen() {
         {/* 🆕 Switch dual-role: Atleta ↔ Coach (visibile solo se atleta promosso) */}
         <SwitchAccountButton />
         
+        {/* 🆕 Convocazioni (sola lettura) */}
+        <View style={{ marginHorizontal: 16 }}>
+          <ConvocationNotice athleteId={profile?.id} accentColor="#E53935" />
+          <PendingReceiptNotice signRoute="/athlete/compensation" />
+        </View>
+
         {/* Compact Profile Header */}
         <View style={{ backgroundColor: '#fff', borderRadius: 12, marginHorizontal: 16, marginBottom: 12, padding: 14, borderWidth: 1, borderColor: '#e0e0e0' }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
