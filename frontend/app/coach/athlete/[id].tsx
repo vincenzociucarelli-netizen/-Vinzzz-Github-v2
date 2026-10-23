@@ -33,6 +33,8 @@ interface TechnicalData {
   athlete_photo?: string;
   athlete_photo_artistic?: string;
   athlete_role?: string;
+  jersey_number?: string;
+  libero?: string;
   athlete_height?: number;
   athlete_weight?: number;
   athlete_characteristics?: string[];
@@ -72,6 +74,8 @@ export default function CoachAthleteDetail() {
   const [photoArtistic, setPhotoArtistic] = useState<string | null>(null);
   const [transformingPhoto, setTransformingPhoto] = useState(false);
   const [role, setRole] = useState<string>('');
+  const [jerseyNumber, setJerseyNumber] = useState<string>('');
+  const [libero, setLibero] = useState<string>('');
   const [height, setHeight] = useState<string>('');
   const [weight, setWeight] = useState<string>('');
   const [elevation, setElevation] = useState<string>('');
@@ -168,6 +172,8 @@ export default function CoachAthleteDetail() {
       setPhoto(athleteData.athlete_photo || null);
       setPhotoArtistic(athleteData.athlete_photo_artistic || null);
       setRole(athleteData.athlete_role || '');
+      setJerseyNumber(athleteData.jersey_number ? String(athleteData.jersey_number) : '');
+      setLibero(athleteData.libero || '');
       setHeight(athleteData.athlete_height ? String(athleteData.athlete_height) : '');
       setWeight(athleteData.athlete_weight ? String(athleteData.athlete_weight) : '');
       setElevation(athleteData.athlete_elevation ? String(athleteData.athlete_elevation) : '');
@@ -243,6 +249,8 @@ export default function CoachAthleteDetail() {
         athlete_photo: photo,
         athlete_photo_artistic: photoArtistic,
         athlete_role: role || null,
+        jersey_number: jerseyNumber || '',
+        libero: libero || '',
         athlete_height: height ? parseInt(height) : null,
         athlete_weight: weight ? parseInt(weight) : null,
         athlete_elevation: elevation ? parseInt(elevation) : null,
@@ -457,6 +465,38 @@ export default function CoachAthleteDetail() {
               ⚠️ Nessun ruolo definito. L'admin deve configurare i ruoli nelle impostazioni della società.
             </Text>
           )}
+
+          <View style={styles.liberoRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.inputLabel}>N° maglia</Text>
+              <TextInput
+                style={styles.input}
+                value={jerseyNumber}
+                onChangeText={(t) => setJerseyNumber(t.replace(/\D/g, ''))}
+                placeholder="Es. 10"
+                placeholderTextColor="#aaa"
+                keyboardType="numeric"
+                maxLength={3}
+              />
+            </View>
+            <View style={{ flex: 1.5 }}>
+              <Text style={styles.inputLabel}>Libero</Text>
+              <View style={styles.liberoChips}>
+                {['L', 'L1', 'L2'].map((opt) => (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[styles.liberoChip, libero === opt && styles.liberoChipActive]}
+                    onPress={() => setLibero(libero === opt ? '' : opt)}
+                  >
+                    <Text style={[styles.liberoChipText, libero === opt && styles.liberoChipTextActive]}>{opt}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+          <Text style={styles.liberoHint}>
+            Seleziona L se l'atleta è libero. Con due liberi usa L1 (primo) e L2 (secondo). Il simbolo comparirà in convocazione.
+          </Text>
         </View>
 
         {/* Physical Data Section */}
@@ -465,43 +505,40 @@ export default function CoachAthleteDetail() {
           
           <View style={styles.physicalRowThree}>
             <View style={styles.physicalInputThird}>
-              <Text style={styles.inputLabel}>Altezza cm.</Text>
+              <Text style={styles.inputLabelSmall}>Altezza cm.</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, styles.inputSmall]}
                 value={height}
                 onChangeText={setHeight}
                 placeholder="175"
-                placeholderTextColor="#999"
-                keyboardType="numeric"
                 placeholderTextColor="#aaa"
+                keyboardType="numeric"
                 maxLength={3}
               />
             </View>
             
             <View style={styles.physicalInputThird}>
-              <Text style={styles.inputLabel}>Peso kg.</Text>
+              <Text style={styles.inputLabelSmall}>Peso kg.</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, styles.inputSmall]}
                 value={weight}
                 onChangeText={setWeight}
                 placeholder="65"
-                placeholderTextColor="#999"
-                keyboardType="numeric"
                 placeholderTextColor="#aaa"
+                keyboardType="numeric"
                 maxLength={3}
               />
             </View>
             
             <View style={styles.physicalInputThird}>
-              <Text style={styles.inputLabel}>Elevaz. cm.</Text>
+              <Text style={styles.inputLabelSmall}>Elevaz. cm.</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, styles.inputSmall]}
                 value={elevation}
                 onChangeText={setElevation}
                 placeholder="45"
-                placeholderTextColor="#999"
-                keyboardType="numeric"
                 placeholderTextColor="#aaa"
+                keyboardType="numeric"
                 maxLength={3}
               />
             </View>
@@ -959,6 +996,52 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#555',
     marginBottom: 6,
+  },
+  inputLabelSmall: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#777',
+    marginBottom: 4,
+  },
+  inputSmall: {
+    padding: 9,
+    fontSize: 14,
+  },
+  liberoRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 14,
+  },
+  liberoChips: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  liberoChip: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+  },
+  liberoChipActive: {
+    backgroundColor: '#5856D6',
+    borderColor: '#5856D6',
+  },
+  liberoChipText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#555',
+  },
+  liberoChipTextActive: {
+    color: '#fff',
+  },
+  liberoHint: {
+    fontSize: 11,
+    color: '#888',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
   input: {
     backgroundColor: '#f5f5f5',

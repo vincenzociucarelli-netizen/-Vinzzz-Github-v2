@@ -733,6 +733,7 @@ export default function AdminAthleteDetail() {
         // Technical data
         athlete_role: athleteData.athlete_role || '',
         jersey_number: athleteData.jersey_number || '',
+        libero: athleteData.libero || '',
         athlete_height: athleteData.athlete_height?.toString() || '',
         athlete_weight: athleteData.athlete_weight?.toString() || '',
         athlete_elevation: athleteData.athlete_elevation?.toString() || '',
@@ -1005,6 +1006,7 @@ export default function AdminAthleteDetail() {
         // Technical data
         athlete_role: editData.athlete_role || null,
         jersey_number: (editData.jersey_number || '').trim(),
+        libero: (editData.libero || '').trim(),
         athlete_height: editData.athlete_height ? parseInt(editData.athlete_height) : null,
         athlete_weight: editData.athlete_weight ? parseInt(editData.athlete_weight) : null,
         athlete_elevation: editData.athlete_elevation ? parseInt(editData.athlete_elevation) : null,
@@ -3408,6 +3410,19 @@ export default function AdminAthleteDetail() {
                     keyboardType="numeric"
                     maxLength={3}
                   />
+                  <Text style={[styles.inputLabel, { marginTop: 12 }]}>Libero</Text>
+                  <View style={styles.liberoChipsRow}>
+                    {['L', 'L1', 'L2'].map((opt) => (
+                      <TouchableOpacity
+                        key={opt}
+                        style={[styles.liberoChipBtn, editData.libero === opt && styles.liberoChipBtnActive]}
+                        onPress={() => setEditData({ ...editData, libero: editData.libero === opt ? '' : opt })}
+                      >
+                        <Text style={[styles.liberoChipBtnText, editData.libero === opt && styles.liberoChipBtnTextActive]}>{opt}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <Text style={styles.liberoHintText}>L = libero. Con due liberi usa L1 (primo) e L2 (secondo). Compare in convocazione.</Text>
                   <View style={styles.rowInputsThree}>
                     <View style={styles.thirdInput}>
                       <Text style={styles.inputLabel}>Altezza cm.</Text>
@@ -3472,6 +3487,14 @@ export default function AdminAthleteDetail() {
                     <View style={styles.roleDisplay}>
                       <Text style={styles.techDataLabel}>Numero di maglia</Text>
                       <Text style={styles.roleValue}>{athlete.jersey_number}</Text>
+                    </View>
+                  ) : null}
+
+                  {/* Libero */}
+                  {athlete?.libero ? (
+                    <View style={styles.roleDisplay}>
+                      <Text style={styles.techDataLabel}>Libero</Text>
+                      <Text style={styles.roleValue}>{athlete.libero}</Text>
                     </View>
                   ) : null}
 
@@ -6803,6 +6826,38 @@ const styles = StyleSheet.create({
   },
   roleDisplay: {
     marginBottom: 12,
+  },
+  liberoChipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 2,
+  },
+  liberoChipBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+  },
+  liberoChipBtnActive: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  liberoChipBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#555',
+  },
+  liberoChipBtnTextActive: {
+    color: '#fff',
+  },
+  liberoHintText: {
+    fontSize: 11,
+    color: '#888',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
   roleValue: {
     fontSize: 16,
