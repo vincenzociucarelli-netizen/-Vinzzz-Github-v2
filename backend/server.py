@@ -7584,6 +7584,8 @@ async def get_user_detail(user_id: str, current_user = Depends(get_current_user)
         "is_scorekeeper": bool(user.get("is_scorekeeper", False)),
         "is_referee": bool(user.get("is_referee", False)),
         "is_accompanying_manager": bool(user.get("is_accompanying_manager", False)),
+        # 🆕 Permesso registrazione presenze manuale (deve persistere al reload)
+        "can_manual_attendance": bool(user.get("can_manual_attendance", False)),
         # Photo
         "profile_photo": user.get("profile_photo"),
         "profile_photo_artistic": user.get("profile_photo_artistic"),
