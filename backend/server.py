@@ -21758,12 +21758,22 @@ async def admin_get_all_custom_receipts(
         if u.get("id"):
             society_user_ids.add(u["id"])
 
+    def _belongs(owner_sid):
+        """True se il record appartiene alla società dell'admin. In contesto
+        mono-società i record con society_id mancante/legacy NON devono sparire
+        dall'elenco (altrimenti coach/dirigenti/atleti pagati non compaiono)."""
+        if not _sid:
+            return True
+        if not owner_sid:
+            return True
+        return str(owner_sid) == str(_sid)
+
     # Get coach receipts
     coach_receipts = await db.coach_compensations.find({}).to_list(1000)
     for r in coach_receipts:
-        if _sid and r.get("coach_id") not in society_user_ids:
-            continue
         user = await db.users.find_one({"id": r.get("coach_id")})
+        if not user or not _belongs(user.get("society_id")):
+            continue
         if user:
             created_by_name = await get_admin_name(r.get("created_by"))
             updated_by_name = await get_admin_name(r.get("updated_by"))
@@ -21795,9 +21805,9 @@ async def admin_get_all_custom_receipts(
     # Get dirigente receipts
     dirigente_receipts = await db.dirigente_compensations.find({}).to_list(1000)
     for r in dirigente_receipts:
-        if _sid and r.get("dirigente_id") not in society_user_ids:
-            continue
         user = await db.users.find_one({"id": r.get("dirigente_id")})
+        if not user or not _belongs(user.get("society_id")):
+            continue
         if user:
             created_by_name = await get_admin_name(r.get("created_by"))
             updated_by_name = await get_admin_name(r.get("updated_by"))
@@ -21829,9 +21839,9 @@ async def admin_get_all_custom_receipts(
     # Get collaboratore receipts
     collaboratore_receipts = await db.collaboratore_compensations.find({}).to_list(1000)
     for r in collaboratore_receipts:
-        if _sid and r.get("collaboratore_id") not in society_user_ids:
-            continue
         user = await db.users.find_one({"id": r.get("collaboratore_id")})
+        if not user or not _belongs(user.get("society_id")):
+            continue
         if user:
             created_by_name = await get_admin_name(r.get("created_by"))
             updated_by_name = await get_admin_name(r.get("updated_by"))
@@ -21867,7 +21877,7 @@ async def admin_get_all_custom_receipts(
         athlete = await db.athletes.find_one({"id": r.get("athlete_id")})
         if not athlete:
             continue
-        if _sid and athlete.get("society_id") != _sid:
+        if not _belongs(athlete.get("society_id")):
             continue
         created_by_name = await get_admin_name(r.get("created_by"))
         updated_by_name = await get_admin_name(r.get("updated_by"))
@@ -21957,6 +21967,16 @@ async def admin_mark_quietanza_payment_bulk(data: dict = Body(...), current_user
     async for u in db.users.find(_uq, {"_id": 0, "id": 1}):
         if u.get("id"):
             society_user_ids.add(u["id"])
+
+    async def _belongs_user(owner_id):
+        if not _sid:
+            return True
+        u = await db.users.find_one({"id": owner_id}, {"_id": 0, "society_id": 1})
+        if not u:
+            return False
+        osid = u.get("society_id")
+        return (not osid) or str(osid) == str(_sid)
+
     now = datetime.now(timezone.utc).isoformat()
     count = 0
     roles = [only_role] if only_role in ROLE_RECEIPT_MAP else list(ROLE_RECEIPT_MAP.keys())
@@ -21969,10 +21989,14 @@ async def admin_mark_quietanza_payment_bulk(data: dict = Body(...), current_user
             owner = r.get(idf)
             if role == "athlete":
                 ath = await db.athletes.find_one({"id": owner}, {"_id": 0, "society_id": 1})
-                if _sid and (not ath or ath.get("society_id") != _sid):
-                    continue
+                if _sid:
+                    if not ath:
+                        continue
+                    osid = ath.get("society_id")
+                    if osid and str(osid) != str(_sid):
+                        continue
             else:
-                if _sid and owner not in society_user_ids:
+                if _sid and not await _belongs_user(owner):
                     continue
             await db[coll].update_one(
                 {"_id": r["_id"]},
