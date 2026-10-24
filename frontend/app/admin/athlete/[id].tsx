@@ -3400,27 +3400,33 @@ export default function AdminAthleteDetail() {
                       placeholderTextColor="#999"
                     />
                   )}
-                  <Text style={[styles.inputLabel, { marginTop: 12 }]}>Numero di maglia</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={editData.jersey_number}
-                    onChangeText={(t) => setEditData({...editData, jersey_number: t.replace(/\D/g, '')})}
-                    placeholder="Es. 10"
-                    placeholderTextColor="#999"
-                    keyboardType="numeric"
-                    maxLength={3}
-                  />
-                  <Text style={[styles.inputLabel, { marginTop: 12 }]}>Libero</Text>
-                  <View style={styles.liberoChipsRow}>
-                    {['L', 'L1', 'L2'].map((opt) => (
-                      <TouchableOpacity
-                        key={opt}
-                        style={[styles.liberoChipBtn, editData.libero === opt && styles.liberoChipBtnActive]}
-                        onPress={() => setEditData({ ...editData, libero: editData.libero === opt ? '' : opt })}
-                      >
-                        <Text style={[styles.liberoChipBtnText, editData.libero === opt && styles.liberoChipBtnTextActive]}>{opt}</Text>
-                      </TouchableOpacity>
-                    ))}
+                  <View style={styles.liberoRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.inputLabel}>N° maglia</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={editData.jersey_number}
+                        onChangeText={(t) => setEditData({...editData, jersey_number: t.replace(/\D/g, '')})}
+                        placeholder="Es. 10"
+                        placeholderTextColor="#999"
+                        keyboardType="numeric"
+                        maxLength={3}
+                      />
+                    </View>
+                    <View style={{ flex: 1.5 }}>
+                      <Text style={styles.inputLabel}>Libero</Text>
+                      <View style={styles.liberoChipsRow}>
+                        {['L', 'L1', 'L2'].map((opt) => (
+                          <TouchableOpacity
+                            key={opt}
+                            style={[styles.liberoChipBtn, editData.libero === opt && styles.liberoChipBtnActive]}
+                            onPress={() => setEditData({ ...editData, libero: editData.libero === opt ? '' : opt })}
+                          >
+                            <Text style={[styles.liberoChipBtnText, editData.libero === opt && styles.liberoChipBtnTextActive]}>{opt}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
                   </View>
                   <Text style={styles.liberoHintText}>L = libero. Con due liberi usa L1 (primo) e L2 (secondo). Compare in convocazione.</Text>
                   <View style={styles.rowInputsThree}>
@@ -6831,6 +6837,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginTop: 2,
+  },
+  liberoRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
   liberoChipBtn: {
     flex: 1,
