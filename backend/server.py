@@ -13623,9 +13623,9 @@ async def get_athlete_technical_data(athlete_id: str, current_user = Depends(get
 
 @api_router.patch("/athletes/{athlete_id}/technical-data")
 async def update_athlete_technical_data(athlete_id: str, data: dict, current_user = Depends(get_current_user)):
-    """Update only technical data of an athlete - accessible by coach and admin"""
-    if current_user["role"] not in [UserRole.ADMIN, UserRole.COACH]:
-        raise HTTPException(status_code=403, detail="Solo admin e coach possono modificare i dati tecnici")
+    """Update only technical data of an athlete - accessible by coach, admin and collaboratore"""
+    if current_user["role"] not in [UserRole.ADMIN, UserRole.COACH, UserRole.COLLABORATORE]:
+        raise HTTPException(status_code=403, detail="Non autorizzato a modificare i dati tecnici")
     
     athlete = await db.athletes.find_one({"id": athlete_id})
     if not athlete:
@@ -20785,11 +20785,11 @@ async def get_coach_commitments_debug(
 
 @api_router.get("/coach/team/{team_id}/athletes")
 async def get_coach_team_athletes(team_id: str, current_user = Depends(get_current_user)):
-    """Get athletes for a team (coach view - limited info)"""
-    if current_user["role"] != UserRole.COACH:
-        raise HTTPException(status_code=403, detail="Solo coach può accedere")
+    """Get athletes for a team (coach/collaboratore view - limited info)"""
+    if current_user["role"] not in [UserRole.COACH, UserRole.COLLABORATORE]:
+        raise HTTPException(status_code=403, detail="Solo coach o collaboratore può accedere")
     
-    # Check if coach is assigned to this team
+    # Check if coach/collaboratore is assigned to this team
     assigned_team_ids = current_user.get("assigned_teams", [])
     if team_id not in assigned_team_ids:
         raise HTTPException(status_code=403, detail="Non sei assegnato a questa squadra")
