@@ -54,6 +54,8 @@ export default function CollaboratoreLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="profile" />
         <Stack.Screen name="compensation" />
+        <Stack.Screen name="team/[id]" />
+        <Stack.Screen name="athlete/[id]" />
       </Stack>
     </View>
   );

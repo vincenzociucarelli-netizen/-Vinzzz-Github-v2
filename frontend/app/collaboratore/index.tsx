@@ -108,7 +108,7 @@ export default function CollaboratoreHome() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // 🆕 23/02/2026 — Squadre + Palestre assegnate (per card "🏆 Stagione" come Coach)
-  const [assignedTeams, setAssignedTeams] = useState<string[]>([]);
+  const [assignedTeams, setAssignedTeams] = useState<{ id: string; name: string }[]>([]);
   const [assignedVenues, setAssignedVenues] = useState<string[]>([]);
 
   const loadCommitments = async () => {
@@ -125,8 +125,7 @@ export default function CollaboratoreHome() {
       const assignedIds: string[] = (resMe.data && resMe.data.assigned_teams) || [];
       const teamsMap: Record<string, string> = {};
       (resTeams.data || []).forEach((t: any) => { teamsMap[t.id] = t.name; });
-      const names = assignedIds.map(id => teamsMap[id] || id);
-      setAssignedTeams(names);
+      setAssignedTeams(assignedIds.map(id => ({ id, name: teamsMap[id] || id })));
       setAssignedVenues((resMe.data && resMe.data.assigned_venues) || []);
     } catch (err: any) {
       console.error('Errore caricamento impegni:', err);
@@ -251,11 +250,17 @@ export default function CollaboratoreHome() {
                   <Ionicons name="people" size={18} color="#007AFF" />
                   <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '600', color: '#333' }}>Squadre Assegnate</Text>
                 </View>
+                <Text style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>Tocca una squadra per gestire i dati tecnici degli atleti (ruolo, n° maglia, libero).</Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {assignedTeams.map((team, idx) => (
-                    <View key={idx} style={{ backgroundColor: '#E3F2FD', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: '#007AFF' }}>
-                      <Text style={{ color: '#007AFF', fontWeight: '500', fontSize: 13 }}>{team}</Text>
-                    </View>
+                  {assignedTeams.map((team) => (
+                    <TouchableOpacity
+                      key={team.id}
+                      onPress={() => router.push(`/collaboratore/team/${team.id}?name=${encodeURIComponent(team.name)}`)}
+                      style={{ backgroundColor: '#E3F2FD', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: '#007AFF', flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                    >
+                      <Text style={{ color: '#007AFF', fontWeight: '500', fontSize: 13 }}>{team.name}</Text>
+                      <Ionicons name="chevron-forward" size={14} color="#007AFF" />
+                    </TouchableOpacity>
                   ))}
                 </View>
               </View>
