@@ -17,6 +17,7 @@ import {
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
 import { Ionicons } from '../../src/components/Icon';
+import TeamPhotoThumb from '../../src/components/TeamPhotoThumb';
 import { Team } from '../../src/types';
 import { useAuthStore } from '../../src/store/authStore';
 import { SportIcon } from '../../src/components/SportIcon';
@@ -530,14 +531,12 @@ export default function TeamsScreen() {
           onPress={() => router.push(`/admin/team/${item.id}`)}
         >
           <View style={styles.teamIcon}>
-            {item.team_photo_url ? (
-              <Image 
-                source={{ uri: item.team_photo_url }}
-                style={{ width: 48, height: 48, borderRadius: 10 }}
-              />
-            ) : (
-              <Ionicons name="people" size={24} color="#007AFF" />
-            )}
+            <TeamPhotoThumb
+              uri={item.team_photo_url || (item.has_team_photo ? `${process.env.EXPO_PUBLIC_BACKEND_URL || ''}/api/teams/${item.id}/photo.jpg` : null)}
+              size={48}
+              radius={10}
+              fallback={<Ionicons name="people" size={24} color="#007AFF" />}
+            />
           </View>
           <View style={styles.teamInfo}>
             <Text style={styles.teamName}>{item.name}</Text>

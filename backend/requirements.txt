@@ -3,6 +3,7 @@ aiohttp==3.13.3
 aiosignal==1.4.0
 annotated-types==0.7.0
 anyio==4.12.1
+APScheduler==3.10.4
 attrs==25.4.0
 bcrypt==4.0.1
 beautifulsoup4==4.14.3
@@ -31,6 +32,7 @@ fonttools==4.61.1
 fpdf2==2.8.5
 frozenlist==1.8.0
 fsspec==2026.1.0
+git-filter-repo==2.47.0
 google-ai-generativelanguage==0.6.15
 google-api-core==2.29.0
 google-api-python-client==2.188.0
@@ -72,11 +74,15 @@ mypy_extensions==1.1.0
 numpy==2.4.1
 oauthlib==3.3.1
 openai==1.99.9
+opencv-python-headless==4.13.0.92
 openpyxl==3.1.5
 packaging==25.0
 pandas==2.3.3
 passlib==1.7.4
 pathspec==1.0.3
+pdf2image==1.17.0
+pdfminer.six==20251230
+pdfplumber==0.11.9
 pillow==12.1.0
 platformdirs==4.5.1
 pluggy==1.6.0
@@ -93,7 +99,11 @@ pyflakes==3.4.0
 Pygments==2.19.2
 PyJWT==2.10.1
 pymongo==4.5.0
+PyMuPDF==1.27.1
 pyparsing==3.3.1
+pypdf==6.10.2
+PyPDF2==3.0.1
+pypdfium2==5.6.0
 pytest==9.0.2
 pytest-asyncio==1.4.0
 python-codicefiscale==0.11.3
@@ -108,6 +118,7 @@ python-slugify==8.0.4
 pytokens==0.3.0
 pytz==2025.2
 PyYAML==6.0.3
+pyzbar==0.1.9
 qrcode==8.2
 referencing==0.37.0
 regex==2026.1.15
@@ -137,6 +148,7 @@ typer-slim==0.21.1
 typing-inspection==0.4.2
 typing_extensions==4.15.0
 tzdata==2025.3
+tzlocal==5.4.5
 uritemplate==4.2.0
 urllib3==2.6.3
 uvicorn==0.25.0

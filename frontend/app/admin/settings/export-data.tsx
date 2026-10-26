@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
+  TextInput,
+  Switch,
 } from 'react-native';
 import { Icon } from '../../../src/components/Icon';
 import InstitutionalBanner from '../../../src/components/InstitutionalBanner';
@@ -71,6 +73,9 @@ export default function ExportDataPage() {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
+  const [schedule, setSchedule] = useState<any>(null);
+  const [savingSched, setSavingSched] = useState(false);
+  const [sendingNow, setSendingNow] = useState(false);
 
   useEffect(() => {
     checkAccess();
@@ -85,6 +90,7 @@ export default function ExportDataPage() {
         return;
       }
       setIsAdmin(true);
+      loadSchedule();
     } catch (error) {
       setIsAdmin(false);
       router.replace('/');
@@ -174,6 +180,59 @@ export default function ExportDataPage() {
     }
   };
 
+  const loadSchedule = async () => {
+    try {
+      const r = await api.get('/admin/backup/schedule');
+      const d = r.data || {};
+      setSchedule({
+        enabled: !!d.enabled,
+        frequency_days: d.frequency_days || 1,
+        hour: typeof d.hour === 'number' ? d.hour : 3,
+        email: d.email || d.default_email || '',
+        last_run_at: d.last_run_at || null,
+        last_status: d.last_status || null,
+      });
+    } catch {
+      setSchedule({ enabled: false, frequency_days: 1, hour: 3, email: '', last_run_at: null, last_status: null });
+    }
+  };
+
+  const saveSchedule = async () => {
+    if (!schedule) return;
+    if (schedule.enabled && !(schedule.email || '').trim()) {
+      showAlert('Email mancante', 'Inserisci l\'email dove ricevere il backup.');
+      return;
+    }
+    setSavingSched(true);
+    try {
+      await api.put('/admin/backup/schedule', {
+        enabled: schedule.enabled,
+        frequency_days: schedule.frequency_days,
+        hour: schedule.hour,
+        email: (schedule.email || '').trim(),
+      });
+      showAlert('Salvato', schedule.enabled
+        ? `Backup automatico attivo: ogni ${schedule.frequency_days === 1 ? 'giorno' : schedule.frequency_days + ' giorni'} intorno alle ${String(schedule.hour).padStart(2, '0')}:00, inviato a ${(schedule.email || '').trim()}.`
+        : 'Backup automatico disattivato.');
+    } catch {
+      showAlert('Errore', 'Impossibile salvare le impostazioni.');
+    } finally {
+      setSavingSched(false);
+    }
+  };
+
+  const sendNow = async () => {
+    setSendingNow(true);
+    try {
+      const r = await api.post('/admin/backup/send-now', { email: (schedule?.email || '').trim() || undefined });
+      showAlert('Backup inviato', r.data?.message || 'Backup inviato via email.');
+    } catch (e: any) {
+      showAlert('Errore', e?.response?.data?.detail || 'Invio del backup fallito. Riprova.');
+    } finally {
+      setSendingNow(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -250,6 +309,69 @@ export default function ExportDataPage() {
             <Icon name="download-outline" size={24} color="#fff" />
           )}
         </TouchableOpacity>
+
+        {/* BACKUP AUTOMATICO VIA EMAIL */}
+        {schedule && (
+          <View style={styles.schedCard}>
+            <View style={styles.schedHeader}>
+              <Icon name="time-outline" size={22} color="#5856D6" />
+              <Text style={styles.schedTitle}>Backup automatico via email</Text>
+              <Switch
+                value={schedule.enabled}
+                onValueChange={(v) => setSchedule({ ...schedule, enabled: v })}
+                trackColor={{ true: '#5856D6', false: '#ccc' }}
+              />
+            </View>
+            <Text style={styles.schedDesc}>
+              {"Ricevi il backup (ZIP con JSON + CSV) via email, in automatico. È una copia di sicurezza indipendente dall'app: resta nella tua posta anche se l'app non è raggiungibile."}
+            </Text>
+
+            <Text style={styles.schedLabel}>Frequenza</Text>
+            <View style={styles.segRow}>
+              {[{ l: 'Ogni giorno', v: 1 }, { l: 'Ogni 2 gg', v: 2 }, { l: 'Ogni 3 gg', v: 3 }, { l: 'Settimanale', v: 7 }].map((o) => (
+                <TouchableOpacity
+                  key={o.v}
+                  style={[styles.seg, schedule.frequency_days === o.v && styles.segActive]}
+                  onPress={() => setSchedule({ ...schedule, frequency_days: o.v })}
+                >
+                  <Text style={[styles.segText, schedule.frequency_days === o.v && styles.segTextActive]}>{o.l}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.schedLabel}>Orario (circa)</Text>
+            <View style={styles.hourRow}>
+              <TouchableOpacity style={styles.hourBtn} onPress={() => setSchedule({ ...schedule, hour: (schedule.hour + 23) % 24 })}>
+                <Icon name="remove" size={22} color="#5856D6" />
+              </TouchableOpacity>
+              <Text style={styles.hourText}>{String(schedule.hour).padStart(2, '0')}:00</Text>
+              <TouchableOpacity style={styles.hourBtn} onPress={() => setSchedule({ ...schedule, hour: (schedule.hour + 1) % 24 })}>
+                <Icon name="add" size={22} color="#5856D6" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.schedLabel}>Email destinatario</Text>
+            <TextInput
+              style={styles.schedInput}
+              value={schedule.email}
+              onChangeText={(t) => setSchedule({ ...schedule, email: t })}
+              placeholder="esempio@gmail.com"
+              placeholderTextColor="#aaa"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <TouchableOpacity style={styles.schedSave} onPress={saveSchedule} disabled={savingSched}>
+              {savingSched ? <ActivityIndicator color="#fff" /> : <Text style={styles.schedSaveText}>Salva impostazioni</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.schedNow} onPress={sendNow} disabled={sendingNow}>
+              {sendingNow ? <ActivityIndicator color="#5856D6" /> : <Text style={styles.schedNowText}>📩 Invia backup ora</Text>}
+            </TouchableOpacity>
+            {schedule.last_run_at ? (
+              <Text style={styles.schedMeta}>Ultimo invio automatico: {new Date(schedule.last_run_at).toLocaleString('it-IT')}</Text>
+            ) : null}
+          </View>
+        )}
 
         {EXPORT_OPTIONS.map((option) => (
           <TouchableOpacity
@@ -385,4 +507,30 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 18,
   },
+  schedCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 18,
+    borderLeftWidth: 4,
+    borderLeftColor: '#5856D6',
+  },
+  schedHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  schedTitle: { flex: 1, fontSize: 16, fontWeight: '700', color: '#222' },
+  schedDesc: { fontSize: 12.5, color: '#666', lineHeight: 18, marginTop: 8 },
+  schedLabel: { fontSize: 13, fontWeight: '600', color: '#444', marginTop: 16, marginBottom: 8 },
+  segRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  seg: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: '#ddd', backgroundColor: '#f7f7f7' },
+  segActive: { backgroundColor: '#5856D6', borderColor: '#5856D6' },
+  segText: { fontSize: 13, fontWeight: '600', color: '#555' },
+  segTextActive: { color: '#fff' },
+  hourRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  hourBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#EEEEFB', alignItems: 'center', justifyContent: 'center' },
+  hourText: { fontSize: 22, fontWeight: '700', color: '#333', minWidth: 72, textAlign: 'center' },
+  schedInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 12, fontSize: 15, backgroundColor: '#fafafa', color: '#222' },
+  schedSave: { backgroundColor: '#5856D6', borderRadius: 10, paddingVertical: 14, alignItems: 'center', marginTop: 18 },
+  schedSaveText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  schedNow: { borderWidth: 1.5, borderColor: '#5856D6', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginTop: 10 },
+  schedNowText: { color: '#5856D6', fontSize: 15, fontWeight: '700' },
+  schedMeta: { fontSize: 11, color: '#999', marginTop: 10, textAlign: 'center' },
 });

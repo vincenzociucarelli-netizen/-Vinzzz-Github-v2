@@ -21,6 +21,7 @@ import InstitutionalBadge from '../../src/components/InstitutionalBadge';
 import InstitutionalBanner from '../../src/components/InstitutionalBanner';
 import { AdminLiveStats } from '../../src/components/AdminLiveStats';
 import { AdminNotesButton } from '../../src/components/AdminNotesButton';
+import BackupStatusBanner from '../../src/components/admin/BackupStatusBanner';
 import GuideButton from '../../src/components/GuideButton';
 import FirstLoginGuideHint from '../../src/components/FirstLoginGuideHint';
 import { SeasonBadge } from '../../src/services/SeasonBadge';
@@ -567,6 +568,9 @@ export default function AdminDashboard() {
 
         {/* 🆕 19/07/2026 — Pulsante compatto Bacheca Note Admin (pulsating se azioni urgenti). Apre /admin/notes */}
         <AdminNotesButton />
+
+        {/* 🆕 Backup: segnale verde con data ultimo backup riuscito */}
+        <BackupStatusBanner />
 
         {/* 🆕 03/07/2026 — Widget live: utenti online / privacy scaduta / ritiri reversibili */}
         <AdminLiveStats />

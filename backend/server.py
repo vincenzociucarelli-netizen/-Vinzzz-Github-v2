@@ -20156,7 +20156,9 @@ async def get_coach_teams(current_user = Depends(get_current_user)):
     result = []
     for team in teams:
         t = Team(**team).dict()
-        if _base_url and (team.get("team_photo_storage_path") or team["id"] in legacy_photo_ids):
+        _has = bool(team.get("team_photo_storage_path") or (team["id"] in legacy_photo_ids))
+        t["has_team_photo"] = _has
+        if _base_url and _has:
             t["team_photo_url"] = f"{_base_url}/api/teams/{team['id']}/photo.jpg"
         result.append(t)
     return result
@@ -38021,23 +38023,17 @@ async def get_athlete_timeline(athlete_id: str, current_user = Depends(get_curre
 
 # ==================== CSV EXPORT ENDPOINTS ====================
 
-@api_router.get("/admin/backup/export")
-async def export_full_backup(current_user = Depends(get_current_user)):
-    """Esporta un backup completo della società in formato ZIP.
-
-    Contiene JSON sanificati di tutte le collezioni rilevanti (users senza
-    password_hash, athletes, teams, matches, attendance, certificates metadata
-    senza file binari, settings, audit_logs, notifications, ecc.)
-    Solo admin — scoped per society_id.
+async def _build_backup_zip_bytes(society_id, by_email=None, by_name=None) -> bytes:
+    """Costruisce lo ZIP di backup completo della società.
+    - json/ struttura originale (filenames a ROOT, usati dal restore)
+    - csv/  copie tabellari apribili con Excel/Google Sheets
+    I file binari (logo, foto, certificati PDF) sono esclusi per dimensione.
     """
-    if current_user["role"] != UserRole.ADMIN:
-        raise HTTPException(status_code=403, detail="Solo admin può esportare il backup")
-
-    society_id = current_user.get("society_id")
-    society_filter = {"society_id": society_id} if society_id else {}
-
     import zipfile as _zipfile
+    import csv as _csv
     from json import JSONEncoder as _JSONEncoder
+
+    society_filter = {"society_id": society_id} if society_id else {}
 
     class _DateTimeEncoder(_JSONEncoder):
         def default(self, obj):
@@ -38047,18 +38043,19 @@ async def export_full_backup(current_user = Depends(get_current_user)):
                 return obj.isoformat()
             return super().default(obj)
 
-    def _clean(docs: list, drop_fields: Optional[list] = None) -> list:
+    def _dump(obj):
+        return json.dumps(obj, ensure_ascii=False, indent=2, cls=_DateTimeEncoder)
+
+    def _clean(docs, drop_fields=None):
         drop_fields = drop_fields or []
-        cleaned = []
+        out = []
         for d in docs:
             if not isinstance(d, dict):
                 continue
-            d = {k: v for k, v in d.items() if k != "_id" and k not in drop_fields}
-            cleaned.append(d)
-        return cleaned
+            out.append({k: v for k, v in d.items() if k != "_id" and k not in drop_fields})
+        return out
 
-    # Raccogli tutte le collezioni rilevanti (best-effort: se una query fallisce non rompiamo)
-    async def _safe_to_list(coll_name: str, filt: dict, drop: Optional[list] = None) -> list:
+    async def _safe(coll_name, filt, drop=None):
         try:
             docs = await db[coll_name].find(filt).to_list(10000)
             return _clean(docs, drop)
@@ -38066,60 +38063,323 @@ async def export_full_backup(current_user = Depends(get_current_user)):
             logging.warning(f"backup: error fetching {coll_name}: {e}")
             return []
 
+    def _to_csv(rows):
+        if not rows:
+            return ""
+        keys, seen = [], set()
+        for r in rows:
+            for k in r.keys():
+                if k not in seen:
+                    seen.add(k)
+                    keys.append(k)
+        sio = io.StringIO()
+        w = _csv.writer(sio)
+        w.writerow(keys)
+        for r in rows:
+            line = []
+            for k in keys:
+                v = r.get(k)
+                if isinstance(v, (dict, list)):
+                    v = json.dumps(v, ensure_ascii=False, cls=_DateTimeEncoder)
+                elif isinstance(v, datetime):
+                    v = v.isoformat()
+                line.append("" if v is None else v)
+            w.writerow(line)
+        return "\ufeff" + sio.getvalue()  # BOM per apertura corretta in Excel
+
     buf = io.BytesIO()
     with _zipfile.ZipFile(buf, "w", _zipfile.ZIP_DEFLATED) as zf:
-        # README con meta
         meta = {
             "society_id": society_id,
-            "exported_by": current_user.get("email"),
-            "exported_by_name": current_user.get("full_name"),
+            "exported_by": by_email,
+            "exported_by_name": by_name,
             "exported_at": datetime.now(timezone.utc).isoformat(),
             "note": (
-                "Backup completo della società. I file .json contengono tutti i dati strutturati. "
-                "I file binari (logo, foto, certificati PDF, pagamenti) sono esclusi per ridurre la "
-                "dimensione — se servono, vanno esportati separatamente dagli endpoint dedicati."
+                "Backup completo della società. I file .json (cartella principale) servono per il "
+                "RIPRISTINO dentro RegistraTEAM. I file .csv nella cartella 'csv/' si aprono con "
+                "Excel/Google Sheets. I file binari (logo, foto, certificati PDF) sono esclusi."
             ),
         }
-        zf.writestr("README.json", json.dumps(meta, ensure_ascii=False, indent=2, cls=_DateTimeEncoder))
+        zf.writestr("README.json", _dump(meta))
 
-        # Society profile (da settings, scoped)
+        # Society profile (da settings, scoped) — resta a ROOT per il restore
         settings_doc = await db.settings.find_one({"type": "society", **society_filter})
         if settings_doc:
-            # Rimuovo logo base64 (binario) dal JSON — pesa troppo
             settings_clean = {k: v for k, v in settings_doc.items() if k not in ("_id", "logo", "sport_image", "stamp_signature")}
-            zf.writestr("society_profile.json", json.dumps(settings_clean, ensure_ascii=False, indent=2, cls=_DateTimeEncoder))
+            zf.writestr("society_profile.json", _dump(settings_clean))
 
-        # Society record
         if society_id:
             soc = await db.societies.find_one({"id": society_id})
             if soc:
-                soc_clean = {k: v for k, v in soc.items() if k != "_id"}
-                zf.writestr("society.json", json.dumps(soc_clean, ensure_ascii=False, indent=2, cls=_DateTimeEncoder))
+                zf.writestr("society.json", _dump({k: v for k, v in soc.items() if k != "_id"}))
 
-        # Tutte le altre collezioni
-        users = await _safe_to_list("users", society_filter, drop=["password_hash", "password_reset_token"])
-        zf.writestr("users.json", json.dumps(users, ensure_ascii=False, indent=2, cls=_DateTimeEncoder))
-
-        athletes = await _safe_to_list("athletes", society_filter, drop=["photo", "medical_certificate_file"])
-        zf.writestr("athletes.json", json.dumps(athletes, ensure_ascii=False, indent=2, cls=_DateTimeEncoder))
-
+        # Collezioni tabellari: JSON a ROOT (per restore) + CSV in csv/ (per Excel)
+        datasets = {}
+        datasets["users"] = await _safe("users", society_filter, drop=["password_hash", "password_reset_token", "data_password_hash"])
+        datasets["athletes"] = await _safe("athletes", society_filter, drop=["photo", "medical_certificate_file"])
         for coll in (
             "teams", "matches", "attendance", "attendances", "medical_certificates",
             "calendars", "events", "compensations", "notifications", "seasons",
             "consents", "audit_logs", "gdpr_documents", "payments",
             "stripe_payment_attempts", "parent_athlete_links",
         ):
-            docs = await _safe_to_list(coll, society_filter)
+            docs = await _safe(coll, society_filter)
             if docs:
-                zf.writestr(f"{coll}.json", json.dumps(docs, ensure_ascii=False, indent=2, cls=_DateTimeEncoder))
+                datasets[coll] = docs
+
+        for name, rows in datasets.items():
+            zf.writestr(f"{name}.json", _dump(rows))  # ROOT (restore)
+            csv_text = _to_csv(rows)
+            if csv_text:
+                zf.writestr(f"csv/{name}.csv", csv_text)  # Excel
+
+        # PDF di riepilogo (pronto da stampare): totali società, atleti per squadra, staff
+        try:
+            society_name = (settings_doc or {}).get("name") or "Società"
+            teams_rows = datasets.get("teams", [])
+            athletes_rows = datasets.get("athletes", [])
+            users_rows = datasets.get("users", [])
+            team_name_by_id = {t.get("id"): (t.get("name") or "—") for t in teams_rows}
+            per_team = {}
+            for a in athletes_rows:
+                tids = a.get("team_ids") or []
+                if not tids:
+                    tid = a.get("team_id")
+                    if tid:
+                        tids = [tid]
+                for tid in (tids or ["(senza squadra)"]):
+                    per_team[tid] = per_team.get(tid, 0) + 1
+            role_counts = {}
+            for u in users_rows:
+                r = (u.get("role") or "altro")
+                role_counts[r] = role_counts.get(r, 0) + 1
+
+            from reportlab.lib.pagesizes import A4
+            from reportlab.lib import colors as _rcolors
+            from reportlab.lib.units import mm as _mm
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
+            pdf_buf = io.BytesIO()
+            doc = SimpleDocTemplate(pdf_buf, pagesize=A4, topMargin=18 * _mm, bottomMargin=18 * _mm, leftMargin=16 * _mm, rightMargin=16 * _mm)
+            ss = getSampleStyleSheet()
+            h1 = ParagraphStyle("h1", parent=ss["Title"], fontSize=18, textColor=_rcolors.HexColor("#1E3A8A"))
+            h2 = ParagraphStyle("h2", parent=ss["Heading2"], fontSize=12, textColor=_rcolors.HexColor("#1E3A8A"), spaceBefore=10)
+            small = ParagraphStyle("small", parent=ss["Normal"], fontSize=9, textColor=_rcolors.HexColor("#666666"))
+            now_it = datetime.now(_IT_TZ).strftime("%d/%m/%Y %H:%M")
+            story = [
+                Paragraph("Riepilogo società", h1),
+                Paragraph(f"<b>{society_name}</b>", ss["Normal"]),
+                Paragraph(f"Generato il {now_it}", small),
+                Spacer(1, 8 * _mm),
+            ]
+            # Totali
+            tot_rows = [["Dato", "Totale"],
+                        ["Squadre", str(len(teams_rows))],
+                        ["Atleti (totale)", str(len(athletes_rows))]]
+            for r_key, r_lbl in [("coach", "Coach"), ("dirigente", "Dirigenti"), ("collaboratore", "Collaboratori"), ("admin", "Amministratori")]:
+                if role_counts.get(r_key):
+                    tot_rows.append([r_lbl, str(role_counts.get(r_key, 0))])
+            t1 = Table(tot_rows, colWidths=[90 * _mm, 40 * _mm])
+            t1.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), _rcolors.HexColor("#1E3A8A")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), _rcolors.white),
+                ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("GRID", (0, 0), (-1, -1), 0.4, _rcolors.HexColor("#cccccc")),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [_rcolors.white, _rcolors.HexColor("#F3F4F6")]),
+                ("PADDING", (0, 0), (-1, -1), 6),
+            ]))
+            story += [Paragraph("Totali", h2), t1, Spacer(1, 6 * _mm)]
+            # Atleti per squadra
+            at_rows = [["Squadra", "N. atleti"]]
+            for tid, cnt in sorted(per_team.items(), key=lambda kv: team_name_by_id.get(kv[0], kv[0]) or ""):
+                at_rows.append([team_name_by_id.get(tid, tid if tid != "(senza squadra)" else "(senza squadra)"), str(cnt)])
+            t2 = Table(at_rows, colWidths=[130 * _mm, 30 * _mm])
+            t2.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), _rcolors.HexColor("#1E3A8A")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), _rcolors.white),
+                ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("GRID", (0, 0), (-1, -1), 0.4, _rcolors.HexColor("#cccccc")),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [_rcolors.white, _rcolors.HexColor("#F3F4F6")]),
+                ("PADDING", (0, 0), (-1, -1), 6),
+            ]))
+            story += [Paragraph("Atleti per squadra", h2), t2]
+            doc.build(story)
+            zf.writestr("riepilogo.pdf", pdf_buf.getvalue())
+        except Exception as e:
+            logging.warning(f"backup: riepilogo PDF non generato: {e}")
 
     buf.seek(0)
+    return buf.getvalue()
+
+
+@api_router.get("/admin/backup/export")
+async def export_full_backup(current_user = Depends(get_current_user)):
+    """Esporta un backup completo della società in formato ZIP (JSON + CSV). Solo admin."""
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin può esportare il backup")
+
+    data = await _build_backup_zip_bytes(
+        current_user.get("society_id"),
+        by_email=current_user.get("email"),
+        by_name=current_user.get("full_name"),
+    )
     filename = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
     return StreamingResponse(
-        iter([buf.getvalue()]),
+        iter([data]),
         media_type="application/zip",
         headers={"Content-Disposition": f"attachment; filename={filename}", "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0", "Pragma": "no-cache", "Expires": "0"},
     )
+
+
+async def _send_backup_email(society_id, to_email, by_email=None, by_name=None):
+    """Genera il backup e lo invia via email come allegato ZIP."""
+    import base64 as _b64
+    from email_service import email_service as _esvc
+    data = await _build_backup_zip_bytes(society_id, by_email=by_email, by_name=by_name)
+    now_str = datetime.now(_IT_TZ).strftime("%d/%m/%Y %H:%M")
+    fname = f"backup_registrateam_{datetime.now().strftime('%Y%m%d_%H%M')}.zip"
+    html = (
+        f"<p>Ciao,</p><p>in allegato trovi il <strong>backup automatico</strong> dei dati della tua "
+        f"società su RegistraTEAM, generato il <strong>{now_str}</strong>.</p>"
+        f"<p>Contiene i file <strong>.json</strong> (per il ripristino dentro RegistraTEAM) e una cartella "
+        f"<strong>csv/</strong> con gli stessi dati apribili in Excel/Google Sheets.</p>"
+        f"<p><strong>Conserva questa email</strong>: è una copia di sicurezza indipendente dall'app.</p>"
+    )
+    size_mb = len(data) / (1024 * 1024)
+    att = [{"content": _b64.b64encode(data).decode(), "name": fname, "type": "application/zip"}]
+    res = await _esvc.send_email(
+        to_email=to_email,
+        subject=f"Backup RegistraTEAM — {now_str}",
+        html_content=html,
+        attachments=att,
+    )
+    return {"ok": bool(res.get("success", res.get("ok", True))), "size_mb": round(size_mb, 2), "file": fname, "detail": res}
+
+
+def _default_backup_schedule(society_id):
+    return {
+        "society_id": society_id,
+        "enabled": False,
+        "frequency_days": 1,
+        "hour": 3,
+        "email": "",
+        "last_run_date": None,
+        "last_status": None,
+        "updated_at": None,
+    }
+
+
+@api_router.get("/admin/backup/schedule")
+async def get_backup_schedule(current_user = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    doc = await db.backup_settings.find_one({"society_id": sid}, {"_id": 0})
+    if not doc:
+        doc = _default_backup_schedule(sid)
+    if not doc.get("email"):
+        doc["default_email"] = current_user.get("email")
+    # data ultimo backup riuscito (automatico o manuale)
+    candidates = [doc.get("last_run_at"), doc.get("last_manual_at")]
+    candidates = [c for c in candidates if c]
+    doc["last_backup_at"] = max(candidates) if candidates else None
+    return doc
+
+
+@api_router.put("/admin/backup/schedule")
+async def update_backup_schedule(payload: dict = Body(...), current_user = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    try:
+        freq = int(payload.get("frequency_days", 1))
+    except Exception:
+        freq = 1
+    if freq not in (1, 2, 3, 7, 14, 30):
+        freq = max(1, min(30, freq))
+    try:
+        hour = int(payload.get("hour", 3))
+    except Exception:
+        hour = 3
+    hour = max(0, min(23, hour))
+    email = (payload.get("email") or "").strip() or current_user.get("email") or ""
+    update = {
+        "society_id": sid,
+        "enabled": bool(payload.get("enabled", False)),
+        "frequency_days": freq,
+        "hour": hour,
+        "email": email,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.backup_settings.update_one({"society_id": sid}, {"$set": update}, upsert=True)
+    doc = await db.backup_settings.find_one({"society_id": sid}, {"_id": 0})
+    return doc
+
+
+@api_router.post("/admin/backup/send-now")
+async def send_backup_now(payload: dict = Body(default={}), current_user = Depends(get_current_user)):
+    if current_user["role"] != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Solo admin")
+    sid = current_user.get("society_id")
+    setting = await db.backup_settings.find_one({"society_id": sid})
+    to_email = (payload or {}).get("email") or (setting or {}).get("email") or current_user.get("email")
+    if not to_email:
+        raise HTTPException(status_code=400, detail="Nessuna email configurata")
+    try:
+        result = await _send_backup_email(sid, to_email, by_email=current_user.get("email"), by_name=current_user.get("full_name"))
+    except Exception as e:
+        logging.error(f"send_backup_now error: {e}")
+        raise HTTPException(status_code=500, detail="Invio backup fallito. Riprova.")
+    await db.backup_settings.update_one(
+        {"society_id": sid},
+        {"$set": {"society_id": sid, "last_manual_at": datetime.now(timezone.utc).isoformat(), "last_status": "ok" if result["ok"] else "error"}},
+        upsert=True,
+    )
+    return {"message": f"Backup inviato a {to_email}", "to": to_email, **result}
+
+
+async def _run_due_backups():
+    """Eseguito periodicamente: invia i backup programmati che sono 'scaduti'.
+    Usa un claim atomico su last_run_date per evitare doppi invii (anche con più worker)."""
+    try:
+        now_rome = datetime.now(_IT_TZ)
+        today_str = now_rome.date().isoformat()
+        async for s in db.backup_settings.find({"enabled": True}):
+            try:
+                hour = int(s.get("hour", 3))
+                if now_rome.hour < hour:
+                    continue  # non è ancora l'orario previsto oggi
+                freq = int(s.get("frequency_days", 1) or 1)
+                cutoff = (now_rome.date() - timedelta(days=freq)).isoformat()
+                # claim atomico: procede solo se non già eseguito di recente
+                claimed = await db.backup_settings.find_one_and_update(
+                    {
+                        "society_id": s.get("society_id"),
+                        "enabled": True,
+                        "$or": [
+                            {"last_run_date": {"$exists": False}},
+                            {"last_run_date": None},
+                            {"last_run_date": {"$lte": cutoff}},
+                        ],
+                    },
+                    {"$set": {"last_run_date": today_str}},
+                )
+                if not claimed:
+                    continue
+                to_email = (claimed.get("email") or "").strip()
+                if not to_email:
+                    continue
+                res = await _send_backup_email(claimed.get("society_id"), to_email, by_name="Backup automatico")
+                await db.backup_settings.update_one(
+                    {"society_id": claimed.get("society_id")},
+                    {"$set": {"last_run_at": now_rome.isoformat(), "last_status": "ok" if res["ok"] else "error"}},
+                )
+                logging.info(f"Backup automatico inviato a {to_email} (società {claimed.get('society_id')})")
+            except Exception as e:
+                logging.error(f"_run_due_backups item error: {e}")
+    except Exception as e:
+        logging.error(f"_run_due_backups error: {e}")
 
 
 # ============================================================
@@ -44086,3 +44346,36 @@ async def run_data_migrations():
     except Exception as exc:
         logger.warning(f"Migration team_ids failed: {exc}")
 
+
+
+# ============================================================
+# BACKUP AUTOMATICO — scheduler (controlla ogni 15 min i backup "scaduti")
+# ============================================================
+_backup_scheduler = None
+
+
+@app.on_event("startup")
+async def start_backup_scheduler():
+    global _backup_scheduler
+    try:
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler
+        if _backup_scheduler is not None:
+            return
+        _backup_scheduler = AsyncIOScheduler(timezone="Europe/Rome")
+        # ogni 15 minuti: _run_due_backups decide (claim atomico) cosa inviare
+        _backup_scheduler.add_job(_run_due_backups, "interval", minutes=15, id="due_backups", replace_existing=True, max_instances=1, coalesce=True)
+        _backup_scheduler.start()
+        logger.info("Backup scheduler avviato (controllo ogni 15 min, TZ Europe/Rome)")
+    except Exception as exc:
+        logger.warning(f"Backup scheduler non avviato: {exc}")
+
+
+@app.on_event("shutdown")
+async def stop_backup_scheduler():
+    global _backup_scheduler
+    try:
+        if _backup_scheduler is not None:
+            _backup_scheduler.shutdown(wait=False)
+            _backup_scheduler = None
+    except Exception:
+        pass
