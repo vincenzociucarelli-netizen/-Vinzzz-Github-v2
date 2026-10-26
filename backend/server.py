@@ -20156,7 +20156,9 @@ async def get_coach_teams(current_user = Depends(get_current_user)):
     result = []
     for team in teams:
         t = Team(**team).dict()
-        if _base_url and (team.get("team_photo_storage_path") or team["id"] in legacy_photo_ids):
+        _has = bool(team.get("team_photo_storage_path") or (team["id"] in legacy_photo_ids))
+        t["has_team_photo"] = _has
+        if _base_url and _has:
             t["team_photo_url"] = f"{_base_url}/api/teams/{team['id']}/photo.jpg"
         result.append(t)
     return result
@@ -38131,6 +38133,82 @@ async def _build_backup_zip_bytes(society_id, by_email=None, by_name=None) -> by
             if csv_text:
                 zf.writestr(f"csv/{name}.csv", csv_text)  # Excel
 
+        # PDF di riepilogo (pronto da stampare): totali società, atleti per squadra, staff
+        try:
+            society_name = (settings_doc or {}).get("name") or "Società"
+            teams_rows = datasets.get("teams", [])
+            athletes_rows = datasets.get("athletes", [])
+            users_rows = datasets.get("users", [])
+            team_name_by_id = {t.get("id"): (t.get("name") or "—") for t in teams_rows}
+            per_team = {}
+            for a in athletes_rows:
+                tids = a.get("team_ids") or []
+                if not tids:
+                    tid = a.get("team_id")
+                    if tid:
+                        tids = [tid]
+                for tid in (tids or ["(senza squadra)"]):
+                    per_team[tid] = per_team.get(tid, 0) + 1
+            role_counts = {}
+            for u in users_rows:
+                r = (u.get("role") or "altro")
+                role_counts[r] = role_counts.get(r, 0) + 1
+
+            from reportlab.lib.pagesizes import A4
+            from reportlab.lib import colors as _rcolors
+            from reportlab.lib.units import mm as _mm
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
+            pdf_buf = io.BytesIO()
+            doc = SimpleDocTemplate(pdf_buf, pagesize=A4, topMargin=18 * _mm, bottomMargin=18 * _mm, leftMargin=16 * _mm, rightMargin=16 * _mm)
+            ss = getSampleStyleSheet()
+            h1 = ParagraphStyle("h1", parent=ss["Title"], fontSize=18, textColor=_rcolors.HexColor("#1E3A8A"))
+            h2 = ParagraphStyle("h2", parent=ss["Heading2"], fontSize=12, textColor=_rcolors.HexColor("#1E3A8A"), spaceBefore=10)
+            small = ParagraphStyle("small", parent=ss["Normal"], fontSize=9, textColor=_rcolors.HexColor("#666666"))
+            now_it = datetime.now(_IT_TZ).strftime("%d/%m/%Y %H:%M")
+            story = [
+                Paragraph("Riepilogo società", h1),
+                Paragraph(f"<b>{society_name}</b>", ss["Normal"]),
+                Paragraph(f"Generato il {now_it}", small),
+                Spacer(1, 8 * _mm),
+            ]
+            # Totali
+            tot_rows = [["Dato", "Totale"],
+                        ["Squadre", str(len(teams_rows))],
+                        ["Atleti (totale)", str(len(athletes_rows))]]
+            for r_key, r_lbl in [("coach", "Coach"), ("dirigente", "Dirigenti"), ("collaboratore", "Collaboratori"), ("admin", "Amministratori")]:
+                if role_counts.get(r_key):
+                    tot_rows.append([r_lbl, str(role_counts.get(r_key, 0))])
+            t1 = Table(tot_rows, colWidths=[90 * _mm, 40 * _mm])
+            t1.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), _rcolors.HexColor("#1E3A8A")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), _rcolors.white),
+                ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("GRID", (0, 0), (-1, -1), 0.4, _rcolors.HexColor("#cccccc")),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [_rcolors.white, _rcolors.HexColor("#F3F4F6")]),
+                ("PADDING", (0, 0), (-1, -1), 6),
+            ]))
+            story += [Paragraph("Totali", h2), t1, Spacer(1, 6 * _mm)]
+            # Atleti per squadra
+            at_rows = [["Squadra", "N. atleti"]]
+            for tid, cnt in sorted(per_team.items(), key=lambda kv: team_name_by_id.get(kv[0], kv[0]) or ""):
+                at_rows.append([team_name_by_id.get(tid, tid if tid != "(senza squadra)" else "(senza squadra)"), str(cnt)])
+            t2 = Table(at_rows, colWidths=[130 * _mm, 30 * _mm])
+            t2.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, 0), _rcolors.HexColor("#1E3A8A")),
+                ("TEXTCOLOR", (0, 0), (-1, 0), _rcolors.white),
+                ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("GRID", (0, 0), (-1, -1), 0.4, _rcolors.HexColor("#cccccc")),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [_rcolors.white, _rcolors.HexColor("#F3F4F6")]),
+                ("PADDING", (0, 0), (-1, -1), 6),
+            ]))
+            story += [Paragraph("Atleti per squadra", h2), t2]
+            doc.build(story)
+            zf.writestr("riepilogo.pdf", pdf_buf.getvalue())
+        except Exception as e:
+            logging.warning(f"backup: riepilogo PDF non generato: {e}")
+
     buf.seek(0)
     return buf.getvalue()
 
@@ -38202,6 +38280,10 @@ async def get_backup_schedule(current_user = Depends(get_current_user)):
         doc = _default_backup_schedule(sid)
     if not doc.get("email"):
         doc["default_email"] = current_user.get("email")
+    # data ultimo backup riuscito (automatico o manuale)
+    candidates = [doc.get("last_run_at"), doc.get("last_manual_at")]
+    candidates = [c for c in candidates if c]
+    doc["last_backup_at"] = max(candidates) if candidates else None
     return doc
 
 

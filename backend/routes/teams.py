@@ -92,7 +92,7 @@ async def create_team(team_data: TeamCreate, current_user = Depends(get_current_
     return team
 
 
-@router.get("/teams", response_model=List[Team])
+@router.get("/teams", response_model=None)
 async def get_teams(current_user = Depends(get_current_user)):
     import os as _os
     society_id = current_user.get("society_id")
@@ -112,10 +112,14 @@ async def get_teams(current_user = Depends(get_current_user)):
     ):
         legacy_photo_ids.add(t["id"])
     base_url = _os.environ.get("EXPO_PUBLIC_BACKEND_URL") or _os.environ.get("FRONTEND_URL") or ""
+    result = []
     for team in teams:
-        if team.get("team_photo_storage_path") or team["id"] in legacy_photo_ids:
-            team["team_photo_url"] = f"{base_url}/api/teams/{team['id']}/photo.jpg" if base_url else None
-    return [Team(**team) for team in teams]
+        t = Team(**team).dict()
+        _has = bool(team.get("team_photo_storage_path") or (team["id"] in legacy_photo_ids))
+        t["has_team_photo"] = _has
+        t["team_photo_url"] = (f"{base_url}/api/teams/{team['id']}/photo.jpg" if (_has and base_url) else None)
+        result.append(t)
+    return result
 
 
 @router.get("/teams/athletes-count/all")
@@ -241,6 +245,7 @@ async def get_team(team_id: str, current_user = Depends(get_current_user)):
     _has_photo = bool(team.get("team_photo_storage_path")) or bool(team.get("team_photo"))
     _base_url = _os.environ.get("EXPO_PUBLIC_BACKEND_URL") or _os.environ.get("FRONTEND_URL") or ""
     team_dict["team_photo_url"] = (f"{_base_url}/api/teams/{team_id}/photo.jpg" if (_has_photo and _base_url) else None)
+    team_dict["has_team_photo"] = _has_photo
     # Non inviare il base64 pesante: il client usa team_photo_url
     team_dict["team_photo"] = None
     team_dict["coach_info"] = coach_info

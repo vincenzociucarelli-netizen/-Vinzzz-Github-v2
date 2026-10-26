@@ -228,7 +228,7 @@ export default function TeamDetail() {
       setSelectedRefereeIds(ref.map((c: CoachInfo) => c.id).filter(Boolean));
 
       // Set team photo (🆕 URL servito da object storage / fallback base64)
-      setTeamPhotoUrl(teamData.team_photo_url || null);
+      setTeamPhotoUrl(teamData.team_photo_url || (teamData.has_team_photo ? `${process.env.EXPO_PUBLIC_BACKEND_URL || ''}/api/teams/${id}/photo.jpg` : null));
       setTeamPhotoNew(null);
       setTeamPhotoRemoved(false);
       
