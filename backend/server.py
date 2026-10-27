@@ -1521,6 +1521,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                         "coordinator_permissions": 1,
                         "pending_dirigente_user_id": 1,
                         "linked_dirigente_user_id": 1,
+                        "can_manual_attendance": 1,
                     },
                 ))
                 _AUTH_INFLIGHT[user_id] = _fut
@@ -1561,6 +1562,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             "coordinator_permissions": list(user.get("coordinator_permissions") or []),
             "pending_dirigente_user_id": user.get("pending_dirigente_user_id"),
             "linked_dirigente_user_id": user.get("linked_dirigente_user_id"),
+            "can_manual_attendance": bool(user.get("can_manual_attendance", False)),
         }
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
