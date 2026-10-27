@@ -81,6 +81,18 @@ export default function ExportDataPage() {
     checkAccess();
   }, []);
 
+  // 🐛 FIX loop: loadSchedule è un `const` dichiarato DOPO gli early-return
+  // (if loading / if !isAdmin). Al primo render con loading=true il corpo esce
+  // prima di inizializzarlo, quindi chiamarlo da checkAccess dava
+  // "Cannot access ... before initialization" → catch → redirect a '/'.
+  // Lo carichiamo in un effetto separato quando isAdmin diventa true (render in
+  // cui loading=false e tutte le const sono inizializzate).
+  useEffect(() => {
+    if (isAdmin === true) {
+      loadSchedule();
+    }
+  }, [isAdmin]);
+
   const checkAccess = async () => {
     try {
       const authResponse = await api.get('/auth/me');
@@ -90,7 +102,6 @@ export default function ExportDataPage() {
         return;
       }
       setIsAdmin(true);
-      loadSchedule();
     } catch (error) {
       setIsAdmin(false);
       router.replace('/');
