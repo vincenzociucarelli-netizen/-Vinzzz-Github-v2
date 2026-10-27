@@ -3496,13 +3496,31 @@ export default function AdminAthleteDetail() {
                     </View>
                   ) : null}
 
-                  {/* Libero */}
-                  {athlete?.libero ? (
-                    <View style={styles.roleDisplay}>
-                      <Text style={styles.techDataLabel}>Libero</Text>
-                      <Text style={styles.roleValue}>{athlete.libero}</Text>
+                  {/* Libero — selezione rapida L/L1/L2 senza entrare in modifica (come coach) */}
+                  <View style={styles.roleDisplay}>
+                    <Text style={styles.techDataLabel}>Libero</Text>
+                    <View style={styles.liberoChipsRow}>
+                      {['L', 'L1', 'L2'].map((opt) => (
+                        <TouchableOpacity
+                          key={opt}
+                          style={[styles.liberoChipBtn, athlete?.libero === opt && styles.liberoChipBtnActive]}
+                          onPress={async () => {
+                            const prevVal = athlete?.libero || '';
+                            const next = prevVal === opt ? '' : opt;
+                            setAthlete((prev: any) => prev ? { ...prev, libero: next } : prev);
+                            try {
+                              await api.patch(`/athletes/${id}/technical-data`, { libero: next });
+                            } catch (e) {
+                              setAthlete((prev: any) => prev ? { ...prev, libero: prevVal } : prev);
+                              showAlert('Errore', 'Impossibile salvare il libero. Riprova.');
+                            }
+                          }}
+                        >
+                          <Text style={[styles.liberoChipBtnText, athlete?.libero === opt && styles.liberoChipBtnTextActive]}>{opt}</Text>
+                        </TouchableOpacity>
+                      ))}
                     </View>
-                  ) : null}
+                  </View>
 
                   {/* Dati fisici in riga */}
                   <View style={styles.physicalDataRow}>

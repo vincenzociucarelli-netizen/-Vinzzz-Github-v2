@@ -40066,17 +40066,35 @@ async def upload_team_photo(team_id: str, body: TeamPhotoUpload, current_user = 
         raise HTTPException(status_code=400, detail="Immagine mancante")
     data_uri = raw if raw.startswith("data:") else f"data:image/jpeg;base64,{raw}"
 
-    storage_path = await _store_team_photo_from_datauri(
-        team.get("society_id") or current_user.get("society_id"), team_id, data_uri
-    )
-    if not storage_path:
+    # Comprimi una sola volta (JPEG stile WhatsApp, < 350KB)
+    jpeg_bytes, _w, _h = _process_cover_for_og(data_uri, max_dim=1280, target_kb=330)
+    if not jpeg_bytes:
         raise HTTPException(status_code=400, detail="Immagine non valida o non elaborabile")
 
-    # Salva lo storage_path e rimuove il base64 pesante dal documento
-    await db.teams.update_one(
-        {"id": team_id},
-        {"$set": {"team_photo_storage_path": storage_path}, "$unset": {"team_photo": ""}},
-    )
+    _soc = team.get("society_id") or current_user.get("society_id")
+    # Tenta object storage; se non disponibile (es. backend self-hosted senza
+    # Emergent Object Storage) fai FALLBACK a base64 in Mongo così la foto si
+    # salva comunque e viene servita dall'endpoint /photo.jpg (dual-read).
+    storage_path = None
+    try:
+        _path = f"{_STORAGE_APP}/uploads/{_soc or 'shared'}/teams/{team_id}.jpg"
+        await _run_in_threadpool(_storage_put_sync, _path, jpeg_bytes, "image/jpeg")
+        storage_path = _path
+    except Exception as e:
+        logger.warning(f"[storage] upload team photo fallito, fallback base64 per {team_id}: {e}")
+
+    if storage_path:
+        await db.teams.update_one(
+            {"id": team_id},
+            {"$set": {"team_photo_storage_path": storage_path}, "$unset": {"team_photo": ""}},
+        )
+    else:
+        import base64 as _b64
+        b64 = _b64.b64encode(jpeg_bytes).decode("ascii")
+        await db.teams.update_one(
+            {"id": team_id},
+            {"$set": {"team_photo": b64}, "$unset": {"team_photo_storage_path": ""}},
+        )
     return {"success": True, "team_photo_url": _team_photo_url(team_id)}
 
 
@@ -40118,9 +40136,10 @@ async def get_team_photo_image(team_id: str):
         try:
             import base64 as _b64
             data_uri = b64 if b64.startswith("data:") else f"data:image/jpeg;base64,{b64}"
-            # 🆕 Migrazione lazy: comprimi e sposta su object storage alla prima lettura,
-            # così le vecchie foto base64 pesanti si alleggeriscono nel tempo.
-            jpeg_bytes, _w, _h = _process_cover_for_og(data_uri, max_dim=1400, target_kb=450)
+            # 🆕 Migrazione lazy: comprimi (stile WhatsApp, < 350KB) e sposta su
+            # object storage alla prima lettura; se lo storage non è disponibile
+            # (self-hosted) ricomprimi comunque il base64 in Mongo per alleggerirlo.
+            jpeg_bytes, _w, _h = _process_cover_for_og(data_uri, max_dim=1280, target_kb=330)
             if jpeg_bytes:
                 path = f"{_STORAGE_APP}/uploads/{(team.get('society_id') or 'shared')}/teams/{team_id}.jpg"
                 try:
@@ -40131,6 +40150,12 @@ async def get_team_photo_image(team_id: str):
                     )
                 except Exception as _e:
                     logger.warning(f"[storage] migrazione lazy foto squadra fallita {team_id}: {_e}")
+                    try:
+                        _lighter = _b64.b64encode(jpeg_bytes).decode("ascii")
+                        if len(_lighter) < len(b64):
+                            await db.teams.update_one({"id": team_id}, {"$set": {"team_photo": _lighter}})
+                    except Exception:
+                        pass
                 return Response(content=jpeg_bytes, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=300"})
             raw = data_uri.split(",", 1)[1]
             return Response(content=_b64.b64decode(raw), media_type="image/jpeg", headers={"Cache-Control": "public, max-age=300"})
