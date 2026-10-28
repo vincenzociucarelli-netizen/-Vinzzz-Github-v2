@@ -691,13 +691,13 @@ export default function TeamDetail() {
                   <Image 
                     source={{ uri: `data:image/jpeg;base64,${teamPhotoNew}` }}
                     style={styles.teamPhotoEditPreview}
-                    resizeMode="cover"
+                    resizeMode="contain"
                   />
                 ) : (teamPhotoUrl && !teamPhotoRemoved) ? (
                   <Image 
                     source={{ uri: teamPhotoUrl }}
                     style={styles.teamPhotoEditPreview}
-                    resizeMode="cover"
+                    resizeMode="contain"
                   />
                 ) : (
                   <View style={styles.teamPhotoUploadPlaceholder}>
@@ -1421,7 +1421,7 @@ export default function TeamDetail() {
                   <Image 
                     source={{ uri: teamPhotoUrl }}
                     style={styles.teamPhotoImage}
-                    resizeMode="cover"
+                    resizeMode="contain"
                   />
                 ) : (
                   <View style={styles.teamPhotoPlaceholder}>
@@ -2199,11 +2199,13 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 10,
     overflow: 'hidden',
+    backgroundColor: '#1e2430',
   },
   teamPhotoImage: {
     width: '100%',
-    height: 200,
+    height: 190,
     borderRadius: 10,
+    backgroundColor: '#1e2430',
   },
   teamPhotoPlaceholder: {
     width: '100%',
@@ -2231,6 +2233,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 180,
     borderRadius: 10,
+    backgroundColor: '#1e2430',
   },
   teamPhotoUploadPlaceholder: {
     width: '100%',
