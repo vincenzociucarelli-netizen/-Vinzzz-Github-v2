@@ -227,8 +227,12 @@ export default function TeamDetail() {
       setRefereesInfo(ref);
       setSelectedRefereeIds(ref.map((c: CoachInfo) => c.id).filter(Boolean));
 
-      // Set team photo (🆕 URL servito da object storage / fallback base64)
-      setTeamPhotoUrl(teamData.team_photo_url || (teamData.has_team_photo ? `${process.env.EXPO_PUBLIC_BACKEND_URL || ''}/api/teams/${id}/photo.jpg` : null));
+      // Set team photo — 🆕 costruiamo SEMPRE l'URL dal backend-base del frontend
+      // (lo stesso usato da tutte le API, quindi sicuro su Vercel/Render); il
+      // team_photo_url del backend può puntare al dominio sbagliato in produzione.
+      // Aggiungiamo un parametro anti-cache così dopo un nuovo upload si vede subito.
+      const _hasPhoto = teamData.has_team_photo || !!teamData.team_photo_url;
+      setTeamPhotoUrl(_hasPhoto ? `${process.env.EXPO_PUBLIC_BACKEND_URL || ''}/api/teams/${id}/photo.jpg?v=${Date.now()}` : null);
       setTeamPhotoNew(null);
       setTeamPhotoRemoved(false);
       

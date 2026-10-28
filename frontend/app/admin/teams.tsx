@@ -532,7 +532,7 @@ export default function TeamsScreen() {
         >
           <View style={styles.teamIcon}>
             <TeamPhotoThumb
-              uri={item.team_photo_url || (item.has_team_photo ? `${process.env.EXPO_PUBLIC_BACKEND_URL || ''}/api/teams/${item.id}/photo.jpg` : null)}
+              uri={(item.has_team_photo || item.team_photo_url) ? `${process.env.EXPO_PUBLIC_BACKEND_URL || ''}/api/teams/${item.id}/photo.jpg` : null}
               size={48}
               radius={10}
               fallback={<Ionicons name="people" size={24} color="#007AFF" />}

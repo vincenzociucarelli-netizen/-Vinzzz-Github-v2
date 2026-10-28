@@ -3488,13 +3488,39 @@ export default function AdminAthleteDetail() {
                     </View>
                   ) : null}
 
-                  {/* Numero di maglia */}
-                  {athlete?.jersey_number ? (
-                    <View style={styles.roleDisplay}>
-                      <Text style={styles.techDataLabel}>Numero di maglia</Text>
-                      <Text style={styles.roleValue}>{athlete.jersey_number}</Text>
-                    </View>
-                  ) : null}
+                  {/* Numero di maglia — modificabile inline senza entrare in modifica */}
+                  <View style={styles.roleDisplay}>
+                    <Text style={styles.techDataLabel}>Numero di maglia</Text>
+                    <TextInput
+                      style={styles.jerseyInlineInput}
+                      value={athlete?.jersey_number || ''}
+                      onChangeText={(t) => {
+                        const v = t.replace(/\D/g, '').slice(0, 3);
+                        setAthlete((prev: any) => prev ? { ...prev, jersey_number: v } : prev);
+                      }}
+                      keyboardType="number-pad"
+                      placeholder="-"
+                      placeholderTextColor="#999"
+                      returnKeyType="done"
+                      maxLength={3}
+                      onBlur={async () => {
+                        const val = athlete?.jersey_number || '';
+                        try {
+                          await api.patch(`/athletes/${id}/technical-data`, { jersey_number: val });
+                        } catch (e) {
+                          showAlert('Errore', 'Impossibile salvare il numero di maglia. Riprova.');
+                        }
+                      }}
+                      onSubmitEditing={async () => {
+                        const val = athlete?.jersey_number || '';
+                        try {
+                          await api.patch(`/athletes/${id}/technical-data`, { jersey_number: val });
+                        } catch (e) {
+                          showAlert('Errore', 'Impossibile salvare il numero di maglia. Riprova.');
+                        }
+                      }}
+                    />
+                  </View>
 
                   {/* Libero — selezione rapida L/L1/L2 senza entrare in modifica (come coach) */}
                   <View style={styles.roleDisplay}>
@@ -6886,6 +6912,19 @@ const styles = StyleSheet.create({
     color: '#888',
     marginTop: 8,
     fontStyle: 'italic',
+  },
+  jerseyInlineInput: {
+    minWidth: 64,
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#007AFF',
+    backgroundColor: '#E3F2FD',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#90CAF9',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
   },
   roleValue: {
     fontSize: 16,

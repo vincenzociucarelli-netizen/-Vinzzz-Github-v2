@@ -216,7 +216,7 @@ export default function CoachTeamAthletes() {
             {(team.team_photo_url || team.has_team_photo) ? (
               <TouchableOpacity onPress={() => setShowTeamPhoto(true)} data-testid="coach-team-photo">
               <Image 
-                source={{ uri: team.team_photo_url || `${process.env.EXPO_PUBLIC_BACKEND_URL || ''}/api/teams/${team.id}/photo.jpg` }}
+                source={{ uri: `${process.env.EXPO_PUBLIC_BACKEND_URL || ''}/api/teams/${team.id}/photo.jpg` }}
                 style={{ width: 80, height: 80, borderRadius: 12, alignSelf: 'center', marginBottom: 8 }}
               />
               </TouchableOpacity>
@@ -310,7 +310,7 @@ export default function CoachTeamAthletes() {
       {/* Team Photo Viewer */}
       <PhotoViewer
         visible={showTeamPhoto}
-        photo={team?.team_photo_url || (team?.has_team_photo ? `${process.env.EXPO_PUBLIC_BACKEND_URL || ''}/api/teams/${team.id}/photo.jpg` : null)}
+        photo={(team?.has_team_photo || team?.team_photo_url) ? `${process.env.EXPO_PUBLIC_BACKEND_URL || ''}/api/teams/${team.id}/photo.jpg` : null}
         title={`Foto Squadra - ${team?.name || ''}`}
         onClose={() => setShowTeamPhoto(false)}
       />
