@@ -19,6 +19,16 @@ const CONSENT_LABELS: Record<string, string> = {
   images_promo: 'Immagini promozionali',
 };
 
+// 🐛 Fix coerenza con la scheda atleta: i consensi possono essere salvati sia
+// come oggetto {value:true} sia come booleano legacy `true`. Prima questa pagina
+// leggeva solo `c.value`, mostrando come "negato" chi aveva dato il consenso in
+// formato booleano. Estrae il valore gestendo entrambi i formati.
+const consentVal = (c: any): boolean | null => {
+  if (typeof c === 'boolean') return c;
+  if (c && typeof c === 'object') return c.value ?? null;
+  return null;
+};
+
 const ROLE_LABELS: Record<string, string> = {
   parent: 'Genitore',
   coach: 'Allenatore',
@@ -81,15 +91,16 @@ export default function ConsentAuditPage() {
 
   const getConsentBadge = (consents: any, type: string) => {
     const c = consents?.[type];
-    if (!c) return null;
+    if (c === undefined || c === null) return null;
+    const v = consentVal(c);
     return (
-      <View style={[s.badge, { backgroundColor: c.value ? '#E8F5E9' : '#FFEBEE' }]} key={type}>
+      <View style={[s.badge, { backgroundColor: v ? '#E8F5E9' : '#FFEBEE' }]} key={type}>
         <Ionicons
-          name={c.value ? 'checkmark-circle' : 'close-circle'}
+          name={v ? 'checkmark-circle' : 'close-circle'}
           size={14}
-          color={c.value ? '#4CAF50' : '#F44336'}
+          color={v ? '#4CAF50' : '#F44336'}
         />
-        <Text style={[s.badgeText, { color: c.value ? '#2E7D32' : '#C62828' }]}>
+        <Text style={[s.badgeText, { color: v ? '#2E7D32' : '#C62828' }]}>
           {CONSENT_LABELS[type]?.split(' ').slice(-1)[0] || type}
         </Text>
       </View>
@@ -122,10 +133,11 @@ export default function ConsentAuditPage() {
       // Check at least one consent type matches the status filter
       const matches = types.some((t) => {
         const c = e.consents?.[t];
-        if (statusFilter === 'all') return !!c || statusFilter === 'all';
-        if (statusFilter === 'given') return c && c.value === true;
-        if (statusFilter === 'denied') return c && c.value === false;
-        if (statusFilter === 'missing') return !c;
+        const present = c !== undefined && c !== null;
+        if (statusFilter === 'all') return true;
+        if (statusFilter === 'given') return present && consentVal(c) === true;
+        if (statusFilter === 'denied') return present && consentVal(c) === false;
+        if (statusFilter === 'missing') return !present;
         return true;
       });
       if (!matches) return false;
@@ -330,19 +342,21 @@ export default function ConsentAuditPage() {
                 <Text style={s.sectionTitle}>Stato Attuale</Text>
                 {['privacy_viewed', 'images_internal', 'images_promo'].map((type) => {
                   const c = detailData.consents?.[type];
+                  const present = c !== undefined && c !== null;
+                  const v = consentVal(c);
                   return (
                     <View key={type} style={s.consentDetailRow}>
                       <Ionicons
-                        name={c?.value === true ? 'checkmark-circle' : c?.value === false ? 'close-circle' : 'help-circle-outline'}
+                        name={v === true ? 'checkmark-circle' : v === false ? 'close-circle' : 'help-circle-outline'}
                         size={18}
-                        color={c?.value === true ? '#4CAF50' : c?.value === false ? '#F44336' : '#999'}
+                        color={v === true ? '#4CAF50' : v === false ? '#F44336' : '#999'}
                       />
                       <View style={{ flex: 1, marginLeft: 10 }}>
                         <Text style={s.consentDetailLabel}>{CONSENT_LABELS[type]}</Text>
-                        {c ? (
+                        {present ? (
                           <Text style={s.consentDetailMeta}>
-                            {c.value ? 'Concesso' : 'Negato'} il {formatDate(c.timestamp)}
-                            {c.ip_address ? ` | IP: ${c.ip_address}` : ''}
+                            {v ? 'Concesso' : 'Negato'}{(c && typeof c === 'object' && c.timestamp) ? ` il ${formatDate(c.timestamp)}` : ''}
+                            {(c && typeof c === 'object' && c.ip_address) ? ` | IP: ${c.ip_address}` : ''}
                           </Text>
                         ) : (
                           <Text style={s.consentDetailMeta}>Non espresso</Text>
