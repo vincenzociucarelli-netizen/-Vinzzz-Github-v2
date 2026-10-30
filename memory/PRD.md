@@ -1969,3 +1969,9 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - Config letta da athlete.advance_split_enabled / advance_amount / advance_label.
 - Verificato in preview su atleta di test (split Affitto €400 + Saldo netto). Dati di test ripristinati.
 - Richiede Save to GitHub + redeploy Vercel per il live.
+
+## Aggiornamento 30/10/2026 — Selettore periodo in Quietanze
+- `/app/frontend/app/admin/quietanze.tsx`: aggiunto selettore "📆 PERIODO" (chips orizzontali: "Tutti i mesi" + ogni mese/anno presente nei dati), posizionato sotto le stat cards.
+- Stato `filterPeriod` applicato a `filteredReceipts` → filtra l'INTERA pagina (stat cards, banner netto, Riepiloghi mensili, elenco quietanze) sul periodo scelto.
+- `availablePeriods` derivati da receipts, ordinati dal più recente.
+- Verificato in preview: selezione "Aprile 2026" → tutta la pagina mostra solo quel mese (netto 11.907, 5 quietanze). Richiede Save to GitHub + redeploy Vercel per il live.

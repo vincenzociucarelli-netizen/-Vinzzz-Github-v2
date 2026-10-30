@@ -41,6 +41,7 @@ export default function QuietanzePage() {
   const [filterRole, setFilterRole] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'signed'>('all');
   const [showMonthly, setShowMonthly] = useState(true);
+  const [filterPeriod, setFilterPeriod] = useState<string | null>(null);
   
   // Edit modal state
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -313,8 +314,17 @@ export default function QuietanzePage() {
     if (filterRole && r.user_role !== filterRole) return false;
     if (filterStatus === 'pending' && r.receipt_signed) return false;
     if (filterStatus === 'signed' && !r.receipt_signed) return false;
+    if (filterPeriod && `${r.year}-${r.month}` !== filterPeriod) return false;
     return true;
   });
+
+  // 🆕 Periodi disponibili (mese/anno) per il selettore, ordinati dal più recente
+  const availablePeriods = Array.from(new Set(receipts.map(r => `${r.year}-${r.month}`)))
+    .sort((a, b) => {
+      const [ay, am] = a.split('-').map(Number);
+      const [by, bm] = b.split('-').map(Number);
+      return (by * 100 + bm) - (ay * 100 + am);
+    });
 
   // Separate custom from standard
   const customReceipts = filteredReceipts.filter(r => r.is_custom);
@@ -476,6 +486,36 @@ export default function QuietanzePage() {
                   <Text style={styles.statLabel}>Totale</Text>
                 </View>
               </View>
+
+              {/* 🆕 Selettore periodo (mese/anno): filtra l'intera pagina */}
+              {availablePeriods.length > 0 && (
+                <View style={{ marginTop: 10 }}>
+                  <Text style={{ fontSize: 11, color: '#666', fontWeight: '700', marginBottom: 6, marginLeft: 2 }}>📆 PERIODO {filterPeriod ? '(filtro attivo)' : ''}</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    <TouchableOpacity
+                      style={[styles.filterChip, !filterPeriod && styles.filterChipActive]}
+                      onPress={() => setFilterPeriod(null)}
+                      data-testid="period-chip-all"
+                    >
+                      <Text style={[styles.filterChipText, !filterPeriod && styles.filterChipTextActive]}>Tutti i mesi</Text>
+                    </TouchableOpacity>
+                    {availablePeriods.map(p => {
+                      const [py, pm] = p.split('-').map(Number);
+                      const active = filterPeriod === p;
+                      return (
+                        <TouchableOpacity
+                          key={`period-${p}`}
+                          style={[styles.filterChip, active && styles.filterChipActive]}
+                          onPress={() => setFilterPeriod(active ? null : p)}
+                          data-testid={`period-chip-${p}`}
+                        >
+                          <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{MONTH_NAMES[pm]} {py}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              )}
 
               {/* 🆕 #3 Riepilogo pagamenti: quanto erogare (netto) col filtro attuale */}
               {filteredReceipts.length > 0 && (
