@@ -6233,6 +6233,10 @@ export default function AdminAthleteDetail() {
                 const priorComp = Number(athlete?.other_annual_compensation || 0);
                 const contractYear = athlete?.contract_start_date ? parseInt(String(athlete.contract_start_date).split('-')[0]) : new Date().getFullYear();
                 const monthlyComp = Number(athlete?.monthly_compensation || 0);
+                // 🆕 Config anticipo/saldo (parità con la vista atleta)
+                const advSplit = !!(athlete as any)?.advance_split_enabled;
+                const advLbl = (athlete as any)?.advance_label || 'Anticipo';
+                const advAmtRaw = Number((athlete as any)?.advance_amount || 0);
                 // Aggrega compensi esterni dichiarati per anno
                 // 🆕 29/06/2026 — Fonte: endpoint /admin/athletes/{id}/external-compensations
                 // (replica esatta dei dati visualizzati lato user)
@@ -6366,6 +6370,23 @@ export default function AdminAthleteDetail() {
                             <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#2E7D32' }}>{formatCurrency(expectedNet)}</Text>
                           </View>
                         )}
+                        {advSplit && advAmtRaw > 0 && expected > 0 && (() => {
+                          const a = Math.min(advAmtRaw, expected);
+                          const s = Math.max(0, expectedNet - a);
+                          return (
+                            <View style={{ marginTop: 4, backgroundColor: '#FFF8E1', borderRadius: 6, padding: 6, borderWidth: 1, borderColor: '#FFE082' }}>
+                              <Text style={{ fontSize: 9, fontWeight: '800', color: '#8D6E00', marginBottom: 2 }}>💶 Pagamento in due tranche</Text>
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                <Text style={{ fontSize: 11, color: '#6D4C00' }}>{advLbl} · subito</Text>
+                                <Text style={{ fontSize: 12, fontWeight: '700', color: '#6D4C00' }}>{formatCurrency(a)}</Text>
+                              </View>
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
+                                <Text style={{ fontSize: 11, color: '#6D4C00' }}>Saldo · a seguire</Text>
+                                <Text style={{ fontSize: 12, fontWeight: '700', color: '#6D4C00' }}>{formatCurrency(s)}</Text>
+                              </View>
+                            </View>
+                          );
+                        })()}
                         <Text style={{ fontSize: 11, color: '#9E9E9E', fontStyle: 'italic', marginTop: 2 }}>Non firmata</Text>
                       </View>
                     );
@@ -6463,6 +6484,23 @@ export default function AdminAthleteDetail() {
                           <Ionicons name="trash-outline" size={18} color="#C62828" />
                         </TouchableOpacity>
                       </View>
+                      {advSplit && advAmtRaw > 0 && (() => {
+                        const a = Math.min(advAmtRaw, _sGross);
+                        const s = Math.max(0, _sNet - a);
+                        return (
+                          <View style={{ marginTop: 6, backgroundColor: '#FFF8E1', borderRadius: 6, padding: 6, borderWidth: 1, borderColor: '#FFE082' }}>
+                            <Text style={{ fontSize: 9, fontWeight: '800', color: '#8D6E00', marginBottom: 2 }}>💶 Pagamento in due tranche</Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                              <Text style={{ fontSize: 11, color: '#6D4C00' }}>{advLbl} · subito</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: '#6D4C00' }}>{formatCurrency(a)}{receipt.advance_paid ? ' ✓' : ''}</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
+                              <Text style={{ fontSize: 11, color: '#6D4C00' }}>Saldo · a seguire</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: '#6D4C00' }}>{formatCurrency(s)}{receipt.balance_paid ? ' ✓' : ''}</Text>
+                            </View>
+                          </View>
+                        );
+                      })()}
                     </View>
                   );
                 });
