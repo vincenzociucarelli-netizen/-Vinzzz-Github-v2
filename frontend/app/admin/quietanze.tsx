@@ -40,6 +40,7 @@ export default function QuietanzePage() {
   const [stats, setStats] = useState({ total: 0, pending: 0, custom_pending: 0, custom_signed: 0 });
   const [filterRole, setFilterRole] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'signed'>('all');
+  const [showMonthly, setShowMonthly] = useState(true);
   
   // Edit modal state
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -331,6 +332,36 @@ export default function QuietanzePage() {
   const netToPayTotal = filteredReceipts.reduce((s, r) => s + _netOf(r), 0);
   const netRemaining = filteredReceipts.filter(r => !r.payment_made).reduce((s, r) => s + _netOf(r), 0);
 
+  // 🆕 Quanto è già stato erogato per una quietanza (gestisce anche lo split anticipo/saldo)
+  const _paidOf = (r: any) => {
+    const net = _netOf(r);
+    if (r.payment_made) return net;
+    if (r.advance_split_enabled && r.advance_amount > 0) {
+      const adv = Math.min(r.advance_amount, r.amount_gross || 0);
+      const saldo = Math.max(0, net - adv);
+      return (r.advance_paid ? adv : 0) + (r.balance_paid ? saldo : 0);
+    }
+    return 0;
+  };
+
+  // 🆕 Riepiloghi mensili: raggruppa i compensi per anno-mese (col filtro attuale)
+  const _nowD = new Date();
+  const _curKey = _nowD.getFullYear() * 100 + (_nowD.getMonth() + 1);
+  const _monthlyMap: Record<string, { year: number; month: number; total: number; paid: number; count: number }> = {};
+  filteredReceipts.forEach(r => {
+    const k = `${r.year}-${r.month}`;
+    if (!_monthlyMap[k]) _monthlyMap[k] = { year: r.year, month: r.month, total: 0, paid: 0, count: 0 };
+    const m = _monthlyMap[k];
+    m.total += _netOf(r);
+    m.paid += _paidOf(r);
+    m.count += 1;
+  });
+  const monthlyList = Object.values(_monthlyMap).sort((a, b) => (b.year * 100 + b.month) - (a.year * 100 + a.month));
+  const aggErogato = monthlyList.reduce((s, m) => s + m.paid, 0);
+  const aggResiduo = monthlyList.filter(m => (m.year * 100 + m.month) <= _curKey).reduce((s, m) => s + Math.max(0, m.total - m.paid), 0);
+  const aggFuturo = monthlyList.filter(m => (m.year * 100 + m.month) > _curKey).reduce((s, m) => s + Math.max(0, m.total - m.paid), 0);
+
+
   const renderStandardCard = (receipt: any, index: number, signed: boolean) => (
     <View
       key={`std-${signed ? 's' : 'p'}-${index}`}
@@ -457,6 +488,83 @@ export default function QuietanzePage() {
                     <Text style={{ fontSize: 10, color: '#66795f' }}>Totale periodo</Text>
                     <Text style={{ fontSize: 13, color: '#2E7D32', fontWeight: '600' }}>{formatCurrency(netToPayTotal)}</Text>
                   </View>
+                </View>
+              )}
+
+              {/* 🆕 Riepiloghi mensili: Totale / Erogato / Residuo per ogni mese */}
+              {monthlyList.length > 0 && (
+                <View style={{ marginTop: 10, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#ECECEC', overflow: 'hidden' }}>
+                  <TouchableOpacity
+                    onPress={() => setShowMonthly(v => !v)}
+                    style={{ flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: '#F7F4FB' }}
+                    data-testid="monthly-recap-toggle"
+                  >
+                    <Text style={{ flex: 1, fontSize: 14, fontWeight: '800', color: '#4A235A' }}>📅 Riepiloghi mensili</Text>
+                    <Ionicons name={showMonthly ? 'chevron-up' : 'chevron-down'} size={20} color="#8E44AD" />
+                  </TouchableOpacity>
+
+                  {showMonthly && (
+                    <View style={{ padding: 12 }}>
+                      {/* Aggregati: erogato finora / da erogare / budget futuro */}
+                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                        <View style={{ flex: 1, backgroundColor: '#E8F5E9', borderRadius: 10, padding: 10, alignItems: 'center' }}>
+                          <Text style={{ fontSize: 10, color: '#1B5E20', fontWeight: '700', textAlign: 'center' }}>✅ Erogato finora</Text>
+                          <Text style={{ fontSize: 15, color: '#2E7D32', fontWeight: 'bold', marginTop: 3 }}>{formatCurrency(aggErogato)}</Text>
+                        </View>
+                        <View style={{ flex: 1, backgroundColor: '#FFEBEE', borderRadius: 10, padding: 10, alignItems: 'center' }}>
+                          <Text style={{ fontSize: 10, color: '#B71C1C', fontWeight: '700', textAlign: 'center' }}>⏳ Da erogare</Text>
+                          <Text style={{ fontSize: 15, color: '#C62828', fontWeight: 'bold', marginTop: 3 }}>{formatCurrency(aggResiduo)}</Text>
+                        </View>
+                        <View style={{ flex: 1, backgroundColor: '#FFF8E1', borderRadius: 10, padding: 10, alignItems: 'center' }}>
+                          <Text style={{ fontSize: 10, color: '#8D6E00', fontWeight: '700', textAlign: 'center' }}>📈 Budget futuro</Text>
+                          <Text style={{ fontSize: 15, color: '#B8860B', fontWeight: 'bold', marginTop: 3 }}>{formatCurrency(aggFuturo)}</Text>
+                        </View>
+                      </View>
+
+                      {/* Dettaglio per mese */}
+                      {monthlyList.map(m => {
+                        const key = m.year * 100 + m.month;
+                        const residuo = Math.max(0, m.total - m.paid);
+                        const isCurrent = key === _curKey;
+                        const isFuture = key > _curKey;
+                        const tag = isCurrent ? 'Mese corrente' : isFuture ? 'Budget futuro' : 'Passato';
+                        const tagColor = isCurrent ? '#1565C0' : isFuture ? '#8D6E00' : '#2E7D32';
+                        const tagBg = isCurrent ? '#E3F2FD' : isFuture ? '#FFF8E1' : '#E8F5E9';
+                        const done = residuo <= 0.01;
+                        return (
+                          <View
+                            key={`month-${m.year}-${m.month}`}
+                            style={{ borderWidth: 1, borderColor: '#EEE', borderRadius: 10, padding: 10, marginBottom: 8, backgroundColor: isCurrent ? '#F5FAFF' : '#FFF' }}
+                            data-testid={`monthly-recap-${m.year}-${m.month}`}
+                          >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                              <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: '#333' }}>{MONTH_NAMES[m.month]} {m.year}</Text>
+                              <View style={{ backgroundColor: tagBg, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginRight: 6 }}>
+                                <Text style={{ fontSize: 10, fontWeight: '700', color: tagColor }}>{tag}</Text>
+                              </View>
+                              <Text style={{ fontSize: 10, color: '#999' }}>{m.count} compensi</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row' }}>
+                              <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: 10, color: '#888' }}>Totale compensi</Text>
+                                <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#333' }}>{formatCurrency(m.total)}</Text>
+                              </View>
+                              <View style={{ flex: 1, alignItems: 'center' }}>
+                                <Text style={{ fontSize: 10, color: '#888' }}>Erogato</Text>
+                                <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#2E7D32' }}>{formatCurrency(m.paid)}</Text>
+                              </View>
+                              <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                                <Text style={{ fontSize: 10, color: '#888' }}>Residuo</Text>
+                                <Text style={{ fontSize: 15, fontWeight: 'bold', color: done ? '#2E7D32' : '#C62828' }}>
+                                  {done ? 'Saldato' : formatCurrency(residuo)}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
                 </View>
               )}
 
