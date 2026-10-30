@@ -901,6 +901,23 @@ export default function AthleteCompensation() {
     };
   };
 
+  // 🆕 Criterio di CASSA: cumulativo LORDO già maturato nello stesso ANNO DI PAGAMENTO,
+  // PRIMA della competenza (cm, cy). La competenza di dicembre (pagata a gennaio) conta
+  // nell'anno solare successivo; in quell'anno il PREGRESSO non si riporta.
+  const getCashCumulativeBefore = (cm: number, cy: number): number => {
+    const py = (paymentShift === 1 && cm === 12) ? cy + 1 : cy; // anno solare di PAGAMENTO
+    const monthlyComp = profile?.monthly_compensation || 0;
+    let before = (py === contractStartYear ? priorCompensation : 0) + (externalByYear[py] || 0);
+    const comp = getCashCompetenceForYear(py); // competenze pagate in py, in ordine di pagamento
+    for (const { cy: ey, cm: em } of comp) {
+      if (ey === cy && em === cm) break; // arrivato alla quietanza corrente
+      const r = records.find(rr => rr.year === ey && rr.month === em);
+      before += (r?.amount_gross || r?.amount || monthlyComp);
+    }
+    return before;
+  };
+
+
   const renderThresholdWarnings = () => {
     if (!thresholdStatus) return null;
     
@@ -922,33 +939,31 @@ export default function AthleteCompensation() {
       // esiste ancora un record DB → la soglia non veniva rilevata e il banner non
       // appariva). Ora iteriamo TUTTI i mesi contrattuali dell'anno, usando il
       // monthly_compensation come fallback per i mesi senza quietanza.
-      const monthsInYear = getContractMonthsForYear(year);
-      const yearRecordsByMonth = new Map<number, any>();
-      records.filter(r => r.year === year).forEach(r => yearRecordsByMonth.set(r.month, r));
+      // 🆕 Criterio di CASSA: iteriamo le competenze nell'ordine di PAGAMENTO dell'anno
+      // solare (dicembre dell'anno prima incassato a gennaio incluso come primo), così
+      // la soglia 2027 si valuta su DIC+GEN+FEB+... e il mese riportato è la COMPETENZA.
+      const comp = getCashCompetenceForYear(year);
       const prior = (year === contractStartYear) ? priorComp : 0;
-      // 🆕 26/02/2026 — Coach contribution (zaino) per cumulativo cronologico mensile
       const coachMonthly = (dualRoleInfo?.coach?.monthly_compensation || 0);
       const cStartStr = dualRoleInfo?.coach?.contract_start_date;
       const cEndStr = dualRoleInfo?.coach?.contract_end_date;
       const cs = cStartStr ? new Date(cStartStr) : null;
       const ce = cEndStr ? new Date(cEndStr) : null;
-      const isCoachActiveInMonth = (m: number): boolean => {
+      const isCoachActive = (cm: number, cy: number): boolean => {
         if (!cs || !ce || coachMonthly <= 0) return false;
-        const firstOfMonth = new Date(year, m - 1, 1);
-        const lastOfMonth = new Date(year, m, 0);
+        const firstOfMonth = new Date(cy, cm - 1, 1);
+        const lastOfMonth = new Date(cy, cm, 0);
         return lastOfMonth >= cs && firstOfMonth <= ce;
       };
-      // External compensations cumulative for this year (added at start)
       let cumulative = prior + (externalByYear[year] || 0);
-      if (cumulative > threshold) return ''; // already exceeded before any month
-      const sortedMonths = [...monthsInYear].sort((a, b) => a - b);
-      for (const m of sortedMonths) {
-        const r = yearRecordsByMonth.get(m);
+      if (cumulative > threshold) return ''; // già superata prima di ogni mese
+      for (const { cy, cm } of comp) {
+        const r = records.find(rr => rr.year === cy && rr.month === cm);
         const amt = (r?.amount_gross || r?.amount || monthlyComp) || 0;
-        const coachAmt = isCoachActiveInMonth(m) ? coachMonthly : 0;
+        const coachAmt = isCoachActive(cm, cy) ? coachMonthly : 0;
         cumulative += amt + coachAmt;
         if (cumulative > threshold) {
-          return MONTH_NAMES[m] || '';
+          return MONTH_NAMES[cm] || '';
         }
       }
       return '';
@@ -1284,13 +1299,11 @@ export default function AthleteCompensation() {
   const isMonthAfterThreshold = (month: number, year: number, thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } }, type: '5k' | '15k') => {
     const yearThresholds = thresholdsByYear[year];
     if (!yearThresholds) return false;
-    
     const thresholdMonth = type === '5k' ? yearThresholds.first5k : yearThresholds.first15k;
     if (thresholdMonth === null) return false;
-    
-    // Only highlight months in the SAME year that are >= threshold month
     return month >= thresholdMonth;
   };
+  void isMonthAfterThreshold; void getThresholdMonths; void getProjectedThresholdMonths;
 
   const renderMonthCard = (month: number, year?: number) => {
     const displayYear = year || currentYear;
@@ -1321,14 +1334,8 @@ export default function AthleteCompensation() {
 
     // 🆕 Netto da pagare = lordo − quota contributi INPS a carico dell'atleta.
     // Per i mesi firmati uso il valore salvato (amount_net); per i pendenti/futuri
-    // lo calcolo sul cumulato proiettato (pregresso se anno contratto + mesi precedenti + ASD esterne).
-    const _prior = profile?.other_annual_compensation || 0;
-    const _csy = profile?.contract_start_date ? parseInt(profile.contract_start_date.split('-')[0]) : null;
-    const _base = (profile?.monthly_compensation || 0) + coachExtra;
-    const _earlier = records
-      .filter(r => r.year === displayYear && (r.month || 0) < month)
-      .reduce((s, r) => s + (r.amount_gross || r.amount || _base), 0);
-    const _before = ((displayYear === _csy) ? _prior : 0) + (externalByYear[displayYear] || 0) + _earlier;
+    // lo calcolo sul cumulato PER CASSA (anno di pagamento; dicembre slitta all'anno dopo).
+    const _before = getCashCumulativeBefore(month, displayYear);
     const _inps = computeInpsWithholding(_before, monthlyAmount, !!(profile as any)?.inps_insured_elsewhere);
     const _signedNet = (status === 'signed' && typeof record?.amount_net === 'number') ? record.amount_net : null;
     const netToPay = _signedNet != null ? _signedNet : (_inps.applies ? _inps.amount_net : monthlyAmount);
@@ -1339,12 +1346,12 @@ export default function AthleteCompensation() {
     const advanceAmt = advanceSplit ? Math.min((profile as any)?.advance_amount || 0, monthlyAmount) : 0;
     const saldoAmt = advanceSplit ? Math.max(0, netToPay - advanceAmt) : 0;
     
-    // Check if this month is after threshold was crossed IN THE SAME YEAR (for highlighting)
-    // Uses PROJECTED cumulative (signed + unsigned) so the user can see in advance
-    // which months are above 5k/15k even before they sign them.
-    const thresholdsByYear = getProjectedThresholdMonths();
-    const isAfter5k = isMonthAfterThreshold(month, displayYear, thresholdsByYear, '5k');
-    const isAfter15k = isMonthAfterThreshold(month, displayYear, thresholdsByYear, '15k');
+    // Check if this month is after threshold was crossed — 🆕 criterio di CASSA:
+    // uso il cumulativo per ANNO DI PAGAMENTO (coerente col netto), così dicembre
+    // (pagato a gennaio) riparte da zero e non risulta erroneamente sopra soglia.
+    const _after = _before + monthlyAmount;
+    const isAfter5k = _after > 5000.005;
+    const isAfter15k = _after > 15000.005;
     
     // Use calculated thresholds for badge display (not DB values which may be stale)
     const showBadge5k = isAfter5k && !isAfter15k;

@@ -12447,19 +12447,6 @@ async def sign_athlete_compensation_receipt_with_signature(
     # Get prior compensation
     prior_compensation = athlete.get("other_annual_compensation", 0) or 0
     
-    # Calculate yearly totals
-    # 🆕 FIX P1: recupera TUTTE le firme dell'anno (escluso solo il mese corrente) per gestire
-    # correttamente le firme retroattive fuori ordine cronologico.
-    yearly_receipts = await db.athlete_compensation_receipts.find({
-        "athlete_id": athlete_id,
-        "year": year,
-        "signed": True,
-        "month": {"$ne": month}
-    }).to_list(12)
-    
-    signed_by_month = {r["month"]: float(r.get("amount", 0) or 0) for r in yearly_receipts}
-    yearly_total_from_receipts = sum(signed_by_month.values())
-    
     # Check contract start year for prior compensation
     contract_start = athlete.get("contract_start_date")
     contract_start_year = None
@@ -12468,8 +12455,36 @@ async def sign_athlete_compensation_receipt_with_signature(
             contract_start_year = int(contract_start.split('-')[0])
         elif hasattr(contract_start, 'year'):
             contract_start_year = contract_start.year
-    
-    if contract_start_year and year == contract_start_year:
+
+    # 🆕 Criterio di CASSA: la soglia €5k/€15k è per ANNO DI PAGAMENTO.
+    # La competenza di dicembre (pagata a gennaio) conta nell'anno solare SUCCESSIVO;
+    # in quell'anno il PREGRESSO non si riporta (è relativo all'anno di assunzione),
+    # quindi la prima quietanza di gennaio riparte da zero verso i €5.000.
+    _timing = await _get_payment_timing(ath_society_id)
+    _shift = _payment_shift_from_timing(_timing)
+    _, _payment_year = _rebucket_month_year_for_payment(int(month), int(year), _shift)
+
+    # 🆕 FIX P1: recupera TUTTE le firme che, PER CASSA, cadono nello stesso anno di
+    # pagamento di questa quietanza (escluso il mese corrente) — gestisce anche le
+    # firme retroattive fuori ordine cronologico.
+    _candidate_years = [year] if _shift == 0 else [year - 1, year, year + 1]
+    _all_signed = await db.athlete_compensation_receipts.find({
+        "athlete_id": athlete_id,
+        "signed": True,
+        "year": {"$in": _candidate_years},
+    }).to_list(48)
+    signed_by_month = {}
+    for _r in _all_signed:
+        _rm, _ry = _r.get("month"), _r.get("year")
+        if _rm == month and _ry == year:
+            continue
+        _, _rpy = _rebucket_month_year_for_payment(int(_rm), int(_ry), _shift)
+        if _rpy != _payment_year:
+            continue
+        signed_by_month[_rm] = signed_by_month.get(_rm, 0.0) + float(_r.get("amount", 0) or 0)
+    yearly_total_from_receipts = sum(signed_by_month.values())
+
+    if contract_start_year and _payment_year == contract_start_year:
         yearly_total = yearly_total_from_receipts + prior_compensation
     else:
         yearly_total = yearly_total_from_receipts
@@ -12534,7 +12549,7 @@ async def sign_athlete_compensation_receipt_with_signature(
     
     # Threshold checks — 🆕 FIX P1 applicato anche all'Atleta PRO: usa calcolo cronologico
     # cumulativo per gestire correttamente le firme retroattive fuori ordine.
-    prior_for_year = prior_compensation if (contract_start_year and year == contract_start_year) else 0
+    prior_for_year = prior_compensation if (contract_start_year and _payment_year == contract_start_year) else 0
     month_5k, month_15k = _detect_threshold_crossings_chronological(
         signed_by_month=signed_by_month,
         new_month=month,
@@ -24325,20 +24340,10 @@ async def sign_compensation_receipt(
     # Get prior compensation (declared at hiring)
     prior_compensation = coach.get("other_annual_compensation", 0) or 0
     
-    # Calculate yearly totals to check thresholds
-    # 🆕 FIX P1: recuperiamo TUTTE le firme dell'anno (escluso solo il mese che si sta firmando ora)
-    # per gestire correttamente le firme retroattive fuori ordine cronologico.
-    yearly_records = await db.coach_compensations.find({
-        "coach_id": coach_id,
-        "year": request.year,
-        "receipt_signed": True,
-        "month": {"$ne": request.month}
-    }).to_list(12)
-    
-    signed_by_month = {r["month"]: float(r.get("amount_gross", r.get("amount", 0)) or 0) for r in yearly_records}
-    yearly_total_from_receipts = sum(signed_by_month.values())
-    
-    # Add prior compensation to the first year of contract
+    # Calculate yearly totals to check thresholds — 🆕 Criterio di CASSA: la soglia è per
+    # ANNO DI PAGAMENTO (dicembre, pagato a gennaio, conta nell'anno dopo; in quell'anno il
+    # pregresso non si riporta). Recuperiamo TUTTE le firme che, per cassa, cadono nello
+    # stesso anno di pagamento di questa quietanza (gestisce anche firme fuori ordine).
     contract_start = coach.get("contract_start_date")
     contract_start_year = None
     if contract_start:
@@ -24346,9 +24351,28 @@ async def sign_compensation_receipt(
             contract_start_year = int(contract_start.split('-')[0])
         elif hasattr(contract_start, 'year'):
             contract_start_year = contract_start.year
-    
-    # Include prior compensation in the first year of contract
-    if contract_start_year and request.year == contract_start_year:
+    _timing = await _get_payment_timing(coach.get("society_id"))
+    _shift = _payment_shift_from_timing(_timing)
+    _, _payment_year = _rebucket_month_year_for_payment(int(request.month), int(request.year), _shift)
+    _candidate_years = [request.year] if _shift == 0 else [request.year - 1, request.year, request.year + 1]
+    _all_signed = await db.coach_compensations.find({
+        "coach_id": coach_id,
+        "receipt_signed": True,
+        "year": {"$in": _candidate_years},
+    }).to_list(48)
+    signed_by_month = {}
+    for _r in _all_signed:
+        _rm, _ry = _r.get("month"), _r.get("year")
+        if _rm == request.month and _ry == request.year:
+            continue
+        _, _rpy = _rebucket_month_year_for_payment(int(_rm), int(_ry), _shift)
+        if _rpy != _payment_year:
+            continue
+        signed_by_month[_rm] = signed_by_month.get(_rm, 0.0) + float(_r.get("amount_gross", _r.get("amount", 0)) or 0)
+    yearly_total_from_receipts = sum(signed_by_month.values())
+
+    # Include prior compensation only if the PAYMENT year equals the hiring year
+    if contract_start_year and _payment_year == contract_start_year:
         yearly_total = yearly_total_from_receipts + prior_compensation
     else:
         yearly_total = yearly_total_from_receipts
@@ -24375,7 +24399,7 @@ async def sign_compensation_receipt(
     # 🆕 FIX P1: usa calcolo cronologico cumulativo per gestire correttamente le firme
     # retroattive fuori ordine. La soglia "scatta" nel mese che CRONOLOGICAMENTE attraversa
     # il limite, non nel mese in cui viene firmato in DB.
-    prior_for_year = prior_compensation if (contract_start_year and request.year == contract_start_year) else 0
+    prior_for_year = prior_compensation if (contract_start_year and _payment_year == contract_start_year) else 0
     month_5k, month_15k = _detect_threshold_crossings_chronological(
         signed_by_month=signed_by_month,
         new_month=request.month,
@@ -25084,10 +25108,11 @@ async def get_coach_threshold_status(
         if amt <= 0:
             continue
         projected_total += amt
+        # 🆕 Criterio di cassa: mese di COMPETENZA (cm), non di pagamento (p)
         if projected_total > 5000 and threshold_5k_month == 0:
-            threshold_5k_month = p
+            threshold_5k_month = cm
         if projected_total > 15000 and threshold_15k_month == 0:
-            threshold_15k_month = p
+            threshold_15k_month = cm
     
     # Extend warning to also cover projected exceedance (not just next-receipt exceedance).
     # This way the banner appears as soon as we know the contract will cross the threshold,
@@ -30114,20 +30139,8 @@ async def sign_dirigente_compensation_receipt(
     # Get prior compensation (declared at hiring)
     prior_compensation = dirigente.get("other_annual_compensation", 0) or 0
     
-    # Calculate yearly totals to check thresholds
-    # 🆕 FIX P1: recupera TUTTE le firme dell'anno (escluso solo il mese corrente) per
-    # gestire correttamente le firme retroattive fuori ordine cronologico.
-    yearly_records = await db.dirigente_compensations.find({
-        "dirigente_id": dirigente_id,
-        "year": request.year,
-        "receipt_signed": True,
-        "month": {"$ne": request.month}
-    }).to_list(12)
-    
-    signed_by_month = {r["month"]: float(r.get("amount_gross", r.get("amount", 0)) or 0) for r in yearly_records}
-    yearly_total_from_receipts = sum(signed_by_month.values())
-    
-    # Add prior compensation to the first year of contract
+    # Calculate yearly totals to check thresholds — 🆕 Criterio di CASSA: soglia per ANNO
+    # DI PAGAMENTO (dicembre slitta all'anno dopo; in quell'anno il pregresso non si riporta).
     contract_start = dirigente.get("contract_start_date")
     contract_start_year = None
     if contract_start:
@@ -30135,9 +30148,28 @@ async def sign_dirigente_compensation_receipt(
             contract_start_year = int(contract_start.split('-')[0])
         elif hasattr(contract_start, 'year'):
             contract_start_year = contract_start.year
-    
-    # Include prior compensation in the first year of contract
-    if contract_start_year and request.year == contract_start_year:
+    _timing = await _get_payment_timing(dirigente.get("society_id"))
+    _shift = _payment_shift_from_timing(_timing)
+    _, _payment_year = _rebucket_month_year_for_payment(int(request.month), int(request.year), _shift)
+    _candidate_years = [request.year] if _shift == 0 else [request.year - 1, request.year, request.year + 1]
+    _all_signed = await db.dirigente_compensations.find({
+        "dirigente_id": dirigente_id,
+        "receipt_signed": True,
+        "year": {"$in": _candidate_years},
+    }).to_list(48)
+    signed_by_month = {}
+    for _r in _all_signed:
+        _rm, _ry = _r.get("month"), _r.get("year")
+        if _rm == request.month and _ry == request.year:
+            continue
+        _, _rpy = _rebucket_month_year_for_payment(int(_rm), int(_ry), _shift)
+        if _rpy != _payment_year:
+            continue
+        signed_by_month[_rm] = signed_by_month.get(_rm, 0.0) + float(_r.get("amount_gross", _r.get("amount", 0)) or 0)
+    yearly_total_from_receipts = sum(signed_by_month.values())
+
+    # Include prior compensation only if the PAYMENT year equals the hiring year
+    if contract_start_year and _payment_year == contract_start_year:
         yearly_total = yearly_total_from_receipts + prior_compensation
     else:
         yearly_total = yearly_total_from_receipts
@@ -30161,7 +30193,7 @@ async def sign_dirigente_compensation_receipt(
     
     # Determina se QUESTA è la prima volta che si supera €5.000 o €15.000
     # 🆕 FIX P1: usa calcolo cronologico cumulativo (gestisce firme retroattive fuori ordine).
-    prior_for_year = prior_compensation if (contract_start_year and request.year == contract_start_year) else 0
+    prior_for_year = prior_compensation if (contract_start_year and _payment_year == contract_start_year) else 0
     month_5k, month_15k = _detect_threshold_crossings_chronological(
         signed_by_month=signed_by_month,
         new_month=request.month,
@@ -30632,10 +30664,11 @@ async def get_dirigente_threshold_status(dirigente_id: str, year: int, current_u
         existing = next((r for r in all_year_records if r.get("year") == cy and r.get("month") == cm), None)
         amt = existing.get("amount_gross", existing.get("amount", monthly_compensation)) if existing else monthly_compensation
         projected_total += amt
+        # 🆕 Criterio di cassa: mese di COMPETENZA (cm), non di pagamento (p)
         if projected_total > 5000 and threshold_5k_month == 0:
-            threshold_5k_month = p
+            threshold_5k_month = cm
         if projected_total > 15000 and threshold_15k_month == 0:
-            threshold_15k_month = p
+            threshold_15k_month = cm
     
     # Calculate if we're approaching thresholds based on PROJECTED total
     next_total = total_with_prior + next_amount
@@ -30915,21 +30948,32 @@ async def sign_collaboratore_compensation_receipt(
     # Calculate yearly total - check both collections (collaboratore_compensations and coach_compensations)
     # 🆕 FIX P1: recupera TUTTE le firme dell'anno (escluso solo il mese corrente) per gestire
     # correttamente le firme retroattive fuori ordine cronologico.
+    # 🆕 Criterio di CASSA: soglia per ANNO DI PAGAMENTO (dicembre slitta all'anno dopo;
+    # in quell'anno il pregresso non si riporta). Combina collaboratore + coach per cassa.
+    _timing = await _get_payment_timing(collaboratore.get("society_id"))
+    _shift = _payment_shift_from_timing(_timing)
+    _, _payment_year = _rebucket_month_year_for_payment(int(request.month), int(request.year), _shift)
+    _cand = [request.year] if _shift == 0 else [request.year - 1, request.year, request.year + 1]
     yearly_records = await db.collaboratore_compensations.find({
         "collaboratore_id": collaboratore_id,
-        "year": request.year,
         "receipt_signed": True,
-        "month": {"$ne": request.month}
-    }).to_list(12)
-    
-    # Also check coach_compensations as backup (some data may be stored there)
+        "year": {"$in": _cand},
+    }).to_list(48)
     coach_records = await db.coach_compensations.find({
         "coach_id": collaboratore_id,
-        "year": request.year,
         "receipt_signed": True,
-        "month": {"$ne": request.month}
-    }).to_list(12)
-    
+        "year": {"$in": _cand},
+    }).to_list(48)
+
+    def _in_pay_year(r):
+        _rm, _ry = r.get("month"), r.get("year")
+        if _rm == request.month and _ry == request.year:
+            return False
+        _, _rpy = _rebucket_month_year_for_payment(int(_rm), int(_ry), _shift)
+        return _rpy == _payment_year
+    yearly_records = [r for r in yearly_records if _in_pay_year(r)]
+    coach_records = [r for r in coach_records if _in_pay_year(r)]
+
     # Combina importi per mese da entrambe le collezioni
     signed_by_month: dict = {}
     for r in yearly_records:
@@ -30955,7 +30999,7 @@ async def sign_collaboratore_compensation_receipt(
             contract_year = int(str(contract_start).split('-')[0].split('T')[0])
         except:
             contract_year = None
-        if contract_year and contract_year == request.year:
+        if contract_year and contract_year == _payment_year:
             yearly_total += prior_compensation
 
     # 📌 Compensi esterni auto-dichiarati (altre ASD/SSD) — criterio per CASSA
@@ -30973,7 +31017,7 @@ async def sign_collaboratore_compensation_receipt(
     
     # Check thresholds - 🆕 FIX P1: usa calcolo cronologico cumulativo
     # (gestisce firme retroattive fuori ordine)
-    prior_for_year = prior_compensation if (contract_year and contract_year == request.year) else 0
+    prior_for_year = prior_compensation if (contract_year and contract_year == _payment_year) else 0
     month_5k, month_15k = _detect_threshold_crossings_chronological(
         signed_by_month=signed_by_month,
         new_month=request.month,
@@ -31451,10 +31495,11 @@ async def get_collaboratore_threshold_status(
         existing = next((r for r in all_collab_year_records if r.get("year") == cy and r.get("month") == cm), None)
         amt = existing.get("amount_gross", existing.get("amount", monthly_compensation)) if existing else monthly_compensation
         proj_total += amt
+        # 🆕 Criterio di cassa: mese di COMPETENZA (cm), non di pagamento (p)
         if proj_total > 5000 and collab_threshold_5k_month == 0:
-            collab_threshold_5k_month = p
+            collab_threshold_5k_month = cm
         if proj_total > 15000 and collab_threshold_15k_month == 0:
-            collab_threshold_15k_month = p
+            collab_threshold_15k_month = cm
     
     needs_warning_5000 = (not prior_already_exceeded_5k) and not (declaration_5000 and declaration_5000.get("signed")) and (collab_threshold_5k_month > 0 and yearly_total < 5000)
     needs_warning_15000 = (not prior_already_exceeded_15k) and not (declaration_15000 and declaration_15000.get("signed")) and (collab_threshold_15k_month > 0 and yearly_total <= 15000)
@@ -32558,10 +32603,13 @@ async def get_athlete_threshold_status(athlete_id: str, year: int, current_user 
             c_amt = c_rec.get("amount_gross", c_rec.get("amount", coach_monthly_compensation)) if c_rec else coach_monthly_compensation
             amt += c_amt
         projected_total += amt
+        # 🆕 Criterio di cassa: riportiamo il mese di COMPETENZA (cm) della quietanza
+        # che fa scattare la soglia, non il mese di pagamento (p). Es. Aprile (pagato
+        # a Maggio) → la soglia si supera con la quietanza di APRILE.
         if projected_total > 5000 and threshold_5k_month == 0:
-            threshold_5k_month = p
+            threshold_5k_month = cm
         if projected_total > 15000 and threshold_15k_month == 0:
-            threshold_15k_month = p
+            threshold_15k_month = cm
     
     # Approaching basato su totale cumulativo + monthly cumulativo
     cumulative_monthly = monthly_compensation + coach_monthly_compensation
