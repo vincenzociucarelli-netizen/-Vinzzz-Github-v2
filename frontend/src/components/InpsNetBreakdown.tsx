@@ -28,9 +28,14 @@ export default function InpsNetBreakdown({
   const bd = computeInpsWithholding(yearlyTotalBefore, monthGross, insuredElsewhere);
   if (!bd.applies) return null;
 
+  const beforeTot = Math.max(0, yearlyTotalBefore || 0);
+  const afterTot = beforeTot + Math.max(0, monthGross || 0);
+
   const rows: { label: string; value: string; deduct?: boolean }[] = [
+    { label: 'Totale già maturato (prima di questo compenso)', value: formatEuro(beforeTot) },
+    { label: 'Totale dopo questo compenso', value: formatEuro(afterTot) },
     { label: 'Compenso pattuito (lordo)', value: formatEuro(bd.amount_gross) },
-    { label: 'Quota eccedente €5.000', value: formatEuro(bd.excess_over_5000) },
+    { label: 'Quota eccedente €5.000 (solo la parte oltre la soglia)', value: formatEuro(bd.excess_over_5000) },
     { label: "Imponibile previdenziale (50% dell'eccedenza)", value: formatEuro(bd.ivs_base) },
     { label: `Contributo IVS (${Math.round(bd.ivs_rate * 100)}% dell'imponibile)`, value: formatEuro(bd.ivs_contribution) },
   ];
