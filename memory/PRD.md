@@ -1963,3 +1963,9 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - Per ogni mese: Totale compensi (netto) / Erogato / Residuo, con tag Passato / Mese corrente / Budget futuro. Residuo mostra "Saldato" se pagato.
 - Helper `_paidOf` considera anche lo split anticipo/saldo (advance_paid + balance_paid). Rispetta i filtri ruolo.
 - Verificato in preview (export dist + restart expo). Richiede Save to GitHub + redeploy Vercel per il live.
+
+## Aggiornamento 30/10/2026 — Ripartizione anticipo/saldo lato Admin
+- `/app/frontend/app/admin/athlete/[id].tsx` (modale "Gestione Quietanze"): aggiunto riquadro "💶 Pagamento in due tranche" (Anticipo/Affitto · subito + Saldo · a seguire = netto − anticipo) sia per i mesi firmati (con ✓ se advance_paid/balance_paid) sia per i mesi non firmati. Parità con la vista atleta.
+- Config letta da athlete.advance_split_enabled / advance_amount / advance_label.
+- Verificato in preview su atleta di test (split Affitto €400 + Saldo netto). Dati di test ripristinati.
+- Richiede Save to GitHub + redeploy Vercel per il live.
