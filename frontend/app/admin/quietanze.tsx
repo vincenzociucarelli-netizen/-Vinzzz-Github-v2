@@ -209,17 +209,49 @@ export default function QuietanzePage() {
     return `39${p}`;
   };
 
-  const markPayment = async (receipt: any, paid: boolean) => {
+  const markPayment = async (receipt: any, paid: boolean, tranche?: 'advance' | 'balance') => {
     try {
       await api.post('/admin/quietanze/mark-payment', {
         user_role: receipt.user_role, user_id: receipt.user_id,
-        year: receipt.year, month: receipt.month, paid,
+        year: receipt.year, month: receipt.month, paid, tranche,
       });
       loadReceipts();
     } catch (e: any) {
       const m = e.response?.data?.detail || 'Operazione non riuscita';
       if (Platform.OS === 'web') window.alert(m); else Alert.alert('Errore', m);
     }
+  };
+
+  // 🆕 Split anticipo: anticipo (versato subito) + saldo (netto − anticipo) con spunta pagato per ciascuno
+  const renderAdvanceSplit = (receipt: any) => {
+    if (!receipt.advance_split_enabled || !(receipt.advance_amount > 0)) return null;
+    const net = (typeof receipt.amount_net === 'number' ? receipt.amount_net : receipt.amount_gross) || 0;
+    const advance = Math.min(receipt.advance_amount, receipt.amount_gross || 0);
+    const saldo = Math.max(0, net - advance);
+    const lbl = receipt.advance_label || 'Anticipo';
+    const Tranche = ({ label, when, amount, paid, kind }: any) => (
+      <View style={styles.splitTrancheRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.splitTrancheLabel}>{label}</Text>
+          <Text style={styles.splitTrancheWhen}>{when}</Text>
+        </View>
+        <Text style={styles.splitTrancheAmount}>{formatCurrency(amount)}</Text>
+        <TouchableOpacity
+          style={[styles.splitPayBtn, paid ? styles.splitPayBtnDone : styles.splitPayBtnTodo]}
+          onPress={() => markPayment(receipt, !paid, kind)}
+        >
+          <Ionicons name={paid ? 'checkmark-circle' : 'ellipse-outline'} size={15} color={paid ? '#2E7D32' : '#8D6E00'} />
+          <Text style={[styles.splitPayText, { color: paid ? '#2E7D32' : '#8D6E00' }]}>{paid ? 'Pagato' : 'Segna'}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+    return (
+      <View style={styles.splitBox}>
+        <Text style={styles.splitTitle}>💶 Pagamento in due tranche</Text>
+        <Tranche label={lbl} when="versare subito" amount={advance} paid={!!receipt.advance_paid} kind="advance" />
+        <Tranche label="Saldo" when="a seguire" amount={saldo} paid={!!receipt.balance_paid} kind="balance" />
+      </View>
+    );
   };
 
   const remindWhatsApp = (receipt: any) => {
@@ -324,6 +356,7 @@ export default function QuietanzePage() {
           <Ionicons name="trash-outline" size={18} color="#D32F2F" />
         </TouchableOpacity>
       </View>
+      {renderAdvanceSplit(receipt)}
       {renderReceiptActions(receipt)}
     </View>
   );
@@ -501,6 +534,7 @@ export default function QuietanzePage() {
                         <Ionicons name="time-outline" size={14} color="#FF9800" />
                         <Text style={{ fontSize: 12, color: '#FF9800', fontWeight: '600' }}>{receipt.payment_made ? 'Bonifico fatto — in attesa di firma' : 'In attesa di firma'}</Text>
                       </View>
+                      {renderAdvanceSplit(receipt)}
                       {renderReceiptActions(receipt)}
                     </View>
                   ))}
@@ -559,6 +593,7 @@ export default function QuietanzePage() {
                         <Ionicons name="checkmark-circle" size={14} color="#4CAF50" />
                         <Text style={{ fontSize: 12, color: '#4CAF50', fontWeight: '600' }}>Firmata dal coach</Text>
                       </View>
+                      {renderAdvanceSplit(receipt)}
                     </View>
                   ))}
                 </View>
@@ -1005,6 +1040,61 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   bulkBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  splitBox: {
+    marginTop: 10,
+    backgroundColor: '#FFF8E1',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FFE082',
+    padding: 10,
+  },
+  splitTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#8D6E00',
+    marginBottom: 6,
+  },
+  splitTrancheRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    gap: 8,
+  },
+  splitTrancheLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#5D4037',
+  },
+  splitTrancheWhen: {
+    fontSize: 10,
+    color: '#A1887F',
+  },
+  splitTrancheAmount: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#5D4037',
+  },
+  splitPayBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  splitPayBtnDone: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#A5D6A7',
+  },
+  splitPayBtnTodo: {
+    backgroundColor: '#FFF3E0',
+    borderColor: '#FFCC80',
+  },
+  splitPayText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
   editBtn: {
     flex: 1,
     flexDirection: 'row',
