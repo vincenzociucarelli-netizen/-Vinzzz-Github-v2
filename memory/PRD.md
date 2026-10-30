@@ -1,5 +1,7 @@
 # RegistraTEAM - Product Requirements Document
 
+- ✨ (30 Ott 2026) — 3 step ADMIN compensi: (#1) netto 'DA PAGARE' + criterio di cassa estesi alle modali 'Gestione Quietanze' di coach/dirigente/collaboratore (come l'atleta: shift da paymentShift, cumulato per anno di pagamento, netForMonth via computeInpsWithholding, badge >5K/>15K cash). (#2) Riga 'Netto da erogare (firmate)' nel riquadro Totale Percepito dei 4 modali (somma amount_net firmati). (#3) Banner 'NETTO DA EROGARE (ancora da pagare)' + 'Totale periodo' in admin/quietanze.tsx sui receipts filtrati; /admin/quietanze/all ora restituisce amount_net per tutti i ruoli. Lint OK, smoke test OK. Frontend+Backend → redeploy Vercel+Render.
+
 ## Original Problem Statement
 RegistraTEAM è un'applicazione full-stack per la gestione delle società sportive di pallavolo italiane. Focus:
 - Compliance GDPR rigorosa (documenti dinamici, consenso, minori)

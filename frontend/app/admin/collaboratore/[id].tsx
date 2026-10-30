@@ -28,6 +28,7 @@ import { Ionicons } from '../../../src/components/Icon';
 import { SportIcon } from '../../../src/components/SportIcon';
 
 import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
+import { computeInpsWithholding } from '../../../src/utils/inpsWithholding';
 interface Collaboratore {
   id: string;
   email: string;
@@ -2056,6 +2057,11 @@ export default function AdminCollaboratoreDetail() {
                 <Text style={{ color: '#666', fontSize: 11 }}>
                   {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate
                 </Text>
+                <View style={{ height: 1, backgroundColor: '#C8E6C9', marginVertical: 8 }} />
+                <Text style={{ color: '#1B5E20', fontWeight: '700', fontSize: 13 }}>💸 Netto da erogare (firmate)</Text>
+                <Text style={{ color: '#2E7D32', fontWeight: 'bold', fontSize: 20, marginTop: 2 }}>
+                  {formatCurrency(signedReceipts.filter((r: any) => r.receipt_signed).reduce((s: number, r: any) => s + (typeof r.amount_net === 'number' ? r.amount_net : (r.amount_gross || r.amount || 0)), 0))}
+                </Text>
               </View>
 
               {/* Lista quietanze compatta - con calcolo soglie dinamico */}
@@ -2069,34 +2075,13 @@ export default function AdminCollaboratoreDetail() {
                   return a.month - b.month;
                 });
                 
-                // Calculate threshold months per year
+                // Threshold per anno — 🆕 criterio di CASSA (mappe sotto, dopo allMonths)
                 const thresholdsByYear: { [year: number]: { first5k: number | null, first15k: number | null } } = {};
-                const cumulativeByYear: { [year: number]: number } = {};
+                void thresholdsByYear;
                 const priorComp = collaboratore?.other_annual_compensation || 0;
+                const monthlyComp = collaboratore?.monthly_compensation || 0;
                 const contractYear = collaboratore?.contract_start_date ? parseInt(collaboratore.contract_start_date.split('-')[0]) : new Date().getFullYear();
-                
-                // Add prior compensation to first year
-                if (priorComp > 0) {
-                  cumulativeByYear[contractYear] = priorComp;
-                }
-                
-                for (const r of sortedForCalc) {
-                  if (!thresholdsByYear[r.year]) {
-                    thresholdsByYear[r.year] = { first5k: null, first15k: null };
-                  }
-                  if (!cumulativeByYear[r.year]) {
-                    cumulativeByYear[r.year] = r.year === contractYear ? (priorComp || 0) : 0;
-                  }
-                  
-                  cumulativeByYear[r.year] += (r.amount_gross || r.amount || 0);
-                  
-                  if (cumulativeByYear[r.year] > 5000 && thresholdsByYear[r.year].first5k === null) {
-                    thresholdsByYear[r.year].first5k = r.month;
-                  }
-                  if (cumulativeByYear[r.year] > 15000 && thresholdsByYear[r.year].first15k === null) {
-                    thresholdsByYear[r.year].first15k = r.month;
-                  }
-                }
+                const _insuredElse = !!(collaboratore as any)?.inps_insured_elsewhere;
                 
                 // 🆕 Genera TUTTI i mesi del contratto (firmati e non) per visualizzazione completa
                 const MONTH_NAMES = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
@@ -2120,9 +2105,46 @@ export default function AdminCollaboratoreDetail() {
                   return b.month - a.month;
                 });
 
+                // 🆕 Mappe criterio di CASSA (dic→anno+1, pregresso solo se py==anno assunzione)
+                const _payItems = allMonths.map(({ year, month, receipt }) => ({
+                  year, month, receipt,
+                  py: (paymentShift === 1 && month === 12) ? year + 1 : year,
+                  pm: (paymentShift === 1) ? (month === 12 ? 1 : month + 1) : month,
+                }));
+                const _byPay = [..._payItems].sort((a, b) => (a.py !== b.py ? a.py - b.py : a.pm - b.pm));
+                const beforeByKey: { [k: string]: number } = {};
+                const afterByKey: { [k: string]: number } = {};
+                const cross5kKey: { [py: number]: string } = {};
+                const cross15kKey: { [py: number]: string } = {};
+                const cumByPy: { [py: number]: number } = {};
+                for (const it of _byPay) {
+                  if (cumByPy[it.py] === undefined) cumByPy[it.py] = (it.py === contractYear ? (priorComp || 0) : 0);
+                  const amt = it.receipt ? (it.receipt.amount_gross || it.receipt.amount || 0) : monthlyComp;
+                  const key = `${it.year}-${it.month}`;
+                  beforeByKey[key] = cumByPy[it.py];
+                  cumByPy[it.py] += amt;
+                  afterByKey[key] = cumByPy[it.py];
+                  if (cumByPy[it.py] > 5000 && cross5kKey[it.py] === undefined) cross5kKey[it.py] = key;
+                  if (cumByPy[it.py] > 15000 && cross15kKey[it.py] === undefined) cross15kKey[it.py] = key;
+                }
+                const payYearOf = (y: number, m: number) => (paymentShift === 1 && m === 12) ? y + 1 : y;
+                const netForMonth = (y: number, m: number, gross: number, signedNet: any): number => {
+                  if (typeof signedNet === 'number') return signedNet;
+                  const bd = computeInpsWithholding(beforeByKey[`${y}-${m}`] || 0, gross, _insuredElse);
+                  return bd.applies ? bd.amount_net : gross;
+                };
+
                 return sortedAllMonths.map(({ year, month, receipt }, index: number) => {
+                  const _key = `${year}-${month}`;
+                  const _py = payYearOf(year, month);
+                  const isThreshold5kMonth = cross5kKey[_py] === _key;
+                  const isThreshold15kMonth = cross15kKey[_py] === _key;
+                  const isAfter5k = (afterByKey[_key] || 0) > 5000.005;
+                  const isAfter15k = (afterByKey[_key] || 0) > 15000.005;
                   // Mese NON firmato → riga grigia placeholder
                   if (!receipt) {
+                    const _projNet = netForMonth(year, month, monthlyComp, null);
+                    const _projShowNet = _projNet < monthlyComp - 0.005;
                     return (
                       <View
                         key={`empty-${year}-${month}`}
@@ -2132,7 +2154,7 @@ export default function AdminCollaboratoreDetail() {
                           paddingHorizontal: 10,
                           marginBottom: 6,
                           borderLeftWidth: 3,
-                          borderLeftColor: '#BDBDBD',
+                          borderLeftColor: isThreshold15kMonth ? '#8E44AD' : isThreshold5kMonth ? '#FF9800' : '#BDBDBD',
                           borderRadius: 6,
                         }}
                       >
@@ -2144,16 +2166,20 @@ export default function AdminCollaboratoreDetail() {
                             Non firmata
                           </Text>
                         </View>
+                        {_projShowNet && (
+                          <View style={{ marginTop: 4, backgroundColor: '#E8F5E9', borderRadius: 6, paddingVertical: 3, paddingHorizontal: 6, alignSelf: 'flex-start' }}>
+                            <Text style={{ fontSize: 8, fontWeight: '700', color: '#1B5E20' }}>DA PAGARE (NETTO)</Text>
+                            <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#2E7D32' }}>{formatCurrency(_projNet)}</Text>
+                          </View>
+                        )}
                       </View>
                     );
                   }
 
-                  // Mese FIRMATO → riga colorata in base alle soglie
-                  const yearThresholds = thresholdsByYear[receipt.year] || { first5k: null, first15k: null };
-                  const isAfter5k = yearThresholds.first5k !== null && receipt.month >= yearThresholds.first5k;
-                  const isAfter15k = yearThresholds.first15k !== null && receipt.month >= yearThresholds.first15k;
-                  const isThreshold5kMonth = yearThresholds.first5k === receipt.month;
-                  const isThreshold15kMonth = yearThresholds.first15k === receipt.month;
+                  // Mese FIRMATO → riga colorata (criterio di cassa)
+                  const _sGross = (receipt.amount_gross || receipt.amount || 0);
+                  const _sNet = netForMonth(receipt.year, receipt.month, _sGross, (typeof receipt.amount_net === 'number' ? receipt.amount_net : null));
+                  const _sShowNet = _sNet < _sGross - 0.005;
 
                   return (
                     <View
@@ -2184,9 +2210,17 @@ export default function AdminCollaboratoreDetail() {
                             </View>
                           )}
                         </View>
-                        <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#2E7D32' }}>
-                          {formatCurrency((receipt.amount_gross || receipt.amount || 0))}
-                        </Text>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#2E7D32' }}>
+                            {formatCurrency(_sGross)}
+                          </Text>
+                          {_sShowNet && (
+                            <View style={{ marginTop: 3, backgroundColor: '#E8F5E9', borderRadius: 6, paddingVertical: 2, paddingHorizontal: 5 }}>
+                              <Text style={{ fontSize: 8, fontWeight: '700', color: '#1B5E20' }}>DA PAGARE (NETTO)</Text>
+                              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#2E7D32' }}>{formatCurrency(_sNet)}</Text>
+                            </View>
+                          )}
+                        </View>
                         <TouchableOpacity
                           onPress={() => handleRequestDeleteReceipt(receipt)}
                           style={{ marginLeft: 8, padding: 4 }}
