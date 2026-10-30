@@ -1080,6 +1080,10 @@ class Athlete(BaseModel):
     is_compensated: bool = False  # Flag: atleta con compensi attivi
     monthly_compensation: float = 0.0  # Compenso mensile
     other_annual_compensation: float = 0.0  # Compensi già percepiti da altre ASD/SSD nell'anno
+    # 🆕 Anticipo / rimborso (split pagamento): una parte del compenso versata subito, saldo dopo
+    advance_split_enabled: bool = False
+    advance_amount: float = 0.0
+    advance_label: Optional[str] = "Anticipo"
     contract_start_date: Optional[str] = None  # Data inizio contratto (ISO string)
     contract_end_date: Optional[str] = None  # Data fine contratto (ISO string)
     fees_waived: bool = False  # Se true, l'atleta non paga le quote
@@ -4895,6 +4899,10 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
                 "postal_code": 1,
                 "province": 1,
                 "phone": 1,
+                # 🆕 Anticipo / rimborso (split pagamento)
+                "advance_split_enabled": 1,
+                "advance_amount": 1,
+                "advance_label": 1,
             }
             if include_images:
                 athlete_proj["athlete_photo"] = 1
@@ -4933,7 +4941,9 @@ async def get_me(request: Request, current_user = Depends(get_current_user)):
                 # Necessario perché compensation.tsx legge questi campi direttamente dal /auth/me
                 for comp_field in ["monthly_compensation", "is_compensated", "athlete_type",
                                   "contract_start_date", "contract_end_date", "iban",
-                                  "other_annual_compensation", "team_id"]:
+                                  "other_annual_compensation", "team_id",
+                                  "rent_split_enabled", "rent_amount",
+                                  "advance_split_enabled", "advance_amount", "advance_label"]:
                     if athlete.get(comp_field) is not None:
                         val = athlete[comp_field]
                         # Normalize date fields to ISO string
@@ -11527,6 +11537,20 @@ async def update_athlete_compensation_settings(athlete_id: str, data: dict, curr
         update_data["iban_holder_last_name"] = val.upper() if val else None
     if "bank_name" in data:
         update_data["bank_name"] = data["bank_name"]
+
+    # 🆕 Anticipo / rimborso (split pagamento): l'anticipo è una PARTE del
+    # compenso totale, da versare subito (es. affitto entro il 5, o un anticipo
+    # straordinario); il saldo (netto − anticipo) si paga dopo. I contributi
+    # restano calcolati sul compenso TOTALE lordo.
+    if "advance_split_enabled" in data:
+        update_data["advance_split_enabled"] = bool(data["advance_split_enabled"])
+    if "advance_amount" in data:
+        try:
+            update_data["advance_amount"] = float(data["advance_amount"]) if data["advance_amount"] not in (None, "") else 0.0
+        except (ValueError, TypeError):
+            update_data["advance_amount"] = 0.0
+    if "advance_label" in data:
+        update_data["advance_label"] = (str(data["advance_label"]).strip() or "Anticipo") if data["advance_label"] else "Anticipo"
     
     if update_data:
         # 🆕 Se cambiano compenso mensile o periodo contratto, l'accettazione (B)
@@ -21898,8 +21922,17 @@ async def admin_get_all_custom_receipts(
             "month": r.get("month"),
             "year": r.get("year"),
             "amount_gross": amt,
+            "amount_net": r.get("amount_net", amt),
             "standard_amount": std,
             "is_custom": amt != std,
+            # 🆕 Anticipo / rimborso (split)
+            "advance_split_enabled": bool(athlete.get("advance_split_enabled")),
+            "advance_amount": float(athlete.get("advance_amount") or 0),
+            "advance_label": athlete.get("advance_label") or "Anticipo",
+            "advance_paid": r.get("advance_paid", False),
+            "advance_paid_date": r.get("advance_paid_date"),
+            "balance_paid": r.get("balance_paid", False),
+            "balance_paid_date": r.get("balance_paid_date"),
             "receipt_signed": r.get("receipt_signed", False),
             "receipt_signed_date": r.get("receipt_signed_date"),
             "exceeded_5000": r.get("exceeded_5000", False),
@@ -21947,13 +21980,19 @@ async def admin_mark_quietanza_payment(data: dict = Body(...), current_user = De
         raise HTTPException(status_code=400, detail="Dati non validi")
     year = int(data.get("year")); month = int(data.get("month"))
     paid = bool(data.get("paid", True))
+    tranche = data.get("tranche")  # None | 'advance' | 'balance' (solo atleti con split anticipo)
     coll, idf = ROLE_RECEIPT_MAP[role]
     now = datetime.now(timezone.utc).isoformat()
-    upd = {"payment_made": paid, "payment_made_date": now if paid else None, "payment_made_by": current_user["id"]}
+    if tranche == "advance":
+        upd = {"advance_paid": paid, "advance_paid_date": now if paid else None, "advance_paid_by": current_user["id"]}
+    elif tranche == "balance":
+        upd = {"balance_paid": paid, "balance_paid_date": now if paid else None, "balance_paid_by": current_user["id"]}
+    else:
+        upd = {"payment_made": paid, "payment_made_date": now if paid else None, "payment_made_by": current_user["id"]}
     res = await db[coll].update_one({idf: uid, "year": year, "month": month}, {"$set": upd})
     if res.matched_count == 0:
         raise HTTPException(status_code=404, detail="Quietanza non trovata")
-    return {"ok": True, "payment_made": paid}
+    return {"ok": True, "payment_made": paid, "tranche": tranche}
 
 
 @api_router.post("/admin/quietanze/mark-payment-bulk")

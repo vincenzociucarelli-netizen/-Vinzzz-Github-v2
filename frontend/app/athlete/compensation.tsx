@@ -23,6 +23,7 @@ import CompensoInformativa from '../../src/components/CompensoInformativa';
 import InpsNetLines from '../../src/components/InpsNetLines';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
+import { computeInpsWithholding } from '../../src/utils/inpsWithholding';
 import { handleAnagraficaError } from '../../src/utils/anagraficaError';
 import ExternalCompensationStep from '../../src/components/ExternalCompensationStep';
 const MONTH_NAMES = [
@@ -1317,6 +1318,26 @@ export default function AthleteCompensation() {
       }
     }
     const monthlyAmount = (record?.amount_gross || record?.amount) ?? ((profile?.monthly_compensation || 0) + coachExtra);
+
+    // 🆕 Netto da pagare = lordo − quota contributi INPS a carico dell'atleta.
+    // Per i mesi firmati uso il valore salvato (amount_net); per i pendenti/futuri
+    // lo calcolo sul cumulato proiettato (pregresso se anno contratto + mesi precedenti + ASD esterne).
+    const _prior = profile?.other_annual_compensation || 0;
+    const _csy = profile?.contract_start_date ? parseInt(profile.contract_start_date.split('-')[0]) : null;
+    const _base = (profile?.monthly_compensation || 0) + coachExtra;
+    const _earlier = records
+      .filter(r => r.year === displayYear && (r.month || 0) < month)
+      .reduce((s, r) => s + (r.amount_gross || r.amount || _base), 0);
+    const _before = ((displayYear === _csy) ? _prior : 0) + (externalByYear[displayYear] || 0) + _earlier;
+    const _inps = computeInpsWithholding(_before, monthlyAmount, !!(profile as any)?.inps_insured_elsewhere);
+    const _signedNet = (status === 'signed' && typeof record?.amount_net === 'number') ? record.amount_net : null;
+    const netToPay = _signedNet != null ? _signedNet : (_inps.applies ? _inps.amount_net : monthlyAmount);
+    const showNet = netToPay < monthlyAmount - 0.005;
+    // 🆕 Split anticipo: anticipo (parte del compenso, versato subito) + saldo (netto − anticipo)
+    const advanceSplit = !!(profile as any)?.advance_split_enabled;
+    const advanceLbl = (profile as any)?.advance_label || 'Anticipo';
+    const advanceAmt = advanceSplit ? Math.min((profile as any)?.advance_amount || 0, monthlyAmount) : 0;
+    const saldoAmt = advanceSplit ? Math.max(0, netToPay - advanceAmt) : 0;
     
     // Check if this month is after threshold was crossed IN THE SAME YEAR (for highlighting)
     // Uses PROJECTED cumulative (signed + unsigned) so the user can see in advance
@@ -1405,6 +1426,24 @@ export default function AthleteCompensation() {
         </View>
         
         <Text style={styles.monthAmount}>{formatCurrency(monthlyAmount)}</Text>
+        {showNet && (
+          <View style={styles.netBox}>
+            <Text style={styles.netLabel}>DA PAGARE (NETTO)</Text>
+            <Text style={styles.netValue}>{formatCurrency(netToPay)}</Text>
+          </View>
+        )}
+        {advanceSplit && advanceAmt > 0 && (
+          <View style={styles.splitBox}>
+            <View style={styles.splitRow}>
+              <Text style={styles.splitLabel}>💶 {advanceLbl} · subito</Text>
+              <Text style={styles.splitVal}>{formatCurrency(advanceAmt)}{record?.advance_paid ? ' ✓' : ''}</Text>
+            </View>
+            <View style={styles.splitRow}>
+              <Text style={styles.splitLabel}>Saldo · a seguire</Text>
+              <Text style={styles.splitVal}>{formatCurrency(saldoAmt)}{record?.balance_paid ? ' ✓' : ''}</Text>
+            </View>
+          </View>
+        )}
         
         {status === 'signed' && record && (
           <Text style={styles.signedDate}>
@@ -2296,6 +2335,50 @@ const styles = StyleSheet.create({
   signedDate: {
     fontSize: 9,
     color: '#34C759',
+  },
+  netBox: {
+    marginTop: 4,
+    backgroundColor: '#E8F5E9',
+    borderRadius: 6,
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+    alignSelf: 'stretch',
+  },
+  netLabel: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: '#1B5E20',
+  },
+  netValue: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+  },
+  splitBox: {
+    marginTop: 4,
+    backgroundColor: '#FFF8E1',
+    borderRadius: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    alignSelf: 'stretch',
+    borderWidth: 1,
+    borderColor: '#FFE082',
+  },
+  splitRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 1,
+  },
+  splitLabel: {
+    fontSize: 9,
+    color: '#8D6E00',
+    fontWeight: '600',
+  },
+  splitVal: {
+    fontSize: 11,
+    color: '#5D4037',
+    fontWeight: 'bold',
   },
   pendingText: {
     fontSize: 9,

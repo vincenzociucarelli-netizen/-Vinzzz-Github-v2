@@ -23,6 +23,7 @@ import CompensoInformativa from '../../src/components/CompensoInformativa';
 import InpsNetLines from '../../src/components/InpsNetLines';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
+import { computeInpsWithholding } from '../../src/utils/inpsWithholding';
 import { handleAnagraficaError } from '../../src/utils/anagraficaError';
 import ExternalCompensationStep from '../../src/components/ExternalCompensationStep';
 import PensionDeclarationModal from '../../src/components/PensionDeclarationModal';
@@ -975,6 +976,19 @@ export default function DirigenteCompensation() {
     const record = records.find(r => matchesMonth(r.month, month) && r.year === displayYear);
     // Use custom amount from record if exists (set by Admin), otherwise use profile monthly
     const monthlyAmount = record?.amount_gross || record?.amount || profile?.monthly_compensation || 0;
+
+    // 🆕 Netto da pagare = lordo − quota contributi INPS a carico del dirigente.
+    const _prior = profile?.other_annual_compensation || 0;
+    const _csy = profile?.contract_start_date ? parseInt(profile.contract_start_date.split('-')[0]) : null;
+    const _base = profile?.monthly_compensation || 0;
+    const _earlier = records
+      .filter(r => r.year === displayYear && (r.month || 0) < month)
+      .reduce((s, r) => s + (r.amount_gross || r.amount || _base), 0);
+    const _before = ((displayYear === _csy) ? _prior : 0) + (externalByYear[displayYear] || 0) + _earlier;
+    const _inps = computeInpsWithholding(_before, monthlyAmount, !!(profile as any)?.inps_insured_elsewhere);
+    const _signedNet = (status === 'signed' && typeof record?.amount_net === 'number') ? record.amount_net : null;
+    const netToPay = _signedNet != null ? _signedNet : (_inps.applies ? _inps.amount_net : monthlyAmount);
+    const showNet = netToPay < monthlyAmount - 0.005;
     
     // Uses PROJECTED cumulative (signed + unsigned) so user sees in advance
     // which months are above 5k/15k even before signing.
@@ -1048,6 +1062,12 @@ export default function DirigenteCompensation() {
         </View>
         
         <Text style={styles.monthAmount}>{formatCurrency(monthlyAmount)}</Text>
+        {showNet && (
+          <View style={styles.netBox}>
+            <Text style={styles.netLabel}>DA PAGARE (NETTO)</Text>
+            <Text style={styles.netValue}>{formatCurrency(netToPay)}</Text>
+          </View>
+        )}
         
         {status === 'signed' && record && (
           <Text style={styles.signedDate}>
@@ -1917,6 +1937,24 @@ const styles = StyleSheet.create({
   signedDate: {
     fontSize: 9,
     color: '#34C759',
+  },
+  netBox: {
+    marginTop: 4,
+    backgroundColor: '#E8F5E9',
+    borderRadius: 6,
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+    alignSelf: 'stretch',
+  },
+  netLabel: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: '#1B5E20',
+  },
+  netValue: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#2E7D32',
   },
   pendingText: {
     fontSize: 9,

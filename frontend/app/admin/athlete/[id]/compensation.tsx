@@ -12,6 +12,7 @@ import {
   Platform,
   Modal,
   Image,
+  Switch,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../../src/services/api';
@@ -86,6 +87,10 @@ export default function AthleteCompensation() {
   const [ibanHolderFirstName, setIbanHolderFirstName] = useState('');
   const [ibanHolderLastName, setIbanHolderLastName] = useState('');
   const [bankName, setBankName] = useState('');
+  // 🆕 Anticipo / rimborso anticipato (split pagamento)
+  const [advanceSplitEnabled, setAdvanceSplitEnabled] = useState(false);
+  const [advanceAmount, setAdvanceAmount] = useState('');
+  const [advanceLabel, setAdvanceLabel] = useState('Anticipo');
   
   // Signed receipts
   const [signedReceipts, setSignedReceipts] = useState<SignedReceipt[]>([]);
@@ -151,6 +156,10 @@ export default function AthleteCompensation() {
       setIbanHolderFirstName(athleteData.iban_holder_first_name || '');
       setIbanHolderLastName(athleteData.iban_holder_last_name || '');
       setBankName(athleteData.bank_name || '');
+      // 🆕 Anticipo / rimborso anticipato
+      setAdvanceSplitEnabled(!!athleteData.advance_split_enabled);
+      setAdvanceAmount(athleteData.advance_amount ? String(athleteData.advance_amount).replace('.', ',') : '');
+      setAdvanceLabel(athleteData.advance_label || 'Anticipo');
       
       // Load signed receipts
       try {
@@ -212,6 +221,9 @@ export default function AthleteCompensation() {
         iban_holder_first_name: ibanHolderFirstName || null,
         iban_holder_last_name: ibanHolderLastName || null,
         bank_name: bankName || null,
+        advance_split_enabled: advanceSplitEnabled,
+        advance_amount: advanceSplitEnabled ? (parseFloat(String(advanceAmount).replace(',', '.')) || 0) : 0,
+        advance_label: advanceLabel || 'Anticipo',
       });
       
       showAlert('Successo', 'Compensi aggiornati con successo');
@@ -555,6 +567,51 @@ export default function AthleteCompensation() {
               <Text style={styles.inputHint}>
                 Importo dichiarato dall'atleta percepito prima dell'assunzione (Gen-Ago se assunto a Set)
               </Text>
+
+              {/* 🆕 Anticipo / rimborso anticipato (split pagamento) */}
+              <View style={styles.rentBox}>
+                <View style={styles.rentHeader}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <Text style={styles.rentTitle}>💶 Anticipo / rimborso</Text>
+                    <Text style={styles.rentHint}>
+                      Una parte del compenso (es. affitto, o un anticipo straordinario) viene versata subito; il saldo (netto − anticipo) si paga dopo. I contributi restano calcolati sul compenso totale.
+                    </Text>
+                  </View>
+                  <Switch
+                    value={advanceSplitEnabled}
+                    onValueChange={setAdvanceSplitEnabled}
+                    trackColor={{ false: '#ccc', true: '#81C784' }}
+                    thumbColor={advanceSplitEnabled ? '#2E7D32' : '#f4f3f4'}
+                  />
+                </View>
+                {advanceSplitEnabled && (
+                  <View style={{ marginTop: 10 }}>
+                    <Text style={styles.inputLabel}>Nome anticipo (es. Affitto)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={advanceLabel}
+                      onChangeText={setAdvanceLabel}
+                      placeholder="Anticipo"
+                      placeholderTextColor="#999"
+                      maxLength={30}
+                    />
+                    <Text style={[styles.inputLabel, { marginTop: 12 }]}>Importo anticipo mensile (€)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={advanceAmount}
+                      onChangeText={(text) => {
+                        const cleaned = text.replace(/[^0-9,]/g, '');
+                        const parts = cleaned.split(',');
+                        setAdvanceAmount(parts.length > 2 ? parts[0] + ',' + parts.slice(1).join('') : cleaned);
+                      }}
+                      keyboardType="decimal-pad"
+                      placeholder="€ 0,00"
+                      placeholderTextColor="#999"
+                      selectTextOnFocus={true}
+                    />
+                  </View>
+                )}
+              </View>
 
               {/* 🚫 28/06/2026 — "Dati Bancari" RIMOSSO dall'EDIT mode (semplificazione editor).
                   L'IBAN viene gestito dall'atleta dal proprio profilo user.
@@ -1039,6 +1096,28 @@ const styles = StyleSheet.create({
   inputHint: {
     fontSize: 12,
     color: '#999',
+    marginTop: 4,
+  },
+  rentBox: {
+    marginTop: 16,
+    backgroundColor: '#F1F8E9',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#C5E1A5',
+    padding: 12,
+  },
+  rentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rentTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#33691E',
+  },
+  rentHint: {
+    fontSize: 11,
+    color: '#558B2F',
     marginTop: 4,
   },
   sectionTitle: {
