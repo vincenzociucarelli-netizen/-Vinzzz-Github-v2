@@ -25,6 +25,7 @@ import CompensoInformativa from '../../src/components/CompensoInformativa';
 import InpsNetLines from '../../src/components/InpsNetLines';
 
 import { formatCurrency, formatAmount } from '../../src/utils/formatCurrency';
+import { computeInpsWithholding } from '../../src/utils/inpsWithholding';
 import { handleAnagraficaError } from '../../src/utils/anagraficaError';
 import ExternalCompensationStep from '../../src/components/ExternalCompensationStep';
 const MONTH_NAMES = [
@@ -1290,6 +1291,23 @@ export default function CoachCompensation() {
     const record = records.find(r => matchesMonth(r.month, month) && r.year === displayYear);
     // Use record amount if exists, otherwise use profile's monthly compensation
     const monthlyAmount = record?.amount_gross || record?.amount || profile?.monthly_compensation || 0;
+
+    // 🆕 Netto da pagare al collaboratore (lordo − quota contributi INPS a suo
+    // carico, 1/3). Il lordo resta mostrato perché serve per il conteggio soglie
+    // €5.000/€15.000; sotto mostriamo l'importo NETTO effettivo da erogare.
+    const _prior = (profile as any)?.other_annual_compensation || 0;
+    const _monthlyDefault = profile?.monthly_compensation || 0;
+    const _csd = (profile as any)?.contract_start_date;
+    const _contractStartYear = _csd ? new Date(_csd).getFullYear() : displayYear;
+    const _priorApplies = displayYear === _contractStartYear;
+    const _earlierGross = records
+      .filter(r => r.year === displayYear && (r.month || 0) < month)
+      .reduce((s, r) => s + (r.amount_gross || r.amount || _monthlyDefault), 0);
+    const _beforeForMonth = (_priorApplies ? _prior : 0) + _earlierGross;
+    const _inps = computeInpsWithholding(_beforeForMonth, monthlyAmount, !!(profile as any)?.inps_insured_elsewhere);
+    const _signedNet = (status === 'signed' && typeof (record as any)?.amount_net === 'number') ? (record as any).amount_net : null;
+    const netToPay = _signedNet !== null ? _signedNet : (_inps.applies ? _inps.amount_net : monthlyAmount);
+    const showNet = netToPay < monthlyAmount - 0.005;
     
     // Check if this month is after threshold was crossed IN THE SAME YEAR (for highlighting)
     // Uses PROJECTED cumulative (signed + unsigned) so the user can see in advance
@@ -1378,6 +1396,12 @@ export default function CoachCompensation() {
         </View>
         
         <Text style={styles.monthAmount}>{formatCurrency(monthlyAmount)}</Text>
+        {showNet && (
+          <View style={styles.netBox}>
+            <Text style={styles.netLabel}>Da pagare (netto)</Text>
+            <Text style={styles.netValue}>{formatCurrency(netToPay)}</Text>
+          </View>
+        )}
         
         {status === 'signed' && record && (
           <Text style={styles.signedDate}>
@@ -2217,6 +2241,26 @@ const styles = StyleSheet.create({
   signedDate: {
     fontSize: 9,
     color: '#34C759',
+  },
+  netBox: {
+    marginTop: 2,
+    marginBottom: 4,
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+    backgroundColor: '#E8F5E9',
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  netLabel: {
+    fontSize: 8,
+    color: '#2E7D32',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  netValue: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#2E7D32',
   },
   pendingText: {
     fontSize: 9,
