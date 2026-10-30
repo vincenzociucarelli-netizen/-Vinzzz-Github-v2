@@ -927,6 +927,25 @@ export default function CoachCompensation() {
     };
   };
 
+  // 🆕 Criterio di CASSA: cumulativo LORDO già maturato nello stesso ANNO DI PAGAMENTO,
+  // PRIMA della competenza (cm, cy). Dicembre (pagato a gennaio) conta nell'anno dopo e
+  // in quell'anno il PREGRESSO non si riporta.
+  const getCashCumulativeBefore = (cm: number, cy: number): number => {
+    const py = (paymentShift === 1 && cm === 12) ? cy + 1 : cy;
+    const monthlyComp = profile?.monthly_compensation || 0;
+    const prior = (profile as any)?.other_annual_compensation || 0;
+    const csd = (profile as any)?.contract_start_date;
+    const csy = csd ? new Date(csd).getFullYear() : null;
+    let before = (py === csy ? prior : 0) + (externalByYear[py] || 0);
+    const comp = getCashCompetenceForYear(py);
+    for (const { cy: ey, cm: em } of comp) {
+      if (ey === cy && em === cm) break;
+      const r = records.find(rr => rr.year === ey && rr.month === em);
+      before += (r?.amount_gross || r?.amount || monthlyComp);
+    }
+    return before;
+  };
+
   const renderThresholdWarnings = () => {
     if (!thresholdStatus) return null;
     
@@ -1295,26 +1314,17 @@ export default function CoachCompensation() {
     // 🆕 Netto da pagare al collaboratore (lordo − quota contributi INPS a suo
     // carico, 1/3). Il lordo resta mostrato perché serve per il conteggio soglie
     // €5.000/€15.000; sotto mostriamo l'importo NETTO effettivo da erogare.
-    const _prior = (profile as any)?.other_annual_compensation || 0;
-    const _monthlyDefault = profile?.monthly_compensation || 0;
-    const _csd = (profile as any)?.contract_start_date;
-    const _contractStartYear = _csd ? new Date(_csd).getFullYear() : displayYear;
-    const _priorApplies = displayYear === _contractStartYear;
-    const _earlierGross = records
-      .filter(r => r.year === displayYear && (r.month || 0) < month)
-      .reduce((s, r) => s + (r.amount_gross || r.amount || _monthlyDefault), 0);
-    const _beforeForMonth = (_priorApplies ? _prior : 0) + _earlierGross;
+    const _beforeForMonth = getCashCumulativeBefore(month, displayYear);
     const _inps = computeInpsWithholding(_beforeForMonth, monthlyAmount, !!(profile as any)?.inps_insured_elsewhere);
     const _signedNet = (status === 'signed' && typeof (record as any)?.amount_net === 'number') ? (record as any).amount_net : null;
     const netToPay = _signedNet !== null ? _signedNet : (_inps.applies ? _inps.amount_net : monthlyAmount);
     const showNet = netToPay < monthlyAmount - 0.005;
     
-    // Check if this month is after threshold was crossed IN THE SAME YEAR (for highlighting)
-    // Uses PROJECTED cumulative (signed + unsigned) so the user can see in advance
-    // which months are above 5k/15k even before they sign them.
-    const thresholdsByYear = getProjectedThresholdMonths();
-    const isAfter5k = isMonthAfterThreshold(month, displayYear, thresholdsByYear, '5k');
-    const isAfter15k = isMonthAfterThreshold(month, displayYear, thresholdsByYear, '15k');
+    // 🆕 Soglie per ANNO DI PAGAMENTO (coerente col netto): dicembre riparte da zero.
+    const _afterForMonth = _beforeForMonth + monthlyAmount;
+    const isAfter5k = _afterForMonth > 5000.005;
+    const isAfter15k = _afterForMonth > 15000.005;
+    void getProjectedThresholdMonths; void isMonthAfterThreshold;
     
     // Use calculated thresholds for badge display (not DB values which may be stale)
     const showBadge5k = isAfter5k && !isAfter15k;
