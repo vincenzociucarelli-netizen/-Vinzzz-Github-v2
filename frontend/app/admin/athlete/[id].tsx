@@ -42,6 +42,7 @@ import { useAuthStore } from '../../../src/store/authStore';
 import { COUNTRIES, DEFAULT_COUNTRY } from '../../../src/constants/countries';
 
 import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
+import { computeInpsWithholding } from '../../../src/utils/inpsWithholding';
 
 // Sub-component: Shows parents with their data password status and reset buttons
 function ParentsPasswordSection({ athleteId, athleteName, token }: { athleteId: string; athleteName: string; token: any }) {
@@ -6246,24 +6247,40 @@ export default function AdminAthleteDetail() {
                   }
                 }
                 const thresholdsByYear: { [year: number]: { first5k: number | null; first15k: number | null } } = {};
-                const cumulativeByYear: { [year: number]: number } = {};
-                for (const { year, month } of allContractMonths) {
-                  if (!thresholdsByYear[year]) thresholdsByYear[year] = { first5k: null, first15k: null };
-                  if (cumulativeByYear[year] === undefined) {
-                    // Inizio anno: includi pregresso (solo nell'anno di inizio contratto) + esterni di quest'anno
-                    cumulativeByYear[year] = (year === contractYear ? priorComp : 0) + (externalByYearAdmin[year] || 0);
-                  }
-                  // Importo del mese: signed > custom > fallback monthlyComp
-                  const r = signedReceipts.find((x: any) => x.year === year && x.month === month);
-                  const amt = Number((r?.amount_gross ?? r?.amount ?? monthlyComp) || 0);
-                  cumulativeByYear[year] += amt;
-                  if (cumulativeByYear[year] > 5000 && thresholdsByYear[year].first5k === null) {
-                    thresholdsByYear[year].first5k = month;
-                  }
-                  if (cumulativeByYear[year] > 15000 && thresholdsByYear[year].first15k === null) {
-                    thresholdsByYear[year].first15k = month;
-                  }
+                // 🆕 Criterio di CASSA: dicembre (pagato a gennaio) conta nell'anno di
+                // PAGAMENTO successivo; in quell'anno il pregresso non si riporta. Accumuliamo
+                // in ordine di pagamento e teniamo il "lordo già maturato PRIMA" di ogni mese.
+                const _shift = societySettings?.compensation_payment_timing === 'next_month' ? 1 : 0;
+                const _insuredElse = !!(athlete as any)?.inps_insured_elsewhere;
+                const _payItems = allContractMonths.map(({ year, month }) => ({
+                  year, month,
+                  py: (_shift === 1 && month === 12) ? year + 1 : year,
+                  pm: (_shift === 1) ? (month === 12 ? 1 : month + 1) : month,
+                }));
+                const _byPay = [..._payItems].sort((a, b) => (a.py !== b.py ? a.py - b.py : a.pm - b.pm));
+                const beforeByKey: { [k: string]: number } = {};
+                const afterByKey: { [k: string]: number } = {};
+                const cross5kKey: { [py: number]: string } = {};
+                const cross15kKey: { [py: number]: string } = {};
+                const cumByPy: { [py: number]: number } = {};
+                for (const it of _byPay) {
+                  if (cumByPy[it.py] === undefined) cumByPy[it.py] = (it.py === contractYear ? priorComp : 0) + (externalByYearAdmin[it.py] || 0);
+                  const rr = signedReceipts.find((x: any) => x.year === it.year && x.month === it.month);
+                  const amt = Number((rr?.amount_gross ?? rr?.amount ?? monthlyComp) || 0);
+                  const key = `${it.year}-${it.month}`;
+                  beforeByKey[key] = cumByPy[it.py];
+                  cumByPy[it.py] += amt;
+                  afterByKey[key] = cumByPy[it.py];
+                  if (cumByPy[it.py] > 5000 && cross5kKey[it.py] === undefined) cross5kKey[it.py] = key;
+                  if (cumByPy[it.py] > 15000 && cross15kKey[it.py] === undefined) cross15kKey[it.py] = key;
                 }
+                const payYearOf = (y: number, m: number) => (_shift === 1 && m === 12) ? y + 1 : y;
+                const netForMonth = (y: number, m: number, gross: number, signedNet: any): number => {
+                  if (typeof signedNet === 'number') return signedNet;
+                  const bd = computeInpsWithholding(beforeByKey[`${y}-${m}`] || 0, gross, _insuredElse);
+                  return bd.applies ? bd.amount_net : gross;
+                };
+                void thresholdsByYear;
 
                 // Genera TUTTI i mesi del contratto
                 const allMonths: Array<{ year: number; month: number; receipt: any | null }> = allContractMonths.map(({ year, month }) => {
@@ -6291,10 +6308,14 @@ export default function AdminAthleteDetail() {
                   // (replica grafica user: i mesi futuri che supereranno >5K/>15K devono
                   // comunque essere colorati arancione/viola).
                   const yt = thresholdsByYear[year] || { first5k: null, first15k: null };
-                  const monthIsAfter5k = yt.first5k !== null && month >= yt.first5k;
-                  const monthIsAfter15k = yt.first15k !== null && month >= yt.first15k;
+                  void yt;
+                  const _key = `${year}-${month}`;
+                  const monthIsAfter5k = (afterByKey[_key] || 0) > 5000.005;
+                  const monthIsAfter15k = (afterByKey[_key] || 0) > 15000.005;
                   if (!receipt) {
                     const expected = computeMonthExpected(year, month);
+                    const expectedNet = netForMonth(year, month, expected, null);
+                    const showNet = expectedNet < expected - 0.005;
                     // 🆕 29/06/2026 — Mesi NON firmati: SEMPRE grigi (nessun bg colorato).
                     // Solo il badge ">5K"/">15K" indica il mese di superamento soglia.
                     const bg = '#F5F5F5';
@@ -6334,16 +6355,26 @@ export default function AdminAthleteDetail() {
                             </Text>
                           )}
                         </View>
+                        {showNet && (
+                          <View style={{ marginTop: 4, backgroundColor: '#E8F5E9', borderRadius: 6, paddingVertical: 3, paddingHorizontal: 6, alignSelf: 'flex-start' }}>
+                            <Text style={{ fontSize: 8, fontWeight: '700', color: '#1B5E20' }}>DA PAGARE (NETTO)</Text>
+                            <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#2E7D32' }}>{formatCurrency(expectedNet)}</Text>
+                          </View>
+                        )}
                         <Text style={{ fontSize: 11, color: '#9E9E9E', fontStyle: 'italic', marginTop: 2 }}>Non firmata</Text>
                       </View>
                     );
                   }
 
-                  const yearThresholds = thresholdsByYear[receipt.year] || { first5k: null, first15k: null };
-                  const isAfter5k = yearThresholds.first5k !== null && receipt.month >= yearThresholds.first5k;
-                  const isAfter15k = yearThresholds.first15k !== null && receipt.month >= yearThresholds.first15k;
-                  const isThreshold5kMonth = yearThresholds.first5k === receipt.month;
-                  const isThreshold15kMonth = yearThresholds.first15k === receipt.month;
+                  const _skey = `${receipt.year}-${receipt.month}`;
+                  const _spy = payYearOf(receipt.year, receipt.month);
+                  const isAfter5k = (afterByKey[_skey] || 0) > 5000.005;
+                  const isAfter15k = (afterByKey[_skey] || 0) > 15000.005;
+                  const isThreshold5kMonth = cross5kKey[_spy] === _skey;
+                  const isThreshold15kMonth = cross15kKey[_spy] === _skey;
+                  const _sGross = (receipt.amount_gross || receipt.amount || 0);
+                  const _sNet = netForMonth(receipt.year, receipt.month, _sGross, (typeof receipt.amount_net === 'number' ? receipt.amount_net : null));
+                  const _sShowNet = _sNet < _sGross - 0.005;
 
                   return (
                     <View
@@ -6374,9 +6405,17 @@ export default function AdminAthleteDetail() {
                             </View>
                           )}
                         </View>
-                        <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#2E7D32' }}>
-                          {formatCurrency((receipt.amount_gross || receipt.amount || 0))}
-                        </Text>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#2E7D32' }}>
+                            {formatCurrency(_sGross)}
+                          </Text>
+                          {_sShowNet && (
+                            <View style={{ marginTop: 3, backgroundColor: '#E8F5E9', borderRadius: 6, paddingVertical: 2, paddingHorizontal: 5 }}>
+                              <Text style={{ fontSize: 8, fontWeight: '700', color: '#1B5E20' }}>DA PAGARE (NETTO)</Text>
+                              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#2E7D32' }}>{formatCurrency(_sNet)}</Text>
+                            </View>
+                          )}
+                        </View>
                         {/* 🆕 29/06/2026 — REQUEST DELETE (parità Coach/Collaboratore):
                             l'admin NON cancella più direttamente la quietanza atleta.
                             Invia una richiesta che l'atleta deve approvare dal suo dashboard. */}
