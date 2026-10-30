@@ -326,6 +326,10 @@ export default function QuietanzePage() {
   const signedStandard = standardReceipts.filter(r => r.receipt_signed);
   const signedTotal = filteredReceipts.filter(r => r.receipt_signed).length;
   const pendingTotal = filteredReceipts.length - signedTotal;
+  // 🆕 #3 Riepilogo pagamenti: netto da erogare (quanto pagare in totale col filtro attuale)
+  const _netOf = (r: any) => (typeof r.amount_net === 'number' ? r.amount_net : (r.amount_gross || 0));
+  const netToPayTotal = filteredReceipts.reduce((s, r) => s + _netOf(r), 0);
+  const netRemaining = filteredReceipts.filter(r => !r.payment_made).reduce((s, r) => s + _netOf(r), 0);
 
   const renderStandardCard = (receipt: any, index: number, signed: boolean) => (
     <View
@@ -441,6 +445,20 @@ export default function QuietanzePage() {
                   <Text style={styles.statLabel}>Totale</Text>
                 </View>
               </View>
+
+              {/* 🆕 #3 Riepilogo pagamenti: quanto erogare (netto) col filtro attuale */}
+              {filteredReceipts.length > 0 && (
+                <View style={{ flexDirection: 'row', backgroundColor: '#E8F5E9', borderRadius: 10, padding: 12, marginTop: 10, borderWidth: 1, borderColor: '#C8E6C9' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 11, color: '#1B5E20', fontWeight: '700' }}>💸 NETTO DA EROGARE (ancora da pagare)</Text>
+                    <Text style={{ fontSize: 22, color: '#2E7D32', fontWeight: 'bold', marginTop: 2 }}>{formatCurrency(netRemaining)}</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 10, color: '#66795f' }}>Totale periodo</Text>
+                    <Text style={{ fontSize: 13, color: '#2E7D32', fontWeight: '600' }}>{formatCurrency(netToPayTotal)}</Text>
+                  </View>
+                </View>
+              )}
 
               {/* Filters */}
               <View style={styles.filtersRow}>

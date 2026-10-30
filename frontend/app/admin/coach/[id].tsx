@@ -32,6 +32,7 @@ import { it } from 'date-fns/locale';
 import { SportIcon } from '../../../src/components/SportIcon';
 
 import { formatCurrency, formatAmount } from '../../../src/utils/formatCurrency';
+import { computeInpsWithholding } from '../../../src/utils/inpsWithholding';
 interface Coach {
   id: string;
   email: string;
@@ -2551,6 +2552,11 @@ export default function AdminCoachDetail() {
                 <Text style={{ color: '#666', fontSize: 11 }}>
                   {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate
                 </Text>
+                <View style={{ height: 1, backgroundColor: '#C8E6C9', marginVertical: 8 }} />
+                <Text style={{ color: '#1B5E20', fontWeight: '700', fontSize: 13 }}>💸 Netto da erogare (firmate)</Text>
+                <Text style={{ color: '#2E7D32', fontWeight: 'bold', fontSize: 20, marginTop: 2 }}>
+                  {formatCurrency(signedReceipts.filter((r: any) => r.receipt_signed).reduce((s: number, r: any) => s + (typeof r.amount_net === 'number' ? r.amount_net : (r.amount_gross || r.amount || 0)), 0))}
+                </Text>
               </View>
 
               {/* Lista quietanze compatta - con calcolo soglie dinamico */}
@@ -2598,26 +2604,38 @@ export default function AdminCoachDetail() {
                   }
                 }
 
-                // Calcolo cumulativo per anno solare, includendo anche mesi non ancora firmati
-                // (importo proiettato = monthly_compensation)
-                const cumulativeByYear: { [year: number]: number } = {};
-                for (const { year, month, receipt } of allMonths) {
-                  if (!thresholdsByYear[year]) {
-                    thresholdsByYear[year] = { first5k: null, first15k: null };
-                  }
-                  if (cumulativeByYear[year] == null) {
-                    cumulativeByYear[year] = year === contractYear ? (priorComp || 0) : 0;
-                  }
-                  const internalAmt = receipt ? (receipt.amount_gross || receipt.amount || 0) : monthlyComp;
-                  const externalAmt = externalByYearMonth[`${year}-${month}`] || 0;
-                  cumulativeByYear[year] += internalAmt + externalAmt;
-                  if (cumulativeByYear[year] > 5000 && thresholdsByYear[year].first5k === null) {
-                    thresholdsByYear[year].first5k = { year, month };
-                  }
-                  if (cumulativeByYear[year] > 15000 && thresholdsByYear[year].first15k === null) {
-                    thresholdsByYear[year].first15k = { year, month };
-                  }
+                // 🆕 Criterio di CASSA: dicembre (pagato a gennaio) conta nell'anno di
+                // PAGAMENTO successivo; in quell'anno il pregresso non si riporta.
+                const _insuredElse = !!(coach as any)?.inps_insured_elsewhere;
+                const _payItems = allMonths.map(({ year, month, receipt }) => ({
+                  year, month, receipt,
+                  py: (paymentShift === 1 && month === 12) ? year + 1 : year,
+                  pm: (paymentShift === 1) ? (month === 12 ? 1 : month + 1) : month,
+                }));
+                const _byPay = [..._payItems].sort((a, b) => (a.py !== b.py ? a.py - b.py : a.pm - b.pm));
+                const beforeByKey: { [k: string]: number } = {};
+                const afterByKey: { [k: string]: number } = {};
+                const cross5kKey: { [py: number]: string } = {};
+                const cross15kKey: { [py: number]: string } = {};
+                const cumByPy: { [py: number]: number } = {};
+                for (const it of _byPay) {
+                  if (cumByPy[it.py] === undefined) cumByPy[it.py] = (it.py === contractYear ? (priorComp || 0) : 0);
+                  const internalAmt = it.receipt ? (it.receipt.amount_gross || it.receipt.amount || 0) : monthlyComp;
+                  const externalAmt = externalByYearMonth[`${it.year}-${it.month}`] || 0;
+                  const key = `${it.year}-${it.month}`;
+                  beforeByKey[key] = cumByPy[it.py];
+                  cumByPy[it.py] += internalAmt + externalAmt;
+                  afterByKey[key] = cumByPy[it.py];
+                  if (cumByPy[it.py] > 5000 && cross5kKey[it.py] === undefined) cross5kKey[it.py] = key;
+                  if (cumByPy[it.py] > 15000 && cross15kKey[it.py] === undefined) cross15kKey[it.py] = key;
                 }
+                const payYearOf = (y: number, m: number) => (paymentShift === 1 && m === 12) ? y + 1 : y;
+                const netForMonth = (y: number, m: number, gross: number, signedNet: any): number => {
+                  if (typeof signedNet === 'number') return signedNet;
+                  const bd = computeInpsWithholding(beforeByKey[`${y}-${m}`] || 0, gross, _insuredElse);
+                  return bd.applies ? bd.amount_net : gross;
+                };
+                void thresholdsByYear;
 
                 // Most recent first
                 const sortedAllMonths = [...allMonths].sort((a, b) => {
@@ -2626,12 +2644,18 @@ export default function AdminCoachDetail() {
                 });
 
                 return sortedAllMonths.map(({ year, month, receipt }, index: number) => {
-                  const yearThresholds = thresholdsByYear[year] || { first5k: null, first15k: null };
-                  const isThreshold5kMonth = yearThresholds.first5k?.year === year && yearThresholds.first5k?.month === month;
-                  const isThreshold15kMonth = yearThresholds.first15k?.year === year && yearThresholds.first15k?.month === month;
+                  const _key = `${year}-${month}`;
+                  const _py = payYearOf(year, month);
+                  const isThreshold5kMonth = cross5kKey[_py] === _key;
+                  const isThreshold15kMonth = cross15kKey[_py] === _key;
+                  const isAfter5k = (afterByKey[_key] || 0) > 5000.005;
+                  const isAfter15k = (afterByKey[_key] || 0) > 15000.005;
 
                   // Mese NON firmato → riga grigia placeholder (con badge di proiezione se supera soglia)
                   if (!receipt) {
+                    const _projGross = monthlyComp + (externalByYearMonth[_key] || 0);
+                    const _projNet = netForMonth(year, month, _projGross, null);
+                    const _projShowNet = _projNet < _projGross - 0.005;
                     return (
                       <View
                         key={`empty-${year}-${month}`}
@@ -2665,13 +2689,20 @@ export default function AdminCoachDetail() {
                             Non firmata
                           </Text>
                         </View>
+                        {_projShowNet && (
+                          <View style={{ marginTop: 4, backgroundColor: '#E8F5E9', borderRadius: 6, paddingVertical: 3, paddingHorizontal: 6, alignSelf: 'flex-start' }}>
+                            <Text style={{ fontSize: 8, fontWeight: '700', color: '#1B5E20' }}>DA PAGARE (NETTO)</Text>
+                            <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#2E7D32' }}>{formatCurrency(_projNet)}</Text>
+                          </View>
+                        )}
                       </View>
                     );
                   }
 
-                  // Mese FIRMATO → riga colorata in base alle soglie
-                  const isAfter5k = yearThresholds.first5k !== null && (year > yearThresholds.first5k!.year || (year === yearThresholds.first5k!.year && month >= yearThresholds.first5k!.month));
-                  const isAfter15k = yearThresholds.first15k !== null && (year > yearThresholds.first15k!.year || (year === yearThresholds.first15k!.year && month >= yearThresholds.first15k!.month));
+                  // Mese FIRMATO → riga colorata in base alle soglie (criterio di cassa)
+                  const _sGross = (receipt.amount_gross || receipt.amount || 0);
+                  const _sNet = netForMonth(receipt.year, receipt.month, _sGross, (typeof receipt.amount_net === 'number' ? receipt.amount_net : null));
+                  const _sShowNet = _sNet < _sGross - 0.005;
 
                   return (
                     <View
@@ -2702,9 +2733,17 @@ export default function AdminCoachDetail() {
                             </View>
                           )}
                         </View>
-                        <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#2E7D32' }}>
-                          {formatCurrency((receipt.amount_gross || receipt.amount || 0))}
-                        </Text>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#2E7D32' }}>
+                            {formatCurrency(_sGross)}
+                          </Text>
+                          {_sShowNet && (
+                            <View style={{ marginTop: 3, backgroundColor: '#E8F5E9', borderRadius: 6, paddingVertical: 2, paddingHorizontal: 5 }}>
+                              <Text style={{ fontSize: 8, fontWeight: '700', color: '#1B5E20' }}>DA PAGARE (NETTO)</Text>
+                              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#2E7D32' }}>{formatCurrency(_sNet)}</Text>
+                            </View>
+                          )}
+                        </View>
                         <TouchableOpacity
                           onPress={() => handleRequestDeleteReceipt(receipt)}
                           style={{ marginLeft: 8, padding: 4 }}
