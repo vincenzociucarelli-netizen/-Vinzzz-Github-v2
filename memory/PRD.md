@@ -2000,3 +2000,16 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - Backend invariato (mark-payment-bulk supporta gi\u00e0 only_unsigned; mark-payment non filtra per firmato). Verificato in preview: le firmate mostrano "Segna bonifico". Lint pulito (solo warning preesistente setFilterStatus).
 - NON implementato (richiede conferma base di calcolo): proiezione dei mesi futuri SENZA quietanze registrate (somma compensi previsti da contratti/INPS cash-aware). Oggi un mese futuro appare nel riepilogo solo quando i suoi compensi sono registrati.
 - Richiede Save to GitHub + redeploy Vercel (frontend).
+
+## Aggiornamento 31/10/2026 (2) — Proiezione compensi previsti (mese corrente + futuri)
+- PROBLEMA: Ottobre mostrava ~1.000€ (solo 3 quietanze registrate) vs Settembre ~18.000€ (28 quietanze). Mancava la proiezione dei compensi non ancora registrati.
+- `/app/frontend/app/admin/quietanze.tsx`: il riepilogo mensile ora PROIETTA i compensi previsti per il mese corrente e i mesi futuri dell'anno in corso.
+  - Roster membri costruito dai receipts (filtro solo ruolo). Per ogni membro: standard = max monthly_compensation visto; minRatio = min(net/gross) tra le sue quietanze firmate (aliquota netta effettiva steady-state).
+  - Per ogni mese >= mese corrente: se esiste quietanza reale usa il netto reale; altrimenti, per i membri attivi nell'anno (years.has(Y)) con standard>0, proietta standard*minRatio (contrassegnato "stimati").
+  - Mesi passati: solo quietanze reali (nessuna proiezione nei vuoti).
+  - Banner NETTO DA EROGARE e aggregati (Erogato/Da erogare/Budget futuro) derivati dal riepilogo (includono proiezioni) → coerenti.
+  - Label riga mese: "N compensi · M stimati"; "Totale previsto" grigio per mesi futuri, "Totale compensi" nero per mese corrente/passato. Legenda esplicativa in fondo.
+  - availablePeriods include ora anche i mesi corrente→Dicembre dell'anno in corso (chip periodo anche senza quietanze reali).
+- Nessuna modifica backend. Verificato in preview: Ottobre (corrente) e Nov/Dic (futuri) mostrano i totali stimati; Aprile reale. Lint pulito.
+- DA VALIDARE IN PRODUZIONE dopo deploy: numeri reali di Ottobre (3 reali + stimati) ~ coerenti con Settembre. La proiezione assume contratto ancora attivo se il membro ha almeno una quietanza nell'anno.
+- Richiede Save to GitHub + redeploy Vercel (solo frontend).
