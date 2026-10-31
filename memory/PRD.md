@@ -1975,3 +1975,28 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - Stato `filterPeriod` applicato a `filteredReceipts` → filtra l'INTERA pagina (stat cards, banner netto, Riepiloghi mensili, elenco quietanze) sul periodo scelto.
 - `availablePeriods` derivati da receipts, ordinati dal più recente.
 - Verificato in preview: selezione "Aprile 2026" → tutta la pagina mostra solo quel mese (netto 11.907, 5 quietanze). Richiede Save to GitHub + redeploy Vercel per il live.
+
+## Aggiornamento 30/10/2026 — Diagnosi email backup NON recapitato
+- CAUSA ROOT: entrambe le chiavi email sono rifiutate (problema credenziali/account lato utente, NON codice):
+  - Brevo: `GET /v3/account` → 401 `{"message":"API Key is not enabled","code":"unauthorized"}` → account Brevo non attivato/verificato; qualsiasi chiave di quell'account fallisce.
+  - SendGrid: chiave formato valido (SG..., 69 char) ma `GET /v3/scopes` → 401 unauthorized → chiave revocata/non valida o account diverso.
+- Nel DB preview il backup risultava `enabled:False` e mai inviato (last_run/last_status None).
+- MODIFICA CODICE: `email_service.py` `send_email` ora fa FALLBACK automatico a SendGrid se Brevo fallisce (prima era either/or in base alla presenza della chiave). Backend riavviato, import OK.
+- AZIONE UTENTE RICHIESTA (blocker esterno): attivare/verificare account Brevo + nuova chiave v3, OPPURE fornire chiave SendGrid valida con permesso Mail Send e sender verificato. Aggiornare la chiave anche nelle Environment Variables di Render per la produzione.
+- NB slot: BREVO_API_KEY è "separate" (test=preview / live=produzione): aggiornare lo slot corretto. SENDGRID_API_KEY è "shared".
+
+## Aggiornamento 30/10/2026 (2) — Evidenza produzione + fix send-now
+- EVIDENZA UTENTE (screenshot Brevo): email consegnata alle 2:42 (mittente info@11727176.brevosend.com) => Brevo FUNZIONA in produzione (slot "live"). Il preview usa lo slot "test" con chiave disabilitata (per questo i test da preview danno 401). Utente ha skippato l'inserimento della chiave di produzione nel test slot => test e2e da preview non eseguibile.
+- FIX server.py send_backup_now: ora se l'invio email fallisce ritorna HTTP 502 con dettaglio provider invece del falso "Backup inviato". last_status resta aggiornato (ok/error).
+- email_service.py: fallback automatico Brevo->SendGrid già aggiunto.
+- DA FARE UTENTE: Save to GitHub + redeploy Render, poi "Invia backup ora" e controllare Brevo > Transazionale > Log per oggetto "Backup RegistraTEAM"; verificare email destinatario in Admin>Esporta Dati e la cartella Spam.
+
+## Aggiornamento 31/10/2026 — Pagamenti mesi chiusi + solleciti + stile futuro
+- `/app/frontend/app/admin/quietanze.tsx`:
+  - renderReceiptActions ora mostra "Segna bonifico/Bonifico fatto" ANCHE sulle quietanze FIRMATE (nascosto solo per le quietanze con split anticipo, che pagano tramite le due tranche); "Sollecita firma" solo se non firmata. Aggiunto renderReceiptActions anche al blocco "Quietanze Personalizzate Firmate" (prima assente) → risolve Settembre (mese chiuso) che non si poteva segnare pagato.
+  - runBulkPayment invia only_unsigned:false → "Segna bonifici del mese" marca come pagate TUTTE le quietanze del mese (anche firmate). Testo modale aggiornato.
+  - Nuovo pulsante "Sollecita firma (N)" + modale che elenca tutti i non firmatari (filtro/periodo attivo) con bottone WhatsApp per ciascuno (indica anche 'bonifico fatto'). Stili remindAllBtn/remindRow/remindWaBtn.
+  - Riepiloghi mensili: per i mesi FUTURI l'etichetta diventa "Totale previsto" e l'importo è in GRIGIO (#B0B0B0); nero per mese corrente/passato (grigio→nero all'inizio del mese).
+- Backend invariato (mark-payment-bulk supporta gi\u00e0 only_unsigned; mark-payment non filtra per firmato). Verificato in preview: le firmate mostrano "Segna bonifico". Lint pulito (solo warning preesistente setFilterStatus).
+- NON implementato (richiede conferma base di calcolo): proiezione dei mesi futuri SENZA quietanze registrate (somma compensi previsti da contratti/INPS cash-aware). Oggi un mese futuro appare nel riepilogo solo quando i suoi compensi sono registrati.
+- Richiede Save to GitHub + redeploy Vercel (frontend).

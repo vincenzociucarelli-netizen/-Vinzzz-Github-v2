@@ -69,34 +69,38 @@ class EmailService:
             Dict with success status and message_id
         """
         
+        _kwargs = dict(
+            to_email=to_email,
+            subject=subject,
+            html_content=html_content,
+            to_name=to_name,
+            text_content=text_content,
+            attachments=attachments,
+            cc_list=cc_list,
+            bcc_list=bcc_list,
+            reply_to_email=reply_to_email,
+            reply_to_name=reply_to_name,
+            sender_name=sender_name,
+        )
+
         if USE_BREVO:
-            return await self._send_via_brevo(
-                to_email=to_email,
-                subject=subject,
-                html_content=html_content,
-                to_name=to_name,
-                text_content=text_content,
-                attachments=attachments,
-                cc_list=cc_list,
-                bcc_list=bcc_list,
-                reply_to_email=reply_to_email,
-                reply_to_name=reply_to_name,
-                sender_name=sender_name,
-            )
+            result = await self._send_via_brevo(**_kwargs)
+            if result.get("success"):
+                return result
+            # 🆕 Fallback automatico a SendGrid se Brevo fallisce e la chiave SendGrid è presente
+            if SENDGRID_API_KEY:
+                logger.warning(f"Brevo failed ({result.get('error')}), trying SendGrid fallback")
+                sg = await self._send_via_sendgrid(**_kwargs)
+                if sg.get("success"):
+                    return sg
+                return {
+                    "success": False,
+                    "error": f"Brevo: {result.get('error')} | SendGrid: {sg.get('error')}",
+                    "provider": "brevo+sendgrid",
+                }
+            return result
         elif USE_SENDGRID:
-            return await self._send_via_sendgrid(
-                to_email=to_email,
-                subject=subject,
-                html_content=html_content,
-                to_name=to_name,
-                text_content=text_content,
-                attachments=attachments,
-                cc_list=cc_list,
-                bcc_list=bcc_list,
-                reply_to_email=reply_to_email,
-                reply_to_name=reply_to_name,
-                sender_name=sender_name,
-            )
+            return await self._send_via_sendgrid(**_kwargs)
         else:
             logger.warning("No email service configured (BREVO_API_KEY or SENDGRID_API_KEY)")
             return {"success": False, "error": "No email service configured"}
