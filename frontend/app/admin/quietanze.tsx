@@ -269,6 +269,7 @@ export default function QuietanzePage() {
   };
 
   const [bulkModal, setBulkModal] = useState(false);
+  const [remindModal, setRemindModal] = useState(false);
   const [bulkYear, setBulkYear] = useState(String(new Date().getFullYear()));
   const [bulkMonth, setBulkMonth] = useState(String(new Date().getMonth() + 1));
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -278,9 +279,9 @@ export default function QuietanzePage() {
     if (!y || !m || m < 1 || m > 12) { Alert.alert('Errore', 'Mese/anno non validi'); return; }
     try {
       setBulkBusy(true);
-      const res = await api.post('/admin/quietanze/mark-payment-bulk', { year: y, month: m, user_role: filterRole || undefined });
+      const res = await api.post('/admin/quietanze/mark-payment-bulk', { year: y, month: m, user_role: filterRole || undefined, only_unsigned: false });
       const n = res.data?.updated ?? 0;
-      const msg = `Bonifici segnati: ${n} quietanze di ${MONTH_NAMES[m]} ${y}${filterRole ? ` (${getRoleLabel(filterRole)})` : ''}.`;
+      const msg = `Bonifici segnati come pagati: ${n} quietanze di ${MONTH_NAMES[m]} ${y}${filterRole ? ` (${getRoleLabel(filterRole)})` : ''} (incluse le firmate).`;
       if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Fatto', msg);
       setBulkModal(false);
       loadReceipts();
@@ -290,22 +291,29 @@ export default function QuietanzePage() {
   };
 
   const renderReceiptActions = (receipt: any) => {
-    if (receipt.receipt_signed) return null;
+    const isSplit = receipt.advance_split_enabled && receipt.advance_amount > 0;
+    const showPay = !isSplit; // le quietanze con split pagano tramite le due tranche
+    const showRemind = !receipt.receipt_signed;
+    if (!showPay && !showRemind) return null;
     return (
       <View style={styles.actionsRow}>
-        <TouchableOpacity
-          style={[styles.actBtn, receipt.payment_made ? styles.actBtnDone : styles.actBtnPay]}
-          onPress={() => markPayment(receipt, !receipt.payment_made)}
-        >
-          <Ionicons name={receipt.payment_made ? 'checkmark-circle' : 'cash-outline'} size={15} color={receipt.payment_made ? '#2E7D32' : '#fff'} />
-          <Text style={[styles.actBtnText, { color: receipt.payment_made ? '#2E7D32' : '#fff' }]}>
-            {receipt.payment_made ? 'Bonifico fatto' : 'Segna bonifico'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.actBtn, styles.actBtnWa]} onPress={() => remindWhatsApp(receipt)}>
-          <Ionicons name="logo-whatsapp" size={15} color="#fff" />
-          <Text style={[styles.actBtnText, { color: '#fff' }]}>Sollecita firma</Text>
-        </TouchableOpacity>
+        {showPay && (
+          <TouchableOpacity
+            style={[styles.actBtn, receipt.payment_made ? styles.actBtnDone : styles.actBtnPay]}
+            onPress={() => markPayment(receipt, !receipt.payment_made)}
+          >
+            <Ionicons name={receipt.payment_made ? 'checkmark-circle' : 'cash-outline'} size={15} color={receipt.payment_made ? '#2E7D32' : '#fff'} />
+            <Text style={[styles.actBtnText, { color: receipt.payment_made ? '#2E7D32' : '#fff' }]}>
+              {receipt.payment_made ? 'Bonifico fatto' : 'Segna bonifico'}
+            </Text>
+          </TouchableOpacity>
+        )}
+        {showRemind && (
+          <TouchableOpacity style={[styles.actBtn, styles.actBtnWa]} onPress={() => remindWhatsApp(receipt)}>
+            <Ionicons name="logo-whatsapp" size={15} color="#fff" />
+            <Text style={[styles.actBtnText, { color: '#fff' }]}>Sollecita firma</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -586,8 +594,8 @@ export default function QuietanzePage() {
                             </View>
                             <View style={{ flexDirection: 'row' }}>
                               <View style={{ flex: 1 }}>
-                                <Text style={{ fontSize: 10, color: '#888' }}>Totale compensi</Text>
-                                <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#333' }}>{formatCurrency(m.total)}</Text>
+                                <Text style={{ fontSize: 10, color: '#888' }}>{isFuture ? 'Totale previsto' : 'Totale compensi'}</Text>
+                                <Text style={{ fontSize: 15, fontWeight: 'bold', color: isFuture ? '#B0B0B0' : '#333' }}>{formatCurrency(m.total)}</Text>
                               </View>
                               <View style={{ flex: 1, alignItems: 'center' }}>
                                 <Text style={{ fontSize: 10, color: '#888' }}>Erogato</Text>
@@ -651,6 +659,16 @@ export default function QuietanzePage() {
                 <Ionicons name="cash-outline" size={18} color="#fff" />
                 <Text style={styles.bulkBtnText}>Segna bonifici del mese</Text>
               </TouchableOpacity>
+
+              {/* 🆕 Sollecito firma in blocco (WhatsApp a tutti i non firmatari) */}
+              {filteredReceipts.filter(r => !r.receipt_signed).length > 0 && (
+                <TouchableOpacity style={styles.remindAllBtn} onPress={() => setRemindModal(true)} data-testid="remind-all-btn">
+                  <Ionicons name="logo-whatsapp" size={18} color="#fff" />
+                  <Text style={styles.bulkBtnText}>
+                    Sollecita firma ({filteredReceipts.filter(r => !r.receipt_signed).length})
+                  </Text>
+                </TouchableOpacity>
+              )}
 
               {/* Pending Custom Receipts */}
               {pendingCustom.length > 0 && (
@@ -760,6 +778,7 @@ export default function QuietanzePage() {
                         <Text style={{ fontSize: 12, color: '#4CAF50', fontWeight: '600' }}>Firmata dal coach</Text>
                       </View>
                       {renderAdvanceSplit(receipt)}
+                      {renderReceiptActions(receipt)}
                     </View>
                   ))}
                 </View>
@@ -808,7 +827,7 @@ export default function QuietanzePage() {
               </TouchableOpacity>
             </View>
             <Text style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>
-              Segna il bonifico per TUTTE le quietanze non ancora firmate del mese scelto{filterRole ? ` (solo ${getRoleLabel(filterRole)})` : ''}. I destinatari vedranno l{'\u2019'}avviso di firma.
+              Segna il bonifico come pagato per TUTTE le quietanze del mese scelto{filterRole ? ` (solo ${getRoleLabel(filterRole)})` : ''}, comprese quelle gi{'\u00e0'} firmate. Utile per chiudere un mese gi{'\u00e0'} saldato.
             </Text>
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <View style={{ flex: 1 }}>
@@ -828,6 +847,53 @@ export default function QuietanzePage() {
                 {bulkBusy ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.editModalSaveText}>Segna bonifici</Text>}
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 🆕 Sollecito firma in blocco Modal */}
+      <Modal visible={remindModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.editModalContent, { maxHeight: '80%' }]}>
+            <View style={styles.editModalHeader}>
+              <Text style={styles.editModalTitle}>📣 Sollecita firma</Text>
+              <TouchableOpacity onPress={() => setRemindModal(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: 13, color: '#666', marginBottom: 10 }}>
+              Persone che non hanno ancora firmato la quietanza{filterPeriod ? ` di ${MONTH_NAMES[parseInt(filterPeriod.split('-')[1], 10)]} ${filterPeriod.split('-')[0]}` : ''}{filterRole ? ` (${getRoleLabel(filterRole)})` : ''}. Tocca WhatsApp per inviare il promemoria.
+            </Text>
+            <ScrollView style={{ maxHeight: 420 }}>
+              {filteredReceipts.filter(r => !r.receipt_signed).map((r, i) => {
+                const hasPhone = !!normalizePhone(r.phone);
+                return (
+                  <View key={`remind-${i}`} style={styles.remindRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#333' }}>{r.user_name}</Text>
+                      <Text style={{ fontSize: 11, color: '#888' }}>
+                        {getRoleLabel(r.user_role)} · {MONTH_NAMES[r.month]} {r.year}
+                        {r.payment_made ? ' · bonifico fatto' : ''}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.remindWaBtn, !hasPhone && { opacity: 0.4 }]}
+                      disabled={!hasPhone}
+                      onPress={() => remindWhatsApp(r)}
+                    >
+                      <Ionicons name="logo-whatsapp" size={16} color="#fff" />
+                      <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>{hasPhone ? 'WhatsApp' : 'No num.'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+              {filteredReceipts.filter(r => !r.receipt_signed).length === 0 && (
+                <Text style={{ textAlign: 'center', color: '#888', padding: 16 }}>Tutte le quietanze sono firmate 🎉</Text>
+              )}
+            </ScrollView>
+            <TouchableOpacity style={[styles.editModalBtn, styles.editModalCancelBtn, { marginTop: 12 }]} onPress={() => setRemindModal(false)}>
+              <Text style={styles.editModalCancelText}>Chiudi</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1206,6 +1272,35 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   bulkBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  remindAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#25D366',
+    paddingVertical: 11,
+    borderRadius: 10,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    marginTop: -4,
+  },
+  remindRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    gap: 8,
+  },
+  remindWaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#25D366',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
   splitBox: {
     marginTop: 10,
     backgroundColor: '#FFF8E1',

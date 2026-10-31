@@ -1990,3 +1990,13 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - FIX server.py send_backup_now: ora se l'invio email fallisce ritorna HTTP 502 con dettaglio provider invece del falso "Backup inviato". last_status resta aggiornato (ok/error).
 - email_service.py: fallback automatico Brevo->SendGrid già aggiunto.
 - DA FARE UTENTE: Save to GitHub + redeploy Render, poi "Invia backup ora" e controllare Brevo > Transazionale > Log per oggetto "Backup RegistraTEAM"; verificare email destinatario in Admin>Esporta Dati e la cartella Spam.
+
+## Aggiornamento 31/10/2026 — Pagamenti mesi chiusi + solleciti + stile futuro
+- `/app/frontend/app/admin/quietanze.tsx`:
+  - renderReceiptActions ora mostra "Segna bonifico/Bonifico fatto" ANCHE sulle quietanze FIRMATE (nascosto solo per le quietanze con split anticipo, che pagano tramite le due tranche); "Sollecita firma" solo se non firmata. Aggiunto renderReceiptActions anche al blocco "Quietanze Personalizzate Firmate" (prima assente) → risolve Settembre (mese chiuso) che non si poteva segnare pagato.
+  - runBulkPayment invia only_unsigned:false → "Segna bonifici del mese" marca come pagate TUTTE le quietanze del mese (anche firmate). Testo modale aggiornato.
+  - Nuovo pulsante "Sollecita firma (N)" + modale che elenca tutti i non firmatari (filtro/periodo attivo) con bottone WhatsApp per ciascuno (indica anche 'bonifico fatto'). Stili remindAllBtn/remindRow/remindWaBtn.
+  - Riepiloghi mensili: per i mesi FUTURI l'etichetta diventa "Totale previsto" e l'importo è in GRIGIO (#B0B0B0); nero per mese corrente/passato (grigio→nero all'inizio del mese).
+- Backend invariato (mark-payment-bulk supporta gi\u00e0 only_unsigned; mark-payment non filtra per firmato). Verificato in preview: le firmate mostrano "Segna bonifico". Lint pulito (solo warning preesistente setFilterStatus).
+- NON implementato (richiede conferma base di calcolo): proiezione dei mesi futuri SENZA quietanze registrate (somma compensi previsti da contratti/INPS cash-aware). Oggi un mese futuro appare nel riepilogo solo quando i suoi compensi sono registrati.
+- Richiede Save to GitHub + redeploy Vercel (frontend).
