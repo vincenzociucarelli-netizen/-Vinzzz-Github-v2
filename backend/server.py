@@ -38428,6 +38428,13 @@ async def send_backup_now(payload: dict = Body(default={}), current_user = Depen
         {"$set": {"society_id": sid, "last_manual_at": datetime.now(timezone.utc).isoformat(), "last_status": "ok" if result["ok"] else "error"}},
         upsert=True,
     )
+    if not result.get("ok"):
+        _detail = ""
+        try:
+            _detail = (result.get("detail") or {}).get("error") or ""
+        except Exception:
+            _detail = ""
+        raise HTTPException(status_code=502, detail=f"Invio backup non riuscito dal provider email{(': ' + _detail) if _detail else ''}. Verifica la chiave/mittente email.")
     return {"message": f"Backup inviato a {to_email}", "to": to_email, **result}
 
 

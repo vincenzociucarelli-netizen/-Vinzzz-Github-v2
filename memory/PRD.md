@@ -1984,3 +1984,9 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - MODIFICA CODICE: `email_service.py` `send_email` ora fa FALLBACK automatico a SendGrid se Brevo fallisce (prima era either/or in base alla presenza della chiave). Backend riavviato, import OK.
 - AZIONE UTENTE RICHIESTA (blocker esterno): attivare/verificare account Brevo + nuova chiave v3, OPPURE fornire chiave SendGrid valida con permesso Mail Send e sender verificato. Aggiornare la chiave anche nelle Environment Variables di Render per la produzione.
 - NB slot: BREVO_API_KEY è "separate" (test=preview / live=produzione): aggiornare lo slot corretto. SENDGRID_API_KEY è "shared".
+
+## Aggiornamento 30/10/2026 (2) — Evidenza produzione + fix send-now
+- EVIDENZA UTENTE (screenshot Brevo): email consegnata alle 2:42 (mittente info@11727176.brevosend.com) => Brevo FUNZIONA in produzione (slot "live"). Il preview usa lo slot "test" con chiave disabilitata (per questo i test da preview danno 401). Utente ha skippato l'inserimento della chiave di produzione nel test slot => test e2e da preview non eseguibile.
+- FIX server.py send_backup_now: ora se l'invio email fallisce ritorna HTTP 502 con dettaglio provider invece del falso "Backup inviato". last_status resta aggiornato (ok/error).
+- email_service.py: fallback automatico Brevo->SendGrid già aggiunto.
+- DA FARE UTENTE: Save to GitHub + redeploy Render, poi "Invia backup ora" e controllare Brevo > Transazionale > Log per oggetto "Backup RegistraTEAM"; verificare email destinatario in Admin>Esporta Dati e la cartella Spam.
