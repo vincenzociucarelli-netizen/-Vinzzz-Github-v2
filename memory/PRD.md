@@ -1975,3 +1975,12 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - Stato `filterPeriod` applicato a `filteredReceipts` → filtra l'INTERA pagina (stat cards, banner netto, Riepiloghi mensili, elenco quietanze) sul periodo scelto.
 - `availablePeriods` derivati da receipts, ordinati dal più recente.
 - Verificato in preview: selezione "Aprile 2026" → tutta la pagina mostra solo quel mese (netto 11.907, 5 quietanze). Richiede Save to GitHub + redeploy Vercel per il live.
+
+## Aggiornamento 30/10/2026 — Diagnosi email backup NON recapitato
+- CAUSA ROOT: entrambe le chiavi email sono rifiutate (problema credenziali/account lato utente, NON codice):
+  - Brevo: `GET /v3/account` → 401 `{"message":"API Key is not enabled","code":"unauthorized"}` → account Brevo non attivato/verificato; qualsiasi chiave di quell'account fallisce.
+  - SendGrid: chiave formato valido (SG..., 69 char) ma `GET /v3/scopes` → 401 unauthorized → chiave revocata/non valida o account diverso.
+- Nel DB preview il backup risultava `enabled:False` e mai inviato (last_run/last_status None).
+- MODIFICA CODICE: `email_service.py` `send_email` ora fa FALLBACK automatico a SendGrid se Brevo fallisce (prima era either/or in base alla presenza della chiave). Backend riavviato, import OK.
+- AZIONE UTENTE RICHIESTA (blocker esterno): attivare/verificare account Brevo + nuova chiave v3, OPPURE fornire chiave SendGrid valida con permesso Mail Send e sender verificato. Aggiornare la chiave anche nelle Environment Variables di Render per la produzione.
+- NB slot: BREVO_API_KEY è "separate" (test=preview / live=produzione): aggiornare lo slot corretto. SENDGRID_API_KEY è "shared".
