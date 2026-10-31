@@ -326,8 +326,11 @@ export default function QuietanzePage() {
     return true;
   });
 
-  // 🆕 Periodi disponibili (mese/anno) per il selettore, ordinati dal più recente
-  const availablePeriods = Array.from(new Set(receipts.map(r => `${r.year}-${r.month}`)))
+  // 🆕 Periodi disponibili (mese/anno) per il selettore: quietanze reali + mesi corrente/futuri dell'anno in corso (proiezione)
+  const _pNow = new Date();
+  const _periodSet = new Set<string>(receipts.map(r => `${r.year}-${r.month}`));
+  for (let _pm = _pNow.getMonth() + 1; _pm <= 12; _pm++) _periodSet.add(`${_pNow.getFullYear()}-${_pm}`);
+  const availablePeriods = Array.from(_periodSet)
     .sort((a, b) => {
       const [ay, am] = a.split('-').map(Number);
       const [by, bm] = b.split('-').map(Number);
@@ -345,10 +348,8 @@ export default function QuietanzePage() {
   const signedStandard = standardReceipts.filter(r => r.receipt_signed);
   const signedTotal = filteredReceipts.filter(r => r.receipt_signed).length;
   const pendingTotal = filteredReceipts.length - signedTotal;
-  // 🆕 #3 Riepilogo pagamenti: netto da erogare (quanto pagare in totale col filtro attuale)
+  // 🆕 #3 Riepilogo pagamenti: netto da erogare
   const _netOf = (r: any) => (typeof r.amount_net === 'number' ? r.amount_net : (r.amount_gross || 0));
-  const netToPayTotal = filteredReceipts.reduce((s, r) => s + _netOf(r), 0);
-  const netRemaining = filteredReceipts.filter(r => !r.payment_made).reduce((s, r) => s + _netOf(r), 0);
 
   // 🆕 Quanto è già stato erogato per una quietanza (gestisce anche lo split anticipo/saldo)
   const _paidOf = (r: any) => {
@@ -362,22 +363,63 @@ export default function QuietanzePage() {
     return 0;
   };
 
-  // 🆕 Riepiloghi mensili: raggruppa i compensi per anno-mese (col filtro attuale)
+  // 🆕 Riepiloghi mensili CON PROIEZIONE compensi previsti (mese corrente + futuri)
   const _nowD = new Date();
-  const _curKey = _nowD.getFullYear() * 100 + (_nowD.getMonth() + 1);
-  const _monthlyMap: Record<string, { year: number; month: number; total: number; paid: number; count: number }> = {};
-  filteredReceipts.forEach(r => {
-    const k = `${r.year}-${r.month}`;
-    if (!_monthlyMap[k]) _monthlyMap[k] = { year: r.year, month: r.month, total: 0, paid: 0, count: 0 };
-    const m = _monthlyMap[k];
-    m.total += _netOf(r);
-    m.paid += _paidOf(r);
-    m.count += 1;
+  const _curY = _nowD.getFullYear();
+  const _curM = _nowD.getMonth() + 1;
+  const _curKey = _curY * 100 + _curM;
+
+  // Roster membri compensati: filtrato SOLO per ruolo (non per periodo), così la proiezione vede tutti
+  const roleReceipts = receipts.filter(r => !filterRole || r.user_role === filterRole);
+  type Member = { standard: number; minRatio: number; years: Set<number>; months: Record<string, any> };
+  const roster: Record<string, Member> = {};
+  roleReceipts.forEach(r => {
+    const id = String(r.user_id);
+    if (!roster[id]) roster[id] = { standard: 0, minRatio: 1, years: new Set(), months: {} };
+    const mem = roster[id];
+    if (r.standard_amount && r.standard_amount > mem.standard) mem.standard = r.standard_amount;
+    if (r.receipt_signed && r.amount_gross > 0) {
+      mem.minRatio = Math.min(mem.minRatio, _netOf(r) / r.amount_gross);
+    }
+    mem.years.add(r.year);
+    mem.months[`${r.year}-${r.month}`] = r;
   });
-  const monthlyList = Object.values(_monthlyMap).sort((a, b) => (b.year * 100 + b.month) - (a.year * 100 + a.month));
+
+  // Chiavi mese da mostrare: tutti i mesi con quietanze reali + mese corrente/futuri dell'anno corrente (proiezione)
+  const _monthKeys = new Set<string>();
+  roleReceipts.forEach(r => _monthKeys.add(`${r.year}-${r.month}`));
+  for (let mm = _curM; mm <= 12; mm++) _monthKeys.add(`${_curY}-${mm}`);
+  const _displayKeys = filterPeriod ? [filterPeriod] : Array.from(_monthKeys);
+
+  const monthlyList = _displayKeys.map(k => {
+    const [Y, M] = k.split('-').map(Number);
+    const key = Y * 100 + M;
+    const isFutureOrCurrent = key >= _curKey;
+    let total = 0, paid = 0, count = 0, projectedCount = 0;
+    Object.values(roster).forEach(mem => {
+      const actual = mem.months[`${Y}-${M}`];
+      if (actual) {
+        total += _netOf(actual);
+        paid += _paidOf(actual);
+        count += 1;
+      } else if (isFutureOrCurrent && mem.standard > 0 && mem.years.has(Y)) {
+        // Proiezione: compenso previsto × aliquota netta effettiva del membro
+        total += mem.standard * mem.minRatio;
+        count += 1;
+        projectedCount += 1;
+      }
+    });
+    return { year: Y, month: M, total, paid, count, projectedCount };
+  }).filter(m => m.count > 0)
+    .sort((a, b) => (b.year * 100 + b.month) - (a.year * 100 + a.month));
+
   const aggErogato = monthlyList.reduce((s, m) => s + m.paid, 0);
   const aggResiduo = monthlyList.filter(m => (m.year * 100 + m.month) <= _curKey).reduce((s, m) => s + Math.max(0, m.total - m.paid), 0);
   const aggFuturo = monthlyList.filter(m => (m.year * 100 + m.month) > _curKey).reduce((s, m) => s + Math.max(0, m.total - m.paid), 0);
+
+  // Banner coerente col riepilogo (include le proiezioni)
+  const netToPayTotal = monthlyList.reduce((s, m) => s + m.total, 0);
+  const netRemaining = monthlyList.reduce((s, m) => s + Math.max(0, m.total - m.paid), 0);
 
 
   const renderStandardCard = (receipt: any, index: number, signed: boolean) => (
@@ -590,7 +632,7 @@ export default function QuietanzePage() {
                               <View style={{ backgroundColor: tagBg, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginRight: 6 }}>
                                 <Text style={{ fontSize: 10, fontWeight: '700', color: tagColor }}>{tag}</Text>
                               </View>
-                              <Text style={{ fontSize: 10, color: '#999' }}>{m.count} compensi</Text>
+                              <Text style={{ fontSize: 10, color: '#999' }}>{m.count} compensi{m.projectedCount > 0 ? ` · ${m.projectedCount} stimati` : ''}</Text>
                             </View>
                             <View style={{ flexDirection: 'row' }}>
                               <View style={{ flex: 1 }}>
@@ -611,6 +653,11 @@ export default function QuietanzePage() {
                           </View>
                         );
                       })}
+                      {monthlyList.some(m => m.projectedCount > 0) && (
+                        <Text style={{ fontSize: 10, color: '#999', fontStyle: 'italic', marginTop: 4 }}>
+                          I compensi contrassegnati come stimati sono previsioni del mese (compenso netto del membro) per quietanze non ancora registrate. Diventano effettivi quando crei o firmi la quietanza.
+                        </Text>
+                      )}
                     </View>
                   )}
                 </View>
