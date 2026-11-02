@@ -371,44 +371,55 @@ export default function QuietanzePage() {
 
   // Roster membri compensati: filtrato SOLO per ruolo (non per periodo), così la proiezione vede tutti
   const roleReceipts = receipts.filter(r => !filterRole || r.user_role === filterRole);
-  type Member = { standard: number; minRatio: number; years: Set<number>; months: Record<string, any> };
+  type Member = { standard: number; minRatio: number; years: Set<number>; firstByYear: Record<number, number> };
   const roster: Record<string, Member> = {};
+  // Aggregati reali per mese (somma TUTTE le quietanze, anche più di una per persona)
+  type MonthAgg = { total: number; paid: number; count: number; userIds: Set<string> };
+  const actualsByMonth: Record<string, MonthAgg> = {};
   roleReceipts.forEach(r => {
     const id = String(r.user_id);
-    if (!roster[id]) roster[id] = { standard: 0, minRatio: 1, years: new Set(), months: {} };
+    if (!roster[id]) roster[id] = { standard: 0, minRatio: 1, years: new Set(), firstByYear: {} };
     const mem = roster[id];
     if (r.standard_amount && r.standard_amount > mem.standard) mem.standard = r.standard_amount;
     if (r.receipt_signed && r.amount_gross > 0) {
       mem.minRatio = Math.min(mem.minRatio, _netOf(r) / r.amount_gross);
     }
     mem.years.add(r.year);
-    mem.months[`${r.year}-${r.month}`] = r;
+    const fy = mem.firstByYear[r.year];
+    if (fy === undefined || r.month < fy) mem.firstByYear[r.year] = r.month;
+
+    const k = `${r.year}-${r.month}`;
+    if (!actualsByMonth[k]) actualsByMonth[k] = { total: 0, paid: 0, count: 0, userIds: new Set() };
+    const am = actualsByMonth[k];
+    am.total += _netOf(r);
+    am.paid += _paidOf(r);
+    am.count += 1;
+    am.userIds.add(id);
   });
 
   // Chiavi mese da mostrare: tutti i mesi con quietanze reali + mese corrente/futuri dell'anno corrente (proiezione)
-  const _monthKeys = new Set<string>();
-  roleReceipts.forEach(r => _monthKeys.add(`${r.year}-${r.month}`));
+  const _monthKeys = new Set<string>(Object.keys(actualsByMonth));
   for (let mm = _curM; mm <= 12; mm++) _monthKeys.add(`${_curY}-${mm}`);
   const _displayKeys = filterPeriod ? [filterPeriod] : Array.from(_monthKeys);
 
   const monthlyList = _displayKeys.map(k => {
     const [Y, M] = k.split('-').map(Number);
     const key = Y * 100 + M;
-    const isFutureOrCurrent = key >= _curKey;
-    let total = 0, paid = 0, count = 0, projectedCount = 0;
-    Object.values(roster).forEach(mem => {
-      const actual = mem.months[`${Y}-${M}`];
-      if (actual) {
-        total += _netOf(actual);
-        paid += _paidOf(actual);
-        count += 1;
-      } else if (isFutureOrCurrent && mem.standard > 0 && mem.years.has(Y)) {
-        // Proiezione: compenso previsto × aliquota netta effettiva del membro
-        total += mem.standard * mem.minRatio;
-        count += 1;
-        projectedCount += 1;
-      }
-    });
+    const am = actualsByMonth[k] || { total: 0, paid: 0, count: 0, userIds: new Set<string>() };
+    let total = am.total, paid = am.paid, count = am.count, projectedCount = 0;
+    // Si proietta nei mesi correnti/futuri E nei mesi passati che hanno già quietanze (es. mese appena chiuso ancora da registrare)
+    const canProject = key >= _curKey || am.count > 0;
+    if (canProject) {
+      Object.entries(roster).forEach(([id, mem]) => {
+        if (am.userIds.has(id)) return; // ha già una quietanza reale questo mese
+        if (mem.standard > 0 && mem.years.has(Y) && M >= (mem.firstByYear[Y] ?? 13)) {
+          // Proiezione: compenso previsto × aliquota netta effettiva del membro
+          total += mem.standard * mem.minRatio;
+          count += 1;
+          projectedCount += 1;
+        }
+      });
+    }
     return { year: Y, month: M, total, paid, count, projectedCount };
   }).filter(m => m.count > 0)
     .sort((a, b) => (b.year * 100 + b.month) - (a.year * 100 + a.month));
