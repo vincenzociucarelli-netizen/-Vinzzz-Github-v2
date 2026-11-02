@@ -2013,3 +2013,13 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - Nessuna modifica backend. Verificato in preview: Ottobre (corrente) e Nov/Dic (futuri) mostrano i totali stimati; Aprile reale. Lint pulito.
 - DA VALIDARE IN PRODUZIONE dopo deploy: numeri reali di Ottobre (3 reali + stimati) ~ coerenti con Settembre. La proiezione assume contratto ancora attivo se il membro ha almeno una quietanza nell'anno.
 - Richiede Save to GitHub + redeploy Vercel (solo frontend).
+
+## Aggiornamento 02/11/2026 — Fix consensi immagini (adulti) + proiezione mesi passati con quietanze
+### Issue 1 — Consensi immagini atleti ADULTI mostrati come NEGATI (ricorrente)
+- CAUSA: gli atleti adulti firmano via /trial/... salvando il consenso come `images_promo__<id_atleta>` / `images_internal__<id_atleta>`. L'endpoint `/admin/athletes/image-consents` leggeva solo `images_promo` (chiave semplice) o `images_promo__<parent_id>` → per gli adulti (parent_id None) non trovava nulla → NEGATO. Es. SANGOI GIADA: nel profilo "Dato" (verde), nella lista admin "negato" (rosso).
+- FIX (`server.py` admin_list_image_consents): ora raccoglie il consenso da QUALSIASI variante di chiave (`images_promo` o `images_promo__<qualsiasi_id>`), regola "un NO = negato, altrimenti se almeno un SÌ espresso = concesso". Verificato con unit test tutti i casi (adulto sì/no, legacy, due genitori misti, mai espresso).
+- Richiede redeploy BACKEND (Render).
+### Issue 2 — Ottobre mostrava solo 1701€ (3-4 quietanze reali) mentre atteso ~18k
+- CAUSA: la proiezione si fermava ai mesi correnti/futuri; Ottobre, diventato passato (mese corrente=Novembre), mostrava solo i reali.
+- FIX (`quietanze.tsx`): la proiezione ora copre anche i mesi PASSATI che hanno già almeno una quietanza (mese appena chiuso ancora da registrare). Inoltre riscritto l'aggregato: somma TUTTE le quietanze reali del mese (no dedup per persona) e proietta SOLO i membri senza quietanza quel mese (guardia firstByYear per non proiettare prima dell'ingresso). Verificato in preview: Aprile 5 reali + 3 stimati = 8.
+- Richiede redeploy FRONTEND (Vercel).

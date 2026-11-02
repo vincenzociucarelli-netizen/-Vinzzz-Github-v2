@@ -42452,36 +42452,43 @@ async def admin_list_image_consents(
             continue
 
         consents = a.get("consents") or {}
-        athlete_parent_ids = [pid for pid in [a.get("parent_id"), a.get("second_parent_id")] if pid]
         priv_signed = _privacy_signed(a)
 
         # Compute final value — considera SOLO i consensi effettivamente espressi
         # (True/False). Un valore None (mai compilato) NON conta come "negato".
-        parent_states = {}
-        for pid in athlete_parent_ids:
-            key = f"{consent_type}__{pid}"
-            if key in consents:
-                v = _extract(consents[key])
-                if v is not None:
-                    parent_states[pid] = v
-            elif pid == a.get("parent_id") and consent_type in consents:
-                v = _extract(consents[consent_type])
-                if v is not None:
-                    parent_states[pid] = v
+        # 🐛 31/10/2026 — Raccoglie il consenso da QUALSIASI variante di chiave:
+        #   - "images_promo" (legacy/diretta)
+        #   - "images_promo__<id>" (per-genitore OPPURE atleta adulto che firma per sé)
+        # Prima gli atleti adulti (senza parent_id) risultavano NEGATI perché il
+        # consenso è salvato come "images_promo__<id_atleta>" e veniva ignorato.
+        expressed = {}  # owner_id -> bool
+        for k, v in consents.items():
+            if not isinstance(k, str):
+                continue
+            if k == consent_type:
+                owner = a.get("parent_id") or "_self"
+            elif k.startswith(consent_type + "__"):
+                owner = k[len(consent_type) + 2:]
+            else:
+                continue
+            val = _extract(v)
+            if val is not None:
+                expressed[owner] = val
 
-        if parent_states:
-            final_value = all(parent_states.values())
-            denied_by_ids = [pid for pid, v in parent_states.items() if not v]
+        if expressed:
+            final_value = all(expressed.values())
+            denied_by_ids = [oid for oid, v in expressed.items() if not v]
             denied_by_names = [
-                (parent_info.get(pid) or {}).get("full_name") or (parent_info.get(pid) or {}).get("email") or pid
-                for pid in denied_by_ids
+                nm for nm in (
+                    (parent_info.get(oid) or {}).get("full_name") or (parent_info.get(oid) or {}).get("email")
+                    for oid in denied_by_ids if oid and oid != "_self"
+                ) if nm
             ]
             has_record = True
         else:
-            raw = _extract(consents.get(consent_type))
-            final_value = bool(raw) if raw is not None else False
+            final_value = False
             denied_by_names = []
-            has_record = raw is not None
+            has_record = False
 
         if only_denied and final_value:
             continue
