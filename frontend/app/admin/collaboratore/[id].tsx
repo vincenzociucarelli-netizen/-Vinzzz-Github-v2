@@ -1878,26 +1878,32 @@ export default function AdminCollaboratoreDetail() {
         {/* 📋 TAB ANAGRAFICA — parte 2 (Dati Bancari) */}
         <TabSection tab="anagrafica" activeTab={activeTab}>
 
-        {/* Bank Info */}
-        {collaboratore.iban && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>🏦 Dati Bancari</Text>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>IBAN:</Text>
-              <Text style={styles.infoValue}>{collaboratore.iban}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Intestatario:</Text>
-              <Text style={styles.infoValue}>{collaboratore.iban_holder || collaboratore.full_name}</Text>
-            </View>
-            {collaboratore.bank_name && (
+        {/* Bank Info — sempre visibile; avviso se mancante */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>🏦 Dati Bancari</Text>
+          {collaboratore.iban ? (
+            <>
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Banca:</Text>
-                <Text style={styles.infoValue}>{collaboratore.bank_name}</Text>
+                <Text style={styles.infoLabel}>IBAN:</Text>
+                <Text style={styles.infoValue}>{collaboratore.iban}</Text>
               </View>
-            )}
-          </View>
-        )}
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Intestatario:</Text>
+                <Text style={styles.infoValue}>{collaboratore.iban_holder || collaboratore.full_name}</Text>
+              </View>
+              {collaboratore.bank_name && (
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Banca:</Text>
+                  <Text style={styles.infoValue}>{collaboratore.bank_name}</Text>
+                </View>
+              )}
+            </>
+          ) : (
+            <Text style={{ color: '#E65100', fontSize: 13, backgroundColor: '#FFF3E0', padding: 10, borderRadius: 8 }}>
+              ⚠️ Dati bancari non ancora inseriti dal collaboratore
+            </Text>
+          )}
+        </View>
 
         </TabSection>
         {/* End of TAB ANAGRAFICA parte 2 */}

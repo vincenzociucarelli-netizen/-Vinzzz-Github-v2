@@ -2033,3 +2033,12 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - Verificato e2e sul backend: adult self-suffix YES→granted, plain YES→granted, plain NO/self NO→denied. Dati test ripristinati.
 - DIAGNOSTICA TEMPORANEA: aggiunto campo `_dbg` nella risposta e una riga viola "dbg: {...}" sotto ogni atleta nella pagina Consensi (image-consents.tsx) per vedere la struttura reale in produzione. DA RIMUOVERE dopo conferma.
 - Richiede redeploy BACKEND (Render) + FRONTEND (Vercel).
+
+## Aggiornamento 02/11/2026 (3) — Dati bancari sempre visibili + chiarimento Ottobre
+- Sezione "🏦 Dati Bancari" ora SEMPRE visibile con avviso "⚠️ Dati bancari non ancora inseriti" quando IBAN mancante, su tutti i ruoli:
+  - collaboratore/[id].tsx (prima si nascondeva se iban vuoto) ✓ verificato (PAOLI PAOLO mostra avviso)
+  - athlete/[id].tsx (compensati: avviso invece di '-'; quota senza dati resta nascosta)
+  - coach/[id].tsx (avviso se tutti i campi vuoti; sezione solo per approved)
+  - dirigente/[id].tsx (avviso nel ramo sola lettura; admin può comunque editare con la matita)
+- CHIARIMENTO Ottobre (domanda utente): la LISTA "Gestione Quietanze" mostra solo le quietanze REALMENTE create/registrate (per Ottobre ~4). Il RIEPILOGO in alto proietta invece il totale previsto. Per far comparire gli altri nominativi nella lista bisogna generare/creare la loro quietanza del mese. Possibile feature futura: "Genera quietanze del mese per tutti".
+- Frontend only → redeploy Vercel.

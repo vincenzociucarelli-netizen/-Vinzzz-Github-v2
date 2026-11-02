@@ -1715,20 +1715,26 @@ export default function AdminDirigenteDetail() {
                 </TouchableOpacity>
               </>
             ) : (
-              <>
-                <View style={styles.infoRow}>
-                  <Text style={styles.label}>IBAN</Text>
-                  <Text style={[styles.value, styles.valueCode]}>{dirigente.iban || '-'}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.label}>Intestatario</Text>
-                  <Text style={styles.value}>{dirigente.account_holder || (dirigente as any).iban_holder || '-'}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.label}>Banca</Text>
-                  <Text style={styles.value}>{dirigente.bank_name || '-'}</Text>
-                </View>
-              </>
+              (dirigente.iban || dirigente.account_holder || (dirigente as any).iban_holder || dirigente.bank_name) ? (
+                <>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>IBAN</Text>
+                    <Text style={[styles.value, styles.valueCode]}>{dirigente.iban || '-'}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Intestatario</Text>
+                    <Text style={styles.value}>{dirigente.account_holder || (dirigente as any).iban_holder || '-'}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.label}>Banca</Text>
+                    <Text style={styles.value}>{dirigente.bank_name || '-'}</Text>
+                  </View>
+                </>
+              ) : (
+                <Text style={{ color: '#E65100', fontSize: 13, backgroundColor: '#FFF3E0', padding: 10, borderRadius: 8 }}>
+                  ⚠️ Dati bancari non ancora inseriti. Tocca l&apos;icona matita per aggiungerli.
+                </Text>
+              )
             )}
           </View>
         )}
