@@ -2023,3 +2023,13 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - CAUSA: la proiezione si fermava ai mesi correnti/futuri; Ottobre, diventato passato (mese corrente=Novembre), mostrava solo i reali.
 - FIX (`quietanze.tsx`): la proiezione ora copre anche i mesi PASSATI che hanno già almeno una quietanza (mese appena chiuso ancora da registrare). Inoltre riscritto l'aggregato: somma TUTTE le quietanze reali del mese (no dedup per persona) e proietta SOLO i membri senza quietanza quel mese (guardia firstByYear per non proiettare prima dell'ingresso). Verificato in preview: Aprile 5 reali + 3 stimati = 8.
 - Richiede redeploy FRONTEND (Vercel).
+
+## Aggiornamento 02/11/2026 (2) — Consensi: logica lista ALLINEATA al profilo + diagnostica
+- La fix precedente (scan "qualsiasi suffisso" con regola all-True) poteva non bastare. Ora `/admin/athletes/image-consents` rispecchia ESATTAMENTE la logica del pannello profilo (get_athlete_consents):
+  1) consensi dei GENITORI → un NO = negato;
+  2) altrimenti chiave semplice `images_promo` (adulto/legacy);
+  3) altrimenti chiave con suffisso dell'atleta stesso `images_promo__<id_atleta>` (maggiorenne che firma per sé) → prima dava NEGATO.
+- Stessa robustezza applicata al ramo STAFF (users.consents + atleta collegato + self-suffix).
+- Verificato e2e sul backend: adult self-suffix YES→granted, plain YES→granted, plain NO/self NO→denied. Dati test ripristinati.
+- DIAGNOSTICA TEMPORANEA: aggiunto campo `_dbg` nella risposta e una riga viola "dbg: {...}" sotto ogni atleta nella pagina Consensi (image-consents.tsx) per vedere la struttura reale in produzione. DA RIMUOVERE dopo conferma.
+- Richiede redeploy BACKEND (Render) + FRONTEND (Vercel).

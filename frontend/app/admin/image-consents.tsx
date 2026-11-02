@@ -416,6 +416,11 @@ export default function ImageConsentsPage() {
                                 Consenso non ancora compilato
                               </Text>
                             ) : null}
+                            {!!(a as any)._dbg && Object.keys((a as any)._dbg).length > 0 && (
+                              <Text style={{ fontSize: 9, color: '#9C27B0', marginTop: 2 }} selectable>
+                                dbg: {JSON.stringify((a as any)._dbg)}
+                              </Text>
+                            )}
                           </View>
                         </View>
                         <TouchableOpacity

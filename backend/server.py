@@ -42454,46 +42454,53 @@ async def admin_list_image_consents(
         consents = a.get("consents") or {}
         priv_signed = _privacy_signed(a)
 
-        # Compute final value — considera SOLO i consensi effettivamente espressi
-        # (True/False). Un valore None (mai compilato) NON conta come "negato".
-        # 🐛 31/10/2026 — Raccoglie il consenso da QUALSIASI variante di chiave:
-        #   - "images_promo" (legacy/diretta)
-        #   - "images_promo__<id>" (per-genitore OPPURE atleta adulto che firma per sé)
-        # Prima gli atleti adulti (senza parent_id) risultavano NEGATI perché il
-        # consenso è salvato come "images_promo__<id_atleta>" e veniva ignorato.
-        expressed = {}  # owner_id -> bool
-        for k, v in consents.items():
-            if not isinstance(k, str):
-                continue
-            if k == consent_type:
-                owner = a.get("parent_id") or "_self"
-            elif k.startswith(consent_type + "__"):
-                owner = k[len(consent_type) + 2:]
-            else:
-                continue
-            val = _extract(v)
-            if val is not None:
-                expressed[owner] = val
+        # Compute final value — rispecchia ESATTAMENTE la logica del pannello profilo
+        # (GET /athletes/{id}/consents) che mostra correttamente "Dato"/"Negato":
+        #  1) se ci sono consensi dei GENITORI → regola "un NO = negato" (tutti SÌ = concesso)
+        #  2) altrimenti chiave semplice "images_promo" (adulto/legacy)
+        #  3) altrimenti chiave con suffisso dell'atleta stesso "images_promo__<id_atleta>"
+        #     (maggiorenne che firma per sé) — prima mancava e li dava per NEGATI.
+        athlete_parent_ids = [pid for pid in [a.get("parent_id"), a.get("second_parent_id")] if pid]
+        parent_states = {}
+        for pid in athlete_parent_ids:
+            key = f"{consent_type}__{pid}"
+            if key in consents:
+                v = _extract(consents[key])
+                if v is not None:
+                    parent_states[pid] = v
+            elif pid == a.get("parent_id") and consent_type in consents:
+                v = _extract(consents[consent_type])
+                if v is not None:
+                    parent_states[pid] = v
 
-        if expressed:
-            final_value = all(expressed.values())
-            denied_by_ids = [oid for oid, v in expressed.items() if not v]
+        if parent_states:
+            final_value = all(parent_states.values())
+            denied_by_ids = [pid for pid, v in parent_states.items() if not v]
             denied_by_names = [
-                nm for nm in (
-                    (parent_info.get(oid) or {}).get("full_name") or (parent_info.get(oid) or {}).get("email")
-                    for oid in denied_by_ids if oid and oid != "_self"
-                ) if nm
+                (parent_info.get(pid) or {}).get("full_name") or (parent_info.get(pid) or {}).get("email") or pid
+                for pid in denied_by_ids
             ]
             has_record = True
         else:
-            final_value = False
+            raw = _extract(consents.get(consent_type))
+            if raw is not None:
+                final_value = bool(raw)
+                has_record = True
+            else:
+                # Maggiorenne che ha firmato per sé: consenso sotto "images_promo__<id>"
+                self_vals = [
+                    _extract(v) for k, v in consents.items()
+                    if isinstance(k, str) and k.startswith(consent_type + "__") and _extract(v) is not None
+                ]
+                final_value = all(self_vals) if self_vals else False
+                has_record = len(self_vals) > 0
             denied_by_names = []
-            has_record = False
 
         if only_denied and final_value:
             continue
 
         full_name = f"{a.get('last_name','')} {a.get('first_name','')}".strip() or a.get("full_name", "—")
+        _dbg = {k: _extract(v) for k, v in consents.items() if isinstance(k, str) and consent_type in k}
         result_athletes.append({
             "athlete_id": a.get("id"),
             "entity_type": "athlete",
@@ -42507,6 +42514,7 @@ async def admin_list_image_consents(
             "has_signed": has_record,
             "privacy_signed": priv_signed,
             "privacy_accepted": bool(a.get("privacy_accepted")),
+            "_dbg": _dbg,
         })
 
     # Group by team
@@ -42578,11 +42586,30 @@ async def admin_list_image_consents(
                 if not priv_signed:
                     priv_signed = _privacy_signed(la)
 
+            # 🐛 02/11/2026 — adulto che firma per sé: consenso sotto "images_promo__<id>"
+            if raw_v is None:
+                _self_vals = [
+                    _extract(v) for k, v in consents.items()
+                    if isinstance(k, str) and k.startswith(consent_type + "__") and _extract(v) is not None
+                ]
+                if not _self_vals and la is not None:
+                    _self_vals = [
+                        _extract(v) for k, v in (la.get("consents") or {}).items()
+                        if isinstance(k, str) and k.startswith(consent_type + "__") and _extract(v) is not None
+                    ]
+                if _self_vals:
+                    raw_v = all(_self_vals)
+
             final_value = bool(raw_v) if raw_v is not None else False
             has_record = raw_v is not None
             if only_denied and final_value:
                 continue
             label = role_label.get(u.get("role"), "Staff")
+            _dbg_staff = {f"user.{k}": _extract(v) for k, v in consents.items() if isinstance(k, str) and consent_type in k}
+            if la is not None:
+                for k, v in (la.get("consents") or {}).items():
+                    if isinstance(k, str) and consent_type in k:
+                        _dbg_staff[f"linked.{k}"] = _extract(v)
             entry = {
                 "athlete_id": u.get("id"),
                 "entity_type": "staff",
@@ -42598,6 +42625,7 @@ async def admin_list_image_consents(
                 "has_signed": has_record,
                 "privacy_signed": priv_signed,
                 "privacy_accepted": priv_signed,
+                "_dbg": _dbg_staff,
             }
             staff_by_label.setdefault(label, {
                 "team_id": f"_staff_{label}",
