@@ -274,6 +274,34 @@ export default function QuietanzePage() {
   const [bulkMonth, setBulkMonth] = useState(String(new Date().getMonth() + 1));
   const [bulkBusy, setBulkBusy] = useState(false);
 
+  // 🆕 Genera quietanze del mese (bozze non firmate per tutti i compensati)
+  const [genModal, setGenModal] = useState(false);
+  const [genYear, setGenYear] = useState(String(new Date().getFullYear()));
+  const [genMonth, setGenMonth] = useState(String(new Date().getMonth() + 1));
+  const [genBusy, setGenBusy] = useState(false);
+
+  const runGenerate = async () => {
+    const y = parseInt(genYear, 10); const m = parseInt(genMonth, 10);
+    if (!y || !m || m < 1 || m > 12) {
+      const msg = 'Inserisci un mese valido (1-12) e un anno.';
+      if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Dati non validi', msg);
+      return;
+    }
+    try {
+      setGenBusy(true);
+      const res = await api.post('/admin/quietanze/generate-month', { year: y, month: m });
+      const created = res.data?.created ?? 0;
+      const skipped = res.data?.skipped ?? 0;
+      const msg = `Quietanze create: ${created} per ${MONTH_NAMES[m]} ${y}.${skipped > 0 ? ` (${skipped} già presenti, saltate)` : ''}\n\nOra puoi segnare i bonifici e sollecitare le firme.`;
+      if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Fatto', msg);
+      setGenModal(false);
+      loadReceipts();
+    } catch (e: any) {
+      const m2 = e.response?.data?.detail || 'Operazione non riuscita';
+      if (Platform.OS === 'web') window.alert(m2); else Alert.alert('Errore', m2);
+    } finally { setGenBusy(false); }
+  };
+
   const runBulkPayment = async () => {
     const y = parseInt(bulkYear, 10); const m = parseInt(bulkMonth, 10);
     if (!y || !m || m < 1 || m > 12) { Alert.alert('Errore', 'Mese/anno non validi'); return; }
@@ -712,6 +740,12 @@ export default function QuietanzePage() {
                 </ScrollView>
               </View>
 
+              {/* 🆕 Genera quietanze del mese (bozze per tutti i compensati) */}
+              <TouchableOpacity style={styles.genBtn} onPress={() => setGenModal(true)} data-testid="generate-month-btn">
+                <Ionicons name="documents-outline" size={18} color="#fff" />
+                <Text style={styles.bulkBtnText}>Genera quietanze del mese</Text>
+              </TouchableOpacity>
+
               {/* 🆕 Bonifici in blocco per mese */}
               <TouchableOpacity style={styles.bulkBtn} onPress={() => setBulkModal(true)} data-testid="bulk-payment-btn">
                 <Ionicons name="cash-outline" size={18} color="#fff" />
@@ -908,6 +942,42 @@ export default function QuietanzePage() {
           </View>
         </View>
       </Modal>
+
+      {/* 🆕 Genera quietanze del mese Modal */}
+      <Modal visible={genModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.editModalContent}>
+            <View style={styles.editModalHeader}>
+              <Text style={styles.editModalTitle}>📄 Genera quietanze del mese</Text>
+              <TouchableOpacity onPress={() => setGenModal(false)}>
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: 13, color: '#666', marginBottom: 12 }}>
+              Crea in un colpo solo le quietanze (bozze da firmare) del mese scelto per TUTTI i membri con un compenso mensile: coach, dirigenti, collaboratori e atleti pro. Chi ha gi{'\u00e0'} una quietanza per quel mese viene saltato. Cos{'\u00ec'} vedi subito chi pagare e quanto.
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.editModalLabel}>Mese (1-12)</Text>
+                <TextInput style={styles.editInput} value={genMonth} onChangeText={setGenMonth} keyboardType="numeric" placeholder="Es: 10" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.editModalLabel}>Anno</Text>
+                <TextInput style={styles.editInput} value={genYear} onChangeText={setGenYear} keyboardType="numeric" placeholder="Es: 2026" />
+              </View>
+            </View>
+            <View style={styles.editModalActions}>
+              <TouchableOpacity style={[styles.editModalBtn, styles.editModalCancelBtn]} onPress={() => setGenModal(false)}>
+                <Text style={styles.editModalCancelText}>Annulla</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.editModalBtn, styles.editModalSaveBtn, genBusy && { opacity: 0.5 }]} onPress={runGenerate} disabled={genBusy}>
+                {genBusy ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.editModalSaveText}>Genera</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
 
       {/* 🆕 Sollecito firma in blocco Modal */}
       <Modal visible={remindModal} transparent animationType="fade">
@@ -1330,6 +1400,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   bulkBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  genBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#1565C0',
+    paddingVertical: 11,
+    borderRadius: 10,
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
   remindAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',

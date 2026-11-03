@@ -22067,6 +22067,148 @@ async def admin_mark_quietanza_payment_bulk(data: dict = Body(...), current_user
     return {"ok": True, "updated": count, "year": year, "month": month}
 
 
+@api_router.post("/admin/quietanze/generate-month")
+async def admin_generate_month_quietanze(data: dict = Body(...), current_user = Depends(get_current_user)):
+    """🆕 Genera in blocco le quietanze (bozze NON firmate) del mese per TUTTI i membri
+    compensati della società: coach, dirigenti, collaboratori (users.monthly_compensation>0)
+    e atleti PRO (athletes.monthly_compensation>0). Non duplica: salta chi ha già una
+    quietanza per quel mese/anno. Il netto è una stima INPS (ricalcolata esattamente alla firma).
+    Così l'admin vede subito CHI pagare e QUANTO, poi segna bonifici e sollecita le firme."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    try:
+        year = int(data.get("year")); month = int(data.get("month"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Mese/anno non validi")
+    if not (1 <= month <= 12):
+        raise HTTPException(status_code=400, detail="Mese non valido")
+    _sid = current_user.get("society_id")
+    now = datetime.now(timezone.utc).isoformat()
+    _MONTHS = ["", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+               "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
+    month_name = _MONTHS[month]
+    created = 0
+    skipped = 0
+
+    def _contract_active_this_month(doc) -> bool:
+        """True se il contratto copre (anche parzialmente) il mese target. Se le date
+        non sono entrambe valide → consideriamo attivo (non escludiamo nessuno)."""
+        cs = _parse_contract_date(doc.get("contract_start_date") or doc.get("contract_start"))
+        ce = _parse_contract_date(doc.get("contract_end_date") or doc.get("contract_end"))
+        if not cs or not ce:
+            return True
+        try:
+            import calendar as _cal
+            from datetime import date as _d
+            first_of_month = _d(year, month, 1)
+            last_of_month = _d(year, month, _cal.monthrange(year, month)[1])
+            return last_of_month >= cs and first_of_month <= ce
+        except Exception:
+            return True
+
+    async def _net_estimate(coll, idf, uid, gross, insured):
+        """Stima netto: somma il lordo già presente nello stesso anno nei mesi precedenti
+        e applica la trattenuta INPS marginale su questo compenso."""
+        before = 0.0
+        async for pr in db[coll].find({idf: uid, "year": year}):
+            try:
+                pm = int(pr.get("month") or 0)
+            except (TypeError, ValueError):
+                pm = 0
+            if 0 < pm < month:
+                before += float(pr.get("amount_gross", pr.get("amount", 0)) or 0)
+        b = compute_sport_inps_withholding(before, gross, insured_elsewhere=bool(insured))
+        return b["amount_net"], b.get("inps_worker", 0.0)
+
+    # ── Coach / Dirigenti / Collaboratori (da users) ──
+    role_map = [
+        ("coach", "coach_compensations", "coach_id"),
+        ("dirigente", "dirigente_compensations", "dirigente_id"),
+        ("collaboratore", "collaboratore_compensations", "collaboratore_id"),
+    ]
+    for role, coll, idf in role_map:
+        uq = {"role": role}
+        if _sid:
+            uq["society_id"] = _sid
+        async for u in db.users.find(uq):
+            comp = float(u.get("monthly_compensation") or 0)
+            if comp <= 0:
+                continue
+            if u.get("status") and u.get("status") != "approved":
+                continue
+            if not _contract_active_this_month(u):
+                continue
+            uid = u["id"]
+            existing = await db[coll].find_one({idf: uid, "year": year, "month": month})
+            if existing:
+                skipped += 1
+                continue
+            net, worker = await _net_estimate(coll, idf, uid, comp, u.get("inps_insured_elsewhere", False))
+            await db[coll].insert_one({
+                "id": str(uuid.uuid4()),
+                idf: uid,
+                "society_id": u.get("society_id") or _sid,
+                "month": month,
+                "year": year,
+                "amount": comp,
+                "amount_gross": comp,
+                "amount_net": net,
+                "deductions": worker,
+                "receipt_signed": False,
+                "signed": False,
+                "payment_made": False,
+                "generated": True,
+                "created_by": current_user["id"],
+                "created_at": now,
+                "updated_at": now,
+            })
+            created += 1
+
+    # ── Atleti PRO (da athletes) ──
+    aq = {}
+    if _sid:
+        aq["society_id"] = _sid
+    async for a in db.athletes.find(aq):
+        comp = float(a.get("monthly_compensation") or 0)
+        if comp <= 0:
+            continue
+        if not _contract_active_this_month(a):
+            continue
+        aid = a["id"]
+        existing = await db.athlete_compensation_receipts.find_one({
+            "athlete_id": aid,
+            "$or": [{"month": month}, {"month": month_name}],
+            "year": year,
+        })
+        if existing:
+            skipped += 1
+            continue
+        net, worker = await _net_estimate("athlete_compensation_receipts", "athlete_id", aid, comp, a.get("inps_insured_elsewhere", False))
+        await db.athlete_compensation_receipts.insert_one({
+            "id": str(uuid.uuid4()),
+            "athlete_id": aid,
+            "society_id": a.get("society_id") or _sid,
+            "month": month,
+            "month_name": month_name,
+            "year": year,
+            "amount": comp,
+            "amount_gross": comp,
+            "amount_net": net,
+            "deductions": worker,
+            "receipt_signed": False,
+            "signed": False,
+            "payment_made": False,
+            "generated": True,
+            "created_by": current_user["id"],
+            "created_at": now,
+            "updated_at": now,
+        })
+        created += 1
+
+    return {"ok": True, "created": created, "skipped": skipped, "month": month, "year": year}
+
+
+
 @api_router.get("/me/receipts/pending-signature")
 async def my_pending_signature_receipts(current_user = Depends(get_current_user)):
     """Quietanze con bonifico effettuato ma NON ancora firmate dall'utente corrente.

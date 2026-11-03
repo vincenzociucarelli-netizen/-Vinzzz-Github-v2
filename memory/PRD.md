@@ -2042,3 +2042,9 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
   - dirigente/[id].tsx (avviso nel ramo sola lettura; admin può comunque editare con la matita)
 - CHIARIMENTO Ottobre (domanda utente): la LISTA "Gestione Quietanze" mostra solo le quietanze REALMENTE create/registrate (per Ottobre ~4). Il RIEPILOGO in alto proietta invece il totale previsto. Per far comparire gli altri nominativi nella lista bisogna generare/creare la loro quietanza del mese. Possibile feature futura: "Genera quietanze del mese per tutti".
 - Frontend only → redeploy Vercel.
+
+## Aggiornamento 03/11/2026 — Genera Quietanze del Mese
+- NUOVO endpoint `POST /api/admin/quietanze/generate-month` (server.py, dopo mark-payment-bulk): crea bozze NON firmate per tutti i membri compensati della società (coach/dirigenti/collaboratori con monthly_compensation>0 e status approved + contratto attivo nel mese; atleti PRO con monthly_compensation>0). Idempotente (salta chi ha già quietanza quel mese). amount_net = stima INPS marginale (lordo pregresso dell'anno + compute_sport_inps_withholding), ricalcolato esatto alla firma. Campo `generated: true`.
+- FRONTEND quietanze.tsx: pulsante blu "Genera quietanze del mese" (sopra bonifici) + modale mese/anno → runGenerate(). Verificato e2e (created=4, idempotente, netto INPS, dirigente sospeso escluso); bozze di test aprile ripulite.
+- Punti 2/3/4 già esistenti: bonifico fatto/da fare (markPayment + bulk), firmata/non firmata (receipt_signed nelle card), sollecito singolo WhatsApp per riga (renderReceiptActions → remindWhatsApp).
+- Frontend+backend → serve redeploy Vercel (frontend) + Render (backend).
