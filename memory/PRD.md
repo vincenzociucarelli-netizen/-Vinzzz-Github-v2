@@ -2048,3 +2048,14 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - FRONTEND quietanze.tsx: pulsante blu "Genera quietanze del mese" (sopra bonifici) + modale mese/anno → runGenerate(). Verificato e2e (created=4, idempotente, netto INPS, dirigente sospeso escluso); bozze di test aprile ripulite.
 - Punti 2/3/4 già esistenti: bonifico fatto/da fare (markPayment + bulk), firmata/non firmata (receipt_signed nelle card), sollecito singolo WhatsApp per riga (renderReceiptActions → remindWhatsApp).
 - Frontend+backend → serve redeploy Vercel (frontend) + Render (backend).
+
+## Aggiornamento 03/11/2026 (2) — Export Pagamenti + Riepilogo Annuale + Promemoria firma automatico
+- EXPORT PAGAMENTI (CSV+PDF) e RIEPILOGO ANNUALE: nella pagina admin/commercialista.tsx.
+  - Mensile: nuovo util src/utils/paymentsReport.ts (monthlyPaymentsCSV/HTML) genera CSV (netti per persona, con CF, lordo/netto/F24/bonifico/firma) e PDF A4 landscape. Usa dati di /admin/commercialista/summary (già esistente).
+  - Annuale: NUOVO endpoint GET /api/admin/commercialista/annual-summary?year= (server.py, dopo commercialista_send_email) → per persona total_gross/total_net/total_paid/total_versare + mesi + soglie. Helper _paid_amount_from_receipt gestisce split anticipo/saldo atleti. UI: sezione "Riepilogo annuale" + CSV/PDF (annualSummaryCSV/HTML).
+  - Download cross-platform: web Blob+anchor; native expo-file-system + expo-sharing (downloadTextFile); PDF via expo-print (printHTMLtoPDF).
+- PROMEMORIA FIRMA AUTOMATICO (email, 1 volta, dopo 3 giorni dal bonifico):
+  - server.py: check_signature_reminders() + signature_reminder_scheduler() (ogni 12h, primo giro 90s), registrato nello startup hook. Filtro: payment_made=True, receipt_signed!=True, payment_made_date<=now-3gg, signature_reminder_sent!=True. Invia via send_society_email (Brevo/branding società), poi set signature_reminder_sent=True/at. Email risolta da users/athletes (athlete: athletes.email o user linkato via athlete_id).
+  - Scelte utente: canale EMAIL automatica, UNA sola volta dopo 3 giorni.
+  - Verificato con stub email (flag impostato, idempotente, cleanup). In preview 0 candidati reali → nessuna email reale inviata. Richiede email del destinatario; in produzione usa Brevo.
+- Frontend+backend → redeploy Vercel + Render.

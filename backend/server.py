@@ -22402,6 +22402,81 @@ async def commercialista_send_email(data: dict = Body(...), current_user = Depen
         raise HTTPException(status_code=500, detail=f"Invio email non riuscito: {e}")
 
 
+def _paid_amount_from_receipt(r: dict, athlete_doc: Optional[dict] = None) -> float:
+    """Quanto è stato effettivamente erogato per una quietanza (gestisce lo split
+    anticipo/saldo degli atleti)."""
+    amt = _receipt_amounts(r)
+    net = amt["net"]
+    if r.get("payment_made"):
+        return net
+    if athlete_doc and athlete_doc.get("advance_split_enabled") and float(athlete_doc.get("advance_amount") or 0) > 0:
+        adv = min(float(athlete_doc.get("advance_amount") or 0), amt["gross"])
+        saldo = max(0.0, net - adv)
+        return round((adv if r.get("advance_paid") else 0.0) + (saldo if r.get("balance_paid") else 0.0), 2)
+    return 0.0
+
+
+@api_router.get("/admin/commercialista/annual-summary")
+async def commercialista_annual_summary(year: int, current_user = Depends(get_current_user)):
+    """Riepilogo ANNUALE per il commercialista: per ogni persona il totale LORDO,
+    NETTO (maturato) e PAGATO (bonifici effettuati) nell'anno, con n. mensilità e
+    flag soglia. Più i totali generali della società."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    _sid = current_user.get("society_id")
+    society_user_ids = set()
+    async for u in db.users.find({"society_id": _sid} if _sid else {}, {"_id": 0, "id": 1}):
+        if u.get("id"):
+            society_user_ids.add(u["id"])
+
+    agg: dict = {}  # key (role, uid) -> accumulatore
+    for role, (coll, idf) in ROLE_RECEIPT_MAP.items():
+        async for r in db[coll].find({"year": year}):
+            owner = r.get(idf)
+            athlete_doc = None
+            if role == "athlete":
+                athlete_doc = await db.athletes.find_one({"id": owner}, {"_id": 0, "society_id": 1, "advance_split_enabled": 1, "advance_amount": 1})
+                if _sid and (not athlete_doc or athlete_doc.get("society_id") != _sid):
+                    continue
+            else:
+                if _sid and owner not in society_user_ids:
+                    continue
+            amt = _receipt_amounts(r)
+            if amt["gross"] <= 0:
+                continue
+            key = (role, owner)
+            if key not in agg:
+                ana = await _commercialista_anagrafica(role, owner)
+                agg[key] = {
+                    "user_role": role, "user_id": owner,
+                    "full_name": ana["full_name"], "fiscal_code": ana["fiscal_code"],
+                    "months": 0, "total_gross": 0.0, "total_net": 0.0,
+                    "total_paid": 0.0, "total_versare": 0.0,
+                    "exceeded_5000": False, "exceeded_15000": False,
+                }
+            row = agg[key]
+            row["months"] += 1
+            row["total_gross"] = round(row["total_gross"] + amt["gross"], 2)
+            row["total_net"] = round(row["total_net"] + amt["net"], 2)
+            row["total_paid"] = round(row["total_paid"] + _paid_amount_from_receipt(r, athlete_doc), 2)
+            if r.get("exceeded_5000"):
+                row["total_versare"] = round(row["total_versare"] + amt["versare"], 2)
+                row["exceeded_5000"] = True
+            if r.get("exceeded_15000"):
+                row["exceeded_15000"] = True
+
+    rows = sorted(agg.values(), key=lambda x: (x.get("full_name") or "").lower())
+    totals = {
+        "count": len(rows),
+        "total_gross": round(sum(x["total_gross"] for x in rows), 2),
+        "total_net": round(sum(x["total_net"] for x in rows), 2),
+        "total_paid": round(sum(x["total_paid"] for x in rows), 2),
+        "total_versare": round(sum(x["total_versare"] for x in rows), 2),
+    }
+    return {"year": year, "recipients": rows, "totals": totals}
+
+
+
 
 
 
@@ -44055,6 +44130,116 @@ async def certificate_block_scheduler():
         await _asyncio.sleep(600)  # every 10 minutes
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# 🆕 Promemoria firma quietanza — email automatica dopo 3 giorni dal bonifico
+# ─────────────────────────────────────────────────────────────────────────
+async def check_signature_reminders():
+    """Invia UNA email di sollecito a chi, 3+ giorni dopo il bonifico, non ha ancora
+    firmato la quietanza. Idempotente: il flag signature_reminder_sent evita doppioni."""
+    try:
+        from email_service import send_society_email
+    except Exception as e:
+        logger.error(f"[FIRMA-REMINDER] email_service non disponibile: {e}")
+        return
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=3)
+    _MESI = ["", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+             "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
+    society_cache: dict = {}
+
+    async def _society(sid):
+        if not sid:
+            return None
+        if sid in society_cache:
+            return society_cache[sid]
+        soc = await db.societies.find_one({"id": sid})
+        society_cache[sid] = soc
+        return soc
+
+    sent = 0
+    for role, (coll, idf) in ROLE_RECEIPT_MAP.items():
+        q = {
+            "payment_made": True,
+            "receipt_signed": {"$ne": True},
+            "signature_reminder_sent": {"$ne": True},
+        }
+        async for r in db[coll].find(q):
+            # payment_made_date deve essere >= 3 giorni fa
+            pmd = r.get("payment_made_date")
+            if not pmd:
+                continue
+            try:
+                pdt = datetime.fromisoformat(str(pmd).replace("Z", "+00:00"))
+                if pdt.tzinfo is None:
+                    pdt = pdt.replace(tzinfo=timezone.utc)
+            except Exception:
+                continue
+            if pdt > cutoff:
+                continue  # non sono ancora passati 3 giorni
+            owner = r.get(idf)
+            # Risolvi email, nome e società del destinatario
+            email = None
+            full_name = ""
+            sid = None
+            if role == "athlete":
+                ath = await db.athletes.find_one({"id": owner})
+                if not ath:
+                    continue
+                sid = ath.get("society_id")
+                full_name = ath.get("full_name") or ""
+                email = (ath.get("email") or "").strip() or None
+                if not email:
+                    linked = await db.users.find_one({"athlete_id": owner}, {"_id": 0, "email": 1})
+                    email = (linked.get("email") if linked else "") or None
+            else:
+                u = await db.users.find_one({"id": owner})
+                if not u:
+                    continue
+                sid = u.get("society_id")
+                full_name = u.get("full_name") or ""
+                email = (u.get("email") or "").strip() or None
+            if not email:
+                # niente email → salta ma non ritentare all'infinito ogni ciclo
+                continue
+            m = r.get("month") or 0
+            mese = _MESI[m] if 0 < m < 13 else str(m)
+            anno = r.get("year")
+            soc = await _society(sid)
+            soc_name = (soc.get("name") if soc else None) or "la società"
+            subject = f"Promemoria: firma la quietanza di {mese} {anno}"
+            html = (
+                f"<p>Ciao {full_name},</p>"
+                f"<p>È stato effettuato il bonifico del compenso di <b>{mese} {anno}</b>, "
+                f"ma risulta che non hai ancora firmato la relativa quietanza.</p>"
+                f"<p>Ti chiediamo di accedere all'app <b>RegistraTEAM</b> e firmare la quietanza al più presto.</p>"
+                f"<p>Grazie,<br/>{soc_name}</p>"
+            )
+            try:
+                await send_society_email(soc, to_email=email, subject=subject, html_content=html)
+                await db[coll].update_one(
+                    {"_id": r["_id"]},
+                    {"$set": {"signature_reminder_sent": True, "signature_reminder_sent_at": now.isoformat()}},
+                )
+                sent += 1
+            except Exception as e:
+                logger.error(f"[FIRMA-REMINDER] invio fallito per {email}: {e}")
+    if sent:
+        logger.info(f"[FIRMA-REMINDER] inviati {sent} solleciti firma via email")
+
+
+async def signature_reminder_scheduler():
+    """Controlla i solleciti firma ogni 12 ore (primo giro 90s dopo l'avvio)."""
+    import asyncio as _asyncio
+    await _asyncio.sleep(90)
+    while True:
+        try:
+            await check_signature_reminders()
+        except Exception as e:
+            logger.error(f"signature_reminder_scheduler error: {e}")
+        await _asyncio.sleep(43200)  # ogni 12 ore
+
+
+
 # 🆕 27/02/2026 (P2) — Notifica GDPR 18° compleanno
 # Contesto: quando un atleta compie 18 anni, per GDPR il genitore titolare
 # perde progressivamente il diritto di firmare in sua vece. Invece di un
@@ -44213,6 +44398,10 @@ async def start_certificate_scheduler():
     logger.info("Certificate block auto-reactivate scheduler started.")
     _asyncio.create_task(birthday_18_scheduler())
     logger.info("18th birthday GDPR notification scheduler started.")
+
+    # 🆕 Promemoria firma quietanza: email automatica 3gg dopo il bonifico
+    _asyncio.create_task(signature_reminder_scheduler())
+    logger.info("Signature reminder scheduler started (every 12h).")
 
     # 🆕 27/07/2026 — Piani ricorrenti Stripe: addebiti automatici alla scadenza
     try:
