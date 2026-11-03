@@ -2023,3 +2023,28 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - CAUSA: la proiezione si fermava ai mesi correnti/futuri; Ottobre, diventato passato (mese corrente=Novembre), mostrava solo i reali.
 - FIX (`quietanze.tsx`): la proiezione ora copre anche i mesi PASSATI che hanno già almeno una quietanza (mese appena chiuso ancora da registrare). Inoltre riscritto l'aggregato: somma TUTTE le quietanze reali del mese (no dedup per persona) e proietta SOLO i membri senza quietanza quel mese (guardia firstByYear per non proiettare prima dell'ingresso). Verificato in preview: Aprile 5 reali + 3 stimati = 8.
 - Richiede redeploy FRONTEND (Vercel).
+
+## Aggiornamento 02/11/2026 (2) — Consensi: logica lista ALLINEATA al profilo + diagnostica
+- La fix precedente (scan "qualsiasi suffisso" con regola all-True) poteva non bastare. Ora `/admin/athletes/image-consents` rispecchia ESATTAMENTE la logica del pannello profilo (get_athlete_consents):
+  1) consensi dei GENITORI → un NO = negato;
+  2) altrimenti chiave semplice `images_promo` (adulto/legacy);
+  3) altrimenti chiave con suffisso dell'atleta stesso `images_promo__<id_atleta>` (maggiorenne che firma per sé) → prima dava NEGATO.
+- Stessa robustezza applicata al ramo STAFF (users.consents + atleta collegato + self-suffix).
+- Verificato e2e sul backend: adult self-suffix YES→granted, plain YES→granted, plain NO/self NO→denied. Dati test ripristinati.
+- DIAGNOSTICA TEMPORANEA: aggiunto campo `_dbg` nella risposta e una riga viola "dbg: {...}" sotto ogni atleta nella pagina Consensi (image-consents.tsx) per vedere la struttura reale in produzione. DA RIMUOVERE dopo conferma.
+- Richiede redeploy BACKEND (Render) + FRONTEND (Vercel).
+
+## Aggiornamento 02/11/2026 (3) — Dati bancari sempre visibili + chiarimento Ottobre
+- Sezione "🏦 Dati Bancari" ora SEMPRE visibile con avviso "⚠️ Dati bancari non ancora inseriti" quando IBAN mancante, su tutti i ruoli:
+  - collaboratore/[id].tsx (prima si nascondeva se iban vuoto) ✓ verificato (PAOLI PAOLO mostra avviso)
+  - athlete/[id].tsx (compensati: avviso invece di '-'; quota senza dati resta nascosta)
+  - coach/[id].tsx (avviso se tutti i campi vuoti; sezione solo per approved)
+  - dirigente/[id].tsx (avviso nel ramo sola lettura; admin può comunque editare con la matita)
+- CHIARIMENTO Ottobre (domanda utente): la LISTA "Gestione Quietanze" mostra solo le quietanze REALMENTE create/registrate (per Ottobre ~4). Il RIEPILOGO in alto proietta invece il totale previsto. Per far comparire gli altri nominativi nella lista bisogna generare/creare la loro quietanza del mese. Possibile feature futura: "Genera quietanze del mese per tutti".
+- Frontend only → redeploy Vercel.
+
+## Aggiornamento 03/11/2026 — Genera Quietanze del Mese
+- NUOVO endpoint `POST /api/admin/quietanze/generate-month` (server.py, dopo mark-payment-bulk): crea bozze NON firmate per tutti i membri compensati della società (coach/dirigenti/collaboratori con monthly_compensation>0 e status approved + contratto attivo nel mese; atleti PRO con monthly_compensation>0). Idempotente (salta chi ha già quietanza quel mese). amount_net = stima INPS marginale (lordo pregresso dell'anno + compute_sport_inps_withholding), ricalcolato esatto alla firma. Campo `generated: true`.
+- FRONTEND quietanze.tsx: pulsante blu "Genera quietanze del mese" (sopra bonifici) + modale mese/anno → runGenerate(). Verificato e2e (created=4, idempotente, netto INPS, dirigente sospeso escluso); bozze di test aprile ripulite.
+- Punti 2/3/4 già esistenti: bonifico fatto/da fare (markPayment + bulk), firmata/non firmata (receipt_signed nelle card), sollecito singolo WhatsApp per riga (renderReceiptActions → remindWhatsApp).
+- Frontend+backend → serve redeploy Vercel (frontend) + Render (backend).

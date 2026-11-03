@@ -2041,21 +2041,28 @@ export default function AdminCoachDetail() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>🏦 Dati Bancari</Text>
             <Text style={styles.readOnlyNote}>* Dati inseriti dal coach nel proprio profilo</Text>
-            
-            <View style={styles.readOnlyField}>
-              <Text style={styles.readOnlyLabel}>IBAN</Text>
-              <Text style={styles.readOnlyValue}>{coach.iban || '-'}</Text>
-            </View>
-            
-            <View style={styles.readOnlyField}>
-              <Text style={styles.readOnlyLabel}>Intestatario Conto</Text>
-              <Text style={styles.readOnlyValue}>{coach.account_holder || '-'}</Text>
-            </View>
-            
-            <View style={styles.readOnlyField}>
-              <Text style={styles.readOnlyLabel}>Banca</Text>
-              <Text style={styles.readOnlyValue}>{coach.bank_name || '-'}</Text>
-            </View>
+            {(coach.iban || coach.account_holder || coach.bank_name) ? (
+              <>
+                <View style={styles.readOnlyField}>
+                  <Text style={styles.readOnlyLabel}>IBAN</Text>
+                  <Text style={styles.readOnlyValue}>{coach.iban || '-'}</Text>
+                </View>
+
+                <View style={styles.readOnlyField}>
+                  <Text style={styles.readOnlyLabel}>Intestatario Conto</Text>
+                  <Text style={styles.readOnlyValue}>{coach.account_holder || '-'}</Text>
+                </View>
+
+                <View style={styles.readOnlyField}>
+                  <Text style={styles.readOnlyLabel}>Banca</Text>
+                  <Text style={styles.readOnlyValue}>{coach.bank_name || '-'}</Text>
+                </View>
+              </>
+            ) : (
+              <Text style={{ color: '#E65100', fontSize: 13, backgroundColor: '#FFF3E0', padding: 10, borderRadius: 8 }}>
+                ⚠️ Dati bancari non ancora inseriti dal coach
+              </Text>
+            )}
           </View>
         )}
 

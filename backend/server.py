@@ -22067,6 +22067,148 @@ async def admin_mark_quietanza_payment_bulk(data: dict = Body(...), current_user
     return {"ok": True, "updated": count, "year": year, "month": month}
 
 
+@api_router.post("/admin/quietanze/generate-month")
+async def admin_generate_month_quietanze(data: dict = Body(...), current_user = Depends(get_current_user)):
+    """🆕 Genera in blocco le quietanze (bozze NON firmate) del mese per TUTTI i membri
+    compensati della società: coach, dirigenti, collaboratori (users.monthly_compensation>0)
+    e atleti PRO (athletes.monthly_compensation>0). Non duplica: salta chi ha già una
+    quietanza per quel mese/anno. Il netto è una stima INPS (ricalcolata esattamente alla firma).
+    Così l'admin vede subito CHI pagare e QUANTO, poi segna bonifici e sollecita le firme."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    try:
+        year = int(data.get("year")); month = int(data.get("month"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Mese/anno non validi")
+    if not (1 <= month <= 12):
+        raise HTTPException(status_code=400, detail="Mese non valido")
+    _sid = current_user.get("society_id")
+    now = datetime.now(timezone.utc).isoformat()
+    _MONTHS = ["", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+               "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
+    month_name = _MONTHS[month]
+    created = 0
+    skipped = 0
+
+    def _contract_active_this_month(doc) -> bool:
+        """True se il contratto copre (anche parzialmente) il mese target. Se le date
+        non sono entrambe valide → consideriamo attivo (non escludiamo nessuno)."""
+        cs = _parse_contract_date(doc.get("contract_start_date") or doc.get("contract_start"))
+        ce = _parse_contract_date(doc.get("contract_end_date") or doc.get("contract_end"))
+        if not cs or not ce:
+            return True
+        try:
+            import calendar as _cal
+            from datetime import date as _d
+            first_of_month = _d(year, month, 1)
+            last_of_month = _d(year, month, _cal.monthrange(year, month)[1])
+            return last_of_month >= cs and first_of_month <= ce
+        except Exception:
+            return True
+
+    async def _net_estimate(coll, idf, uid, gross, insured):
+        """Stima netto: somma il lordo già presente nello stesso anno nei mesi precedenti
+        e applica la trattenuta INPS marginale su questo compenso."""
+        before = 0.0
+        async for pr in db[coll].find({idf: uid, "year": year}):
+            try:
+                pm = int(pr.get("month") or 0)
+            except (TypeError, ValueError):
+                pm = 0
+            if 0 < pm < month:
+                before += float(pr.get("amount_gross", pr.get("amount", 0)) or 0)
+        b = compute_sport_inps_withholding(before, gross, insured_elsewhere=bool(insured))
+        return b["amount_net"], b.get("inps_worker", 0.0)
+
+    # ── Coach / Dirigenti / Collaboratori (da users) ──
+    role_map = [
+        ("coach", "coach_compensations", "coach_id"),
+        ("dirigente", "dirigente_compensations", "dirigente_id"),
+        ("collaboratore", "collaboratore_compensations", "collaboratore_id"),
+    ]
+    for role, coll, idf in role_map:
+        uq = {"role": role}
+        if _sid:
+            uq["society_id"] = _sid
+        async for u in db.users.find(uq):
+            comp = float(u.get("monthly_compensation") or 0)
+            if comp <= 0:
+                continue
+            if u.get("status") and u.get("status") != "approved":
+                continue
+            if not _contract_active_this_month(u):
+                continue
+            uid = u["id"]
+            existing = await db[coll].find_one({idf: uid, "year": year, "month": month})
+            if existing:
+                skipped += 1
+                continue
+            net, worker = await _net_estimate(coll, idf, uid, comp, u.get("inps_insured_elsewhere", False))
+            await db[coll].insert_one({
+                "id": str(uuid.uuid4()),
+                idf: uid,
+                "society_id": u.get("society_id") or _sid,
+                "month": month,
+                "year": year,
+                "amount": comp,
+                "amount_gross": comp,
+                "amount_net": net,
+                "deductions": worker,
+                "receipt_signed": False,
+                "signed": False,
+                "payment_made": False,
+                "generated": True,
+                "created_by": current_user["id"],
+                "created_at": now,
+                "updated_at": now,
+            })
+            created += 1
+
+    # ── Atleti PRO (da athletes) ──
+    aq = {}
+    if _sid:
+        aq["society_id"] = _sid
+    async for a in db.athletes.find(aq):
+        comp = float(a.get("monthly_compensation") or 0)
+        if comp <= 0:
+            continue
+        if not _contract_active_this_month(a):
+            continue
+        aid = a["id"]
+        existing = await db.athlete_compensation_receipts.find_one({
+            "athlete_id": aid,
+            "$or": [{"month": month}, {"month": month_name}],
+            "year": year,
+        })
+        if existing:
+            skipped += 1
+            continue
+        net, worker = await _net_estimate("athlete_compensation_receipts", "athlete_id", aid, comp, a.get("inps_insured_elsewhere", False))
+        await db.athlete_compensation_receipts.insert_one({
+            "id": str(uuid.uuid4()),
+            "athlete_id": aid,
+            "society_id": a.get("society_id") or _sid,
+            "month": month,
+            "month_name": month_name,
+            "year": year,
+            "amount": comp,
+            "amount_gross": comp,
+            "amount_net": net,
+            "deductions": worker,
+            "receipt_signed": False,
+            "signed": False,
+            "payment_made": False,
+            "generated": True,
+            "created_by": current_user["id"],
+            "created_at": now,
+            "updated_at": now,
+        })
+        created += 1
+
+    return {"ok": True, "created": created, "skipped": skipped, "month": month, "year": year}
+
+
+
 @api_router.get("/me/receipts/pending-signature")
 async def my_pending_signature_receipts(current_user = Depends(get_current_user)):
     """Quietanze con bonifico effettuato ma NON ancora firmate dall'utente corrente.
@@ -42454,46 +42596,53 @@ async def admin_list_image_consents(
         consents = a.get("consents") or {}
         priv_signed = _privacy_signed(a)
 
-        # Compute final value — considera SOLO i consensi effettivamente espressi
-        # (True/False). Un valore None (mai compilato) NON conta come "negato".
-        # 🐛 31/10/2026 — Raccoglie il consenso da QUALSIASI variante di chiave:
-        #   - "images_promo" (legacy/diretta)
-        #   - "images_promo__<id>" (per-genitore OPPURE atleta adulto che firma per sé)
-        # Prima gli atleti adulti (senza parent_id) risultavano NEGATI perché il
-        # consenso è salvato come "images_promo__<id_atleta>" e veniva ignorato.
-        expressed = {}  # owner_id -> bool
-        for k, v in consents.items():
-            if not isinstance(k, str):
-                continue
-            if k == consent_type:
-                owner = a.get("parent_id") or "_self"
-            elif k.startswith(consent_type + "__"):
-                owner = k[len(consent_type) + 2:]
-            else:
-                continue
-            val = _extract(v)
-            if val is not None:
-                expressed[owner] = val
+        # Compute final value — rispecchia ESATTAMENTE la logica del pannello profilo
+        # (GET /athletes/{id}/consents) che mostra correttamente "Dato"/"Negato":
+        #  1) se ci sono consensi dei GENITORI → regola "un NO = negato" (tutti SÌ = concesso)
+        #  2) altrimenti chiave semplice "images_promo" (adulto/legacy)
+        #  3) altrimenti chiave con suffisso dell'atleta stesso "images_promo__<id_atleta>"
+        #     (maggiorenne che firma per sé) — prima mancava e li dava per NEGATI.
+        athlete_parent_ids = [pid for pid in [a.get("parent_id"), a.get("second_parent_id")] if pid]
+        parent_states = {}
+        for pid in athlete_parent_ids:
+            key = f"{consent_type}__{pid}"
+            if key in consents:
+                v = _extract(consents[key])
+                if v is not None:
+                    parent_states[pid] = v
+            elif pid == a.get("parent_id") and consent_type in consents:
+                v = _extract(consents[consent_type])
+                if v is not None:
+                    parent_states[pid] = v
 
-        if expressed:
-            final_value = all(expressed.values())
-            denied_by_ids = [oid for oid, v in expressed.items() if not v]
+        if parent_states:
+            final_value = all(parent_states.values())
+            denied_by_ids = [pid for pid, v in parent_states.items() if not v]
             denied_by_names = [
-                nm for nm in (
-                    (parent_info.get(oid) or {}).get("full_name") or (parent_info.get(oid) or {}).get("email")
-                    for oid in denied_by_ids if oid and oid != "_self"
-                ) if nm
+                (parent_info.get(pid) or {}).get("full_name") or (parent_info.get(pid) or {}).get("email") or pid
+                for pid in denied_by_ids
             ]
             has_record = True
         else:
-            final_value = False
+            raw = _extract(consents.get(consent_type))
+            if raw is not None:
+                final_value = bool(raw)
+                has_record = True
+            else:
+                # Maggiorenne che ha firmato per sé: consenso sotto "images_promo__<id>"
+                self_vals = [
+                    _extract(v) for k, v in consents.items()
+                    if isinstance(k, str) and k.startswith(consent_type + "__") and _extract(v) is not None
+                ]
+                final_value = all(self_vals) if self_vals else False
+                has_record = len(self_vals) > 0
             denied_by_names = []
-            has_record = False
 
         if only_denied and final_value:
             continue
 
         full_name = f"{a.get('last_name','')} {a.get('first_name','')}".strip() or a.get("full_name", "—")
+        _dbg = {k: _extract(v) for k, v in consents.items() if isinstance(k, str) and consent_type in k}
         result_athletes.append({
             "athlete_id": a.get("id"),
             "entity_type": "athlete",
@@ -42507,6 +42656,7 @@ async def admin_list_image_consents(
             "has_signed": has_record,
             "privacy_signed": priv_signed,
             "privacy_accepted": bool(a.get("privacy_accepted")),
+            "_dbg": _dbg,
         })
 
     # Group by team
@@ -42578,11 +42728,30 @@ async def admin_list_image_consents(
                 if not priv_signed:
                     priv_signed = _privacy_signed(la)
 
+            # 🐛 02/11/2026 — adulto che firma per sé: consenso sotto "images_promo__<id>"
+            if raw_v is None:
+                _self_vals = [
+                    _extract(v) for k, v in consents.items()
+                    if isinstance(k, str) and k.startswith(consent_type + "__") and _extract(v) is not None
+                ]
+                if not _self_vals and la is not None:
+                    _self_vals = [
+                        _extract(v) for k, v in (la.get("consents") or {}).items()
+                        if isinstance(k, str) and k.startswith(consent_type + "__") and _extract(v) is not None
+                    ]
+                if _self_vals:
+                    raw_v = all(_self_vals)
+
             final_value = bool(raw_v) if raw_v is not None else False
             has_record = raw_v is not None
             if only_denied and final_value:
                 continue
             label = role_label.get(u.get("role"), "Staff")
+            _dbg_staff = {f"user.{k}": _extract(v) for k, v in consents.items() if isinstance(k, str) and consent_type in k}
+            if la is not None:
+                for k, v in (la.get("consents") or {}).items():
+                    if isinstance(k, str) and consent_type in k:
+                        _dbg_staff[f"linked.{k}"] = _extract(v)
             entry = {
                 "athlete_id": u.get("id"),
                 "entity_type": "staff",
@@ -42598,6 +42767,7 @@ async def admin_list_image_consents(
                 "has_signed": has_record,
                 "privacy_signed": priv_signed,
                 "privacy_accepted": priv_signed,
+                "_dbg": _dbg_staff,
             }
             staff_by_label.setdefault(label, {
                 "team_id": f"_staff_{label}",

@@ -3313,18 +3313,26 @@ export default function AdminAthleteDetail() {
                   {isCompensated && (
                     <Text style={{ fontSize: 12, color: '#888', fontStyle: 'italic', marginBottom: 8 }}>* Dati inseriti dall'atleta nel proprio profilo (necessari per i compensi)</Text>
                   )}
-                  <View style={styles.infoRow}>
-                    <Text style={styles.label}>IBAN</Text>
-                    <Text style={[styles.value, styles.valueSmall]}>{iban || '-'}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.label}>Intestatario</Text>
-                    <Text style={styles.value}>{holder ? String(holder).toUpperCase() : '-'}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Text style={styles.label}>Banca</Text>
-                    <Text style={styles.value}>{bank || '-'}</Text>
-                  </View>
+                  {(iban || holder || bank) ? (
+                    <>
+                      <View style={styles.infoRow}>
+                        <Text style={styles.label}>IBAN</Text>
+                        <Text style={[styles.value, styles.valueSmall]}>{iban || '-'}</Text>
+                      </View>
+                      <View style={styles.infoRow}>
+                        <Text style={styles.label}>Intestatario</Text>
+                        <Text style={styles.value}>{holder ? String(holder).toUpperCase() : '-'}</Text>
+                      </View>
+                      <View style={styles.infoRow}>
+                        <Text style={styles.label}>Banca</Text>
+                        <Text style={styles.value}>{bank || '-'}</Text>
+                      </View>
+                    </>
+                  ) : (
+                    <Text style={{ color: '#E65100', fontSize: 13, backgroundColor: '#FFF3E0', padding: 10, borderRadius: 8 }}>
+                      ⚠️ Dati bancari non ancora inseriti dall&apos;atleta
+                    </Text>
+                  )}
                 </View>
               );
             })()}
