@@ -289,6 +289,45 @@ const buildConvocationPdf = (JsPDF: any, d: ConvocationPDFData) => {
   return pdf;
 };
 
+/**
+ * APRE il PDF per la VISUALIZZAZIONE (non la condivisione).
+ * Su web apre il PDF in una nuova scheda del browser (niente foglio di
+ * condivisione di sistema che bloccava tutto su desktop). Su mobile apre
+ * l'anteprima/condivisione nativa, da cui si può aprire o inviare.
+ */
+export const openConvocationPDF = async (d: ConvocationPDFData) => {
+  const fileName = (d.fileName || 'convocazione').replace(/[^a-zA-Z0-9_-]+/g, '_');
+  if (Platform.OS === 'web') {
+    const { jsPDF } = await import('jspdf');
+    const pdf = buildConvocationPdf(jsPDF, d);
+    const blob = pdf.output('blob');
+    const url = URL.createObjectURL(blob);
+    const win = window.open(url, '_blank');
+    if (!win) {
+      // Popup bloccato → fallback: scarica il file
+      const a = document.createElement('a');
+      a.href = url; a.download = `${fileName}.pdf`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } else {
+    const html = generateConvocationHTML(d);
+    const Print = await import('expo-print');
+    const Sharing = await import('expo-sharing');
+    try {
+      const { uri } = await Print.printToFileAsync({ html });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Convocazione', UTI: 'com.adobe.pdf' });
+      } else {
+        await Print.printAsync({ html });
+      }
+    } catch {
+      await Print.printAsync({ html });
+    }
+  }
+};
+
+
 export const downloadConvocationPDF = async (d: ConvocationPDFData) => {
   const fileName = (d.fileName || 'convocazione').replace(/[^a-zA-Z0-9_-]+/g, '_');
   if (Platform.OS === 'web') {

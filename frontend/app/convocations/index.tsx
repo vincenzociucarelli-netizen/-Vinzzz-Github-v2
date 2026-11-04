@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '../../src/components/Icon';
 import api from '../../src/services/api';
-import { downloadConvocationPDF } from '../../src/utils/convocationReport';
+import { openConvocationPDF } from '../../src/utils/convocationReport';
 
 interface Convocation {
   id: string;
@@ -80,7 +80,7 @@ export default function ConvocationsList() {
         api.get('/settings/society?include_images=true'),
       ]);
       const d = detRes.data || {};
-      await downloadConvocationPDF({
+      await openConvocationPDF({
         societyName: socRes.data?.name || 'RegistraTEAM',
         societyLogo: socRes.data?.logo || null,
         teamName: d.team_name || c.team_name || teamName || '',
