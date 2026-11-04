@@ -298,6 +298,9 @@ export default function ConvocationEditor() {
   const handlePDF = async () => {
     if (!validate()) return;
     const athletes = allAthletes.filter(a => selected.has(a.id)).map(a => ({ id: a.id, full_name: a.full_name, role: a.role, jersey_number: a.jersey_number }));
+    const home = (teamName || 'squadra').trim();
+    const away = (opponent || 'avversario').trim();
+    const pair = homeAway === 'away' ? `${away}_vs_${home}` : `${home}_vs_${away}`;
     await downloadConvocationPDF({
       societyName: society.name || 'RegistraTEAM',
       societyLogo: society.logo,
@@ -316,7 +319,7 @@ export default function ConvocationEditor() {
       startTime: startTime.trim(),
       notes: notes.trim(),
       athletes,
-      fileName: `convocazione_${(teamName || 'squadra').replace(/[^a-zA-Z0-9]+/g, '_')}`,
+      fileName: `convocazione_${pair.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '')}`,
       sortBy,
     });
   };
