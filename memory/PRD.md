@@ -2048,3 +2048,23 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - FRONTEND quietanze.tsx: pulsante blu "Genera quietanze del mese" (sopra bonifici) + modale mese/anno → runGenerate(). Verificato e2e (created=4, idempotente, netto INPS, dirigente sospeso escluso); bozze di test aprile ripulite.
 - Punti 2/3/4 già esistenti: bonifico fatto/da fare (markPayment + bulk), firmata/non firmata (receipt_signed nelle card), sollecito singolo WhatsApp per riga (renderReceiptActions → remindWhatsApp).
 - Frontend+backend → serve redeploy Vercel (frontend) + Render (backend).
+
+## Aggiornamento 03/11/2026 (2) — Export Pagamenti + Riepilogo Annuale + Promemoria firma automatico
+- EXPORT PAGAMENTI (CSV+PDF) e RIEPILOGO ANNUALE: nella pagina admin/commercialista.tsx.
+  - Mensile: nuovo util src/utils/paymentsReport.ts (monthlyPaymentsCSV/HTML) genera CSV (netti per persona, con CF, lordo/netto/F24/bonifico/firma) e PDF A4 landscape. Usa dati di /admin/commercialista/summary (già esistente).
+  - Annuale: NUOVO endpoint GET /api/admin/commercialista/annual-summary?year= (server.py, dopo commercialista_send_email) → per persona total_gross/total_net/total_paid/total_versare + mesi + soglie. Helper _paid_amount_from_receipt gestisce split anticipo/saldo atleti. UI: sezione "Riepilogo annuale" + CSV/PDF (annualSummaryCSV/HTML).
+  - Download cross-platform: web Blob+anchor; native expo-file-system + expo-sharing (downloadTextFile); PDF via expo-print (printHTMLtoPDF).
+- PROMEMORIA FIRMA AUTOMATICO (email, 1 volta, dopo 3 giorni dal bonifico):
+  - server.py: check_signature_reminders() + signature_reminder_scheduler() (ogni 12h, primo giro 90s), registrato nello startup hook. Filtro: payment_made=True, receipt_signed!=True, payment_made_date<=now-3gg, signature_reminder_sent!=True. Invia via send_society_email (Brevo/branding società), poi set signature_reminder_sent=True/at. Email risolta da users/athletes (athlete: athletes.email o user linkato via athlete_id).
+  - Scelte utente: canale EMAIL automatica, UNA sola volta dopo 3 giorni.
+  - Verificato con stub email (flag impostato, idempotente, cleanup). In preview 0 candidati reali → nessuna email reale inviata. Richiede email del destinatario; in produzione usa Brevo.
+- Frontend+backend → redeploy Vercel + Render.
+
+## Aggiornamento 03/11/2026 (3) — Fix definitivo discrepanza consensi privacy (anagrafica vs Consensi Privacy)
+- CAUSA RADICE: lo stato finale del consenso immagini era calcolato in 3 punti separati (GET /athletes/{id}/consents, GET /admin/athletes/image-consents, e frontend AdminConsentView), con gestione diversa delle chiavi suffisse `images_promo__<parentId>` e dei valori None → divergevano (anagrafica "Dato" verde, lista admin "Negato" rosso per minori con consenso genitore).
+- FIX: nuovo helper UNICO backend `_compute_image_consent_final(athlete, consent_type)` (server.py, prima di get_athlete_consents) → tri-stato status True/False/None. Gestisce: per-genitore suffisso, chiave semplice/legacy (bool o {value}), suffisso self maggiorenne. Regola "un NO prevale".
+  - get_athlete_consents → usa helper.
+  - /admin/athletes/image-consents (atleti E staff, con fallback doppio incarico su linked_athlete) → usa helper. Aggiunto campo consent_status. Rimosso _dbg/_dbg_staff.
+  - AdminConsentView.tsx → usa fc.status tri-stato (fallback alla vecchia logica se backend non aggiornato). Rimossa riga diagnostica dbg da image-consents.tsx.
+- VERIFICATO in locale (DB test): helper + due endpoint HTTP coincidono (minore consenso genitore=CONCESSO in entrambe; non compare tra i Negati). Scenari: minore concesso/negato, adulto self-signed. Dati test ripuliti.
+- NOTA AMBIENTE: il preview usa test_database (5 atleti fittizi) — gli atleti reali (Sangoi/Cucina/Brughini) sono in produzione (Atlas/Render), non interrogabili da qui. Il fix è a prova di drift ma richiede REDEPLOY backend (Render) + frontend (Vercel) per avere effetto in produzione.

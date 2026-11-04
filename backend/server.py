@@ -22402,6 +22402,81 @@ async def commercialista_send_email(data: dict = Body(...), current_user = Depen
         raise HTTPException(status_code=500, detail=f"Invio email non riuscito: {e}")
 
 
+def _paid_amount_from_receipt(r: dict, athlete_doc: Optional[dict] = None) -> float:
+    """Quanto è stato effettivamente erogato per una quietanza (gestisce lo split
+    anticipo/saldo degli atleti)."""
+    amt = _receipt_amounts(r)
+    net = amt["net"]
+    if r.get("payment_made"):
+        return net
+    if athlete_doc and athlete_doc.get("advance_split_enabled") and float(athlete_doc.get("advance_amount") or 0) > 0:
+        adv = min(float(athlete_doc.get("advance_amount") or 0), amt["gross"])
+        saldo = max(0.0, net - adv)
+        return round((adv if r.get("advance_paid") else 0.0) + (saldo if r.get("balance_paid") else 0.0), 2)
+    return 0.0
+
+
+@api_router.get("/admin/commercialista/annual-summary")
+async def commercialista_annual_summary(year: int, current_user = Depends(get_current_user)):
+    """Riepilogo ANNUALE per il commercialista: per ogni persona il totale LORDO,
+    NETTO (maturato) e PAGATO (bonifici effettuati) nell'anno, con n. mensilità e
+    flag soglia. Più i totali generali della società."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    _sid = current_user.get("society_id")
+    society_user_ids = set()
+    async for u in db.users.find({"society_id": _sid} if _sid else {}, {"_id": 0, "id": 1}):
+        if u.get("id"):
+            society_user_ids.add(u["id"])
+
+    agg: dict = {}  # key (role, uid) -> accumulatore
+    for role, (coll, idf) in ROLE_RECEIPT_MAP.items():
+        async for r in db[coll].find({"year": year}):
+            owner = r.get(idf)
+            athlete_doc = None
+            if role == "athlete":
+                athlete_doc = await db.athletes.find_one({"id": owner}, {"_id": 0, "society_id": 1, "advance_split_enabled": 1, "advance_amount": 1})
+                if _sid and (not athlete_doc or athlete_doc.get("society_id") != _sid):
+                    continue
+            else:
+                if _sid and owner not in society_user_ids:
+                    continue
+            amt = _receipt_amounts(r)
+            if amt["gross"] <= 0:
+                continue
+            key = (role, owner)
+            if key not in agg:
+                ana = await _commercialista_anagrafica(role, owner)
+                agg[key] = {
+                    "user_role": role, "user_id": owner,
+                    "full_name": ana["full_name"], "fiscal_code": ana["fiscal_code"],
+                    "months": 0, "total_gross": 0.0, "total_net": 0.0,
+                    "total_paid": 0.0, "total_versare": 0.0,
+                    "exceeded_5000": False, "exceeded_15000": False,
+                }
+            row = agg[key]
+            row["months"] += 1
+            row["total_gross"] = round(row["total_gross"] + amt["gross"], 2)
+            row["total_net"] = round(row["total_net"] + amt["net"], 2)
+            row["total_paid"] = round(row["total_paid"] + _paid_amount_from_receipt(r, athlete_doc), 2)
+            if r.get("exceeded_5000"):
+                row["total_versare"] = round(row["total_versare"] + amt["versare"], 2)
+                row["exceeded_5000"] = True
+            if r.get("exceeded_15000"):
+                row["exceeded_15000"] = True
+
+    rows = sorted(agg.values(), key=lambda x: (x.get("full_name") or "").lower())
+    totals = {
+        "count": len(rows),
+        "total_gross": round(sum(x["total_gross"] for x in rows), 2),
+        "total_net": round(sum(x["total_net"] for x in rows), 2),
+        "total_paid": round(sum(x["total_paid"] for x in rows), 2),
+        "total_versare": round(sum(x["total_versare"] for x in rows), 2),
+    }
+    return {"year": year, "recipients": rows, "totals": totals}
+
+
+
 
 
 
@@ -41388,6 +41463,59 @@ async def update_my_consents(
     
     return {"success": True, "consents": existing_consents}
 
+def _compute_image_consent_final(athlete: dict, consent_type: str) -> dict:
+    """UNICA fonte di verità per lo stato finale di un consenso immagini.
+
+    Usata SIA dal profilo atleta (GET /athletes/{id}/consents) SIA dalla schermata
+    admin 'Consensi Privacy' (GET /admin/athletes/image-consents), così le due viste
+    non possono MAI più divergere (prima erano due implementazioni separate).
+
+    Gestisce tutte le forme di salvataggio presenti nei dati:
+      • consensi per-genitore con suffisso:  images_promo__<parentId>
+      • chiave semplice / legacy:            images_promo (bool oppure {"value": ...})
+      • maggiorenne che firma per sé:        images_promo__<selfUserId>
+
+    Regola: un NO prevale (concesso solo se TUTTI dicono SÌ esplicito).
+    Ritorna status TRI-STATO: True (dato) / False (negato) / None (mai espresso)."""
+    consents = athlete.get("consents") or {}
+
+    def _v(entry):
+        if isinstance(entry, bool):
+            return entry
+        if isinstance(entry, dict):
+            return entry.get("value")
+        return None
+
+    parent_ids = [pid for pid in [athlete.get("parent_id"), athlete.get("second_parent_id")] if pid]
+    parent_states = {}
+    for pid in parent_ids:
+        key = f"{consent_type}__{pid}"
+        if key in consents:
+            parent_states[pid] = _v(consents[key])
+        elif pid == athlete.get("parent_id") and consent_type in consents:
+            parent_states[pid] = _v(consents[consent_type])
+
+    if parent_states:
+        status = all(v is True for v in parent_states.values())
+        denied_by = [pid for pid, v in parent_states.items() if v is not True] or None
+        return {"final_value": bool(status), "status": bool(status),
+                "per_parent": parent_states, "denied_by": denied_by}
+
+    # Nessun contesto genitori → chiave semplice/legacy, poi suffisso "self" (maggiorenne)
+    raw = _v(consents.get(consent_type))
+    if raw is not None:
+        return {"final_value": bool(raw), "status": bool(raw), "per_parent": {}, "denied_by": None}
+    self_vals = [
+        _v(v) for k, v in consents.items()
+        if isinstance(k, str) and k.startswith(consent_type + "__") and _v(v) is not None
+    ]
+    if self_vals:
+        status = all(x is True for x in self_vals)
+        return {"final_value": bool(status), "status": bool(status), "per_parent": {}, "denied_by": None}
+    return {"final_value": False, "status": None, "per_parent": {}, "denied_by": None}
+
+
+
 @api_router.get("/athletes/{athlete_id}/consents")
 async def get_athlete_consents(athlete_id: str, current_user = Depends(get_current_user)):
     """Get an athlete's consent status with per-parent breakdown and final state."""
@@ -41401,44 +41529,14 @@ async def get_athlete_consents(athlete_id: str, current_user = Depends(get_curre
         raise HTTPException(status_code=403, detail="Non autorizzato")
     
     consents = athlete.get("consents") or {}
-    
-    # Calcola lo stato finale per i consensi immagini (regola: un NO = NEGATO)
-    parent_ids = [pid for pid in [athlete.get("parent_id"), athlete.get("second_parent_id")] if pid]
-    
-    def _extract_consent_value(entry):
-        """Extract bool value from consent entry (handles both bool and dict formats)."""
-        if isinstance(entry, bool):
-            return entry
-        if isinstance(entry, dict):
-            return entry.get("value", False)
-        return False
 
-    final_consents = {}
-    for consent_type in ["images_internal", "images_promo"]:
-        parent_states = {}
-        for pid in parent_ids:
-            key = f"{consent_type}__{pid}"
-            if key in consents:
-                parent_states[pid] = _extract_consent_value(consents[key])
-            elif pid == athlete.get("parent_id") and consent_type in consents:
-                # Retrocompatibilità: consenso senza parent_id specifico
-                parent_states[pid] = _extract_consent_value(consents[consent_type])
-        
-        # Regola: se almeno un genitore nega → NEGATO. Solo se TUTTI accettano → ACCETTATO
-        if parent_states:
-            final_consents[consent_type] = {
-                "final_value": all(parent_states.values()),
-                "per_parent": parent_states,
-                "denied_by": [pid for pid, v in parent_states.items() if not v] or None,
-            }
-        else:
-            raw = consents.get(consent_type)
-            final_consents[consent_type] = {
-                "final_value": _extract_consent_value(raw) if raw is not None else False,
-                "per_parent": {},
-                "denied_by": None,
-            }
-    
+    # 🆕 Stato finale consensi immagini via helper UNICO condiviso con la
+    # schermata admin 'Consensi Privacy' (niente più logiche parallele).
+    final_consents = {
+        ct: _compute_image_consent_final(athlete, ct)
+        for ct in ["images_internal", "images_promo"]
+    }
+
     return {
         "consents": consents,
         "final_consents": final_consents,
@@ -42596,53 +42694,21 @@ async def admin_list_image_consents(
         consents = a.get("consents") or {}
         priv_signed = _privacy_signed(a)
 
-        # Compute final value — rispecchia ESATTAMENTE la logica del pannello profilo
-        # (GET /athletes/{id}/consents) che mostra correttamente "Dato"/"Negato":
-        #  1) se ci sono consensi dei GENITORI → regola "un NO = negato" (tutti SÌ = concesso)
-        #  2) altrimenti chiave semplice "images_promo" (adulto/legacy)
-        #  3) altrimenti chiave con suffisso dell'atleta stesso "images_promo__<id_atleta>"
-        #     (maggiorenne che firma per sé) — prima mancava e li dava per NEGATI.
-        athlete_parent_ids = [pid for pid in [a.get("parent_id"), a.get("second_parent_id")] if pid]
-        parent_states = {}
-        for pid in athlete_parent_ids:
-            key = f"{consent_type}__{pid}"
-            if key in consents:
-                v = _extract(consents[key])
-                if v is not None:
-                    parent_states[pid] = v
-            elif pid == a.get("parent_id") and consent_type in consents:
-                v = _extract(consents[consent_type])
-                if v is not None:
-                    parent_states[pid] = v
-
-        if parent_states:
-            final_value = all(parent_states.values())
-            denied_by_ids = [pid for pid, v in parent_states.items() if not v]
-            denied_by_names = [
-                (parent_info.get(pid) or {}).get("full_name") or (parent_info.get(pid) or {}).get("email") or pid
-                for pid in denied_by_ids
-            ]
-            has_record = True
-        else:
-            raw = _extract(consents.get(consent_type))
-            if raw is not None:
-                final_value = bool(raw)
-                has_record = True
-            else:
-                # Maggiorenne che ha firmato per sé: consenso sotto "images_promo__<id>"
-                self_vals = [
-                    _extract(v) for k, v in consents.items()
-                    if isinstance(k, str) and k.startswith(consent_type + "__") and _extract(v) is not None
-                ]
-                final_value = all(self_vals) if self_vals else False
-                has_record = len(self_vals) > 0
-            denied_by_names = []
+        # 🆕 Stato finale via helper UNICO condiviso con il profilo atleta
+        # (GET /athletes/{id}/consents): le due viste ora sono identiche by-design.
+        _fc = _compute_image_consent_final(a, consent_type)
+        status = _fc["status"]                 # True / False / None
+        final_value = (status is True)         # concesso SOLO se True esplicito
+        has_record = (status is not None)      # ha firmato/espresso qualcosa
+        denied_by_names = [
+            (parent_info.get(pid) or {}).get("full_name") or (parent_info.get(pid) or {}).get("email") or pid
+            for pid in (_fc.get("denied_by") or [])
+        ]
 
         if only_denied and final_value:
             continue
 
         full_name = f"{a.get('last_name','')} {a.get('first_name','')}".strip() or a.get("full_name", "—")
-        _dbg = {k: _extract(v) for k, v in consents.items() if isinstance(k, str) and consent_type in k}
         result_athletes.append({
             "athlete_id": a.get("id"),
             "entity_type": "athlete",
@@ -42652,11 +42718,11 @@ async def admin_list_image_consents(
             "birth_date": a.get("date_of_birth") or a.get("birth_date"),
             "is_minor": _is_minor(a),
             "consent_given": final_value,
+            "consent_status": status,
             "denied_by_parents": denied_by_names,
             "has_signed": has_record,
             "privacy_signed": priv_signed,
             "privacy_accepted": bool(a.get("privacy_accepted")),
-            "_dbg": _dbg,
         })
 
     # Group by team
@@ -42715,43 +42781,26 @@ async def admin_list_image_consents(
             if u.get("is_institutional"):
                 continue  # l'account istituzionale non firma consensi immagine
             consents = u.get("consents") or {}
-            raw_v = _extract(consents.get(consent_type))
             privacy_raw = consents.get("privacy_viewed")
             priv_signed = (_extract(privacy_raw) is True)
 
             # Fallback su atleta collegato (doppio incarico)
             la = linked_athletes.get(u.get("linked_athlete_id")) if u.get("linked_athlete_id") else None
-            if la is not None:
-                la_cons = la.get("consents") or {}
-                if raw_v is None:
-                    raw_v = _extract(la_cons.get(consent_type))
-                if not priv_signed:
-                    priv_signed = _privacy_signed(la)
 
-            # 🐛 02/11/2026 — adulto che firma per sé: consenso sotto "images_promo__<id>"
-            if raw_v is None:
-                _self_vals = [
-                    _extract(v) for k, v in consents.items()
-                    if isinstance(k, str) and k.startswith(consent_type + "__") and _extract(v) is not None
-                ]
-                if not _self_vals and la is not None:
-                    _self_vals = [
-                        _extract(v) for k, v in (la.get("consents") or {}).items()
-                        if isinstance(k, str) and k.startswith(consent_type + "__") and _extract(v) is not None
-                    ]
-                if _self_vals:
-                    raw_v = all(_self_vals)
+            # 🆕 Stato finale via helper UNICO: prima sul record utente, poi (se non
+            # espresso) sul record atleta collegato del doppio incarico.
+            _fc = _compute_image_consent_final(u, consent_type)
+            status = _fc["status"]
+            if status is None and la is not None:
+                status = _compute_image_consent_final(la, consent_type)["status"]
+            if not priv_signed and la is not None:
+                priv_signed = _privacy_signed(la)
 
-            final_value = bool(raw_v) if raw_v is not None else False
-            has_record = raw_v is not None
+            final_value = (status is True)
+            has_record = (status is not None)
             if only_denied and final_value:
                 continue
             label = role_label.get(u.get("role"), "Staff")
-            _dbg_staff = {f"user.{k}": _extract(v) for k, v in consents.items() if isinstance(k, str) and consent_type in k}
-            if la is not None:
-                for k, v in (la.get("consents") or {}).items():
-                    if isinstance(k, str) and consent_type in k:
-                        _dbg_staff[f"linked.{k}"] = _extract(v)
             entry = {
                 "athlete_id": u.get("id"),
                 "entity_type": "staff",
@@ -42763,11 +42812,11 @@ async def admin_list_image_consents(
                 "birth_date": None,
                 "is_minor": False,
                 "consent_given": final_value,
+                "consent_status": status,
                 "denied_by_parents": [],
                 "has_signed": has_record,
                 "privacy_signed": priv_signed,
                 "privacy_accepted": priv_signed,
-                "_dbg": _dbg_staff,
             }
             staff_by_label.setdefault(label, {
                 "team_id": f"_staff_{label}",
@@ -44055,6 +44104,116 @@ async def certificate_block_scheduler():
         await _asyncio.sleep(600)  # every 10 minutes
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# 🆕 Promemoria firma quietanza — email automatica dopo 3 giorni dal bonifico
+# ─────────────────────────────────────────────────────────────────────────
+async def check_signature_reminders():
+    """Invia UNA email di sollecito a chi, 3+ giorni dopo il bonifico, non ha ancora
+    firmato la quietanza. Idempotente: il flag signature_reminder_sent evita doppioni."""
+    try:
+        from email_service import send_society_email
+    except Exception as e:
+        logger.error(f"[FIRMA-REMINDER] email_service non disponibile: {e}")
+        return
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(days=3)
+    _MESI = ["", "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+             "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
+    society_cache: dict = {}
+
+    async def _society(sid):
+        if not sid:
+            return None
+        if sid in society_cache:
+            return society_cache[sid]
+        soc = await db.societies.find_one({"id": sid})
+        society_cache[sid] = soc
+        return soc
+
+    sent = 0
+    for role, (coll, idf) in ROLE_RECEIPT_MAP.items():
+        q = {
+            "payment_made": True,
+            "receipt_signed": {"$ne": True},
+            "signature_reminder_sent": {"$ne": True},
+        }
+        async for r in db[coll].find(q):
+            # payment_made_date deve essere >= 3 giorni fa
+            pmd = r.get("payment_made_date")
+            if not pmd:
+                continue
+            try:
+                pdt = datetime.fromisoformat(str(pmd).replace("Z", "+00:00"))
+                if pdt.tzinfo is None:
+                    pdt = pdt.replace(tzinfo=timezone.utc)
+            except Exception:
+                continue
+            if pdt > cutoff:
+                continue  # non sono ancora passati 3 giorni
+            owner = r.get(idf)
+            # Risolvi email, nome e società del destinatario
+            email = None
+            full_name = ""
+            sid = None
+            if role == "athlete":
+                ath = await db.athletes.find_one({"id": owner})
+                if not ath:
+                    continue
+                sid = ath.get("society_id")
+                full_name = ath.get("full_name") or ""
+                email = (ath.get("email") or "").strip() or None
+                if not email:
+                    linked = await db.users.find_one({"athlete_id": owner}, {"_id": 0, "email": 1})
+                    email = (linked.get("email") if linked else "") or None
+            else:
+                u = await db.users.find_one({"id": owner})
+                if not u:
+                    continue
+                sid = u.get("society_id")
+                full_name = u.get("full_name") or ""
+                email = (u.get("email") or "").strip() or None
+            if not email:
+                # niente email → salta ma non ritentare all'infinito ogni ciclo
+                continue
+            m = r.get("month") or 0
+            mese = _MESI[m] if 0 < m < 13 else str(m)
+            anno = r.get("year")
+            soc = await _society(sid)
+            soc_name = (soc.get("name") if soc else None) or "la società"
+            subject = f"Promemoria: firma la quietanza di {mese} {anno}"
+            html = (
+                f"<p>Ciao {full_name},</p>"
+                f"<p>È stato effettuato il bonifico del compenso di <b>{mese} {anno}</b>, "
+                f"ma risulta che non hai ancora firmato la relativa quietanza.</p>"
+                f"<p>Ti chiediamo di accedere all'app <b>RegistraTEAM</b> e firmare la quietanza al più presto.</p>"
+                f"<p>Grazie,<br/>{soc_name}</p>"
+            )
+            try:
+                await send_society_email(soc, to_email=email, subject=subject, html_content=html)
+                await db[coll].update_one(
+                    {"_id": r["_id"]},
+                    {"$set": {"signature_reminder_sent": True, "signature_reminder_sent_at": now.isoformat()}},
+                )
+                sent += 1
+            except Exception as e:
+                logger.error(f"[FIRMA-REMINDER] invio fallito per {email}: {e}")
+    if sent:
+        logger.info(f"[FIRMA-REMINDER] inviati {sent} solleciti firma via email")
+
+
+async def signature_reminder_scheduler():
+    """Controlla i solleciti firma ogni 12 ore (primo giro 90s dopo l'avvio)."""
+    import asyncio as _asyncio
+    await _asyncio.sleep(90)
+    while True:
+        try:
+            await check_signature_reminders()
+        except Exception as e:
+            logger.error(f"signature_reminder_scheduler error: {e}")
+        await _asyncio.sleep(43200)  # ogni 12 ore
+
+
+
 # 🆕 27/02/2026 (P2) — Notifica GDPR 18° compleanno
 # Contesto: quando un atleta compie 18 anni, per GDPR il genitore titolare
 # perde progressivamente il diritto di firmare in sua vece. Invece di un
@@ -44213,6 +44372,10 @@ async def start_certificate_scheduler():
     logger.info("Certificate block auto-reactivate scheduler started.")
     _asyncio.create_task(birthday_18_scheduler())
     logger.info("18th birthday GDPR notification scheduler started.")
+
+    # 🆕 Promemoria firma quietanza: email automatica 3gg dopo il bonifico
+    _asyncio.create_task(signature_reminder_scheduler())
+    logger.info("Signature reminder scheduler started (every 12h).")
 
     # 🆕 27/07/2026 — Piani ricorrenti Stripe: addebiti automatici alla scadenza
     try:

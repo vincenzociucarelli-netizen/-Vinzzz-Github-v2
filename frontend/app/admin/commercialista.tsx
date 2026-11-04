@@ -9,6 +9,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '../../src/components/Icon';
 import api from '../../src/services/api';
 import { downloadFascicoloPDF, fascicoloPdfBase64, generateFascicoloHTML, FascicoloData } from '../../src/utils/fascicoloReport';
+import {
+  downloadTextFile, printHTMLtoPDF,
+  monthlyPaymentsCSV, monthlyPaymentsHTML,
+  annualSummaryCSV, annualSummaryHTML,
+} from '../../src/utils/paymentsReport';
 
 const ROLE_LABEL: Record<string, string> = { coach: 'Coach', dirigente: 'Dirigente', collaboratore: 'Collaboratore', athlete: 'Atleta' };
 const eur = (n: any) => `€${Number(n || 0).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -29,7 +34,70 @@ export default function Commercialista() {
   const [emailTarget, setEmailTarget] = useState<any>(null);
   const [sending, setSending] = useState(false);
 
+  // 🆕 Export pagamenti mensili + riepilogo annuale
+  const [annual, setAnnual] = useState<any>(null);
+  const [annualLoading, setAnnualLoading] = useState(false);
+
   const showAlert = (t: string, m: string) => { if (Platform.OS === 'web') window.alert(`${t}\n${m}`); else Alert.alert(t, m); };
+
+  const safeName = (s: string) => (s || 'export').replace(/[^a-zA-Z0-9]+/g, '_');
+
+  const exportMonthlyCSV = async () => {
+    if (!summary) return;
+    try {
+      const csv = monthlyPaymentsCSV({
+        societyName: society.name || 'RegistraTEAM', societyLogo: society.logo,
+        monthName: summary.month_name, year: summary.year,
+        rows: summary.recipients || [], totals: summary.totals,
+      });
+      await downloadTextFile(`pagamenti_${safeName(summary.month_name)}_${summary.year}.csv`, csv);
+    } catch { showAlert('Errore', 'Export CSV non riuscito.'); }
+  };
+
+  const exportMonthlyPDF = async () => {
+    if (!summary) return;
+    try {
+      const html = monthlyPaymentsHTML({
+        societyName: society.name || 'RegistraTEAM', societyLogo: society.logo,
+        monthName: summary.month_name, year: summary.year,
+        rows: summary.recipients || [], totals: summary.totals,
+      });
+      await printHTMLtoPDF(html, `Pagamenti ${summary.month_name} ${summary.year}`);
+    } catch { showAlert('Errore', 'Export PDF non riuscito.'); }
+  };
+
+  const loadAnnual = async () => {
+    const y = parseInt(year, 10);
+    if (!y) { showAlert('Errore', 'Anno non valido'); return; }
+    setAnnualLoading(true);
+    try {
+      const res = await api.get(`/admin/commercialista/annual-summary?year=${y}`);
+      setAnnual(res.data);
+    } catch { showAlert('Errore', 'Caricamento riepilogo annuale non riuscito.'); }
+    finally { setAnnualLoading(false); }
+  };
+
+  const exportAnnualCSV = async () => {
+    if (!annual) return;
+    try {
+      const csv = annualSummaryCSV({
+        societyName: society.name || 'RegistraTEAM', societyLogo: society.logo,
+        year: annual.year, rows: annual.recipients || [], totals: annual.totals,
+      });
+      await downloadTextFile(`riepilogo_annuale_${annual.year}.csv`, csv);
+    } catch { showAlert('Errore', 'Export CSV non riuscito.'); }
+  };
+
+  const exportAnnualPDF = async () => {
+    if (!annual) return;
+    try {
+      const html = annualSummaryHTML({
+        societyName: society.name || 'RegistraTEAM', societyLogo: society.logo,
+        year: annual.year, rows: annual.recipients || [], totals: annual.totals,
+      });
+      await printHTMLtoPDF(html, `Riepilogo annuale ${annual.year}`);
+    } catch { showAlert('Errore', 'Export PDF non riuscito.'); }
+  };
 
   const load = useCallback(async () => {
     const y = parseInt(year, 10), m = parseInt(month, 10);
@@ -162,6 +230,16 @@ export default function Commercialista() {
               <Text style={styles.totLine}>Totale lordo del mese: <Text style={styles.totBold}>{eur(summary.totals.total_gross)}</Text></Text>
               <Text style={styles.totLine}>Da inviare per F24 (oltre €5.000): <Text style={styles.totBold}>{summary.totals.f24_count}</Text></Text>
               <Text style={styles.totLine}>Totale importi da versare: <Text style={styles.totBold}>{eur(summary.totals.total_versare)}</Text></Text>
+              <View style={styles.exportRow}>
+                <TouchableOpacity style={[styles.exportBtn, styles.exportCsv]} onPress={exportMonthlyCSV}>
+                  <Ionicons name="grid-outline" size={16} color="#fff" />
+                  <Text style={styles.exportBtnText}>Scarica CSV</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.exportBtn, styles.exportPdf]} onPress={exportMonthlyPDF}>
+                  <Ionicons name="document-text-outline" size={16} color="#fff" />
+                  <Text style={styles.exportBtnText}>Scarica PDF</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             <Text style={styles.sectionTitle}>🧾 F24 del mese (oltre €5.000) — {f24.length}</Text>
@@ -171,6 +249,50 @@ export default function Commercialista() {
             {others.length === 0 ? <Text style={styles.empty}>Nessun altro compenso.</Text> : others.map(renderPerson)}
           </>
         )}
+
+        {/* 🆕 Riepilogo annuale per persona */}
+        <View style={[styles.card, { marginTop: 18 }]}>
+          <Text style={styles.cardTitle}>📅 Riepilogo annuale {year}</Text>
+          <Text style={styles.annualHint}>Totale lordo, netto e pagato nell&apos;anno, persona per persona.</Text>
+          <TouchableOpacity style={styles.annualBtn} onPress={loadAnnual} disabled={annualLoading}>
+            {annualLoading ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="stats-chart-outline" size={18} color="#fff" />}
+            <Text style={styles.loadBtnText}>Mostra riepilogo annuale</Text>
+          </TouchableOpacity>
+
+          {annual && !annualLoading && (
+            <>
+              <View style={[styles.totCard, { marginTop: 14, marginBottom: 10 }]}>
+                <Text style={styles.totTitle}>Anno {annual.year}</Text>
+                <Text style={styles.totLine}>Persone con compenso: <Text style={styles.totBold}>{annual.totals.count}</Text></Text>
+                <Text style={styles.totLine}>Totale lordo: <Text style={styles.totBold}>{eur(annual.totals.total_gross)}</Text></Text>
+                <Text style={styles.totLine}>Totale netto: <Text style={styles.totBold}>{eur(annual.totals.total_net)}</Text></Text>
+                <Text style={styles.totLine}>Totale pagato (bonifici): <Text style={styles.totBold}>{eur(annual.totals.total_paid)}</Text></Text>
+                <View style={styles.exportRow}>
+                  <TouchableOpacity style={[styles.exportBtn, styles.exportCsv]} onPress={exportAnnualCSV}>
+                    <Ionicons name="grid-outline" size={16} color="#fff" />
+                    <Text style={styles.exportBtnText}>Scarica CSV</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.exportBtn, styles.exportPdf]} onPress={exportAnnualPDF}>
+                    <Ionicons name="document-text-outline" size={16} color="#fff" />
+                    <Text style={styles.exportBtnText}>Scarica PDF</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              {(annual.recipients || []).length === 0
+                ? <Text style={styles.empty}>Nessun compenso registrato nell&apos;anno.</Text>
+                : (annual.recipients || []).map((p: any) => (
+                  <View key={`ann-${p.user_role}-${p.user_id}`} style={styles.personCard}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.personName}>{p.full_name}</Text>
+                      <Text style={styles.personMeta}>{ROLE_LABEL[p.user_role] || p.user_role} · {p.months} {p.months === 1 ? 'mese' : 'mesi'}</Text>
+                      <Text style={styles.annualAmounts}>Lordo {eur(p.total_gross)} · Netto {eur(p.total_net)} · Pagato {eur(p.total_paid)}</Text>
+                      {p.exceeded_5000 && <Text style={styles.f24Tag}>⚠️ {p.exceeded_15000 ? 'Oltre €15.000' : 'Oltre €5.000'}</Text>}
+                    </View>
+                  </View>
+                ))}
+            </>
+          )}
+        </View>
       </ScrollView>
 
       <Modal visible={emailModal} transparent animationType="fade">
@@ -214,6 +336,14 @@ const styles = StyleSheet.create({
   totTitle: { fontSize: 15, fontWeight: '800', color: '#1E3A8A', marginBottom: 6 },
   totLine: { fontSize: 13.5, color: '#333', marginTop: 2 },
   totBold: { fontWeight: '800', color: '#1E3A8A' },
+  exportRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  exportBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 9 },
+  exportCsv: { backgroundColor: '#2E7D32' },
+  exportPdf: { backgroundColor: '#C62828' },
+  exportBtnText: { color: '#fff', fontSize: 13.5, fontWeight: '700' },
+  annualHint: { fontSize: 12.5, color: '#666', marginBottom: 10 },
+  annualBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#1E3A8A', paddingVertical: 12, borderRadius: 10 },
+  annualAmounts: { fontSize: 12.5, color: '#333', marginTop: 3, fontWeight: '600' },
   sectionTitle: { fontSize: 14, fontWeight: '700', color: '#444', marginTop: 8, marginBottom: 8 },
   empty: { color: '#999', fontStyle: 'italic', marginBottom: 8 },
   personCard: { backgroundColor: '#fff', borderRadius: 10, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center' },
