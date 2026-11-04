@@ -52,6 +52,7 @@ export default function ImageConsentsPage() {
   const [teamFilter, setTeamFilter] = useState<string | null>(null);
   const [groups, setGroups] = useState<TeamGroup[]>([]);
   const [total, setTotal] = useState(0);
+  const [engine, setEngine] = useState('');
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [notifying, setNotifying] = useState<string | null>(null);
@@ -79,6 +80,7 @@ export default function ImageConsentsPage() {
       const res = await api.get('/admin/athletes/image-consents', { params });
       setGroups(res.data.groups || []);
       setTotal(res.data.total || 0);
+      setEngine(res.data.engine || '');
       // Expand all by default
       const exp: Record<string, boolean> = {};
       (res.data.groups || []).forEach((g: TeamGroup) => {
@@ -319,6 +321,12 @@ export default function ImageConsentsPage() {
           </Text>
         </View>
 
+        {!loading && !!engine && (
+          <Text style={styles.engineTag}>
+            motore consensi: {engine}
+          </Text>
+        )}
+
         {/* Results */}
         {loading ? (
           <ActivityIndicator size="large" color="#1976D2" style={{ marginTop: 40 }} />
@@ -457,6 +465,7 @@ const styles = StyleSheet.create({
   backBtn: { marginRight: 12, padding: 4 },
   headerTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
   headerSubtitle: { color: '#E3F2FD', fontSize: 12, marginTop: 2 },
+  engineTag: { fontSize: 10, color: '#9E9E9E', textAlign: 'center', marginBottom: 6, marginTop: -2 },
   exportBtn: {
     flexDirection: 'row',
     alignItems: 'center',
