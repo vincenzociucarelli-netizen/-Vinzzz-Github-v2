@@ -2068,3 +2068,9 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
   - AdminConsentView.tsx → usa fc.status tri-stato (fallback alla vecchia logica se backend non aggiornato). Rimossa riga diagnostica dbg da image-consents.tsx.
 - VERIFICATO in locale (DB test): helper + due endpoint HTTP coincidono (minore consenso genitore=CONCESSO in entrambe; non compare tra i Negati). Scenari: minore concesso/negato, adulto self-signed. Dati test ripuliti.
 - NOTA AMBIENTE: il preview usa test_database (5 atleti fittizi) — gli atleti reali (Sangoi/Cucina/Brughini) sono in produzione (Atlas/Render), non interrogabili da qui. Il fix è a prova di drift ma richiede REDEPLOY backend (Render) + frontend (Vercel) per avere effetto in produzione.
+
+## Aggiornamento 03/11/2026 (4) — Diagnosi: discrepanza consensi = BACKEND non aggiornato in produzione
+- Evidenza utente (screenshot): adulte (Cucina/Sangoi/Brughini/Nielson) = anagrafica "Dato" verde MA lista Consensi Privacy "Negato" rosso. Nessuna scritta viola "dbg".
+- CONCLUSIONE: il "controllo dbg" era fallace (la rimozione dbg è lato FRONTEND/Vercel). L'assenza di dbg conferma solo frontend nuovo, NON il backend. Con l'helper unico (che vive nel backend) le due viste coincidono by-design → la persistenza indica che il BACKEND su Render NON è stato ri-deployato con le modifiche di oggi (probabile: redeploy senza Save to GitHub, o solo Vercel).
+- AZIONE: aggiunto marcatore di versione backend. GET /admin/athletes/image-consents ora ritorna "engine": "unified-consent-v2". Frontend image-consents.tsx mostra piccola scritta grigia "motore consensi: unified-consent-v2" sotto il conteggio. Check definitivo: se NON appare → backend vecchio ancora attivo su Render.
+- DA FARE UTENTE: Save to GitHub → redeploy BACKEND su Render (oltre a Vercel). Quando compare "motore consensi: unified-consent-v2", il fix è live e gli adulti risultano Concesso.
