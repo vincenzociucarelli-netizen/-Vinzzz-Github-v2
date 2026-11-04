@@ -2078,3 +2078,9 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 ## Aggiornamento 04/11/2026 — Apertura PDF convocazioni + conferma causa consensi
 - PDF CONVOCAZIONI: "Apri PDF" su web usava navigator.share({files}) → apriva il foglio di condivisione di sistema (Windows) che bloccava tutto. Aggiunta funzione openConvocationPDF in src/utils/convocationReport.ts: su web apre il PDF in NUOVA SCHEDA (window.open blob, fallback download se popup bloccato); su mobile mantiene anteprima/condivisione. app/convocations/index.tsx openPdf ora usa openConvocationPDF. editor.tsx resta su downloadConvocationPDF (flusso invio WhatsApp).
 - CONSENSI: confermato via codice che le adulte (Cucina/Sangoi/Brughini/Nielson) hanno consenso salvato da minorenni sotto images_promo__<parentId>; l'helper unico (backend nuovo) lo legge → entrambe le viste CONCESSO. La lista ancora rossa ⇒ BACKEND su Render non aggiornato. L'indicatore engine "unified-consent-v2" (aggiunto turno precedente) non era nel deploy dell'utente. Serve: Save to GitHub + redeploy BACKEND Render; verifica che compaia "motore consensi: unified-consent-v2" sotto il conteggio in Consensi Privacy.
+
+## Aggiornamento 04/11/2026 (2) — Ordinamento convocazioni (N° maglia / Alfabetico)
+- src/utils/convocationReport.ts: ConvocationPDFData.sortBy ('name'|'jersey') + helper sortConvocationAthletes (jersey numerico, senza numero in fondo; name localeCompare 'it'). Applicato sia in generateConvocationHTML sia in buildConvocationPdf (open + download coerenti).
+- app/convocations/editor.tsx: toggle "Ordina nel PDF" (N° maglia / Alfabetico), default 'jersey', preferenza persistita in AsyncStorage 'conv_sort'; passata a downloadConvocationPDF.
+- app/convocations/index.tsx: openPdf legge 'conv_sort' da AsyncStorage e passa sortBy (default 'jersey').
+- Verificato smoke: toggle visibile nell'editor. Frontend only → redeploy Vercel.

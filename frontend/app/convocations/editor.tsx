@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '../../src/components/Icon';
 import api from '../../src/services/api';
@@ -80,6 +81,13 @@ export default function ConvocationEditor() {
   const [showCalendar, setShowCalendar] = useState(false);
 
   const [saving, setSaving] = useState(false);
+
+  // 🆕 Ordinamento atleti nel documento PDF (persistente)
+  const [sortBy, setSortBy] = useState<'jersey' | 'name'>('jersey');
+  useEffect(() => {
+    AsyncStorage.getItem('conv_sort').then(v => { if (v === 'name' || v === 'jersey') setSortBy(v); });
+  }, []);
+  const changeSort = (v: 'jersey' | 'name') => { setSortBy(v); AsyncStorage.setItem('conv_sort', v); };
 
   // WhatsApp send modal
   const [waVisible, setWaVisible] = useState(false);
@@ -309,6 +317,7 @@ export default function ConvocationEditor() {
       notes: notes.trim(),
       athletes,
       fileName: `convocazione_${(teamName || 'squadra').replace(/[^a-zA-Z0-9]+/g, '_')}`,
+      sortBy,
     });
   };
 
@@ -515,6 +524,16 @@ export default function ConvocationEditor() {
                 <Text style={styles.selectAll}>{allSelected ? 'Deseleziona tutti' : 'Seleziona tutti'}</Text>
               </TouchableOpacity>
             )}
+          </View>
+          {/* 🆕 Ordinamento nel documento PDF */}
+          <Text style={styles.label}>Ordina nel PDF</Text>
+          <View style={styles.toggleRow}>
+            <TouchableOpacity style={[styles.toggleBtn, sortBy === 'jersey' && styles.toggleBtnOn]} onPress={() => changeSort('jersey')} testID="conv-sort-jersey">
+              <Text style={[styles.toggleText, sortBy === 'jersey' && styles.toggleTextOn]}>N° maglia</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.toggleBtn, sortBy === 'name' && styles.toggleBtnOn]} onPress={() => changeSort('name')} testID="conv-sort-name">
+              <Text style={[styles.toggleText, sortBy === 'name' && styles.toggleTextOn]}>Alfabetico</Text>
+            </TouchableOpacity>
           </View>
           {roster.length === 0 ? (
             <Text style={styles.emptyText}>Nessun atleta in questa squadra.</Text>
