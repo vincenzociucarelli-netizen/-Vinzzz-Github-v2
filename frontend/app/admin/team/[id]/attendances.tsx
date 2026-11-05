@@ -153,7 +153,7 @@ export default function TeamAttendances() {
         <View style={{ height: 12 }} />
         <TeamQrCodesButton teamId={String(id)} teamName={stats?.team_name} />
         <TodayAttendanceList teamId={String(id)} onChanged={loadStats} />
-        <MonthlyAttendanceGrid teamId={String(id)} />
+        <MonthlyAttendanceGrid teamId={String(id)} canEdit onChanged={loadStats} />
 
         {/* View Mode Selector */}
         <View style={styles.viewModeContainer}>

@@ -35,7 +35,29 @@ export interface ConvocationPDFData {
   coachPhone?: string;
   athletes: ConvocationAthlete[];
   fileName: string;
+  sortBy?: 'name' | 'jersey'; // ordinamento atleti nel documento
 }
+
+/** Ordina i convocati per numero di maglia o alfabeticamente. */
+export const sortConvocationAthletes = (
+  list: ConvocationAthlete[],
+  sortBy?: 'name' | 'jersey',
+): ConvocationAthlete[] => {
+  const arr = [...list];
+  if (sortBy === 'jersey') {
+    arr.sort((a, b) => {
+      const na = parseInt(String(a.jersey_number ?? '').trim(), 10);
+      const nb = parseInt(String(b.jersey_number ?? '').trim(), 10);
+      const va = isNaN(na) ? Infinity : na; // senza numero in fondo
+      const vb = isNaN(nb) ? Infinity : nb;
+      if (va !== vb) return va - vb;
+      return (a.full_name || '').localeCompare(b.full_name || '', 'it');
+    });
+  } else {
+    arr.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || '', 'it'));
+  }
+  return arr;
+};
 
 const esc = (v: string | undefined | null): string => {
   if (v == null) return '';
@@ -59,9 +81,10 @@ export const generateConvocationHTML = (d: ConvocationPDFData): string => {
     ? `${esc(d.societyName)} &ndash; ${esc(d.opponent)}`
     : `${esc(d.opponent)} &ndash; ${esc(d.societyName)}`;
   const dateLine = [d.matchDate, d.matchTime].filter(Boolean).join(' · ');
+  const athletes = sortConvocationAthletes(d.athletes, d.sortBy);
 
-  const athletesRows = d.athletes.length
-    ? d.athletes.map((a) => `
+  const athletesRows = athletes.length
+    ? athletes.map((a) => `
       <tr>
         <td style="text-align:center; font-weight:bold;">${esc(a.jersey_number || '')}</td>
         <td>${esc(a.full_name)}</td>
@@ -132,7 +155,7 @@ export const generateConvocationHTML = (d: ConvocationPDFData): string => {
     ⚠️ In caso di impossibilità a partecipare, avvisare <strong>immediatamente il coach</strong>${d.coachName ? ` (${esc(d.coachName)})` : ''}${d.coachPhone ? ` al numero <strong>${esc(d.coachPhone)}</strong>` : ''} telefonicamente o con un messaggio WhatsApp.
   </div>
 
-  <h2 class="sec">Atleti convocati <span style="font-size:11px; color:#888; font-weight:normal;">(${d.athletes.length})</span></h2>
+  <h2 class="sec">Atleti convocati <span style="font-size:11px; color:#888; font-weight:normal;">(${athletes.length})</span></h2>
   <table class="ath">
     <thead><tr><th style="width:44px; text-align:center;">N° maglia</th><th>Atleta</th><th style="width:140px;">Ruolo</th></tr></thead>
     <tbody>${athletesRows}</tbody>
@@ -146,6 +169,7 @@ export const generateConvocationHTML = (d: ConvocationPDFData): string => {
 // testo selezionabile, ruoli garantiti dai dati, file piccolo e condivisibile.
 const buildConvocationPdf = (JsPDF: any, d: ConvocationPDFData) => {
   const pdf = new JsPDF('p', 'mm', 'a4');
+  const athletes = sortConvocationAthletes(d.athletes, d.sortBy);
   const PW = 210, PH = 297, M = 12, CW = PW - M * 2;
   let y = M;
   const today = new Date();
@@ -245,7 +269,7 @@ const buildConvocationPdf = (JsPDF: any, d: ConvocationPDFData) => {
 
   // Titolo elenco
   pdf.setFont('helvetica', 'bold'); pdf.setFontSize(12); pdf.setTextColor(30, 58, 138);
-  pdf.text(`Atleti convocati (${d.athletes.length})`, M, y);
+  pdf.text(`Atleti convocati (${athletes.length})`, M, y);
   y += 2;
   pdf.setDrawColor(229, 231, 235); pdf.setLineWidth(0.2); pdf.line(M, y, PW - M, y);
   y += 4;
@@ -262,7 +286,7 @@ const buildConvocationPdf = (JsPDF: any, d: ConvocationPDFData) => {
   };
   drawHeader();
   pdf.setFont('helvetica', 'normal');
-  d.athletes.forEach((a, idx) => {
+  athletes.forEach((a, idx) => {
     if (y + rowH > PH - M) { pdf.addPage(); y = M; drawHeader(); pdf.setFont('helvetica', 'normal'); }
     if (idx % 2 === 1) { pdf.setFillColor(243, 244, 246); pdf.rect(M, y, CW, rowH, 'F'); }
     pdf.setDrawColor(209, 213, 219); pdf.setLineWidth(0.2);
@@ -275,7 +299,7 @@ const buildConvocationPdf = (JsPDF: any, d: ConvocationPDFData) => {
     pdf.text(pdf.splitTextToSize(a.role || '', c2 - 4)[0] || '', M + c0 + c1 + 2, y + 4.8);
     y += rowH;
   });
-  if (d.athletes.length === 0) {
+  if (athletes.length === 0) {
     pdf.setDrawColor(209, 213, 219); pdf.rect(M, y, CW, rowH);
     pdf.setTextColor(102, 102, 102);
     pdf.text('Nessun atleta convocato', M + CW / 2, y + 4.8, { align: 'center' });

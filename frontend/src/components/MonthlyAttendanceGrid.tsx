@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Platform, Alert } from 'react-native';
 import { Ionicons } from './Icon';
 import api from '../services/api';
 
 interface DayInfo { day: number; weekday: string; is_weekend: boolean; is_training: boolean; }
-interface RowInfo { athlete_id: string; name: string; cells: string[]; present: number; absent: number; }
+interface RowInfo { athlete_id: string; name: string; cells: string[]; cell_ids?: (string | null)[]; present: number; absent: number; }
 
 const MONTHS = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
 const CELL_W = 30;
@@ -13,8 +13,9 @@ const NAME_W = 130;
 /**
  * 🆕 26/09/2026 — Griglia MENSILE presenze/assenze: nomi atlete in riga, giorni in colonna.
  * P = presente (verde), A = assente in un giorno di allenamento (rosso), vuoto = niente allenamento.
+ * 🆕 04/11/2026 — canEdit (admin): tocca una "P" per ANNULLARE quella presenza (anche date passate).
  */
-export default function MonthlyAttendanceGrid({ teamId }: { teamId: string }) {
+export default function MonthlyAttendanceGrid({ teamId, canEdit = false, onChanged }: { teamId: string; canEdit?: boolean; onChanged?: () => void }) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1); // 1-12
@@ -22,6 +23,7 @@ export default function MonthlyAttendanceGrid({ teamId }: { teamId: string }) {
   const [rows, setRows] = useState<RowInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -29,7 +31,7 @@ export default function MonthlyAttendanceGrid({ teamId }: { teamId: string }) {
       const res = await api.get(`/teams/${teamId}/attendance/monthly`, { params: { year, month } });
       setDays(res.data?.days || []);
       setRows(res.data?.rows || []);
-    } catch (e) {
+    } catch {
       setDays([]); setRows([]);
     } finally {
       setLoading(false);
@@ -43,6 +45,37 @@ export default function MonthlyAttendanceGrid({ teamId }: { teamId: string }) {
 
   const cellColor = (s: string) => s === 'P' ? '#E8F5E9' : s === 'A' ? '#FFEBEE' : '#FAFAFA';
   const cellText = (s: string) => s === 'P' ? '#2E7D32' : s === 'A' ? '#C62828' : '#ccc';
+
+  const doDeleteCell = async (attId: string) => {
+    try {
+      setDeleting(attId);
+      await api.delete(`/attendances/${attId}`);
+      await load();
+      onChanged && onChanged();
+    } catch (e: any) {
+      const msg = e?.response?.data?.detail || 'Impossibile annullare la presenza';
+      if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Errore', msg);
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const onCellPress = (r: RowInfo, ci: number) => {
+    if (!canEdit) return;
+    const status = r.cells[ci];
+    const attId = r.cell_ids ? r.cell_ids[ci] : null;
+    if (status !== 'P' || !attId) return;
+    const d = days[ci];
+    const msg = `Annullare la presenza di ${r.name} del ${d?.day} ${MONTHS[month - 1]} ${year}?`;
+    if (Platform.OS === 'web') {
+      if (window.confirm(msg)) doDeleteCell(attId);
+    } else {
+      Alert.alert('Annulla presenza', msg, [
+        { text: 'No', style: 'cancel' },
+        { text: 'Sì, annulla', style: 'destructive', onPress: () => doDeleteCell(attId) },
+      ]);
+    }
+  };
 
   return (
     <View style={styles.card}>
@@ -64,6 +97,9 @@ export default function MonthlyAttendanceGrid({ teamId }: { teamId: string }) {
             <View style={[styles.legendDot, { backgroundColor: '#FFEBEE' }]} /><Text style={styles.legendTxt}>A = assente</Text>
             <View style={[styles.legendDot, { backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#eee' }]} /><Text style={styles.legendTxt}>= no allenamento</Text>
           </View>
+          {canEdit && (
+            <Text style={styles.editHint}>✏️ Tocca una &quot;P&quot; per annullare quella presenza (anche di giorni passati).</Text>
+          )}
 
           {loading ? (
             <ActivityIndicator color="#5856D6" style={{ marginVertical: 16 }} />
@@ -88,11 +124,24 @@ export default function MonthlyAttendanceGrid({ teamId }: { teamId: string }) {
                 {rows.map((r, ri) => (
                   <View key={r.athlete_id} style={{ flexDirection: 'row', backgroundColor: ri % 2 ? '#fff' : '#F7F7FB' }}>
                     <View style={[styles.nameCell, { width: NAME_W }]}><Text style={styles.nameTxt} numberOfLines={1}>{r.name}</Text></View>
-                    {r.cells.map((c, ci) => (
-                      <View key={ci} style={[styles.dayCell, { backgroundColor: cellColor(c) }]}>
-                        <Text style={[styles.cellTxt, { color: cellText(c) }]}>{c || '·'}</Text>
-                      </View>
-                    ))}
+                    {r.cells.map((c, ci) => {
+                      const editable = canEdit && c === 'P' && !!(r.cell_ids && r.cell_ids[ci]);
+                      const isDeleting = editable && deleting === (r.cell_ids as any)[ci];
+                      return (
+                        <TouchableOpacity
+                          key={ci}
+                          activeOpacity={editable ? 0.6 : 1}
+                          disabled={!editable || isDeleting}
+                          onPress={() => onCellPress(r, ci)}
+                          style={[styles.dayCell, { backgroundColor: cellColor(c) }, editable && styles.editableCell]}
+                          testID={editable ? `cell-${r.athlete_id}-${ci}` : undefined}
+                        >
+                          {isDeleting
+                            ? <ActivityIndicator size="small" color="#C62828" />
+                            : <Text style={[styles.cellTxt, { color: cellText(c) }]}>{c || '·'}</Text>}
+                        </TouchableOpacity>
+                      );
+                    })}
                     <View style={styles.totCell}><Text style={[styles.cellTxt, { color: '#2E7D32', fontWeight: '700' }]}>{r.present}</Text></View>
                     <View style={styles.totCell}><Text style={[styles.cellTxt, { color: '#C62828', fontWeight: '700' }]}>{r.absent}</Text></View>
                   </View>
@@ -116,6 +165,8 @@ const styles = StyleSheet.create({
   legendRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
   legendDot: { width: 14, height: 14, borderRadius: 3 },
   legendTxt: { fontSize: 11, color: '#666', marginRight: 8 },
+  editHint: { fontSize: 11, color: '#5856D6', fontStyle: 'italic', marginBottom: 8 },
+  editableCell: { borderColor: '#2E7D32', borderWidth: 1 },
   empty: { fontSize: 13, color: '#999', paddingVertical: 12, textAlign: 'center' },
   headCell: { backgroundColor: '#5856D6' },
   headTxt: { color: '#fff', fontWeight: '700', fontSize: 11 },

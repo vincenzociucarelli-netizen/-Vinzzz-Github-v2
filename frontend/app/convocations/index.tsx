@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '../../src/components/Icon';
 import api from '../../src/services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { openConvocationPDF } from '../../src/utils/convocationReport';
 
 interface Convocation {
@@ -80,6 +81,12 @@ export default function ConvocationsList() {
         api.get('/settings/society?include_images=true'),
       ]);
       const d = detRes.data || {};
+      const savedSort = await AsyncStorage.getItem('conv_sort');
+      const sortBy: 'jersey' | 'name' = savedSort === 'name' ? 'name' : 'jersey';
+      const home = (d.team_name || c.team_name || teamName || 'squadra').trim();
+      const away = (d.opponent || 'avversario').trim();
+      const pair = (d.home_away === 'away' ? `${away}_vs_${home}` : `${home}_vs_${away}`)
+        .replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
       await openConvocationPDF({
         societyName: socRes.data?.name || 'RegistraTEAM',
         societyLogo: socRes.data?.logo || null,
@@ -98,7 +105,8 @@ export default function ConvocationsList() {
         startTime: d.start_time || '',
         notes: d.notes || '',
         athletes: (d.athletes || []).map((a: any) => ({ id: a.id, full_name: a.full_name, role: a.role, jersey_number: a.jersey_number })),
-        fileName: `convocazione_${(d.team_name || teamName || 'squadra').replace(/[^a-zA-Z0-9]+/g, '_')}`,
+        fileName: `convocazione_${pair}`,
+        sortBy,
       });
     } catch {
       showAlert('Errore', 'Impossibile generare il PDF.');

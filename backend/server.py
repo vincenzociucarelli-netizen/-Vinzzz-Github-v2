@@ -20014,7 +20014,7 @@ async def get_team_monthly_attendance(team_id: str, year: int, month: int, curre
     # Presenze del mese
     prefix = f"{year:04d}-{month:02d}"
     atts = await db.attendances.find({"team_id": team_id, "date": {"$regex": f"^{prefix}"}},
-                                     {"_id": 0, "athlete_id": 1, "date": 1}).to_list(20000)
+                                     {"_id": 0, "id": 1, "athlete_id": 1, "date": 1}).to_list(20000)
     present: dict = {}
     for at in atts:
         d = at.get("date") or ""
@@ -20022,23 +20022,27 @@ async def get_team_monthly_attendance(team_id: str, year: int, month: int, curre
             dn = int(d.split("-")[2])
         except Exception:
             continue
-        present.setdefault(at.get("athlete_id"), set()).add(dn)
+        present.setdefault(at.get("athlete_id"), {})[dn] = at.get("id")
     rows = []
     for a in athletes:
-        pset = present.get(a["id"], set())
+        pmap = present.get(a["id"], {})
         cells = []
+        cell_ids = []
         p_count = 0
         a_count = 0
         for d in days:
             dn = d["day"]
-            if dn in pset:
+            if dn in pmap:
                 status = "P"; p_count += 1
+                cell_ids.append(pmap[dn])
             elif d["is_training"] and not d.get("is_future"):
                 status = "A"; a_count += 1
+                cell_ids.append(None)
             else:
                 status = ""
+                cell_ids.append(None)
             cells.append(status)
-        rows.append({"athlete_id": a["id"], "name": _name(a), "cells": cells, "present": p_count, "absent": a_count})
+        rows.append({"athlete_id": a["id"], "name": _name(a), "cells": cells, "cell_ids": cell_ids, "present": p_count, "absent": a_count})
     return {"year": year, "month": month, "team_name": team.get("name", ""), "days": days, "rows": rows}
 
 # ==================== QR IDENTIFIER MANAGEMENT ====================
