@@ -2084,3 +2084,9 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - app/convocations/editor.tsx: toggle "Ordina nel PDF" (N° maglia / Alfabetico), default 'jersey', preferenza persistita in AsyncStorage 'conv_sort'; passata a downloadConvocationPDF.
 - app/convocations/index.tsx: openPdf legge 'conv_sort' da AsyncStorage e passa sortBy (default 'jersey').
 - Verificato smoke: toggle visibile nell'editor. Frontend only → redeploy Vercel.
+
+## Aggiornamento 04/11/2026 (3) — Annulla presenza passata dalla Vista mensile (admin)
+- Richiesta: annullare una presenza di giorni passati (prima il cestino valeva solo per "Presenze di oggi"; vista mensile sola lettura).
+- Backend GET /teams/{id}/attendance/monthly: ora ritorna rows[].cell_ids (id presenza per ogni cella 'P', null altrove). DELETE /attendances/{id} già consente all'admin qualsiasi data (coach solo oggi).
+- Frontend MonthlyAttendanceGrid: props canEdit + onChanged. Con canEdit (admin), le celle 'P' sono toccabili → conferma → DELETE → reload. Hint "Tocca una P per annullare". Bordo verde sulle celle annullabili. app/admin/team/[id]/attendances.tsx passa canEdit + onChanged={loadStats}. Coach resta sola lettura.
+- Verificato e2e (insert presenza 03/11 → P con cell_id → DELETE → present=0). Frontend+backend → redeploy Vercel + Render.
