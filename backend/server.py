@@ -42603,6 +42603,46 @@ async def render_whatsapp_message(case: str, athlete_id: Optional[str] = None, u
 
 
 # ─────────────────────────── Consensi Immagini (Admin) ───────────────────────────
+@api_router.get("/admin/debug/consent-raw")
+async def debug_consent_raw(name: str, current_user = Depends(get_current_user)):
+    """🔧 TEMPORANEO (debug privacy): restituisce i valori GREZZI dei consensi salvati
+    nel DB per gli atleti/utenti il cui nome contiene `name`. Nessuna interpretazione.
+    Solo admin. Da rimuovere dopo la diagnosi."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    rx = {"$regex": name, "$options": "i"}
+    out = {"query": name, "athletes": [], "users": []}
+    async for a in db.athletes.find({"full_name": rx}):
+        out["athletes"].append({
+            "id": a.get("id"),
+            "full_name": a.get("full_name"),
+            "society_id": a.get("society_id"),
+            "team_id": a.get("team_id"),
+            "date_of_birth": a.get("date_of_birth") or a.get("birth_date"),
+            "parent_id": a.get("parent_id"),
+            "second_parent_id": a.get("second_parent_id"),
+            "linked_user_id": a.get("user_id") or a.get("linked_user_id"),
+            "privacy_accepted": a.get("privacy_accepted"),
+            "consent_images_internal": a.get("consent_images_internal"),
+            "consent_images_promo": a.get("consent_images_promo"),
+            "consents": a.get("consents"),  # GREZZO
+        })
+    async for u in db.users.find({"full_name": rx}):
+        out["users"].append({
+            "id": u.get("id"),
+            "role": u.get("role"),
+            "full_name": u.get("full_name"),
+            "society_id": u.get("society_id"),
+            "parent_id": u.get("parent_id"),
+            "second_parent_id": u.get("second_parent_id"),
+            "linked_athlete_id": u.get("linked_athlete_id"),
+            "athlete_id": u.get("athlete_id"),
+            "consents": u.get("consents"),  # GREZZO
+        })
+    return out
+
+
+
 @api_router.get("/admin/athletes/image-consents")
 async def admin_list_image_consents(
     consent_type: str = "images_promo",  # "images_promo" or "images_internal"

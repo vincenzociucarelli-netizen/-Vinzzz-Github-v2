@@ -2090,3 +2090,8 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - Backend GET /teams/{id}/attendance/monthly: ora ritorna rows[].cell_ids (id presenza per ogni cella 'P', null altrove). DELETE /attendances/{id} già consente all'admin qualsiasi data (coach solo oggi).
 - Frontend MonthlyAttendanceGrid: props canEdit + onChanged. Con canEdit (admin), le celle 'P' sono toccabili → conferma → DELETE → reload. Hint "Tocca una P per annullare". Bordo verde sulle celle annullabili. app/admin/team/[id]/attendances.tsx passa canEdit + onChanged={loadStats}. Coach resta sola lettura.
 - Verificato e2e (insert presenza 03/11 → P con cell_id → DELETE → present=0). Frontend+backend → redeploy Vercel + Render.
+
+## Aggiornamento 04/11/2026 (4) — Endpoint debug consensi grezzi (TEMPORANEO)
+- Backend: GET /api/admin/debug/consent-raw?name=<substr> (admin). Ritorna valori GREZZI dei consensi (athletes.consents + campi consent_images_*, parent_id/second_parent_id/linked_user; users.consents) per nome. Da RIMUOVERE dopo diagnosi.
+- Frontend image-consents.tsx: pannello "Diagnostica consensi (admin)" (collassabile sotto l'indicatore motore) con input nome + Cerca + JSON grezzo selezionabile/copiabile. Default nome "Sangoi".
+- Scopo: vedere la forma reale dei dati in PRODUZIONE (Atlas/Render) che da preview non è interrogabile. Richiede redeploy Render (backend) + Vercel (frontend).
