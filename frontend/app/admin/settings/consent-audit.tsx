@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Modal,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '../../../src/components/Icon';
@@ -390,6 +391,17 @@ export default function ConsentAuditPage() {
                     ))}
                   </>
                 )}
+
+                {/* 🔧 Dati grezzi (debug) — com'è salvato il consenso nel database */}
+                <Text style={[s.sectionTitle, { marginTop: 20, color: '#6A1B9A' }]}>Dati grezzi (debug)</Text>
+                <Text style={{ fontSize: 11, color: '#777', marginBottom: 6 }}>
+                  parent_id: {String(detailData.parent_id || '—')} · second_parent_id: {String(detailData.second_parent_id || '—')}
+                </Text>
+                <View style={{ backgroundColor: '#2B2B2B', borderRadius: 8, padding: 8 }}>
+                  <Text selectable style={{ color: '#E0E0E0', fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' }}>
+                    {JSON.stringify(detailData.consents_raw || {}, null, 2)}
+                  </Text>
+                </View>
                 <View style={{ height: 30 }} />
               </ScrollView>
             ) : null}

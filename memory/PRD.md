@@ -2107,3 +2107,9 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - FIX (server.py, /admin/payments/duplicates): helper _rata_key(p) = installment_number se presente, ALTRIMENTI dedotto da installment_name/description via regex ("RATA 1", "Iscrizione - Rata 1", "1ª rata", "Rata n.2"...). Ora i doppioni emergono: mantiene il PAGATO, suggerisce delete del non pagato.
 - Scope/"quante sono": la pagina Igiene dati → "verifica rate duplicate" ora elenca TUTTI gli atleti con questo problema (con conteggio). Solo backend → redeploy Render. Nessuna modifica frontend (pagina payments-hygiene già mostra gruppi/suggested_delete).
 - Verificato e2e (insert doppione → duplicates lo rileva, pagato tenuto, non pagato suggerito per delete; cleanup).
+
+## Aggiornamento 04/11/2026 (7) — Dati grezzi consensi nella modale consent-audit
+- Il dettaglio di SANGOI GIADA (consent-audit) mostra "Negato il 06/08/2026" con IP → nel DB esiste un diniego registrato per le immagini. Serve vedere i valori grezzi per capire il conflitto con l'anagrafica (che l'utente dice mostri "Dato").
+- Backend /admin/consent-history: ora ritorna anche consents_raw (valori grezzi pre-normalizzazione) + parent_id + second_parent_id.
+- Frontend app/admin/settings/consent-audit.tsx: aggiunta sezione "Dati grezzi (debug)" nella modale dettaglio (JSON selezionabile, con parent_id/second_parent_id). Così l'utente apre Sangoi e copia i valori reali.
+- ATTESA: l'utente deve fare redeploy Render+Vercel, aprire il dettaglio di Sangoi e incollare il JSON "Dati grezzi" per diagnosi definitiva. Nota: le fix precedenti (all-consents/consent-history con helper unico) valgono solo se il BACKEND Render è aggiornato.

@@ -41739,6 +41739,7 @@ async def get_consent_history_admin(
     # 🆕 Normalizza i consensi IMMAGINI con l'helper UNICO (coerenza con l'anagrafica):
     # legge chiavi per-genitore / suffisso self / chiave semplice.
     _doc_for_calc = {"consents": consents or {}, "parent_id": entity.get("parent_id"), "second_parent_id": entity.get("second_parent_id")}
+    consents_raw = dict(consents or {})  # 🔧 debug: valori grezzi (pre-normalizzazione)
     consents = dict(consents or {})
     for ct in ("images_internal", "images_promo"):
         st = _compute_image_consent_final(_doc_for_calc, ct)["status"]
@@ -41760,6 +41761,9 @@ async def get_consent_history_admin(
         "role": entity.get("role"),
         "consents": consents,
         "consent_history": consent_history,
+        "consents_raw": consents_raw,
+        "parent_id": entity.get("parent_id"),
+        "second_parent_id": entity.get("second_parent_id"),
     }
 
 @api_router.get("/admin/all-consents")
