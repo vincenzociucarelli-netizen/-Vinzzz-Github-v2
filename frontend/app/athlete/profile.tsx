@@ -1454,7 +1454,7 @@ export default function AthleteProfile() {
               <Text style={{ fontSize: 14, fontWeight: '700', color: '#2E7D32' }}>Consensi Privacy</Text>
               <Ionicons name={showConsents ? "chevron-up" : "chevron-down"} size={20} color="#2E7D32" />
             </TouchableOpacity>
-            {showConsents && <ConsentManager entityType="athlete" entityId={athleteId || undefined} accentColor="#4CAF50" />}
+            {showConsents && <ConsentManager entityType="athlete" entityId={athleteId || undefined} accentColor="#4CAF50" privacySignedOverride={profile?.privacy_accepted === true} />}
           </View>
 
         <View style={{ height: 120 }} />

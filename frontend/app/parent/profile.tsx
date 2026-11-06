@@ -684,6 +684,8 @@ export default function ParentProfile() {
                     entityId={child.id}
                     entityName={`${child.first_name} ${child.last_name}`}
                     accentColor="#E91E63"
+                    perParentId={user?.id}
+                    privacySignedOverride={child?.privacy_accepted === true}
                   />
                 ))}
               </>

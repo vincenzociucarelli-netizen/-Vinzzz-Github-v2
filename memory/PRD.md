@@ -2113,3 +2113,11 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - Backend /admin/consent-history: ora ritorna anche consents_raw (valori grezzi pre-normalizzazione) + parent_id + second_parent_id.
 - Frontend app/admin/settings/consent-audit.tsx: aggiunta sezione "Dati grezzi (debug)" nella modale dettaglio (JSON selezionabile, con parent_id/second_parent_id). Così l'utente apre Sangoi e copia i valori reali.
 - ATTESA: l'utente deve fare redeploy Render+Vercel, aprire il dettaglio di Sangoi e incollare il JSON "Dati grezzi" per diagnosi definitiva. Nota: le fix precedenti (all-consents/consent-history con helper unico) valgono solo se il BACKEND Render è aggiornato.
+
+## Aggiornamento 06/11/2026 — Root cause consensi immagini non salvati (Giada/Cucina)
+- DIAGNOSI: backend OK. Verificato end-to-end in locale che il PATCH /api/athletes/{id}/consents PERSISTE sia per atleta adulto (chiave diretta `images_internal`) sia per genitore→minore (chiave per-genitore `images_internal__{parentId}`). Report admin (/admin/all-consents) e profilo (/athletes/{id}/consents) usano lo STESSO helper `_compute_image_consent_final` senza cache → non possono divergere.
+- VERO BUG = SOLO FRONTEND: gli switch del consenso erano disabilitati/mal letti → atleta/genitore NON riuscivano a salvare, quindi restava il diniego iniziale e l'admin vedeva "Negato".
+  1) app/parent/profile.tsx: il ConsentManager dei figli MINORI veniva reso SENZA `perParentId` né `privacySignedOverride` → leggeva le chiavi dirette (vuote per i minori, salvati per-genitore) e calcolava privacySigned=false → switch "-" disabilitati. FIX: passati `perParentId={user?.id}` e `privacySignedOverride={child?.privacy_accepted===true}` (come già in parent/athlete/[id].tsx).
+  2) app/athlete/profile.tsx: l'atleta adulto abilitava lo switch solo se `consents.privacy_viewed.value===true`; questa chiave può restare stale/false anche dopo privacy accettata → switch bloccato. FIX: passato `privacySignedOverride={profile?.privacy_accepted===true}`.
+- Debug UI "Dati grezzi" in consent-audit.tsx LASCIATO in piedi (utente aveva detto "aspetta..").
+- DA FARE (utente): Save to GitHub + redeploy Vercel. Poi Giada/Cucina riaprono il loro profilo e attivano gli switch (ora funzionanti) → report e scheda si allineeranno.
