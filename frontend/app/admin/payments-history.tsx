@@ -219,6 +219,21 @@ export default function PaymentsHistoryPage() {
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 12, paddingBottom: 40 }}>
+        {/* Ingresso Solleciti rate */}
+        <TouchableOpacity
+          style={styles.reminderBanner}
+          onPress={() => router.push('/admin/payments-reminders')}
+          testID="open-reminders-btn"
+          data-testid="open-reminders-btn"
+        >
+          <Ionicons name="logo-whatsapp" size={22} color="#fff" />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={styles.reminderBannerTitle}>Solleciti rate</Text>
+            <Text style={styles.reminderBannerSub}>Chi ha pagato e chi no, per rata · sollecito WhatsApp</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </TouchableOpacity>
+
         {/* Filtri */}
         <View style={styles.card}>
           <Text style={styles.filterLabel}>Periodo</Text>
@@ -449,6 +464,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8,
   },
   exportBtnText: { color: '#fff', fontWeight: '700', marginLeft: 6, fontSize: 13 },
+  reminderBanner: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#25D366',
+    borderRadius: 12, padding: 14, marginBottom: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.12, shadowRadius: 3, elevation: 2,
+  },
+  reminderBannerTitle: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  reminderBannerSub: { color: '#E8FBEF', fontSize: 12, marginTop: 2 },
   card: {
     backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3, elevation: 2,
