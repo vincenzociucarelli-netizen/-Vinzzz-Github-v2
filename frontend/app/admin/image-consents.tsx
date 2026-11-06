@@ -7,9 +7,11 @@ import {
   StyleSheet,
   ActivityIndicator,
   Platform,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import api from '../../src/services/api';
 
 type ConsentType = 'images_promo' | 'images_internal';
@@ -53,6 +55,26 @@ export default function ImageConsentsPage() {
   const [groups, setGroups] = useState<TeamGroup[]>([]);
   const [total, setTotal] = useState(0);
   const [engine, setEngine] = useState('');
+
+  // 🔧 Diagnostica temporanea: legge i valori GREZZI dei consensi dal DB
+  const [dbgOpen, setDbgOpen] = useState(false);
+  const [dbgName, setDbgName] = useState('Sangoi');
+  const [dbgBusy, setDbgBusy] = useState(false);
+  const [dbgJson, setDbgJson] = useState('');
+  const runDbg = async () => {
+    const q = dbgName.trim();
+    if (!q) return;
+    setDbgBusy(true); setDbgJson('');
+    try {
+      const res = await api.get('/admin/debug/consent-raw', { params: { name: q } });
+      setDbgJson(JSON.stringify(res.data, null, 2));
+    } catch (e: any) {
+      setDbgJson('Errore: ' + (e?.response?.data?.detail || e?.message || 'richiesta fallita'));
+    } finally { setDbgBusy(false); }
+  };
+  const copyDbg = async () => {
+    try { await Clipboard.setStringAsync(dbgJson); if (Platform.OS === 'web') window.alert('Copiato!'); } catch {}
+  };
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [notifying, setNotifying] = useState<string | null>(null);
@@ -327,6 +349,37 @@ export default function ImageConsentsPage() {
           </Text>
         )}
 
+        {/* 🔧 Diagnostica temporanea: valori grezzi consensi dal DB */}
+        <View style={styles.dbgBox}>
+          <TouchableOpacity style={styles.dbgHeader} onPress={() => setDbgOpen(o => !o)}>
+            <Ionicons name="construct-outline" size={16} color="#6A1B9A" />
+            <Text style={styles.dbgTitle}>Diagnostica consensi (admin)</Text>
+            <Ionicons name={dbgOpen ? 'chevron-up' : 'chevron-down'} size={16} color="#6A1B9A" />
+          </TouchableOpacity>
+          {dbgOpen && (
+            <View style={{ padding: 10 }}>
+              <Text style={styles.dbgHint}>Scrivi un nome (o cognome) e tocca Cerca per vedere i valori salvati esattamente nel database.</Text>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput style={styles.dbgInput} value={dbgName} onChangeText={setDbgName} placeholder="Es: Sangoi" autoCapitalize="none" />
+                <TouchableOpacity style={styles.dbgBtn} onPress={runDbg} disabled={dbgBusy}>
+                  {dbgBusy ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.dbgBtnTxt}>Cerca</Text>}
+                </TouchableOpacity>
+              </View>
+              {!!dbgJson && (
+                <>
+                  <TouchableOpacity style={styles.dbgCopy} onPress={copyDbg}>
+                    <Ionicons name="copy-outline" size={14} color="#6A1B9A" />
+                    <Text style={styles.dbgCopyTxt}>Copia</Text>
+                  </TouchableOpacity>
+                  <ScrollView horizontal style={styles.dbgJsonWrap}>
+                    <Text style={styles.dbgJson} selectable>{dbgJson}</Text>
+                  </ScrollView>
+                </>
+              )}
+            </View>
+          )}
+        </View>
+
         {/* Results */}
         {loading ? (
           <ActivityIndicator size="large" color="#1976D2" style={{ marginTop: 40 }} />
@@ -466,6 +519,17 @@ const styles = StyleSheet.create({
   headerTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
   headerSubtitle: { color: '#E3F2FD', fontSize: 12, marginTop: 2 },
   engineTag: { fontSize: 10, color: '#9E9E9E', textAlign: 'center', marginBottom: 6, marginTop: -2 },
+  dbgBox: { marginHorizontal: 12, marginBottom: 10, borderWidth: 1, borderColor: '#E1BEE7', borderRadius: 10, backgroundColor: '#FBF5FE', overflow: 'hidden' },
+  dbgHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10 },
+  dbgTitle: { flex: 1, fontSize: 13, fontWeight: '700', color: '#6A1B9A' },
+  dbgHint: { fontSize: 11, color: '#777', marginBottom: 8 },
+  dbgInput: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 14, backgroundColor: '#fff' },
+  dbgBtn: { backgroundColor: '#6A1B9A', borderRadius: 8, paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center' },
+  dbgBtnTxt: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  dbgCopy: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-end', marginTop: 8 },
+  dbgCopyTxt: { color: '#6A1B9A', fontSize: 12, fontWeight: '600' },
+  dbgJsonWrap: { marginTop: 6, backgroundColor: '#2B2B2B', borderRadius: 8, padding: 8, maxHeight: 280 },
+  dbgJson: { color: '#E0E0E0', fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace' },
   exportBtn: {
     flexDirection: 'row',
     alignItems: 'center',
