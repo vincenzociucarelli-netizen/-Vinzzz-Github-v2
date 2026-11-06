@@ -41687,9 +41687,9 @@ async def get_consent_history_admin(
         raise HTTPException(status_code=403, detail="Solo admin")
     
     if entity_type == "user":
-        entity = await db.users.find_one({"id": entity_id}, {"_id": 0, "consents": 1, "consent_history": 1, "full_name": 1, "email": 1, "role": 1, "linked_athlete_id": 1})
+        entity = await db.users.find_one({"id": entity_id}, {"_id": 0, "consents": 1, "consent_history": 1, "full_name": 1, "email": 1, "role": 1, "linked_athlete_id": 1, "parent_id": 1, "second_parent_id": 1})
     elif entity_type == "athlete":
-        entity = await db.athletes.find_one({"id": entity_id}, {"_id": 0, "consents": 1, "consent_history": 1, "full_name": 1, "first_name": 1, "last_name": 1})
+        entity = await db.athletes.find_one({"id": entity_id}, {"_id": 0, "consents": 1, "consent_history": 1, "full_name": 1, "first_name": 1, "last_name": 1, "parent_id": 1, "second_parent_id": 1})
     else:
         raise HTTPException(status_code=400, detail="entity_type deve essere 'user' o 'athlete'")
     
@@ -41722,6 +41722,22 @@ async def get_consent_history_admin(
             if not consent_history:
                 consent_history = la.get("consent_history", [])
 
+    # 🆕 Normalizza i consensi IMMAGINI con l'helper UNICO (coerenza con l'anagrafica):
+    # legge chiavi per-genitore / suffisso self / chiave semplice.
+    _doc_for_calc = {"consents": consents or {}, "parent_id": entity.get("parent_id"), "second_parent_id": entity.get("second_parent_id")}
+    consents = dict(consents or {})
+    for ct in ("images_internal", "images_promo"):
+        st = _compute_image_consent_final(_doc_for_calc, ct)["status"]
+        if st is None:
+            consents.pop(ct, None)
+        else:
+            # mantiene eventuale timestamp/ip esistente se già in formato oggetto
+            prev = consents.get(ct)
+            if isinstance(prev, dict):
+                consents[ct] = {**prev, "value": bool(st)}
+            else:
+                consents[ct] = {"value": bool(st)}
+
     return {
         "entity_type": entity_type,
         "entity_id": entity_id,
@@ -41741,6 +41757,19 @@ async def get_all_consents_admin(current_user = Depends(get_current_user)):
     result = []
     
     _sid = current_user.get("society_id")
+
+    # 🆕 Normalizza i consensi IMMAGINI usando l'helper UNICO, così questa lista
+    # (Consensi Privacy) coincide con l'anagrafica. Legge chiavi per-genitore
+    # (images_promo__<idGenitore>), suffisso self del maggiorenne e chiave semplice.
+    def _normalize_images(doc, raw):
+        out = dict(raw or {})
+        for ct in ("images_internal", "images_promo"):
+            st = _compute_image_consent_final(doc, ct)["status"]
+            if st is None:
+                out.pop(ct, None)   # non espresso → nessun badge
+            else:
+                out[ct] = {"value": bool(st)}
+        return out
     _u_q = {"role": {"$ne": "admin"}}
     _a_q = {}
     if _sid:
@@ -41763,7 +41792,7 @@ async def get_all_consents_admin(current_user = Depends(get_current_user)):
                 "full_name": u.get("full_name", ""),
                 "email": u.get("email", ""),
                 "role": u.get("role", ""),
-                "consents": consents,
+                "consents": _normalize_images(u, consents),
                 "history_count": len(history),
                 "last_change": history[-1]["timestamp"] if history else None,
             })
@@ -41771,7 +41800,7 @@ async def get_all_consents_admin(current_user = Depends(get_current_user)):
     # Get athletes with consents (society-scoped)
     athletes = await db.athletes.find(
         _a_q,
-        {"_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1, "consents": 1, "consent_history": 1, "team_id": 1}
+        {"_id": 0, "id": 1, "full_name": 1, "first_name": 1, "last_name": 1, "consents": 1, "consent_history": 1, "team_id": 1, "parent_id": 1, "second_parent_id": 1}
     ).to_list(500)
     
     # Pre-load team names for athletes
@@ -41790,7 +41819,7 @@ async def get_all_consents_admin(current_user = Depends(get_current_user)):
                 "role": "atleta",
                 "team_id": a.get("team_id"),
                 "team_name": _team_names.get(a.get("team_id")) if a.get("team_id") else None,
-                "consents": consents,
+                "consents": _normalize_images(a, consents),
                 "history_count": len(history),
                 "last_change": history[-1]["timestamp"] if history else None,
             })
