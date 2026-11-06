@@ -59,7 +59,8 @@ async def cleanup(db):
     ids = json.load(open(IDS_FILE))
     r1 = await db.payments.delete_many({"id": {"$in": ids["payments"]}})
     r2 = await db.athletes.delete_many({"id": {"$in": ids["athletes"]}})
-    print("deleted payments", r1.deleted_count, "athletes", r2.deleted_count)
+    r3 = await db.payment_reminders.delete_many({"athlete_id": {"$in": ids["athletes"]}})
+    print("deleted payments", r1.deleted_count, "athletes", r2.deleted_count, "reminders", r3.deleted_count)
 
 
 async def main():

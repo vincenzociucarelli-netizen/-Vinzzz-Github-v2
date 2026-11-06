@@ -1,0 +1,35 @@
+{
+  "summary": "Tested the 'Scaduti' summary and the 'Promemoria inviati' (sent reminders) log in Solleciti rate. Backend: 18/18 pytest pass, covering 7 new log tests and the 11 regression tests for installment-reminders. POST /admin/payments/reminders/log returns 401/403 without auth, 403 for a coach, 422 when required fields are missing and 200 for the admin with {ok, sent_at, role}. The DB document has society_id, sent_by and sent_at. GET then shows last_reminder (null, then count 1, then count 2 with the latest role), isolated per athlete and per rata. Frontend at 375x667: rata-tab-overdue is the first tab, selected by default, with badge 3. The red header shows '3 rate scadute' and 'Da incassare: € 400,00'. The list covers all overdue rate sorted by due_date ascending, with a 'Rata N' chip on each row. Sending a reminder calls window.open with wa.me/393201234567 and POSTs the log with the correct body. The modal closes and the row shows 'Sollecitato il 06/11/2026 (Padre)' with the button changed to 'Risollecita'. This persists after reload. The Rata 1/2/3 tabs and the Pagato/Non pagato toggle work and the counts are correct. Two minor issues found: the badge date uses UTC, and the POST log does not validate its input.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/admin/payments/reminders/log", "issue": "No validation: any athlete_id is accepted, including one that does not exist or belongs to another society, and so is any installment_number (99 was accepted with 200). A document is still inserted. The endpoint should check that the athlete belongs to the society and that installment_number is 1, 2 or 3."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Badge 'Sollecitato il'", "issue": "The date comes from lr.sent_at.slice(0,10) on a UTC ISO string. Between 00:00 and 01:00/02:00 Rome time it shows the previous day. Reproduced: a reminder sent at 00:40 Rome time on 07/11 is shown as 'Sollecitato il 06/11/2026'. Fix: format with new Date(sent_at).toLocaleDateString('it-IT', {timeZone:'Europe/Rome'}), or have the backend return a date in Rome time. Ref: app/admin/payments-reminders.tsx:246", "testID": "wa-<athleteId>", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Solleciti rate", "issues": ["refresh-btn is 35x34 and back-btn is 32x36, below the 44x44 minimum touch target (no hitSlop).", "In the Scaduti tab, a single athlete with 2 or more overdue rate would render duplicate testIDs wa-<athleteId>. Consider wa-<athleteId>-<rata> for uniqueness."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_reminders_log.py", "/app/backend/tests/test_installment_reminders.py", "/app/backend/tests/seed_test_reminders.py", "/app/test_reports/pytest/pytest_results_iter140.xml"],
+  "action_items": [
+    "Format the 'Sollecitato il' date in the Europe/Rome timezone instead of slicing the UTC ISO string (payments-reminders.tsx:246).",
+    "POST reminders/log: check that the athlete belongs to the society (404 otherwise) and constrain installment_number to 1..3 (Field(ge=1, le=3)).",
+    "Optional: give back-btn and refresh-btn a 44x44 touch area (hitSlop or padding), and make the wa- testIDs unique per rata."
+  ],
+  "critical_code_review_comments": [
+    "The log is written after Linking.openURL succeeds and does not block if it fails. That is good, but on failure the user gets no feedback, so a reminder could go unrecorded without anyone noticing.",
+    "payment_reminders documents have no 'id' field (only Mongo _id), unlike the other collections. This does not cause any _id leak in responses."
+  ],
+  "updated_files": ["/app/backend/tests/test_reminders_log.py (new)", "/app/backend/tests/seed_test_reminders.py (cleanup now also deletes payment_reminders by the seeded athlete ids)"],
+  "success_rate": {"backend": "100%", "frontend": "100% (core flows); 1 low-priority date/timezone bug"},
+  "seed_data_creation": "Temporary seed: 3 TEST_ athletes and 9 TEST_ payments in Pallavolo Perugia, plus 3 payment_reminders documents created by the tests and 1 probe document with athlete_id TEST_nonexistent_xyz. All were deleted by id afterwards. Checked: 0 TEST_ records and 0 payment_reminders left. No real data was touched and no real WhatsApp messages were sent (window.open was stubbed and wa.me blocked).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Seed with 'python /app/backend/tests/seed_test_reminders.py seed' and remove with '... cleanup' (cleanup also removes payment_reminders). Run pytest with EXPO_PUBLIC_BACKEND_URL exported from frontend/.env. The preview is a static dist build. To intercept WhatsApp, use add_init_script to override window.open and route **/wa.me/** to abort. The login screen has no testIDs: use the placeholders Email/Password and the text 'Accedi'."
+}

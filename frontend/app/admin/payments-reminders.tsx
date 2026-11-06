@@ -26,8 +26,14 @@ interface PaidRow {
   amount: number;
   paid_date: string | null;
 }
+interface Reminder {
+  sent_at: string;
+  role?: string | null;
+  count: number;
+}
 interface UnpaidRow {
   athlete_id: string;
+  installment_number: number;
   athlete_name: string;
   team_name: string;
   label: string;
@@ -37,6 +43,7 @@ interface UnpaidRow {
   due_date: string | null;
   overdue: boolean;
   phones: Record<string, string>;
+  last_reminder?: Reminder | null;
 }
 interface Installment {
   installment_number: number;
@@ -62,6 +69,21 @@ function formatDateIt(iso: string | null): string {
   return `${d}/${m}/${y}`;
 }
 
+// Formatta un timestamp ISO nel fuso orario italiano (gg/mm/aaaa)
+function formatDateRome(iso: string | null): string {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString('it-IT', {
+      timeZone: 'Europe/Rome',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  } catch {
+    return formatDateIt(iso.slice(0, 10));
+  }
+}
+
 // Normalizza il numero in formato internazionale senza '+' per wa.me (default Italia +39)
 function normalizePhone(raw: string): string {
   let digits = (raw || '').replace(/[^\d]/g, '');
@@ -81,7 +103,8 @@ export default function PaymentsRemindersScreen() {
   const [error, setError] = useState<string | null>(null);
   const [societyName, setSocietyName] = useState('');
   const [installments, setInstallments] = useState<Installment[]>([]);
-  const [selectedRata, setSelectedRata] = useState(1);
+  // -1 = scheda "Scaduti" (tutte le rate scadute insieme); 1/2/3 = singola rata
+  const [selectedRata, setSelectedRata] = useState(-1);
   const [view, setView] = useState<'unpaid' | 'paid'>('unpaid');
 
   // Modale sollecito WhatsApp
@@ -113,6 +136,17 @@ export default function PaymentsRemindersScreen() {
     [installments, selectedRata],
   );
 
+  // Riepilogo Scaduti: tutte le rate scadute di tutte le squadre, ordinate per scadenza
+  const overdueAll = useMemo(() => {
+    const rows: UnpaidRow[] = [];
+    installments.forEach((inst) => inst.unpaid.forEach((r) => r.overdue && rows.push(r)));
+    rows.sort((a, b) => (a.due_date || '9999').localeCompare(b.due_date || '9999') || a.athlete_name.localeCompare(b.athlete_name));
+    return rows;
+  }, [installments]);
+
+  const overdueTotal = overdueAll.length;
+  const overdueResidual = useMemo(() => overdueAll.reduce((s, r) => s + r.residual, 0), [overdueAll]);
+
   const buildMessage = useCallback(
     (row: UnpaidRow): string => {
       const parts = [
@@ -143,6 +177,23 @@ export default function PaymentsRemindersScreen() {
     [buildMessage],
   );
 
+  const markReminded = useCallback((athleteId: string, installmentNumber: number, sentAt: string, role: string) => {
+    setInstallments((prev) =>
+      prev.map((inst) =>
+        inst.installment_number !== installmentNumber
+          ? inst
+          : {
+              ...inst,
+              unpaid: inst.unpaid.map((r) =>
+                r.athlete_id === athleteId
+                  ? { ...r, last_reminder: { sent_at: sentAt, role, count: (r.last_reminder?.count || 0) + 1 } }
+                  : r,
+              ),
+            },
+      ),
+    );
+  }, []);
+
   const sendWhatsapp = useCallback(async () => {
     if (!modalRow || !selectedPhoneKey) return;
     const raw = modalRow.phones[selectedPhoneKey];
@@ -159,11 +210,72 @@ export default function PaymentsRemindersScreen() {
         return;
       }
       await Linking.openURL(url);
+      // Registra il sollecito (non bloccare l'apertura di WhatsApp se fallisce)
+      try {
+        const res = await api.post('/admin/payments/reminders/log', {
+          athlete_id: modalRow.athlete_id,
+          installment_number: modalRow.installment_number,
+          role: selectedPhoneKey,
+          phone: raw,
+          label: modalRow.label,
+        });
+        markReminded(modalRow.athlete_id, modalRow.installment_number, res.data.sent_at, selectedPhoneKey);
+      } catch {
+        /* log best-effort */
+      }
       setModalOpen(false);
     } catch {
       Alert.alert('Errore', 'Impossibile aprire WhatsApp.');
     }
-  }, [modalRow, selectedPhoneKey, message]);
+  }, [modalRow, selectedPhoneKey, message, markReminded]);
+
+  const renderUnpaidRow = (row: UnpaidRow, showChip: boolean) => {
+    const reminded = !!row.last_reminder;
+    const lr = row.last_reminder;
+    return (
+      <View key={`${row.installment_number}-${row.athlete_id}`} style={styles.row}>
+        <View style={{ flex: 1 }}>
+          <View style={styles.rowTop}>
+            <Text style={styles.rowName}>{row.athlete_name}</Text>
+            {row.overdue && (
+              <View style={styles.overdueBadge}>
+                <Text style={styles.overdueBadgeText}>SCADUTA</Text>
+              </View>
+            )}
+            {showChip && (
+              <View style={styles.rataChip}>
+                <Text style={styles.rataChipText}>Rata {row.installment_number}</Text>
+              </View>
+            )}
+          </View>
+          {!!row.team_name && <Text style={styles.rowTeam}>{row.team_name}</Text>}
+          <Text style={styles.rowMeta}>
+            {formatCurrency(row.residual)}
+            {row.paid_so_far > 0 ? ` (parziale, versato ${formatCurrency(row.paid_so_far)})` : ''}
+            {row.due_date ? ` · scad. ${formatDateIt(row.due_date)}` : ''}
+          </Text>
+          {reminded && lr && (
+            <View style={styles.remindedRow}>
+              <Ionicons name="checkmark-done" size={13} color="#2E7D32" />
+              <Text style={styles.remindedText}>
+                Sollecitato il {formatDateRome(lr.sent_at)}
+                {lr.role ? ` (${ROLE_LABEL[lr.role] || lr.role})` : ''}
+                {lr.count > 1 ? ` · ${lr.count}×` : ''}
+              </Text>
+            </View>
+          )}
+        </View>
+        <TouchableOpacity
+          style={[styles.waBtn, reminded && styles.waBtnSent]}
+          onPress={() => openReminder(row)}
+          testID={`wa-${row.athlete_id}-${row.installment_number}`}
+        >
+          <Ionicons name="logo-whatsapp" size={18} color="#fff" />
+          <Text style={styles.waBtnText}>{reminded ? 'Risollecita' : 'Sollecita'}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -194,8 +306,20 @@ export default function PaymentsRemindersScreen() {
         </View>
       ) : (
         <>
-          {/* Selettore rata */}
+          {/* Selettore: Scaduti + singole rate */}
           <View style={styles.rataTabs}>
+            <TouchableOpacity
+              style={[styles.rataTab, selectedRata === -1 && styles.rataTabOverdueActive]}
+              onPress={() => setSelectedRata(-1)}
+              testID="rata-tab-overdue"
+            >
+              <Text style={[styles.rataTabText, selectedRata === -1 && styles.rataTabTextActive]}>Scaduti</Text>
+              {overdueTotal > 0 && (
+                <View style={styles.rataTabBadge}>
+                  <Text style={styles.rataTabBadgeText}>{overdueTotal}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
             {installments.map((inst) => {
               const active = inst.installment_number === selectedRata;
               return (
@@ -219,7 +343,24 @@ export default function PaymentsRemindersScreen() {
           </View>
 
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 12, paddingBottom: 40 }}>
-            {!current ? (
+            {selectedRata === -1 ? (
+              /* ===== Riepilogo Scaduti (tutte le rate) ===== */
+              <>
+                <View style={styles.overdueHeader}>
+                  <Text style={styles.overdueHeaderTitle}>
+                    {overdueTotal} {overdueTotal === 1 ? 'rata scaduta' : 'rate scadute'}
+                  </Text>
+                  {overdueResidual > 0 && (
+                    <Text style={styles.overdueHeaderSub}>Da incassare: {formatCurrency(overdueResidual)}</Text>
+                  )}
+                </View>
+                {overdueAll.length === 0 ? (
+                  <Text style={styles.emptyText}>Nessuna rata scaduta 🎉</Text>
+                ) : (
+                  overdueAll.map((row) => renderUnpaidRow(row, true))
+                )}
+              </>
+            ) : !current ? (
               <Text style={styles.emptyText}>Nessuna rata configurata.</Text>
             ) : (
               <>
@@ -271,34 +412,7 @@ export default function PaymentsRemindersScreen() {
                   current.unpaid.length === 0 ? (
                     <Text style={styles.emptyText}>Tutti in regola con questa rata 🎉</Text>
                   ) : (
-                    current.unpaid.map((row) => (
-                      <View key={row.athlete_id} style={styles.row}>
-                        <View style={{ flex: 1 }}>
-                          <View style={styles.rowTop}>
-                            <Text style={styles.rowName}>{row.athlete_name}</Text>
-                            {row.overdue && (
-                              <View style={styles.overdueBadge}>
-                                <Text style={styles.overdueBadgeText}>SCADUTA</Text>
-                              </View>
-                            )}
-                          </View>
-                          {!!row.team_name && <Text style={styles.rowTeam}>{row.team_name}</Text>}
-                          <Text style={styles.rowMeta}>
-                            {formatCurrency(row.residual)}
-                            {row.paid_so_far > 0 ? ` (parziale, versato ${formatCurrency(row.paid_so_far)})` : ''}
-                            {row.due_date ? ` · scad. ${formatDateIt(row.due_date)}` : ''}
-                          </Text>
-                        </View>
-                        <TouchableOpacity
-                          style={styles.waBtn}
-                          onPress={() => openReminder(row)}
-                          testID={`wa-${row.athlete_id}`}
-                        >
-                          <Ionicons name="logo-whatsapp" size={18} color="#fff" />
-                          <Text style={styles.waBtnText}>Sollecita</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))
+                    current.unpaid.map((row) => renderUnpaidRow(row, false))
                   )
                 ) : current.paid.length === 0 ? (
                   <Text style={styles.emptyText}>Nessun pagamento registrato per questa rata.</Text>
@@ -399,7 +513,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#1565C0', paddingTop: 44, paddingBottom: 14, paddingHorizontal: 12,
   },
-  backBtn: { padding: 6, marginRight: 6 },
+  backBtn: { padding: 6, marginRight: 6, minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { color: '#fff', fontSize: 20, fontWeight: '800' },
   headerSubtitle: { color: '#BBDEFB', fontSize: 12, marginTop: 2 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
@@ -412,6 +526,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12, minHeight: 44, borderRadius: 8, backgroundColor: '#F1F3F5',
   },
   rataTabActive: { backgroundColor: '#1565C0' },
+  rataTabOverdueActive: { backgroundColor: '#C0392B' },
   rataTabText: { fontSize: 14, fontWeight: '700', color: '#495057' },
   rataTabTextActive: { color: '#fff' },
   rataTabBadge: {
@@ -447,6 +562,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, minHeight: 44, borderRadius: 8, marginLeft: 10,
   },
   waBtnText: { color: '#fff', fontWeight: '700', marginLeft: 6, fontSize: 13 },
+  waBtnSent: { backgroundColor: '#1565C0' },
+  rataChip: { backgroundColor: '#EEF4FF', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  rataChipText: { color: '#1565C0', fontSize: 10, fontWeight: '800' },
+  remindedRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  remindedText: { color: '#2E7D32', fontSize: 11, fontWeight: '600' },
+  overdueHeader: {
+    backgroundColor: '#FDECEA', borderRadius: 12, padding: 14, marginBottom: 12,
+    borderLeftWidth: 4, borderLeftColor: '#C0392B',
+  },
+  overdueHeaderTitle: { color: '#C0392B', fontSize: 16, fontWeight: '800' },
+  overdueHeaderSub: { color: '#7B241C', fontSize: 13, fontWeight: '700', marginTop: 2 },
   paidBadge: { flexDirection: 'row', alignItems: 'center', marginLeft: 10 },
   paidBadgeText: { color: '#2E7D32', fontWeight: '700', marginLeft: 4, fontSize: 13 },
   emptyText: { fontSize: 14, color: '#6B7280', textAlign: 'center', marginTop: 24 },

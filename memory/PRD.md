@@ -2132,3 +2132,14 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 ## Aggiornamento 06/11/2026 (3) — Solleciti rate: fix post-test (iter.139)
 - Fix applicati: (1) normalizePhone non aggiunge più +39 ai cellulari 391/392/393 (solo se len>=11); (2) backend non mostra più righe a €0 (skip rate senza importo); (3) etichetta messaggio = nome della rata PROGRAMMATA (non "Bonifico RATA 1"); (4) "oggi" calcolato in fuso Europe/Rome (non UTC); (5) UI: touch target >=44px (tab/toggle/Sollecita/close), KeyboardAvoidingView nella modale, safe-area insets nell'header.
 - DA CHIARIRE CON L'UTENTE (verifica su dati reali): la vista raggruppa per installment_number 1/2/3. Se alcune squadre hanno una "Quota iscrizione" come rata 1 o più di 3 rate (preview mostrava Under 18 con 10), la suddivisione 1/2/3 va riallineata al reale schema rate.
+
+## Aggiornamento 06/11/2026 (4) — Solleciti rate: Riepilogo Scaduti + Promemoria Inviati
+- RIEPILOGO SCADUTI: nuova scheda "Scaduti" (default all'apertura) in cima al selettore rate: unisce tutte le rate SCADUTE di tutte le squadre, ordinate per scadenza, ognuna con chip "Rata N" e pulsante Sollecita. Header rosso con totale rate scadute e importo da incassare. Tutto lato client da installments (nessun fetch extra).
+- PROMEMORIA INVIATI: nuova collection db.payment_reminders. POST /api/admin/payments/reminders/log {athlete_id, installment_number, role, phone, label} registra il sollecito (sent_by, sent_at). GET /api/admin/payments/installment-reminders ora include per ogni unpaid `last_reminder` {sent_at, role, count}. In UI: dopo "Apri WhatsApp" si logga e la riga mostra "Sollecitato il GG/MM (ruolo) · N×" e il bottone diventa "Risollecita". Aggiunto installment_number ad ogni riga unpaid.
+- Validato localmente endpoint registrati (403 senza auth). Da testare e2e.
+
+## Aggiornamento 06/11/2026 (5) — Solleciti rate: fix post-test iter.140
+- Badge "Sollecitato il": data ora formattata in fuso Europe/Rome (formatDateRome) invece che tagliata dall'UTC.
+- POST reminders/log: valida installment_number in 1-3 (400) e che l'atleta appartenga alla società (404).
+- UI: back/refresh button 44x44; testID pulsante sollecita ora univoco wa-<athleteId>-<rata> (per atleti con più rate scadute nella scheda Scaduti).
+- Testato e2e (iter.140 PASS: backend 18/18, Scaduti + registro solleciti ok).

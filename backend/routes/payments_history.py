@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional
 from datetime import datetime, timezone, date
 from zoneinfo import ZoneInfo
+from pydantic import BaseModel
 
 from database import db
 from auth_utils import get_current_user
@@ -458,6 +459,18 @@ async def get_installment_reminders(current_user=Depends(get_current_user)):
     society = await db.societies.find_one({"id": society_id}, {"name": 1}) or {}
     society_name = society.get("name", "")
 
+    # Registro solleciti: ultimo invio e conteggio per (athlete_id, rata)
+    reminders = await db.payment_reminders.find({"society_id": society_id}).to_list(100000)
+    rem_map: dict = {}
+    for r in reminders:
+        k = (r.get("athlete_id"), r.get("installment_number"))
+        e = rem_map.setdefault(k, {"sent_at": None, "role": None, "count": 0})
+        e["count"] += 1
+        sa = r.get("sent_at")
+        if sa and (e["sent_at"] is None or sa > e["sent_at"]):
+            e["sent_at"] = sa
+            e["role"] = r.get("role")
+
     payments = await db.payments.find(
         {"$or": [{"society_id": society_id}, {"athlete_id": {"$in": athlete_ids}}]}
     ).to_list(100000)
@@ -533,6 +546,7 @@ async def get_installment_reminders(current_user=Depends(get_current_user)):
             overdue = bool(due_date and due_date < today and residual > 0)
             rate_data[rata]["unpaid"].append({
                 "athlete_id": aid,
+                "installment_number": rata,
                 "athlete_name": athlete_name,
                 "team_name": team_name,
                 "label": label,
@@ -542,6 +556,7 @@ async def get_installment_reminders(current_user=Depends(get_current_user)):
                 "due_date": due_date.isoformat() if due_date else None,
                 "overdue": overdue,
                 "phones": phones,
+                "last_reminder": rem_map.get((aid, rata)),
             })
 
     installments = []
@@ -567,3 +582,45 @@ async def get_installment_reminders(current_user=Depends(get_current_user)):
         "today": today.isoformat(),
         "installments": installments,
     }
+
+
+
+class ReminderLogIn(BaseModel):
+    athlete_id: str
+    installment_number: int
+    role: Optional[str] = None
+    phone: Optional[str] = None
+    label: Optional[str] = None
+
+
+@router.post("/admin/payments/reminders/log")
+async def log_payment_reminder(payload: ReminderLogIn, current_user=Depends(get_current_user)):
+    """🆕 Registra un sollecito WhatsApp inviato (per non ricontattare due volte).
+    Salva atleta, rata, destinatario e timestamp; non invia nulla, solo traccia."""
+    if current_user.get("role") not in ("admin", "viewer"):
+        raise HTTPException(status_code=403, detail="Solo admin")
+    society_id = current_user.get("society_id")
+    if not society_id:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+
+    sent_at = datetime.now(timezone.utc).isoformat()
+    if payload.installment_number not in (1, 2, 3):
+        raise HTTPException(status_code=400, detail="Numero rata non valido")
+    athlete = await db.athletes.find_one(
+        {"id": payload.athlete_id, "society_id": society_id}, {"id": 1}
+    )
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    doc = {
+        "society_id": society_id,
+        "athlete_id": payload.athlete_id,
+        "installment_number": payload.installment_number,
+        "role": payload.role,
+        "phone": payload.phone,
+        "label": payload.label,
+        "sent_by": current_user.get("id") or current_user.get("email"),
+        "sent_by_name": current_user.get("name") or current_user.get("email"),
+        "sent_at": sent_at,
+    }
+    await db.payment_reminders.insert_one(doc)
+    return {"ok": True, "sent_at": sent_at, "role": payload.role}
