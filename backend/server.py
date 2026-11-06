@@ -17582,12 +17582,26 @@ async def get_payment_duplicates(current_user = Depends(get_current_user)):
     result = []
     for a in athletes:
         payments = await db.payments.find({"athlete_id": a["id"]}).to_list(200)
-        # Raggruppa per numero rata (solo non ricorrenti, con installment_number valorizzato)
+        # Raggruppa per numero rata (solo non ricorrenti). 🆕 04/11/2026: la chiave
+        # rata è l'installment_number se presente, ALTRIMENTI viene dedotta dalla
+        # descrizione/etichetta (es. "RATA 1", "Iscrizione - Rata 1", "1ª rata").
+        # Così un bonifico pagato registrato a mano senza numero rata viene comunque
+        # accoppiato alla rata programmata non pagata → il doppione emerge.
+        def _rata_key(p):
+            n = p.get("installment_number")
+            if isinstance(n, int) and n > 0:
+                return n
+            text = f"{p.get('installment_name') or ''} {p.get('description') or ''}".lower()
+            m = re.search(r'rata\s*n?[°\.\s]*([1-9])', text)
+            if not m:
+                m = re.search(r'([1-9])\s*[aª°]?\s*rata', text)
+            return int(m.group(1)) if m else None
+
         groups = {}
         for p in payments:
             if p.get("recurring_plan_id"):
                 continue
-            key = p.get("installment_number")
+            key = _rata_key(p)
             if key is None:
                 continue
             groups.setdefault(key, []).append(p)
