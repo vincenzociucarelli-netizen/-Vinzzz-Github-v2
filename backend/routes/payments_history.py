@@ -447,14 +447,14 @@ async def get_installment_reminders(current_user=Depends(get_current_user)):
 
     athletes = await db.athletes.find(
         {"society_id": society_id, "is_withdrawn": {"$ne": True}},
-        {"id": 1, "first_name": 1, "last_name": 1, "team_id": 1,
-         "phone_athlete": 1, "phone_father": 1, "phone_mother": 1},
+        {"id": 1, "full_name": 1, "first_name": 1, "last_name": 1, "team_id": 1,
+         "discount_amount": 1, "phone_athlete": 1, "phone_father": 1, "phone_mother": 1},
     ).to_list(20000)
     athlete_map = {a["id"]: a for a in athletes}
     athlete_ids = list(athlete_map.keys())
 
-    teams = await db.teams.find({"society_id": society_id}, {"id": 1, "name": 1}).to_list(500)
-    team_map = {t["id"]: t.get("name", "") for t in teams}
+    teams = await db.teams.find({"society_id": society_id}).to_list(500)
+    team_map = {t["id"]: t for t in teams}
 
     society = await db.societies.find_one({"id": society_id}, {"name": 1}) or {}
     society_name = society.get("name", "")
@@ -471,96 +471,122 @@ async def get_installment_reminders(current_user=Depends(get_current_user)):
             e["sent_at"] = sa
             e["role"] = r.get("role")
 
-    payments = await db.payments.find(
-        {"$or": [{"society_id": society_id}, {"athlete_id": {"$in": athlete_ids}}]}
-    ).to_list(100000)
-
-    # Raggruppa: (athlete_id, rata) -> lista pagamenti. Esclude i ricorrenti.
-    grouped: dict = {}
+    payments = await db.payments.find({"athlete_id": {"$in": athlete_ids}}).to_list(100000)
+    pay_by_ath: dict = {}
     for p in payments:
-        if p.get("recurring_plan_id"):
-            continue
-        aid = p.get("athlete_id")
-        if aid not in athlete_map:
-            continue
-        key = _rata_key_from_payment(p)
-        if key not in (1, 2, 3):
-            continue
-        grouped.setdefault((aid, key), []).append(p)
+        pay_by_ath.setdefault(p.get("athlete_id"), []).append(p)
 
-    # Struttura per rata
-    rate_data = {n: {"installment_number": n, "label": f"Rata {n}", "paid": [], "unpaid": []} for n in (1, 2, 3)}
+    def _schedule_for(team: dict):
+        """Scadenzario della squadra: lista [{amount, due_date, name}] per rata."""
+        sched = []
+        dyn = (team or {}).get("installments") or []
+        for inst in dyn:
+            try:
+                amt = float(inst.get("amount") or 0)
+            except (TypeError, ValueError):
+                amt = 0.0
+            if amt > 0:
+                sched.append({
+                    "amount": amt,
+                    "due_date": _to_date(inst.get("due_date")),
+                    "name": inst.get("name") or f"Rata {len(sched) + 1}",
+                })
+        if not sched and team:
+            legacy = [
+                (team.get("installment_1_amount"), None, "Iscrizione - Rata 1"),
+                (team.get("installment_2_amount"), team.get("installment_2_due_date"), "Rata 2"),
+                (team.get("installment_3_amount"), team.get("installment_3_due_date"), "Rata 3"),
+            ]
+            for amt, dd, nm in legacy:
+                try:
+                    amt = float(amt or 0)
+                except (TypeError, ValueError):
+                    amt = 0.0
+                if amt > 0:
+                    sched.append({"amount": amt, "due_date": _to_date(dd), "name": nm})
+        return sched
 
-    for (aid, rata), plist in grouped.items():
-        a = athlete_map[aid]
-        athlete_name = f"{a.get('last_name','')} {a.get('first_name','')}".strip() or "—"
-        team_name = team_map.get(a.get("team_id"), "")
+    MAX_RATE = 3  # mostriamo al massimo 3 rate come richiesto
+    rate_data: dict = {}
 
-        planned_amount = max((float(p.get("amount", 0) or 0) for p in plist), default=0.0)
+    for aid, a in athlete_map.items():
+        team = team_map.get(a.get("team_id"))
+        schedule = _schedule_for(team)
+        if not schedule:
+            continue
+        # Sconto applicato sull'ultima rata dello scadenzario
+        discount = a.get("discount_amount") or 0
+        if discount:
+            try:
+                schedule[-1] = {**schedule[-1], "amount": max(0.0, schedule[-1]["amount"] - float(discount))}
+            except (TypeError, ValueError):
+                pass
+
+        # Incassato = somma degli importi effettivamente pagati (no ricorrenti, no rimborsati).
+        # Conta la cifra accreditata, NON la descrizione del pagamento.
         paid_sum = 0.0
         last_paid_date = None
-        due_date = None
-        label = f"Rata {rata}"
-        label_best_amt = -1.0
-        for p in plist:
-            nm = p.get("installment_name") or p.get("description")
-            amt = float(p.get("amount", 0) or 0)
-            # etichetta: preferisci la rata PROGRAMMATA (nome + importo maggiore),
-            # non un eventuale bonifico manuale ("Bonifico RATA 1")
-            if nm and amt >= label_best_amt:
-                label = nm
-                label_best_amt = amt
-            st = _compute_status(p)
-            if st in ("paid", "partial"):
-                pa = float(p.get("paid_amount") or (float(p.get("amount", 0) or 0) if p.get("paid") else 0) or 0)
-                paid_sum += pa
+        for p in pay_by_ath.get(aid, []):
+            if p.get("recurring_plan_id") or p.get("status") == "refunded":
+                continue
+            if p.get("paid"):
+                paid_sum += float(p.get("amount", 0) or 0)
                 pd = _to_date(p.get("paid_date") or p.get("registration_date"))
                 if pd and (last_paid_date is None or pd > last_paid_date):
                     last_paid_date = pd
-            dd = _to_date(p.get("due_date"))
-            if dd and (due_date is None or dd < due_date):
-                due_date = dd
 
-        # rata senza importo da incassare e senza versamenti: nulla da mostrare
-        if planned_amount <= 0 and paid_sum <= 0:
-            continue
-
-        residual = round(max(planned_amount - paid_sum, 0.0), 2)
-        is_paid = (planned_amount > 0 and paid_sum >= planned_amount - 0.01) or residual <= 0.01
-
+        athlete_name = (
+            (a.get("full_name") or "").strip()
+            or f"{a.get('last_name','')} {a.get('first_name','')}".strip()
+            or "—"
+        )
+        team_name = (team or {}).get("name", "") if team else ""
         phones = {}
         for role_key, field in (("atleta", "phone_athlete"), ("padre", "phone_father"), ("madre", "phone_mother")):
             v = (a.get(field) or "").strip()
             if v:
                 phones[role_key] = v
 
-        if is_paid:
-            rate_data[rata]["paid"].append({
-                "athlete_id": aid,
-                "athlete_name": athlete_name,
-                "team_name": team_name,
-                "amount": round(paid_sum, 2),
-                "paid_date": last_paid_date.isoformat() if last_paid_date else None,
-            })
-        else:
-            overdue = bool(due_date and due_date < today and residual > 0)
-            rate_data[rata]["unpaid"].append({
-                "athlete_id": aid,
-                "installment_number": rata,
-                "athlete_name": athlete_name,
-                "team_name": team_name,
-                "label": label,
-                "amount": round(planned_amount, 2),
-                "residual": residual,
-                "paid_so_far": round(paid_sum, 2),
-                "due_date": due_date.isoformat() if due_date else None,
-                "overdue": overdue,
-                "phones": phones,
-                "last_reminder": rem_map.get((aid, rata)),
-            })
+        # Waterfall: l'incassato copre le rate in ordine 1ª → 2ª → 3ª
+        remaining = paid_sum
+        for idx, inst in enumerate(schedule[:MAX_RATE]):
+            rata = idx + 1
+            due_i = round(float(inst["amount"]), 2)
+            pay_i = max(min(remaining, due_i), 0.0)
+            remaining -= pay_i
+            residual = round(max(due_i - pay_i, 0.0), 2)
+            due_date = inst["due_date"]
+            label = inst["name"]
+            bucket = rate_data.setdefault(
+                rata, {"installment_number": rata, "label": label, "paid": [], "unpaid": []}
+            )
+            if residual <= 0.01:
+                bucket["paid"].append({
+                    "athlete_id": aid,
+                    "athlete_name": athlete_name,
+                    "team_name": team_name,
+                    "amount": due_i,
+                    "paid_date": last_paid_date.isoformat() if last_paid_date else None,
+                })
+            else:
+                overdue = bool(due_date and due_date < today)
+                bucket["unpaid"].append({
+                    "athlete_id": aid,
+                    "installment_number": rata,
+                    "athlete_name": athlete_name,
+                    "team_name": team_name,
+                    "label": label,
+                    "amount": due_i,
+                    "residual": residual,
+                    "paid_so_far": round(pay_i, 2),
+                    "due_date": due_date.isoformat() if due_date else None,
+                    "overdue": overdue,
+                    "phones": phones,
+                    "last_reminder": rem_map.get((aid, rata)),
+                })
 
     installments = []
-    for n in (1, 2, 3):
+    for n in sorted(rate_data.keys()):
         d = rate_data[n]
         # non paganti: scaduti prima, poi per scadenza crescente, poi per nome
         d["unpaid"].sort(key=lambda r: (not r["overdue"], r["due_date"] or "9999", r["athlete_name"].upper()))
