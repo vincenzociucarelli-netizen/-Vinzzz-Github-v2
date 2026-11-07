@@ -41794,13 +41794,23 @@ async def get_all_consents_admin(current_user = Depends(get_current_user)):
         _u_q["society_id"] = _sid
         _a_q["society_id"] = _sid
 
+    # Atleti adulti: id dei record ATLETA che verranno mostrati (hanno consensi o
+    # cronologia). Servono a saltare la card USER duplicata/obsoleta dell'atleta adulto,
+    # il cui stato reale è sul record ATLETA (dove avvengono le modifiche self-service).
+    _adult_rows = await db.athletes.find(_a_q, {"_id": 0, "id": 1, "consents": 1, "consent_history": 1}).to_list(500)
+    _rendered_athlete_ids = {r["id"] for r in _adult_rows if (r.get("consents") or r.get("consent_history"))}
+
     # Get users with consents
     users = await db.users.find(
         _u_q,
-        {"_id": 0, "id": 1, "full_name": 1, "email": 1, "role": 1, "consents": 1, "consent_history": 1}
+        {"_id": 0, "id": 1, "full_name": 1, "email": 1, "role": 1, "athlete_id": 1, "consents": 1, "consent_history": 1}
     ).to_list(500)
     
     for u in users:
+        # Atleta adulto: la card reale è il record ATLETA (stesso helper della scheda
+        # anagrafica). Salta la card USER duplicata/obsoleta per evitare falsi 'Negati'.
+        if u.get("role") == "athlete" and u.get("athlete_id") in _rendered_athlete_ids:
+            continue
         consents = u.get("consents") or {}
         history = u.get("consent_history") or []
         if consents or history:
