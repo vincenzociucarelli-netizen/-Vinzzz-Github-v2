@@ -2143,3 +2143,8 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - POST reminders/log: valida installment_number in 1-3 (400) e che l'atleta appartenga alla società (404).
 - UI: back/refresh button 44x44; testID pulsante sollecita ora univoco wa-<athleteId>-<rata> (per atleti con più rate scadute nella scheda Scaduti).
 - Testato e2e (iter.140 PASS: backend 18/18, Scaduti + registro solleciti ok).
+
+## Aggiornamento 06/11/2026 (6) — Solleciti rate: Filtro per squadra
+- Aggiunta barra filtro squadre (chip orizzontali "Tutte le squadre" + una per squadra, testID team-all / team-<nome>) sotto il selettore rate. Visibile solo se >1 squadra.
+- Filtro 100% client-side: filteredInstallments ricalcola paid/unpaid e TUTTI i conteggi (pagato/non pagato/scadute/residuo) per la squadra scelta; coerente su scheda Scaduti, singole rate e badge delle tab. Nessuna modifica backend.
+- Lint OK, export web OK (compila). Riusa il rendering riga già testato (iter.139/140).

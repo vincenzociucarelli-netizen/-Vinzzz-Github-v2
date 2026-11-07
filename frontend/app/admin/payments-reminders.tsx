@@ -105,6 +105,7 @@ export default function PaymentsRemindersScreen() {
   const [installments, setInstallments] = useState<Installment[]>([]);
   // -1 = scheda "Scaduti" (tutte le rate scadute insieme); 1/2/3 = singola rata
   const [selectedRata, setSelectedRata] = useState(-1);
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [view, setView] = useState<'unpaid' | 'paid'>('unpaid');
 
   // Modale sollecito WhatsApp
@@ -131,18 +132,46 @@ export default function PaymentsRemindersScreen() {
     load();
   }, [load]);
 
+  // Elenco squadre presenti (per il filtro)
+  const teams = useMemo(() => {
+    const set = new Set<string>();
+    installments.forEach((i) => {
+      i.paid.forEach((r) => r.team_name && set.add(r.team_name));
+      i.unpaid.forEach((r) => r.team_name && set.add(r.team_name));
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [installments]);
+
+  // Applica il filtro squadra e ricalcola i conteggi di conseguenza
+  const filteredInstallments = useMemo(() => {
+    if (!selectedTeam) return installments;
+    return installments.map((inst) => {
+      const paid = inst.paid.filter((r) => r.team_name === selectedTeam);
+      const unpaid = inst.unpaid.filter((r) => r.team_name === selectedTeam);
+      return {
+        ...inst,
+        paid,
+        unpaid,
+        paid_count: paid.length,
+        unpaid_count: unpaid.length,
+        overdue_count: unpaid.filter((r) => r.overdue).length,
+        unpaid_residual: Math.round(unpaid.reduce((s, r) => s + r.residual, 0) * 100) / 100,
+      };
+    });
+  }, [installments, selectedTeam]);
+
   const current = useMemo(
-    () => installments.find((i) => i.installment_number === selectedRata),
-    [installments, selectedRata],
+    () => filteredInstallments.find((i) => i.installment_number === selectedRata),
+    [filteredInstallments, selectedRata],
   );
 
   // Riepilogo Scaduti: tutte le rate scadute di tutte le squadre, ordinate per scadenza
   const overdueAll = useMemo(() => {
     const rows: UnpaidRow[] = [];
-    installments.forEach((inst) => inst.unpaid.forEach((r) => r.overdue && rows.push(r)));
+    filteredInstallments.forEach((inst) => inst.unpaid.forEach((r) => r.overdue && rows.push(r)));
     rows.sort((a, b) => (a.due_date || '9999').localeCompare(b.due_date || '9999') || a.athlete_name.localeCompare(b.athlete_name));
     return rows;
-  }, [installments]);
+  }, [filteredInstallments]);
 
   const overdueTotal = overdueAll.length;
   const overdueResidual = useMemo(() => overdueAll.reduce((s, r) => s + r.residual, 0), [overdueAll]);
@@ -320,7 +349,7 @@ export default function PaymentsRemindersScreen() {
                 </View>
               )}
             </TouchableOpacity>
-            {installments.map((inst) => {
+            {filteredInstallments.map((inst) => {
               const active = inst.installment_number === selectedRata;
               return (
                 <TouchableOpacity
@@ -341,6 +370,39 @@ export default function PaymentsRemindersScreen() {
               );
             })}
           </View>
+
+          {/* Filtro per squadra */}
+          {teams.length > 1 && (
+            <View style={styles.teamFilterWrap}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.teamFilterRow}
+              >
+                <TouchableOpacity
+                  style={[styles.teamChip, selectedTeam === null && styles.teamChipActive]}
+                  onPress={() => setSelectedTeam(null)}
+                  testID="team-all"
+                >
+                  <Text style={[styles.teamChipText, selectedTeam === null && styles.teamChipTextActive]}>
+                    Tutte le squadre
+                  </Text>
+                </TouchableOpacity>
+                {teams.map((t) => (
+                  <TouchableOpacity
+                    key={t}
+                    style={[styles.teamChip, selectedTeam === t && styles.teamChipActive]}
+                    onPress={() => setSelectedTeam(t)}
+                    testID={`team-${t}`}
+                  >
+                    <Text style={[styles.teamChipText, selectedTeam === t && styles.teamChipTextActive]}>
+                      {t}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 12, paddingBottom: 40 }}>
             {selectedRata === -1 ? (
@@ -534,6 +596,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5, paddingVertical: 1, alignItems: 'center',
   },
   rataTabBadgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
+  teamFilterWrap: { backgroundColor: '#fff', paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: '#ECEFF1' },
+  teamFilterRow: { paddingHorizontal: 10, gap: 8, flexDirection: 'row' },
+  teamChip: {
+    paddingHorizontal: 14, minHeight: 36, borderRadius: 18, backgroundColor: '#F1F3F5',
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'transparent',
+  },
+  teamChipActive: { backgroundColor: '#E3F2FD', borderColor: '#1565C0' },
+  teamChipText: { fontSize: 13, color: '#495057', fontWeight: '600' },
+  teamChipTextActive: { color: '#1565C0', fontWeight: '800' },
   summaryRow: { flexDirection: 'row', gap: 10, marginBottom: 8 },
   summaryCard: { flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   summaryNum: { fontSize: 24, fontWeight: '800' },
