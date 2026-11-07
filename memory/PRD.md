@@ -2113,3 +2113,38 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - Backend /admin/consent-history: ora ritorna anche consents_raw (valori grezzi pre-normalizzazione) + parent_id + second_parent_id.
 - Frontend app/admin/settings/consent-audit.tsx: aggiunta sezione "Dati grezzi (debug)" nella modale dettaglio (JSON selezionabile, con parent_id/second_parent_id). Così l'utente apre Sangoi e copia i valori reali.
 - ATTESA: l'utente deve fare redeploy Render+Vercel, aprire il dettaglio di Sangoi e incollare il JSON "Dati grezzi" per diagnosi definitiva. Nota: le fix precedenti (all-consents/consent-history con helper unico) valgono solo se il BACKEND Render è aggiornato.
+
+## Aggiornamento 06/11/2026 — Root cause consensi immagini non salvati (Giada/Cucina)
+- DIAGNOSI: backend OK. Verificato end-to-end in locale che il PATCH /api/athletes/{id}/consents PERSISTE sia per atleta adulto (chiave diretta `images_internal`) sia per genitore→minore (chiave per-genitore `images_internal__{parentId}`). Report admin (/admin/all-consents) e profilo (/athletes/{id}/consents) usano lo STESSO helper `_compute_image_consent_final` senza cache → non possono divergere.
+- VERO BUG = SOLO FRONTEND: gli switch del consenso erano disabilitati/mal letti → atleta/genitore NON riuscivano a salvare, quindi restava il diniego iniziale e l'admin vedeva "Negato".
+  1) app/parent/profile.tsx: il ConsentManager dei figli MINORI veniva reso SENZA `perParentId` né `privacySignedOverride` → leggeva le chiavi dirette (vuote per i minori, salvati per-genitore) e calcolava privacySigned=false → switch "-" disabilitati. FIX: passati `perParentId={user?.id}` e `privacySignedOverride={child?.privacy_accepted===true}` (come già in parent/athlete/[id].tsx).
+  2) app/athlete/profile.tsx: l'atleta adulto abilitava lo switch solo se `consents.privacy_viewed.value===true`; questa chiave può restare stale/false anche dopo privacy accettata → switch bloccato. FIX: passato `privacySignedOverride={profile?.privacy_accepted===true}`.
+- Debug UI "Dati grezzi" in consent-audit.tsx LASCIATO in piedi (utente aveva detto "aspetta..").
+- DA FARE (utente): Save to GitHub + redeploy Vercel. Poi Giada/Cucina riaprono il loro profilo e attivano gli switch (ora funzionanti) → report e scheda si allineeranno.
+
+## Aggiornamento 06/11/2026 (2) — NUOVA FEATURE: Solleciti rate (pagato/non pagato per rata + WhatsApp)
+- Richiesta utente: nella sezione pagamenti vedere chi NON ha pagato, suddiviso per le 3 rate singolarmente; dare priorità alle rate SCADUTE (due_date < oggi; la rata 3 di dicembre non è "scaduta" finché non arriva); poter mandare un sollecito via WhatsApp ai non paganti.
+- Scelte utente: numero WhatsApp = SCELGO DI VOLTA IN VOLTA (menu padre/madre/atleta tra i disponibili); "scaduta" = due_date < oggi; messaggio = template predefinito MODIFICABILE; collocazione = NUOVA schermata raggiungibile dallo Storico Pagamenti.
+- BACKEND: nuovo GET /api/admin/payments/installment-reminders (routes/payments_history.py). Per ogni rata 1/2/3 ritorna paid[] e unpaid[] con conteggi e overdue_count. CONSOLIDA i record per (atleta, rata) usando _rata_key_from_payment (installment_number OR testo "RATA 1"/"1ª rata") → un bonifico manuale "RATA 1" pagato copre la rata programmata non pagata ⇒ niente falso "non pagato". overdue = residual>0 && due_date<oggi. Esclude ricorrenti e atleti ritirati. Ritorna phones (atleta/padre/madre) per il sollecito. Ruoli: admin/viewer.
+- FRONTEND: nuova app/admin/payments-reminders.tsx (tab per rata con badge n° scadute, riepilogo Pagato/Non pagato/Scadute, toggle lista, badge "SCADUTA", pulsante "Sollecita"). Modale sollecito: scelta numero (radio tra disponibili) + messaggio precompilato editabile → apre https://wa.me/<num>?text=... (normalizePhone: default +39). Banner d'ingresso "Solleciti rate" in cima a app/admin/payments-history.tsx.
+- Validato e2e in locale (seed: bonifico manuale "RATA 1" consolidato = PAGATO; rata 2 scaduta evidenziata; rata 3 dic non scaduta). Solo preview; verifica su dati reali richiede redeploy Render+Vercel.
+
+## Aggiornamento 06/11/2026 (3) — Solleciti rate: fix post-test (iter.139)
+- Fix applicati: (1) normalizePhone non aggiunge più +39 ai cellulari 391/392/393 (solo se len>=11); (2) backend non mostra più righe a €0 (skip rate senza importo); (3) etichetta messaggio = nome della rata PROGRAMMATA (non "Bonifico RATA 1"); (4) "oggi" calcolato in fuso Europe/Rome (non UTC); (5) UI: touch target >=44px (tab/toggle/Sollecita/close), KeyboardAvoidingView nella modale, safe-area insets nell'header.
+- DA CHIARIRE CON L'UTENTE (verifica su dati reali): la vista raggruppa per installment_number 1/2/3. Se alcune squadre hanno una "Quota iscrizione" come rata 1 o più di 3 rate (preview mostrava Under 18 con 10), la suddivisione 1/2/3 va riallineata al reale schema rate.
+
+## Aggiornamento 06/11/2026 (4) — Solleciti rate: Riepilogo Scaduti + Promemoria Inviati
+- RIEPILOGO SCADUTI: nuova scheda "Scaduti" (default all'apertura) in cima al selettore rate: unisce tutte le rate SCADUTE di tutte le squadre, ordinate per scadenza, ognuna con chip "Rata N" e pulsante Sollecita. Header rosso con totale rate scadute e importo da incassare. Tutto lato client da installments (nessun fetch extra).
+- PROMEMORIA INVIATI: nuova collection db.payment_reminders. POST /api/admin/payments/reminders/log {athlete_id, installment_number, role, phone, label} registra il sollecito (sent_by, sent_at). GET /api/admin/payments/installment-reminders ora include per ogni unpaid `last_reminder` {sent_at, role, count}. In UI: dopo "Apri WhatsApp" si logga e la riga mostra "Sollecitato il GG/MM (ruolo) · N×" e il bottone diventa "Risollecita". Aggiunto installment_number ad ogni riga unpaid.
+- Validato localmente endpoint registrati (403 senza auth). Da testare e2e.
+
+## Aggiornamento 06/11/2026 (5) — Solleciti rate: fix post-test iter.140
+- Badge "Sollecitato il": data ora formattata in fuso Europe/Rome (formatDateRome) invece che tagliata dall'UTC.
+- POST reminders/log: valida installment_number in 1-3 (400) e che l'atleta appartenga alla società (404).
+- UI: back/refresh button 44x44; testID pulsante sollecita ora univoco wa-<athleteId>-<rata> (per atleti con più rate scadute nella scheda Scaduti).
+- Testato e2e (iter.140 PASS: backend 18/18, Scaduti + registro solleciti ok).
+
+## Aggiornamento 06/11/2026 (6) — Solleciti rate: Filtro per squadra
+- Aggiunta barra filtro squadre (chip orizzontali "Tutte le squadre" + una per squadra, testID team-all / team-<nome>) sotto il selettore rate. Visibile solo se >1 squadra.
+- Filtro 100% client-side: filteredInstallments ricalcola paid/unpaid e TUTTI i conteggi (pagato/non pagato/scadute/residuo) per la squadra scelta; coerente su scheda Scaduti, singole rate e badge delle tab. Nessuna modifica backend.
+- Lint OK, export web OK (compila). Riusa il rendering riga già testato (iter.139/140).

@@ -1,0 +1,58 @@
+{
+  "summary": "I tested the 'Solleciti rate' feature on the backend and the frontend. Backend: GET /api/admin/payments/installment-reminders passes 11/11 tests: auth checks (401/403, coach 403, dirigente 200), the response structure, the 3 instalments, the counts, the overdue logic (due_date < today and residual > 0), overdue rows sorted first and no athlete counted twice. The preview DB had 0 payments, so I added TEMPORARY TEST_ data (3 athletes, 9 payments) and deleted it afterwards by id. Consolidation works: a manual bonifico 'Bonifico RATA 1' with no installment_number paired with the scheduled Rata 1 and the athlete showed as PAID. I found one edge-case bug: a payment with amount 0 shows up as 'Non pagato' with €0,00 and a Sollecita button. Frontend: the preview serves a static build (dist/) made BEFORE the feature, so the banner was missing at first. I rebuilt it with 'npx expo export --platform web --output-dir dist' and restarted expo. After that every flow worked with no JS errors: the green banner opens /admin/payments-reminders; the Rata 1/2/3 tabs show overdue badges (2/1/none); the summary cards, the Non pagato/Pagato toggle and the SCADUTA badges are correct; the modal shows phone choices (3 for one athlete, 1 for another) with selection, an editable pre-filled message and 'Apri WhatsApp'. With window.open stubbed, the button builds https://wa.me/393336667777?text=... and closes the modal. No real message was sent. Tapping Sollecita for an athlete with no phone numbers shows the 'Nessun numero' alert. No deprecated Expo packages in these files.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/admin/payments/installment-reminders", "issue": "A planned payment with amount 0 (or no amount) is listed in 'unpaid' with residual 0 and gets a Sollecita button: is_paid requires planned_amount > 0. Reproduced with seed data (rata 2 showed 'TEST_VERDI ANNA € 0,00'). Skip groups where planned_amount <= 0, or treat them as paid. Ref: routes/payments_history.py:504-534"},
+      {"endpoint": "GET /api/admin/payments/installment-reminders", "issue": "Possible numbering mismatch. Team installments get installment_number = index+1 (server.py:10839), and in the preview DB the first team installment is 'Quota iscrizione' (e.g. Under 14: Quota iscrizione, Rata 1, Rata 2). So tab 'Rata 1' would list the 'Quota iscrizione' debt, and the team's 'Rata 1' appears under tab 'Rata 2'. The regex fallback also maps a manual 'RATA 1' bonifico to key 1, so it would consolidate with the Quota iscrizione instead of the real Rata 1, giving false paid and unpaid results. Teams with more than 3 installments (Under 18 has 10) lose installments 4 and up entirely. Please check this against the real production naming."},
+      {"endpoint": "GET /api/admin/payments/installment-reminders", "issue": "The row label is overwritten by the LAST payment in the group that has installment_name or description (line 491-492). For a partial manual bonifico, the WhatsApp text can read 'risulta non saldata la Bonifico RATA 1'. Use the scheduled record's (the one with installment_number) installment_name first."},
+      {"endpoint": "GET /api/admin/payments/installment-reminders", "issue": "'today' is computed in UTC (datetime.now(timezone.utc)). Between 00:00 and 01:00/02:00 Italian time, a rata due 'yesterday' is not yet overdue. Use the Europe/Rome timezone."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "normalizePhone", "issue": "Italian mobile numbers whose prefix starts with 39 (e.g. 391/392/393 xxxxxxx, 10 digits) are treated as already having the country code, so the result is wa.me/3921234567 (wrong country/number). Only skip prepending 39 when the number starts with '39' AND has 11 or more digits. Ref: app/admin/payments-reminders.tsx:68", "testID": "send-wa-btn", "priority": "HIGH"}
+    ],
+    "integration_issues": [
+      {"flow": "Preview deploy", "issue": "The preview serves a static export (supervisor: 'npx serve -s dist'). The main agent did not rebuild dist after the change, so open-reminders-btn was missing. The testing agent rebuilt it with 'npx expo export --platform web --output-dir dist' plus a restart of expo. Always rebuild after frontend changes.", "affected_testIDs": ["open-reminders-btn"]}
+    ],
+    "design_issues": [
+      {"screen": "payments-reminders", "issues": [
+        "Touch targets under 44px: rata-tab-1/2/3 are 36px tall, view-unpaid/view-paid 31px, wa-<id> 36px, modal-close 15x24px (add hitSlop or padding), back-btn/refresh-btn about 36px",
+        "Header paddingTop is hard-coded to 44 instead of using safe-area insets (notch / Dynamic Island devices)",
+        "The WhatsApp modal (bottom sheet with a multiline TextInput) has no KeyboardAvoidingView. On iOS the keyboard will cover msg-input and the 'Apri WhatsApp' button",
+        "The phone selected by default is always 'atleta' (the first key). For minors, the parent's number is probably the better default"
+      ]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_installment_reminders.py",
+    "/app/backend/tests/seed_test_reminders.py",
+    "/app/test_reports/pytest/pytest_installment_reminders.xml"
+  ],
+  "action_items": [
+    "Fix normalizePhone in payments-reminders.tsx for Italian 39x mobile prefixes (check the length before skipping the '39' prefix)",
+    "Exclude amount-0 payment groups from the 'unpaid' list (or mark them as paid) in get_installment_reminders",
+    "Check the rata numbering against real data: team installments with 'Quota iscrizione' as item 0 make tab 'Rata 1' show the quota, and the regex consolidation of 'RATA 1' bonifici lands on the wrong group",
+    "Prefer the scheduled record's installment_name as the label; compute 'today' in Europe/Rome",
+    "Add KeyboardAvoidingView to the WhatsApp modal; raise touch targets to at least 44px (tabs, toggle, Sollecita, close)",
+    "Remember to run 'npx expo export --platform web --output-dir dist' and 'sudo supervisorctl restart expo' after frontend changes"
+  ],
+  "critical_code_review_comments": [
+    "The endpoint loads up to 100k payments into memory per request. Acceptable now, but consider a projection or a filter on installment_number/description",
+    "Role check allows admin and viewer but not coordinatore. This differs from income-summary; confirm it is intended",
+    "Withdrawn athletes are excluded (is_withdrawn != True). This is correct for reminders"
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_installment_reminders.py (new)",
+    "/app/backend/tests/seed_test_reminders.py (new: TEST_ seed and cleanup by id)",
+    "/app/frontend/dist (rebuilt static export, no source changes)"
+  ],
+  "success_rate": {"backend": "100% (11/11 on preview data; the residual>0 test fails when an amount-0 payment exists, as with the seed)", "frontend": "100% of the requested flows"},
+  "seed_data_creation": "Temporarily created 3 TEST_ athletes and 9 TEST_ payments in the Pallavolo Perugia society (ids stored in /tmp/test_reminders_ids.json). All were deleted by id after testing. No real data was changed.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The preview DB has 0 payments, so use 'python /app/backend/tests/seed_test_reminders.py seed' and then '... cleanup' to get UI data. The preview is a static build in dist/ and must be rebuilt after frontend changes. The login screen has no testIDs: use the placeholders 'Email' and 'Password' and the text 'Accedi'. The modal uses a slide animation, so wait about 1.2s before interacting. On web, Alert.alert shows up as a window dialog.",
+  "rca_of_issue": "The banner was missing in the preview because dist/ was built at 22:37, before the feature was added. The source code was correct."
+}

@@ -9,14 +9,30 @@ Endpoint di sola lettura per la contabilità di fine anno:
     L'export CSV viene generato lato frontend a partire da queste righe (filtrabili
     ulteriormente per atleta), coerentemente con le altre pagine di export.
 """
+import re
 from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Optional
 from datetime import datetime, timezone, date
+from zoneinfo import ZoneInfo
+from pydantic import BaseModel
 
 from database import db
 from auth_utils import get_current_user
 
 router = APIRouter()
+
+
+def _rata_key_from_payment(p: dict) -> Optional[int]:
+    """Numero rata (1/2/3) da installment_number oppure dedotto dalla descrizione
+    ('RATA 1', 'Iscrizione - Rata 1', '1ª rata'). Coerente con /admin/payments/duplicates."""
+    n = p.get("installment_number")
+    if isinstance(n, int) and n > 0:
+        return n
+    text = f"{p.get('installment_name') or ''} {p.get('description') or ''}".lower()
+    m = re.search(r'rata\s*n?[°\.\s]*([1-9])', text)
+    if not m:
+        m = re.search(r'([1-9])\s*[aª°]?\s*rata', text)
+    return int(m.group(1)) if m else None
 
 
 def _to_date(value) -> Optional[date]:
@@ -410,3 +426,201 @@ async def get_refunds_report(
         "rows": rows,
         "totals": {"count": len(rows), "total_refunded": round(total_refunded, 2)},
     }
+
+
+
+@router.get("/admin/payments/installment-reminders")
+async def get_installment_reminders(current_user=Depends(get_current_user)):
+    """🆕 Solleciti rate: per ogni rata (1/2/3) elenca atleti che HANNO PAGATO e
+    atleti che NON hanno pagato, con evidenza delle rate SCADUTE (due_date < oggi).
+    Per i non paganti restituisce i recapiti (atleta/padre/madre) per il sollecito
+    WhatsApp. Consolida i record per evitare falsi 'non pagato' (un bonifico manuale
+    'RATA 1' senza installment_number viene accoppiato alla rata programmata)."""
+    if current_user.get("role") not in ("admin", "viewer"):
+        raise HTTPException(status_code=403, detail="Solo admin")
+
+    society_id = current_user.get("society_id")
+    if not society_id:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+
+    today = datetime.now(ZoneInfo("Europe/Rome")).date()
+
+    athletes = await db.athletes.find(
+        {"society_id": society_id, "is_withdrawn": {"$ne": True}},
+        {"id": 1, "first_name": 1, "last_name": 1, "team_id": 1,
+         "phone_athlete": 1, "phone_father": 1, "phone_mother": 1},
+    ).to_list(20000)
+    athlete_map = {a["id"]: a for a in athletes}
+    athlete_ids = list(athlete_map.keys())
+
+    teams = await db.teams.find({"society_id": society_id}, {"id": 1, "name": 1}).to_list(500)
+    team_map = {t["id"]: t.get("name", "") for t in teams}
+
+    society = await db.societies.find_one({"id": society_id}, {"name": 1}) or {}
+    society_name = society.get("name", "")
+
+    # Registro solleciti: ultimo invio e conteggio per (athlete_id, rata)
+    reminders = await db.payment_reminders.find({"society_id": society_id}).to_list(100000)
+    rem_map: dict = {}
+    for r in reminders:
+        k = (r.get("athlete_id"), r.get("installment_number"))
+        e = rem_map.setdefault(k, {"sent_at": None, "role": None, "count": 0})
+        e["count"] += 1
+        sa = r.get("sent_at")
+        if sa and (e["sent_at"] is None or sa > e["sent_at"]):
+            e["sent_at"] = sa
+            e["role"] = r.get("role")
+
+    payments = await db.payments.find(
+        {"$or": [{"society_id": society_id}, {"athlete_id": {"$in": athlete_ids}}]}
+    ).to_list(100000)
+
+    # Raggruppa: (athlete_id, rata) -> lista pagamenti. Esclude i ricorrenti.
+    grouped: dict = {}
+    for p in payments:
+        if p.get("recurring_plan_id"):
+            continue
+        aid = p.get("athlete_id")
+        if aid not in athlete_map:
+            continue
+        key = _rata_key_from_payment(p)
+        if key not in (1, 2, 3):
+            continue
+        grouped.setdefault((aid, key), []).append(p)
+
+    # Struttura per rata
+    rate_data = {n: {"installment_number": n, "label": f"Rata {n}", "paid": [], "unpaid": []} for n in (1, 2, 3)}
+
+    for (aid, rata), plist in grouped.items():
+        a = athlete_map[aid]
+        athlete_name = f"{a.get('last_name','')} {a.get('first_name','')}".strip() or "—"
+        team_name = team_map.get(a.get("team_id"), "")
+
+        planned_amount = max((float(p.get("amount", 0) or 0) for p in plist), default=0.0)
+        paid_sum = 0.0
+        last_paid_date = None
+        due_date = None
+        label = f"Rata {rata}"
+        label_best_amt = -1.0
+        for p in plist:
+            nm = p.get("installment_name") or p.get("description")
+            amt = float(p.get("amount", 0) or 0)
+            # etichetta: preferisci la rata PROGRAMMATA (nome + importo maggiore),
+            # non un eventuale bonifico manuale ("Bonifico RATA 1")
+            if nm and amt >= label_best_amt:
+                label = nm
+                label_best_amt = amt
+            st = _compute_status(p)
+            if st in ("paid", "partial"):
+                pa = float(p.get("paid_amount") or (float(p.get("amount", 0) or 0) if p.get("paid") else 0) or 0)
+                paid_sum += pa
+                pd = _to_date(p.get("paid_date") or p.get("registration_date"))
+                if pd and (last_paid_date is None or pd > last_paid_date):
+                    last_paid_date = pd
+            dd = _to_date(p.get("due_date"))
+            if dd and (due_date is None or dd < due_date):
+                due_date = dd
+
+        # rata senza importo da incassare e senza versamenti: nulla da mostrare
+        if planned_amount <= 0 and paid_sum <= 0:
+            continue
+
+        residual = round(max(planned_amount - paid_sum, 0.0), 2)
+        is_paid = (planned_amount > 0 and paid_sum >= planned_amount - 0.01) or residual <= 0.01
+
+        phones = {}
+        for role_key, field in (("atleta", "phone_athlete"), ("padre", "phone_father"), ("madre", "phone_mother")):
+            v = (a.get(field) or "").strip()
+            if v:
+                phones[role_key] = v
+
+        if is_paid:
+            rate_data[rata]["paid"].append({
+                "athlete_id": aid,
+                "athlete_name": athlete_name,
+                "team_name": team_name,
+                "amount": round(paid_sum, 2),
+                "paid_date": last_paid_date.isoformat() if last_paid_date else None,
+            })
+        else:
+            overdue = bool(due_date and due_date < today and residual > 0)
+            rate_data[rata]["unpaid"].append({
+                "athlete_id": aid,
+                "installment_number": rata,
+                "athlete_name": athlete_name,
+                "team_name": team_name,
+                "label": label,
+                "amount": round(planned_amount, 2),
+                "residual": residual,
+                "paid_so_far": round(paid_sum, 2),
+                "due_date": due_date.isoformat() if due_date else None,
+                "overdue": overdue,
+                "phones": phones,
+                "last_reminder": rem_map.get((aid, rata)),
+            })
+
+    installments = []
+    for n in (1, 2, 3):
+        d = rate_data[n]
+        # non paganti: scaduti prima, poi per scadenza crescente, poi per nome
+        d["unpaid"].sort(key=lambda r: (not r["overdue"], r["due_date"] or "9999", r["athlete_name"].upper()))
+        d["paid"].sort(key=lambda r: r["athlete_name"].upper())
+        overdue_count = sum(1 for r in d["unpaid"] if r["overdue"])
+        installments.append({
+            "installment_number": n,
+            "label": d["label"],
+            "paid_count": len(d["paid"]),
+            "unpaid_count": len(d["unpaid"]),
+            "overdue_count": overdue_count,
+            "unpaid_residual": round(sum(r["residual"] for r in d["unpaid"]), 2),
+            "paid": d["paid"],
+            "unpaid": d["unpaid"],
+        })
+
+    return {
+        "society_name": society_name,
+        "today": today.isoformat(),
+        "installments": installments,
+    }
+
+
+
+class ReminderLogIn(BaseModel):
+    athlete_id: str
+    installment_number: int
+    role: Optional[str] = None
+    phone: Optional[str] = None
+    label: Optional[str] = None
+
+
+@router.post("/admin/payments/reminders/log")
+async def log_payment_reminder(payload: ReminderLogIn, current_user=Depends(get_current_user)):
+    """🆕 Registra un sollecito WhatsApp inviato (per non ricontattare due volte).
+    Salva atleta, rata, destinatario e timestamp; non invia nulla, solo traccia."""
+    if current_user.get("role") not in ("admin", "viewer"):
+        raise HTTPException(status_code=403, detail="Solo admin")
+    society_id = current_user.get("society_id")
+    if not society_id:
+        raise HTTPException(status_code=400, detail="Società non identificata")
+
+    sent_at = datetime.now(timezone.utc).isoformat()
+    if payload.installment_number not in (1, 2, 3):
+        raise HTTPException(status_code=400, detail="Numero rata non valido")
+    athlete = await db.athletes.find_one(
+        {"id": payload.athlete_id, "society_id": society_id}, {"id": 1}
+    )
+    if not athlete:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    doc = {
+        "society_id": society_id,
+        "athlete_id": payload.athlete_id,
+        "installment_number": payload.installment_number,
+        "role": payload.role,
+        "phone": payload.phone,
+        "label": payload.label,
+        "sent_by": current_user.get("id") or current_user.get("email"),
+        "sent_by_name": current_user.get("name") or current_user.get("email"),
+        "sent_at": sent_at,
+    }
+    await db.payment_reminders.insert_one(doc)
+    return {"ok": True, "sent_at": sent_at, "role": payload.role}
