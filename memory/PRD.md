@@ -2148,3 +2148,8 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - Aggiunta barra filtro squadre (chip orizzontali "Tutte le squadre" + una per squadra, testID team-all / team-<nome>) sotto il selettore rate. Visibile solo se >1 squadra.
 - Filtro 100% client-side: filteredInstallments ricalcola paid/unpaid e TUTTI i conteggi (pagato/non pagato/scadute/residuo) per la squadra scelta; coerente su scheda Scaduti, singole rate e badge delle tab. Nessuna modifica backend.
 - Lint OK, export web OK (compila). Riusa il rendering riga già testato (iter.139/140).
+
+## Aggiornamento 06/11/2026 (7) — FIX CRITICO Solleciti rate: calcolo per rata basato sull'IMPORTO (waterfall)
+- BUG segnalato dall'utente: atleti che hanno saldato tutto con UN unico bonifico "SALDO" (senza numero rata) risultavano "non pagato" sulle singole rate, perché la logica cercava pagamenti etichettati per rata (installment_number/descrizione).
+- FIX: riscritto GET /api/admin/payments/installment-reminders con la STESSA logica canonica di /admin/payments/rate-summary: dovuto per rata preso dallo SCADENZARIO DELLA SQUADRA (team.installments amount+due_date, legacy installment_N_*; sconto atleta sull'ultima rata); incassato = SOMMA degli importi pagati (paid=True, esclusi ricorrenti e refunded), allocata a CASCATA 1ª→2ª→3ª. NON si guarda più la descrizione: conta solo la cifra accreditata (come richiesto dall'utente). overdue = residuo>0 && due_date<oggi (fuso Europe/Rome). MAX 3 rate.
+- Validato con seed (SALDO unico 750 → pagato su tutte e 3; nessun pagamento → non pagato scaduto; acconto 300 → rata1 pagata, rata2 parziale residuo 200, rata3 non pagata). Frontend invariato (stessa shape risposta).
