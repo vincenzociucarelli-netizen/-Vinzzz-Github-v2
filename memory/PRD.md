@@ -2159,3 +2159,9 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - CAUSA: per un atleta adulto esistono DUE entità: record ATLETA (dove avvengono le modifiche self-service, aggiornato) e account USER role=athlete (consensi vecchi/obsoleti). Il report mostrava entrambe → la card USER stale compariva sotto "Negati". Nessun dedup user↔athlete.
 - FIX (server.py get_all_consents_admin): pre-calcolo _rendered_athlete_ids (record atleta con consensi/cronologia) e, nel loop users, SALTO la card USER quando role=="athlete" e athlete_id ∈ _rendered_athlete_ids. Così il report mostra una sola card (il record atleta), coerente con la scheda. Aggiunto athlete_id alla projection users. Validato con seed (1 sola card, interno/promo=concessi). Frontend invariato.
 - Verifica su dati reali richiede redeploy Render.
+
+## Aggiornamento 07/11/2026 (2) — FIX firma consenso privacy non prosegue ("Conferma e Salva" non fa nulla)
+- BUG (segnalato da genitore del minore DELICATO SARA, app web su cellulare): firma disegnata ma "Conferma e Salva" non fa nulla (nessun alert, nessuno spinner).
+- CAUSA: in GDPRPrivacyModal.tsx (e AdultPrivacyModal.tsx) l'estrazione firma `signatureRef.current.getTrimmedCanvas().toDataURL()` era FUORI dal try/catch. Su alcuni browser mobili getTrimmedCanvas può restituire undefined/lanciare → .toDataURL su undefined lancia errore sincrono prima di setSigning(true) → tap senza alcun effetto visibile.
+- FIX: estrazione spostata dentro il try con fallback: prova getTrimmedCanvas(), in caso di errore usa getCanvas().toDataURL() (sempre valido). Rimosso il check width/height<10 (ridondante con isEmpty()). Ora eventuali errori mostrano comunque l'alert. Backend /documents/sign-gdpr-privacy richiede solo document_type+signature_base64+user_agent (altri opzionali), quindi nessun 422 da campi mancanti.
+- Lint OK, export web OK. Richiede redeploy FRONTEND (Vercel) per andare in produzione.

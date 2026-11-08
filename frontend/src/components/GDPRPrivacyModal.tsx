@@ -189,17 +189,18 @@ export const GDPRPrivacyModal: React.FC<GDPRPrivacyModalProps> = ({
       alert('Per favore, firma nel riquadro prima di confermare.');
       return;
     }
-    
-    const signature = signatureRef.current.getTrimmedCanvas().toDataURL('image/png');
-    const canvas = signatureRef.current.getTrimmedCanvas();
-    
-    if (canvas.width < 10 || canvas.height < 10) {
-      alert('La firma è troppo piccola. Per favore, firma in modo più visibile.');
-      return;
-    }
-    
+
     setSigning(true);
     try {
+      // Esporta la firma dal canvas. getTrimmedCanvas() su alcuni browser mobili
+      // può restituire undefined/errore: in tal caso ricadi su getCanvas() (sempre valido).
+      let signature: string;
+      try {
+        signature = signatureRef.current.getTrimmedCanvas().toDataURL('image/png');
+      } catch {
+        signature = signatureRef.current.getCanvas().toDataURL('image/png');
+      }
+
       // Get user agent
       const userAgent = Platform.OS === 'web' 
         ? navigator.userAgent 

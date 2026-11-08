@@ -72,15 +72,16 @@ export const AdultPrivacyModal: React.FC<AdultPrivacyModalProps> = ({
       alert('Per favore, firma nel riquadro prima di confermare.');
       return;
     }
-    
-    const signature = signatureRef.current.getTrimmedCanvas().toDataURL('image/png');
-    const canvas = signatureRef.current.getTrimmedCanvas();
-    
-    if (canvas.width < 10 || canvas.height < 10) {
-      alert('La firma è troppo piccola. Per favore, firma in modo più visibile.');
-      return;
+
+    // Esporta la firma: getTrimmedCanvas() su alcuni browser mobili può fallire,
+    // in tal caso ricadi su getCanvas() (sempre valido).
+    let signature: string;
+    try {
+      signature = signatureRef.current.getTrimmedCanvas().toDataURL('image/png');
+    } catch {
+      signature = signatureRef.current.getCanvas().toDataURL('image/png');
     }
-    
+
     if (signature) {
       setSigning(true);
       try {
