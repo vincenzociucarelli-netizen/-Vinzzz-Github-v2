@@ -650,3 +650,80 @@ async def log_payment_reminder(payload: ReminderLogIn, current_user=Depends(get_
     }
     await db.payment_reminders.insert_one(doc)
     return {"ok": True, "sent_at": sent_at, "role": payload.role}
+
+
+
+@router.get("/admin/payments/income-detail")
+async def get_income_detail(current_user=Depends(get_current_user)):
+    """🆕 Dettaglio Incassato: elenco di TUTTI i pagamenti degli atleti attivi della
+    società, con il flag 'counted' = conteggiato nell'Incassato (pagato e NON rimborsato).
+    La somma dei 'counted' combacia con l'Incassato del riepilogo rate. Serve a capire
+    perché un totale cambia nel tempo (pagamenti messi a non pagato / rimborsati / modificati)."""
+    if current_user.get("role") not in ("admin", "viewer"):
+        raise HTTPException(status_code=403, detail="Solo admin")
+    society_id = current_user.get("society_id")
+
+    athletes = await db.athletes.find(
+        {"society_id": society_id, "is_withdrawn": {"$ne": True}},
+        {"id": 1, "full_name": 1, "first_name": 1, "last_name": 1, "team_id": 1},
+    ).to_list(20000)
+    athlete_map = {a["id"]: a for a in athletes}
+    athlete_ids = list(athlete_map.keys())
+
+    teams = await db.teams.find({"society_id": society_id}, {"id": 1, "name": 1}).to_list(500)
+    team_map = {t["id"]: t.get("name", "") for t in teams}
+
+    payments = await db.payments.find({"athlete_id": {"$in": athlete_ids}}).to_list(100000)
+
+    rows = []
+    incassato = 0.0
+    counted_n = 0
+    for p in payments:
+        a = athlete_map.get(p.get("athlete_id"))
+        if not a:
+            continue
+        amount = float(p.get("amount", 0) or 0)
+        refunded = p.get("status") == "refunded"
+        paid = bool(p.get("paid"))
+        recurring = bool(p.get("recurring_plan_id"))
+        counted = paid and not refunded
+        if counted:
+            incassato += amount
+            counted_n += 1
+        pd = _to_date(p.get("paid_date"))
+        rd = _to_date(p.get("registration_date") or p.get("created_at"))
+        is_cash = bool(p.get("is_cash"))
+        method = (p.get("payment_method") or ("Contanti" if is_cash else "")) or "—"
+        athlete_name = (
+            (a.get("full_name") or "").strip()
+            or f"{a.get('last_name','')} {a.get('first_name','')}".strip()
+            or "—"
+        )
+        rows.append({
+            "id": p.get("id"),
+            "athlete_name": athlete_name,
+            "team_name": team_map.get(a.get("team_id"), ""),
+            "amount": round(amount, 2),
+            "method": method,
+            "paid": paid,
+            "refunded": refunded,
+            "recurring": recurring,
+            "counted": counted,
+            "paid_date": pd.isoformat() if pd else None,
+            "registration_date": rd.isoformat() if rd else None,
+            "description": p.get("description") or "",
+            "receipt_number": p.get("receipt_number") or "",
+        })
+
+    # Ordina per data pagamento (più recenti prima); i senza data in fondo
+    rows.sort(key=lambda r: (r["paid_date"] or r["registration_date"] or ""), reverse=True)
+
+    return {
+        "rows": rows,
+        "totals": {
+            "incassato": round(incassato, 2),
+            "counted_count": counted_n,
+            "not_counted_count": len(rows) - counted_n,
+            "total_rows": len(rows),
+        },
+    }

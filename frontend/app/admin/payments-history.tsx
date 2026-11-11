@@ -234,6 +234,21 @@ export default function PaymentsHistoryPage() {
           <Ionicons name="chevron-forward" size={20} color="#fff" />
         </TouchableOpacity>
 
+        {/* Ingresso Dettaglio Incassato */}
+        <TouchableOpacity
+          style={styles.incomeBanner}
+          onPress={() => router.push('/admin/payments-income-detail')}
+          testID="open-income-detail-btn"
+          data-testid="open-income-detail-btn"
+        >
+          <Ionicons name="receipt-outline" size={22} color="#fff" />
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={styles.reminderBannerTitle}>Dettaglio Incassato</Text>
+            <Text style={styles.reminderBannerSub}>Ogni pagamento conteggiato · verifica e export CSV</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#fff" />
+        </TouchableOpacity>
+
         {/* Filtri */}
         <View style={styles.card}>
           <Text style={styles.filterLabel}>Periodo</Text>
@@ -471,6 +486,11 @@ const styles = StyleSheet.create({
   },
   reminderBannerTitle: { color: '#fff', fontSize: 16, fontWeight: '800' },
   reminderBannerSub: { color: '#E8FBEF', fontSize: 12, marginTop: 2 },
+  incomeBanner: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#1565C0',
+    borderRadius: 12, padding: 14, marginBottom: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.12, shadowRadius: 3, elevation: 2,
+  },
   card: {
     backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 12,
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3, elevation: 2,
