@@ -59,6 +59,36 @@ export const sortConvocationAthletes = (
   return arr;
 };
 
+/** Converte la data gara (gg/mm/aaaa o aaaa-mm-gg) in formato breve gg-mm-aa per il nome file. */
+const matchDateShort = (matchDate?: string): string => {
+  const s = (matchDate || '').trim();
+  if (!s) return '';
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); // ISO aaaa-mm-gg
+  if (m) return `${m[3]}-${m[2]}-${m[1].slice(2)}`;
+  m = s.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})/); // gg/mm/aaaa
+  if (m) return `${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}-${m[3].slice(-2)}`;
+  return '';
+};
+
+/**
+ * Nome file automatico della convocazione:
+ *   "Convocazione gara {numero} - {gg-mm-aa} - {squadra}"
+ * Se manca il numero gara ripiega sull'avversario; rimuove solo i caratteri non
+ * validi per un nome file (mantiene spazi e trattini per leggibilità).
+ */
+export const buildConvocationFileName = (d: ConvocationPDFData): string => {
+  const clean = (v?: string) => String(v || '').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim();
+  const num = clean(d.matchNumber);
+  const opp = clean(d.opponent);
+  const team = clean(d.teamName);
+  const date = matchDateShort(d.matchDate);
+  const garaPart = num ? `gara ${num}` : (opp ? `gara ${opp}` : 'gara');
+  let name = `Convocazione ${garaPart}`;
+  if (date) name += ` - ${date}`;
+  if (team) name += ` - ${team}`;
+  return name;
+};
+
 const esc = (v: string | undefined | null): string => {
   if (v == null) return '';
   return String(v)
@@ -320,20 +350,13 @@ const buildConvocationPdf = (JsPDF: any, d: ConvocationPDFData) => {
  * l'anteprima/condivisione nativa, da cui si può aprire o inviare.
  */
 export const openConvocationPDF = async (d: ConvocationPDFData) => {
-  const fileName = (d.fileName || 'convocazione').replace(/[^a-zA-Z0-9_-]+/g, '_');
+  const fileName = buildConvocationFileName(d);
   if (Platform.OS === 'web') {
     const { jsPDF } = await import('jspdf');
     const pdf = buildConvocationPdf(jsPDF, d);
-    const blob = pdf.output('blob');
-    const url = URL.createObjectURL(blob);
-    const win = window.open(url, '_blank');
-    if (!win) {
-      // Popup bloccato → fallback: scarica il file
-      const a = document.createElement('a');
-      a.href = url; a.download = `${fileName}.pdf`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    }
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    // Salva direttamente con il nome leggibile (jsPDF imposta il nome del file).
+    // Evita l'anteprima con URL blob, che al "Salva" proponeva un nome casuale (UUID).
+    pdf.save(`${fileName}.pdf`);
   } else {
     const html = generateConvocationHTML(d);
     const Print = await import('expo-print');
@@ -353,7 +376,7 @@ export const openConvocationPDF = async (d: ConvocationPDFData) => {
 
 
 export const downloadConvocationPDF = async (d: ConvocationPDFData) => {
-  const fileName = (d.fileName || 'convocazione').replace(/[^a-zA-Z0-9_-]+/g, '_');
+  const fileName = buildConvocationFileName(d);
   if (Platform.OS === 'web') {
     const { jsPDF } = await import('jspdf');
     const pdf = buildConvocationPdf(jsPDF, d);

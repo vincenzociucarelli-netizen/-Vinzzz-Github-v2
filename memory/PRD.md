@@ -2177,3 +2177,9 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - FIX backend (income-detail): include solo i MOVIMENTI DI DENARO reali → salta i record con paid=False e status!='refunded' (rate pianificate/non pagate). Ora counted = pagato non rimborsato; "esclusi" = solo RIMBORSATI. not_counted_count = n° rimborsi.
 - FIX frontend: tag solo "Rimborsato" (rimosso "Non pagato"); filtro "Esclusi"→"Rimborsati"; sottotitolo "Solo incassi e rimborsi reali"; sottotesto totale "N conteggiati · M rimborsati"; caption adattiva (rimborsati vs conteggiati); empty text adattivo.
 - Validato con seed MAURO (rata1 paid 250 + rata2 paid 200 + rata2 pianificata 200 + rata3 pianificata 120 + rimborso 50) → incassato 450, 2 conteggiati, 1 rimborsato; pianificate escluse. Le rate non pagate restano nei Solleciti rate. Lint+export OK. Richiede redeploy Render+Vercel.
+
+## Aggiornamento 11/11/2026 (3) — Nome file PDF convocazione automatico
+- Richiesta: il PDF della convocazione, al salvataggio, deve avere nome "Convocazione gara [numero gara] - [gg-mm-aa] - [squadra]" invece dell'UUID.
+- CAUSA UUID: "Apri PDF" (openConvocationPDF) su web apriva l'anteprima via window.open(blobURL) → al "Salva" il browser proponeva l'id del blob (UUID).
+- FIX (src/utils/convocationReport.ts): nuova buildConvocationFileName(d) → "Convocazione gara {matchNumber|opponent} - {gg-mm-aa} - {teamName}" (matchDateShort gestisce gg/mm/aaaa e ISO; mantiene spazi/trattini, rimuove solo \ / : * ? " < > |). openConvocationPDF su web ora usa pdf.save(`${nome}.pdf`) (scarica col nome giusto, niente più UUID). downloadConvocationPDF usa lo stesso nome. Nota: numero gara al posto dell'avversario (fallback avversario se numero mancante).
+- Lint OK, export web OK. Mobile (expo-print/share) invariato. Richiede redeploy Vercel.
