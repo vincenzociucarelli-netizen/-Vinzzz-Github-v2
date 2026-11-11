@@ -682,9 +682,13 @@ async def get_income_detail(current_user=Depends(get_current_user)):
         a = athlete_map.get(p.get("athlete_id"))
         if not a:
             continue
-        amount = float(p.get("amount", 0) or 0)
         refunded = p.get("status") == "refunded"
         paid = bool(p.get("paid"))
+        # Questa vista mostra SOLO i movimenti di denaro reali (incassi e rimborsi).
+        # Le rate programmate/non pagate NON sono incassi: vengono escluse (sono nei Solleciti rate).
+        if not paid and not refunded:
+            continue
+        amount = float(p.get("amount", 0) or 0)
         recurring = bool(p.get("recurring_plan_id"))
         counted = paid and not refunded
         if counted:

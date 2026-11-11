@@ -42,7 +42,6 @@ function formatDateIt(iso: string | null): string {
 
 function statusTag(r: Row): { label: string; color: string; bg: string } | null {
   if (r.refunded) return { label: 'Rimborsato', color: '#C0392B', bg: '#FDECEA' };
-  if (!r.paid) return { label: 'Non pagato', color: '#E65100', bg: '#FFF3E0' };
   return null;
 }
 
@@ -136,7 +135,7 @@ export default function IncomeDetailScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.headerTitle}>Dettaglio Incassato</Text>
-          <Text style={styles.headerSubtitle}>Ogni pagamento e cosa fa totale</Text>
+          <Text style={styles.headerSubtitle}>Solo incassi e rimborsi reali</Text>
         </View>
         {Platform.OS === 'web' && (
           <TouchableOpacity onPress={exportCsv} style={styles.csvBtn} testID="export-csv-btn">
@@ -164,7 +163,7 @@ export default function IncomeDetailScreen() {
             <Text style={styles.totalLabel}>Incassato (somma dei conteggiati)</Text>
             <Text style={styles.totalValue}>{formatCurrency(totals?.incassato || 0)}</Text>
             <Text style={styles.totalSub}>
-              {totals?.counted_count || 0} pagamenti conteggiati · {totals?.not_counted_count || 0} esclusi
+              {totals?.counted_count || 0} conteggiati · {totals?.not_counted_count || 0} rimborsati
             </Text>
           </View>
 
@@ -191,7 +190,7 @@ export default function IncomeDetailScreen() {
             {([
               ['all', 'Tutti'],
               ['counted', 'Conteggiati'],
-              ['excluded', 'Esclusi'],
+              ['excluded', 'Rimborsati'],
             ] as [Filter, string][]).map(([key, label]) => (
               <TouchableOpacity
                 key={key}
@@ -206,10 +205,11 @@ export default function IncomeDetailScreen() {
 
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 12, paddingBottom: 40 }}>
             <Text style={styles.countCaption}>
-              {filtered.length} pagamenti · conteggiati {formatCurrency(filteredSum)}
+              {filtered.length} movimenti · {filter === 'excluded' ? 'rimborsati' : 'conteggiati'}{' '}
+              {formatCurrency(filter === 'excluded' ? filtered.reduce((s, r) => s + r.amount, 0) : filteredSum)}
             </Text>
             {filtered.length === 0 ? (
-              <Text style={styles.emptyText}>Nessun pagamento</Text>
+              <Text style={styles.emptyText}>{filter === 'excluded' ? 'Nessun rimborso' : 'Nessun movimento'}</Text>
             ) : (
               filtered.map((r) => {
                 const tag = statusTag(r);
