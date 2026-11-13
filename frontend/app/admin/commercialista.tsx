@@ -167,9 +167,11 @@ export default function Commercialista() {
     <View key={`${p.user_role}-${p.user_id}`} style={styles.personCard}>
       <View style={{ flex: 1 }}>
         <Text style={styles.personName}>{p.full_name}</Text>
-        <Text style={styles.personMeta}>{ROLE_LABEL[p.user_role] || p.user_role} · Lordo {eur(p.amount_gross)}{p.exceeded_5000 ? ` · Da versare ${eur(p.importo_versare)}` : ''}</Text>
+        <Text style={styles.personMeta}>{ROLE_LABEL[p.user_role] || p.user_role} · Lordo {eur(p.amount_gross)}{p.importo_versare > 0 ? ` · Da versare ${eur(p.importo_versare)}` : ''}</Text>
         <Text style={styles.personNet}>💶 Da bonificare: {eur(p.amount_net)}</Text>
-        {p.exceeded_5000 && <Text style={styles.f24Tag}>⚠️ Superata soglia €5.000 — F24 mensile</Text>}
+        {p.exceeded_5000
+          ? <Text style={styles.f24Tag}>⚠️ Superata soglia €5.000 questo mese — F24</Text>
+          : (p.importo_versare > 0 && <Text style={styles.f24Tag}>⚠️ Trattenuta INPS su eccedenza €5.000 — F24</Text>)}
       </View>
       <View style={styles.personActions}>
         <TouchableOpacity style={styles.pBtn} onPress={() => onDownload(p)} disabled={busyId === p.user_id}>
@@ -183,7 +185,7 @@ export default function Commercialista() {
   );
 
   const f24 = summary?.f24 || [];
-  const others = (summary?.recipients || []).filter((r: any) => !r.exceeded_5000);
+  const others = (summary?.recipients || []).filter((r: any) => !r.exceeded_5000 && !(r.importo_versare > 0));
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -230,7 +232,7 @@ export default function Commercialista() {
               <Text style={styles.totLine}>Persone con compenso: <Text style={styles.totBold}>{summary.totals.count}</Text></Text>
               <Text style={styles.totLine}>Totale lordo del mese: <Text style={styles.totBold}>{eur(summary.totals.total_gross)}</Text></Text>
               <Text style={styles.totLine}>Totale netto da bonificare: <Text style={styles.totBold}>{eur((summary.recipients || []).reduce((s: number, r: any) => s + Number(r.amount_net || 0), 0))}</Text></Text>
-              <Text style={styles.totLine}>Da inviare per F24 (oltre €5.000): <Text style={styles.totBold}>{summary.totals.f24_count}</Text></Text>
+              <Text style={styles.totLine}>Da inviare per F24 (trattenuta INPS): <Text style={styles.totBold}>{summary.totals.f24_count}</Text></Text>
               <Text style={styles.totLine}>Totale importi da versare: <Text style={styles.totBold}>{eur(summary.totals.total_versare)}</Text></Text>
               <View style={styles.exportRow}>
                 <TouchableOpacity style={[styles.exportBtn, styles.exportCsv]} onPress={exportMonthlyCSV}>
@@ -244,8 +246,8 @@ export default function Commercialista() {
               </View>
             </View>
 
-            <Text style={styles.sectionTitle}>🧾 F24 del mese (oltre €5.000) — {f24.length}</Text>
-            {f24.length === 0 ? <Text style={styles.empty}>Nessuno supera la soglia questo mese.</Text> : f24.map(renderPerson)}
+            <Text style={styles.sectionTitle}>🧾 F24 del mese (trattenuta INPS) — {f24.length}</Text>
+            {f24.length === 0 ? <Text style={styles.empty}>Nessuna trattenuta INPS da versare questo mese.</Text> : f24.map(renderPerson)}
 
             <Text style={styles.sectionTitle}>Altri compensi del mese — {others.length}</Text>
             {others.length === 0 ? <Text style={styles.empty}>Nessun altro compenso.</Text> : others.map(renderPerson)}

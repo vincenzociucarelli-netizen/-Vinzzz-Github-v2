@@ -22359,6 +22359,11 @@ async def commercialista_summary(year: int, month: int, current_user = Depends(g
                 "user_role": role, "user_id": owner, "full_name": ana["full_name"],
                 "fiscal_code": ana["fiscal_code"],
                 "amount_gross": amt["gross"], "amount_net": amt["net"], "importo_versare": amt["versare"],
+                # 🆕 Trattenuta INPS presente su QUESTO mese (anche se la soglia €5.000
+                # era già stata superata in un mese precedente). `exceeded_5000` indica
+                # SOLO il mese di primo superamento, quindi da solo non basta a mostrare
+                # la trattenuta nei mesi successivi.
+                "has_withholding": amt["versare"] > 0,
                 "exceeded_5000": bool(r.get("exceeded_5000")), "exceeded_15000": bool(r.get("exceeded_15000")),
                 "receipt_signed": bool(r.get("receipt_signed")),
                 "payment_made": bool(r.get("payment_made")),
@@ -22397,8 +22402,12 @@ async def commercialista_summary(year: int, month: int, current_user = Depends(g
         })
     missing.sort(key=lambda x: (x.get("full_name") or "").lower())
 
-    f24 = [x for x in rows if x["exceeded_5000"]]
-    tot_versare = round(sum(x["importo_versare"] for x in f24), 2)
+    # 🆕 F24 del mese = chi ha una trattenuta INPS da versare questo mese
+    # (mese di primo superamento €5.000 OPPURE mesi successivi con eccedenza).
+    f24 = [x for x in rows if x["exceeded_5000"] or x["has_withholding"]]
+    # Totale importi da versare (F24) su TUTTE le righe del mese, non solo il mese
+    # di primo superamento soglia.
+    tot_versare = round(sum(x["importo_versare"] for x in rows), 2)
     tot_gross = round(sum(x["amount_gross"] for x in rows), 2)
     return {
         "year": year, "month": month, "month_name": _MESI_IT[month] if 0 < month < 13 else str(month),
@@ -22543,8 +22552,11 @@ async def commercialista_annual_summary(year: int, current_user = Depends(get_cu
             row["total_gross"] = round(row["total_gross"] + amt["gross"], 2)
             row["total_net"] = round(row["total_net"] + amt["net"], 2)
             row["total_paid"] = round(row["total_paid"] + _paid_amount_from_receipt(r, athlete_doc), 2)
-            if r.get("exceeded_5000"):
+            # 🆕 Somma la trattenuta INPS di OGNI mese con eccedenza (non solo il mese
+            # di primo superamento soglia). `exceeded_5000` marca solo il mese di crossing.
+            if amt["versare"] > 0:
                 row["total_versare"] = round(row["total_versare"] + amt["versare"], 2)
+            if r.get("exceeded_5000"):
                 row["exceeded_5000"] = True
             if r.get("exceeded_15000"):
                 row["exceeded_15000"] = True

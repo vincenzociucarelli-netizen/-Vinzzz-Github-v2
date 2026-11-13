@@ -75,7 +75,7 @@ export const monthlyPaymentsCSV = (d: MonthlyExport): string => {
   d.rows.forEach(r => {
     lines.push([
       csvStr(r.full_name), csvStr(r.fiscal_code), csvStr(ROLE_LABEL[r.user_role] || r.user_role),
-      csvNum(r.amount_gross), csvNum(r.amount_net), csvNum(r.exceeded_5000 ? r.importo_versare : 0),
+      csvNum(r.amount_gross), csvNum(r.amount_net), csvNum(r.importo_versare),
       csvStr(r.payment_made ? 'Fatto' : 'Da fare'), csvStr(r.receipt_signed ? 'Firmata' : 'Non firmata'),
     ].join(';'));
   });
@@ -92,13 +92,13 @@ export const monthlyPaymentsHTML = (d: MonthlyExport): string => {
   const totNet = d.rows.reduce((s, r) => s + Number(r.amount_net || 0), 0);
   const rows = d.rows.length
     ? d.rows.map(r => `
-      <tr class="${r.exceeded_5000 ? 'hl' : ''}">
+      <tr class="${(r.exceeded_5000 || r.importo_versare > 0) ? 'hl' : ''}">
         <td>${esc(r.full_name)}</td>
         <td>${esc(r.fiscal_code)}</td>
         <td>${esc(ROLE_LABEL[r.user_role] || r.user_role)}</td>
         <td style="text-align:right;">${eur(r.amount_gross)}</td>
         <td style="text-align:right;font-weight:bold;">${eur(r.amount_net)}</td>
-        <td style="text-align:right;">${r.exceeded_5000 ? eur(r.importo_versare) : '—'}</td>
+        <td style="text-align:right;">${r.importo_versare > 0 ? eur(r.importo_versare) : '—'}</td>
         <td style="text-align:center;">${r.payment_made ? '✔︎' : '—'}</td>
         <td style="text-align:center;">${r.receipt_signed ? '✔︎' : '—'}</td>
       </tr>`).join('')
@@ -181,7 +181,7 @@ export const annualSummaryHTML = (d: AnnualExport): string => {
   const todayStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
   const rows = d.rows.length
     ? d.rows.map(r => `
-      <tr class="${r.exceeded_5000 ? 'hl' : ''}">
+      <tr class="${(r.exceeded_5000 || r.total_versare > 0) ? 'hl' : ''}">
         <td>${esc(r.full_name)}</td>
         <td>${esc(r.fiscal_code)}</td>
         <td>${esc(ROLE_LABEL[r.user_role] || r.user_role)}</td>
@@ -189,7 +189,7 @@ export const annualSummaryHTML = (d: AnnualExport): string => {
         <td style="text-align:right;">${eur(r.total_gross)}</td>
         <td style="text-align:right;font-weight:bold;">${eur(r.total_net)}</td>
         <td style="text-align:right;">${eur(r.total_paid)}</td>
-        <td style="text-align:right;">${r.exceeded_5000 ? eur(r.total_versare) : '—'}</td>
+        <td style="text-align:right;">${r.total_versare > 0 ? eur(r.total_versare) : '—'}</td>
       </tr>`).join('')
     : `<tr><td colspan="8" style="text-align:center;color:#666;font-style:italic;">Nessun compenso nell'anno</td></tr>`;
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=794">

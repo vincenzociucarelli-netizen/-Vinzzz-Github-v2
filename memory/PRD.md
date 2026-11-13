@@ -2204,3 +2204,10 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - Consiglio dato all'utente: usare "Genera quietanze del mese" (Quietanze) invece della creazione manuale → include tutti automaticamente.
 - F24: la colonna "Da versare (F24)" è l'INPS calcolato ESATTAMENTE alla FIRMA di ogni quietanza e solo sulla parte oltre €5.000/anno; le bozze non firmate o le creazioni manuali (amount_net=amount_gross) mostrano "—"/€0. Proposto (da confermare) di aggiungere una STIMA F24 nel report.
 - Validato con seed. Lint+export OK. Richiede redeploy Render+Vercel.
+
+
+## [AGGIORNAMENTO] Report Commercialista — trattenuta INPS/F24 nei mesi successivi al superamento soglia
+- Bug: importo trattenuto (F24) mostrato SOLO nel mese di primo superamento €5.000 (flag `exceeded_5000`). Nei mesi successivi la quietanza firmata ha `deductions`>0 e `amount_net`<`amount_gross`, ma il report (video + PDF + CSV, mensile e annuale) non lo mostrava.
+- Fix backend (server.py): `commercialista_summary` aggiunge `has_withholding`, lista F24 = exceeded_5000 OR has_withholding, `total_versare` sommato su TUTTE le righe. `annual-summary` somma `total_versare` su ogni mese con eccedenza.
+- Fix frontend: commercialista.tsx mostra "Da versare" quando importo_versare>0; paymentsReport.ts (PDF+CSV mensile e annuale) mostra importo per riga quando >0.
+- Verificato con seed: riga mese continuazione (exceeded_5000=False, trattenuta €24.20) ora in lista F24, importo_versare valorizzato, totali corretti.
