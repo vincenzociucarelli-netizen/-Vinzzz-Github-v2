@@ -22329,6 +22329,97 @@ def _receipt_amounts(r: dict) -> dict:
     return {"gross": gross, "net": net, "versare": round(versare, 2)}
 
 
+def _receipt_is_signed(r: dict) -> bool:
+    return bool(r.get("receipt_signed") or r.get("signed"))
+
+
+def _parse_ym(value) -> Optional[tuple]:
+    """Estrae (anno, mese) da una stringa data 'YYYY-MM-DD' (o 'YYYY-MM')."""
+    if not value:
+        return None
+    try:
+        parts = str(value).split("T")[0].split("-")
+        return (int(parts[0]), int(parts[1]))
+    except (ValueError, IndexError):
+        return None
+
+
+async def _estimate_net_cash_basis(role: str, owner: str, doc: dict, year: int, month: int,
+                                   payment_shift: int) -> Optional[dict]:
+    """🆕 Stima del netto 'per cassa' per una quietanza NON ancora firmata.
+
+    Replica ESATTAMENTE il calcolo della scheda Gestione Quietanze (frontend):
+    - pregresso (`other_annual_compensation`) sommato nell'anno di inizio contratto;
+    - per ogni mese del contratto si usa il lordo del receipt FIRMATO se esiste,
+      altrimenti il compenso mensile proiettato;
+    - i mesi sono ordinati per DATA DI PAGAMENTO (criterio di cassa: con 'next_month'
+      dicembre slitta a gennaio dell'anno dopo);
+    - la trattenuta INPS marginale si applica sull'eccedenza oltre €5.000 cumulativi.
+
+    Ritorna {"net", "versare"} stimati per (year, month), oppure None se non calcolabile.
+    """
+    coll, idf = ROLE_RECEIPT_MAP[role]
+    monthly_comp = float(doc.get("monthly_compensation") or 0)
+    prior_comp = float(doc.get("other_annual_compensation") or 0)
+    insured = bool(doc.get("inps_insured_elsewhere"))
+    cs = _parse_ym(doc.get("contract_start_date") or doc.get("contract_start"))
+    ce = _parse_ym(doc.get("contract_end_date") or doc.get("contract_end"))
+    if not cs or not ce:
+        return None
+    contract_year = cs[0]
+
+    # Lordo dei mesi FIRMATI (per cumulo reale), indicizzato per (anno, mese)
+    signed_gross: dict = {}
+    async for pr in db[coll].find({idf: owner}):
+        if not _receipt_is_signed(pr):
+            continue
+        pm = pr.get("month")
+        try:
+            pm = int(pm)
+        except (TypeError, ValueError):
+            continue
+        py = pr.get("year")
+        if not isinstance(py, int):
+            try:
+                py = int(py)
+            except (TypeError, ValueError):
+                continue
+        signed_gross[(py, pm)] = float(pr.get("amount_gross", pr.get("amount", 0)) or 0)
+
+    # Enumerazione mesi del contratto
+    items = []
+    y, m = cs
+    ey, em = ce
+    guard = 0
+    while (y < ey or (y == ey and m <= em)) and guard < 600:
+        guard += 1
+        gross = signed_gross.get((y, m), monthly_comp)
+        py = y + 1 if (payment_shift == 1 and m == 12) else y
+        pm = (1 if m == 12 else m + 1) if payment_shift == 1 else m
+        items.append({"year": y, "month": m, "gross": gross, "py": py, "pm": pm})
+        m += 1
+        if m > 12:
+            m = 1
+            y += 1
+
+    items.sort(key=lambda it: (it["py"], it["pm"]))
+    before_by_key: dict = {}
+    cum_by_py: dict = {}
+    for it in items:
+        if it["py"] not in cum_by_py:
+            cum_by_py[it["py"]] = prior_comp if it["py"] == contract_year else 0.0
+        before_by_key[(it["year"], it["month"])] = cum_by_py[it["py"]]
+        cum_by_py[it["py"]] += it["gross"]
+
+    before = before_by_key.get((year, month))
+    if before is None:
+        return None
+    target_gross = signed_gross.get((year, month), monthly_comp)
+    bd = compute_sport_inps_withholding(before, target_gross, insured_elsewhere=insured)
+    return {"net": bd["amount_net"], "versare": bd.get("inps_worker", 0.0)}
+
+
+
 @api_router.get("/admin/commercialista/summary")
 async def commercialista_summary(year: int, month: int, current_user = Depends(get_current_user)):
     """Riepilogo del mese per il commercialista: chi ha percepito un compenso,
@@ -22336,6 +22427,7 @@ async def commercialista_summary(year: int, month: int, current_user = Depends(g
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Solo admin")
     _sid = current_user.get("society_id")
+    _payment_shift = _payment_shift_from_timing(await _get_payment_timing(_sid))
     society_user_ids = set()
     async for u in db.users.find({"society_id": _sid} if _sid else {}, {"_id": 0, "id": 1}):
         if u.get("id"):
@@ -22344,16 +22436,29 @@ async def commercialista_summary(year: int, month: int, current_user = Depends(g
     for role, (coll, idf) in ROLE_RECEIPT_MAP.items():
         async for r in db[coll].find({"year": year, "month": month}):
             owner = r.get(idf)
+            person_doc = None
             if role == "athlete":
-                ath = await db.athletes.find_one({"id": owner}, {"_id": 0, "society_id": 1})
-                if _sid and (not ath or ath.get("society_id") != _sid):
+                person_doc = await db.athletes.find_one({"id": owner})
+                if _sid and (not person_doc or person_doc.get("society_id") != _sid):
                     continue
             else:
                 if _sid and owner not in society_user_ids:
                     continue
+                person_doc = await db.users.find_one({"id": owner})
             amt = _receipt_amounts(r)
             if amt["gross"] <= 0:
                 continue
+            # 🆕 STIMA F24 PRE-FIRMA: se la quietanza NON è firmata e non ha ancora una
+            # trattenuta reale salvata, calcoliamo il netto 'per cassa' stimato (identico
+            # alla scheda Gestione Quietanze) così il promemoria bonifici è corretto.
+            is_signed = _receipt_is_signed(r)
+            is_estimated = False
+            if not is_signed and amt["versare"] <= 0 and person_doc:
+                est = await _estimate_net_cash_basis(role, owner, person_doc, year, month, _payment_shift)
+                if est and est["versare"] > 0:
+                    amt["net"] = est["net"]
+                    amt["versare"] = round(est["versare"], 2)
+                    is_estimated = True
             ana = await _commercialista_anagrafica(role, owner)
             rows.append({
                 "user_role": role, "user_id": owner, "full_name": ana["full_name"],
@@ -22364,8 +22469,10 @@ async def commercialista_summary(year: int, month: int, current_user = Depends(g
                 # SOLO il mese di primo superamento, quindi da solo non basta a mostrare
                 # la trattenuta nei mesi successivi.
                 "has_withholding": amt["versare"] > 0,
+                # 🆕 True se il netto/trattenuta sono una STIMA (quietanza non ancora firmata)
+                "estimated": is_estimated,
                 "exceeded_5000": bool(r.get("exceeded_5000")), "exceeded_15000": bool(r.get("exceeded_15000")),
-                "receipt_signed": bool(r.get("receipt_signed")),
+                "receipt_signed": is_signed,
                 "payment_made": bool(r.get("payment_made")),
             })
     rows.sort(key=lambda x: (x.get("full_name") or "").lower())
@@ -22517,6 +22624,7 @@ async def commercialista_annual_summary(year: int, current_user = Depends(get_cu
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Solo admin")
     _sid = current_user.get("society_id")
+    _payment_shift = _payment_shift_from_timing(await _get_payment_timing(_sid))
     society_user_ids = set()
     async for u in db.users.find({"society_id": _sid} if _sid else {}, {"_id": 0, "id": 1}):
         if u.get("id"):
@@ -22526,17 +22634,28 @@ async def commercialista_annual_summary(year: int, current_user = Depends(get_cu
     for role, (coll, idf) in ROLE_RECEIPT_MAP.items():
         async for r in db[coll].find({"year": year}):
             owner = r.get(idf)
-            athlete_doc = None
+            person_doc = None
             if role == "athlete":
-                athlete_doc = await db.athletes.find_one({"id": owner}, {"_id": 0, "society_id": 1, "advance_split_enabled": 1, "advance_amount": 1})
-                if _sid and (not athlete_doc or athlete_doc.get("society_id") != _sid):
+                person_doc = await db.athletes.find_one({"id": owner})
+                if _sid and (not person_doc or person_doc.get("society_id") != _sid):
                     continue
             else:
                 if _sid and owner not in society_user_ids:
                     continue
+                person_doc = await db.users.find_one({"id": owner})
             amt = _receipt_amounts(r)
             if amt["gross"] <= 0:
                 continue
+            # 🆕 STIMA F24 PRE-FIRMA anche nel riepilogo annuale (mesi non firmati).
+            try:
+                rmonth = int(r.get("month") or 0)
+            except (TypeError, ValueError):
+                rmonth = 0
+            if not _receipt_is_signed(r) and amt["versare"] <= 0 and person_doc and 0 < rmonth < 13:
+                est = await _estimate_net_cash_basis(role, owner, person_doc, year, rmonth, _payment_shift)
+                if est and est["versare"] > 0:
+                    amt["net"] = est["net"]
+                    amt["versare"] = round(est["versare"], 2)
             key = (role, owner)
             if key not in agg:
                 ana = await _commercialista_anagrafica(role, owner)
@@ -22551,7 +22670,7 @@ async def commercialista_annual_summary(year: int, current_user = Depends(get_cu
             row["months"] += 1
             row["total_gross"] = round(row["total_gross"] + amt["gross"], 2)
             row["total_net"] = round(row["total_net"] + amt["net"], 2)
-            row["total_paid"] = round(row["total_paid"] + _paid_amount_from_receipt(r, athlete_doc), 2)
+            row["total_paid"] = round(row["total_paid"] + _paid_amount_from_receipt(r, person_doc), 2)
             # 🆕 Somma la trattenuta INPS di OGNI mese con eccedenza (non solo il mese
             # di primo superamento soglia). `exceeded_5000` marca solo il mese di crossing.
             if amt["versare"] > 0:

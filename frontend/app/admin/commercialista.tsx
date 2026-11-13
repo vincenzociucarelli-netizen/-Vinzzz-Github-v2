@@ -168,10 +168,11 @@ export default function Commercialista() {
       <View style={{ flex: 1 }}>
         <Text style={styles.personName}>{p.full_name}</Text>
         <Text style={styles.personMeta}>{ROLE_LABEL[p.user_role] || p.user_role} · Lordo {eur(p.amount_gross)}{p.importo_versare > 0 ? ` · Da versare ${eur(p.importo_versare)}` : ''}</Text>
-        <Text style={styles.personNet}>💶 Da bonificare: {eur(p.amount_net)}</Text>
+        <Text style={styles.personNet}>💶 Da bonificare: {eur(p.amount_net)}{p.estimated ? ' (stima)' : ''}</Text>
         {p.exceeded_5000
           ? <Text style={styles.f24Tag}>⚠️ Superata soglia €5.000 questo mese — F24</Text>
           : (p.importo_versare > 0 && <Text style={styles.f24Tag}>⚠️ Trattenuta INPS su eccedenza €5.000 — F24</Text>)}
+        {p.estimated && <Text style={styles.estimateNote}>≈ Stima: importo soggetto a firma della quietanza</Text>}
       </View>
       <View style={styles.personActions}>
         <TouchableOpacity style={styles.pBtn} onPress={() => onDownload(p)} disabled={busyId === p.user_id}>
@@ -373,6 +374,7 @@ const styles = StyleSheet.create({
   missRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF8F6', borderRadius: 10, padding: 12, marginBottom: 8, borderLeftWidth: 3, borderLeftColor: '#C0392B' },
   missReason: { fontSize: 12, color: '#C0392B', fontWeight: '700', marginTop: 3 },
   f24Tag: { fontSize: 12, color: '#E65100', fontWeight: '700', marginTop: 3 },
+  estimateNote: { fontSize: 11, color: '#8E44AD', fontStyle: 'italic', marginTop: 2 },
   personActions: { flexDirection: 'row', gap: 8 },
   pBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: '#F0F0F5', alignItems: 'center', justifyContent: 'center' },
   modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 },

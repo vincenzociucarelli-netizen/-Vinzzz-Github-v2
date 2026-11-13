@@ -61,6 +61,7 @@ export interface MonthlyRow {
   user_role: string; full_name: string; fiscal_code: string;
   amount_gross: number; amount_net: number; importo_versare: number;
   exceeded_5000: boolean; receipt_signed: boolean; payment_made: boolean;
+  estimated?: boolean;
 }
 export interface MonthlyExport {
   societyName: string; societyLogo?: string | null;
@@ -97,8 +98,8 @@ export const monthlyPaymentsHTML = (d: MonthlyExport): string => {
         <td>${esc(r.fiscal_code)}</td>
         <td>${esc(ROLE_LABEL[r.user_role] || r.user_role)}</td>
         <td style="text-align:right;">${eur(r.amount_gross)}</td>
-        <td style="text-align:right;font-weight:bold;">${eur(r.amount_net)}</td>
-        <td style="text-align:right;">${r.importo_versare > 0 ? eur(r.importo_versare) : '—'}</td>
+        <td style="text-align:right;font-weight:bold;">${eur(r.amount_net)}${r.estimated ? ' <span style="color:#8E44AD;font-weight:normal;font-size:9px;">(stima)</span>' : ''}</td>
+        <td style="text-align:right;">${r.importo_versare > 0 ? eur(r.importo_versare) + (r.estimated ? ' <span style="color:#8E44AD;font-size:9px;">(stima)</span>' : '') : '—'}</td>
         <td style="text-align:center;">${r.payment_made ? '✔︎' : '—'}</td>
         <td style="text-align:center;">${r.receipt_signed ? '✔︎' : '—'}</td>
       </tr>`).join('')
@@ -145,11 +146,7 @@ export const monthlyPaymentsHTML = (d: MonthlyExport): string => {
     Totale netto da pagare: <b>${eur(totNet)}</b> &nbsp;·&nbsp;
     Totale da versare (F24): <b>${eur(d.totals.total_versare)}</b>
   </div>
-  <div class="foot">Documento generato automaticamente da RegistraTEAM.</div>
-</body></html>`;
-};
-
-// ─────────────────────── RIEPILOGO ANNUALE ───────────────────────
+  <div class="foot">${d.rows.some(r => r.estimated) ? 'Gli importi contrassegnati con (stima) sono provvisori e verranno confermati alla firma della quietanza.<br/>' : ''}Documento generato automaticamente da RegistraTEAM.</div>
 export interface AnnualRow {
   user_role: string; full_name: string; fiscal_code: string;
   months: number; total_gross: number; total_net: number; total_paid: number;
