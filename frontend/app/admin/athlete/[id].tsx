@@ -4657,8 +4657,38 @@ export default function AdminAthleteDetail() {
                         <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>🩺 Diagnostica quietanze (legacy fix)</Text>
                       </TouchableOpacity>
 
-                      {/* 🚫 26/06/2026 — "Zona di servizio (reset quietanze)" RIMOSSA su richiesta utente.
-                          Era stata aggiunta per resettare account di test, ma non serve in produzione. */}
+                      {/* 🗑️ Azzera TUTTI i compensi */}
+                      <TouchableOpacity
+                        style={{ backgroundColor: '#C62828', borderRadius: 8, padding: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 8 }}
+                        onPress={async () => {
+                          const confirmMsg = `Eliminare TUTTE le quietanze e i compensi di ${athlete?.full_name || 'questo atleta'}?\n\nL'anagrafica resta, ma lo storico compensi (anche firmati) viene cancellato in modo irreversibile.`;
+                          const ok = Platform.OS === 'web'
+                            ? window.confirm(confirmMsg)
+                            : await new Promise<boolean>((res) => Alert.alert('Azzera tutti i compensi', confirmMsg, [
+                                { text: 'Annulla', style: 'cancel', onPress: () => res(false) },
+                                { text: 'Elimina tutto', style: 'destructive', onPress: () => res(true) },
+                              ]));
+                          if (!ok) return;
+                          try {
+                            await api.delete(`/admin/athletes/${id}/compensation/reset-all`);
+                            const msg = '✅ Tutte le quietanze e i compensi sono stati eliminati.';
+                            if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Fatto', msg); }
+                            try {
+                              const rec = await api.get(`/athletes/${id}/compensation/receipts`);
+                              setSignedReceipts(Array.isArray(rec.data) ? rec.data : []);
+                            } catch {}
+                            loadData();
+                          } catch (e: any) {
+                            const msg = e?.response?.data?.detail || 'Errore durante l\'azzeramento';
+                            if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Errore', msg); }
+                          }
+                        }}
+                        data-testid="admin-athlete-reset-all-btn"
+                      >
+                        <Ionicons name="trash-outline" size={16} color="#fff" />
+                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>🗑️ Azzera tutti i compensi</Text>
+                      </TouchableOpacity>
+
                     </View>
                   )}
 
