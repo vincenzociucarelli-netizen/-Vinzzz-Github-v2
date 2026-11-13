@@ -2183,3 +2183,9 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - CAUSA UUID: "Apri PDF" (openConvocationPDF) su web apriva l'anteprima via window.open(blobURL) → al "Salva" il browser proponeva l'id del blob (UUID).
 - FIX (src/utils/convocationReport.ts): nuova buildConvocationFileName(d) → "Convocazione gara {matchNumber|opponent} - {gg-mm-aa} - {teamName}" (matchDateShort gestisce gg/mm/aaaa e ISO; mantiene spazi/trattini, rimuove solo \ / : * ? " < > |). openConvocationPDF su web ora usa pdf.save(`${nome}.pdf`) (scarica col nome giusto, niente più UUID). downloadConvocationPDF usa lo stesso nome. Nota: numero gara al posto dell'avversario (fallback avversario se numero mancante).
 - Lint OK, export web OK. Mobile (expo-print/share) invariato. Richiede redeploy Vercel.
+
+## Aggiornamento 12/11/2026 (1) — Report compensi lordo/netto per mese: dove si trova + netto a video
+- Utente non trovava il report lordi/netti da bonificare ai collaboratori per mese. SI TROVA in: Stanza dei Bottoni → Quietanze → "Area Commercialista" (/admin/commercialista). Imposta Mese=10, Anno=2026 → "Mostra riepilogo del mese" → "Scarica PDF/CSV".
+- Il report export (src/utils/paymentsReport.ts monthlyPaymentsCSV/HTML) GIÀ include per persona: Lordo, Netto da pagare, Da versare (F24), Bonifico, Quietanza firmata + totali. Backend /admin/commercialista/summary già restituisce amount_net per persona.
+- MIGLIORIA a video (commercialista.tsx): aggiunta riga "💶 Da bonificare: {amount_net}" su ogni persona e "Totale netto da bonificare" nei totali del mese (prima mostrava solo il Lordo). Nessuna modifica backend.
+- Lint OK, export web OK. Richiede redeploy Vercel per i dati reali.

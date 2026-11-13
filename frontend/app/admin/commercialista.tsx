@@ -168,6 +168,7 @@ export default function Commercialista() {
       <View style={{ flex: 1 }}>
         <Text style={styles.personName}>{p.full_name}</Text>
         <Text style={styles.personMeta}>{ROLE_LABEL[p.user_role] || p.user_role} · Lordo {eur(p.amount_gross)}{p.exceeded_5000 ? ` · Da versare ${eur(p.importo_versare)}` : ''}</Text>
+        <Text style={styles.personNet}>💶 Da bonificare: {eur(p.amount_net)}</Text>
         {p.exceeded_5000 && <Text style={styles.f24Tag}>⚠️ Superata soglia €5.000 — F24 mensile</Text>}
       </View>
       <View style={styles.personActions}>
@@ -228,6 +229,7 @@ export default function Commercialista() {
               <Text style={styles.totTitle}>Riepilogo {summary.month_name} {summary.year}</Text>
               <Text style={styles.totLine}>Persone con compenso: <Text style={styles.totBold}>{summary.totals.count}</Text></Text>
               <Text style={styles.totLine}>Totale lordo del mese: <Text style={styles.totBold}>{eur(summary.totals.total_gross)}</Text></Text>
+              <Text style={styles.totLine}>Totale netto da bonificare: <Text style={styles.totBold}>{eur((summary.recipients || []).reduce((s: number, r: any) => s + Number(r.amount_net || 0), 0))}</Text></Text>
               <Text style={styles.totLine}>Da inviare per F24 (oltre €5.000): <Text style={styles.totBold}>{summary.totals.f24_count}</Text></Text>
               <Text style={styles.totLine}>Totale importi da versare: <Text style={styles.totBold}>{eur(summary.totals.total_versare)}</Text></Text>
               <View style={styles.exportRow}>
@@ -349,6 +351,7 @@ const styles = StyleSheet.create({
   personCard: { backgroundColor: '#fff', borderRadius: 10, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center' },
   personName: { fontSize: 15, fontWeight: '700', color: '#222' },
   personMeta: { fontSize: 12.5, color: '#666', marginTop: 2 },
+  personNet: { fontSize: 14, color: '#1B5E20', fontWeight: '800', marginTop: 3 },
   f24Tag: { fontSize: 12, color: '#E65100', fontWeight: '700', marginTop: 3 },
   personActions: { flexDirection: 'row', gap: 8 },
   pBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: '#F0F0F5', alignItems: 'center', justifyContent: 'center' },
