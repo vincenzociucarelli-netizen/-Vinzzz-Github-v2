@@ -249,6 +249,22 @@ export default function Commercialista() {
 
             <Text style={styles.sectionTitle}>Altri compensi del mese — {others.length}</Text>
             {others.length === 0 ? <Text style={styles.empty}>Nessun altro compenso.</Text> : others.map(renderPerson)}
+
+            {(summary.missing || []).length > 0 && (
+              <>
+                <Text style={[styles.sectionTitle, { color: '#C0392B' }]}>⚠️ Compensati SENZA quietanza questo mese — {summary.missing.length}</Text>
+                <Text style={styles.annualHint}>Hanno un compenso mensile impostato ma non risultano nel report perché manca la quietanza di {summary.month_name}. Crea le quietanze (es. &quot;Genera quietanze del mese&quot;) per includerli.</Text>
+                {summary.missing.map((m: any) => (
+                  <View key={`miss-${m.user_id}`} style={styles.missRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.personName}>{m.full_name}</Text>
+                      <Text style={styles.personMeta}>{ROLE_LABEL[m.user_role] || m.user_role} · Compenso {eur(m.monthly_compensation)}/mese</Text>
+                      <Text style={styles.missReason}>{m.reason}</Text>
+                    </View>
+                  </View>
+                ))}
+              </>
+            )}
           </>
         )}
 
@@ -352,6 +368,8 @@ const styles = StyleSheet.create({
   personName: { fontSize: 15, fontWeight: '700', color: '#222' },
   personMeta: { fontSize: 12.5, color: '#666', marginTop: 2 },
   personNet: { fontSize: 14, color: '#1B5E20', fontWeight: '800', marginTop: 3 },
+  missRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF8F6', borderRadius: 10, padding: 12, marginBottom: 8, borderLeftWidth: 3, borderLeftColor: '#C0392B' },
+  missReason: { fontSize: 12, color: '#C0392B', fontWeight: '700', marginTop: 3 },
   f24Tag: { fontSize: 12, color: '#E65100', fontWeight: '700', marginTop: 3 },
   personActions: { flexDirection: 'row', gap: 8 },
   pBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: '#F0F0F5', alignItems: 'center', justifyContent: 'center' },

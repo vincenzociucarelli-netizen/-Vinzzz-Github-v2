@@ -2196,3 +2196,11 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - IMPORTANTE: il tasto "Verifica" (handleVerifyCertificate) e il toggle copia originale re-inviano le STESSE date → date_changed=False, quindi NON vengono azzerati (nessuna regressione). Inserimento iniziale (nessuna data precedente) non resetta.
 - Frontend invariato: dopo il salvataggio la pagina fa loadData() e riflette i flag deselezionati.
 - Validato con seed: (1) cambio data → False/False; (2) stessa data formato diverso → True/True; (3) issue prima assente → True/True. Richiede redeploy Render.
+
+## Aggiornamento 13/11/2026 (1) — Report commercialista: sezione "Compensati senza quietanza" + chiarimenti F24
+- Problema utente: 3 compensati (SCARGIALI FILIPPO/STEFANO, BIZZARRI SILVIA) non presenti nel report Ottobre. Causa: il report mostra solo chi ha una QUIETANZA creata per il mese; chi non ce l'ha "scompare" senza spiegazione. (Quietanze Ottobre erano state create manualmente una per una → questi 3 non creati.)
+- FIX backend (server.py commercialista_summary): aggiunto campo "missing" = compensati (users coach/dirigente/collaboratore + athletes PRO con monthly_compensation>0) SENZA quietanza nel mese, con reason ("Profilo non approvato" se status!=approved, altrimenti "Quietanza del mese non ancora creata").
+- FIX frontend (commercialista.tsx): nuova sezione rossa "⚠️ Compensati SENZA quietanza questo mese" sotto gli altri compensi, con nome, ruolo, compenso/mese e motivo + hint di usare "Genera quietanze del mese".
+- Consiglio dato all'utente: usare "Genera quietanze del mese" (Quietanze) invece della creazione manuale → include tutti automaticamente.
+- F24: la colonna "Da versare (F24)" è l'INPS calcolato ESATTAMENTE alla FIRMA di ogni quietanza e solo sulla parte oltre €5.000/anno; le bozze non firmate o le creazioni manuali (amount_net=amount_gross) mostrano "—"/€0. Proposto (da confermare) di aggiungere una STIMA F24 nel report.
+- Validato con seed. Lint+export OK. Richiede redeploy Render+Vercel.

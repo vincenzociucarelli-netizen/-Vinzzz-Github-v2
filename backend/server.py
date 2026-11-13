@@ -22364,6 +22364,39 @@ async def commercialista_summary(year: int, month: int, current_user = Depends(g
                 "payment_made": bool(r.get("payment_made")),
             })
     rows.sort(key=lambda x: (x.get("full_name") or "").lower())
+
+    # 🆕 Compensati SENZA quietanza in questo mese: per capire subito CHI manca nel report
+    # (chi ha un compenso mensile impostato ma non ha ancora una quietanza per il mese).
+    present_ids = {r["user_id"] for r in rows}
+    missing = []
+    uq = {"role": {"$in": ["coach", "dirigente", "collaboratore"]}}
+    if _sid:
+        uq["society_id"] = _sid
+    async for u in db.users.find(uq):
+        comp = float(u.get("monthly_compensation") or 0)
+        if comp <= 0 or u.get("id") in present_ids:
+            continue
+        st = u.get("status")
+        reason = "Profilo non approvato" if (st and st != "approved") else "Quietanza del mese non ancora creata"
+        missing.append({
+            "user_role": u.get("role"), "user_id": u.get("id"),
+            "full_name": u.get("full_name") or "",
+            "monthly_compensation": round(comp, 2),
+            "reason": reason,
+        })
+    aq2 = {"society_id": _sid} if _sid else {}
+    async for a in db.athletes.find(aq2):
+        comp = float(a.get("monthly_compensation") or 0)
+        if comp <= 0 or a.get("id") in present_ids:
+            continue
+        missing.append({
+            "user_role": "athlete", "user_id": a.get("id"),
+            "full_name": a.get("full_name") or f"{a.get('last_name','')} {a.get('first_name','')}".strip(),
+            "monthly_compensation": round(comp, 2),
+            "reason": "Quietanza del mese non ancora creata",
+        })
+    missing.sort(key=lambda x: (x.get("full_name") or "").lower())
+
     f24 = [x for x in rows if x["exceeded_5000"]]
     tot_versare = round(sum(x["importo_versare"] for x in f24), 2)
     tot_gross = round(sum(x["amount_gross"] for x in rows), 2)
@@ -22371,6 +22404,7 @@ async def commercialista_summary(year: int, month: int, current_user = Depends(g
         "year": year, "month": month, "month_name": _MESI_IT[month] if 0 < month < 13 else str(month),
         "recipients": rows,
         "f24": f24,
+        "missing": missing,
         "totals": {
             "count": len(rows), "f24_count": len(f24),
             "total_gross": tot_gross, "total_versare": tot_versare,
