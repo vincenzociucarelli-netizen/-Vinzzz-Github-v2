@@ -14,7 +14,9 @@ import {
   Modal,
   Dimensions,
   Linking,
+  Switch,
 } from 'react-native';
+import { chooseResetMode } from '../../../src/utils/compensationAdmin';
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -1653,21 +1655,35 @@ export default function AdminDirigenteDetail() {
             <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>🩺 Diagnostica quietanze (legacy fix)</Text>
           </TouchableOpacity>
 
-          {/* 🗑️ Azzera TUTTI i compensi */}
+          {/* 🧪 Utente di test — escludi dai report */}
+          <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, paddingHorizontal: 12, backgroundColor: '#F3E5F5', borderRadius: 8, borderWidth: 1, borderColor: '#CE93D8' }}>
+            <View style={{ flex: 1, paddingRight: 8 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#6A1B9A' }}>🧪 Utente di test</Text>
+              <Text style={{ fontSize: 11, color: '#8E24AA' }}>Escluso da report commercialista, pagamenti e generazione quietanze</Text>
+            </View>
+            <Switch
+              value={!!dirigente?.is_test_user}
+              onValueChange={async (v) => {
+                try {
+                  await api.patch(`/admin/users/${id}/test-flag`, { is_test_user: v });
+                  await loadData();
+                } catch (e: any) {
+                  const msg = e?.response?.data?.detail || 'Errore';
+                  if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Errore', msg);
+                }
+              }}
+            />
+          </View>
+
+          {/* 🗑️ Azzera compensi (con scelta) */}
           <TouchableOpacity
             style={{ marginTop: 8, padding: 10, backgroundColor: '#C62828', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
             onPress={async () => {
-              const confirmMsg = `Eliminare TUTTI i compensi e le quietanze di ${dirigente?.full_name || 'questo dirigente'}?\n\nL'anagrafica resta, ma lo storico compensi (anche firmati) viene cancellato in modo irreversibile.`;
-              const ok = Platform.OS === 'web'
-                ? window.confirm(confirmMsg)
-                : await new Promise<boolean>((res) => Alert.alert('Azzera tutti i compensi', confirmMsg, [
-                    { text: 'Annulla', style: 'cancel', onPress: () => res(false) },
-                    { text: 'Elimina tutto', style: 'destructive', onPress: () => res(true) },
-                  ]));
-              if (!ok) return;
+              const mode = await chooseResetMode(dirigente?.full_name);
+              if (!mode) return;
               try {
-                const r = await api.delete(`/admin/dirigente/${id}/compensation/reset-all`);
-                const msg = `✅ Eliminati i compensi di ${r.data.deleted_months || 0} mesi.`;
+                const r = await api.delete(`/admin/dirigente/${id}/compensation/reset-all?mode=${mode}`);
+                const msg = `✅ Eliminati i compensi di ${r.data.deleted_months || 0} mesi (${r.data.mode}).`;
                 if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Fatto', msg);
                 await loadData();
               } catch (e: any) {
@@ -1678,7 +1694,7 @@ export default function AdminDirigenteDetail() {
             testID="admin-dirigente-reset-all-btn"
           >
             <Ionicons name="trash-outline" size={16} color="#fff" />
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>🗑️ Azzera tutti i compensi</Text>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>🗑️ Azzera compensi</Text>
           </TouchableOpacity>
         </View>
 

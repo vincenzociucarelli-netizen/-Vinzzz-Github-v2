@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
+import { chooseResetMode } from '../../../src/utils/compensationAdmin';
 import CompensationSummaryCard from '../../../src/components/compensation/CompensationSummaryCard';
 import FipavAthleteRulesPanel from '../../../src/components/FipavAthleteRulesPanel';
 // 🆕 29/07/2026 — Card Calendario Gare (con export .ics)
@@ -4657,21 +4658,37 @@ export default function AdminAthleteDetail() {
                         <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>🩺 Diagnostica quietanze (legacy fix)</Text>
                       </TouchableOpacity>
 
-                      {/* 🗑️ Azzera TUTTI i compensi */}
+                      {/* 🧪 Utente di test — escludi dai report */}
+                      <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8, paddingHorizontal: 12, backgroundColor: '#F3E5F5', borderRadius: 8, borderWidth: 1, borderColor: '#CE93D8' }}>
+                        <View style={{ flex: 1, paddingRight: 8 }}>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: '#6A1B9A' }}>🧪 Atleta di test</Text>
+                          <Text style={{ fontSize: 11, color: '#8E24AA' }}>Escluso da report commercialista, Prima Nota pagamenti e generazione quietanze</Text>
+                        </View>
+                        <Switch
+                          value={!!athlete?.is_test_user}
+                          onValueChange={async (v) => {
+                            try {
+                              await api.patch(`/admin/athletes/${id}/test-flag`, { is_test_user: v });
+                              loadData();
+                            } catch (e: any) {
+                              const msg = e?.response?.data?.detail || 'Errore';
+                              if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Errore', msg); }
+                            }
+                          }}
+                        />
+                      </View>
+
+                      {/* 🗑️ Azzera compensi (con scelta) */}
                       <TouchableOpacity
                         style={{ backgroundColor: '#C62828', borderRadius: 8, padding: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 8 }}
                         onPress={async () => {
-                          const confirmMsg = `Eliminare TUTTE le quietanze e i compensi di ${athlete?.full_name || 'questo atleta'}?\n\nL'anagrafica resta, ma lo storico compensi (anche firmati) viene cancellato in modo irreversibile.`;
-                          const ok = Platform.OS === 'web'
-                            ? window.confirm(confirmMsg)
-                            : await new Promise<boolean>((res) => Alert.alert('Azzera tutti i compensi', confirmMsg, [
-                                { text: 'Annulla', style: 'cancel', onPress: () => res(false) },
-                                { text: 'Elimina tutto', style: 'destructive', onPress: () => res(true) },
-                              ]));
-                          if (!ok) return;
+                          const mode = await chooseResetMode(athlete?.full_name);
+                          if (!mode) return;
                           try {
-                            await api.delete(`/admin/athletes/${id}/compensation/reset-all`);
-                            const msg = '✅ Tutte le quietanze e i compensi sono stati eliminati.';
+                            await api.delete(`/admin/athletes/${id}/compensation/reset-all?mode=${mode}`);
+                            const msg = mode === 'unsigned'
+                              ? '✅ Eliminate le quietanze NON firmate (i firmati sono stati mantenuti).'
+                              : '✅ Tutte le quietanze e i compensi sono stati eliminati.';
                             if (Platform.OS === 'web') { window.alert(msg); } else { Alert.alert('Fatto', msg); }
                             try {
                               const rec = await api.get(`/athletes/${id}/compensation/receipts`);
@@ -4686,7 +4703,7 @@ export default function AdminAthleteDetail() {
                         data-testid="admin-athlete-reset-all-btn"
                       >
                         <Ionicons name="trash-outline" size={16} color="#fff" />
-                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>🗑️ Azzera tutti i compensi</Text>
+                        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>🗑️ Azzera compensi</Text>
                       </TouchableOpacity>
 
                     </View>

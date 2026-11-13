@@ -11876,10 +11876,10 @@ async def admin_normalize_collaboratore_receipts(collaboratore_id: str, current_
 
 
 @api_router.delete("/admin/athletes/{athlete_id}/compensation/reset-all")
-async def admin_reset_athlete_compensations(athlete_id: str, current_user = Depends(get_current_user)):
-    """ADMIN ONLY — Cancella TUTTE le quietanze, ricevute firmate, compensi coach linked,
-    compensi esterni e autocertificazioni soglie di un atleta. NON ELIMINA l'anagrafica.
-    Da usare con cautela: operazione irreversibile."""
+async def admin_reset_athlete_compensations(athlete_id: str, mode: str = "all", current_user = Depends(get_current_user)):
+    """ADMIN ONLY — Cancella le quietanze/compensi di un atleta. NON ELIMINA l'anagrafica.
+    mode='all' → tutto (anche firmati); mode='unsigned' → solo le quietanze NON firmate
+    (mantiene percepiti/firmati). Operazione irreversibile."""
     if current_user.get("role") != UserRole.ADMIN:
         raise HTTPException(status_code=403, detail="Solo admin")
 
@@ -11891,7 +11891,17 @@ async def admin_reset_athlete_compensations(athlete_id: str, current_user = Depe
     if athlete.get("society_id") != current_user.get("society_id"):
         raise HTTPException(status_code=403, detail="Atleta di altra società")
 
-    result = {"athlete_name": athlete.get("full_name", ""), "athlete_id": athlete_id, "deleted": {}}
+    only_unsigned = (mode == "unsigned")
+    result = {"athlete_name": athlete.get("full_name", ""), "athlete_id": athlete_id,
+              "mode": "non firmati" if only_unsigned else "tutti", "deleted": {}}
+
+    if only_unsigned:
+        # Elimina SOLO le quietanze non firmate; mantieni percepiti/firmati e relativi documenti
+        r1 = await db.athlete_compensation_receipts.delete_many(
+            {"athlete_id": athlete_id, "receipt_signed": {"$ne": True}, "signed": {"$ne": True}})
+        result["deleted"]["athlete_compensation_receipts"] = r1.deleted_count
+        logger.warning(f"[ADMIN-RESET] Quietanze NON firmate atleta {athlete_id} ({athlete.get('full_name')}) cancellate da admin {current_user.get('id')}. Result: {result['deleted']}")
+        return {"message": "Quietanze non firmate cancellate", **result}
 
     r1 = await db.athlete_compensation_receipts.delete_many({"athlete_id": athlete_id})
     result["deleted"]["athlete_compensation_receipts"] = r1.deleted_count
@@ -17164,7 +17174,7 @@ async def get_registro_stagione(current_user = Depends(get_current_user)):
     
     # 🚀 18/08/2026 PERF — projection: escludi le foto base64 (registro usa solo nome/cognome).
     athletes = await db.athletes.find(
-        {"society_id": society_id, "is_withdrawn": {"$ne": True}},
+        {"society_id": society_id, "is_withdrawn": {"$ne": True}, "is_test_user": {"$ne": True}},
         {"athlete_photo": 0, "athlete_photo_artistic": 0, "doc_back_image": 0,
          "doc_front_image": 0, "id_back": 0, "id_front": 0, "document_back": 0,
          "document_front": 0, "privacy_signature": 0, "receipt_signature_base64": 0,
@@ -21846,10 +21856,11 @@ async def admin_delete_athlete_receipt(
     return await _full_delete_user_receipt(athlete_id, "athlete", year, month)
 
 
-async def _full_reset_user_compensations(user_id: str, role: str, society_id: str) -> dict:
-    """🆕 Azzera TUTTI i compensi/quietanze di un utente (dirigente/collaboratore/coach),
+async def _full_reset_user_compensations(user_id: str, role: str, society_id: str, only_unsigned: bool = False) -> dict:
+    """🆕 Azzera i compensi/quietanze di un utente (dirigente/collaboratore/coach),
     riusando la cancellazione completa mese-per-mese (compensi + documenti firmati + PDF +
-    soglie). NON elimina l'anagrafica. Operazione irreversibile."""
+    soglie). NON elimina l'anagrafica. Operazione irreversibile.
+    only_unsigned=True → elimina SOLO le quietanze NON firmate (mantiene i percepiti/firmati)."""
     role_to_collection = {
         "collaboratore": ("collaboratore_compensations", "collaboratore_id"),
         "coach": ("coach_compensations", "coach_id"),
@@ -21864,9 +21875,11 @@ async def _full_reset_user_compensations(user_id: str, role: str, society_id: st
     if person and society_id and person.get("society_id") not in (None, society_id):
         raise HTTPException(status_code=403, detail="Utente di altra società")
 
-    # Raccogli tutti i mesi/anni presenti (gestisce month int e stringa legacy)
+    # Raccogli i mesi/anni presenti (gestisce month int e stringa legacy)
     periods = set()
-    async for r in db[collection_name].find({key: user_id}, {"_id": 0, "year": 1, "month": 1}):
+    async for r in db[collection_name].find({key: user_id}, {"_id": 0, "year": 1, "month": 1, "receipt_signed": 1, "signed": 1}):
+        if only_unsigned and (r.get("receipt_signed") is True or r.get("signed") is True):
+            continue  # mantieni le quietanze firmate/percepite
         y = r.get("year")
         m = r.get("month")
         try:
@@ -21886,37 +21899,73 @@ async def _full_reset_user_compensations(user_id: str, role: str, society_id: st
         except Exception as e:
             logger.warning(f"[RESET-ALL] fallita cancellazione {role} {user_id} {y}-{m}: {e}")
 
-    # Pulizia residua di sicurezza
-    try:
-        await db[collection_name].delete_many({key: user_id})
-    except Exception:
-        pass
+    # Pulizia residua di sicurezza (solo in modalità 'tutti')
+    if not only_unsigned:
+        try:
+            await db[collection_name].delete_many({key: user_id})
+        except Exception:
+            pass
 
     name = (person or {}).get("full_name", "") if person else ""
-    logger.warning(f"[ADMIN-RESET] Compensi {role} {user_id} ({name}) azzerati da admin. Mesi: {deleted_months}")
-    return {"message": "Tutti i compensi sono stati cancellati", "role": role,
+    mode_label = "non firmati" if only_unsigned else "tutti"
+    logger.warning(f"[ADMIN-RESET] Compensi {role} {user_id} ({name}) azzerati ({mode_label}) da admin. Mesi: {deleted_months}")
+    return {"message": "Compensi cancellati", "role": role, "mode": mode_label,
             "user_id": user_id, "full_name": name, "deleted_months": deleted_months}
 
 
 @api_router.delete("/admin/dirigente/{dirigente_id}/compensation/reset-all")
-async def admin_reset_dirigente_compensations(dirigente_id: str, current_user = Depends(get_current_user)):
+async def admin_reset_dirigente_compensations(dirigente_id: str, mode: str = "all", current_user = Depends(get_current_user)):
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Solo admin")
-    return await _full_reset_user_compensations(dirigente_id, "dirigente", current_user.get("society_id"))
+    return await _full_reset_user_compensations(dirigente_id, "dirigente", current_user.get("society_id"), only_unsigned=(mode == "unsigned"))
 
 
 @api_router.delete("/admin/collaboratore/{collaboratore_id}/compensation/reset-all")
-async def admin_reset_collaboratore_compensations(collaboratore_id: str, current_user = Depends(get_current_user)):
+async def admin_reset_collaboratore_compensations(collaboratore_id: str, mode: str = "all", current_user = Depends(get_current_user)):
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Solo admin")
-    return await _full_reset_user_compensations(collaboratore_id, "collaboratore", current_user.get("society_id"))
+    return await _full_reset_user_compensations(collaboratore_id, "collaboratore", current_user.get("society_id"), only_unsigned=(mode == "unsigned"))
 
 
 @api_router.delete("/admin/coach/{coach_id}/compensation/reset-all")
-async def admin_reset_coach_compensations(coach_id: str, current_user = Depends(get_current_user)):
+async def admin_reset_coach_compensations(coach_id: str, mode: str = "all", current_user = Depends(get_current_user)):
     if current_user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Solo admin")
-    return await _full_reset_user_compensations(coach_id, "coach", current_user.get("society_id"))
+    return await _full_reset_user_compensations(coach_id, "coach", current_user.get("society_id"), only_unsigned=(mode == "unsigned"))
+
+
+@api_router.patch("/admin/users/{user_id}/test-flag")
+async def admin_set_user_test_flag(user_id: str, data: dict = Body(...), current_user = Depends(get_current_user)):
+    """🆕 Marca/smarca un utente (coach/dirigente/collaboratore) come 'utente di test':
+    se True viene ESCLUSO dai report commercialista/pagamenti e dalla generazione quietanze."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    u = await db.users.find_one({"id": user_id}, {"_id": 0, "society_id": 1})
+    if not u:
+        raise HTTPException(status_code=404, detail="Utente non trovato")
+    if u.get("society_id") and u.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Utente di altra società")
+    flag = bool(data.get("is_test_user"))
+    await db.users.update_one({"id": user_id}, {"$set": {"is_test_user": flag}})
+    return {"ok": True, "is_test_user": flag}
+
+
+@api_router.patch("/admin/athletes/{athlete_id}/test-flag")
+async def admin_set_athlete_test_flag(athlete_id: str, data: dict = Body(...), current_user = Depends(get_current_user)):
+    """🆕 Marca/smarca un atleta come 'atleta di test': se True viene ESCLUSO dai report
+    commercialista, dalla Prima Nota pagamenti e dalla generazione quietanze."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    a = await db.athletes.find_one({"id": athlete_id}, {"_id": 0, "society_id": 1})
+    if not a:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    if a.get("society_id") and a.get("society_id") != current_user.get("society_id"):
+        raise HTTPException(status_code=403, detail="Atleta di altra società")
+    flag = bool(data.get("is_test_user"))
+    await db.athletes.update_one({"id": athlete_id}, {"$set": {"is_test_user": flag}})
+    return {"ok": True, "is_test_user": flag}
+
+
 
 
 
@@ -22282,6 +22331,7 @@ async def admin_generate_month_quietanze(data: dict = Body(...), current_user = 
         # 🆕 I dirigenti legacy possono avere role="viewer" (vecchio alias storico):
         # vanno inclusi, altrimenti la generazione li salta (es. Scargiali, Bizzarri).
         uq = {"role": {"$in": ["dirigente", "viewer"]}} if role == "dirigente" else {"role": role}
+        uq["is_test_user"] = {"$ne": True}  # 🆕 escludi utenti di test
         if _sid:
             uq["society_id"] = _sid
         async for u in db.users.find(uq):
@@ -22319,7 +22369,7 @@ async def admin_generate_month_quietanze(data: dict = Body(...), current_user = 
             created += 1
 
     # ── Atleti PRO (da athletes) ──
-    aq = {}
+    aq = {"is_test_user": {"$ne": True}}  # 🆕 escludi atleti di test
     if _sid:
         aq["society_id"] = _sid
     async for a in db.athletes.find(aq):
@@ -22549,6 +22599,8 @@ async def commercialista_summary(year: int, month: int, current_user = Depends(g
                 if _sid and owner not in society_user_ids:
                     continue
                 person_doc = await db.users.find_one({"id": owner})
+            if person_doc and person_doc.get("is_test_user"):
+                continue  # 🆕 escludi utenti di test dai report commercialista
             amt = _receipt_amounts(r)
             if amt["gross"] <= 0:
                 continue
@@ -22747,6 +22799,8 @@ async def commercialista_annual_summary(year: int, current_user = Depends(get_cu
                 if _sid and owner not in society_user_ids:
                     continue
                 person_doc = await db.users.find_one({"id": owner})
+            if person_doc and person_doc.get("is_test_user"):
+                continue  # 🆕 escludi utenti di test dal riepilogo annuale
             amt = _receipt_amounts(r)
             if amt["gross"] <= 0:
                 continue
@@ -39605,7 +39659,7 @@ async def export_prima_nota_csv(current_user = Depends(get_current_user)):
     
     # Get all payments for this society in the current season
     # First get all athletes for this society
-    athletes_cursor = db.athletes.find({"society_id": society_id}, {"_id": 1, "id": 1, "first_name": 1, "last_name": 1, "fiscal_code": 1, "team_id": 1})
+    athletes_cursor = db.athletes.find({"society_id": society_id, "is_test_user": {"$ne": True}}, {"_id": 1, "id": 1, "first_name": 1, "last_name": 1, "fiscal_code": 1, "team_id": 1})
     athletes_list = await athletes_cursor.to_list(10000)
     athlete_map = {}
     for a in athletes_list:
@@ -39701,7 +39755,7 @@ async def prima_nota_gaps(current_user = Depends(get_current_user)):
         sy, ey = now.year - 1, now.year
     prefix = f"RIC-{sy % 100:02d}/{ey % 100:02d}-"
 
-    ath_list = await db.athletes.find({"society_id": society_id}, {"_id": 0, "id": 1}).to_list(20000)
+    ath_list = await db.athletes.find({"society_id": society_id, "is_test_user": {"$ne": True}}, {"_id": 0, "id": 1}).to_list(20000)
     ath_ids = [a["id"] for a in ath_list]
     mine = await db.payments.find(
         {"receipt_number": {"$regex": f"^{prefix}"},
