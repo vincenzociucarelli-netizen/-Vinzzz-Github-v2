@@ -935,6 +935,32 @@ export default function AthleteCompensation() {
             • Al superamento delle soglie è richiesta una dichiarazione
           </Text>
         </View>
+
+        {/* 🗑️ Azzera TUTTI i compensi */}
+        <TouchableOpacity
+          style={{ margin: 16, padding: 12, backgroundColor: '#C62828', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+          onPress={async () => {
+            const confirmMsg = `Eliminare TUTTE le quietanze e i compensi di ${athlete?.full_name || 'questo atleta'}?\n\nL'anagrafica resta, ma lo storico compensi (anche firmati) viene cancellato in modo irreversibile.`;
+            const ok = Platform.OS === 'web'
+              ? window.confirm(confirmMsg)
+              : await new Promise<boolean>((res) => Alert.alert('Azzera tutti i compensi', confirmMsg, [
+                  { text: 'Annulla', style: 'cancel', onPress: () => res(false) },
+                  { text: 'Elimina tutto', style: 'destructive', onPress: () => res(true) },
+                ]));
+            if (!ok) return;
+            try {
+              await api.delete(`/admin/athletes/${id}/compensation/reset-all`);
+              showAlert('Fatto', '✅ Tutte le quietanze e i compensi sono stati eliminati.');
+              await loadData();
+            } catch (error: any) {
+              showAlert('Errore', error?.response?.data?.detail || 'Errore durante l\'azzeramento');
+            }
+          }}
+          testID="admin-athlete-reset-all-btn"
+        >
+          <Ionicons name="trash-outline" size={18} color="#fff" />
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>🗑️ Azzera tutti i compensi</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Receipt Modal - READ ONLY for Admin */}

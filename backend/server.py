@@ -21818,6 +21818,80 @@ async def admin_delete_athlete_receipt(
     return await _full_delete_user_receipt(athlete_id, "athlete", year, month)
 
 
+async def _full_reset_user_compensations(user_id: str, role: str, society_id: str) -> dict:
+    """🆕 Azzera TUTTI i compensi/quietanze di un utente (dirigente/collaboratore/coach),
+    riusando la cancellazione completa mese-per-mese (compensi + documenti firmati + PDF +
+    soglie). NON elimina l'anagrafica. Operazione irreversibile."""
+    role_to_collection = {
+        "collaboratore": ("collaboratore_compensations", "collaboratore_id"),
+        "coach": ("coach_compensations", "coach_id"),
+        "dirigente": ("dirigente_compensations", "dirigente_id"),
+    }
+    collection_name, key = role_to_collection.get(role, (None, None))
+    if collection_name is None:
+        raise HTTPException(status_code=400, detail=f"Ruolo non supportato: {role}")
+
+    # Multi-tenancy: la persona deve appartenere alla società dell'admin
+    person = await db.users.find_one({"id": user_id})
+    if person and society_id and person.get("society_id") not in (None, society_id):
+        raise HTTPException(status_code=403, detail="Utente di altra società")
+
+    # Raccogli tutti i mesi/anni presenti (gestisce month int e stringa legacy)
+    periods = set()
+    async for r in db[collection_name].find({key: user_id}, {"_id": 0, "year": 1, "month": 1}):
+        y = r.get("year")
+        m = r.get("month")
+        try:
+            m = int(m)
+        except Exception:
+            continue
+        if y is not None:
+            periods.add((int(y), m))
+
+    deleted_months = 0
+    for (y, m) in sorted(periods):
+        try:
+            await _full_delete_user_receipt(user_id, role, y, m)
+            deleted_months += 1
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning(f"[RESET-ALL] fallita cancellazione {role} {user_id} {y}-{m}: {e}")
+
+    # Pulizia residua di sicurezza
+    try:
+        await db[collection_name].delete_many({key: user_id})
+    except Exception:
+        pass
+
+    name = (person or {}).get("full_name", "") if person else ""
+    logger.warning(f"[ADMIN-RESET] Compensi {role} {user_id} ({name}) azzerati da admin. Mesi: {deleted_months}")
+    return {"message": "Tutti i compensi sono stati cancellati", "role": role,
+            "user_id": user_id, "full_name": name, "deleted_months": deleted_months}
+
+
+@api_router.delete("/admin/dirigente/{dirigente_id}/compensation/reset-all")
+async def admin_reset_dirigente_compensations(dirigente_id: str, current_user = Depends(get_current_user)):
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    return await _full_reset_user_compensations(dirigente_id, "dirigente", current_user.get("society_id"))
+
+
+@api_router.delete("/admin/collaboratore/{collaboratore_id}/compensation/reset-all")
+async def admin_reset_collaboratore_compensations(collaboratore_id: str, current_user = Depends(get_current_user)):
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    return await _full_reset_user_compensations(collaboratore_id, "collaboratore", current_user.get("society_id"))
+
+
+@api_router.delete("/admin/coach/{coach_id}/compensation/reset-all")
+async def admin_reset_coach_compensations(coach_id: str, current_user = Depends(get_current_user)):
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    return await _full_reset_user_compensations(coach_id, "coach", current_user.get("society_id"))
+
+
+
 
 # Endpoint to get all custom receipts for admin management
 @api_router.get("/admin/quietanze/all")

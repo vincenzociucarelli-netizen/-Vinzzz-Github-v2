@@ -1652,6 +1652,34 @@ export default function AdminDirigenteDetail() {
             <Ionicons name="construct-outline" size={16} color="#fff" />
             <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>🩺 Diagnostica quietanze (legacy fix)</Text>
           </TouchableOpacity>
+
+          {/* 🗑️ Azzera TUTTI i compensi */}
+          <TouchableOpacity
+            style={{ marginTop: 8, padding: 10, backgroundColor: '#C62828', borderRadius: 8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+            onPress={async () => {
+              const confirmMsg = `Eliminare TUTTI i compensi e le quietanze di ${dirigente?.full_name || 'questo dirigente'}?\n\nL'anagrafica resta, ma lo storico compensi (anche firmati) viene cancellato in modo irreversibile.`;
+              const ok = Platform.OS === 'web'
+                ? window.confirm(confirmMsg)
+                : await new Promise<boolean>((res) => Alert.alert('Azzera tutti i compensi', confirmMsg, [
+                    { text: 'Annulla', style: 'cancel', onPress: () => res(false) },
+                    { text: 'Elimina tutto', style: 'destructive', onPress: () => res(true) },
+                  ]));
+              if (!ok) return;
+              try {
+                const r = await api.delete(`/admin/dirigente/${id}/compensation/reset-all`);
+                const msg = `✅ Eliminati i compensi di ${r.data.deleted_months || 0} mesi.`;
+                if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Fatto', msg);
+                await loadData();
+              } catch (e: any) {
+                const msg = e?.response?.data?.detail || 'Errore durante l\'azzeramento';
+                if (Platform.OS === 'web') window.alert(msg); else Alert.alert('Errore', msg);
+              }
+            }}
+            testID="admin-dirigente-reset-all-btn"
+          >
+            <Ionicons name="trash-outline" size={16} color="#fff" />
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>🗑️ Azzera tutti i compensi</Text>
+          </TouchableOpacity>
         </View>
 
         </TabSection>
