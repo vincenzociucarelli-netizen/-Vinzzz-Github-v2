@@ -7495,7 +7495,7 @@ async def admin_delete_parent_complete(parent_user_id: str, request: Request, cu
         else:
             # Unico genitore → elimina atleta e dati collegati
             await db.certificates.delete_many({"athlete_id": aid})
-            await db.payments.delete_many({"athlete_id": aid})
+            await _archive_athlete_paid_payments(aid, ath)
             await db.attendances.delete_many({"athlete_id": aid})
             await db.signed_documents.delete_many({"related_entity_id": aid})
             ath_uid = ath.get("user_id") or ath.get("linked_user_id")
@@ -14839,7 +14839,7 @@ async def self_delete_trial_athlete(athlete_id: str, request: Request, preview: 
     await db.signed_documents.delete_many({"related_entity_id": athlete_id})
     await db.certificates.delete_many({"athlete_id": athlete_id})
     await db.attendances.delete_many({"athlete_id": athlete_id})
-    await db.payments.delete_many({"athlete_id": athlete_id})
+    await _archive_athlete_paid_payments(athlete_id)
 
     await log_audit(
         action="deletion_approved",
@@ -15071,10 +15071,9 @@ async def approve_athlete_deletion(athlete_id: str, current_user = Depends(get_c
     await db.attendances.delete_many({"athlete_id": athlete_id})
     
     # Delete payments that are paid (keep unpaid for obligations)
-    if has_obligations:
-        await db.payments.delete_many({"athlete_id": athlete_id, "paid": True})
-    else:
-        await db.payments.delete_many({"athlete_id": athlete_id})
+    # 🆕 Integrità Prima Nota: conserva i pagamenti già incassati (archiviati con snapshot nome),
+    # elimina solo le rate non pagate. Evita buchi nella numerazione ricevute.
+    await _archive_athlete_paid_payments(athlete_id)
     
     # Audit log BEFORE deleting athlete
     await log_audit(
@@ -15271,7 +15270,7 @@ async def withdraw_trial_leave(current_user = Depends(get_current_user)):
     
     # Delete all related data
     await db.certificates.delete_many({"athlete_id": athlete_id})
-    await db.payments.delete_many({"athlete_id": athlete_id})
+    await _archive_athlete_paid_payments(athlete_id, athlete)
     await db.attendances.delete_many({"athlete_id": athlete_id})
     await db.signed_documents.delete_many({"signer_id": user_id})
     await db.signed_documents.delete_many({"signer_id": athlete_id})
@@ -15418,7 +15417,7 @@ async def delete_athlete(athlete_id: str, current_user = Depends(get_current_use
     
     # Delete all related data
     await db.certificates.delete_many({"athlete_id": athlete_id})
-    await db.payments.delete_many({"athlete_id": athlete_id})
+    await _archive_athlete_paid_payments(athlete_id, athlete)
     await db.attendances.delete_many({"athlete_id": athlete_id})
     
     # Delete the athlete
@@ -17116,6 +17115,30 @@ async def export_athletes_with_codes(current_user = Depends(get_current_user)):
 
 # ==================== REGISTRO STAGIONE & SOLLECITI ====================
 
+async def _archive_athlete_paid_payments(athlete_id, athlete=None):
+    """🆕 13/11/2026 — Integrità Prima Nota: quando un atleta viene eliminato NON cancellare i
+    pagamenti già incassati (con numero ricevuta). Vengono 'archiviati' con uno snapshot del
+    nome, così restano nel registro e NON creano buchi nella numerazione ricevute. Elimina solo
+    le rate NON pagate."""
+    if athlete is None:
+        athlete = await db.athletes.find_one({"id": athlete_id}) or {}
+    name = (athlete.get("full_name")
+            or f"{athlete.get('last_name', '')} {athlete.get('first_name', '')}".strip()
+            or "Atleta eliminato")
+    await db.payments.update_many(
+        {"athlete_id": athlete_id, "paid": True},
+        {"$set": {
+            "athlete_deleted": True,
+            "athlete_name_snapshot": name,
+            "last_name_snapshot": athlete.get("last_name", ""),
+            "first_name_snapshot": athlete.get("first_name", ""),
+            "society_id": athlete.get("society_id"),
+        }},
+    )
+    await db.payments.delete_many({"athlete_id": athlete_id, "paid": {"$ne": True}})
+
+
+
 @api_router.get("/payments/registro-stagione")
 async def get_registro_stagione(current_user = Depends(get_current_user)):
     """Generate registro of all payments for the current sports season with progressive receipt numbers"""
@@ -17151,7 +17174,10 @@ async def get_registro_stagione(current_user = Depends(get_current_user)):
     athlete_ids = list(athlete_map.keys())
     
     payments = await db.payments.find({
-        "athlete_id": {"$in": athlete_ids},
+        "$or": [
+            {"athlete_id": {"$in": athlete_ids}},
+            {"athlete_deleted": True, "society_id": society_id},
+        ],
         "paid": True,
         "paid_date": {"$gte": season_start, "$lt": season_end}
     }).sort("receipt_number", 1).to_list(50000)
@@ -17159,6 +17185,8 @@ async def get_registro_stagione(current_user = Depends(get_current_user)):
     rows = []
     for p in payments:
         athlete = athlete_map.get(p.get("athlete_id", ""), {})
+        last_name = athlete.get("last_name") or p.get("last_name_snapshot", "")
+        first_name = athlete.get("first_name") or p.get("first_name_snapshot", "")
         paid_date = p.get("paid_date", "")
         if isinstance(paid_date, datetime):
             paid_date = paid_date.strftime("%d/%m/%Y")
@@ -17169,8 +17197,8 @@ async def get_registro_stagione(current_user = Depends(get_current_user)):
         rows.append({
             "Ric. Fiscale": p.get("receipt_number", ""),
             "Data Registrazione": reg_date,
-            "Cognome": athlete.get("last_name", ""),
-            "Nome": athlete.get("first_name", ""),
+            "Cognome": last_name,
+            "Nome": first_name,
             "Data Pagamento": paid_date,
             "Tipo": p.get("payment_method", ""),
             "Importo": f"{amount:.2f}".replace('.', ','),
@@ -26316,7 +26344,7 @@ async def request_data_deletion(athlete_id: str, current_user = Depends(get_curr
     
     # Delete all related data
     # 1. Delete payments
-    await db.payments.delete_many({"athlete_id": athlete_id})
+    await _archive_athlete_paid_payments(athlete_id, athlete)
     
     # 2. Delete certificates
     await db.certificates.delete_many({"athlete_id": athlete_id})
@@ -39586,9 +39614,11 @@ async def export_prima_nota_csv(current_user = Depends(get_current_user)):
     
     athlete_ids = list(athlete_map.keys())
     
-    # Get all payments for these athletes, sorted by receipt_number
+    # Get all payments for these athletes, sorted by receipt_number (inclusi i pagamenti
+    # archiviati di atleti eliminati, per non creare buchi nella Prima Nota)
     payments = await db.payments.find(
-        {"athlete_id": {"$in": athlete_ids}, "receipt_number": {"$exists": True, "$nin": [None, ""]}}
+        {"receipt_number": {"$exists": True, "$nin": [None, ""]},
+         "$or": [{"athlete_id": {"$in": athlete_ids}}, {"athlete_deleted": True, "society_id": society_id}]}
     ).sort("receipt_number", 1).to_list(50000)
     
     # Get teams for team name lookup - use custom 'id' field, not '_id'
@@ -39613,8 +39643,12 @@ async def export_prima_nota_csv(current_user = Depends(get_current_user)):
     
     for p in payments:
         athlete = athlete_map.get(p.get("athlete_id", ""), {})
-        athlete_name = f"{athlete.get('last_name', '')} {athlete.get('first_name', '')}".strip()
-        team_name = team_map.get(athlete.get("team_id", ""), "")
+        if athlete:
+            athlete_name = f"{athlete.get('last_name', '')} {athlete.get('first_name', '')}".strip()
+            team_name = team_map.get(athlete.get("team_id", ""), "")
+        else:
+            athlete_name = p.get("athlete_name_snapshot") or f"{p.get('last_name_snapshot','')} {p.get('first_name_snapshot','')}".strip()
+            team_name = "(atleta eliminato)"
         
         paid_date = p.get("paid_date", "")
         if isinstance(paid_date, datetime):
@@ -39670,7 +39704,8 @@ async def prima_nota_gaps(current_user = Depends(get_current_user)):
     ath_list = await db.athletes.find({"society_id": society_id}, {"_id": 0, "id": 1}).to_list(20000)
     ath_ids = [a["id"] for a in ath_list]
     mine = await db.payments.find(
-        {"receipt_number": {"$regex": f"^{prefix}"}, "athlete_id": {"$in": ath_ids}},
+        {"receipt_number": {"$regex": f"^{prefix}"},
+         "$or": [{"athlete_id": {"$in": ath_ids}}, {"athlete_deleted": True, "society_id": society_id}]},
         {"_id": 0, "receipt_number": 1},
     ).to_list(50000)
     nums = sorted({int(p["receipt_number"].split("-")[-1]) for p in mine if p.get("receipt_number") and p["receipt_number"].split("-")[-1].isdigit()})
