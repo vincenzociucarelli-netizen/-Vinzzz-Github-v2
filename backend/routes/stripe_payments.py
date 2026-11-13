@@ -270,8 +270,16 @@ async def stripe_reconcile(limit: int = 100, current_user=Depends(get_current_us
     settings = await _get_society_stripe_settings(society_id)
     sk = settings["stripe_secret_key"]
 
+    # Scorri fino a ~500 sessioni recenti (auto-paginazione) così da coprire anche
+    # incassi non recentissimi (es. di settimane prima), non solo le ultime 100.
+    MAX_SESSIONS = 500
+    collected = []
     try:
-        sessions = stripe.checkout.Session.list(api_key=sk, limit=max(1, min(int(limit or 100), 100)))
+        it = stripe.checkout.Session.list(api_key=sk, limit=100).auto_paging_iter()
+        for s in it:
+            collected.append(s)
+            if len(collected) >= MAX_SESSIONS:
+                break
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Errore Stripe: {e}")
 
@@ -279,7 +287,7 @@ async def stripe_reconcile(limit: int = 100, current_user=Depends(get_current_us
     already = 0
     skipped = 0
 
-    for sess in (sessions.get("data", []) if isinstance(sessions, dict) else sessions.data):
+    for sess in collected:
         try:
             if getattr(sess, "payment_status", None) != "paid" and (sess.get("payment_status") if isinstance(sess, dict) else None) != "paid":
                 skipped += 1
