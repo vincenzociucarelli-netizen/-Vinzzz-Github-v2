@@ -147,6 +147,10 @@ export const monthlyPaymentsHTML = (d: MonthlyExport): string => {
     Totale da versare (F24): <b>${eur(d.totals.total_versare)}</b>
   </div>
   <div class="foot">${d.rows.some(r => r.estimated) ? 'Gli importi contrassegnati con (stima) sono provvisori e verranno confermati alla firma della quietanza.<br/>' : ''}Documento generato automaticamente da RegistraTEAM.</div>
+</body></html>`;
+};
+
+// ─────────────────────── RIEPILOGO ANNUALE ───────────────────────
 export interface AnnualRow {
   user_role: string; full_name: string; fiscal_code: string;
   months: number; total_gross: number; total_net: number; total_paid: number;
