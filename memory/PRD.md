@@ -2189,3 +2189,10 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - Il report export (src/utils/paymentsReport.ts monthlyPaymentsCSV/HTML) GIÀ include per persona: Lordo, Netto da pagare, Da versare (F24), Bonifico, Quietanza firmata + totali. Backend /admin/commercialista/summary già restituisce amount_net per persona.
 - MIGLIORIA a video (commercialista.tsx): aggiunta riga "💶 Da bonificare: {amount_net}" su ogni persona e "Totale netto da bonificare" nei totali del mese (prima mostrava solo il Lordo). Nessuna modifica backend.
 - Lint OK, export web OK. Richiede redeploy Vercel per i dati reali.
+
+## Aggiornamento 12/11/2026 (2) — Cambio data certificato → deseleziona verifica admin + copia originale
+- Richiesta: quando si modifica la DATA del certificato medico, devono deselezionarsi automaticamente la verifica admin (medical_certificate_verified) e il possesso della copia originale (medical_certificate_original_received).
+- FIX backend (server.py POST /certificates/simple): calcolo date_changed confrontando per DATA DI CALENDARIO (robusto a orario/fuso/formato) e SOLO sui campi che avevano già un valore (exp_changed/iss_changed). Se date_changed → verified_value=False + reset medical_certificate_original_received (+ _by/_by_name/_at a None). La verifica già azzera verified_at/by nel ramo elif.
+- IMPORTANTE: il tasto "Verifica" (handleVerifyCertificate) e il toggle copia originale re-inviano le STESSE date → date_changed=False, quindi NON vengono azzerati (nessuna regressione). Inserimento iniziale (nessuna data precedente) non resetta.
+- Frontend invariato: dopo il salvataggio la pagina fa loadData() e riflette i flag deselezionati.
+- Validato con seed: (1) cambio data → False/False; (2) stessa data formato diverso → True/True; (3) issue prima assente → True/True. Richiede redeploy Render.

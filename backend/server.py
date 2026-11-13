@@ -15593,6 +15593,7 @@ async def create_certificate_simple(
     old_expiry = athlete.get("medical_certificate_expiry")
     old_issue = athlete.get("medical_certificate_issue_date")
     old_verified = athlete.get("medical_certificate_verified", False)
+    old_original = athlete.get("medical_certificate_original_received", False)
     
     # Parse dates
     try:
@@ -15610,7 +15611,31 @@ async def create_certificate_simple(
             pass
     
     now = datetime.utcnow()
-    
+
+    # 🆕 Se la DATA del certificato viene MODIFICATA (su un certificato già esistente),
+    # la verifica dell'admin e il possesso della copia originale NON sono più validi per
+    # il nuovo certificato: vengono quindi DESELEZIONATI automaticamente (vanno ri-controllati).
+    # Confronto per DATA di calendario (robusto a differenze di orario/fuso/formato) e solo
+    # sui campi che AVEVANO già un valore (così il tasto "Verifica", che re-invia le stesse
+    # date, non azzera nulla).
+    def _as_date(x):
+        if not x:
+            return None
+        try:
+            return datetime.fromisoformat(str(x).replace('Z', '+00:00')).date()
+        except (ValueError, TypeError):
+            return None
+
+    old_exp_d = _as_date(old_expiry)
+    old_iss_d = _as_date(old_issue)
+    new_exp_d = expiry_dt.date()
+    new_iss_d = issue_dt.date() if issue_dt else None
+    exp_changed = old_exp_d is not None and old_exp_d != new_exp_d
+    iss_changed = old_iss_d is not None and old_iss_d != new_iss_d
+    date_changed = exp_changed or iss_changed
+    if date_changed:
+        verified_value = False
+
     # Build metadata update
     update_data = {
         "medical_certificate_expiry": expiry_dt.isoformat(),
@@ -15638,6 +15663,13 @@ async def create_certificate_simple(
         update_data["medical_certificate_verified_at"] = None
         update_data["medical_certificate_verified_by"] = None
         update_data["medical_certificate_verified_by_name"] = None
+
+    # 🆕 Cambio data → deseleziona anche il possesso della COPIA ORIGINALE
+    if date_changed:
+        update_data["medical_certificate_original_received"] = False
+        update_data["medical_certificate_original_received_by"] = None
+        update_data["medical_certificate_original_received_by_name"] = None
+        update_data["medical_certificate_original_received_at"] = None
     
     await db.athletes.update_one(
         {"id": data.athlete_id},
