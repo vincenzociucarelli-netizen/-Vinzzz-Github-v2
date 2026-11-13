@@ -122,6 +122,151 @@ async def stripe_received_payments(limit: int = 100, current_user=Depends(get_cu
     return {"count": len(items), "payments": items}
 
 
+@router.post("/admin/stripe/reconcile")
+async def stripe_reconcile(limit: int = 100, current_user=Depends(get_current_user)):
+    """🆕 Riconcilia gli incassi Stripe NON registrati in app.
+
+    Se il webhook di Stripe non viene consegnato (es. URL/secret non allineati dopo un
+    redeploy), un pagamento può risultare "Riuscito" su Stripe ma NON comparire nella
+    scheda dell'atleta. Questo endpoint scorre le Checkout Session pagate e crea/aggiorna
+    i record mancanti. È IDEMPOTENTE: ogni sessione è identificata da `stripe_session_id`,
+    quindi non genera mai doppioni.
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    society_id = current_user.get("society_id")
+    settings = await _get_society_stripe_settings(society_id)
+    sk = settings["stripe_secret_key"]
+
+    try:
+        sessions = stripe.checkout.Session.list(api_key=sk, limit=max(1, min(int(limit or 100), 100)))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Errore Stripe: {e}")
+
+    reconciled = []
+    already = 0
+    skipped = 0
+
+    for sess in (sessions.get("data", []) if isinstance(sessions, dict) else sessions.data):
+        try:
+            if getattr(sess, "payment_status", None) != "paid" and (sess.get("payment_status") if isinstance(sess, dict) else None) != "paid":
+                skipped += 1
+                continue
+            meta = (sess.get("metadata") if isinstance(sess, dict) else sess.metadata) or {}
+            # Multi-tenant safety: processa solo sessioni di QUESTA società
+            if meta.get("society_id") and meta.get("society_id") != society_id:
+                skipped += 1
+                continue
+            if meta.get("type") == "recurring_activation":
+                skipped += 1
+                continue
+
+            sid = sess.get("id") if isinstance(sess, dict) else sess.id
+            # Già registrato? (idempotenza)
+            if await db.payments.find_one({"stripe_session_id": sid}):
+                already += 1
+                continue
+
+            amount_total = (sess.get("amount_total") if isinstance(sess, dict) else sess.amount_total) or 0
+            amount = round(amount_total / 100.0, 2)
+            payment_intent = sess.get("payment_intent") if isinstance(sess, dict) else sess.payment_intent
+            created_ts = sess.get("created") if isinstance(sess, dict) else sess.created
+            try:
+                paid_dt = datetime.fromtimestamp(created_ts, tz=timezone.utc)
+            except Exception:
+                paid_dt = datetime.now(timezone.utc)
+
+            payment_id = meta.get("payment_id")
+            athlete_id = meta.get("athlete_id")
+            pend = await db.payments.find_one({"id": payment_id}) if payment_id else None
+            if pend and not athlete_id:
+                athlete_id = pend.get("athlete_id")
+            if not athlete_id:
+                # Impossibile attribuire a un atleta: salta (verrà mostrato in "received-payments")
+                skipped += 1
+                continue
+
+            athlete = await db.athletes.find_one({"id": athlete_id})
+            athlete_name = (f"{athlete.get('last_name','')} {athlete.get('first_name','')}".strip()
+                            if athlete else athlete_id)
+            description = (pend.get("description") if pend else None) or "Pagamento Stripe (riconciliato)"
+
+            try:
+                receipt_number = await get_next_receipt_number(db, society_id)
+            except Exception:
+                receipt_number = None
+
+            if pend and not pend.get("paid"):
+                # Completa la rata PENDING esistente
+                set_updates = {
+                    "paid": True,
+                    "paid_amount": amount if amount > 0 else float(pend.get("amount", 0) or 0),
+                    "paid_date": paid_dt,
+                    "payment_method": "stripe",
+                    "stripe_session_id": sid,
+                    "stripe_payment_intent": payment_intent,
+                    "registration_date": pend.get("registration_date") or paid_dt,
+                }
+                if not pend.get("receipt_number") and receipt_number:
+                    set_updates["receipt_number"] = receipt_number
+                await db.payments.update_one({"id": pend["id"]}, {"$set": set_updates})
+                reconciled.append({
+                    "action": "completata_rata",
+                    "athlete_id": athlete_id, "athlete_name": athlete_name,
+                    "amount": set_updates["paid_amount"], "date": _format_receipt_datetime(paid_dt),
+                    "description": pend.get("description") or description,
+                })
+            else:
+                # Crea un nuovo record pagato (rata inesistente o già pagata da altra sessione)
+                import uuid as _uuid
+                new_doc = {
+                    "id": _uuid.uuid4().hex,
+                    "athlete_id": athlete_id,
+                    "society_id": society_id,
+                    "amount": amount,
+                    "description": description,
+                    "paid": True,
+                    "paid_amount": amount,
+                    "paid_date": paid_dt,
+                    "payment_method": "stripe",
+                    "is_cash": False,
+                    "receipt_number": receipt_number,
+                    "registration_date": paid_dt,
+                    "created_at": datetime.now(timezone.utc),
+                    "created_by": current_user.get("id"),
+                    "stripe_session_id": sid,
+                    "stripe_payment_intent": payment_intent,
+                }
+                await db.payments.insert_one(new_doc)
+                reconciled.append({
+                    "action": "creato_pagamento",
+                    "athlete_id": athlete_id, "athlete_name": athlete_name,
+                    "amount": amount, "date": _format_receipt_datetime(paid_dt),
+                    "description": description,
+                })
+
+            # Allinea il log tentativo
+            try:
+                await db.stripe_payment_attempts.update_one(
+                    {"id": sid}, {"$set": {"status": "paid", "paid_at": paid_dt, "reconciled": True}}
+                )
+            except Exception:
+                pass
+        except Exception as _e:
+            logger.exception(f"[stripe reconcile] session failed: {_e}")
+            skipped += 1
+            continue
+
+    return {
+        "ok": True,
+        "reconciled_count": len(reconciled),
+        "already_recorded": already,
+        "skipped": skipped,
+        "reconciled": reconciled,
+    }
+
+
+
 
 
 async def _get_payment_context(payment_id: str, current_user: dict, allow_paid: bool = False) -> tuple[dict, dict, dict]:

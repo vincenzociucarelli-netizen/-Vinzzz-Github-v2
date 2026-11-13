@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Linking,
   Platform,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import api from '../../src/services/api';
@@ -21,6 +22,7 @@ export default function StripePaymentsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [payments, setPayments] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [reconciling, setReconciling] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -44,6 +46,31 @@ export default function StripePaymentsScreen() {
     if (!url) return;
     Linking.openURL(url).catch(() => {});
   };
+
+  const reconcile = useCallback(async () => {
+    setReconciling(true);
+    try {
+      const res = await api.post('/admin/stripe/reconcile');
+      const n = res.data?.reconciled_count || 0;
+      const items = res.data?.reconciled || [];
+      if (n === 0) {
+        Alert.alert('Tutto allineato ✅', 'Nessun incasso mancante: tutti i pagamenti Stripe sono già registrati nelle schede.');
+      } else {
+        const lines = items
+          .map((r: any) => `• ${r.athlete_name}: ${formatCurrency(r.amount)} (${r.date})`)
+          .join('\n');
+        Alert.alert(
+          `Riconciliati ${n} incassi ✅`,
+          `Questi pagamenti Stripe sono stati registrati nelle schede degli atleti:\n\n${lines}`,
+        );
+      }
+      await load();
+    } catch (e: any) {
+      Alert.alert('Errore', e?.response?.data?.detail || 'Riconciliazione non riuscita');
+    } finally {
+      setReconciling(false);
+    }
+  }, [load]);
 
   return (
     <View style={styles.container} data-testid="stripe-payments-page">
@@ -73,6 +100,26 @@ export default function StripePaymentsScreen() {
               risalire a incassi il cui record in app è stato eliminato: confronta data e importo.
             </Text>
           </View>
+
+          <TouchableOpacity
+            style={[styles.reconcileBtn, reconciling && { opacity: 0.6 }]}
+            onPress={reconcile}
+            disabled={reconciling}
+            testID="reconcile-btn"
+          >
+            {reconciling ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Ionicons name="sync" size={18} color="#fff" />
+            )}
+            <Text style={styles.reconcileBtnText}>
+              {reconciling ? 'Controllo incassi…' : 'Riconcilia incassi mancanti'}
+            </Text>
+          </TouchableOpacity>
+          <Text style={styles.reconcileHint}>
+            Registra nelle schede degli atleti i pagamenti Stripe riusciti ma non ancora
+            comparsi (es. se il webhook non è stato consegnato). Operazione sicura: non crea doppioni.
+          </Text>
 
           {error ? (
             <View style={styles.errorBox}>
@@ -128,6 +175,9 @@ const styles = StyleSheet.create({
   headerSubtitle: { color: '#D6D2FF', fontSize: 12, marginTop: 2 },
   infoBox: { backgroundColor: '#F5F3FF', borderRadius: 10, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#D6D2FF' },
   infoText: { fontSize: 12, color: '#4A4A6A', lineHeight: 18 },
+  reconcileBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#635BFF', borderRadius: 10, paddingVertical: 13, marginBottom: 6 },
+  reconcileBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  reconcileHint: { fontSize: 11, color: '#777', lineHeight: 16, marginBottom: 12 },
   errorBox: { backgroundColor: '#FFEBEE', borderRadius: 10, padding: 14, borderWidth: 1, borderColor: '#FFCDD2' },
   errorText: { color: '#C62828', fontSize: 13 },
   emptyBox: { alignItems: 'center', padding: 40 },
