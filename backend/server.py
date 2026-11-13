@@ -22177,7 +22177,9 @@ async def admin_generate_month_quietanze(data: dict = Body(...), current_user = 
         ("collaboratore", "collaboratore_compensations", "collaboratore_id"),
     ]
     for role, coll, idf in role_map:
-        uq = {"role": role}
+        # 🆕 I dirigenti legacy possono avere role="viewer" (vecchio alias storico):
+        # vanno inclusi, altrimenti la generazione li salta (es. Scargiali, Bizzarri).
+        uq = {"role": {"$in": ["dirigente", "viewer"]}} if role == "dirigente" else {"role": role}
         if _sid:
             uq["society_id"] = _sid
         async for u in db.users.find(uq):
