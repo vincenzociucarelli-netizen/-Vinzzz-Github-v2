@@ -82,6 +82,138 @@ async def _get_society_stripe_settings(society_id: str) -> dict:
     return s
 
 
+async def _insert_stripe_payment(*, athlete_id, society_id, amount, description,
+                                 session_id, payment_intent, created_by=None):
+    """🆕 Crea un record pagamento Stripe 'pagato' e indipendente, identificato in modo
+    univoco da `stripe_session_id` (idempotenza). Usato sia dal webhook (quando la rata di
+    riferimento è già pagata = incasso aggiuntivo) sia dalla riconciliazione manuale."""
+    import uuid as _uuid
+    now = datetime.now(timezone.utc)
+    amt = round(float(amount or 0), 2)
+    doc = {
+        "id": _uuid.uuid4().hex,
+        "athlete_id": athlete_id,
+        "society_id": society_id,
+        "amount": amt,
+        "description": description or "Pagamento Stripe",
+        "paid": True,
+        "paid_amount": amt,
+        "paid_date": now,
+        "payment_method": "stripe",
+        "is_cash": False,
+        "registration_date": now,
+        "created_at": now,
+        "created_by": created_by,
+        "stripe_session_id": session_id,
+        "stripe_payment_intent": payment_intent,
+    }
+    try:
+        doc["receipt_number"] = await get_next_receipt_number(db, society_id)
+    except Exception:
+        doc["receipt_number"] = None
+    await db.payments.insert_one(doc)
+    return doc
+
+
+async def _apply_completed_checkout(session, society_id):
+    """🆕 Registra una Checkout Session Stripe PAGATA sul pagamento/atleta corretto.
+    Usato dal webhook (checkout.session.completed). È IDEMPOTENTE per `stripe_session_id`.
+
+    Casi gestiti:
+    - rata collegata ancora da pagare → la marca pagata (con supporto parziale);
+    - rata collegata GIÀ pagata da un incasso precedente → crea un nuovo pagamento a sé
+      (così i soldi realmente incassati compaiono sempre nell'anagrafica dell'atleta);
+    - rata collegata assente (pending scaduto) ma athlete_id nei metadati → crea il pagamento.
+    """
+    def _g(obj, key, default=None):
+        return (obj.get(key) if isinstance(obj, dict) else getattr(obj, key, default)) if obj is not None else default
+
+    metadata = _g(session, "metadata") or {}
+    payment_id = metadata.get("payment_id")
+    if not payment_id:
+        return
+    is_partial = metadata.get("partial") == "1"
+    try:
+        charge_amount = float(metadata.get("charge_amount") or 0)
+    except (TypeError, ValueError):
+        charge_amount = 0.0
+    session_id = _g(session, "id")
+    try:
+        sess_total = float(_g(session, "amount_total") or 0) / 100.0
+    except Exception:
+        sess_total = 0.0
+    payment_intent = _g(session, "payment_intent")
+
+    # Idempotenza assoluta: se QUESTA sessione è già registrata, non rifare nulla
+    already_recorded = await db.payments.find_one({"stripe_session_id": session_id})
+    payment_doc = None if already_recorded else await db.payments.find_one({"id": payment_id})
+
+    if payment_doc:
+        total_amount = float(payment_doc.get("amount", 0) or 0)
+        already_paid = float(payment_doc.get("paid_amount") or 0)
+        new_paid = round(already_paid + (charge_amount if charge_amount > 0 else total_amount - already_paid), 2)
+        is_fully_paid = new_paid >= total_amount - 0.01
+        already_full = payment_doc.get("paid") and not payment_doc.get("partial_payments")
+        if already_full:
+            amt = sess_total if sess_total > 0 else (charge_amount if charge_amount > 0 else total_amount)
+            await _insert_stripe_payment(
+                athlete_id=payment_doc.get("athlete_id"), society_id=society_id, amount=amt,
+                description=payment_doc.get("description") or "Pagamento Stripe",
+                session_id=session_id, payment_intent=payment_intent,
+            )
+            logger.info(f"[stripe webhook] incasso aggiuntivo registrato per atleta {payment_doc.get('athlete_id')} (rata già pagata)")
+        else:
+            now = datetime.now(timezone.utc)
+            set_updates = {
+                "paid_amount": new_paid,
+                "payment_method": "stripe",
+                "stripe_session_id": session_id,
+                "stripe_payment_intent": payment_intent,
+            }
+            if is_fully_paid:
+                set_updates["paid"] = True
+                set_updates["paid_date"] = now
+                if not payment_doc.get("receipt_number"):
+                    try:
+                        set_updates["receipt_number"] = await get_next_receipt_number(db, society_id)
+                    except Exception:
+                        logger.exception("[stripe webhook] receipt_number assignment failed")
+            await db.payments.update_one(
+                {"id": payment_id},
+                {
+                    "$set": set_updates,
+                    "$push": {
+                        "partial_payments": {
+                            "amount": round(charge_amount if is_partial else total_amount - already_paid, 2),
+                            "stripe_session_id": session_id,
+                            "stripe_payment_intent": payment_intent,
+                            "paid_at": now,
+                            "is_partial": is_partial,
+                        }
+                    } if is_partial else {},
+                } if is_partial else {"$set": set_updates},
+            )
+    elif not already_recorded and metadata.get("athlete_id"):
+        await _insert_stripe_payment(
+            athlete_id=metadata.get("athlete_id"), society_id=society_id,
+            amount=sess_total if sess_total > 0 else charge_amount,
+            description="Pagamento Stripe", session_id=session_id, payment_intent=payment_intent,
+        )
+        logger.info("[stripe webhook] incasso registrato da metadata athlete_id (rata collegata assente)")
+
+    # Aggiorna il log tentativo
+    try:
+        await db.stripe_payment_attempts.update_one(
+            {"id": session_id},
+            {"$set": {"status": "paid", "paid_at": datetime.now(timezone.utc), "partial": is_partial, "charge_amount": charge_amount}},
+        )
+    except Exception:
+        pass
+    logger.info(f"[stripe webhook] checkout session {session_id} applicata (society={society_id}, partial={is_partial})")
+
+
+
+
 @router.get("/admin/stripe/received-payments")
 async def stripe_received_payments(limit: int = 100, current_user=Depends(get_current_user)):
     """🆕 21/09/2026 — Elenca i pagamenti realmente RICEVUTI su Stripe (data, importo,
@@ -625,67 +757,7 @@ async def stripe_webhook(society_id: str, request: Request):
 
     if event_type == "checkout.session.completed":
         session = event["data"]["object"]
-        metadata = session.get("metadata") or {}
-        payment_id = metadata.get("payment_id")
-        if payment_id:
-            # 🆕 28/07/2026 — Supporto pagamento parziale
-            is_partial = metadata.get("partial") == "1"
-            try:
-                charge_amount = float(metadata.get("charge_amount") or 0)
-            except (TypeError, ValueError):
-                charge_amount = 0.0
-            payment_doc = await db.payments.find_one({"id": payment_id})
-            if payment_doc:
-                total_amount = float(payment_doc.get("amount", 0) or 0)
-                already_paid = float(payment_doc.get("paid_amount") or 0)
-                new_paid = round(already_paid + (charge_amount if charge_amount > 0 else total_amount - already_paid), 2)
-                is_fully_paid = new_paid >= total_amount - 0.01
-
-                # Se il pagamento è già stato marcato come "paid" senza logic parziale
-                # (webhook duplicato/redundant), non fare nulla
-                already_full = payment_doc.get("paid") and not payment_doc.get("partial_payments")
-                if not already_full:
-                    now = datetime.now(timezone.utc)
-                    set_updates = {
-                        "paid_amount": new_paid,
-                        "payment_method": "stripe",
-                        "stripe_session_id": session.get("id"),
-                        "stripe_payment_intent": session.get("payment_intent"),
-                    }
-                    if is_fully_paid:
-                        set_updates["paid"] = True
-                        set_updates["paid_date"] = now
-                        # 🆕 10/08/2026 — Assegna il N. Prog. (ricevuta) anche agli incassi
-                        # Stripe, come per contanti/bonifico, se non già presente.
-                        if not payment_doc.get("receipt_number"):
-                            try:
-                                set_updates["receipt_number"] = await get_next_receipt_number(db, society_id)
-                            except Exception:
-                                logger.exception("[stripe webhook] receipt_number assignment failed")
-                    await db.payments.update_one(
-                        {"id": payment_id},
-                        {
-                            "$set": set_updates,
-                            "$push": {
-                                "partial_payments": {
-                                    "amount": round(charge_amount if is_partial else total_amount - already_paid, 2),
-                                    "stripe_session_id": session.get("id"),
-                                    "stripe_payment_intent": session.get("payment_intent"),
-                                    "paid_at": now,
-                                    "is_partial": is_partial,
-                                }
-                            } if is_partial else {},
-                        } if is_partial else {"$set": set_updates},
-                    )
-            # Aggiorna anche il log tentativo
-            try:
-                await db.stripe_payment_attempts.update_one(
-                    {"id": session.get("id")},
-                    {"$set": {"status": "paid", "paid_at": datetime.now(timezone.utc), "partial": is_partial, "charge_amount": charge_amount}},
-                )
-            except Exception:
-                pass
-            logger.info(f"[stripe webhook] payment {payment_id} paid via Stripe (society={society_id}, partial={is_partial}, amount={charge_amount})")
+        await _apply_completed_checkout(session, society_id)
 
     elif event_type == "checkout.session.expired":
         session = event["data"]["object"]
