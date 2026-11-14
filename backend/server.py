@@ -21246,13 +21246,26 @@ async def get_today_birthdays(current_user = Depends(get_current_user)):
                     "icon": "person"
                 })
     
-    # Check users (coaches and dirigenti) - filter by society
+    # Check users (coach, dirigenti, collaboratori, coordinatori, admin) - filter by society
+    # 🆕 Include TUTTI i ruoli staff (prima mancavano 'dirigente', 'collaboratore',
+    # 'coordinatore', per cui alcuni compleanni non comparivano). Niente filtro rigido
+    # su status 'approved' così vengono mostrati anche gli utenti "virtuali".
+    USER_PROJ = {"_id": 0, "id": 1, "full_name": 1, "date_of_birth": 1, "role": 1}
     users = await db.users.find({
         "society_id": society_id,
-        "role": {"$in": [UserRole.COACH, UserRole.VIEWER, UserRole.ADMIN]},
-        "status": UserStatus.APPROVED
-    }, USER_PROJ).to_list(1000)
-    
+        "role": {"$in": ["coach", "dirigente", "viewer", "collaboratore", "coordinatore", "admin"]},
+        "status": {"$nin": ["rejected", "deleted", "suspended"]},
+    }, USER_PROJ).to_list(2000)
+
+    ROLE_LABELS = {
+        "coach": ("coach", "fitness"),
+        "dirigente": ("dirigente", "briefcase"),
+        "viewer": ("dirigente", "briefcase"),
+        "collaboratore": ("collaboratore", "briefcase"),
+        "coordinatore": ("coordinatore", "briefcase"),
+        "admin": ("admin", "briefcase"),
+    }
+
     for user in users:
         dob = user.get("date_of_birth")
         if dob:
@@ -21263,15 +21276,13 @@ async def get_today_birthdays(current_user = Depends(get_current_user)):
                     continue
             if dob.month == today_month and dob.day == today_day:
                 age = today.year - dob.year
-                role_label = "coach" if user["role"] == UserRole.COACH else "dirigente"
-                if user["role"] == UserRole.ADMIN:
-                    role_label = "admin"
+                role_label, icon = ROLE_LABELS.get(user.get("role"), ("staff", "briefcase"))
                 birthdays.append({
                     "id": user["id"],
                     "name": user["full_name"],
                     "type": role_label,
                     "age": age,
-                    "icon": "fitness" if user["role"] == UserRole.COACH else "briefcase"
+                    "icon": icon
                 })
     
     return birthdays
