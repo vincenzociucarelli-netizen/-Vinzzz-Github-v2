@@ -21977,6 +21977,40 @@ async def admin_set_athlete_test_flag(athlete_id: str, data: dict = Body(...), c
     return {"ok": True, "is_test_user": flag}
 
 
+@api_router.patch("/admin/payments/{payment_id}/receipt-number")
+async def admin_set_payment_receipt_number(payment_id: str, data: dict = Body(...), current_user = Depends(get_current_user)):
+    """🆕 Imposta/corregge manualmente il numero di ricevuta fiscale di un pagamento.
+    Usato per ripristinare i numeri originali su incassi riconciliati. Controlla l'unicità."""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    society_id = current_user.get("society_id")
+    payment = await db.payments.find_one({"id": payment_id})
+    if not payment:
+        raise HTTPException(status_code=404, detail="Pagamento non trovato")
+
+    # Multi-tenancy: verifica la società (via payment.society_id o via atleta)
+    p_sid = payment.get("society_id")
+    if not p_sid:
+        ath = await db.athletes.find_one({"id": payment.get("athlete_id")}, {"_id": 0, "society_id": 1})
+        p_sid = (ath or {}).get("society_id")
+    if p_sid and society_id and p_sid != society_id:
+        raise HTTPException(status_code=403, detail="Pagamento di altra società")
+
+    new_rn = (data.get("receipt_number") or "").strip()
+    if not new_rn:
+        raise HTTPException(status_code=400, detail="Numero ricevuta mancante")
+
+    # Unicità: nessun ALTRO pagamento deve avere già questo numero
+    dup = await db.payments.find_one({"receipt_number": new_rn, "id": {"$ne": payment_id}})
+    if dup:
+        raise HTTPException(status_code=409, detail=f"Il numero {new_rn} è già usato da un altro pagamento")
+
+    await db.payments.update_one({"id": payment_id}, {"$set": {"receipt_number": new_rn}})
+    logger.warning(f"[ADMIN] N. ricevuta pagamento {payment_id} impostato a {new_rn} da {current_user.get('id')}")
+    return {"ok": True, "receipt_number": new_rn}
+
+
+
 
 
 

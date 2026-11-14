@@ -4129,6 +4129,34 @@ export default function AdminAthleteDetail() {
                       >
                         <Ionicons name="pencil" size={18} color="#007AFF" />
                       </TouchableOpacity>
+                      {/* 🆕 Modifica numero ricevuta fiscale (per correggere incassi riconciliati) */}
+                      {payment.paid && (
+                        <TouchableOpacity
+                          style={styles.editPaymentBtn}
+                          onPress={async () => {
+                            const current = payment.receipt_number || '';
+                            let val: string | null = null;
+                            if (Platform.OS === 'web') {
+                              val = window.prompt(`Numero ricevuta fiscale per questo pagamento\n(${payment.description || ''})\n\nAttuale: ${current || '—'}`, current);
+                            } else {
+                              Alert.alert('Modifica n. ricevuta', 'Questa operazione è disponibile dalla versione web dell\'app.');
+                              return;
+                            }
+                            if (val === null) return;
+                            const rn = val.trim();
+                            if (!rn) return;
+                            try {
+                              await api.patch(`/admin/payments/${payment.id}/receipt-number`, { receipt_number: rn });
+                              window.alert(`✅ Numero ricevuta impostato: ${rn}`);
+                              await loadData();
+                            } catch (e: any) {
+                              window.alert(e?.response?.data?.detail || 'Errore nel salvataggio');
+                            }
+                          }}
+                        >
+                          <Ionicons name="pricetag-outline" size={18} color="#6A1B9A" />
+                        </TouchableOpacity>
+                      )}
                       {/* 🆕 27/07/2026 — Bottone Rimborsa (solo per pagamenti Stripe non ancora rimborsati completamente) */}
                       {payment.stripe_payment_intent && !payment.refunded && (
                         <TouchableOpacity
