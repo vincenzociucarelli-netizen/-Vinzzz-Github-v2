@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Platform, Alert,
+  ActivityIndicator, Platform, Alert, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -71,6 +71,16 @@ const STATUS_LABELS: { [k: string]: string } = {
 const statusLabel = (s: string) => STATUS_LABELS[s] || s || '—';
 const genderLabel = (g: string) => (g === 'F' ? 'F' : g === 'M' ? 'M' : g || '—');
 
+// Converte una data "gg/mm/aaaa" (anche con giorno/mese a 1 cifra) in numero aaaammgg
+// confrontabile. Ritorna null se la stringa non è una data valida/completa.
+const itDateToNum = (s: string): number | null => {
+  const m = (s || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  const d = parseInt(m[1], 10), mo = parseInt(m[2], 10), y = parseInt(m[3], 10);
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  return y * 10000 + mo * 100 + d;
+};
+
 export default function TeamRoster() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -82,6 +92,8 @@ export default function TeamRoster() {
   const [exporting, setExporting] = useState(false);
   const [selectedCols, setSelectedCols] = useState<string[]>(DEFAULT_SELECTED);
   const [selectedCity, setSelectedCity] = useState<string>('');
+  const [bornFrom, setBornFrom] = useState<string>('');
+  const [bornTo, setBornTo] = useState<string>('');
 
   const showAlert = (title: string, message: string) => {
     if (Platform.OS === 'web') { window.alert(`${title}\n${message}`); }
@@ -121,11 +133,21 @@ export default function TeamRoster() {
     return Array.from(set).sort((x, y) => x.localeCompare(y, 'it'));
   }, [athletes]);
 
-  // Atleti filtrati per città (case-insensitive)
+  // Atleti filtrati per città (case-insensitive) e per periodo di nascita
   const filteredAthletes = useMemo(() => {
-    if (!selectedCity) return athletes;
-    return athletes.filter(a => (a.city || '').trim().toLowerCase() === selectedCity.toLowerCase());
-  }, [athletes, selectedCity]);
+    const fromNum = itDateToNum(bornFrom);
+    const toNum = itDateToNum(bornTo);
+    return athletes.filter(a => {
+      if (selectedCity && (a.city || '').trim().toLowerCase() !== selectedCity.toLowerCase()) return false;
+      if (fromNum || toNum) {
+        const bd = itDateToNum(a.date_of_birth);
+        if (!bd) return false;
+        if (fromNum && bd < fromNum) return false;
+        if (toNum && bd > toNum) return false;
+      }
+      return true;
+    });
+  }, [athletes, selectedCity, bornFrom, bornTo]);
 
   // Quando si sceglie "Tutta la società", mostra automaticamente la colonna Categoria
   useEffect(() => {
@@ -140,6 +162,13 @@ export default function TeamRoster() {
       setSelectedCols(prev => (prev.includes('city') ? prev : [...prev, 'city']));
     }
   }, [selectedCity]);
+
+  // Quando si filtra per periodo di nascita, mostra automaticamente la colonna Data di nascita
+  useEffect(() => {
+    if (bornFrom || bornTo) {
+      setSelectedCols(prev => (prev.includes('date_of_birth') ? prev : [...prev, 'date_of_birth']));
+    }
+  }, [bornFrom, bornTo]);
 
   const toggleCol = (key: string) => {
     const col = COLUMNS.find(c => c.key === key);
@@ -242,6 +271,55 @@ export default function TeamRoster() {
                 })}
               </Picker>
             </View>
+          </View>
+        )}
+
+        {/* Birth date range filter */}
+        {athletes.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.label}>Filtra per periodo di nascita</Text>
+            <View style={styles.dateRow}>
+              <View style={styles.dateCol}>
+                <Text style={styles.dateHint}>Dal</Text>
+                <TextInput
+                  style={styles.dateInput}
+                  placeholder="gg/mm/aaaa"
+                  placeholderTextColor="#9AA0A6"
+                  value={bornFrom}
+                  onChangeText={setBornFrom}
+                  keyboardType="numbers-and-punctuation"
+                  autoCapitalize="none"
+                  data-testid="born-from-input"
+                />
+              </View>
+              <View style={styles.dateCol}>
+                <Text style={styles.dateHint}>Al</Text>
+                <TextInput
+                  style={styles.dateInput}
+                  placeholder="gg/mm/aaaa"
+                  placeholderTextColor="#9AA0A6"
+                  value={bornTo}
+                  onChangeText={setBornTo}
+                  keyboardType="numbers-and-punctuation"
+                  autoCapitalize="none"
+                  data-testid="born-to-input"
+                />
+              </View>
+              {(bornFrom || bornTo) ? (
+                <TouchableOpacity
+                  style={styles.clearDateBtn}
+                  onPress={() => { setBornFrom(''); setBornTo(''); }}
+                  data-testid="born-clear-btn"
+                >
+                  <Ionicons name="close-circle" size={22} color="#C62828" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+            {(bornFrom || bornTo) ? (
+              <Text style={styles.bornResult}>
+                🎂 {filteredAthletes.length} atleti nati{bornFrom ? ` dal ${bornFrom}` : ''}{bornTo ? ` al ${bornTo}` : ''}
+              </Text>
+            ) : null}
           </View>
         )}
 
@@ -358,6 +436,16 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 12.5, color: '#555', fontWeight: '600' },
   chipTextActive: { color: '#fff' },
   countText: { fontSize: 13, fontWeight: '700', color: '#374151' },
+  dateRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
+  dateCol: { flex: 1 },
+  dateHint: { fontSize: 11, fontWeight: '600', color: '#6B7280', marginBottom: 4 },
+  dateInput: {
+    borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 10, fontSize: 15,
+    color: '#111827', backgroundColor: '#fff',
+  },
+  clearDateBtn: { paddingBottom: 8, paddingLeft: 2 },
+  bornResult: { marginTop: 10, fontSize: 14, fontWeight: '700', color: '#1565C0' },
   exportBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: '#2E7D32', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10,
