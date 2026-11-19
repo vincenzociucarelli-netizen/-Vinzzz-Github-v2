@@ -9585,7 +9585,7 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
         "medical_certificate_expiry": 1, "parent_id": 1, "second_parent_id": 1,
         "privacy_accepted": 1, "medical_certificate_verified": 1,
         "address": 1, "city": 1, "cap": 1, "postal_code": 1, "team_id": 1, "is_registered": 1,
-        "is_trial": 1, "trial_sessions_count": 1,
+        "is_trial": 1, "trial_sessions_count": 1, "place_of_birth": 1, "birth_place": 1,
     }
     aths = await db.athletes.find(_q, proj).to_list(5000)
 
@@ -9667,6 +9667,7 @@ async def get_team_roster(team_id: str, current_user = Depends(get_current_user)
             "full_name": full_name,
             "last_name": a.get("last_name", ""),
             "first_name": a.get("first_name", ""),
+            "birth_place": a.get("place_of_birth") or a.get("birth_place") or "",
             "date_of_birth": dob.strftime("%d/%m/%Y") if dob else "",
             "age": _calc_age(dob),
             "tesserato": bool(a.get("is_registered")),

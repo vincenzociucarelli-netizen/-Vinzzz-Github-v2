@@ -13,6 +13,9 @@ import { exportToExcel } from '../../src/utils/excelExport';
 interface RosterAthlete {
   id: string;
   full_name: string;
+  last_name: string;
+  first_name: string;
+  birth_place: string;
   date_of_birth: string;
   age: number | null;
   tesserato: boolean;
@@ -38,6 +41,7 @@ interface ColumnDef {
 
 const COLUMNS: ColumnDef[] = [
   { key: 'full_name', label: 'Atleta', width: 170, always: true },
+  { key: 'birth_place', label: 'Comune di nascita', width: 160 },
   { key: 'date_of_birth', label: 'Data di nascita', width: 120 },
   { key: 'age', label: 'Età', width: 55 },
   { key: 'tesserato', label: 'Tesserato', width: 90 },
@@ -151,6 +155,7 @@ export default function TeamRoster() {
   const cellValue = (a: RosterAthlete, key: string): string => {
     switch (key) {
       case 'full_name': return a.full_name || '—';
+      case 'birth_place': return a.birth_place || '—';
       case 'date_of_birth': return a.date_of_birth || '—';
       case 'age': return a.age != null ? String(a.age) : '—';
       case 'tesserato': return a.tesserato ? 'Sì' : 'No';
@@ -173,7 +178,16 @@ export default function TeamRoster() {
     try {
       const rows = filteredAthletes.map(a => {
         const row: { [k: string]: any } = {};
-        visibleColumns.forEach(col => { row[col.label] = cellValue(a, col.key); });
+        visibleColumns.forEach(col => {
+          if (col.key === 'full_name') {
+            // Nel file: Cognome e Nome in colonne separate + Comune di nascita
+            row['Cognome'] = a.last_name || '';
+            row['Nome'] = a.first_name || '';
+            row['Comune di nascita'] = a.birth_place || '';
+          } else {
+            row[col.label] = cellValue(a, col.key);
+          }
+        });
         return row;
       });
       const teamName = teams.find(t => t.id === selectedTeam)?.name || 'Squadra';
