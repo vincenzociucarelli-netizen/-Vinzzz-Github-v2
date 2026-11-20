@@ -143,6 +143,30 @@ export default function QuietanzeArchive() {
     } finally { setBusy(null); }
   };
 
+  const rebuildMissing = async () => {
+    const confirmMsg = 'Ricostruisce e archivia le quietanze firmate che non hanno ancora il PDF in archivio (usando la firma salvata sul compenso). Procedere?';
+    const go = Platform.OS === 'web' ? window.confirm(confirmMsg) : await new Promise<boolean>((resolve) => {
+      Alert.alert('Allinea archivio', confirmMsg, [
+        { text: 'Annulla', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Procedi', onPress: () => resolve(true) },
+      ]);
+    });
+    if (!go) return;
+    try {
+      setBusy('rebuild');
+      const body: any = {};
+      if (year) body.year = year;
+      const res = await api.post('/admin/quietanze/archive/rebuild-missing', body, { timeout: 180000 });
+      const n = res.data?.rebuilt || 0;
+      const failed = res.data?.failed || 0;
+      showAlert('Archivio allineato', `Ricostruite ${n} quietanze mancanti${failed ? `\n(${failed} non ricostruibili: firma non disponibile)` : ''}.`);
+      await load(year);
+    } catch (e: any) {
+      const d = e?.response?.data?.detail;
+      showAlert('Errore', typeof d === 'string' ? d : 'Allineamento non riuscito.');
+    } finally { setBusy(null); }
+  };
+
   const downloadZip = async (y: number, m?: number) => {
     const key = m ? `zip-${y}-${m}` : `zip-${y}`;
     try {
@@ -167,6 +191,18 @@ export default function QuietanzeArchive() {
           Apri il singolo PDF oppure scarica lo ZIP del mese (o dell&apos;anno) da consegnare al commercialista.
         </Text>
       </View>
+
+      <TouchableOpacity
+        style={styles.rebuildBtn}
+        onPress={rebuildMissing}
+        disabled={!!busy}
+        testID="archive-rebuild-missing"
+      >
+        {busy === 'rebuild'
+          ? <ActivityIndicator color="#fff" size="small" />
+          : <Ionicons name="construct" size={16} color="#fff" />}
+        <Text style={styles.rebuildBtnText}>Allinea archivio (ricostruisci mancanti)</Text>
+      </TouchableOpacity>
 
       {/* Anno */}
       <View style={styles.rowWrap}>
@@ -319,6 +355,8 @@ export default function QuietanzeArchive() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   infoBox: { flexDirection: 'row', gap: 8, margin: 12, marginBottom: 6, padding: 12, backgroundColor: '#F3E5F5', borderRadius: 10, borderLeftWidth: 4, borderLeftColor: '#8E44AD' },
+  rebuildBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginHorizontal: 12, marginBottom: 8, paddingVertical: 12, borderRadius: 10, backgroundColor: '#00897B', minHeight: 46 },
+  rebuildBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   infoText: { flex: 1, fontSize: 12, color: '#4A148C', lineHeight: 18 },
   rowWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 12, marginTop: 8 },
   chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd', minHeight: 40, justifyContent: 'center' },

@@ -22314,6 +22314,154 @@ async def admin_mark_quietanza_payment_bulk(data: dict = Body(...), current_user
     return {"ok": True, "updated": count, "year": year, "month": month}
 
 
+# role -> (collection, id_field, name_field, archive document_type)
+_REBUILD_ROLE_CFG = {
+    "coach": ("coach_compensations", "coach_id", "coach_name", "coach_compensation_receipt"),
+    "dirigente": ("dirigente_compensations", "dirigente_id", "dirigente_name", "dirigente_compensation_receipt"),
+    "collaboratore": ("collaboratore_compensations", "collaboratore_id", "collaboratore_name", "collaboratore_compensation_receipt"),
+    "athlete": ("athlete_compensation_receipts", "athlete_id", "athlete_name", "atleta_pro_compensation_receipt"),
+}
+_ARCHIVE_RECEIPT_TYPES = [
+    "compensation_receipt", "coach_compensation_receipt",
+    "collaboratore_compensation_receipt", "dirigente_compensation_receipt",
+    "atleta_pro_compensation_receipt",
+]
+
+
+@api_router.post("/admin/quietanze/archive/rebuild-missing")
+async def admin_rebuild_missing_quietanze_archive(data: dict = Body(...), current_user = Depends(get_current_user)):
+    """🆕 Allinea l'Archivio Firmate ai compensi firmati della società.
+
+    Per ogni compenso con `receipt_signed=True` che NON ha un documento
+    corrispondente in `signed_documents`, ricostruisce e archivia il PDF della
+    quietanza (riusando la firma e la data di firma salvate sul compenso).
+    Così l'Archivio Firmate e lo ZIP/invio al commercialista contengono TUTTE
+    le quietanze firmate, non solo quelle il cui PDF era già stato archiviato.
+    """
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    year = data.get("year")
+    month = data.get("month")
+    try:
+        year = int(year) if year not in (None, "") else None
+        month = int(month) if month not in (None, "") else None
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Mese/anno non validi")
+
+    _sid = current_user.get("society_id")
+    now_default = datetime.now(timezone.utc)
+
+    rebuilt = 0
+    skipped_existing = 0
+    failed = 0
+    details: list = []
+
+    for role, (coll, idf, name_field, doc_type) in _REBUILD_ROLE_CFG.items():
+        q: dict = {"receipt_signed": True}
+        if year is not None:
+            q["year"] = year
+        if month is not None:
+            q["month"] = month
+        async for comp in db[coll].find(q):
+            signer_id = comp.get(idf)
+            if not signer_id:
+                continue
+            m_val = comp.get("month")
+            y_val = comp.get("year")
+            if m_val in (None, "") or y_val in (None, ""):
+                continue
+
+            # Profilo + scoping società
+            if role == "athlete":
+                prof = await db.athletes.find_one({"id": signer_id})
+                full_name = ((prof or {}).get("full_name")
+                             or (f"{(prof or {}).get('last_name', '').upper()} {(prof or {}).get('first_name', '').upper()}".strip())) if prof else ""
+            else:
+                prof = await db.users.find_one({"id": signer_id})
+                full_name = (prof or {}).get("full_name", "") if prof else ""
+            osid = (prof or {}).get("society_id") if prof else None
+            if _sid and osid and str(osid) != str(_sid):
+                continue
+            fiscal = (prof or {}).get("fiscal_code", "") if prof else ""
+
+            # Esiste già un documento firmato per questo compenso?
+            existing_doc = None
+            rdoc_id = comp.get("receipt_document_id")
+            if rdoc_id:
+                existing_doc = await db.signed_documents.find_one({"id": rdoc_id})
+            if not existing_doc:
+                existing_doc = await db.signed_documents.find_one({
+                    idf: signer_id,
+                    "month": m_val,
+                    "year": y_val,
+                    "document_type": {"$in": _ARCHIVE_RECEIPT_TYPES},
+                })
+            if existing_doc:
+                skipped_existing += 1
+                continue
+
+            # Costruisci il documento e rigenera il PDF (recupera firma dal compenso)
+            new_id = rdoc_id or str(uuid.uuid4())[:8]
+            amount_gross = comp.get("amount_gross", comp.get("amount", 0)) or 0
+            signed_at = (comp.get("receipt_signed_date") or comp.get("signed_date")
+                         or comp.get("received_date") or now_default)
+            doc_dict = {
+                "id": new_id,
+                "document_type": doc_type,
+                "society_id": osid or _sid,
+                "signer_id": signer_id,
+                idf: signer_id,
+                name_field: full_name,
+                "signer_name": full_name,
+                "fiscal_code": fiscal,
+                "month": m_val,
+                "year": y_val,
+                "amount_gross": amount_gross,
+                "amount_net": comp.get("amount_net", amount_gross),
+                "signature_base64": comp.get("receipt_signature_base64") or comp.get("signature_base64") or "",
+                "signed_at": signed_at,
+            }
+            try:
+                pdf_bytes = await _regenerate_compensation_receipt_pdf(doc_dict)
+            except Exception as ex:
+                logging.warning(f"rebuild archive: PDF regen failed for {role} {signer_id} {m_val}/{y_val}: {ex}")
+                pdf_bytes = None
+            if not pdf_bytes:
+                failed += 1
+                continue
+
+            try:
+                m_name = _MONTH_NAMES_IT[int(m_val)] if 1 <= int(m_val) <= 12 else str(m_val)
+            except Exception:
+                m_name = str(m_val)
+            record = {
+                **doc_dict,
+                "document_title": f"Quietanza Compenso - {m_name} {y_val}",
+                "pdf_filename": f"quietanza_{signer_id}_{y_val}_{str(m_val).zfill(2)}_{new_id}.pdf",
+                "pdf_base64": base64.b64encode(pdf_bytes).decode(),
+                "signed_at_iso": signed_at.isoformat() if isinstance(signed_at, datetime) else str(signed_at),
+                "exceeded_5000": bool(comp.get("exceeded_5000")),
+                "exceeded_15000": bool(comp.get("exceeded_15000")),
+                "rebuilt_from_compensation": True,
+                "created_at": now_default,
+            }
+            await db.signed_documents.insert_one(record)
+            # Collega il documento al compenso se non era collegato
+            if not comp.get("receipt_document_id"):
+                await db[coll].update_one({"_id": comp["_id"]}, {"$set": {"receipt_document_id": new_id}})
+            rebuilt += 1
+            details.append({"role": role, "name": full_name, "month": m_val, "year": y_val, "amount": amount_gross})
+
+    return {
+        "ok": True,
+        "rebuilt": rebuilt,
+        "skipped_existing": skipped_existing,
+        "failed": failed,
+        "details": details[:200],
+    }
+
+
+
 @api_router.post("/admin/quietanze/generate-month")
 async def admin_generate_month_quietanze(data: dict = Body(...), current_user = Depends(get_current_user)):
     """🆕 Genera in blocco le quietanze (bozze NON firmate) del mese per TUTTI i membri
