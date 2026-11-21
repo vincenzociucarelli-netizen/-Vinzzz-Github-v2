@@ -7931,6 +7931,7 @@ async def get_athlete_matches(
     athlete_id: str,
     format: str = "json",
     only_upcoming: bool = False,
+    only_selected: bool = False,
     current_user = Depends(get_current_user),
 ):
     """
@@ -8020,6 +8021,10 @@ async def get_athlete_matches(
         }
 
     # Genera ICS
+    # 🆕 Gare selezionate dall'utente ("interessato"): su queste aggiungiamo i
+    # promemoria nativi del calendario (VALARM 2h prima + il giorno prima).
+    selected_ids = await _get_user_selected_match_ids(current_user.get("id"), athlete_id)
+
     def _ics_escape(s: str) -> str:
         return (s or "").replace("\\", "\\\\").replace(",", "\\,").replace(";", "\\;").replace("\n", "\\n")
 
@@ -8042,7 +8047,11 @@ async def get_athlete_matches(
     ]
     now_utc = _fmt(datetime.now(timezone.utc))
     for m in matches:
-        uid = f"match-{m.get('id') or m.get('_id') or ''}@registrateam.it"
+        match_id = m.get('id') or m.get('_id') or ''
+        # 🆕 Se richiesto, includi SOLO le gare marcate "interessato"
+        if only_selected and match_id not in selected_ids:
+            continue
+        uid = f"match-{match_id}@registrateam.it"
         start = _fmt(m.get("date"))
         if not start:
             continue
@@ -8069,6 +8078,16 @@ async def get_athlete_matches(
             lines.append(f"LOCATION:{_ics_escape(location)}")
         if desc_parts:
             lines.append(f"DESCRIPTION:{_ics_escape(' | '.join(desc_parts))}")
+        # 🆕 Promemoria nativi del calendario per le gare selezionate
+        if match_id in selected_ids:
+            lines += [
+                "BEGIN:VALARM", "ACTION:DISPLAY",
+                f"DESCRIPTION:{_ics_escape('Gara tra 2 ore: ' + summary)}",
+                "TRIGGER:-PT2H", "END:VALARM",
+                "BEGIN:VALARM", "ACTION:DISPLAY",
+                f"DESCRIPTION:{_ics_escape('Gara domani: ' + summary)}",
+                "TRIGGER:-P1D", "END:VALARM",
+            ]
         lines.append("END:VEVENT")
     lines.append("END:VCALENDAR")
     ics = "\r\n".join(lines) + "\r\n"
@@ -8078,6 +8097,103 @@ async def get_athlete_matches(
         media_type="text/calendar; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ============================================================================
+# 🆕 Promemoria gare: selezione "interessato" + email il giorno prima
+# ============================================================================
+
+def _authorize_athlete_match_access(ath: dict, current_user: dict):
+    """Stesso criterio di get_athlete_matches: admin/staff della società,
+    l'atleta stesso, il genitore collegato, o il minorenne in login Lite."""
+    society_id = current_user.get("society_id")
+    if society_id and ath.get("society_id") != society_id:
+        raise HTTPException(status_code=403, detail="Atleta non appartiene alla tua società")
+    role = current_user.get("role")
+    user_id = current_user.get("id")
+    allowed = False
+    if role in (UserRole.ADMIN, UserRole.COACH, UserRole.DIRIGENTE, UserRole.COLLABORATORE):
+        allowed = True
+    elif role == UserRole.ATHLETE and ath.get("user_id") == user_id:
+        allowed = True
+    elif role == UserRole.PARENT and (ath.get("parent_id") == user_id or user_id in (ath.get("parent_ids") or [])):
+        allowed = True
+    elif role == "minor" and (current_user.get("athlete_id") == ath.get("id") or user_id == ath.get("id")):
+        allowed = True
+    if not allowed:
+        raise HTTPException(status_code=403, detail="Non autorizzato a gestire le gare di questo atleta")
+
+
+async def _get_user_selected_match_ids(user_id: str, athlete_id: str) -> set:
+    ids = set()
+    if not user_id:
+        return ids
+    async for r in db.match_reminders.find(
+        {"user_id": user_id, "athlete_id": athlete_id}, {"_id": 0, "match_id": 1}
+    ):
+        if r.get("match_id"):
+            ids.add(r["match_id"])
+    return ids
+
+
+@api_router.get("/athletes/{athlete_id}/match-reminders")
+async def get_athlete_match_reminders(athlete_id: str, current_user = Depends(get_current_user)):
+    """Elenco degli id gara marcati 'interessato' dall'utente corrente per questo atleta."""
+    ath = await db.athletes.find_one({"id": athlete_id})
+    if not ath:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    _authorize_athlete_match_access(ath, current_user)
+    selected = await _get_user_selected_match_ids(current_user.get("id"), athlete_id)
+    return {"selected": list(selected)}
+
+
+@api_router.post("/athletes/{athlete_id}/match-reminders")
+async def toggle_athlete_match_reminder(athlete_id: str, data: dict = Body(...), current_user = Depends(get_current_user)):
+    """Marca/smarca una gara come 'interessato'. Se interessato=True riceverà
+    l'email il giorno prima e i promemoria nativi (2h/giorno prima) nel .ics."""
+    match_id = data.get("match_id")
+    interested = bool(data.get("interested"))
+    if not match_id:
+        raise HTTPException(status_code=400, detail="match_id richiesto")
+    ath = await db.athletes.find_one({"id": athlete_id})
+    if not ath:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    _authorize_athlete_match_access(ath, current_user)
+    uid = current_user.get("id")
+    if not interested:
+        await db.match_reminders.delete_many({"user_id": uid, "athlete_id": athlete_id, "match_id": match_id})
+        return {"ok": True, "interested": False}
+
+    match = await db.matches.find_one({"id": match_id})
+    if not match:
+        raise HTTPException(status_code=404, detail="Gara non trovata")
+    mdate = match.get("date")
+    if isinstance(mdate, str):
+        try:
+            mdate = datetime.fromisoformat(mdate.replace("Z", "+00:00"))
+        except Exception:
+            mdate = None
+    if isinstance(mdate, datetime) and mdate.tzinfo is None:
+        mdate = mdate.replace(tzinfo=timezone.utc)
+    await db.match_reminders.update_one(
+        {"user_id": uid, "athlete_id": athlete_id, "match_id": match_id},
+        {
+            "$set": {
+                "user_id": uid, "athlete_id": athlete_id, "match_id": match_id,
+                "society_id": ath.get("society_id"), "match_date": mdate,
+                "updated_at": datetime.now(timezone.utc),
+            },
+            "$setOnInsert": {
+                "id": str(uuid.uuid4())[:8],
+                "created_at": datetime.now(timezone.utc),
+                "email_sent": False,
+            },
+        },
+        upsert=True,
+    )
+    return {"ok": True, "interested": True}
+
+
 
 @api_router.post("/matches")
 async def create_match(match_data: MatchCreate, current_user = Depends(get_current_user)):
@@ -44893,6 +45009,92 @@ async def signature_reminder_scheduler():
 
 
 
+# ============================================================================
+# 🆕 Promemoria email gare selezionate — invio il giorno prima (~24h)
+# ============================================================================
+
+async def _send_match_reminder_email(rem: dict) -> None:
+    from email_service import send_society_email
+    match = await db.matches.find_one({"id": rem.get("match_id")})
+    if not match:
+        return
+    user = await db.users.find_one({"id": rem.get("user_id")}, {"_id": 0, "email": 1, "first_name": 1, "full_name": 1})
+    to_email = (user or {}).get("email")
+    if not to_email:
+        return
+    society = None
+    sid = rem.get("society_id")
+    if sid:
+        society = await db.settings.find_one({"society_id": sid, "type": "society"}, {"_id": 0})
+
+    mdate = match.get("date")
+    if isinstance(mdate, str):
+        try:
+            mdate = datetime.fromisoformat(mdate.replace("Z", "+00:00"))
+        except Exception:
+            mdate = None
+    date_str = mdate.strftime("%d/%m/%Y alle %H:%M") if isinstance(mdate, datetime) else ""
+
+    home_away = (match.get("home_away") or "").lower()
+    opponent = match.get("opponent") or "Avversario"
+    team_name = match.get("team_name") or ""
+    vs = f"{team_name} vs {opponent}" if home_away == "home" else f"{opponent} vs {team_name}"
+    venue = match.get("venue") or match.get("address") or match.get("city") or ""
+    meeting = match.get("meeting_time")
+
+    rows = f"<p style='margin:6px 0;font-size:16px;'><b>{vs}</b></p>"
+    if date_str:
+        rows += f"<p style='margin:6px 0;'>📅 {date_str}</p>"
+    if venue:
+        rows += f"<p style='margin:6px 0;'>📍 {venue}</p>"
+    if meeting:
+        rows += f"<p style='margin:6px 0;'>⏰ Ritrovo: {meeting}</p>"
+    html = (
+        "<div style='font-family:Arial,sans-serif;max-width:520px;margin:auto;'>"
+        "<h2 style='color:#1E3A8A;'>Promemoria gara di domani</h2>"
+        f"{rows}"
+        "<p style='color:#6B7280;font-size:13px;margin-top:16px;'>Ricevi questo avviso perché hai segnato questa gara come \"interessato\" su RegistraTEAM.</p>"
+        "</div>"
+    )
+    await send_society_email(society, to_email, f"Promemoria gara di domani: {vs}", html)
+
+
+async def check_match_email_reminders() -> None:
+    """Invia l'email ~24h prima per le gare marcate 'interessato'. Idempotente:
+    'claim' atomico via email_sent per evitare doppi invii anche con più worker."""
+    now = datetime.now(timezone.utc)
+    horizon = now + timedelta(hours=24)
+    q = {"email_sent": {"$ne": True}, "match_date": {"$gt": now, "$lte": horizon}}
+    async for rem in db.match_reminders.find(q):
+        claimed = await db.match_reminders.find_one_and_update(
+            {"id": rem.get("id"), "email_sent": {"$ne": True}},
+            {"$set": {"email_sent": True, "email_sent_at": now}},
+        )
+        if not claimed:
+            continue
+        try:
+            await _send_match_reminder_email(claimed)
+        except Exception as e:
+            logger.error(f"match reminder email failed for {rem.get('id')}: {e}")
+            await db.match_reminders.update_one(
+                {"id": rem.get("id")},
+                {"$set": {"email_sent": False, "last_error": str(e)[:300]}},
+            )
+
+
+async def match_reminder_scheduler():
+    """Controlla i promemoria gare ogni 30 minuti (primo giro 120s dopo l'avvio)."""
+    import asyncio as _asyncio
+    await _asyncio.sleep(120)
+    while True:
+        try:
+            await check_match_email_reminders()
+        except Exception as e:
+            logger.error(f"match_reminder_scheduler error: {e}")
+        await _asyncio.sleep(1800)  # ogni 30 minuti
+
+
+
 # 🆕 27/02/2026 (P2) — Notifica GDPR 18° compleanno
 # Contesto: quando un atleta compie 18 anni, per GDPR il genitore titolare
 # perde progressivamente il diritto di firmare in sua vece. Invece di un
@@ -45055,6 +45257,10 @@ async def start_certificate_scheduler():
     # 🆕 Promemoria firma quietanza: email automatica 3gg dopo il bonifico
     _asyncio.create_task(signature_reminder_scheduler())
     logger.info("Signature reminder scheduler started (every 12h).")
+
+    # 🆕 Promemoria gare selezionate: email il giorno prima (~24h)
+    _asyncio.create_task(match_reminder_scheduler())
+    logger.info("Match reminder scheduler started (every 30m).")
 
     # 🆕 27/07/2026 — Piani ricorrenti Stripe: addebiti automatici alla scadenza
     try:

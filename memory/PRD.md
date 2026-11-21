@@ -2211,3 +2211,12 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - Fix backend (server.py): `commercialista_summary` aggiunge `has_withholding`, lista F24 = exceeded_5000 OR has_withholding, `total_versare` sommato su TUTTE le righe. `annual-summary` somma `total_versare` su ogni mese con eccedenza.
 - Fix frontend: commercialista.tsx mostra "Da versare" quando importo_versare>0; paymentsReport.ts (PDF+CSV mensile e annuale) mostra importo per riga quando >0.
 - Verificato con seed: riga mese continuazione (exceeded_5000=False, trattenuta €24.20) ora in lista F24, importo_versare valorizzato, totali corretti.
+
+
+## 2026-11-21 — Promemoria gare nel calendario (ICS)
+- AthleteMatchesCard: stella 'interessato' per gara (GET/POST /api/athletes/{id}/match-reminders).
+- Export .ics con opzioni: escludi gare passate (only_upcoming), solo gare selezionate (only_selected).
+- Gare selezionate: VALARM nel .ics (2h prima + giorno prima) + email automatica ~24h prima via Brevo (send_society_email).
+- Scheduler match_reminder_scheduler() ogni 30 min (richiede backend Render sempre attivo); invio idempotente via claim su email_sent.
+- Collezione: match_reminders. SMS non implementati (utente valuta notifiche push in futuro).
+

@@ -5,7 +5,7 @@
  *   Google Calendar / Apple Calendar / Outlook
  */
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, Linking } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform, Linking, Alert } from 'react-native';
 import { Ionicons } from './Icon';
 import api from '../services/api';
 
@@ -40,15 +40,24 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
   // 🆕 01/08/2026 — Card collassabile + filtro Da giocare/Giocate/Totale
   const [collapsed, setCollapsed] = useState(true);
   const [filter, setFilter] = useState<'upcoming' | 'played' | 'all'>('upcoming');
+  // 🆕 Gare selezionate "interessato" + opzioni export .ics
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [excludePast, setExcludePast] = useState(true);
+  const [onlySelected, setOnlySelected] = useState(false);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const res = await api.get(`/athletes/${athleteId}/matches`);
+        const [res, rem] = await Promise.all([
+          api.get(`/athletes/${athleteId}/matches`),
+          api.get(`/athletes/${athleteId}/match-reminders`).catch(() => ({ data: { selected: [] } })),
+        ]);
         if (mounted) {
           setMatches(res.data?.matches || []);
           setTeams(res.data?.teams || []);
+          setSelected(new Set<string>(rem.data?.selected || []));
         }
       } catch {
         if (mounted) { setMatches([]); setTeams([]); }
@@ -59,14 +68,36 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
     return () => { mounted = false; };
   }, [athleteId]);
 
+  const toggleInterest = async (matchId: string) => {
+    const wasSelected = selected.has(matchId);
+    const next = new Set(selected);
+    if (wasSelected) next.delete(matchId); else next.add(matchId);
+    setSelected(next);
+    setTogglingId(matchId);
+    try {
+      await api.post(`/athletes/${athleteId}/match-reminders`, { match_id: matchId, interested: !wasSelected });
+    } catch (e) {
+      // rollback in caso di errore
+      void e;
+      const revert = new Set(selected);
+      setSelected(revert);
+      Alert.alert('Errore', 'Impossibile aggiornare il promemoria. Riprova.');
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   const openFederation = (url: string) => {
     try { Linking.openURL(url); } catch (e) { console.error('open federation link failed', e); }
   };
 
   const exportICS = async () => {
     try {
+      const params: Record<string, string> = { format: 'ics' };
+      if (excludePast) params.only_upcoming = 'true';
+      if (onlySelected) params.only_selected = 'true';
       const res = await api.get(`/athletes/${athleteId}/matches`, {
-        params: { format: 'ics' },
+        params,
         responseType: 'blob',
       });
       const blob = new Blob([res.data], { type: 'text/calendar' });
@@ -144,10 +175,24 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
       {!collapsed && (
         <>
           {matches.length > 0 && (
-            <TouchableOpacity onPress={exportICS} style={[styles.exportBtn, { alignSelf: 'flex-start', marginBottom: 10 }]} testID="athlete-matches-export-ics">
-              <Ionicons name="download" size={14} color="#fff" />
-              <Text style={styles.exportBtnText}>Esporta .ics</Text>
-            </TouchableOpacity>
+            <View style={styles.exportBox}>
+              <Text style={styles.exportTitle}>📅 Esporta nel tuo calendario (.ics)</Text>
+              <TouchableOpacity style={styles.optRow} onPress={() => setExcludePast(!excludePast)} testID="ics-opt-exclude-past">
+                <Ionicons name={excludePast ? 'checkbox' : 'square-outline'} size={18} color="#059669" />
+                <Text style={styles.optText}>Escludi le gare già passate</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.optRow} onPress={() => setOnlySelected(!onlySelected)} testID="ics-opt-only-selected">
+                <Ionicons name={onlySelected ? 'checkbox' : 'square-outline'} size={18} color="#059669" />
+                <Text style={styles.optText}>Solo le gare che mi interessano ({selected.size})</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={exportICS} style={[styles.exportBtn, { alignSelf: 'flex-start', marginTop: 8 }]} testID="athlete-matches-export-ics">
+                <Ionicons name="download" size={14} color="#fff" />
+                <Text style={styles.exportBtnText}>Scarica .ics</Text>
+              </TouchableOpacity>
+              <Text style={styles.exportHint}>
+                ⭐ Tocca la stella su una gara per essere avvisato: email il giorno prima e promemoria sul calendario 2 ore prima.
+              </Text>
+            </View>
           )}
           {matches.length > 0 && (
             <View style={styles.filterRow}>
@@ -168,6 +213,18 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
                 const isHome = (m.home_away || '').toLowerCase() === 'home';
                 return (
                   <View key={m.id} style={styles.row} testID={`athlete-match-${m.id}`}>
+                    <TouchableOpacity
+                      onPress={() => toggleInterest(m.id)}
+                      disabled={togglingId === m.id}
+                      style={styles.starBtn}
+                      testID={`athlete-match-star-${m.id}`}
+                    >
+                      <Ionicons
+                        name={selected.has(m.id) ? 'star' : 'star-outline'}
+                        size={20}
+                        color={selected.has(m.id) ? '#F59E0B' : '#9CA3AF'}
+                      />
+                    </TouchableOpacity>
                     <View style={styles.rowMain}>
                       <Text style={styles.rowDate}>{fmtDate(m.date)}</Text>
                       <Text style={styles.rowTeams} numberOfLines={1}>
@@ -230,6 +287,12 @@ const styles = StyleSheet.create({
   filterTabTextActive: { color: '#fff' },
   exportBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#059669', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
   exportBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  exportBox: { backgroundColor: '#F0FDF4', borderWidth: 1, borderColor: '#BBF7D0', borderRadius: 10, padding: 12, marginBottom: 12 },
+  exportTitle: { fontSize: 13, fontWeight: '700', color: '#065F46', marginBottom: 8 },
+  optRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5 },
+  optText: { fontSize: 13, color: '#374151' },
+  exportHint: { fontSize: 11.5, color: '#6B7280', marginTop: 8, lineHeight: 16 },
+  starBtn: { padding: 4, marginRight: 4 },
   subtitle: { fontSize: 12, color: '#6B7280', marginBottom: 10 },
   empty: { fontSize: 13, color: '#9CA3AF', fontStyle: 'italic', marginTop: 6 },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
