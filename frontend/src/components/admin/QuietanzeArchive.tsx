@@ -158,8 +158,16 @@ export default function QuietanzeArchive() {
       if (year) body.year = year;
       const res = await api.post('/admin/quietanze/archive/rebuild-missing', body, { timeout: 180000 });
       const n = res.data?.rebuilt || 0;
+      const fixed = res.data?.fixed_type || 0;
       const failed = res.data?.failed || 0;
-      showAlert('Archivio allineato', `Ricostruite ${n} quietanze mancanti${failed ? `\n(${failed} non ricostruibili: firma non disponibile)` : ''}.`);
+      const fd: any[] = res.data?.failed_details || [];
+      let msg = `Ricostruite ${n} quietanze mancanti.`;
+      if (fixed) msg += `\nCorretto il tipo di ${fixed} quietanze già presenti.`;
+      if (failed) {
+        const names = fd.map((x) => x.name).filter(Boolean).slice(0, 10).join(', ');
+        msg += `\n\n⚠️ ${failed} non ricostruibili${names ? `:\n${names}` : ''}`;
+      }
+      showAlert('Archivio allineato', msg);
       await load(year);
     } catch (e: any) {
       const d = e?.response?.data?.detail;

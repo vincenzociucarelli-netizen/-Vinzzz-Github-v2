@@ -22354,7 +22354,9 @@ async def admin_rebuild_missing_quietanze_archive(data: dict = Body(...), curren
     rebuilt = 0
     skipped_existing = 0
     failed = 0
+    fixed_type = 0
     details: list = []
+    failed_details: list = []
 
     for role, (coll, idf, name_field, doc_type) in _REBUILD_ROLE_CFG.items():
         q: dict = {"receipt_signed": True}
@@ -22391,13 +22393,24 @@ async def admin_rebuild_missing_quietanze_archive(data: dict = Body(...), curren
                 existing_doc = await db.signed_documents.find_one({"id": rdoc_id})
             if not existing_doc:
                 existing_doc = await db.signed_documents.find_one({
-                    idf: signer_id,
-                    "month": m_val,
-                    "year": y_val,
-                    "document_type": {"$in": _ARCHIVE_RECEIPT_TYPES},
+                    idf: signer_id, "month": m_val, "year": y_val,
                 })
             if existing_doc:
-                skipped_existing += 1
+                ex_type = existing_doc.get("document_type")
+                if ex_type in _ARCHIVE_RECEIPT_TYPES:
+                    # Già presente e visibile nell'Archivio → niente da fare
+                    skipped_existing += 1
+                    continue
+                # Esiste ma con un document_type NON riconosciuto dall'Archivio
+                # (es. quietanza "custom"/supplementare): correggo il tipo così compare.
+                await db.signed_documents.update_one(
+                    {"id": existing_doc["id"]},
+                    {"$set": {"document_type": doc_type}},
+                )
+                fixed_type += 1
+                details.append({"role": role, "name": full_name, "month": m_val,
+                                "year": y_val, "amount": comp.get("amount_gross", comp.get("amount", 0)),
+                                "action": f"tipo corretto ({ex_type})"})
                 continue
 
             # Costruisci il documento e rigenera il PDF (recupera firma dal compenso)
@@ -22405,6 +22418,7 @@ async def admin_rebuild_missing_quietanze_archive(data: dict = Body(...), curren
             amount_gross = comp.get("amount_gross", comp.get("amount", 0)) or 0
             signed_at = (comp.get("receipt_signed_date") or comp.get("signed_date")
                          or comp.get("received_date") or now_default)
+            has_signature = bool(comp.get("receipt_signature_base64") or comp.get("signature_base64"))
             doc_dict = {
                 "id": new_id,
                 "document_type": doc_type,
@@ -22428,7 +22442,12 @@ async def admin_rebuild_missing_quietanze_archive(data: dict = Body(...), curren
                 pdf_bytes = None
             if not pdf_bytes:
                 failed += 1
+                failed_details.append({
+                    "role": role, "name": full_name or signer_id, "month": m_val, "year": y_val,
+                    "reason": "PDF non generabile",
+                })
                 continue
+
 
             try:
                 m_name = _MONTH_NAMES_IT[int(m_val)] if 1 <= int(m_val) <= 12 else str(m_val)
@@ -22455,8 +22474,10 @@ async def admin_rebuild_missing_quietanze_archive(data: dict = Body(...), curren
     return {
         "ok": True,
         "rebuilt": rebuilt,
+        "fixed_type": fixed_type,
         "skipped_existing": skipped_existing,
         "failed": failed,
+        "failed_details": failed_details[:50],
         "details": details[:200],
     }
 
