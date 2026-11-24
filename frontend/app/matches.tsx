@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Platform, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '../src/components/Icon';
@@ -15,12 +15,23 @@ export default function SocietyMatchesScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filterMode, setFilterMode] = useState<'upcoming' | 'played' | 'all'>('upcoming');
+  // 🆕 Gare "interessato" + opzioni export (per tutti i ruoli)
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [excludePast, setExcludePast] = useState(true);
+  const [onlySelected, setOnlySelected] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const res = await api.get('/matches/society-view');
+      const [res, rem] = await Promise.all([
+        api.get('/matches/society-view'),
+        api.get('/match-reminders').catch(() => ({ data: { selected: [] } })),
+      ]);
       setMatches(Array.isArray(res.data) ? res.data : []);
+      setSelected(new Set<string>(rem.data?.selected || []));
     } catch (e) {
+      void e;
       setMatches([]);
     } finally {
       setLoading(false);
@@ -29,6 +40,49 @@ export default function SocietyMatchesScreen() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const toggleInterest = async (matchId: string) => {
+    const wasSelected = selected.has(matchId);
+    const next = new Set(selected);
+    if (wasSelected) next.delete(matchId); else next.add(matchId);
+    setSelected(next);
+    setTogglingId(matchId);
+    try {
+      await api.post('/match-reminders', { match_id: matchId, interested: !wasSelected });
+    } catch {
+      setSelected(new Set(selected));
+      Alert.alert('Errore', 'Impossibile aggiornare il promemoria. Riprova.');
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const exportICS = async () => {
+    try {
+      setExporting(true);
+      const params: Record<string, string> = { format: 'ics' };
+      if (excludePast) params.only_upcoming = 'true';
+      if (onlySelected) params.only_selected = 'true';
+      const res = await api.get('/matches/society-view', { params, responseType: 'blob' });
+      if (Platform.OS === 'web') {
+        const blob = new Blob([res.data], { type: 'text/calendar' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'gare_societa.ics';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } else {
+        Alert.alert('Download .ics', 'Apri il Calendario Gare dalla versione web dell\'app per scaricare il file .ics.');
+      }
+    } catch {
+      Alert.alert('Errore', 'Esportazione non riuscita. Riprova.');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const today = new Date(new Date().toDateString());
   const filtered = matches.filter((m) => {
@@ -96,6 +150,28 @@ export default function SocietyMatchesScreen() {
           contentContainerStyle={{ padding: 12, paddingBottom: 40 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
         >
+          {/* 🆕 Export calendario + opzioni (tutti i ruoli) */}
+          {matches.length > 0 && (
+            <View style={styles.exportBox}>
+              <Text style={styles.exportTitle}>📅 Esporta nel tuo calendario (.ics)</Text>
+              <TouchableOpacity style={styles.optRow} onPress={() => setExcludePast(!excludePast)} testID="ics-opt-exclude-past">
+                <Ionicons name={excludePast ? 'checkbox' : 'square-outline'} size={18} color="#059669" />
+                <Text style={styles.optText}>Escludi le gare già passate</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.optRow} onPress={() => setOnlySelected(!onlySelected)} testID="ics-opt-only-selected">
+                <Ionicons name={onlySelected ? 'checkbox' : 'square-outline'} size={18} color="#059669" />
+                <Text style={styles.optText}>Solo le gare che mi interessano ({selected.size})</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={exportICS} style={styles.exportBtn} disabled={exporting} testID="matches-export-ics">
+                {exporting ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="download" size={15} color="#fff" />}
+                <Text style={styles.exportBtnText}>Scarica .ics</Text>
+              </TouchableOpacity>
+              <Text style={styles.exportHint}>
+                ⭐ Tocca la stella su una gara per essere avvisato: email il giorno prima e promemoria sul calendario 2 ore prima.
+              </Text>
+            </View>
+          )}
+
           {filtered.length === 0 ? (
             <View style={styles.empty}>
               <Ionicons name="trophy-outline" size={48} color="#ccc" />
@@ -109,10 +185,26 @@ export default function SocietyMatchesScreen() {
                   const isHome = (m.home_away || 'home') === 'home';
                   return (
                     <View key={m.id || idx} style={styles.card}>
-                      <View style={[styles.badge, { backgroundColor: isHome ? '#E8F5E9' : '#FFF3E0' }]}>
-                        <Text style={{ fontSize: 11, fontWeight: '700', color: isHome ? '#2E7D32' : '#E65100' }}>
-                          {isHome ? '🏠 Casa' : '✈️ Trasferta'}
-                        </Text>
+                      <View style={styles.cardTopRow}>
+                        <View style={[styles.badge, { backgroundColor: isHome ? '#E8F5E9' : '#FFF3E0' }]}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: isHome ? '#2E7D32' : '#E65100' }}>
+                            {isHome ? '🏠 Casa' : '✈️ Trasferta'}
+                          </Text>
+                        </View>
+                        {m.id ? (
+                          <TouchableOpacity
+                            onPress={() => toggleInterest(m.id)}
+                            disabled={togglingId === m.id}
+                            style={styles.starBtn}
+                            testID={`match-star-${m.id}`}
+                          >
+                            <Ionicons
+                              name={selected.has(m.id) ? 'star' : 'star-outline'}
+                              size={22}
+                              color={selected.has(m.id) ? '#F59E0B' : '#9CA3AF'}
+                            />
+                          </TouchableOpacity>
+                        ) : null}
                       </View>
                       {/* 🆕 Titolo = nome società (es. "Sirio Perugia vs OMAC"), categoria come etichetta */}
                       <Text style={[styles.title, { color: championshipColor(m.team_name) }]}>
@@ -151,6 +243,15 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#fff' },
   month: { fontSize: 15, fontWeight: '800', color: '#333', marginBottom: 8, marginLeft: 4 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10 },
+  cardTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  starBtn: { padding: 4 },
+  exportBox: { backgroundColor: '#F0FDF4', borderWidth: 1, borderColor: '#BBF7D0', borderRadius: 12, padding: 14, marginBottom: 14 },
+  exportTitle: { fontSize: 14, fontWeight: '700', color: '#065F46', marginBottom: 8 },
+  optRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6 },
+  optText: { fontSize: 14, color: '#374151' },
+  exportBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#059669', paddingVertical: 11, borderRadius: 10, marginTop: 10, minHeight: 46 },
+  exportBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  exportHint: { fontSize: 12, color: '#6B7280', marginTop: 10, lineHeight: 16 },
   badge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, marginBottom: 6 },
   title: { fontSize: 16, fontWeight: '800' },
   vs: { fontSize: 14, color: '#333', marginTop: 2 },

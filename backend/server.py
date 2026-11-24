@@ -7810,10 +7810,17 @@ async def _society_short_name_for(society_id: Optional[str]) -> str:
 
 
 @api_router.get("/matches/society-view")
-async def get_matches_society_view(current_user = Depends(get_current_user)):
+async def get_matches_society_view(
+    format: str = "json",
+    only_upcoming: bool = False,
+    only_selected: bool = False,
+    current_user = Depends(get_current_user),
+):
     """🆕 13/09/2026 — Elenco SOLA LETTURA di tutte le gare della società, accessibile a
     QUALSIASI utente autenticato (genitori, atleti, coach, collaboratori). Stessa forma del
-    calendario admin ma senza modifica/eliminazione."""
+    calendario admin ma senza modifica/eliminazione.
+    `?format=ics` esporta il calendario; `only_upcoming` esclude le passate;
+    `only_selected` include solo le gare marcate 'interessato' dall'utente."""
     society_id = current_user.get("society_id")
     query = {"society_id": society_id} if society_id else {}
     matches = await db.matches.find(query).sort("date", 1).to_list(1000)
@@ -7821,7 +7828,142 @@ async def get_matches_society_view(current_user = Depends(get_current_user)):
     for m in matches:
         clean_mongo_doc(m)
         m["society_name"] = _soc  # 🆕 nome società da mostrare al posto del nome squadra ("Serie B/1")
-    return matches
+
+    if format.lower() != "ics":
+        return matches
+
+    selected_ids = await _get_user_all_selected_match_ids(current_user.get("id"))
+
+    def _esc(s: str) -> str:
+        return (s or "").replace("\\", "\\\\").replace(",", "\\,").replace(";", "\\;").replace("\n", "\\n")
+
+    def _fmt(dt) -> str:
+        if isinstance(dt, str):
+            try:
+                dt = datetime.fromisoformat(dt.replace("Z", "+00:00"))
+            except Exception:
+                return ""
+        if not isinstance(dt, datetime):
+            return ""
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+    now_dt = datetime.now(timezone.utc)
+    lines = [
+        "BEGIN:VCALENDAR", "VERSION:2.0",
+        "PRODID:-//RegistraTEAM//Society Matches//IT", "CALSCALE:GREGORIAN",
+        f"X-WR-CALNAME:{_esc('Gare ' + (_soc or 'società'))}",
+    ]
+    now_utc = _fmt(now_dt)
+    for m in matches:
+        match_id = m.get("id") or ""
+        if only_selected and match_id not in selected_ids:
+            continue
+        mdate = m.get("date")
+        if isinstance(mdate, str):
+            try:
+                mdate = datetime.fromisoformat(mdate.replace("Z", "+00:00"))
+            except Exception:
+                mdate = None
+        if only_upcoming:
+            cmp_dt = mdate.replace(tzinfo=timezone.utc) if (isinstance(mdate, datetime) and mdate.tzinfo is None) else mdate
+            if not isinstance(cmp_dt, datetime) or cmp_dt < now_dt:
+                continue
+        start = _fmt(m.get("date"))
+        if not start:
+            continue
+        home_away = (m.get("home_away") or "").lower()
+        opponent = m.get("opponent") or "Avversario"
+        team_name = m.get("society_name") or m.get("team_name") or ""
+        summary = f"{team_name} vs {opponent}" if home_away == "home" else f"{opponent} vs {team_name}"
+        location = ", ".join([x for x in [m.get("venue") or "", m.get("address") or m.get("city") or ""] if x])
+        desc_parts = []
+        if m.get("meeting_time"):
+            desc_parts.append(f"Ritrovo: {m['meeting_time']}")
+        if m.get("notes"):
+            desc_parts.append(m["notes"])
+        lines += ["BEGIN:VEVENT", f"UID:match-{match_id}@registrateam.it", f"DTSTAMP:{now_utc}", f"DTSTART:{start}", f"SUMMARY:{_esc(summary)}"]
+        if location:
+            lines.append(f"LOCATION:{_esc(location)}")
+        if desc_parts:
+            lines.append(f"DESCRIPTION:{_esc(' | '.join(desc_parts))}")
+        if match_id in selected_ids:
+            lines += [
+                "BEGIN:VALARM", "ACTION:DISPLAY", f"DESCRIPTION:{_esc('Gara tra 2 ore: ' + summary)}", "TRIGGER:-PT2H", "END:VALARM",
+                "BEGIN:VALARM", "ACTION:DISPLAY", f"DESCRIPTION:{_esc('Gara domani: ' + summary)}", "TRIGGER:-P1D", "END:VALARM",
+            ]
+        lines.append("END:VEVENT")
+    lines.append("END:VCALENDAR")
+    ics = "\r\n".join(lines) + "\r\n"
+    return Response(
+        content=ics,
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="gare_societa.ics"'},
+    )
+
+
+async def _get_user_all_selected_match_ids(user_id: str) -> set:
+    ids = set()
+    if not user_id:
+        return ids
+    async for r in db.match_reminders.find({"user_id": user_id}, {"_id": 0, "match_id": 1}):
+        if r.get("match_id"):
+            ids.add(r["match_id"])
+    return ids
+
+
+@api_router.get("/match-reminders")
+async def get_my_match_reminders(current_user = Depends(get_current_user)):
+    """🆕 Gare marcate 'interessato' dall'utente corrente (qualsiasi ruolo)."""
+    selected = await _get_user_all_selected_match_ids(current_user.get("id"))
+    return {"selected": list(selected)}
+
+
+@api_router.post("/match-reminders")
+async def toggle_my_match_reminder(data: dict = Body(...), current_user = Depends(get_current_user)):
+    """🆕 Marca/smarca una gara come 'interessato' per l'utente corrente (coach, dirigente,
+    collaboratore, atleta, genitore). Email il giorno prima + promemoria 2h/giorno prima nel .ics."""
+    match_id = data.get("match_id")
+    interested = bool(data.get("interested"))
+    if not match_id:
+        raise HTTPException(status_code=400, detail="match_id richiesto")
+    uid = current_user.get("id")
+    if not interested:
+        await db.match_reminders.delete_many({"user_id": uid, "match_id": match_id})
+        return {"ok": True, "interested": False}
+
+    match = await db.matches.find_one({"id": match_id})
+    if not match:
+        raise HTTPException(status_code=404, detail="Gara non trovata")
+    # scoping società: l'utente può seguire solo gare della propria società
+    sid = current_user.get("society_id")
+    if sid and match.get("society_id") and match.get("society_id") != sid:
+        raise HTTPException(status_code=403, detail="Gara non appartiene alla tua società")
+
+    mdate = match.get("date")
+    if isinstance(mdate, str):
+        try:
+            mdate = datetime.fromisoformat(mdate.replace("Z", "+00:00"))
+        except Exception:
+            mdate = None
+    if isinstance(mdate, datetime) and mdate.tzinfo is None:
+        mdate = mdate.replace(tzinfo=timezone.utc)
+    await db.match_reminders.update_one(
+        {"user_id": uid, "match_id": match_id},
+        {
+            "$set": {
+                "user_id": uid, "match_id": match_id,
+                "society_id": match.get("society_id") or sid, "match_date": mdate,
+                "updated_at": datetime.now(timezone.utc),
+            },
+            "$setOnInsert": {
+                "id": str(uuid.uuid4())[:8], "created_at": datetime.now(timezone.utc), "email_sent": False,
+            },
+        },
+        upsert=True,
+    )
+    return {"ok": True, "interested": True}
 
 
 
