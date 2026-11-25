@@ -129,6 +129,11 @@ async def get_payments_history(
     query = {"$or": [{"society_id": society_id}, {"athlete_id": {"$in": athlete_ids}}]}
     payments = await db.payments.find(query).to_list(100000)
 
+    # 🆕 Piani ricorrenti: per consolidare gli addebiti in un'unica riga nello storico
+    rec_plans_list = await db.recurring_plans.find({"society_id": society_id}).to_list(100000)
+    plan_map = {pl["id"]: pl for pl in rec_plans_list}
+    rec_agg: dict = {}
+
     d_from = _to_date(date_from)
     d_to = _to_date(date_to)
 
@@ -174,6 +179,24 @@ async def get_payments_history(
         paid_amount = float(p.get("paid_amount") or (amount if p.get("paid") else 0) or 0)
         refund_amount = float(p.get("refund_amount") or 0)
 
+        # 🆕 Pagamenti ricorrenti: NON creare una riga per ogni addebito. Aggrega per piano
+        # (mostreremo una sola riga con il TOTALE rateizzato e il versato finora).
+        if p.get("recurring_plan_id"):
+            pid = p.get("recurring_plan_id")
+            agg = rec_agg.setdefault(pid, {
+                "paid": 0.0, "refund": 0.0, "latest": None, "latest_raw": None,
+                "method": pm, "athlete_id": p.get("athlete_id"),
+                "athlete_name": athlete_name, "team_name": team_map.get(athlete.get("team_id"), ""),
+            })
+            if st != "refunded":
+                agg["paid"] += paid_amount
+            agg["refund"] += refund_amount
+            if eff_date and (agg["latest"] is None or eff_date > agg["latest"]):
+                agg["latest"] = eff_date
+                agg["latest_raw"] = eff_raw
+                agg["method"] = pm
+            continue
+
         total_amount += amount
         total_paid += paid_amount if st in ("paid", "partial") else 0.0
         total_refunded += refund_amount
@@ -216,6 +239,48 @@ async def get_payments_history(
             # 🆕 19/09/2026 — Per il calcolo client del saldo da incassare per fascia
             "installment_number": p.get("installment_number"),
             "is_recurring": bool(p.get("recurring_plan_id")),
+        })
+
+    # 🆕 Righe consolidate dei piani ricorrenti: TOTALE rateizzato + versato finora
+    for pid, agg in rec_agg.items():
+        plan = plan_map.get(pid) or {}
+        total = round(float(plan.get("total_amount") or agg["paid"] or 0), 2)
+        paid = round(agg["paid"], 2)
+        residual = round(max(total - paid, 0.0), 2)
+        if paid <= 0.01 and total > 0:
+            rstatus = "unpaid"
+        elif residual <= 0.01:
+            rstatus = "paid"
+        else:
+            rstatus = "partial"
+        if status != "all" and rstatus != status:
+            continue
+        total_amount += total
+        total_paid += paid
+        total_refunded += agg["refund"]
+        if residual > 0:
+            total_outstanding += residual
+            out_recurring += residual
+        desc = (plan.get("description") or "Piano ricorrente").strip()
+        inst_n = plan.get("installments_count")
+        suffix = f" · {inst_n} rate" if inst_n else ""
+        rows.append({
+            "id": f"rec-{pid}",
+            "date": _to_iso(agg["latest_raw"]),
+            "athlete_id": agg["athlete_id"],
+            "athlete_name": agg["athlete_name"],
+            "team_name": agg["team_name"],
+            "description": f"{desc} (ricorrente){suffix}",
+            "method": _method_display(agg["method"]),
+            "status": rstatus,
+            "amount": total,
+            "paid_amount": paid,
+            "refund_amount": round(agg["refund"], 2),
+            "refund_reason": "",
+            "receipt_number": "",
+            "stripe_payment_intent": "",
+            "installment_number": None,
+            "is_recurring": True,
         })
 
     # Ordina per data discendente (record senza data in fondo)
@@ -448,10 +513,18 @@ async def get_installment_reminders(current_user=Depends(get_current_user)):
     athletes = await db.athletes.find(
         {"society_id": society_id, "is_withdrawn": {"$ne": True}},
         {"id": 1, "full_name": 1, "first_name": 1, "last_name": 1, "team_id": 1,
-         "discount_amount": 1, "phone_athlete": 1, "phone_father": 1, "phone_mother": 1},
+         "discount_amount": 1, "fees_waived": 1,
+         "phone_athlete": 1, "phone_father": 1, "phone_mother": 1},
     ).to_list(20000)
     athlete_map = {a["id"]: a for a in athletes}
     athlete_ids = list(athlete_map.keys())
+
+    # 🆕 Atleti con un piano di pagamento RICORRENTE in corso: esclusi dai solleciti
+    rec_plans = await db.recurring_plans.find(
+        {"society_id": society_id, "status": {"$in": ["pending", "active", "paused"]}},
+        {"athlete_id": 1},
+    ).to_list(100000)
+    active_recurring_ath = {p.get("athlete_id") for p in rec_plans if p.get("athlete_id")}
 
     teams = await db.teams.find({"society_id": society_id}).to_list(500)
     team_map = {t["id"]: t for t in teams}
@@ -477,50 +550,57 @@ async def get_installment_reminders(current_user=Depends(get_current_user)):
         pay_by_ath.setdefault(p.get("athlete_id"), []).append(p)
 
     def _schedule_for(team: dict):
-        """Scadenzario della squadra: lista [{amount, due_date, name}] per rata."""
+        """Scadenzario della squadra: lista [{amount, due_date, name, rata}] per rata.
+        🆕 Il numero di rata è ESPLICITO (posizione reale), così una squadra senza 'Rata 1'
+        non fa scalare 'Rata 3' dentro il bucket 'Rata 2'."""
         sched = []
         dyn = (team or {}).get("installments") or []
-        for inst in dyn:
-            try:
-                amt = float(inst.get("amount") or 0)
-            except (TypeError, ValueError):
-                amt = 0.0
-            if amt > 0:
-                sched.append({
-                    "amount": amt,
-                    "due_date": _to_date(inst.get("due_date")),
-                    "name": inst.get("name") or f"Rata {len(sched) + 1}",
-                })
-        if not sched and team:
+        if dyn:
+            for i, inst in enumerate(dyn):
+                try:
+                    amt = float(inst.get("amount") or 0)
+                except (TypeError, ValueError):
+                    amt = 0.0
+                if amt > 0:
+                    sched.append({
+                        "amount": amt,
+                        "due_date": _to_date(inst.get("due_date")),
+                        "name": inst.get("name") or f"Rata {i + 1}",
+                        "rata": i + 1,
+                    })
+        elif team:
             legacy = [
-                (team.get("installment_1_amount"), None, "Iscrizione - Rata 1"),
-                (team.get("installment_2_amount"), team.get("installment_2_due_date"), "Rata 2"),
-                (team.get("installment_3_amount"), team.get("installment_3_due_date"), "Rata 3"),
+                (team.get("installment_1_amount"), None, "Iscrizione - Rata 1", 1),
+                (team.get("installment_2_amount"), team.get("installment_2_due_date"), "Rata 2", 2),
+                (team.get("installment_3_amount"), team.get("installment_3_due_date"), "Rata 3", 3),
             ]
-            for amt, dd, nm in legacy:
+            for amt, dd, nm, rata in legacy:
                 try:
                     amt = float(amt or 0)
                 except (TypeError, ValueError):
                     amt = 0.0
                 if amt > 0:
-                    sched.append({"amount": amt, "due_date": _to_date(dd), "name": nm})
+                    sched.append({"amount": amt, "due_date": _to_date(dd), "name": nm, "rata": rata})
         return sched
 
     MAX_RATE = 3  # mostriamo al massimo 3 rate come richiesto
     rate_data: dict = {}
 
     for aid, a in athlete_map.items():
+        # 🆕 Esclusioni: atleta esente (fees_waived/sponsorizzato) o con piano ricorrente in corso
+        if a.get("fees_waived"):
+            continue
+        if aid in active_recurring_ath:
+            continue
         team = team_map.get(a.get("team_id"))
         schedule = _schedule_for(team)
         if not schedule:
             continue
-        # Sconto applicato sull'ultima rata dello scadenzario
-        discount = a.get("discount_amount") or 0
-        if discount:
-            try:
-                schedule[-1] = {**schedule[-1], "amount": max(0.0, schedule[-1]["amount"] - float(discount))}
-            except (TypeError, ValueError):
-                pass
+        # Sconto/sponsorizzazione: credito globale che copre le rate in ordine
+        try:
+            discount = float(a.get("discount_amount") or 0)
+        except (TypeError, ValueError):
+            discount = 0.0
 
         # Incassato = somma degli importi effettivamente pagati (no ricorrenti, no rimborsati).
         # Conta la cifra accreditata, NON la descrizione del pagamento.
@@ -547,10 +627,12 @@ async def get_installment_reminders(current_user=Depends(get_current_user)):
             if v:
                 phones[role_key] = v
 
-        # Waterfall: l'incassato copre le rate in ordine 1ª → 2ª → 3ª
-        remaining = paid_sum
-        for idx, inst in enumerate(schedule[:MAX_RATE]):
-            rata = idx + 1
+        # Waterfall: incassato + sconto coprono le rate in ordine di rata (1ª → 2ª → 3ª)
+        remaining = paid_sum + discount
+        for inst in sorted(schedule, key=lambda s: s["rata"]):
+            rata = inst["rata"]
+            if rata > MAX_RATE:
+                continue
             due_i = round(float(inst["amount"]), 2)
             pay_i = max(min(remaining, due_i), 0.0)
             remaining -= pay_i

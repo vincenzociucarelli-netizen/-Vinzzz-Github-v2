@@ -29,6 +29,8 @@ interface Row {
   refund_reason: string;
   receipt_number: string;
   stripe_payment_intent: string;
+  installment_number?: number | null;
+  is_recurring?: boolean;
 }
 
 const STATUS_OPTIONS = [
@@ -452,9 +454,11 @@ export default function PaymentsHistoryPage() {
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={styles.rowAmount}>{formatCurrency(r.amount)}</Text>
-                  {r.status === 'partial' && (
+                  {r.is_recurring && r.paid_amount > 0 ? (
+                    <Text style={styles.rowPartial}>versato {formatCurrency(r.paid_amount)}</Text>
+                  ) : r.status === 'partial' ? (
                     <Text style={styles.rowPartial}>incassato {formatCurrency(r.paid_amount)}</Text>
-                  )}
+                  ) : null}
                 </View>
               </View>
             );
