@@ -6271,7 +6271,7 @@ export default function AdminAthleteDetail() {
                   {signedReceipts.filter((r: any) => r.receipt_signed).length} quietanze firmate
                 </Text>
                 <View style={{ height: 1, backgroundColor: '#C8E6C9', marginVertical: 8 }} />
-                <Text style={{ color: '#1B5E20', fontWeight: '700', fontSize: 13 }}>💸 Netto da erogare (firmate)</Text>
+                <Text style={{ color: '#1B5E20', fontWeight: '700', fontSize: 13 }}>💸 Netto erogato (firmate)</Text>
                 <Text style={{ color: '#2E7D32', fontWeight: 'bold', fontSize: 20, marginTop: 2 }}>
                   {formatCurrency(signedReceipts.filter((r: any) => r.receipt_signed).reduce((s: number, r: any) => s + (typeof r.amount_net === 'number' ? r.amount_net : (r.amount_gross || r.amount || 0)), 0))}
                 </Text>

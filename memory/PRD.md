@@ -2257,3 +2257,29 @@ lavoratore, Importo netto. Non rimuovere la comunicazione di superamento, non ca
   cumulato autorevole.
 - Allineamento archivio: se per il mese esiste una dichiarazione soglia, rigenera QUELLA (aggiunge i 3
   campi) e NON crea una quietanza separata.
+
+## 26/11/2026 — Villan Chiara: calcolo INPS errato (iscritta ad altra previdenza)
+Problema: coach con dichiarazione previdenziale opzione A (iscritta ad altra previdenza / dipendente)
+→ aliquota corretta IVS 24% SENZA 2,03%. Il sistema mostrava:
+- Dichiarazione PDF Ott (lordo 800, before 4800): trattenuta €29,06 netto €770,94 (ERRATO, calcolato al 25%+2,03%)
+- Proiezione scheda Nov (before 5600): netto €761,25 / trattenuta €38,75 (ERRATO)
+Valori CORRETTI (insured=True): Ott trattenuta €24 netto €776; Nov trattenuta €32 netto €768.
+
+Due bug di root cause (il flag inps_insured_elsewhere non arrivava al calcolo):
+1) GET /api/users/{id} NON restituiva `inps_insured_elsewhere` (whitelist) → la scheda admin
+   (app/admin/coach/[id].tsx, _insuredElse) calcolava i mesi NON firmati sempre al 25%+2,03%.
+   FIX: aggiunto il campo alla risposta dell'endpoint.
+2) _regenerate_compensation_receipt_pdf leggeva la chiave sbagliata `insured_elsewhere`
+   invece di `inps_insured_elsewhere` → la dichiarazione di superamento rigenerata usava il 25%.
+   FIX: chiave corretta (da signer/users e comp_row) + preferenza ai valori AUTOREVOLI già
+   salvati sulla riga compenso al momento della firma (deductions/amount_net). Aggiunto anche
+   inps_insured_elsewhere al dict atleta trimmed nel regen.
+Il flag è gestito automaticamente dalla Dichiarazione Previdenziale (opzione A/B→True, C→False):
+routes/pension_declarations.py sincronizza users/athletes. Nessun toggle manuale aggiunto.
+
+Label (richiesta utente Fig2a): "Netto da erogare (firmate)" → "Netto erogato (firmate)" in tutte
+le 4 schede admin (coach/dirigente/collaboratore/athlete).
+
+Verifica: compute_sport_inps_withholding(4800,800,insured=True)=24/776;
+(5600,800,insured=True)=32/768. Regen E2E su dati temporanei: PDF mostra lordo 800,
+contributi 24,00, netto 776,00, comunicazione soglia preservata. Dati puliti.

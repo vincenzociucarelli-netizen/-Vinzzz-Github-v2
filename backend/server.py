@@ -7607,6 +7607,10 @@ async def get_user_detail(user_id: str, current_user = Depends(get_current_user)
         "linked_dirigente_user_id": user.get("linked_dirigente_user_id"),
         "linked_coordinatore_user_id": user.get("linked_coordinatore_user_id"),
         "other_annual_compensation": user.get("other_annual_compensation", 0),  # Da altre ASD/SSD
+        # 🆕 Iscritto ad altra previdenza obbligatoria (dipendente/pensionato): aliquota IVS 24%
+        # e nessuna aliquota minore. Necessario in risposta per calcolare correttamente il netto
+        # proiettato dei mesi NON firmati nella scheda (altrimenti usa erroneamente il 25%).
+        "inps_insured_elsewhere": bool(user.get("inps_insured_elsewhere", False)),
         "compensation_accepted": user.get("compensation_accepted", False),
         "compensation_history": user.get("compensation_history", {}),
         "over_5000_limit": user.get("over_5000_limit", {}),
@@ -36571,6 +36575,7 @@ async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes
                     ),
                     "fiscal_code": ath.get("fiscal_code", ""),
                     "society_id": ath.get("society_id"),
+                    "inps_insured_elsewhere": bool(ath.get("inps_insured_elsewhere", False)),
                 }
                 is_athlete_doc = True
 
@@ -36691,7 +36696,7 @@ async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes
                         before = float(b)  # autorevole per il mese del superamento
                     elif b is not None:
                         before = max(before, float(b))
-                insured = bool((comp_row or {}).get("insured_elsewhere") or (signer or {}).get("insured_elsewhere"))
+                insured = bool((signer or {}).get("inps_insured_elsewhere") or (comp_row or {}).get("inps_insured_elsewhere"))
                 recomputed = compute_sport_inps_withholding(before, gross_val, insured_elsewhere=insured)
                 if recomputed.get("applies"):
                     inps_bd = recomputed
@@ -36705,20 +36710,32 @@ async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes
         _dtype = (document.get("document_type") or "").lower()
         if _dtype in ("threshold_5000_communication", "threshold_15000_communication"):
             threshold_meta = document.get("threshold_metadata") or {}
-            bd = inps_bd
-            if not bd or not bd.get("applies"):
-                before_decl = threshold_meta.get("yearly_total_before")
-                if before_decl is not None:
-                    _insured = bool((comp_row or {}).get("insured_elsewhere") or (signer or {}).get("insured_elsewhere"))
-                    bd = compute_sport_inps_withholding(float(before_decl), gross_val, insured_elsewhere=_insured)
-            if bd:
+            # 1) valori AUTOREVOLI già salvati sulla riga compenso al momento della firma
+            #    (identici a quelli mostrati nella scheda: es. trattenuta €24, netto €776).
+            stored_ded = (comp_row or {}).get("deductions")
+            stored_net = (comp_row or {}).get("amount_net")
+            if comp_row is not None and stored_ded is not None and stored_net is not None and float(stored_ded or 0) > 0:
                 amount_bd = {
                     "amount_gross": gross_val,
-                    "inps_worker": bd.get("inps_worker", 0.0),
-                    "amount_net": bd.get("amount_net", gross_val),
+                    "inps_worker": float(stored_ded),
+                    "amount_net": float(stored_net),
                 }
             else:
-                amount_bd = {"amount_gross": gross_val, "inps_worker": 0.0, "amount_net": gross_val}
+                # 2) fallback: ricalcolo dal cumulato autorevole con il flag corretto
+                bd = inps_bd
+                if not bd or not bd.get("applies"):
+                    before_decl = threshold_meta.get("yearly_total_before")
+                    if before_decl is not None:
+                        _insured = bool((signer or {}).get("inps_insured_elsewhere") or (comp_row or {}).get("inps_insured_elsewhere"))
+                        bd = compute_sport_inps_withholding(float(before_decl), gross_val, insured_elsewhere=_insured)
+                if bd and bd.get("applies"):
+                    amount_bd = {
+                        "amount_gross": gross_val,
+                        "inps_worker": bd.get("inps_worker", 0.0),
+                        "amount_net": bd.get("amount_net", gross_val),
+                    }
+                else:
+                    amount_bd = {"amount_gross": gross_val, "inps_worker": 0.0, "amount_net": gross_val}
             society_city = society_settings.get("city") or "Perugia"
             _gen = generate_threshold_15k_pdf if "15000" in _dtype else generate_threshold_5k_pdf
             return _gen(
