@@ -7832,7 +7832,7 @@ async def get_matches_society_view(
     if format.lower() != "ics":
         return matches
 
-    selected_ids = await _get_user_all_selected_match_ids(current_user.get("id"))
+    selected_ids = await _resolve_selected_match_ids(current_user.get("id"))
 
     def _esc(s: str) -> str:
         return (s or "").replace("\\", "\\\\").replace(",", "\\,").replace(";", "\\;").replace("\n", "\\n")
@@ -7913,11 +7913,100 @@ async def _get_user_all_selected_match_ids(user_id: str) -> set:
     return ids
 
 
+async def _get_user_followed_team_ids(user_id: str) -> set:
+    tids = set()
+    if not user_id:
+        return tids
+    async for t in db.team_follows.find({"user_id": user_id}, {"_id": 0, "team_id": 1}):
+        if t.get("team_id"):
+            tids.add(t["team_id"])
+    return tids
+
+
+async def _resolve_selected_match_ids(user_id: str) -> set:
+    """Gare 'di interesse' per l'utente = stelline singole UNITE a tutte le gare
+    delle squadre seguite (stella sulla squadra)."""
+    selected = await _get_user_all_selected_match_ids(user_id)
+    followed = await _get_user_followed_team_ids(user_id)
+    if followed:
+        async for m in db.matches.find({"team_id": {"$in": list(followed)}}, {"_id": 0, "id": 1}):
+            if m.get("id"):
+                selected.add(m["id"])
+    return selected
+
+
+async def _materialize_team_follow_reminders(user_id: str, team_id: str, society_id: str) -> int:
+    """Crea i promemoria (match_reminders) per tutte le gare FUTURE di una squadra seguita.
+    Idempotente: non duplica. source='team' per poterli rimuovere allo 'smarca squadra'."""
+    now = datetime.now(timezone.utc)
+    count = 0
+    async for m in db.matches.find({"team_id": team_id}):
+        mid = m.get("id")
+        if not mid:
+            continue
+        mdate = m.get("date")
+        if isinstance(mdate, str):
+            try:
+                mdate = datetime.fromisoformat(mdate.replace("Z", "+00:00"))
+            except Exception:
+                mdate = None
+        if isinstance(mdate, datetime) and mdate.tzinfo is None:
+            mdate = mdate.replace(tzinfo=timezone.utc)
+        if not isinstance(mdate, datetime) or mdate < now:
+            continue  # solo gare future
+        res = await db.match_reminders.update_one(
+            {"user_id": user_id, "match_id": mid},
+            {
+                "$set": {
+                    "user_id": user_id, "match_id": mid, "team_id": team_id,
+                    "society_id": m.get("society_id") or society_id, "match_date": mdate,
+                    "updated_at": now,
+                },
+                "$setOnInsert": {
+                    "id": str(uuid.uuid4())[:8], "created_at": now,
+                    "email_sent": False, "source": "team",
+                },
+            },
+            upsert=True,
+        )
+        if res.upserted_id is not None:
+            count += 1
+    return count
+
+
 @api_router.get("/match-reminders")
 async def get_my_match_reminders(current_user = Depends(get_current_user)):
-    """🆕 Gare marcate 'interessato' dall'utente corrente (qualsiasi ruolo)."""
-    selected = await _get_user_all_selected_match_ids(current_user.get("id"))
-    return {"selected": list(selected)}
+    """🆕 Gare marcate 'interessato' + squadre seguite dall'utente corrente (qualsiasi ruolo)."""
+    uid = current_user.get("id")
+    selected = await _resolve_selected_match_ids(uid)
+    followed = await _get_user_followed_team_ids(uid)
+    return {"selected": list(selected), "followed_teams": list(followed)}
+
+
+@api_router.post("/team-follows")
+async def toggle_team_follow(data: dict = Body(...), current_user = Depends(get_current_user)):
+    """🆕 Segui/smetti di seguire un'intera SQUADRA: ricevi i promemoria per TUTTE le sue
+    gare future, senza selezionarle una per una."""
+    team_id = data.get("team_id")
+    follow = bool(data.get("follow"))
+    if not team_id:
+        raise HTTPException(status_code=400, detail="team_id richiesto")
+    uid = current_user.get("id")
+    sid = current_user.get("society_id")
+    if not follow:
+        await db.team_follows.delete_many({"user_id": uid, "team_id": team_id})
+        # rimuove solo i promemoria creati dalla squadra, preserva le stelline singole
+        await db.match_reminders.delete_many({"user_id": uid, "team_id": team_id, "source": "team"})
+        return {"ok": True, "following": False}
+
+    await db.team_follows.update_one(
+        {"user_id": uid, "team_id": team_id},
+        {"$set": {"user_id": uid, "team_id": team_id, "society_id": sid, "updated_at": datetime.now(timezone.utc)},
+         "$setOnInsert": {"id": str(uuid.uuid4())[:8], "created_at": datetime.now(timezone.utc)}},
+        upsert=True,
+    )
+    created = await _materialize_team_follow_reminders(uid, team_id, sid)
+    return {"ok": True, "following": True, "reminders_created": created}
 
 
 @api_router.post("/match-reminders")
@@ -7953,7 +8042,7 @@ async def toggle_my_match_reminder(data: dict = Body(...), current_user = Depend
         {"user_id": uid, "match_id": match_id},
         {
             "$set": {
-                "user_id": uid, "match_id": match_id,
+                "user_id": uid, "match_id": match_id, "team_id": match.get("team_id"),
                 "society_id": match.get("society_id") or sid, "match_date": mdate,
                 "updated_at": datetime.now(timezone.utc),
             },
@@ -45206,6 +45295,12 @@ async def check_match_email_reminders() -> None:
     'claim' atomico via email_sent per evitare doppi invii anche con più worker."""
     now = datetime.now(timezone.utc)
     horizon = now + timedelta(hours=24)
+    # 🆕 Materializza i promemoria delle squadre seguite (anche per gare aggiunte dopo)
+    try:
+        async for tf in db.team_follows.find({}):
+            await _materialize_team_follow_reminders(tf.get("user_id"), tf.get("team_id"), tf.get("society_id"))
+    except Exception as e:
+        logger.error(f"materialize team follows error: {e}")
     q = {"email_sent": {"$ne": True}, "match_date": {"$gt": now, "$lte": horizon}}
     async for rem in db.match_reminders.find(q):
         claimed = await db.match_reminders.find_one_and_update(
