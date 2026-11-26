@@ -45,6 +45,17 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [excludePast, setExcludePast] = useState(true);
   const [onlySelected, setOnlySelected] = useState(false);
+  // 🆕 Squadre seguite: ricevi i promemoria di TUTTE le gare della squadra
+  const [followedTeams, setFollowedTeams] = useState<Set<string>>(new Set());
+  const [togglingTeam, setTogglingTeam] = useState<string | null>(null);
+
+  const reloadReminders = async () => {
+    try {
+      const rem = await api.get(`/athletes/${athleteId}/match-reminders`);
+      setSelected(new Set<string>(rem.data?.selected || []));
+      setFollowedTeams(new Set<string>(rem.data?.followed_teams || []));
+    } catch { /* noop */ }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -52,12 +63,13 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
       try {
         const [res, rem] = await Promise.all([
           api.get(`/athletes/${athleteId}/matches`),
-          api.get(`/athletes/${athleteId}/match-reminders`).catch(() => ({ data: { selected: [] } })),
+          api.get(`/athletes/${athleteId}/match-reminders`).catch(() => ({ data: { selected: [], followed_teams: [] } })),
         ]);
         if (mounted) {
           setMatches(res.data?.matches || []);
           setTeams(res.data?.teams || []);
           setSelected(new Set<string>(rem.data?.selected || []));
+          setFollowedTeams(new Set<string>(rem.data?.followed_teams || []));
         }
       } catch {
         if (mounted) { setMatches([]); setTeams([]); }
@@ -67,6 +79,23 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
     })();
     return () => { mounted = false; };
   }, [athleteId]);
+
+  const toggleTeam = async (teamId: string) => {
+    const wasFollowing = followedTeams.has(teamId);
+    const next = new Set(followedTeams);
+    if (wasFollowing) next.delete(teamId); else next.add(teamId);
+    setFollowedTeams(next);
+    setTogglingTeam(teamId);
+    try {
+      await api.post(`/athletes/${athleteId}/team-follows`, { team_id: teamId, follow: !wasFollowing });
+      await reloadReminders(); // aggiorna stelline singole + stato squadre
+    } catch {
+      setFollowedTeams(new Set(followedTeams));
+      Alert.alert('Errore', 'Impossibile aggiornare la squadra seguita. Riprova.');
+    } finally {
+      setTogglingTeam(null);
+    }
+  };
 
   const toggleInterest = async (matchId: string) => {
     const wasSelected = selected.has(matchId);
@@ -174,6 +203,32 @@ export default function AthleteMatchesCard({ athleteId, athleteName }: Props) {
 
       {!collapsed && (
         <>
+          {teams.length > 0 && (
+            <View style={styles.teamsBox} testID="athlete-teams-follow">
+              <Text style={styles.teamsTitle}>⭐ Segui le tue squadre</Text>
+              <Text style={styles.teamsHint}>Tocca una squadra per ricevere i promemoria di tutte le sue gare, senza sceglierle una per una.</Text>
+              {teams.map((t) => {
+                const following = followedTeams.has(t.id);
+                return (
+                  <TouchableOpacity
+                    key={t.id}
+                    style={styles.teamRow}
+                    onPress={() => toggleTeam(t.id)}
+                    disabled={togglingTeam === t.id}
+                    testID={`athlete-team-follow-${t.id}`}
+                  >
+                    <Ionicons
+                      name={following ? 'star' : 'star-outline'}
+                      size={20}
+                      color={following ? '#F59E0B' : '#9CA3AF'}
+                    />
+                    <Text style={[styles.teamName, following && { fontWeight: '800', color: '#065F46' }]} numberOfLines={1}>{t.name}</Text>
+                    {following ? <Text style={styles.teamFollowing}>Seguita</Text> : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
           {matches.length > 0 && (
             <View style={styles.exportBox}>
               <Text style={styles.exportTitle}>📅 Esporta nel tuo calendario (.ics)</Text>
@@ -287,6 +342,12 @@ const styles = StyleSheet.create({
   filterTabTextActive: { color: '#fff' },
   exportBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#059669', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
   exportBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  teamsBox: { backgroundColor: '#FFFBEB', borderWidth: 1, borderColor: '#FDE68A', borderRadius: 10, padding: 12, marginBottom: 12 },
+  teamsTitle: { fontSize: 13, fontWeight: '700', color: '#92400E', marginBottom: 4 },
+  teamsHint: { fontSize: 11.5, color: '#6B7280', marginBottom: 8, lineHeight: 16 },
+  teamRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#FEF3C7' },
+  teamName: { flex: 1, fontSize: 14, color: '#111827', fontWeight: '600' },
+  teamFollowing: { fontSize: 11, color: '#065F46', fontWeight: '700' },
   exportBox: { backgroundColor: '#F0FDF4', borderWidth: 1, borderColor: '#BBF7D0', borderRadius: 10, padding: 12, marginBottom: 12 },
   exportTitle: { fontSize: 13, fontWeight: '700', color: '#065F46', marginBottom: 8 },
   optRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5 },

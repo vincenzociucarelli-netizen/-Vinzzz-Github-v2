@@ -2220,3 +2220,40 @@ Scopo: RegistraTEAM raccoglie, fa sottoscrivere e conserva la dichiarazione prev
 - Scheduler match_reminder_scheduler() ogni 30 min (richiede backend Render sempre attivo); invio idempotente via claim su email_sent.
 - Collezione: match_reminders. SMS non implementati (utente valuta notifiche push in futuro).
 
+
+## 26/11/2026 — "Segui la squadra" anche nella card Calendario Gare (scheda atleta)
+Problema utente: la stella sulla singola gara funziona, ma la selezione dell'INTERA squadra
+(per seguire tutte le sue gare senza sceglierle una a una) non era disponibile dove l'utente
+la usava. Causa: la selezione squadra esisteva SOLO nella schermata /matches (app/matches.tsx),
+non nella card "Calendario Gare" della dashboard (src/components/AthleteMatchesCard.tsx).
+
+Soluzione:
+- Backend: nuovi endpoint athlete-scoped
+  - POST /api/athletes/{athlete_id}/team-follows  {team_id, follow}
+  - GET  /api/athletes/{athlete_id}/match-reminders ora restituisce anche followed_teams
+  - Helper _get_athlete_followed_team_ids, _materialize_athlete_team_follow_reminders
+  - Collezione dedicata ISOLATA: athlete_team_follows (per non interferire con team_follows di /matches)
+  - Promemoria creati come match_reminders athlete-scoped {user_id, athlete_id, match_id, source:'team'}
+    → nessuna email duplicata (stessa chiave della stella singola)
+  - Scheduler check_match_email_reminders(): aggiunto loop su athlete_team_follows per materializzare
+    le gare future aggiunte dopo.
+- Frontend: AthleteMatchesCard.tsx mostra il riquadro giallo "⭐ Segui le tue squadre" (testID
+  athlete-teams-follow / athlete-team-follow-{id}) usando la lista teams dell'atleta; toggle ricarica
+  stelline + stato squadre.
+- Validato via curl: follow→reminders_created=1 su gara futura, star accesa, unfollow rimuove follow+reminder.
+- Card renderizzata in: app/athlete/index.tsx, app/minor/index.tsx, app/parent/athlete/[id].tsx,
+  app/admin/athlete/[id].tsx, app/athlete/presenze.tsx.
+- Preview dist ricostruita (expo export + inject-seo) + expo riavviato.
+
+## 26/11/2026 — Quietanza superamento soglia €5.000/€15.000: 3 campi nella dichiarazione
+Richiesta utente: NON creare una quietanza separata; prendere la dichiarazione di superamento
+esistente e aggiungere SOLO 3 campi: Importo lordo percepito, Quota contributi a carico del
+lavoratore, Importo netto. Non rimuovere la comunicazione di superamento, non cambiare altro.
+- generate_threshold_5k_pdf / generate_threshold_15k_pdf: nuovo param amount_breakdown; i 3 campi
+  disegnati dopo il testo COMUNICA, prima dei paragrafi di dichiarazione.
+- Tutti i flussi di firma (atleta/coach/dirigente/collaboratore) passano amount_breakdown=inps_breakdown.
+- _regenerate_compensation_receipt_pdf: per document_type threshold_5000/15000_communication ricostruisce
+  la DICHIARAZIONE (non una quietanza) con i 3 campi, usando threshold_metadata.yearly_total_before come
+  cumulato autorevole.
+- Allineamento archivio: se per il mese esiste una dichiarazione soglia, rigenera QUELLA (aggiunge i 3
+  campi) e NON crea una quietanza separata.

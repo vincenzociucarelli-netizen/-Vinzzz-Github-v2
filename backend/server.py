@@ -8367,15 +8367,99 @@ async def _get_user_selected_match_ids(user_id: str, athlete_id: str) -> set:
     return ids
 
 
+async def _get_athlete_followed_team_ids(user_id: str, athlete_id: str) -> set:
+    """Squadre seguite dall'utente per QUESTO atleta (collezione dedicata, isolata
+    dalla 'segui squadra' della schermata /matches per non interferire)."""
+    tids = set()
+    if not user_id:
+        return tids
+    async for t in db.athlete_team_follows.find(
+        {"user_id": user_id, "athlete_id": athlete_id}, {"_id": 0, "team_id": 1}
+    ):
+        if t.get("team_id"):
+            tids.add(t["team_id"])
+    return tids
+
+
+async def _materialize_athlete_team_follow_reminders(user_id: str, athlete_id: str, team_id: str, society_id: str) -> int:
+    """Crea i promemoria (match_reminders athlete-scoped) per tutte le gare FUTURE della
+    squadra seguita. Idempotente. source='team' per poterli rimuovere allo 'smarca squadra'."""
+    now = datetime.now(timezone.utc)
+    count = 0
+    async for m in db.matches.find({"team_id": team_id}):
+        mid = m.get("id")
+        if not mid:
+            continue
+        mdate = m.get("date")
+        if isinstance(mdate, str):
+            try:
+                mdate = datetime.fromisoformat(mdate.replace("Z", "+00:00"))
+            except Exception:
+                mdate = None
+        if isinstance(mdate, datetime) and mdate.tzinfo is None:
+            mdate = mdate.replace(tzinfo=timezone.utc)
+        if not isinstance(mdate, datetime) or mdate < now:
+            continue  # solo gare future
+        res = await db.match_reminders.update_one(
+            {"user_id": user_id, "athlete_id": athlete_id, "match_id": mid},
+            {
+                "$set": {
+                    "user_id": user_id, "athlete_id": athlete_id, "match_id": mid,
+                    "team_id": team_id, "society_id": m.get("society_id") or society_id,
+                    "match_date": mdate, "updated_at": now,
+                },
+                "$setOnInsert": {
+                    "id": str(uuid.uuid4())[:8], "created_at": now,
+                    "email_sent": False, "source": "team",
+                },
+            },
+            upsert=True,
+        )
+        if res.upserted_id is not None:
+            count += 1
+    return count
+
+
 @api_router.get("/athletes/{athlete_id}/match-reminders")
 async def get_athlete_match_reminders(athlete_id: str, current_user = Depends(get_current_user)):
-    """Elenco degli id gara marcati 'interessato' dall'utente corrente per questo atleta."""
+    """Elenco degli id gara marcati 'interessato' + squadre seguite dall'utente per questo atleta."""
     ath = await db.athletes.find_one({"id": athlete_id})
     if not ath:
         raise HTTPException(status_code=404, detail="Atleta non trovato")
     _authorize_athlete_match_access(ath, current_user)
     selected = await _get_user_selected_match_ids(current_user.get("id"), athlete_id)
-    return {"selected": list(selected)}
+    followed = await _get_athlete_followed_team_ids(current_user.get("id"), athlete_id)
+    return {"selected": list(selected), "followed_teams": list(followed)}
+
+
+@api_router.post("/athletes/{athlete_id}/team-follows")
+async def toggle_athlete_team_follow(athlete_id: str, data: dict = Body(...), current_user = Depends(get_current_user)):
+    """🆕 Segui/smetti di seguire un'intera SQUADRA dalla scheda atleta: ricevi i promemoria
+    (email il giorno prima) per TUTTE le sue gare future, senza selezionarle una per una."""
+    team_id = data.get("team_id")
+    follow = bool(data.get("follow"))
+    if not team_id:
+        raise HTTPException(status_code=400, detail="team_id richiesto")
+    ath = await db.athletes.find_one({"id": athlete_id})
+    if not ath:
+        raise HTTPException(status_code=404, detail="Atleta non trovato")
+    _authorize_athlete_match_access(ath, current_user)
+    uid = current_user.get("id")
+    sid = ath.get("society_id")
+    if not follow:
+        await db.athlete_team_follows.delete_many({"user_id": uid, "athlete_id": athlete_id, "team_id": team_id})
+        # rimuove solo i promemoria creati dalla squadra, preserva le stelline singole
+        await db.match_reminders.delete_many({"user_id": uid, "athlete_id": athlete_id, "team_id": team_id, "source": "team"})
+        return {"ok": True, "following": False}
+
+    await db.athlete_team_follows.update_one(
+        {"user_id": uid, "athlete_id": athlete_id, "team_id": team_id},
+        {"$set": {"user_id": uid, "athlete_id": athlete_id, "team_id": team_id, "society_id": sid, "updated_at": datetime.now(timezone.utc)},
+         "$setOnInsert": {"id": str(uuid.uuid4())[:8], "created_at": datetime.now(timezone.utc)}},
+        upsert=True,
+    )
+    created = await _materialize_athlete_team_follow_reminders(uid, athlete_id, team_id, sid)
+    return {"ok": True, "following": True, "reminders_created": created}
 
 
 @api_router.post("/athletes/{athlete_id}/match-reminders")
@@ -45533,6 +45617,14 @@ async def check_match_email_reminders() -> None:
             await _materialize_team_follow_reminders(tf.get("user_id"), tf.get("team_id"), tf.get("society_id"))
     except Exception as e:
         logger.error(f"materialize team follows error: {e}")
+    # 🆕 Squadre seguite dalla scheda atleta (athlete-scoped, collezione dedicata)
+    try:
+        async for tf in db.athlete_team_follows.find({}):
+            await _materialize_athlete_team_follow_reminders(
+                tf.get("user_id"), tf.get("athlete_id"), tf.get("team_id"), tf.get("society_id")
+            )
+    except Exception as e:
+        logger.error(f"materialize athlete team follows error: {e}")
     q = {"email_sent": {"$ne": True}, "match_date": {"$gt": now, "$lte": horizon}}
     async for rem in db.match_reminders.find(q):
         claimed = await db.match_reminders.find_one_and_update(
