@@ -12968,6 +12968,7 @@ async def sign_athlete_compensation_receipt_with_signature(
                 signed_at=now,
                 threshold_month=month,
                 document_id=receipt_id,
+                amount_breakdown=inps_breakdown,
             )
             pdf_filename_prefix = "comunicazione_15k_atleta"
             doc_type = "threshold_15000_communication"
@@ -12983,6 +12984,7 @@ async def sign_athlete_compensation_receipt_with_signature(
                 signed_at=now,
                 threshold_month=month,
                 document_id=receipt_id,
+                amount_breakdown=inps_breakdown,
             )
             pdf_filename_prefix = "comunicazione_5k_atleta"
             doc_type = "threshold_5000_communication"
@@ -22751,6 +22753,35 @@ async def admin_rebuild_missing_quietanze_archive(data: dict = Body(...), curren
                 continue
             fiscal = (prof or {}).get("fiscal_code", "") if prof else ""
 
+            # 🆕 Se per questo compenso esiste una DICHIARAZIONE di superamento soglia,
+            # NON creare/ricostruire una quietanza separata: rigenera la dichiarazione
+            # esistente aggiungendo i 3 campi (importo lordo / quota contributi a carico
+            # del lavoratore / importo netto), preservandone la struttura.
+            threshold_doc = await db.signed_documents.find_one({
+                idf: signer_id, "month": m_val, "year": y_val,
+                "document_type": {"$in": ["threshold_5000_communication", "threshold_15000_communication"]},
+            })
+            if not threshold_doc:
+                threshold_doc = await db.signed_documents.find_one({
+                    "signer_id": signer_id, "month": m_val, "year": y_val,
+                    "document_type": {"$in": ["threshold_5000_communication", "threshold_15000_communication"]},
+                })
+            if threshold_doc:
+                try:
+                    new_pdf = await _regenerate_compensation_receipt_pdf({**threshold_doc})
+                    if new_pdf:
+                        await db.signed_documents.update_one(
+                            {"id": threshold_doc["id"]},
+                            {"$set": {"pdf_base64": base64.b64encode(new_pdf).decode()}},
+                        )
+                        refreshed += 1
+                        details.append({"role": role, "name": full_name, "month": m_val,
+                                        "year": y_val, "amount": comp.get("amount_gross", comp.get("amount", 0)),
+                                        "action": "Dichiarazione soglia aggiornata (lordo/contributi/netto)"})
+                except Exception as ex:
+                    logging.warning(f"rebuild archive: threshold regen failed {role} {signer_id}: {ex}")
+                continue
+
             # Esiste già un documento firmato per questo compenso?
             existing_doc = None
             rdoc_id = comp.get("receipt_document_id")
@@ -25733,6 +25764,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 signed_at=now,
                 threshold_month=request.month,
                 document_id=receipt_id,
+                amount_breakdown=inps_breakdown,
             )
             pdf_filename_prefix = "comunicazione_15k"
             doc_type = "threshold_15000_communication"
@@ -25760,6 +25792,7 @@ Il collaboratore è consapevole degli obblighi fiscali e contributivi derivanti 
                 signed_at=now,
                 threshold_month=request.month,
                 document_id=receipt_id,
+                amount_breakdown=inps_breakdown,
             )
             pdf_filename_prefix = "comunicazione_5k"
             doc_type = "threshold_5000_communication"
@@ -28750,6 +28783,7 @@ def generate_threshold_5k_pdf(
     signed_at: Optional[Any] = None,
     threshold_month: Optional[int] = None,
     document_id: Optional[str] = None,
+    amount_breakdown: Optional[dict] = None,
 ) -> bytes:
     """Generate €5,000 threshold communication PDF with metadata.
 
@@ -28848,6 +28882,23 @@ def generate_threshold_5k_pdf(
         c.drawString(2*cm, y, line)
         y -= 0.5*cm
     
+    # 🆕 Dettaglio importi del compenso del mese di superamento soglia.
+    # Richiesto: aggiungere alla dichiarazione esistente SOLO questi 3 campi
+    # (importo lordo, quota contributi a carico del lavoratore, importo netto),
+    # senza modificare nient'altro della comunicazione di superamento.
+    if amount_breakdown:
+        y -= 0.6*cm
+        _g = float(amount_breakdown.get("amount_gross") or 0)
+        _w = float(amount_breakdown.get("inps_worker") or 0)
+        _n = float(amount_breakdown.get("amount_net") or 0)
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(2*cm, y, f"Importo lordo percepito: € {_g:,.2f}")
+        y -= 0.55*cm
+        c.drawString(2*cm, y, f"Quota contributi a carico del lavoratore: € {_w:,.2f}")
+        y -= 0.55*cm
+        c.drawString(2*cm, y, f"Importo netto: € {_n:,.2f}")
+        c.setFont("Helvetica", 10)
+
     # Declaration paragraphs
     y -= 0.8*cm
     decl1 = "Il sottoscritto dichiara di essere a conoscenza che, dal momento del superamento della suddetta soglia, i compensi eccedenti sono soggetti agli obblighi previdenziali previsti dalla normativa vigente."
@@ -28987,6 +29038,7 @@ def generate_threshold_15k_pdf(
     signed_at: Optional[Any] = None,
     threshold_month: Optional[int] = None,
     document_id: Optional[str] = None,
+    amount_breakdown: Optional[dict] = None,
 ) -> bytes:
     """Generate €15,000 threshold communication PDF with metadata"""
     if not HAS_PDF_GENERATION:
@@ -29075,6 +29127,20 @@ def generate_threshold_15k_pdf(
         c.drawString(2*cm, y, line)
         y -= 0.5*cm
     
+    # 🆕 Dettaglio importi del compenso del mese di superamento soglia €15.000.
+    if amount_breakdown:
+        y -= 0.6*cm
+        _g = float(amount_breakdown.get("amount_gross") or 0)
+        _w = float(amount_breakdown.get("inps_worker") or 0)
+        _n = float(amount_breakdown.get("amount_net") or 0)
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(2*cm, y, f"Importo lordo percepito: € {_g:,.2f}")
+        y -= 0.55*cm
+        c.drawString(2*cm, y, f"Quota contributi a carico del lavoratore: € {_w:,.2f}")
+        y -= 0.55*cm
+        c.drawString(2*cm, y, f"Importo netto: € {_n:,.2f}")
+        c.setFont("Helvetica", 10)
+
     # Declaration - FISCAL instead of PREVIDENZIALE
     y -= 0.8*cm
     decl1 = "Il sottoscritto dichiara di essere a conoscenza che, dal momento del superamento della suddetta soglia, i compensi eccedenti sono soggetti a imposizione fiscale secondo la normativa vigente."
@@ -31475,6 +31541,7 @@ async def sign_dirigente_compensation_receipt(
                 signed_at=now,
                 threshold_month=request.month,
                 document_id=receipt_id,
+                amount_breakdown=inps_breakdown,
             )
             pdf_filename_prefix = "comunicazione_15k_dirigente"
             doc_type = "threshold_15000_communication"
@@ -31491,6 +31558,7 @@ async def sign_dirigente_compensation_receipt(
                 signed_at=now,
                 threshold_month=request.month,
                 document_id=receipt_id,
+                amount_breakdown=inps_breakdown,
             )
             pdf_filename_prefix = "comunicazione_5k_dirigente"
             doc_type = "threshold_5000_communication"
@@ -32313,6 +32381,7 @@ async def sign_collaboratore_compensation_receipt(
                 signed_at=now,
                 threshold_month=request.month,
                 document_id=receipt_id,
+                amount_breakdown=inps_breakdown,
             )
             pdf_filename_prefix = "comunicazione_15k_collaboratore"
             doc_type = "threshold_15000_communication"
@@ -32340,6 +32409,7 @@ async def sign_collaboratore_compensation_receipt(
                 signed_at=now,
                 threshold_month=request.month,
                 document_id=receipt_id,
+                amount_breakdown=inps_breakdown,
             )
             pdf_filename_prefix = "comunicazione_5k_collaboratore"
             doc_type = "threshold_5000_communication"
@@ -36543,6 +36613,43 @@ async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes
                     inps_bd = recomputed
             except Exception:
                 pass
+
+        # 🆕 DICHIARAZIONE di superamento soglia: NON rigenerare una quietanza.
+        # Ricostruisci la stessa comunicazione di superamento (preservandone la
+        # struttura) aggiungendo SOLO i 3 campi: importo lordo, quota contributi a
+        # carico del lavoratore, importo netto.
+        _dtype = (document.get("document_type") or "").lower()
+        if _dtype in ("threshold_5000_communication", "threshold_15000_communication"):
+            threshold_meta = document.get("threshold_metadata") or {}
+            bd = inps_bd
+            if not bd or not bd.get("applies"):
+                before_decl = threshold_meta.get("yearly_total_before")
+                if before_decl is not None:
+                    _insured = bool((comp_row or {}).get("insured_elsewhere") or (signer or {}).get("insured_elsewhere"))
+                    bd = compute_sport_inps_withholding(float(before_decl), gross_val, insured_elsewhere=_insured)
+            if bd:
+                amount_bd = {
+                    "amount_gross": gross_val,
+                    "inps_worker": bd.get("inps_worker", 0.0),
+                    "amount_net": bd.get("amount_net", gross_val),
+                }
+            else:
+                amount_bd = {"amount_gross": gross_val, "inps_worker": 0.0, "amount_net": gross_val}
+            society_city = society_settings.get("city") or "Perugia"
+            _gen = generate_threshold_15k_pdf if "15000" in _dtype else generate_threshold_5k_pdf
+            return _gen(
+                society_name=society_name,
+                collaborator_name=signer_name,
+                collaborator_fiscal_code=fiscal,
+                year=int(year_val) if year_val else datetime.now(timezone.utc).year,
+                signature_base64=signature_b64,
+                society_city=society_city,
+                threshold_metadata=threshold_meta,
+                signed_at=signed_at_final,
+                threshold_month=int(month_val) if month_val else None,
+                document_id=document.get("id"),
+                amount_breakdown=amount_bd,
+            )
 
         pdf_bytes = generate_monthly_receipt_pdf(
             society_name=society_name,
