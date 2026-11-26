@@ -22702,6 +22702,7 @@ async def admin_rebuild_missing_quietanze_archive(data: dict = Body(...), curren
     skipped_existing = 0
     failed = 0
     fixed_type = 0
+    refreshed = 0
     details: list = []
     failed_details: list = []
 
@@ -22745,7 +22746,33 @@ async def admin_rebuild_missing_quietanze_archive(data: dict = Body(...), curren
             if existing_doc:
                 ex_type = existing_doc.get("document_type")
                 if ex_type in _ARCHIVE_RECEIPT_TYPES:
-                    # Già presente e visibile nell'Archivio → niente da fare
+                    # Già presente nell'Archivio. 🆕 Se il compenso supera i €5.000,
+                    # RIGENERA il PDF così mostra lordo/ritenute/netto aggiornati.
+                    bd = comp.get("inps_breakdown") if isinstance(comp.get("inps_breakdown"), dict) else None
+                    over_5k = bool(
+                        comp.get("exceeded_5000")
+                        or (bd and bd.get("applies"))
+                        or (float(comp.get("amount_net", comp.get("amount_gross", 0)) or 0)
+                            < float(comp.get("amount_gross", comp.get("amount", 0)) or 0) - 0.01)
+                    )
+                    if over_5k:
+                        try:
+                            new_pdf = await _regenerate_compensation_receipt_pdf({**existing_doc})
+                            if new_pdf:
+                                await db.signed_documents.update_one(
+                                    {"id": existing_doc["id"]},
+                                    {"$set": {
+                                        "pdf_base64": base64.b64encode(new_pdf).decode(),
+                                        "amount_net": comp.get("amount_net"),
+                                    }},
+                                )
+                                refreshed += 1
+                                details.append({"role": role, "name": full_name, "month": m_val,
+                                                "year": y_val, "amount": comp.get("amount_gross", comp.get("amount", 0)),
+                                                "action": "PDF aggiornato (dettaglio INPS)"})
+                                continue
+                        except Exception as ex:
+                            logging.warning(f"rebuild archive refresh failed {role} {signer_id}: {ex}")
                     skipped_existing += 1
                     continue
                 # Esiste ma con un document_type NON riconosciuto dall'Archivio
@@ -22822,6 +22849,7 @@ async def admin_rebuild_missing_quietanze_archive(data: dict = Body(...), curren
         "ok": True,
         "rebuilt": rebuilt,
         "fixed_type": fixed_type,
+        "refreshed": refreshed,
         "skipped_existing": skipped_existing,
         "failed": failed,
         "failed_details": failed_details[:50],
@@ -36390,9 +36418,19 @@ async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes
             or ""
         )
 
-        # Recover signature + signed_date from source-of-truth compensation row
+        # Recover signature + signed_date + ruolo + breakdown INPS dalla riga compenso
         signature_b64 = document.get("signature_base64") or ""
         source_signed_at = None
+        comp_row = None
+        role_label = "Atleta" if is_athlete_doc else "Collaboratore"
+        _role_by_coll = {
+            "coach_compensations": "Coach",
+            "collaboratore_compensations": "Collaboratore",
+            "dirigente_compensations": "Dirigente",
+            "compensations": "Coach",
+            "athlete_compensation_receipts": "Atleta",
+        }
+        m_int = y_int = None
         if signer_id and month_val and year_val:
             try:
                 m_int = int(month_val)
@@ -36407,18 +36445,47 @@ async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes
                 ]:
                     comp = await db[coll].find_one({key: signer_id, "month": m_int, "year": y_int})
                     if comp:
+                        comp_row = comp
+                        role_label = _role_by_coll.get(coll, role_label)
                         if not signature_b64:
                             signature_b64 = comp.get("receipt_signature_base64") or comp.get("signature_base64") or ""
                         if not source_signed_at:
                             source_signed_at = comp.get("receipt_signed_date") or comp.get("signed_date")
-                        if signature_b64 and source_signed_at:
-                            break
+                        break
             except Exception:
                 pass
 
         signed_at_final = document.get("signed_at") or source_signed_at or document.get("created_at")
 
         month_name = _MONTH_NAMES_IT[int(month_val)] if month_val and 1 <= int(month_val) <= 12 else ""
+        gross_val = float(amount_val) if amount_val else 0.0
+
+        # 🆕 Dettaglio INPS (lordo / ritenute / netto) per chi supera i €5.000:
+        # 1) usa il breakdown PERSISTITO sul compenso (più autorevole);
+        # 2) altrimenti RICALCOLA dal cumulato annuo dei compensi firmati.
+        inps_bd = None
+        if comp_row and isinstance(comp_row.get("inps_breakdown"), dict):
+            inps_bd = comp_row.get("inps_breakdown")
+        if (not inps_bd or not inps_bd.get("applies")) and signer_id and m_int and y_int:
+            try:
+                cum_before = 0.0
+                for coll, key in [
+                    ("coach_compensations", "coach_id"),
+                    ("collaboratore_compensations", "collaboratore_id"),
+                    ("dirigente_compensations", "dirigente_id"),
+                    ("athlete_compensation_receipts", "athlete_id"),
+                ]:
+                    async for r in db[coll].find({key: signer_id, "year": y_int}):
+                        if not (r.get("receipt_signed") or r.get("signed")):
+                            continue
+                        if int(r.get("month") or 0) < m_int:
+                            cum_before += float(r.get("amount_gross") or r.get("amount") or 0)
+                insured = bool((comp_row or {}).get("insured_elsewhere") or (signer or {}).get("insured_elsewhere"))
+                recomputed = compute_sport_inps_withholding(cum_before, gross_val, insured_elsewhere=insured)
+                if recomputed.get("applies"):
+                    inps_bd = recomputed
+            except Exception:
+                pass
 
         pdf_bytes = generate_monthly_receipt_pdf(
             society_name=society_name,
@@ -36426,15 +36493,16 @@ async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes
             collaborator_fiscal_code=fiscal,
             month_name=month_name,
             year=int(year_val) if year_val else datetime.now(timezone.utc).year,
-            amount_gross=float(amount_val) if amount_val else 0.0,
+            amount_gross=gross_val,
             signature_base64=signature_b64,
             signed_at=signed_at_final,
             document_id=document.get("id"),
             signer_id=signer_id,
             ip_address=document.get("ip_address"),
             document_hash=document.get("document_hash") or document.get("hash"),
-            # 🆕 29/06/2026 — Label "Atleta:" per quietanze atleti compensati
-            role_label=("Atleta" if is_athlete_doc else "Collaboratore"),
+            # 🆕 ruolo reale (Coach/Dirigente/Collaboratore/Atleta) e dettaglio INPS
+            role_label=role_label,
+            inps_breakdown=inps_bd,
         )
         return pdf_bytes
     except Exception as e:

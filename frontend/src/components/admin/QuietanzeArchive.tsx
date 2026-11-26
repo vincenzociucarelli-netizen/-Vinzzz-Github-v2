@@ -159,10 +159,12 @@ export default function QuietanzeArchive() {
       const res = await api.post('/admin/quietanze/archive/rebuild-missing', body, { timeout: 180000 });
       const n = res.data?.rebuilt || 0;
       const fixed = res.data?.fixed_type || 0;
+      const refreshed = res.data?.refreshed || 0;
       const failed = res.data?.failed || 0;
       const fd: any[] = res.data?.failed_details || [];
       let msg = `Ricostruite ${n} quietanze mancanti.`;
       if (fixed) msg += `\nCorretto il tipo di ${fixed} quietanze già presenti.`;
+      if (refreshed) msg += `\nAggiornate ${refreshed} quietanze oltre i €5.000 (lordo/ritenute/netto).`;
       if (failed) {
         const names = fd.map((x) => x.name).filter(Boolean).slice(0, 10).join(', ');
         msg += `\n\n⚠️ ${failed} non ricostruibili${names ? `:\n${names}` : ''}`;
