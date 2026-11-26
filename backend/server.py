@@ -22703,8 +22703,25 @@ async def admin_rebuild_missing_quietanze_archive(data: dict = Body(...), curren
     failed = 0
     fixed_type = 0
     refreshed = 0
+    restored = 0
     details: list = []
     failed_details: list = []
+
+    # 🛡️ RIPRISTINO: dichiarazioni di superamento soglia erroneamente convertite in
+    # quietanza da versioni precedenti dell'allineamento. Le riconosciamo perché hanno
+    # 'threshold_metadata' ma un document_type da ricevuta. Le riportiamo al tipo corretto.
+    restore_q = {
+        "document_type": {"$in": _ARCHIVE_RECEIPT_TYPES},
+        "threshold_metadata": {"$exists": True, "$ne": None},
+    }
+    if _sid:
+        restore_q["society_id"] = _sid
+    async for d in db.signed_documents.find(restore_q):
+        meta = d.get("threshold_metadata") or {}
+        crossed = str(meta.get("threshold_crossed") or "5000")
+        new_type = "threshold_15000_communication" if "15000" in crossed else "threshold_5000_communication"
+        await db.signed_documents.update_one({"id": d["id"]}, {"$set": {"document_type": new_type}})
+        restored += 1
 
     for role, (coll, idf, name_field, doc_type) in _REBUILD_ROLE_CFG.items():
         q: dict = {"receipt_signed": True}
@@ -22742,6 +22759,10 @@ async def admin_rebuild_missing_quietanze_archive(data: dict = Body(...), curren
             if not existing_doc:
                 existing_doc = await db.signed_documents.find_one({
                     idf: signer_id, "month": m_val, "year": y_val,
+                    "document_type": {"$nin": [
+                        "threshold_5000_communication", "threshold_15000_communication",
+                        "threshold_declaration_5000", "threshold_declaration_15000",
+                    ]},
                 })
             if existing_doc:
                 ex_type = existing_doc.get("document_type")
@@ -22775,17 +22796,27 @@ async def admin_rebuild_missing_quietanze_archive(data: dict = Body(...), curren
                             logging.warning(f"rebuild archive refresh failed {role} {signer_id}: {ex}")
                     skipped_existing += 1
                     continue
-                # Esiste ma con un document_type NON riconosciuto dall'Archivio
-                # (es. quietanza "custom"/supplementare): correggo il tipo così compare.
-                await db.signed_documents.update_one(
-                    {"id": existing_doc["id"]},
-                    {"$set": {"document_type": doc_type}},
+                # Esiste ma con un document_type non in archivio.
+                # 🛡️ Converti SOLO documenti chiaramente di tipo quietanza/compenso;
+                # NON toccare MAI dichiarazioni soglia, GDPR, certificati, ecc.
+                ex_low = (ex_type or "").lower()
+                convertible = (
+                    ("receipt" in ex_low or "compensation" in ex_low
+                     or "quietanz" in ex_low or "compenso" in ex_low)
+                    and "threshold" not in ex_low and "communication" not in ex_low
                 )
-                fixed_type += 1
-                details.append({"role": role, "name": full_name, "month": m_val,
-                                "year": y_val, "amount": comp.get("amount_gross", comp.get("amount", 0)),
-                                "action": f"tipo corretto ({ex_type})"})
-                continue
+                if convertible:
+                    await db.signed_documents.update_one(
+                        {"id": existing_doc["id"]},
+                        {"$set": {"document_type": doc_type}},
+                    )
+                    fixed_type += 1
+                    details.append({"role": role, "name": full_name, "month": m_val,
+                                    "year": y_val, "amount": comp.get("amount_gross", comp.get("amount", 0)),
+                                    "action": f"tipo corretto ({ex_type})"})
+                    continue
+                # Tipo non convertibile (es. dichiarazione soglia): crea comunque la quietanza
+                existing_doc = None
 
             # Costruisci il documento e rigenera il PDF (recupera firma dal compenso)
             new_id = rdoc_id or str(uuid.uuid4())[:8]
@@ -22850,6 +22881,7 @@ async def admin_rebuild_missing_quietanze_archive(data: dict = Body(...), curren
         "rebuilt": rebuilt,
         "fixed_type": fixed_type,
         "refreshed": refreshed,
+        "restored": restored,
         "skipped_existing": skipped_existing,
         "failed": failed,
         "failed_details": failed_details[:50],
@@ -36468,6 +36500,7 @@ async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes
             inps_bd = comp_row.get("inps_breakdown")
         if (not inps_bd or not inps_bd.get("applies")) and signer_id and m_int and y_int:
             try:
+                # 1) Cumulato dalle righe compenso firmate PRIMA di questo mese
                 cum_before = 0.0
                 for coll, key in [
                     ("coach_compensations", "coach_id"),
@@ -36480,8 +36513,32 @@ async def _regenerate_compensation_receipt_pdf(document: dict) -> Optional[bytes
                             continue
                         if int(r.get("month") or 0) < m_int:
                             cum_before += float(r.get("amount_gross") or r.get("amount") or 0)
+                # + compensi pregressi dichiarati (altri committenti / inizio rapporto)
+                prior = float((signer or {}).get("other_annual_compensation") or 0)
+                before = cum_before + prior
+                # 2) Cumulato AUTOREVOLE dalla dichiarazione di superamento 5k firmata:
+                #    per il mese del superamento è il dato corretto (include già i pregressi).
+                decl = await db.signed_documents.find_one({
+                    "document_type": "threshold_5000_communication",
+                    "year": y_int,
+                    "$or": [
+                        {"coach_id": signer_id}, {"collaboratore_id": signer_id},
+                        {"dirigente_id": signer_id}, {"athlete_id": signer_id},
+                        {"atleta_id": signer_id}, {"signer_id": signer_id},
+                    ],
+                })
+                if decl:
+                    b = (decl.get("threshold_metadata") or {}).get("yearly_total_before")
+                    try:
+                        decl_month = int(decl.get("month") or 0)
+                    except (TypeError, ValueError):
+                        decl_month = 0
+                    if b is not None and decl_month == m_int:
+                        before = float(b)  # autorevole per il mese del superamento
+                    elif b is not None:
+                        before = max(before, float(b))
                 insured = bool((comp_row or {}).get("insured_elsewhere") or (signer or {}).get("insured_elsewhere"))
-                recomputed = compute_sport_inps_withholding(cum_before, gross_val, insured_elsewhere=insured)
+                recomputed = compute_sport_inps_withholding(before, gross_val, insured_elsewhere=insured)
                 if recomputed.get("applies"):
                     inps_bd = recomputed
             except Exception:

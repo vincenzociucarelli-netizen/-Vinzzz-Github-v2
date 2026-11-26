@@ -160,9 +160,11 @@ export default function QuietanzeArchive() {
       const n = res.data?.rebuilt || 0;
       const fixed = res.data?.fixed_type || 0;
       const refreshed = res.data?.refreshed || 0;
+      const restored = res.data?.restored || 0;
       const failed = res.data?.failed || 0;
       const fd: any[] = res.data?.failed_details || [];
       let msg = `Ricostruite ${n} quietanze mancanti.`;
+      if (restored) msg += `\nRipristinate ${restored} dichiarazioni di superamento soglia.`;
       if (fixed) msg += `\nCorretto il tipo di ${fixed} quietanze già presenti.`;
       if (refreshed) msg += `\nAggiornate ${refreshed} quietanze oltre i €5.000 (lordo/ritenute/netto).`;
       if (failed) {
