@@ -53,6 +53,10 @@ export default function AdminMatches() {
   const router = useRouter();
   const [matches, setMatches] = useState<Match[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  // 🆕 Segui squadra (personale): ricevi email 24h prima di tutte le gare della squadra
+  const [followedTeams, setFollowedTeams] = useState<Set<string>>(new Set());
+  const [togglingTeam, setTogglingTeam] = useState<string | null>(null);
+  const [followExpanded, setFollowExpanded] = useState(true);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -149,12 +153,14 @@ export default function AdminMatches() {
 
   const loadData = async () => {
     try {
-      const [matchesRes, teamsRes] = await Promise.all([
+      const [matchesRes, teamsRes, remRes] = await Promise.all([
         api.get('/matches'),
         api.get('/teams'),
+        api.get('/match-reminders').catch(() => ({ data: { followed_teams: [] } })),
       ]);
       setMatches(matchesRes.data);
       setTeams(teamsRes.data);
+      setFollowedTeams(new Set<string>(remRes.data?.followed_teams || []));
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -174,6 +180,23 @@ export default function AdminMatches() {
   const onRefresh = () => {
     setRefreshing(true);
     loadData();
+  };
+
+  // 🆕 Segui / smetti di seguire una squadra (promemoria email 24h prima di ogni sua gara)
+  const toggleTeam = async (teamId: string) => {
+    const wasFollowing = followedTeams.has(teamId);
+    const next = new Set(followedTeams);
+    if (wasFollowing) next.delete(teamId); else next.add(teamId);
+    setFollowedTeams(next);
+    setTogglingTeam(teamId);
+    try {
+      await api.post('/team-follows', { team_id: teamId, follow: !wasFollowing });
+    } catch {
+      setFollowedTeams(new Set(followedTeams));
+      Alert.alert('Errore', 'Impossibile aggiornare la squadra seguita. Riprova.');
+    } finally {
+      setTogglingTeam(null);
+    }
   };
 
   const handleSyncFipav = async () => {
@@ -1316,6 +1339,38 @@ export default function AdminMatches() {
         style={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {/* 🆕 Segui le squadre che ti interessano: email il giorno prima di ogni loro gara */}
+        {teams.length > 0 && (
+          <View style={styles.followCard} testID="team-follow-section">
+            <TouchableOpacity style={styles.followHeader} onPress={() => setFollowExpanded((v) => !v)} testID="team-follow-toggle">
+              <Text style={styles.followTitle}>⭐ Segui le tue squadre</Text>
+              <Ionicons name={followExpanded ? 'chevron-up' : 'chevron-down'} size={20} color="#B45309" />
+            </TouchableOpacity>
+            {followExpanded ? (
+              <>
+                <Text style={styles.followHint}>Tocca una squadra per ricevere l&apos;avviso via email il giorno prima di tutte le sue gare, senza selezionarle una per una.</Text>
+                {[...teams].sort((a, b) => a.name.localeCompare(b.name)).map((t) => {
+                  const following = followedTeams.has(t.id);
+                  return (
+                    <TouchableOpacity
+                      key={t.id}
+                      style={styles.followRow}
+                      onPress={() => toggleTeam(t.id)}
+                      disabled={togglingTeam === t.id}
+                      testID={`team-follow-${t.id}`}
+                    >
+                      <Ionicons name={following ? 'star' : 'star-outline'} size={22} color={following ? '#F59E0B' : '#9CA3AF'} />
+                      <Text style={[styles.followTeamName, following && { fontWeight: '800', color: '#065F46' }]} numberOfLines={1}>{t.name}</Text>
+                      {togglingTeam === t.id ? <ActivityIndicator size="small" color="#F59E0B" /> : (following ? <Text style={styles.followBadge}>Seguita</Text> : null)}
+                    </TouchableOpacity>
+                  );
+                })}
+              </>
+            ) : (
+              <Text style={styles.followHint}>{followedTeams.size > 0 ? `${followedTeams.size} squadre seguite · tocca per gestire` : 'Tocca per scegliere le squadre da seguire'}</Text>
+            )}
+          </View>
+        )}
         {matches.length > 0 ? (() => {
           const counts: { [tid: string]: { name: string; count: number } } = {};
           for (const m of matches) {
@@ -2152,6 +2207,13 @@ const styles = StyleSheet.create({
   bulkTitle: { fontSize: 14, fontWeight: '800', color: '#111827' },
   bulkHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   bulkHint: { fontSize: 11, color: '#795548', marginTop: 2, marginBottom: 8 },
+  followCard: { backgroundColor: '#FFFBEB', borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: '#FDE68A' },
+  followHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  followTitle: { fontSize: 14, fontWeight: '800', color: '#92400E' },
+  followHint: { fontSize: 11.5, color: '#6B7280', marginTop: 4, marginBottom: 6, lineHeight: 16 },
+  followRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, borderTopWidth: 1, borderTopColor: '#FEF3C7' },
+  followTeamName: { flex: 1, fontSize: 14, color: '#111827', fontWeight: '600' },
+  followBadge: { fontSize: 11, color: '#065F46', fontWeight: '700' },
   confirmOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 24 },
   confirmBox: { backgroundColor: '#fff', borderRadius: 14, padding: 20, width: '100%', maxWidth: 420 },
   confirmTitle: { fontSize: 17, fontWeight: '800', color: '#C62828', marginBottom: 10 },

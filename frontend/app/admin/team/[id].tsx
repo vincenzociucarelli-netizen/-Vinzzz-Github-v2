@@ -17,6 +17,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import api from '../../../src/services/api';
 import { Ionicons } from '../../../src/components/Icon';
 import KitInfoBanner from '../../../src/components/KitInfoBanner';
+import PersonMultiSelect from '../../../src/components/PersonMultiSelect';
 import { Team, TrainingSession, MatchDay } from '../../../src/types';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
@@ -741,131 +742,44 @@ export default function TeamDetail() {
 
             {/* Coach Assignment Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>👨‍🏫 Assegna Coach</Text>
-              {availableCoaches.length > 0 ? (
-                <View style={styles.coachSelectionList}>
-                  {availableCoaches.map((coach) => (
-                    <TouchableOpacity
-                      key={coach.id}
-                      style={[
-                        styles.coachSelectionItem,
-                        selectedCoachIds.includes(coach.id) && styles.coachSelectionItemSelected
-                      ]}
-                      onPress={() => {
-                        if (selectedCoachIds.includes(coach.id)) {
-                          setSelectedCoachIds(selectedCoachIds.filter(cId => cId !== coach.id));
-                        } else {
-                          setSelectedCoachIds([...selectedCoachIds, coach.id]);
-                        }
-                      }}
-                    >
-                      <View style={[styles.coachSelectionPhotoPlaceholder, {backgroundColor: '#007AFF'}]}>
-                        <Text style={{color: '#fff', fontSize: 12, fontWeight: '700'}}>{getInitials(coach.full_name)}</Text>
-                      </View>
-                      <Text style={[
-                        styles.coachSelectionName,
-                        selectedCoachIds.includes(coach.id) && styles.coachSelectionNameSelected
-                      ]}>
-                        {coach.full_name}
-                      </Text>
-                      {selectedCoachIds.includes(coach.id) && (
-                        <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : (
-                <Text style={styles.noCoachText}>Nessun coach disponibile nel sistema</Text>
-              )}
-              <Text style={styles.helperText}>
-                Seleziona uno o più coach da assegnare a questa squadra
-              </Text>
+              <PersonMultiSelect
+                title="👨‍🏫 Assegna Coach"
+                color="#007AFF"
+                people={availableCoaches}
+                selectedIds={selectedCoachIds}
+                onToggle={(cid) => setSelectedCoachIds(selectedCoachIds.includes(cid) ? selectedCoachIds.filter((x) => x !== cid) : [...selectedCoachIds, cid])}
+                emptyText="Nessun coach disponibile nel sistema"
+                helperText="Seleziona uno o più coach da assegnare a questa squadra"
+                testIDPrefix="assign-coach"
+              />
             </View>
 
             {/* Dirigenti Assignment Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>👔 Assegna Dirigenti</Text>
-              {availableDirigenti.length > 0 ? (
-                <View style={styles.coachSelectionList}>
-                  {availableDirigenti.map((dirigente) => (
-                    <TouchableOpacity
-                      key={dirigente.id}
-                      style={[
-                        styles.coachSelectionItem,
-                        selectedDirigenteIds.includes(dirigente.id) && styles.coachSelectionItemSelected
-                      ]}
-                      onPress={() => {
-                        if (selectedDirigenteIds.includes(dirigente.id)) {
-                          setSelectedDirigenteIds(selectedDirigenteIds.filter(dId => dId !== dirigente.id));
-                        } else {
-                          setSelectedDirigenteIds([...selectedDirigenteIds, dirigente.id]);
-                        }
-                      }}
-                    >
-                      <View style={[styles.coachSelectionPhotoPlaceholder, {backgroundColor: '#FF9500'}]}>
-                        <Text style={{color: '#fff', fontSize: 12, fontWeight: '700'}}>{getInitials(dirigente.full_name)}</Text>
-                      </View>
-                      <Text style={[
-                        styles.coachSelectionName,
-                        selectedDirigenteIds.includes(dirigente.id) && styles.coachSelectionNameSelected
-                      ]}>
-                        {dirigente.full_name}
-                      </Text>
-                      {selectedDirigenteIds.includes(dirigente.id) && (
-                        <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : (
-                <Text style={styles.noCoachText}>Nessun dirigente disponibile nel sistema</Text>
-              )}
-              <Text style={styles.helperText}>
-                Seleziona uno o più dirigenti da assegnare a questa squadra
-              </Text>
+              <PersonMultiSelect
+                title="👔 Assegna Dirigenti"
+                color="#FF9500"
+                people={availableDirigenti}
+                selectedIds={selectedDirigenteIds}
+                onToggle={(did) => setSelectedDirigenteIds(selectedDirigenteIds.includes(did) ? selectedDirigenteIds.filter((x) => x !== did) : [...selectedDirigenteIds, did])}
+                emptyText="Nessun dirigente disponibile nel sistema"
+                helperText="Seleziona uno o più dirigenti da assegnare a questa squadra"
+                testIDPrefix="assign-dirigente"
+              />
             </View>
 
             {/* Collaboratori Assignment Section (🆕 03/08/2026) */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>🤝 Assegna Collaboratori</Text>
-              {availableCollaboratori.length > 0 ? (
-                <View style={styles.coachSelectionList}>
-                  {availableCollaboratori.map((collab) => (
-                    <TouchableOpacity
-                      key={collab.id}
-                      style={[
-                        styles.coachSelectionItem,
-                        selectedCollaboratoreIds.includes(collab.id) && styles.coachSelectionItemSelected
-                      ]}
-                      onPress={() => {
-                        if (selectedCollaboratoreIds.includes(collab.id)) {
-                          setSelectedCollaboratoreIds(selectedCollaboratoreIds.filter(cId => cId !== collab.id));
-                        } else {
-                          setSelectedCollaboratoreIds([...selectedCollaboratoreIds, collab.id]);
-                        }
-                      }}
-                    >
-                      <View style={[styles.coachSelectionPhotoPlaceholder, {backgroundColor: '#00A896'}]}>
-                        <Text style={{color: '#fff', fontSize: 12, fontWeight: '700'}}>{getInitials(collab.full_name)}</Text>
-                      </View>
-                      <Text style={[
-                        styles.coachSelectionName,
-                        selectedCollaboratoreIds.includes(collab.id) && styles.coachSelectionNameSelected
-                      ]}>
-                        {collab.full_name}
-                      </Text>
-                      {selectedCollaboratoreIds.includes(collab.id) && (
-                        <Ionicons name="checkmark-circle" size={20} color="#007AFF" />
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : (
-                <Text style={styles.noCoachText}>Nessun collaboratore disponibile nel sistema</Text>
-              )}
-              <Text style={styles.helperText}>
-                Seleziona uno o più collaboratori da assegnare a questa squadra
-              </Text>
+              <PersonMultiSelect
+                title="🤝 Assegna Collaboratori"
+                color="#00A896"
+                people={availableCollaboratori}
+                selectedIds={selectedCollaboratoreIds}
+                onToggle={(cid) => setSelectedCollaboratoreIds(selectedCollaboratoreIds.includes(cid) ? selectedCollaboratoreIds.filter((x) => x !== cid) : [...selectedCollaboratoreIds, cid])}
+                emptyText="Nessun collaboratore disponibile nel sistema"
+                helperText="Seleziona uno o più collaboratori da assegnare a questa squadra"
+                testIDPrefix="assign-collaboratore"
+              />
             </View>
 
             {/* 🆕 12/08/2026 — Staff FIPAV: Segnapunti */}
@@ -875,29 +789,15 @@ export default function TeamDetail() {
               { title: '🏁 Assegna Arbitri Associati', list: availableReferees, sel: selectedRefereeIds, setSel: setSelectedRefereeIds, color: '#E67E22', empty: 'Nessun arbitro associato tesserato', show: isUnderYouth },
             ].filter(s => s.show).map((s, si) => (
               <View style={styles.section} key={si}>
-                <Text style={styles.sectionTitle}>{s.title}</Text>
-                {s.list.length > 0 ? (
-                  <View style={styles.coachSelectionList}>
-                    {s.list.map((p) => (
-                      <TouchableOpacity
-                        key={p.id}
-                        style={[styles.coachSelectionItem, s.sel.includes(p.id) && styles.coachSelectionItemSelected]}
-                        onPress={() => {
-                          if (s.sel.includes(p.id)) s.setSel(s.sel.filter((x) => x !== p.id));
-                          else s.setSel([...s.sel, p.id]);
-                        }}
-                      >
-                        <View style={[styles.coachSelectionPhotoPlaceholder, { backgroundColor: s.color }]}>
-                          <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{getInitials(p.full_name)}</Text>
-                        </View>
-                        <Text style={[styles.coachSelectionName, s.sel.includes(p.id) && styles.coachSelectionNameSelected]}>{p.full_name}</Text>
-                        {s.sel.includes(p.id) && <Ionicons name="checkmark-circle" size={20} color="#007AFF" />}
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                ) : (
-                  <Text style={styles.noCoachText}>{s.empty}</Text>
-                )}
+                <PersonMultiSelect
+                  title={s.title}
+                  color={s.color}
+                  people={s.list}
+                  selectedIds={s.sel}
+                  onToggle={(pid) => s.setSel(s.sel.includes(pid) ? s.sel.filter((x) => x !== pid) : [...s.sel, pid])}
+                  emptyText={s.empty}
+                  testIDPrefix={`assign-staff-${si}`}
+                />
               </View>
             ))}
 

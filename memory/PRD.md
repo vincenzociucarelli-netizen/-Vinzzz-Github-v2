@@ -2283,3 +2283,17 @@ le 4 schede admin (coach/dirigente/collaboratore/athlete).
 Verifica: compute_sport_inps_withholding(4800,800,insured=True)=24/776;
 (5600,800,insured=True)=32/768. Regen E2E su dati temporanei: PDF mostra lordo 800,
 contributi 24,00, netto 776,00, comunicazione soglia preservata. Dati puliti.
+
+## 27/11/2026 — Segui squadra su /admin/matches + multi-select compatto team edit
+1) "Segui le tue squadre" ora anche nel Calendario Gare ADMIN (app/admin/matches.tsx):
+   - l'admin apriva /admin/matches (gestione) che NON aveva il follow → aggiunto il riquadro
+     "⭐ Segui le tue squadre" collassabile che usa TUTTE le squadre (/teams) e gli endpoint
+     user-scoped esistenti /team-follows + /match-reminders (email il giorno prima).
+   - Confermato a video (admin vincenzo): box visibile con MiniVolley, Serie C, Serie D, ...
+2) Modifica squadra (app/admin/team/[id].tsx): le 6 liste di assegnazione (Coach, Dirigenti,
+   Collaboratori, Segnapunti, Accompagnatori, Arbitri) erano lunghissime liste verticali di
+   checkbox. Sostituite con nuovo componente riutilizzabile src/components/PersonMultiSelect.tsx:
+   - header collassabile con badge conteggio + chip dei nomi selezionati in riga
+   - all'apertura: ricerca per nome (liste > 6) + elenco scrollabile (maxHeight 240) con spunta
+   - Confermato a video: "Assegna Coach (3)" con chip FARO REMO/FERRI SARA/RICA FEDE.
+Build web + inject-seo rifatti, expo riavviato.
